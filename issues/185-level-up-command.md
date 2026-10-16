@@ -7,6 +7,8 @@
   their buddies), 617r (gearsets: the white gear by level), 617k (buddy
   professions), 617t2 (the Ragefire scene: its first user), 718 (death
   knight buddies' professions raised to 300)
+- Related (2026-10-15): 187 (the purse and the visiting trainer after
+  the level rises)
 - Priority: High (617t2 waits on it)
 - State: planned; open questions first
 
@@ -30,6 +32,21 @@ Answers, 2026-10-13 (verbatim):
 
 On five skill points a level, and teaching the recipes a trainer would
 have taught: "yes and yes".
+
+Answers, 2026-10-15 (verbatim):
+
+> we have a script for adjusting level just like the class change quest.
+> If it isn't there, rebuild it from scratch I guess. Easier than
+> searching.
+
+> The buddy class-change and level-change upgrade should apply to all the
+> bots in a clan if possible. Well, only the level-change one. And it
+> should keep in mind their relative difference in terms of monsters to
+> slay at that level to achieve such a differential, and it maintains the
+> same degree. So, a character whose buddy-bots are always higher level is
+> like the little sibling. But, a player who knows how to grind can keep
+> up with them. Then they are leveling apace. Growing up together, how
+> sweet.
 
 ## Current Behavior
 
@@ -57,13 +74,20 @@ reloads without a build), that brings a character and their buddies to a
 level as if they had played there:
 1. the character's level set (through the server's own level command, so
    talent points follow);
-2. each of their buddies in the world set to the same level;
+2. each buddy of their clan moved by the same distance in *monsters to
+   slay*, not in levels (2026-10-15): the experience a buddy is ahead of
+   (or behind) its owner is measured in kills of a monster of the
+   owner's level, and after the change it stays the same number of such
+   kills ahead (or behind) at the new level. A buddy two levels ahead at
+   10 stays "that many kills" ahead at 30, which is fewer or more levels
+   as the experience curve bends;
 3. everyone dressed in the white gearset of that level's tier
    (buddy-white-1, -10, ... -60);
 4. every profession each of them has raised to the skill that level
    gives, with the trainer ranks that skill needs (Apprentice 75,
    Journeyman 150, Expert 225, Artisan 300; basic stops at 300);
-5. a reply naming each character and what changed, and anything that
+5. the purse and the visiting trainer of 187, for the player;
+6. a reply naming each character and what changed, and anything that
    could not be done.
 
 Usable from `scripts/gm-command` (so scenes such as 617t2 can call it)
@@ -82,6 +106,10 @@ and in game.
 5. In game: Birth to 15 (617t2).
 
 ## Open Questions
+
+7. The kills-ahead measure: experience per kill of a monster of the
+   owner's level (the server's own kill-experience formula, no group
+   bonus or rest), or of the buddy's level?
 
 1. (Answered 2026-10-13: five points a level, to 300 on basic.)
 2. (Answered 2026-10-13: yes, the recipes too, from the trainers' lists:

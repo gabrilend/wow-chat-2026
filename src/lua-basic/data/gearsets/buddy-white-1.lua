@@ -17,6 +17,7 @@ return {
         [101] = {   -- Warrior, 2/3 Arms, 1/3 Fury
             [2] = { items = {
                 [15] =  2489,   -- main hand Two-handed Sword (level 2)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
                 [ 4] =  2392,   -- chest     Light Mail Armor (level 5)
@@ -32,6 +33,7 @@ return {
         [102] = {   -- Warrior, 2/3 Arms, 1/3 Protection
             [2] = { items = {
                 [15] =  2489,   -- main hand Two-handed Sword (level 2)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
                 [ 4] =  2392,   -- chest     Light Mail Armor (level 5)
@@ -47,6 +49,7 @@ return {
         [103] = {   -- Warrior, 1/3 Arms, 2/3 Fury
             [2] = { items = {
                 [15] =  2492,   -- main hand Cudgel (level 2)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
                 [ 4] =  2392,   -- chest     Light Mail Armor (level 5)
@@ -62,6 +65,7 @@ return {
         [104] = {   -- Warrior, 2/3 Fury, 1/3 Protection
             [2] = { items = {
                 [15] =  2492,   -- main hand Cudgel (level 2)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
                 [ 4] =  2392,   -- chest     Light Mail Armor (level 5)
@@ -77,6 +81,7 @@ return {
         [105] = {   -- Warrior, 1/3 Arms, 2/3 Protection
             [2] = { items = {
                 [15] =  2492,   -- main hand Cudgel (level 2)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
                 [ 4] =  2392,   -- chest     Light Mail Armor (level 5)
@@ -93,6 +98,7 @@ return {
         [106] = {   -- Warrior, 1/3 Fury, 2/3 Protection
             [2] = { items = {
                 [15] =  2492,   -- main hand Cudgel (level 2)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
                 [ 4] =  2392,   -- chest     Light Mail Armor (level 5)
@@ -109,6 +115,7 @@ return {
         [107] = {   -- Warrior, 1/3 Arms, 1/3 Fury, 1/3 Protection
             [2] = { items = {
                 [15] =  2489,   -- main hand Two-handed Sword (level 2)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
                 [ 4] =  2392,   -- chest     Light Mail Armor (level 5)
@@ -124,6 +131,7 @@ return {
         [108] = {   -- Warrior, all Arms
             [2] = { items = {
                 [15] =  2489,   -- main hand Two-handed Sword (level 2)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
                 [ 4] =  2392,   -- chest     Light Mail Armor (level 5)
@@ -139,6 +147,7 @@ return {
         [109] = {   -- Warrior, all Fury
             [2] = { items = {
                 [15] =  2492,   -- main hand Cudgel (level 2)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
                 [ 4] =  2392,   -- chest     Light Mail Armor (level 5)
@@ -154,6 +163,7 @@ return {
         [110] = {   -- Warrior, all Protection
             [2] = { items = {
                 [15] =  2492,   -- main hand Cudgel (level 2)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
                 [ 4] =  2392,   -- chest     Light Mail Armor (level 5)
@@ -187,12 +197,12 @@ return {
                 [15] =  2492,   -- main hand Cudgel (level 2)
             } },
             [5] = { items = {
-                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
-                [ 5] =  2393,   -- waist     Light Mail Belt (level 5)
-                [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
-                [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
+                [ 4] =  2392,   -- chest     Light Mail Armor (level 5)
+                [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
+                [ 6] =   794,   -- legs      Knitted Pants (level 5)
+                [ 7] =  2395,   -- feet      Light Mail Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
-                [ 9] =  2397,   -- hands     Light Mail Gloves (level 5)
+                [ 9] =   797,   -- hands     Rough Leather Gloves (level 5)
                 [15] =  2490,   -- main hand Tomahawk (level 4)
                 [16] =  1201,   -- off hand  Dull Heater Shield (level 5)
             } },
@@ -232,12 +242,12 @@ return {
                 [15] =  2489,   -- main hand Two-handed Sword (level 2)
             } },
             [5] = { items = {
-                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
-                [ 5] =  2393,   -- waist     Light Mail Belt (level 5)
-                [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
-                [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
+                [ 4] =  2392,   -- chest     Light Mail Armor (level 5)
+                [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
+                [ 6] =   794,   -- legs      Knitted Pants (level 5)
+                [ 7] =  2395,   -- feet      Light Mail Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
-                [ 9] =  2397,   -- hands     Light Mail Gloves (level 5)
+                [ 9] =   797,   -- hands     Rough Leather Gloves (level 5)
                 [15] =  2493,   -- main hand Wooden Mallet (level 4)
             } },
         },
@@ -275,12 +285,12 @@ return {
                 [15] =  2492,   -- main hand Cudgel (level 2)
             } },
             [5] = { items = {
-                [ 4] =  2392,   -- chest     Light Mail Armor (level 5)
+                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
-                [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
-                [ 7] =   792,   -- feet      Knitted Sandals (level 5)
+                [ 6] =   794,   -- legs      Knitted Pants (level 5)
+                [ 7] =  2395,   -- feet      Light Mail Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
-                [ 9] =   793,   -- hands     Knitted Gloves (level 5)
+                [ 9] =   797,   -- hands     Rough Leather Gloves (level 5)
                 [15] =  2488,   -- main hand Gladius (level 4)
                 [16] =  1201,   -- off hand  Dull Heater Shield (level 5)
             } },
@@ -305,24 +315,25 @@ return {
                 [15] =  2489,   -- main hand Two-handed Sword (level 2)
             } },
             [5] = { items = {
-                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
-                [ 5] =  2393,   -- waist     Light Mail Belt (level 5)
-                [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
-                [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
+                [ 4] =  2392,   -- chest     Light Mail Armor (level 5)
+                [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
+                [ 6] =   794,   -- legs      Knitted Pants (level 5)
+                [ 7] =  2395,   -- feet      Light Mail Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
-                [ 9] =  2397,   -- hands     Light Mail Gloves (level 5)
+                [ 9] =   797,   -- hands     Rough Leather Gloves (level 5)
                 [15] =  2493,   -- main hand Wooden Mallet (level 4)
             } },
         },
         [301] = {   -- Hunter, 2/3 Beast Mastery, 1/3 Marksmanship
             [2] = { items = {
                 [15] =  2489,   -- main hand Two-handed Sword (level 2)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
-                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
+                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
                 [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
-                [ 7] =   792,   -- feet      Knitted Sandals (level 5)
+                [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
                 [ 9] =   797,   -- hands     Rough Leather Gloves (level 5)
                 [15] =  2491,   -- main hand Large Axe (level 3)
@@ -332,12 +343,13 @@ return {
         [302] = {   -- Hunter, 2/3 Beast Mastery, 1/3 Survival
             [2] = { items = {
                 [15] =  2489,   -- main hand Two-handed Sword (level 2)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
-                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
+                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
                 [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
-                [ 7] =   792,   -- feet      Knitted Sandals (level 5)
+                [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
                 [ 9] =   797,   -- hands     Rough Leather Gloves (level 5)
                 [15] =  2491,   -- main hand Large Axe (level 3)
@@ -347,12 +359,13 @@ return {
         [303] = {   -- Hunter, 1/3 Beast Mastery, 2/3 Marksmanship
             [2] = { items = {
                 [15] =  2489,   -- main hand Two-handed Sword (level 2)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
-                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
+                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
                 [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
-                [ 7] =   792,   -- feet      Knitted Sandals (level 5)
+                [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
                 [ 9] =   797,   -- hands     Rough Leather Gloves (level 5)
                 [15] =  2491,   -- main hand Large Axe (level 3)
@@ -362,12 +375,13 @@ return {
         [304] = {   -- Hunter, 2/3 Marksmanship, 1/3 Survival
             [2] = { items = {
                 [15] =  2489,   -- main hand Two-handed Sword (level 2)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
-                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
+                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
                 [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
-                [ 7] =   792,   -- feet      Knitted Sandals (level 5)
+                [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
                 [ 9] =   797,   -- hands     Rough Leather Gloves (level 5)
                 [15] =  2491,   -- main hand Large Axe (level 3)
@@ -377,12 +391,13 @@ return {
         [305] = {   -- Hunter, 1/3 Beast Mastery, 2/3 Survival
             [2] = { items = {
                 [15] =  2489,   -- main hand Two-handed Sword (level 2)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
-                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
+                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
                 [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
-                [ 7] =   792,   -- feet      Knitted Sandals (level 5)
+                [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
                 [ 9] =   797,   -- hands     Rough Leather Gloves (level 5)
                 [15] =  2491,   -- main hand Large Axe (level 3)
@@ -392,12 +407,13 @@ return {
         [306] = {   -- Hunter, 1/3 Marksmanship, 2/3 Survival
             [2] = { items = {
                 [15] =  2489,   -- main hand Two-handed Sword (level 2)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
-                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
+                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
                 [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
-                [ 7] =   792,   -- feet      Knitted Sandals (level 5)
+                [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
                 [ 9] =   797,   -- hands     Rough Leather Gloves (level 5)
                 [15] =  2491,   -- main hand Large Axe (level 3)
@@ -407,12 +423,13 @@ return {
         [307] = {   -- Hunter, 1/3 Beast Mastery, 1/3 Marksmanship, 1/3 Survival
             [2] = { items = {
                 [15] =  2489,   -- main hand Two-handed Sword (level 2)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
-                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
+                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
                 [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
-                [ 7] =   792,   -- feet      Knitted Sandals (level 5)
+                [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
                 [ 9] =   797,   -- hands     Rough Leather Gloves (level 5)
                 [15] =  2491,   -- main hand Large Axe (level 3)
@@ -422,12 +439,13 @@ return {
         [308] = {   -- Hunter, all Beast Mastery
             [2] = { items = {
                 [15] =  2489,   -- main hand Two-handed Sword (level 2)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
-                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
+                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
                 [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
-                [ 7] =   792,   -- feet      Knitted Sandals (level 5)
+                [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
                 [ 9] =   797,   -- hands     Rough Leather Gloves (level 5)
                 [15] =  2491,   -- main hand Large Axe (level 3)
@@ -437,12 +455,13 @@ return {
         [309] = {   -- Hunter, all Marksmanship
             [2] = { items = {
                 [15] =  2489,   -- main hand Two-handed Sword (level 2)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
-                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
+                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
                 [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
-                [ 7] =   792,   -- feet      Knitted Sandals (level 5)
+                [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
                 [ 9] =   797,   -- hands     Rough Leather Gloves (level 5)
                 [15] =  2491,   -- main hand Large Axe (level 3)
@@ -452,12 +471,13 @@ return {
         [310] = {   -- Hunter, all Survival
             [2] = { items = {
                 [15] =  2489,   -- main hand Two-handed Sword (level 2)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
-                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
+                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
                 [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
-                [ 7] =   792,   -- feet      Knitted Sandals (level 5)
+                [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
                 [ 9] =   797,   -- hands     Rough Leather Gloves (level 5)
                 [15] =  2491,   -- main hand Large Axe (level 3)
@@ -466,12 +486,14 @@ return {
         },
         [401] = {   -- Rogue, 2/3 Assassination, 1/3 Combat
             [2] = { items = {
-                [15] =  2492,   -- main hand Cudgel (level 2)
+                [15] = 20852,   -- main hand Arcane Forged Dirk (level 1)
+                [16] = 20852,   -- off hand  Arcane Forged Dirk (level 1)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
-                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
+                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
-                [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
+                [ 6] =   794,   -- legs      Knitted Pants (level 5)
                 [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
                 [ 9] =   793,   -- hands     Knitted Gloves (level 5)
@@ -482,12 +504,14 @@ return {
         },
         [402] = {   -- Rogue, 2/3 Assassination, 1/3 Subtlety
             [2] = { items = {
-                [15] =  2492,   -- main hand Cudgel (level 2)
+                [15] = 20852,   -- main hand Arcane Forged Dirk (level 1)
+                [16] = 20852,   -- off hand  Arcane Forged Dirk (level 1)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
-                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
+                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
-                [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
+                [ 6] =   794,   -- legs      Knitted Pants (level 5)
                 [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
                 [ 9] =   793,   -- hands     Knitted Gloves (level 5)
@@ -499,11 +523,13 @@ return {
         [403] = {   -- Rogue, 1/3 Assassination, 2/3 Combat
             [2] = { items = {
                 [15] =  2492,   -- main hand Cudgel (level 2)
+                [16] = 20852,   -- off hand  Arcane Forged Dirk (level 1)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
-                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
+                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
-                [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
+                [ 6] =   794,   -- legs      Knitted Pants (level 5)
                 [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
                 [ 9] =   793,   -- hands     Knitted Gloves (level 5)
@@ -515,11 +541,13 @@ return {
         [404] = {   -- Rogue, 2/3 Combat, 1/3 Subtlety
             [2] = { items = {
                 [15] =  2492,   -- main hand Cudgel (level 2)
+                [16] = 20852,   -- off hand  Arcane Forged Dirk (level 1)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
-                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
+                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
-                [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
+                [ 6] =   794,   -- legs      Knitted Pants (level 5)
                 [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
                 [ 9] =   793,   -- hands     Knitted Gloves (level 5)
@@ -530,12 +558,14 @@ return {
         },
         [405] = {   -- Rogue, 1/3 Assassination, 2/3 Subtlety
             [2] = { items = {
-                [15] =  2492,   -- main hand Cudgel (level 2)
+                [15] = 20852,   -- main hand Arcane Forged Dirk (level 1)
+                [16] = 20852,   -- off hand  Arcane Forged Dirk (level 1)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
-                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
+                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
-                [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
+                [ 6] =   794,   -- legs      Knitted Pants (level 5)
                 [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
                 [ 9] =   793,   -- hands     Knitted Gloves (level 5)
@@ -546,12 +576,14 @@ return {
         },
         [406] = {   -- Rogue, 1/3 Combat, 2/3 Subtlety
             [2] = { items = {
-                [15] =  2492,   -- main hand Cudgel (level 2)
+                [15] = 20852,   -- main hand Arcane Forged Dirk (level 1)
+                [16] = 20852,   -- off hand  Arcane Forged Dirk (level 1)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
-                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
+                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
-                [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
+                [ 6] =   794,   -- legs      Knitted Pants (level 5)
                 [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
                 [ 9] =   793,   -- hands     Knitted Gloves (level 5)
@@ -562,12 +594,14 @@ return {
         },
         [407] = {   -- Rogue, 1/3 Assassination, 1/3 Combat, 1/3 Subtlety
             [2] = { items = {
-                [15] =  2492,   -- main hand Cudgel (level 2)
+                [15] = 20852,   -- main hand Arcane Forged Dirk (level 1)
+                [16] = 20852,   -- off hand  Arcane Forged Dirk (level 1)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
-                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
+                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
-                [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
+                [ 6] =   794,   -- legs      Knitted Pants (level 5)
                 [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
                 [ 9] =   793,   -- hands     Knitted Gloves (level 5)
@@ -578,12 +612,14 @@ return {
         },
         [408] = {   -- Rogue, all Assassination
             [2] = { items = {
-                [15] =  2492,   -- main hand Cudgel (level 2)
+                [15] = 20852,   -- main hand Arcane Forged Dirk (level 1)
+                [16] = 20852,   -- off hand  Arcane Forged Dirk (level 1)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
-                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
+                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
-                [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
+                [ 6] =   794,   -- legs      Knitted Pants (level 5)
                 [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
                 [ 9] =   793,   -- hands     Knitted Gloves (level 5)
@@ -595,11 +631,13 @@ return {
         [409] = {   -- Rogue, all Combat
             [2] = { items = {
                 [15] =  2492,   -- main hand Cudgel (level 2)
+                [16] = 20852,   -- off hand  Arcane Forged Dirk (level 1)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
-                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
+                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
-                [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
+                [ 6] =   794,   -- legs      Knitted Pants (level 5)
                 [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
                 [ 9] =   793,   -- hands     Knitted Gloves (level 5)
@@ -610,12 +648,14 @@ return {
         },
         [410] = {   -- Rogue, all Subtlety
             [2] = { items = {
-                [15] =  2492,   -- main hand Cudgel (level 2)
+                [15] = 20852,   -- main hand Arcane Forged Dirk (level 1)
+                [16] = 20852,   -- off hand  Arcane Forged Dirk (level 1)
+                [17] =  2505,   -- ranged    Polished Shortbow (level 1)
             } },
             [5] = { items = {
-                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
+                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
-                [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
+                [ 6] =   794,   -- legs      Knitted Pants (level 5)
                 [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
                 [ 9] =   793,   -- hands     Knitted Gloves (level 5)
@@ -626,7 +666,7 @@ return {
         },
         [501] = {   -- Priest, 2/3 Discipline, 1/3 Holy
             [2] = { items = {
-                [15] =  2492,   -- main hand Cudgel (level 2)
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -640,7 +680,7 @@ return {
         },
         [502] = {   -- Priest, 2/3 Discipline, 1/3 Shadow
             [2] = { items = {
-                [15] =  2492,   -- main hand Cudgel (level 2)
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -654,7 +694,7 @@ return {
         },
         [503] = {   -- Priest, 1/3 Discipline, 2/3 Holy
             [2] = { items = {
-                [15] =  2492,   -- main hand Cudgel (level 2)
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -668,7 +708,7 @@ return {
         },
         [504] = {   -- Priest, 2/3 Holy, 1/3 Shadow
             [2] = { items = {
-                [15] =  2492,   -- main hand Cudgel (level 2)
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -682,7 +722,7 @@ return {
         },
         [505] = {   -- Priest, 1/3 Discipline, 2/3 Shadow
             [2] = { items = {
-                [15] =  2492,   -- main hand Cudgel (level 2)
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -696,7 +736,7 @@ return {
         },
         [506] = {   -- Priest, 1/3 Holy, 2/3 Shadow
             [2] = { items = {
-                [15] =  2492,   -- main hand Cudgel (level 2)
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -710,7 +750,7 @@ return {
         },
         [507] = {   -- Priest, 1/3 Discipline, 1/3 Holy, 1/3 Shadow
             [2] = { items = {
-                [15] =  2492,   -- main hand Cudgel (level 2)
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -724,7 +764,7 @@ return {
         },
         [508] = {   -- Priest, all Discipline
             [2] = { items = {
-                [15] =  2492,   -- main hand Cudgel (level 2)
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -738,7 +778,7 @@ return {
         },
         [509] = {   -- Priest, all Holy
             [2] = { items = {
-                [15] =  2492,   -- main hand Cudgel (level 2)
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -752,7 +792,7 @@ return {
         },
         [510] = {   -- Priest, all Shadow
             [2] = { items = {
-                [15] =  2492,   -- main hand Cudgel (level 2)
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -915,12 +955,12 @@ return {
                 [15] =  2492,   -- main hand Cudgel (level 2)
             } },
             [5] = { items = {
-                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
+                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
                 [ 6] =   794,   -- legs      Knitted Pants (level 5)
-                [ 7] =   792,   -- feet      Knitted Sandals (level 5)
+                [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
-                [ 9] =   797,   -- hands     Rough Leather Gloves (level 5)
+                [ 9] =   793,   -- hands     Knitted Gloves (level 5)
                 [15] =  2490,   -- main hand Tomahawk (level 4)
                 [16] =  1201,   -- off hand  Dull Heater Shield (level 5)
             } },
@@ -935,7 +975,7 @@ return {
                 [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
                 [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
-                [ 9] =   797,   -- hands     Rough Leather Gloves (level 5)
+                [ 9] =   793,   -- hands     Knitted Gloves (level 5)
                 [15] =  2490,   -- main hand Tomahawk (level 4)
                 [16] =  1201,   -- off hand  Dull Heater Shield (level 5)
             } },
@@ -945,12 +985,12 @@ return {
                 [15] =  2492,   -- main hand Cudgel (level 2)
             } },
             [5] = { items = {
-                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
+                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
                 [ 6] =   794,   -- legs      Knitted Pants (level 5)
-                [ 7] =   792,   -- feet      Knitted Sandals (level 5)
+                [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
-                [ 9] =   797,   -- hands     Rough Leather Gloves (level 5)
+                [ 9] =   793,   -- hands     Knitted Gloves (level 5)
                 [15] =  2490,   -- main hand Tomahawk (level 4)
                 [16] =  1201,   -- off hand  Dull Heater Shield (level 5)
             } },
@@ -960,12 +1000,12 @@ return {
                 [15] =  2492,   -- main hand Cudgel (level 2)
             } },
             [5] = { items = {
-                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
+                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
                 [ 6] =   794,   -- legs      Knitted Pants (level 5)
-                [ 7] =   792,   -- feet      Knitted Sandals (level 5)
+                [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
-                [ 9] =   797,   -- hands     Rough Leather Gloves (level 5)
+                [ 9] =   793,   -- hands     Knitted Gloves (level 5)
                 [15] =  2490,   -- main hand Tomahawk (level 4)
                 [16] =  1201,   -- off hand  Dull Heater Shield (level 5)
             } },
@@ -980,7 +1020,7 @@ return {
                 [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
                 [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
-                [ 9] =   797,   -- hands     Rough Leather Gloves (level 5)
+                [ 9] =   793,   -- hands     Knitted Gloves (level 5)
                 [15] =  2490,   -- main hand Tomahawk (level 4)
                 [16] =  1201,   -- off hand  Dull Heater Shield (level 5)
             } },
@@ -990,12 +1030,12 @@ return {
                 [15] =  2492,   -- main hand Cudgel (level 2)
             } },
             [5] = { items = {
-                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
+                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
                 [ 6] =   794,   -- legs      Knitted Pants (level 5)
-                [ 7] =   792,   -- feet      Knitted Sandals (level 5)
+                [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
-                [ 9] =   797,   -- hands     Rough Leather Gloves (level 5)
+                [ 9] =   793,   -- hands     Knitted Gloves (level 5)
                 [15] =  2490,   -- main hand Tomahawk (level 4)
                 [16] =  1201,   -- off hand  Dull Heater Shield (level 5)
             } },
@@ -1005,12 +1045,12 @@ return {
                 [15] =  2492,   -- main hand Cudgel (level 2)
             } },
             [5] = { items = {
-                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
+                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
                 [ 6] =   794,   -- legs      Knitted Pants (level 5)
-                [ 7] =   792,   -- feet      Knitted Sandals (level 5)
+                [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
-                [ 9] =   797,   -- hands     Rough Leather Gloves (level 5)
+                [ 9] =   793,   -- hands     Knitted Gloves (level 5)
                 [15] =  2490,   -- main hand Tomahawk (level 4)
                 [16] =  1201,   -- off hand  Dull Heater Shield (level 5)
             } },
@@ -1025,7 +1065,7 @@ return {
                 [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
                 [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
-                [ 9] =   797,   -- hands     Rough Leather Gloves (level 5)
+                [ 9] =   793,   -- hands     Knitted Gloves (level 5)
                 [15] =  2490,   -- main hand Tomahawk (level 4)
                 [16] =  1201,   -- off hand  Dull Heater Shield (level 5)
             } },
@@ -1035,12 +1075,12 @@ return {
                 [15] =  2492,   -- main hand Cudgel (level 2)
             } },
             [5] = { items = {
-                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
+                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
                 [ 6] =   794,   -- legs      Knitted Pants (level 5)
-                [ 7] =   792,   -- feet      Knitted Sandals (level 5)
+                [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
-                [ 9] =   797,   -- hands     Rough Leather Gloves (level 5)
+                [ 9] =   793,   -- hands     Knitted Gloves (level 5)
                 [15] =  2490,   -- main hand Tomahawk (level 4)
                 [16] =  1201,   -- off hand  Dull Heater Shield (level 5)
             } },
@@ -1055,13 +1095,14 @@ return {
                 [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
                 [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
-                [ 9] =   797,   -- hands     Rough Leather Gloves (level 5)
+                [ 9] =   793,   -- hands     Knitted Gloves (level 5)
                 [15] =  2490,   -- main hand Tomahawk (level 4)
                 [16] =  1201,   -- off hand  Dull Heater Shield (level 5)
             } },
         },
         [801] = {   -- Mage, 2/3 Arcane, 1/3 Fire
             [2] = { items = {
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -1075,6 +1116,7 @@ return {
         },
         [802] = {   -- Mage, 2/3 Arcane, 1/3 Frost
             [2] = { items = {
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -1088,6 +1130,7 @@ return {
         },
         [803] = {   -- Mage, 1/3 Arcane, 2/3 Fire
             [2] = { items = {
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -1101,6 +1144,7 @@ return {
         },
         [804] = {   -- Mage, 2/3 Fire, 1/3 Frost
             [2] = { items = {
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -1114,6 +1158,7 @@ return {
         },
         [805] = {   -- Mage, 1/3 Arcane, 2/3 Frost
             [2] = { items = {
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -1127,6 +1172,7 @@ return {
         },
         [806] = {   -- Mage, 1/3 Fire, 2/3 Frost
             [2] = { items = {
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -1140,6 +1186,7 @@ return {
         },
         [807] = {   -- Mage, 1/3 Arcane, 1/3 Fire, 1/3 Frost
             [2] = { items = {
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -1153,6 +1200,7 @@ return {
         },
         [808] = {   -- Mage, all Arcane
             [2] = { items = {
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -1166,6 +1214,7 @@ return {
         },
         [809] = {   -- Mage, all Fire
             [2] = { items = {
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -1179,6 +1228,7 @@ return {
         },
         [810] = {   -- Mage, all Frost
             [2] = { items = {
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -1192,6 +1242,7 @@ return {
         },
         [901] = {   -- Warlock, 2/3 Affliction, 1/3 Demonology
             [2] = { items = {
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -1205,6 +1256,7 @@ return {
         },
         [902] = {   -- Warlock, 2/3 Affliction, 1/3 Destruction
             [2] = { items = {
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -1218,6 +1270,7 @@ return {
         },
         [903] = {   -- Warlock, 1/3 Affliction, 2/3 Demonology
             [2] = { items = {
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -1231,6 +1284,7 @@ return {
         },
         [904] = {   -- Warlock, 2/3 Demonology, 1/3 Destruction
             [2] = { items = {
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -1244,6 +1298,7 @@ return {
         },
         [905] = {   -- Warlock, 1/3 Affliction, 2/3 Destruction
             [2] = { items = {
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -1257,6 +1312,7 @@ return {
         },
         [906] = {   -- Warlock, 1/3 Demonology, 2/3 Destruction
             [2] = { items = {
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -1270,6 +1326,7 @@ return {
         },
         [907] = {   -- Warlock, 1/3 Affliction, 1/3 Demonology, 1/3 Destruction
             [2] = { items = {
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -1283,6 +1340,7 @@ return {
         },
         [908] = {   -- Warlock, all Affliction
             [2] = { items = {
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -1296,6 +1354,7 @@ return {
         },
         [909] = {   -- Warlock, all Demonology
             [2] = { items = {
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -1309,6 +1368,7 @@ return {
         },
         [910] = {   -- Warlock, all Destruction
             [2] = { items = {
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   795,   -- chest     Knitted Tunic (level 5)
@@ -1322,7 +1382,7 @@ return {
         },
         [1101] = {   -- Druid, 2/3 Balance, 1/3 Feral Combat
             [2] = { items = {
-                [15] =  2492,   -- main hand Cudgel (level 2)
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
@@ -1336,12 +1396,12 @@ return {
         },
         [1102] = {   -- Druid, 2/3 Balance, 1/3 Restoration
             [2] = { items = {
-                [15] =  2492,   -- main hand Cudgel (level 2)
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
-                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
+                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
-                [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
+                [ 6] =   794,   -- legs      Knitted Pants (level 5)
                 [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
                 [ 9] =   797,   -- hands     Rough Leather Gloves (level 5)
@@ -1350,6 +1410,7 @@ return {
         },
         [1103] = {   -- Druid, 1/3 Balance, 2/3 Feral Combat
             [2] = { items = {
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
@@ -1363,6 +1424,7 @@ return {
         },
         [1104] = {   -- Druid, 2/3 Feral Combat, 1/3 Restoration
             [2] = { items = {
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
@@ -1376,12 +1438,12 @@ return {
         },
         [1105] = {   -- Druid, 1/3 Balance, 2/3 Restoration
             [2] = { items = {
-                [15] =  2492,   -- main hand Cudgel (level 2)
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
-                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
+                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
-                [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
+                [ 6] =   794,   -- legs      Knitted Pants (level 5)
                 [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
                 [ 9] =   797,   -- hands     Rough Leather Gloves (level 5)
@@ -1390,7 +1452,7 @@ return {
         },
         [1106] = {   -- Druid, 1/3 Feral Combat, 2/3 Restoration
             [2] = { items = {
-                [15] =  2492,   -- main hand Cudgel (level 2)
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
@@ -1404,7 +1466,7 @@ return {
         },
         [1107] = {   -- Druid, 1/3 Balance, 1/3 Feral Combat, 1/3 Restoration
             [2] = { items = {
-                [15] =  2492,   -- main hand Cudgel (level 2)
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
@@ -1418,12 +1480,12 @@ return {
         },
         [1108] = {   -- Druid, all Balance
             [2] = { items = {
-                [15] =  2492,   -- main hand Cudgel (level 2)
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
-                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
+                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
-                [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
+                [ 6] =   794,   -- legs      Knitted Pants (level 5)
                 [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
                 [ 9] =   797,   -- hands     Rough Leather Gloves (level 5)
@@ -1432,6 +1494,7 @@ return {
         },
         [1109] = {   -- Druid, all Feral Combat
             [2] = { items = {
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
                 [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
@@ -1445,12 +1508,12 @@ return {
         },
         [1110] = {   -- Druid, all Restoration
             [2] = { items = {
-                [15] =  2492,   -- main hand Cudgel (level 2)
+                [15] =  2132,   -- main hand Short Staff (level 1)
             } },
             [5] = { items = {
-                [ 4] =   799,   -- chest     Rough Leather Vest (level 5)
+                [ 4] =   795,   -- chest     Knitted Tunic (level 5)
                 [ 5] =  1839,   -- waist     Rough Leather Belt (level 5)
-                [ 6] =   798,   -- legs      Rough Leather Pants (level 5)
+                [ 6] =   794,   -- legs      Knitted Pants (level 5)
                 [ 7] =   796,   -- feet      Rough Leather Boots (level 5)
                 [ 8] =  1840,   -- wrists    Rough Leather Bracers (level 5)
                 [ 9] =   797,   -- hands     Rough Leather Gloves (level 5)

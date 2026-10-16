@@ -20,6 +20,23 @@ Verbatim, 2026-10-05:
 
 ## Current Behavior
 
+**Two fixes, 2026-10-15; generated and syntax-checked, not yet rebuilt,
+installed (E052) or run.**
+- The kit asks whether the buddy can use an item before it destroys
+  what that slot held. Before, a refused weapon left empty hands, and the
+  bot module then equipped the only weapon in its bags, its fishing pole
+  (Montahmu, fighting Uldaman with one). A refusal now keeps the old item
+  and names the server's reason number in the log line.
+- The translator now takes weapons from required level 1 (armour still
+  from 2): the starter weapons (Short Staff, Dirk, Shortsword) need level
+  1, and without them 23 level 2-9 records (mages, warlocks, feral
+  druids) had no weapon at all. A first try at "everything from 0" put
+  holiday mantles, jewellers' rings and romance goggles on every buddy,
+  so armour stays at 2. Every record now has a main hand. The re-run also
+  picked up items whose required level had changed in the world database
+  since 2026-10-05 (Cuirboulli Gloves now need 22, not 20), which the old
+  records would have had refused.
+
 **Built 2026-10-05; module syntax-checked against the build's own
 compile commands; not yet rebuilt or run.** Needs the owner's rebuild
 (the buddy module changed) and an install (E052).

@@ -16,12 +16,12 @@ return {
     records = {
         [101] = {   -- Warrior, 2/3 Arms, 1/3 Fury
             [30] = { items = {
-                [ 4] =  2153,   -- chest     Polished Scale Vest (level 20)
-                [ 5] =  2148,   -- waist     Polished Scale Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 4] =  2153,   -- chest     Polished Scale Vest (level 22)
+                [ 5] =  2148,   -- waist     Polished Scale Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2149,   -- feet      Polished Scale Boots (level 22)
+                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 22)
+                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 22)
                 [15] =  2523,   -- main hand Bullova (level 30)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
             } },
@@ -39,12 +39,12 @@ return {
         },
         [102] = {   -- Warrior, 2/3 Arms, 1/3 Protection
             [30] = { items = {
-                [ 4] =  2153,   -- chest     Polished Scale Vest (level 20)
-                [ 5] =  2148,   -- waist     Polished Scale Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 4] =  2153,   -- chest     Polished Scale Vest (level 22)
+                [ 5] =  2148,   -- waist     Polished Scale Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2149,   -- feet      Polished Scale Boots (level 22)
+                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 22)
+                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 22)
                 [15] =  2523,   -- main hand Bullova (level 30)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
             } },
@@ -62,12 +62,12 @@ return {
         },
         [103] = {   -- Warrior, 1/3 Arms, 2/3 Fury
             [30] = { items = {
-                [ 4] =  2153,   -- chest     Polished Scale Vest (level 20)
-                [ 5] =  2148,   -- waist     Polished Scale Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 4] =  2153,   -- chest     Polished Scale Vest (level 22)
+                [ 5] =  2148,   -- waist     Polished Scale Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2149,   -- feet      Polished Scale Boots (level 22)
+                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 22)
+                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 22)
                 [15] =  2522,   -- main hand Crescent Axe (level 30)
                 [16] = 15909,   -- off hand  Left-Handed Blades (level 30)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
@@ -87,12 +87,12 @@ return {
         },
         [104] = {   -- Warrior, 2/3 Fury, 1/3 Protection
             [30] = { items = {
-                [ 4] =  2153,   -- chest     Polished Scale Vest (level 20)
-                [ 5] =  2148,   -- waist     Polished Scale Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 4] =  2153,   -- chest     Polished Scale Vest (level 22)
+                [ 5] =  2148,   -- waist     Polished Scale Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2149,   -- feet      Polished Scale Boots (level 22)
+                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 22)
+                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 22)
                 [15] =  2522,   -- main hand Crescent Axe (level 30)
                 [16] = 15909,   -- off hand  Left-Handed Blades (level 30)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
@@ -112,12 +112,12 @@ return {
         },
         [105] = {   -- Warrior, 1/3 Arms, 2/3 Protection
             [30] = { items = {
-                [ 4] =  2153,   -- chest     Polished Scale Vest (level 20)
-                [ 5] =  2148,   -- waist     Polished Scale Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 4] =  2153,   -- chest     Polished Scale Vest (level 22)
+                [ 5] =  2148,   -- waist     Polished Scale Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2149,   -- feet      Polished Scale Boots (level 22)
+                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 22)
+                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 22)
                 [15] =  2522,   -- main hand Crescent Axe (level 30)
                 [16] = 17189,   -- off hand  Metal Buckler (level 29)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
@@ -137,12 +137,12 @@ return {
         },
         [106] = {   -- Warrior, 1/3 Fury, 2/3 Protection
             [30] = { items = {
-                [ 4] =  2153,   -- chest     Polished Scale Vest (level 20)
-                [ 5] =  2148,   -- waist     Polished Scale Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 4] =  2153,   -- chest     Polished Scale Vest (level 22)
+                [ 5] =  2148,   -- waist     Polished Scale Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2149,   -- feet      Polished Scale Boots (level 22)
+                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 22)
+                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 22)
                 [15] =  2522,   -- main hand Crescent Axe (level 30)
                 [16] = 17189,   -- off hand  Metal Buckler (level 29)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
@@ -162,12 +162,12 @@ return {
         },
         [107] = {   -- Warrior, 1/3 Arms, 1/3 Fury, 1/3 Protection
             [30] = { items = {
-                [ 4] =  2153,   -- chest     Polished Scale Vest (level 20)
-                [ 5] =  2148,   -- waist     Polished Scale Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 4] =  2153,   -- chest     Polished Scale Vest (level 22)
+                [ 5] =  2148,   -- waist     Polished Scale Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2149,   -- feet      Polished Scale Boots (level 22)
+                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 22)
+                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 22)
                 [15] =  2523,   -- main hand Bullova (level 30)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
             } },
@@ -185,12 +185,12 @@ return {
         },
         [108] = {   -- Warrior, all Arms
             [30] = { items = {
-                [ 4] =  2153,   -- chest     Polished Scale Vest (level 20)
-                [ 5] =  2148,   -- waist     Polished Scale Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 4] =  2153,   -- chest     Polished Scale Vest (level 22)
+                [ 5] =  2148,   -- waist     Polished Scale Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2149,   -- feet      Polished Scale Boots (level 22)
+                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 22)
+                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 22)
                 [15] =  2523,   -- main hand Bullova (level 30)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
             } },
@@ -208,12 +208,12 @@ return {
         },
         [109] = {   -- Warrior, all Fury
             [30] = { items = {
-                [ 4] =  2153,   -- chest     Polished Scale Vest (level 20)
-                [ 5] =  2148,   -- waist     Polished Scale Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 4] =  2153,   -- chest     Polished Scale Vest (level 22)
+                [ 5] =  2148,   -- waist     Polished Scale Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2149,   -- feet      Polished Scale Boots (level 22)
+                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 22)
+                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 22)
                 [15] =  2522,   -- main hand Crescent Axe (level 30)
                 [16] = 15909,   -- off hand  Left-Handed Blades (level 30)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
@@ -233,12 +233,12 @@ return {
         },
         [110] = {   -- Warrior, all Protection
             [30] = { items = {
-                [ 4] =  2153,   -- chest     Polished Scale Vest (level 20)
-                [ 5] =  2148,   -- waist     Polished Scale Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 4] =  2153,   -- chest     Polished Scale Vest (level 22)
+                [ 5] =  2148,   -- waist     Polished Scale Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2149,   -- feet      Polished Scale Boots (level 22)
+                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 22)
+                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 22)
                 [15] =  2522,   -- main hand Crescent Axe (level 30)
                 [16] = 17189,   -- off hand  Metal Buckler (level 29)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
@@ -258,12 +258,12 @@ return {
         },
         [201] = {   -- Paladin, 2/3 Holy, 1/3 Protection
             [30] = { items = {
-                [ 4] =  2153,   -- chest     Polished Scale Vest (level 20)
-                [ 5] =  2148,   -- waist     Polished Scale Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 4] =  2153,   -- chest     Polished Scale Vest (level 22)
+                [ 5] =  2148,   -- waist     Polished Scale Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2149,   -- feet      Polished Scale Boots (level 22)
+                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 22)
+                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 22)
                 [15] =  2522,   -- main hand Crescent Axe (level 30)
                 [16] = 17189,   -- off hand  Metal Buckler (level 29)
             } },
@@ -282,11 +282,11 @@ return {
         [202] = {   -- Paladin, 2/3 Holy, 1/3 Retribution
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =  2522,   -- main hand Crescent Axe (level 30)
                 [16] = 17189,   -- off hand  Metal Buckler (level 29)
             } },
@@ -304,12 +304,12 @@ return {
         },
         [203] = {   -- Paladin, 1/3 Holy, 2/3 Protection
             [30] = { items = {
-                [ 4] =  2153,   -- chest     Polished Scale Vest (level 20)
-                [ 5] =  2148,   -- waist     Polished Scale Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 4] =  2153,   -- chest     Polished Scale Vest (level 22)
+                [ 5] =  2148,   -- waist     Polished Scale Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2149,   -- feet      Polished Scale Boots (level 22)
+                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 22)
+                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 22)
                 [15] =  2522,   -- main hand Crescent Axe (level 30)
                 [16] = 17189,   -- off hand  Metal Buckler (level 29)
             } },
@@ -327,12 +327,12 @@ return {
         },
         [204] = {   -- Paladin, 2/3 Protection, 1/3 Retribution
             [30] = { items = {
-                [ 4] =  2153,   -- chest     Polished Scale Vest (level 20)
-                [ 5] =  2148,   -- waist     Polished Scale Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 4] =  2153,   -- chest     Polished Scale Vest (level 22)
+                [ 5] =  2148,   -- waist     Polished Scale Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2149,   -- feet      Polished Scale Boots (level 22)
+                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 22)
+                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 22)
                 [15] =  2522,   -- main hand Crescent Axe (level 30)
                 [16] = 17189,   -- off hand  Metal Buckler (level 29)
             } },
@@ -351,11 +351,11 @@ return {
         [205] = {   -- Paladin, 1/3 Holy, 2/3 Retribution
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =  2523,   -- main hand Bullova (level 30)
             } },
             [35] = { items = {
@@ -371,12 +371,12 @@ return {
         },
         [206] = {   -- Paladin, 1/3 Protection, 2/3 Retribution
             [30] = { items = {
-                [ 4] =  2153,   -- chest     Polished Scale Vest (level 20)
-                [ 5] =  2148,   -- waist     Polished Scale Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 4] =  2153,   -- chest     Polished Scale Vest (level 22)
+                [ 5] =  2148,   -- waist     Polished Scale Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2149,   -- feet      Polished Scale Boots (level 22)
+                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 22)
+                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 22)
                 [15] =  2523,   -- main hand Bullova (level 30)
             } },
             [35] = { items = {
@@ -392,12 +392,12 @@ return {
         },
         [207] = {   -- Paladin, 1/3 Holy, 1/3 Protection, 1/3 Retribution
             [30] = { items = {
-                [ 4] =  2153,   -- chest     Polished Scale Vest (level 20)
-                [ 5] =  2148,   -- waist     Polished Scale Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 4] =  2153,   -- chest     Polished Scale Vest (level 22)
+                [ 5] =  2148,   -- waist     Polished Scale Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2149,   -- feet      Polished Scale Boots (level 22)
+                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 22)
+                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 22)
                 [15] =  2522,   -- main hand Crescent Axe (level 30)
                 [16] = 17189,   -- off hand  Metal Buckler (level 29)
             } },
@@ -416,11 +416,11 @@ return {
         [208] = {   -- Paladin, all Holy
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2148,   -- waist     Polished Scale Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2149,   -- feet      Polished Scale Boots (level 22)
+                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =  2522,   -- main hand Crescent Axe (level 30)
                 [16] = 17189,   -- off hand  Metal Buckler (level 29)
             } },
@@ -438,12 +438,12 @@ return {
         },
         [209] = {   -- Paladin, all Protection
             [30] = { items = {
-                [ 4] =  2153,   -- chest     Polished Scale Vest (level 20)
-                [ 5] =  2148,   -- waist     Polished Scale Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 4] =  2153,   -- chest     Polished Scale Vest (level 22)
+                [ 5] =  2148,   -- waist     Polished Scale Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2149,   -- feet      Polished Scale Boots (level 22)
+                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 22)
+                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 22)
                 [15] =  2522,   -- main hand Crescent Axe (level 30)
                 [16] = 17189,   -- off hand  Metal Buckler (level 29)
             } },
@@ -462,11 +462,11 @@ return {
         [210] = {   -- Paladin, all Retribution
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =  2523,   -- main hand Bullova (level 30)
             } },
             [35] = { items = {
@@ -483,19 +483,19 @@ return {
         [301] = {   -- Hunter, 2/3 Beast Mastery, 1/3 Marksmanship
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =  2523,   -- main hand Bullova (level 30)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
             } },
             [35] = { items = {
                 [ 0] =  3890,   -- head      Studded Hat (level 32)
-                [ 4] =  2429,   -- chest     Russet Vest (level 32)
+                [ 4] =  2463,   -- chest     Studded Doublet (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
-                [ 6] =  2465,   -- legs      Studded Pants (level 32)
+                [ 6] =  2431,   -- legs      Russet Pants (level 32)
                 [ 7] =  2432,   -- feet      Russet Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
                 [ 9] =  2434,   -- hands     Russet Gloves (level 32)
@@ -506,19 +506,19 @@ return {
         [302] = {   -- Hunter, 2/3 Beast Mastery, 1/3 Survival
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =  2523,   -- main hand Bullova (level 30)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
             } },
             [35] = { items = {
                 [ 0] =  3890,   -- head      Studded Hat (level 32)
-                [ 4] =  2429,   -- chest     Russet Vest (level 32)
+                [ 4] =  2463,   -- chest     Studded Doublet (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
-                [ 6] =  2465,   -- legs      Studded Pants (level 32)
+                [ 6] =  2431,   -- legs      Russet Pants (level 32)
                 [ 7] =  2432,   -- feet      Russet Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
                 [ 9] =  2434,   -- hands     Russet Gloves (level 32)
@@ -529,19 +529,19 @@ return {
         [303] = {   -- Hunter, 1/3 Beast Mastery, 2/3 Marksmanship
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =  2523,   -- main hand Bullova (level 30)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
             } },
             [35] = { items = {
                 [ 0] =  3890,   -- head      Studded Hat (level 32)
-                [ 4] =  2429,   -- chest     Russet Vest (level 32)
+                [ 4] =  2463,   -- chest     Studded Doublet (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
-                [ 6] =  2465,   -- legs      Studded Pants (level 32)
+                [ 6] =  2431,   -- legs      Russet Pants (level 32)
                 [ 7] =  2432,   -- feet      Russet Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
                 [ 9] =  2434,   -- hands     Russet Gloves (level 32)
@@ -552,19 +552,19 @@ return {
         [304] = {   -- Hunter, 2/3 Marksmanship, 1/3 Survival
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =  2523,   -- main hand Bullova (level 30)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
             } },
             [35] = { items = {
                 [ 0] =  3890,   -- head      Studded Hat (level 32)
-                [ 4] =  2429,   -- chest     Russet Vest (level 32)
+                [ 4] =  2463,   -- chest     Studded Doublet (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
-                [ 6] =  2465,   -- legs      Studded Pants (level 32)
+                [ 6] =  2431,   -- legs      Russet Pants (level 32)
                 [ 7] =  2432,   -- feet      Russet Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
                 [ 9] =  2434,   -- hands     Russet Gloves (level 32)
@@ -575,19 +575,19 @@ return {
         [305] = {   -- Hunter, 1/3 Beast Mastery, 2/3 Survival
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =  2523,   -- main hand Bullova (level 30)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
             } },
             [35] = { items = {
                 [ 0] =  3890,   -- head      Studded Hat (level 32)
-                [ 4] =  2429,   -- chest     Russet Vest (level 32)
+                [ 4] =  2463,   -- chest     Studded Doublet (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
-                [ 6] =  2465,   -- legs      Studded Pants (level 32)
+                [ 6] =  2431,   -- legs      Russet Pants (level 32)
                 [ 7] =  2432,   -- feet      Russet Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
                 [ 9] =  2434,   -- hands     Russet Gloves (level 32)
@@ -598,19 +598,19 @@ return {
         [306] = {   -- Hunter, 1/3 Marksmanship, 2/3 Survival
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =  2523,   -- main hand Bullova (level 30)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
             } },
             [35] = { items = {
                 [ 0] =  3890,   -- head      Studded Hat (level 32)
-                [ 4] =  2429,   -- chest     Russet Vest (level 32)
+                [ 4] =  2463,   -- chest     Studded Doublet (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
-                [ 6] =  2465,   -- legs      Studded Pants (level 32)
+                [ 6] =  2431,   -- legs      Russet Pants (level 32)
                 [ 7] =  2432,   -- feet      Russet Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
                 [ 9] =  2434,   -- hands     Russet Gloves (level 32)
@@ -621,19 +621,19 @@ return {
         [307] = {   -- Hunter, 1/3 Beast Mastery, 1/3 Marksmanship, 1/3 Survival
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =  2523,   -- main hand Bullova (level 30)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
             } },
             [35] = { items = {
                 [ 0] =  3890,   -- head      Studded Hat (level 32)
-                [ 4] =  2429,   -- chest     Russet Vest (level 32)
+                [ 4] =  2463,   -- chest     Studded Doublet (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
-                [ 6] =  2465,   -- legs      Studded Pants (level 32)
+                [ 6] =  2431,   -- legs      Russet Pants (level 32)
                 [ 7] =  2432,   -- feet      Russet Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
                 [ 9] =  2434,   -- hands     Russet Gloves (level 32)
@@ -644,19 +644,19 @@ return {
         [308] = {   -- Hunter, all Beast Mastery
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =  2523,   -- main hand Bullova (level 30)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
             } },
             [35] = { items = {
                 [ 0] =  3890,   -- head      Studded Hat (level 32)
-                [ 4] =  2429,   -- chest     Russet Vest (level 32)
+                [ 4] =  2463,   -- chest     Studded Doublet (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
-                [ 6] =  2465,   -- legs      Studded Pants (level 32)
+                [ 6] =  2431,   -- legs      Russet Pants (level 32)
                 [ 7] =  2432,   -- feet      Russet Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
                 [ 9] =  2434,   -- hands     Russet Gloves (level 32)
@@ -667,19 +667,19 @@ return {
         [309] = {   -- Hunter, all Marksmanship
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =  2523,   -- main hand Bullova (level 30)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
             } },
             [35] = { items = {
                 [ 0] =  3890,   -- head      Studded Hat (level 32)
-                [ 4] =  2429,   -- chest     Russet Vest (level 32)
+                [ 4] =  2463,   -- chest     Studded Doublet (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
-                [ 6] =  2465,   -- legs      Studded Pants (level 32)
+                [ 6] =  2431,   -- legs      Russet Pants (level 32)
                 [ 7] =  2432,   -- feet      Russet Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
                 [ 9] =  2434,   -- hands     Russet Gloves (level 32)
@@ -690,19 +690,19 @@ return {
         [310] = {   -- Hunter, all Survival
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =  2523,   -- main hand Bullova (level 30)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
             } },
             [35] = { items = {
                 [ 0] =  3890,   -- head      Studded Hat (level 32)
-                [ 4] =  2429,   -- chest     Russet Vest (level 32)
+                [ 4] =  2463,   -- chest     Studded Doublet (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
-                [ 6] =  2465,   -- legs      Studded Pants (level 32)
+                [ 6] =  2431,   -- legs      Russet Pants (level 32)
                 [ 7] =  2432,   -- feet      Russet Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
                 [ 9] =  2434,   -- hands     Russet Gloves (level 32)
@@ -713,11 +713,11 @@ return {
         [401] = {   -- Rogue, 2/3 Assassination, 1/3 Combat
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =  2526,   -- main hand Main Gauche (level 29)
                 [16] =  2526,   -- off hand  Main Gauche (level 29)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
@@ -726,10 +726,10 @@ return {
                 [ 0] =  3890,   -- head      Studded Hat (level 32)
                 [ 4] =  2429,   -- chest     Russet Vest (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
-                [ 6] =  2465,   -- legs      Studded Pants (level 32)
-                [ 7] =  2432,   -- feet      Russet Boots (level 32)
+                [ 6] =  2431,   -- legs      Russet Pants (level 32)
+                [ 7] =  2467,   -- feet      Studded Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
-                [ 9] =  2434,   -- hands     Russet Gloves (level 32)
+                [ 9] =  2469,   -- hands     Studded Gloves (level 32)
                 [15] =  2526,   -- main hand Main Gauche (level 29)
                 [16] =  2526,   -- off hand  Main Gauche (level 29)
                 [17] =  3025,   -- ranged    BKP 42 "Ultra" (level 31)
@@ -738,11 +738,11 @@ return {
         [402] = {   -- Rogue, 2/3 Assassination, 1/3 Subtlety
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =  2526,   -- main hand Main Gauche (level 29)
                 [16] =  2526,   -- off hand  Main Gauche (level 29)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
@@ -751,10 +751,10 @@ return {
                 [ 0] =  3890,   -- head      Studded Hat (level 32)
                 [ 4] =  2429,   -- chest     Russet Vest (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
-                [ 6] =  2465,   -- legs      Studded Pants (level 32)
-                [ 7] =  2432,   -- feet      Russet Boots (level 32)
+                [ 6] =  2431,   -- legs      Russet Pants (level 32)
+                [ 7] =  2467,   -- feet      Studded Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
-                [ 9] =  2434,   -- hands     Russet Gloves (level 32)
+                [ 9] =  2469,   -- hands     Studded Gloves (level 32)
                 [15] =  2526,   -- main hand Main Gauche (level 29)
                 [16] =  2526,   -- off hand  Main Gauche (level 29)
                 [17] =  3025,   -- ranged    BKP 42 "Ultra" (level 31)
@@ -763,11 +763,11 @@ return {
         [403] = {   -- Rogue, 1/3 Assassination, 2/3 Combat
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] = 15904,   -- main hand Right-Handed Blades (level 30)
                 [16] = 15909,   -- off hand  Left-Handed Blades (level 30)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
@@ -776,10 +776,10 @@ return {
                 [ 0] =  3890,   -- head      Studded Hat (level 32)
                 [ 4] =  2429,   -- chest     Russet Vest (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
-                [ 6] =  2465,   -- legs      Studded Pants (level 32)
-                [ 7] =  2432,   -- feet      Russet Boots (level 32)
+                [ 6] =  2431,   -- legs      Russet Pants (level 32)
+                [ 7] =  2467,   -- feet      Studded Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
-                [ 9] =  2434,   -- hands     Russet Gloves (level 32)
+                [ 9] =  2469,   -- hands     Studded Gloves (level 32)
                 [15] =  2520,   -- main hand Broadsword (level 31)
                 [16] = 15909,   -- off hand  Left-Handed Blades (level 30)
                 [17] =  3025,   -- ranged    BKP 42 "Ultra" (level 31)
@@ -788,11 +788,11 @@ return {
         [404] = {   -- Rogue, 2/3 Combat, 1/3 Subtlety
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] = 15904,   -- main hand Right-Handed Blades (level 30)
                 [16] = 15909,   -- off hand  Left-Handed Blades (level 30)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
@@ -801,10 +801,10 @@ return {
                 [ 0] =  3890,   -- head      Studded Hat (level 32)
                 [ 4] =  2429,   -- chest     Russet Vest (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
-                [ 6] =  2465,   -- legs      Studded Pants (level 32)
-                [ 7] =  2432,   -- feet      Russet Boots (level 32)
+                [ 6] =  2431,   -- legs      Russet Pants (level 32)
+                [ 7] =  2467,   -- feet      Studded Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
-                [ 9] =  2434,   -- hands     Russet Gloves (level 32)
+                [ 9] =  2469,   -- hands     Studded Gloves (level 32)
                 [15] =  2520,   -- main hand Broadsword (level 31)
                 [16] = 15909,   -- off hand  Left-Handed Blades (level 30)
                 [17] =  3025,   -- ranged    BKP 42 "Ultra" (level 31)
@@ -813,11 +813,11 @@ return {
         [405] = {   -- Rogue, 1/3 Assassination, 2/3 Subtlety
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =  2526,   -- main hand Main Gauche (level 29)
                 [16] =  2526,   -- off hand  Main Gauche (level 29)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
@@ -826,10 +826,10 @@ return {
                 [ 0] =  3890,   -- head      Studded Hat (level 32)
                 [ 4] =  2429,   -- chest     Russet Vest (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
-                [ 6] =  2465,   -- legs      Studded Pants (level 32)
-                [ 7] =  2432,   -- feet      Russet Boots (level 32)
+                [ 6] =  2431,   -- legs      Russet Pants (level 32)
+                [ 7] =  2467,   -- feet      Studded Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
-                [ 9] =  2434,   -- hands     Russet Gloves (level 32)
+                [ 9] =  2469,   -- hands     Studded Gloves (level 32)
                 [15] =  2526,   -- main hand Main Gauche (level 29)
                 [16] =  2526,   -- off hand  Main Gauche (level 29)
                 [17] =  3025,   -- ranged    BKP 42 "Ultra" (level 31)
@@ -838,11 +838,11 @@ return {
         [406] = {   -- Rogue, 1/3 Combat, 2/3 Subtlety
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =  2526,   -- main hand Main Gauche (level 29)
                 [16] =  2526,   -- off hand  Main Gauche (level 29)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
@@ -851,10 +851,10 @@ return {
                 [ 0] =  3890,   -- head      Studded Hat (level 32)
                 [ 4] =  2429,   -- chest     Russet Vest (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
-                [ 6] =  2465,   -- legs      Studded Pants (level 32)
-                [ 7] =  2432,   -- feet      Russet Boots (level 32)
+                [ 6] =  2431,   -- legs      Russet Pants (level 32)
+                [ 7] =  2467,   -- feet      Studded Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
-                [ 9] =  2434,   -- hands     Russet Gloves (level 32)
+                [ 9] =  2469,   -- hands     Studded Gloves (level 32)
                 [15] =  2526,   -- main hand Main Gauche (level 29)
                 [16] =  2526,   -- off hand  Main Gauche (level 29)
                 [17] =  3025,   -- ranged    BKP 42 "Ultra" (level 31)
@@ -863,11 +863,11 @@ return {
         [407] = {   -- Rogue, 1/3 Assassination, 1/3 Combat, 1/3 Subtlety
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =  2526,   -- main hand Main Gauche (level 29)
                 [16] =  2526,   -- off hand  Main Gauche (level 29)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
@@ -876,10 +876,10 @@ return {
                 [ 0] =  3890,   -- head      Studded Hat (level 32)
                 [ 4] =  2429,   -- chest     Russet Vest (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
-                [ 6] =  2465,   -- legs      Studded Pants (level 32)
-                [ 7] =  2432,   -- feet      Russet Boots (level 32)
+                [ 6] =  2431,   -- legs      Russet Pants (level 32)
+                [ 7] =  2467,   -- feet      Studded Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
-                [ 9] =  2434,   -- hands     Russet Gloves (level 32)
+                [ 9] =  2469,   -- hands     Studded Gloves (level 32)
                 [15] =  2526,   -- main hand Main Gauche (level 29)
                 [16] =  2526,   -- off hand  Main Gauche (level 29)
                 [17] =  3025,   -- ranged    BKP 42 "Ultra" (level 31)
@@ -888,11 +888,11 @@ return {
         [408] = {   -- Rogue, all Assassination
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =  2526,   -- main hand Main Gauche (level 29)
                 [16] =  2526,   -- off hand  Main Gauche (level 29)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
@@ -901,10 +901,10 @@ return {
                 [ 0] =  3890,   -- head      Studded Hat (level 32)
                 [ 4] =  2429,   -- chest     Russet Vest (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
-                [ 6] =  2465,   -- legs      Studded Pants (level 32)
-                [ 7] =  2432,   -- feet      Russet Boots (level 32)
+                [ 6] =  2431,   -- legs      Russet Pants (level 32)
+                [ 7] =  2467,   -- feet      Studded Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
-                [ 9] =  2434,   -- hands     Russet Gloves (level 32)
+                [ 9] =  2469,   -- hands     Studded Gloves (level 32)
                 [15] =  2526,   -- main hand Main Gauche (level 29)
                 [16] =  2526,   -- off hand  Main Gauche (level 29)
                 [17] =  3025,   -- ranged    BKP 42 "Ultra" (level 31)
@@ -913,11 +913,11 @@ return {
         [409] = {   -- Rogue, all Combat
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] = 15904,   -- main hand Right-Handed Blades (level 30)
                 [16] = 15909,   -- off hand  Left-Handed Blades (level 30)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
@@ -926,10 +926,10 @@ return {
                 [ 0] =  3890,   -- head      Studded Hat (level 32)
                 [ 4] =  2429,   -- chest     Russet Vest (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
-                [ 6] =  2465,   -- legs      Studded Pants (level 32)
-                [ 7] =  2432,   -- feet      Russet Boots (level 32)
+                [ 6] =  2431,   -- legs      Russet Pants (level 32)
+                [ 7] =  2467,   -- feet      Studded Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
-                [ 9] =  2434,   -- hands     Russet Gloves (level 32)
+                [ 9] =  2469,   -- hands     Studded Gloves (level 32)
                 [15] =  2520,   -- main hand Broadsword (level 31)
                 [16] = 15909,   -- off hand  Left-Handed Blades (level 30)
                 [17] =  3025,   -- ranged    BKP 42 "Ultra" (level 31)
@@ -938,11 +938,11 @@ return {
         [410] = {   -- Rogue, all Subtlety
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =  2526,   -- main hand Main Gauche (level 29)
                 [16] =  2526,   -- off hand  Main Gauche (level 29)
                 [17] = 15809,   -- ranged    Heavy Crossbow (level 29)
@@ -951,10 +951,10 @@ return {
                 [ 0] =  3890,   -- head      Studded Hat (level 32)
                 [ 4] =  2429,   -- chest     Russet Vest (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
-                [ 6] =  2465,   -- legs      Studded Pants (level 32)
-                [ 7] =  2432,   -- feet      Russet Boots (level 32)
+                [ 6] =  2431,   -- legs      Russet Pants (level 32)
+                [ 7] =  2467,   -- feet      Studded Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
-                [ 9] =  2434,   -- hands     Russet Gloves (level 32)
+                [ 9] =  2469,   -- hands     Studded Gloves (level 32)
                 [15] =  2526,   -- main hand Main Gauche (level 29)
                 [16] =  2526,   -- off hand  Main Gauche (level 29)
                 [17] =  3025,   -- ranged    BKP 42 "Ultra" (level 31)
@@ -963,11 +963,11 @@ return {
         [501] = {   -- Priest, 2/3 Discipline, 1/3 Holy
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -986,11 +986,11 @@ return {
         [502] = {   -- Priest, 2/3 Discipline, 1/3 Shadow
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -1009,11 +1009,11 @@ return {
         [503] = {   -- Priest, 1/3 Discipline, 2/3 Holy
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -1032,11 +1032,11 @@ return {
         [504] = {   -- Priest, 2/3 Holy, 1/3 Shadow
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -1055,11 +1055,11 @@ return {
         [505] = {   -- Priest, 1/3 Discipline, 2/3 Shadow
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -1078,11 +1078,11 @@ return {
         [506] = {   -- Priest, 1/3 Holy, 2/3 Shadow
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -1101,11 +1101,11 @@ return {
         [507] = {   -- Priest, 1/3 Discipline, 1/3 Holy, 1/3 Shadow
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -1124,11 +1124,11 @@ return {
         [508] = {   -- Priest, all Discipline
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -1147,11 +1147,11 @@ return {
         [509] = {   -- Priest, all Holy
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -1170,11 +1170,11 @@ return {
         [510] = {   -- Priest, all Shadow
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -1192,12 +1192,12 @@ return {
         },
         [601] = {   -- Death Knight, 2/3 Blood, 1/3 Frost
             [30] = { items = {
-                [ 4] =  2153,   -- chest     Polished Scale Vest (level 20)
-                [ 5] =  2148,   -- waist     Polished Scale Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 4] =  2153,   -- chest     Polished Scale Vest (level 22)
+                [ 5] =  2148,   -- waist     Polished Scale Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2149,   -- feet      Polished Scale Boots (level 22)
+                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 22)
+                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 22)
                 [15] =  2523,   -- main hand Bullova (level 30)
             } },
             [35] = { items = {
@@ -1213,12 +1213,12 @@ return {
         },
         [602] = {   -- Death Knight, 2/3 Blood, 1/3 Unholy
             [30] = { items = {
-                [ 4] =  2153,   -- chest     Polished Scale Vest (level 20)
-                [ 5] =  2148,   -- waist     Polished Scale Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 4] =  2153,   -- chest     Polished Scale Vest (level 22)
+                [ 5] =  2148,   -- waist     Polished Scale Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2149,   -- feet      Polished Scale Boots (level 22)
+                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 22)
+                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 22)
                 [15] =  2523,   -- main hand Bullova (level 30)
             } },
             [35] = { items = {
@@ -1234,12 +1234,12 @@ return {
         },
         [603] = {   -- Death Knight, 1/3 Blood, 2/3 Frost
             [30] = { items = {
-                [ 4] =  2153,   -- chest     Polished Scale Vest (level 20)
-                [ 5] =  2148,   -- waist     Polished Scale Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 4] =  2153,   -- chest     Polished Scale Vest (level 22)
+                [ 5] =  2148,   -- waist     Polished Scale Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2149,   -- feet      Polished Scale Boots (level 22)
+                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 22)
+                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 22)
                 [15] =  2522,   -- main hand Crescent Axe (level 30)
                 [16] =   927,   -- off hand  Double Axe (level 19)
             } },
@@ -1257,12 +1257,12 @@ return {
         },
         [604] = {   -- Death Knight, 2/3 Frost, 1/3 Unholy
             [30] = { items = {
-                [ 4] =  2153,   -- chest     Polished Scale Vest (level 20)
-                [ 5] =  2148,   -- waist     Polished Scale Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 4] =  2153,   -- chest     Polished Scale Vest (level 22)
+                [ 5] =  2148,   -- waist     Polished Scale Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2149,   -- feet      Polished Scale Boots (level 22)
+                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 22)
+                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 22)
                 [15] =  2522,   -- main hand Crescent Axe (level 30)
                 [16] =   927,   -- off hand  Double Axe (level 19)
             } },
@@ -1280,12 +1280,12 @@ return {
         },
         [605] = {   -- Death Knight, 1/3 Blood, 2/3 Unholy
             [30] = { items = {
-                [ 4] =  2153,   -- chest     Polished Scale Vest (level 20)
-                [ 5] =  2148,   -- waist     Polished Scale Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 4] =  2153,   -- chest     Polished Scale Vest (level 22)
+                [ 5] =  2148,   -- waist     Polished Scale Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2149,   -- feet      Polished Scale Boots (level 22)
+                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 22)
+                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 22)
                 [15] =  2523,   -- main hand Bullova (level 30)
             } },
             [35] = { items = {
@@ -1301,12 +1301,12 @@ return {
         },
         [606] = {   -- Death Knight, 1/3 Frost, 2/3 Unholy
             [30] = { items = {
-                [ 4] =  2153,   -- chest     Polished Scale Vest (level 20)
-                [ 5] =  2148,   -- waist     Polished Scale Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 4] =  2153,   -- chest     Polished Scale Vest (level 22)
+                [ 5] =  2148,   -- waist     Polished Scale Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2149,   -- feet      Polished Scale Boots (level 22)
+                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 22)
+                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 22)
                 [15] =  2523,   -- main hand Bullova (level 30)
             } },
             [35] = { items = {
@@ -1322,12 +1322,12 @@ return {
         },
         [607] = {   -- Death Knight, 1/3 Blood, 1/3 Frost, 1/3 Unholy
             [30] = { items = {
-                [ 4] =  2153,   -- chest     Polished Scale Vest (level 20)
-                [ 5] =  2148,   -- waist     Polished Scale Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 4] =  2153,   -- chest     Polished Scale Vest (level 22)
+                [ 5] =  2148,   -- waist     Polished Scale Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2149,   -- feet      Polished Scale Boots (level 22)
+                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 22)
+                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 22)
                 [15] =  2523,   -- main hand Bullova (level 30)
             } },
             [35] = { items = {
@@ -1343,12 +1343,12 @@ return {
         },
         [608] = {   -- Death Knight, all Blood
             [30] = { items = {
-                [ 4] =  2153,   -- chest     Polished Scale Vest (level 20)
-                [ 5] =  2148,   -- waist     Polished Scale Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 4] =  2153,   -- chest     Polished Scale Vest (level 22)
+                [ 5] =  2148,   -- waist     Polished Scale Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2149,   -- feet      Polished Scale Boots (level 22)
+                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 22)
+                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 22)
                 [15] =  2523,   -- main hand Bullova (level 30)
             } },
             [35] = { items = {
@@ -1364,12 +1364,12 @@ return {
         },
         [609] = {   -- Death Knight, all Frost
             [30] = { items = {
-                [ 4] =  2153,   -- chest     Polished Scale Vest (level 20)
-                [ 5] =  2148,   -- waist     Polished Scale Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 4] =  2153,   -- chest     Polished Scale Vest (level 22)
+                [ 5] =  2148,   -- waist     Polished Scale Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2149,   -- feet      Polished Scale Boots (level 22)
+                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 22)
+                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 22)
                 [15] =  2522,   -- main hand Crescent Axe (level 30)
                 [16] =   927,   -- off hand  Double Axe (level 19)
             } },
@@ -1387,12 +1387,12 @@ return {
         },
         [610] = {   -- Death Knight, all Unholy
             [30] = { items = {
-                [ 4] =  2153,   -- chest     Polished Scale Vest (level 20)
-                [ 5] =  2148,   -- waist     Polished Scale Belt (level 20)
-                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 20)
-                [ 7] =  2149,   -- feet      Polished Scale Boots (level 20)
-                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 20)
-                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 20)
+                [ 4] =  2153,   -- chest     Polished Scale Vest (level 22)
+                [ 5] =  2148,   -- waist     Polished Scale Belt (level 22)
+                [ 6] =  2152,   -- legs      Polished Scale Leggings (level 22)
+                [ 7] =  2149,   -- feet      Polished Scale Boots (level 22)
+                [ 8] =  2150,   -- wrists    Polished Scale Bracers (level 22)
+                [ 9] =  2151,   -- hands     Polished Scale Gloves (level 22)
                 [15] =  2523,   -- main hand Bullova (level 30)
             } },
             [35] = { items = {
@@ -1409,11 +1409,11 @@ return {
         [701] = {   -- Shaman, 2/3 Elemental, 1/3 Enhancement
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] = 15904,   -- main hand Right-Handed Blades (level 30)
                 [16] = 17189,   -- off hand  Metal Buckler (level 29)
             } },
@@ -1422,7 +1422,7 @@ return {
                 [ 4] =  2429,   -- chest     Russet Vest (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
                 [ 6] =  2431,   -- legs      Russet Pants (level 32)
-                [ 7] =  2467,   -- feet      Studded Boots (level 32)
+                [ 7] =  2432,   -- feet      Russet Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
                 [ 9] =  2434,   -- hands     Russet Gloves (level 32)
                 [15] = 15904,   -- main hand Right-Handed Blades (level 30)
@@ -1432,11 +1432,11 @@ return {
         [702] = {   -- Shaman, 2/3 Elemental, 1/3 Restoration
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =  2522,   -- main hand Crescent Axe (level 30)
                 [16] = 17189,   -- off hand  Metal Buckler (level 29)
             } },
@@ -1444,7 +1444,7 @@ return {
                 [ 0] =  3890,   -- head      Studded Hat (level 32)
                 [ 4] =  2463,   -- chest     Studded Doublet (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
-                [ 6] =  2465,   -- legs      Studded Pants (level 32)
+                [ 6] =  2431,   -- legs      Russet Pants (level 32)
                 [ 7] =  2432,   -- feet      Russet Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
                 [ 9] =  2434,   -- hands     Russet Gloves (level 32)
@@ -1455,11 +1455,11 @@ return {
         [703] = {   -- Shaman, 1/3 Elemental, 2/3 Enhancement
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] = 15904,   -- main hand Right-Handed Blades (level 30)
                 [16] = 17189,   -- off hand  Metal Buckler (level 29)
             } },
@@ -1468,7 +1468,7 @@ return {
                 [ 4] =  2429,   -- chest     Russet Vest (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
                 [ 6] =  2431,   -- legs      Russet Pants (level 32)
-                [ 7] =  2467,   -- feet      Studded Boots (level 32)
+                [ 7] =  2432,   -- feet      Russet Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
                 [ 9] =  2434,   -- hands     Russet Gloves (level 32)
                 [15] = 15904,   -- main hand Right-Handed Blades (level 30)
@@ -1478,11 +1478,11 @@ return {
         [704] = {   -- Shaman, 2/3 Enhancement, 1/3 Restoration
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] = 15904,   -- main hand Right-Handed Blades (level 30)
                 [16] = 17189,   -- off hand  Metal Buckler (level 29)
             } },
@@ -1491,7 +1491,7 @@ return {
                 [ 4] =  2429,   -- chest     Russet Vest (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
                 [ 6] =  2431,   -- legs      Russet Pants (level 32)
-                [ 7] =  2467,   -- feet      Studded Boots (level 32)
+                [ 7] =  2432,   -- feet      Russet Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
                 [ 9] =  2434,   -- hands     Russet Gloves (level 32)
                 [15] = 15904,   -- main hand Right-Handed Blades (level 30)
@@ -1501,11 +1501,11 @@ return {
         [705] = {   -- Shaman, 1/3 Elemental, 2/3 Restoration
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =  2522,   -- main hand Crescent Axe (level 30)
                 [16] = 17189,   -- off hand  Metal Buckler (level 29)
             } },
@@ -1513,7 +1513,7 @@ return {
                 [ 0] =  3890,   -- head      Studded Hat (level 32)
                 [ 4] =  2463,   -- chest     Studded Doublet (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
-                [ 6] =  2465,   -- legs      Studded Pants (level 32)
+                [ 6] =  2431,   -- legs      Russet Pants (level 32)
                 [ 7] =  2432,   -- feet      Russet Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
                 [ 9] =  2434,   -- hands     Russet Gloves (level 32)
@@ -1524,11 +1524,11 @@ return {
         [706] = {   -- Shaman, 1/3 Enhancement, 2/3 Restoration
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] = 15904,   -- main hand Right-Handed Blades (level 30)
                 [16] = 17189,   -- off hand  Metal Buckler (level 29)
             } },
@@ -1537,7 +1537,7 @@ return {
                 [ 4] =  2429,   -- chest     Russet Vest (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
                 [ 6] =  2431,   -- legs      Russet Pants (level 32)
-                [ 7] =  2467,   -- feet      Studded Boots (level 32)
+                [ 7] =  2432,   -- feet      Russet Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
                 [ 9] =  2434,   -- hands     Russet Gloves (level 32)
                 [15] = 15904,   -- main hand Right-Handed Blades (level 30)
@@ -1547,11 +1547,11 @@ return {
         [707] = {   -- Shaman, 1/3 Elemental, 1/3 Enhancement, 1/3 Restoration
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] = 15904,   -- main hand Right-Handed Blades (level 30)
                 [16] = 17189,   -- off hand  Metal Buckler (level 29)
             } },
@@ -1560,7 +1560,7 @@ return {
                 [ 4] =  2429,   -- chest     Russet Vest (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
                 [ 6] =  2431,   -- legs      Russet Pants (level 32)
-                [ 7] =  2467,   -- feet      Studded Boots (level 32)
+                [ 7] =  2432,   -- feet      Russet Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
                 [ 9] =  2434,   -- hands     Russet Gloves (level 32)
                 [15] = 15904,   -- main hand Right-Handed Blades (level 30)
@@ -1570,11 +1570,11 @@ return {
         [708] = {   -- Shaman, all Elemental
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =  2522,   -- main hand Crescent Axe (level 30)
                 [16] = 17189,   -- off hand  Metal Buckler (level 29)
             } },
@@ -1582,7 +1582,7 @@ return {
                 [ 0] =  3890,   -- head      Studded Hat (level 32)
                 [ 4] =  2463,   -- chest     Studded Doublet (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
-                [ 6] =  2465,   -- legs      Studded Pants (level 32)
+                [ 6] =  2431,   -- legs      Russet Pants (level 32)
                 [ 7] =  2432,   -- feet      Russet Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
                 [ 9] =  2434,   -- hands     Russet Gloves (level 32)
@@ -1593,11 +1593,11 @@ return {
         [709] = {   -- Shaman, all Enhancement
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] = 15904,   -- main hand Right-Handed Blades (level 30)
                 [16] = 17189,   -- off hand  Metal Buckler (level 29)
             } },
@@ -1606,7 +1606,7 @@ return {
                 [ 4] =  2429,   -- chest     Russet Vest (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
                 [ 6] =  2431,   -- legs      Russet Pants (level 32)
-                [ 7] =  2467,   -- feet      Studded Boots (level 32)
+                [ 7] =  2432,   -- feet      Russet Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
                 [ 9] =  2434,   -- hands     Russet Gloves (level 32)
                 [15] = 15904,   -- main hand Right-Handed Blades (level 30)
@@ -1616,11 +1616,11 @@ return {
         [710] = {   -- Shaman, all Restoration
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =  2522,   -- main hand Crescent Axe (level 30)
                 [16] = 17189,   -- off hand  Metal Buckler (level 29)
             } },
@@ -1628,7 +1628,7 @@ return {
                 [ 0] =  3890,   -- head      Studded Hat (level 32)
                 [ 4] =  2463,   -- chest     Studded Doublet (level 32)
                 [ 5] =  2464,   -- waist     Studded Belt (level 32)
-                [ 6] =  2465,   -- legs      Studded Pants (level 32)
+                [ 6] =  2431,   -- legs      Russet Pants (level 32)
                 [ 7] =  2432,   -- feet      Russet Boots (level 32)
                 [ 8] =  2468,   -- wrists    Studded Bracers (level 32)
                 [ 9] =  2434,   -- hands     Russet Gloves (level 32)
@@ -1639,11 +1639,11 @@ return {
         [801] = {   -- Mage, 2/3 Arcane, 1/3 Fire
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -1662,11 +1662,11 @@ return {
         [802] = {   -- Mage, 2/3 Arcane, 1/3 Frost
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -1685,11 +1685,11 @@ return {
         [803] = {   -- Mage, 1/3 Arcane, 2/3 Fire
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -1708,11 +1708,11 @@ return {
         [804] = {   -- Mage, 2/3 Fire, 1/3 Frost
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -1731,11 +1731,11 @@ return {
         [805] = {   -- Mage, 1/3 Arcane, 2/3 Frost
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -1754,11 +1754,11 @@ return {
         [806] = {   -- Mage, 1/3 Fire, 2/3 Frost
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -1777,11 +1777,11 @@ return {
         [807] = {   -- Mage, 1/3 Arcane, 1/3 Fire, 1/3 Frost
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -1800,11 +1800,11 @@ return {
         [808] = {   -- Mage, all Arcane
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -1823,11 +1823,11 @@ return {
         [809] = {   -- Mage, all Fire
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -1846,11 +1846,11 @@ return {
         [810] = {   -- Mage, all Frost
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -1869,11 +1869,11 @@ return {
         [901] = {   -- Warlock, 2/3 Affliction, 1/3 Demonology
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -1892,11 +1892,11 @@ return {
         [902] = {   -- Warlock, 2/3 Affliction, 1/3 Destruction
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -1915,11 +1915,11 @@ return {
         [903] = {   -- Warlock, 1/3 Affliction, 2/3 Demonology
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -1938,11 +1938,11 @@ return {
         [904] = {   -- Warlock, 2/3 Demonology, 1/3 Destruction
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -1961,11 +1961,11 @@ return {
         [905] = {   -- Warlock, 1/3 Affliction, 2/3 Destruction
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -1984,11 +1984,11 @@ return {
         [906] = {   -- Warlock, 1/3 Demonology, 2/3 Destruction
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -2007,11 +2007,11 @@ return {
         [907] = {   -- Warlock, 1/3 Affliction, 1/3 Demonology, 1/3 Destruction
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -2030,11 +2030,11 @@ return {
         [908] = {   -- Warlock, all Affliction
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -2053,11 +2053,11 @@ return {
         [909] = {   -- Warlock, all Demonology
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -2076,11 +2076,11 @@ return {
         [910] = {   -- Warlock, all Destruction
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  3591,   -- waist     Padded Belt (level 20)
-                [ 6] =  2159,   -- legs      Padded Pants (level 20)
-                [ 7] =  2156,   -- feet      Padded Boots (level 20)
-                [ 8] =  3592,   -- wrists    Padded Bracers (level 20)
-                [ 9] =  2158,   -- hands     Padded Gloves (level 20)
+                [ 5] =  3591,   -- waist     Padded Belt (level 22)
+                [ 6] =  2159,   -- legs      Padded Pants (level 22)
+                [ 7] =  2156,   -- feet      Padded Boots (level 22)
+                [ 8] =  3592,   -- wrists    Padded Bracers (level 22)
+                [ 9] =  2158,   -- hands     Padded Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
                 [17] =  5347,   -- ranged    Pestilent Wand (level 30)
             } },
@@ -2098,12 +2098,12 @@ return {
         },
         [1101] = {   -- Druid, 2/3 Balance, 1/3 Feral Combat
             [30] = { items = {
-                [ 4] =  6525,   -- chest     Grunt's Harness (level 22)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 4] =  2141,   -- chest     Cuirboulli Vest (level 22)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
             } },
             [35] = { items = {
@@ -2120,11 +2120,11 @@ return {
         [1102] = {   -- Druid, 2/3 Balance, 1/3 Restoration
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
             } },
             [35] = { items = {
@@ -2140,12 +2140,12 @@ return {
         },
         [1103] = {   -- Druid, 1/3 Balance, 2/3 Feral Combat
             [30] = { items = {
-                [ 4] =  6525,   -- chest     Grunt's Harness (level 22)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 4] =  2141,   -- chest     Cuirboulli Vest (level 22)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =  2525,   -- main hand War Hammer (level 30)
             } },
             [35] = { items = {
@@ -2161,12 +2161,12 @@ return {
         },
         [1104] = {   -- Druid, 2/3 Feral Combat, 1/3 Restoration
             [30] = { items = {
-                [ 4] =  6525,   -- chest     Grunt's Harness (level 22)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 4] =  2141,   -- chest     Cuirboulli Vest (level 22)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =  2525,   -- main hand War Hammer (level 30)
             } },
             [35] = { items = {
@@ -2183,11 +2183,11 @@ return {
         [1105] = {   -- Druid, 1/3 Balance, 2/3 Restoration
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
             } },
             [35] = { items = {
@@ -2203,12 +2203,12 @@ return {
         },
         [1106] = {   -- Druid, 1/3 Feral Combat, 2/3 Restoration
             [30] = { items = {
-                [ 4] =  6525,   -- chest     Grunt's Harness (level 22)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 4] =  2141,   -- chest     Cuirboulli Vest (level 22)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
             } },
             [35] = { items = {
@@ -2224,12 +2224,12 @@ return {
         },
         [1107] = {   -- Druid, 1/3 Balance, 1/3 Feral Combat, 1/3 Restoration
             [30] = { items = {
-                [ 4] =  6525,   -- chest     Grunt's Harness (level 22)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 4] =  2141,   -- chest     Cuirboulli Vest (level 22)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
             } },
             [35] = { items = {
@@ -2246,11 +2246,11 @@ return {
         [1108] = {   -- Druid, all Balance
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
             } },
             [35] = { items = {
@@ -2266,12 +2266,12 @@ return {
         },
         [1109] = {   -- Druid, all Feral Combat
             [30] = { items = {
-                [ 4] =  6525,   -- chest     Grunt's Harness (level 22)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 4] =  2141,   -- chest     Cuirboulli Vest (level 22)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =  2525,   -- main hand War Hammer (level 30)
             } },
             [35] = { items = {
@@ -2288,11 +2288,11 @@ return {
         [1110] = {   -- Druid, all Restoration
             [30] = { items = {
                 [ 4] =  2615,   -- chest     Chromatic Robe (level 24)
-                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 20)
-                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 20)
-                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 20)
-                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 20)
-                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 20)
+                [ 5] =  2142,   -- waist     Cuirboulli Belt (level 22)
+                [ 6] =  2146,   -- legs      Cuirboulli Pants (level 22)
+                [ 7] =  2143,   -- feet      Cuirboulli Boots (level 22)
+                [ 8] =  2144,   -- wrists    Cuirboulli Bracers (level 22)
+                [ 9] =  2145,   -- hands     Cuirboulli Gloves (level 22)
                 [15] =   928,   -- main hand Long Staff (level 20)
             } },
             [35] = { items = {

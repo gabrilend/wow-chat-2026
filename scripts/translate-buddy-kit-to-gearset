@@ -4,8 +4,9 @@
 -- What it is: the bridge from the buddy module's old way of dressing a
 -- new buddy to a gearset profile (issue 617r2). Until now the buddy module
 -- chose every slot live when a buddy was made (buddies_kit.cpp, GiveGear):
--- white items some vendor sells, from the buddy's last five levels, never
--- required level 0 or 1, the heaviest armour the class wears, and weapons
+-- white items some vendor sells, from the buddy's last five levels (the
+-- starter weapons of required level 1 too since 2026-10-15), the heaviest
+-- armour the class wears, and weapons
 -- by the talent plan's main tree. This applies the same rules here, once,
 -- for every class, talent shape and level bracket, and writes the answers
 -- as the profiles src/lua-basic/data/gearsets/buddy-white-<tier>.lua (one per
@@ -145,7 +146,14 @@ do
     for i = 1, 10 do cols[#cols + 1] = "it.stat_type" .. i; cols[#cols + 1] = "it.stat_value" .. i end
     for _, r in ipairs(query(WORLD, "SELECT DISTINCT " .. table.concat(cols, ", ") ..
         " FROM item_template it JOIN npc_vendor v ON v.item = it.entry WHERE it.Quality = 1 AND it.class IN (2, 4)" ..
-        " AND it.RequiredLevel BETWEEN " .. LOWEST .. " AND " .. MAX_LEVEL)) do
+        -- weapons from required level 1, everything else from LOWEST: the
+        -- starter weapons (Short Staff, Dirk, Shortsword) need level 1, and
+        -- with them left out a level 2-9 mage, warlock or feral druid had no
+        -- weapon it could use and wore none from its record (owner,
+        -- 2026-10-15: "fix."). Armour stays at LOWEST and up: below it are
+        -- the level-0 novelties (holiday mantles, jewellers' rings, romance
+        -- goggles) a first try at "from 0" dressed every buddy in.
+        " AND (it.RequiredLevel BETWEEN " .. LOWEST .. " AND " .. MAX_LEVEL .. " OR (it.class = 2 AND it.RequiredLevel = 1))")) do
         local f = { id = tonumber(r[1]), name = r[2], class = tonumber(r[3]), sub = tonumber(r[4]), inv = tonumber(r[5]),
                     req = tonumber(r[6]), ilvl = tonumber(r[7]), allow_class = tonumber(r[8]), allow_race = tonumber(r[9]),
                     armor = tonumber(r[10]), stats = {} }

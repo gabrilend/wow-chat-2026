@@ -166,7 +166,7 @@ return {
         [202] = {   -- Paladin, 2/3 Holy, 1/3 Retribution
             [60] = { items = {
                 [ 0] =  8092,   -- head      Platemail Helm (level 45)
-                [ 4] =  8094,   -- chest     Platemail Armor (level 45)
+                [ 4] =  2423,   -- chest     Brigandine Vest (level 45)
                 [ 5] =  2424,   -- waist     Brigandine Belt (level 45)
                 [ 6] =  8093,   -- legs      Platemail Leggings (level 45)
                 [ 7] =  2426,   -- feet      Brigandine Boots (level 45)
@@ -205,7 +205,7 @@ return {
         [205] = {   -- Paladin, 1/3 Holy, 2/3 Retribution
             [60] = { items = {
                 [ 0] =  8092,   -- head      Platemail Helm (level 45)
-                [ 4] =  8094,   -- chest     Platemail Armor (level 45)
+                [ 4] =  2423,   -- chest     Brigandine Vest (level 45)
                 [ 5] =  2424,   -- waist     Brigandine Belt (level 45)
                 [ 6] =  8093,   -- legs      Platemail Leggings (level 45)
                 [ 7] =  2426,   -- feet      Brigandine Boots (level 45)
@@ -241,7 +241,7 @@ return {
         },
         [208] = {   -- Paladin, all Holy
             [60] = { items = {
-                [ 0] =  8092,   -- head      Platemail Helm (level 45)
+                [ 0] =  3894,   -- head      Brigandine Helm (level 45)
                 [ 4] =  2423,   -- chest     Brigandine Vest (level 45)
                 [ 5] =  2424,   -- waist     Brigandine Belt (level 45)
                 [ 6] =  8093,   -- legs      Platemail Leggings (level 45)
@@ -268,7 +268,7 @@ return {
         [210] = {   -- Paladin, all Retribution
             [60] = { items = {
                 [ 0] =  8092,   -- head      Platemail Helm (level 45)
-                [ 4] =  8094,   -- chest     Platemail Armor (level 45)
+                [ 4] =  2423,   -- chest     Brigandine Vest (level 45)
                 [ 5] =  2424,   -- waist     Brigandine Belt (level 45)
                 [ 6] =  8093,   -- legs      Platemail Leggings (level 45)
                 [ 7] =  2426,   -- feet      Brigandine Boots (level 45)
@@ -415,7 +415,7 @@ return {
                 [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
-                [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
+                [ 9] =  2475,   -- hands     Reinforced Leather Gloves (level 45)
                 [15] =  2534,   -- main hand Rondel (level 39)
                 [16] =  2534,   -- off hand  Rondel (level 39)
                 [17] = 30757,   -- ranged    Draenic Light Crossbow (level 60)
@@ -429,7 +429,7 @@ return {
                 [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
-                [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
+                [ 9] =  2475,   -- hands     Reinforced Leather Gloves (level 45)
                 [15] =  2534,   -- main hand Rondel (level 39)
                 [16] =  2534,   -- off hand  Rondel (level 39)
                 [17] = 30757,   -- ranged    Draenic Light Crossbow (level 60)
@@ -443,7 +443,7 @@ return {
                 [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
-                [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
+                [ 9] =  2475,   -- hands     Reinforced Leather Gloves (level 45)
                 [15] = 30754,   -- main hand Ancient Bone Mace (level 60)
                 [16] = 30754,   -- off hand  Ancient Bone Mace (level 60)
                 [17] = 30757,   -- ranged    Draenic Light Crossbow (level 60)
@@ -457,7 +457,7 @@ return {
                 [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
-                [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
+                [ 9] =  2475,   -- hands     Reinforced Leather Gloves (level 45)
                 [15] = 30754,   -- main hand Ancient Bone Mace (level 60)
                 [16] = 30754,   -- off hand  Ancient Bone Mace (level 60)
                 [17] = 30757,   -- ranged    Draenic Light Crossbow (level 60)
@@ -471,7 +471,7 @@ return {
                 [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
-                [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
+                [ 9] =  2475,   -- hands     Reinforced Leather Gloves (level 45)
                 [15] =  2534,   -- main hand Rondel (level 39)
                 [16] =  2534,   -- off hand  Rondel (level 39)
                 [17] = 30757,   -- ranged    Draenic Light Crossbow (level 60)
@@ -485,7 +485,7 @@ return {
                 [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
-                [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
+                [ 9] =  2475,   -- hands     Reinforced Leather Gloves (level 45)
                 [15] =  2534,   -- main hand Rondel (level 39)
                 [16] =  2534,   -- off hand  Rondel (level 39)
                 [17] = 30757,   -- ranged    Draenic Light Crossbow (level 60)
@@ -499,7 +499,7 @@ return {
                 [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
-                [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
+                [ 9] =  2475,   -- hands     Reinforced Leather Gloves (level 45)
                 [15] =  2534,   -- main hand Rondel (level 39)
                 [16] =  2534,   -- off hand  Rondel (level 39)
                 [17] = 30757,   -- ranged    Draenic Light Crossbow (level 60)
@@ -513,7 +513,7 @@ return {
                 [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
-                [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
+                [ 9] =  2475,   -- hands     Reinforced Leather Gloves (level 45)
                 [15] =  2534,   -- main hand Rondel (level 39)
                 [16] =  2534,   -- off hand  Rondel (level 39)
                 [17] = 30757,   -- ranged    Draenic Light Crossbow (level 60)
@@ -527,7 +527,7 @@ return {
                 [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
-                [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
+                [ 9] =  2475,   -- hands     Reinforced Leather Gloves (level 45)
                 [15] = 30754,   -- main hand Ancient Bone Mace (level 60)
                 [16] = 30754,   -- off hand  Ancient Bone Mace (level 60)
                 [17] = 30757,   -- ranged    Draenic Light Crossbow (level 60)
@@ -541,7 +541,7 @@ return {
                 [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
-                [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
+                [ 9] =  2475,   -- hands     Reinforced Leather Gloves (level 45)
                 [15] =  2534,   -- main hand Rondel (level 39)
                 [16] =  2534,   -- off hand  Rondel (level 39)
                 [17] = 30757,   -- ranged    Draenic Light Crossbow (level 60)
@@ -1205,7 +1205,7 @@ return {
         [1102] = {   -- Druid, 2/3 Balance, 1/3 Restoration
             [60] = { items = {
                 [ 0] =  3893,   -- head      Reinforced Leather Cap (level 45)
-                [ 4] =  2470,   -- chest     Reinforced Leather Vest (level 45)
+                [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
                 [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
@@ -1241,7 +1241,7 @@ return {
         [1105] = {   -- Druid, 1/3 Balance, 2/3 Restoration
             [60] = { items = {
                 [ 0] =  3893,   -- head      Reinforced Leather Cap (level 45)
-                [ 4] =  2470,   -- chest     Reinforced Leather Vest (level 45)
+                [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
                 [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
@@ -1277,7 +1277,7 @@ return {
         [1108] = {   -- Druid, all Balance
             [60] = { items = {
                 [ 0] =  3893,   -- head      Reinforced Leather Cap (level 45)
-                [ 4] =  2470,   -- chest     Reinforced Leather Vest (level 45)
+                [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
                 [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
@@ -1301,7 +1301,7 @@ return {
         [1110] = {   -- Druid, all Restoration
             [60] = { items = {
                 [ 0] =  3893,   -- head      Reinforced Leather Cap (level 45)
-                [ 4] =  2470,   -- chest     Reinforced Leather Vest (level 45)
+                [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
                 [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)

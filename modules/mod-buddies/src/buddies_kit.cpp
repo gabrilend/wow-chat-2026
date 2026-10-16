@@ -75,15 +75,26 @@ static constexpr uint32 MEALS = 5;    // servings of food, and of drink, in the 
 // Each item is equipped in its slot, replacing the stock (or an earlier
 // kit's) item. Nothing found is a problem named in full, never filled
 // with something close (the owner's rule: no fallbacks).
-static bool Wear(Player* buddy, uint8 slot, uint32 entry)
+// Whether it can use the item (skill, level, class) is asked before the
+// old item is destroyed: until 2026-10-15 the old one went first, so a
+// refused weapon left empty hands, and the only weapon left in its bags,
+// its fishing pole, was what the bot module then equipped (Montahmu, in
+// Uldaman). A refusal now keeps what it wore. Returns the server's answer
+// (EQUIP_ERR_OK when worn), for the caller to name in its problem line.
+static InventoryResult Wear(Player* buddy, uint8 slot, uint32 entry)
 {
+    ItemTemplate const* proto = sObjectMgr->GetItemTemplate(entry);
+    if (!proto)
+        return EQUIP_ERR_ITEM_NOT_FOUND;
+    if (InventoryResult use = buddy->CanUseItem(proto); use != EQUIP_ERR_OK)
+        return use;                                     // can't use it: the old item stays on
     if (buddy->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
         buddy->DestroyItem(INVENTORY_SLOT_BAG_0, slot, true);   // the stock (or an earlier kit's) item goes
     uint16 dest;
-    if (buddy->CanEquipNewItem(slot, dest, entry, false) != EQUIP_ERR_OK)
-        return false;
+    if (InventoryResult equip = buddy->CanEquipNewItem(slot, dest, entry, false); equip != EQUIP_ERR_OK)
+        return equip;
     buddy->EquipNewItem(dest, entry, true);
-    return true;
+    return EQUIP_ERR_OK;
 }
 static uint32 GiveGear(Player* buddy, uint8 shape, std::string& problems)
 {
@@ -111,10 +122,13 @@ static uint32 GiveGear(Player* buddy, uint8 shape, std::string& problems)
     {
         uint8 slot = (*rows)[0].Get<uint16>();
         uint32 item = (*rows)[1].Get<uint32>();
-        if (Wear(buddy, slot, item))
+        // refused: the server's reason number (InventoryResult in
+        // Item.h; 8 is "no required proficiency", a weapon skill not taught)
+        if (InventoryResult r = Wear(buddy, slot, item); r == EQUIP_ERR_OK)
             ++worn;
         else
-            problems += "slot " + std::to_string(slot) + " refused item " + std::to_string(item) + "; ";
+            problems += "slot " + std::to_string(slot) + " refused item " + std::to_string(item) + " (reason "
+                + std::to_string(uint32(r)) + ", what it wore there is kept); ";
     } while (rows->NextRow());
     return worn;
 }
@@ -308,7 +322,7 @@ std::string BuddyGivePvpJewellery(Player* who, uint8 shape, uint8 role)
                     if (who->GetReputationMgr().GetRank(faction) < ReputationRank(proto->RequiredReputationRank))
                         who->GetReputationMgr().SetReputation(faction,
                             float(ReputationMgr::ReputationRankToStanding(ReputationRank(proto->RequiredReputationRank))));
-            if (!Wear(who, slot, proto->ItemId))
+            if (Wear(who, slot, proto->ItemId) != EQUIP_ERR_OK)
                 problems += std::string("slot ") + std::to_string(slot) + " refused " + kind.name + " " + std::to_string(proto->ItemId) + "; ";
         }
     }

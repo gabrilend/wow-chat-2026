@@ -33,6 +33,7 @@ void AddSC_buddies_steer();
 void AddSC_buddies_spells();
 void AddSC_buddies_outfits();
 void AddSC_buddies_town_circles();
+void AddSC_buddies_town_pole();
 void AddSC_buddies_kit();
 void AddSC_buddies_stand_ins();
 void AddSC_buddies_show();
@@ -66,6 +67,7 @@ void Addmod_buddiesScripts()
     AddSC_buddies_spells();
     AddSC_buddies_outfits();
     AddSC_buddies_town_circles();
+    AddSC_buddies_town_pole();
     AddSC_buddies_kit();
     AddSC_buddies_stand_ins();
     AddSC_buddies_show();

@@ -292,24 +292,24 @@ return {
         },
         [202] = {   -- Paladin, 2/3 Holy, 1/3 Retribution
             [50] = { items = {
-                [ 0] =  3894,   -- head      Brigandine Helm (level 45)
-                [ 4] =  8094,   -- chest     Platemail Armor (level 45)
+                [ 0] =  8092,   -- head      Platemail Helm (level 45)
+                [ 4] =  2423,   -- chest     Brigandine Vest (level 45)
                 [ 5] =  2424,   -- waist     Brigandine Belt (level 45)
                 [ 6] =  8093,   -- legs      Platemail Leggings (level 45)
                 [ 7] =  2426,   -- feet      Brigandine Boots (level 45)
-                [ 8] =  8090,   -- wrists    Platemail Bracers (level 45)
-                [ 9] =  2428,   -- hands     Brigandine Gloves (level 45)
+                [ 8] =  2427,   -- wrists    Brigandine Bracers (level 45)
+                [ 9] =  8091,   -- hands     Platemail Gloves (level 45)
                 [15] =  2530,   -- main hand Francisca (level 41)
                 [16] =  2451,   -- off hand  Crested Heater Shield (level 45)
             } },
             [55] = { items = {
-                [ 0] =  3894,   -- head      Brigandine Helm (level 45)
-                [ 4] =  8094,   -- chest     Platemail Armor (level 45)
+                [ 0] =  8092,   -- head      Platemail Helm (level 45)
+                [ 4] =  2423,   -- chest     Brigandine Vest (level 45)
                 [ 5] =  2424,   -- waist     Brigandine Belt (level 45)
                 [ 6] =  8093,   -- legs      Platemail Leggings (level 45)
                 [ 7] =  2426,   -- feet      Brigandine Boots (level 45)
-                [ 8] =  8090,   -- wrists    Platemail Bracers (level 45)
-                [ 9] =  2428,   -- hands     Brigandine Gloves (level 45)
+                [ 8] =  2427,   -- wrists    Brigandine Bracers (level 45)
+                [ 9] =  8091,   -- hands     Platemail Gloves (level 45)
                 [15] =  2530,   -- main hand Francisca (level 41)
                 [16] =  2451,   -- off hand  Crested Heater Shield (level 45)
             } },
@@ -364,23 +364,23 @@ return {
         },
         [205] = {   -- Paladin, 1/3 Holy, 2/3 Retribution
             [50] = { items = {
-                [ 0] =  3894,   -- head      Brigandine Helm (level 45)
-                [ 4] =  8094,   -- chest     Platemail Armor (level 45)
+                [ 0] =  8092,   -- head      Platemail Helm (level 45)
+                [ 4] =  2423,   -- chest     Brigandine Vest (level 45)
                 [ 5] =  2424,   -- waist     Brigandine Belt (level 45)
                 [ 6] =  8093,   -- legs      Platemail Leggings (level 45)
                 [ 7] =  2426,   -- feet      Brigandine Boots (level 45)
-                [ 8] =  8090,   -- wrists    Platemail Bracers (level 45)
-                [ 9] =  2428,   -- hands     Brigandine Gloves (level 45)
+                [ 8] =  2427,   -- wrists    Brigandine Bracers (level 45)
+                [ 9] =  8091,   -- hands     Platemail Gloves (level 45)
                 [15] =  2529,   -- main hand Zweihander (level 41)
             } },
             [55] = { items = {
-                [ 0] =  3894,   -- head      Brigandine Helm (level 45)
-                [ 4] =  8094,   -- chest     Platemail Armor (level 45)
+                [ 0] =  8092,   -- head      Platemail Helm (level 45)
+                [ 4] =  2423,   -- chest     Brigandine Vest (level 45)
                 [ 5] =  2424,   -- waist     Brigandine Belt (level 45)
                 [ 6] =  8093,   -- legs      Platemail Leggings (level 45)
                 [ 7] =  2426,   -- feet      Brigandine Boots (level 45)
-                [ 8] =  8090,   -- wrists    Platemail Bracers (level 45)
-                [ 9] =  2428,   -- hands     Brigandine Gloves (level 45)
+                [ 8] =  2427,   -- wrists    Brigandine Bracers (level 45)
+                [ 9] =  8091,   -- hands     Platemail Gloves (level 45)
                 [15] =  2529,   -- main hand Zweihander (level 41)
             } },
         },
@@ -432,22 +432,22 @@ return {
         },
         [208] = {   -- Paladin, all Holy
             [50] = { items = {
-                [ 0] =  3894,   -- head      Brigandine Helm (level 45)
+                [ 0] =  8092,   -- head      Platemail Helm (level 45)
                 [ 4] =  2423,   -- chest     Brigandine Vest (level 45)
                 [ 5] =  2424,   -- waist     Brigandine Belt (level 45)
-                [ 6] =  8093,   -- legs      Platemail Leggings (level 45)
-                [ 7] =  2426,   -- feet      Brigandine Boots (level 45)
+                [ 6] =  2425,   -- legs      Brigandine Leggings (level 45)
+                [ 7] =  8089,   -- feet      Platemail Boots (level 45)
                 [ 8] =  2427,   -- wrists    Brigandine Bracers (level 45)
                 [ 9] =  2428,   -- hands     Brigandine Gloves (level 45)
                 [15] =  2528,   -- main hand Falchion (level 41)
                 [16] =  2451,   -- off hand  Crested Heater Shield (level 45)
             } },
             [55] = { items = {
-                [ 0] =  3894,   -- head      Brigandine Helm (level 45)
+                [ 0] =  8092,   -- head      Platemail Helm (level 45)
                 [ 4] =  2423,   -- chest     Brigandine Vest (level 45)
                 [ 5] =  2424,   -- waist     Brigandine Belt (level 45)
-                [ 6] =  8093,   -- legs      Platemail Leggings (level 45)
-                [ 7] =  2426,   -- feet      Brigandine Boots (level 45)
+                [ 6] =  2425,   -- legs      Brigandine Leggings (level 45)
+                [ 7] =  8089,   -- feet      Platemail Boots (level 45)
                 [ 8] =  2427,   -- wrists    Brigandine Bracers (level 45)
                 [ 9] =  2428,   -- hands     Brigandine Gloves (level 45)
                 [15] =  2528,   -- main hand Falchion (level 41)
@@ -480,23 +480,23 @@ return {
         },
         [210] = {   -- Paladin, all Retribution
             [50] = { items = {
-                [ 0] =  3894,   -- head      Brigandine Helm (level 45)
-                [ 4] =  8094,   -- chest     Platemail Armor (level 45)
+                [ 0] =  8092,   -- head      Platemail Helm (level 45)
+                [ 4] =  2423,   -- chest     Brigandine Vest (level 45)
                 [ 5] =  2424,   -- waist     Brigandine Belt (level 45)
                 [ 6] =  8093,   -- legs      Platemail Leggings (level 45)
                 [ 7] =  2426,   -- feet      Brigandine Boots (level 45)
-                [ 8] =  8090,   -- wrists    Platemail Bracers (level 45)
-                [ 9] =  2428,   -- hands     Brigandine Gloves (level 45)
+                [ 8] =  2427,   -- wrists    Brigandine Bracers (level 45)
+                [ 9] =  8091,   -- hands     Platemail Gloves (level 45)
                 [15] =  2529,   -- main hand Zweihander (level 41)
             } },
             [55] = { items = {
-                [ 0] =  3894,   -- head      Brigandine Helm (level 45)
-                [ 4] =  8094,   -- chest     Platemail Armor (level 45)
+                [ 0] =  8092,   -- head      Platemail Helm (level 45)
+                [ 4] =  2423,   -- chest     Brigandine Vest (level 45)
                 [ 5] =  2424,   -- waist     Brigandine Belt (level 45)
                 [ 6] =  8093,   -- legs      Platemail Leggings (level 45)
                 [ 7] =  2426,   -- feet      Brigandine Boots (level 45)
-                [ 8] =  8090,   -- wrists    Platemail Bracers (level 45)
-                [ 9] =  2428,   -- hands     Brigandine Gloves (level 45)
+                [ 8] =  2427,   -- wrists    Brigandine Bracers (level 45)
+                [ 9] =  8091,   -- hands     Platemail Gloves (level 45)
                 [15] =  2529,   -- main hand Zweihander (level 41)
             } },
         },
@@ -743,9 +743,9 @@ return {
         [401] = {   -- Rogue, 2/3 Assassination, 1/3 Combat
             [50] = { items = {
                 [ 0] =  3893,   -- head      Reinforced Leather Cap (level 45)
-                [ 4] =  2470,   -- chest     Reinforced Leather Vest (level 45)
+                [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
-                [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
+                [ 6] =  2472,   -- legs      Reinforced Leather Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
                 [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
@@ -755,9 +755,9 @@ return {
             } },
             [55] = { items = {
                 [ 0] =  3893,   -- head      Reinforced Leather Cap (level 45)
-                [ 4] =  2470,   -- chest     Reinforced Leather Vest (level 45)
+                [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
-                [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
+                [ 6] =  2472,   -- legs      Reinforced Leather Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
                 [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
@@ -769,9 +769,9 @@ return {
         [402] = {   -- Rogue, 2/3 Assassination, 1/3 Subtlety
             [50] = { items = {
                 [ 0] =  3893,   -- head      Reinforced Leather Cap (level 45)
-                [ 4] =  2470,   -- chest     Reinforced Leather Vest (level 45)
+                [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
-                [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
+                [ 6] =  2472,   -- legs      Reinforced Leather Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
                 [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
@@ -781,9 +781,9 @@ return {
             } },
             [55] = { items = {
                 [ 0] =  3893,   -- head      Reinforced Leather Cap (level 45)
-                [ 4] =  2470,   -- chest     Reinforced Leather Vest (level 45)
+                [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
-                [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
+                [ 6] =  2472,   -- legs      Reinforced Leather Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
                 [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
@@ -795,9 +795,9 @@ return {
         [403] = {   -- Rogue, 1/3 Assassination, 2/3 Combat
             [50] = { items = {
                 [ 0] =  3893,   -- head      Reinforced Leather Cap (level 45)
-                [ 4] =  2470,   -- chest     Reinforced Leather Vest (level 45)
+                [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
-                [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
+                [ 6] =  2472,   -- legs      Reinforced Leather Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
                 [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
@@ -807,9 +807,9 @@ return {
             } },
             [55] = { items = {
                 [ 0] =  3893,   -- head      Reinforced Leather Cap (level 45)
-                [ 4] =  2470,   -- chest     Reinforced Leather Vest (level 45)
+                [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
-                [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
+                [ 6] =  2472,   -- legs      Reinforced Leather Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
                 [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
@@ -821,9 +821,9 @@ return {
         [404] = {   -- Rogue, 2/3 Combat, 1/3 Subtlety
             [50] = { items = {
                 [ 0] =  3893,   -- head      Reinforced Leather Cap (level 45)
-                [ 4] =  2470,   -- chest     Reinforced Leather Vest (level 45)
+                [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
-                [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
+                [ 6] =  2472,   -- legs      Reinforced Leather Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
                 [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
@@ -833,9 +833,9 @@ return {
             } },
             [55] = { items = {
                 [ 0] =  3893,   -- head      Reinforced Leather Cap (level 45)
-                [ 4] =  2470,   -- chest     Reinforced Leather Vest (level 45)
+                [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
-                [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
+                [ 6] =  2472,   -- legs      Reinforced Leather Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
                 [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
@@ -847,9 +847,9 @@ return {
         [405] = {   -- Rogue, 1/3 Assassination, 2/3 Subtlety
             [50] = { items = {
                 [ 0] =  3893,   -- head      Reinforced Leather Cap (level 45)
-                [ 4] =  2470,   -- chest     Reinforced Leather Vest (level 45)
+                [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
-                [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
+                [ 6] =  2472,   -- legs      Reinforced Leather Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
                 [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
@@ -859,9 +859,9 @@ return {
             } },
             [55] = { items = {
                 [ 0] =  3893,   -- head      Reinforced Leather Cap (level 45)
-                [ 4] =  2470,   -- chest     Reinforced Leather Vest (level 45)
+                [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
-                [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
+                [ 6] =  2472,   -- legs      Reinforced Leather Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
                 [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
@@ -873,9 +873,9 @@ return {
         [406] = {   -- Rogue, 1/3 Combat, 2/3 Subtlety
             [50] = { items = {
                 [ 0] =  3893,   -- head      Reinforced Leather Cap (level 45)
-                [ 4] =  2470,   -- chest     Reinforced Leather Vest (level 45)
+                [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
-                [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
+                [ 6] =  2472,   -- legs      Reinforced Leather Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
                 [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
@@ -885,9 +885,9 @@ return {
             } },
             [55] = { items = {
                 [ 0] =  3893,   -- head      Reinforced Leather Cap (level 45)
-                [ 4] =  2470,   -- chest     Reinforced Leather Vest (level 45)
+                [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
-                [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
+                [ 6] =  2472,   -- legs      Reinforced Leather Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
                 [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
@@ -899,9 +899,9 @@ return {
         [407] = {   -- Rogue, 1/3 Assassination, 1/3 Combat, 1/3 Subtlety
             [50] = { items = {
                 [ 0] =  3893,   -- head      Reinforced Leather Cap (level 45)
-                [ 4] =  2470,   -- chest     Reinforced Leather Vest (level 45)
+                [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
-                [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
+                [ 6] =  2472,   -- legs      Reinforced Leather Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
                 [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
@@ -911,9 +911,9 @@ return {
             } },
             [55] = { items = {
                 [ 0] =  3893,   -- head      Reinforced Leather Cap (level 45)
-                [ 4] =  2470,   -- chest     Reinforced Leather Vest (level 45)
+                [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
-                [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
+                [ 6] =  2472,   -- legs      Reinforced Leather Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
                 [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
@@ -925,9 +925,9 @@ return {
         [408] = {   -- Rogue, all Assassination
             [50] = { items = {
                 [ 0] =  3893,   -- head      Reinforced Leather Cap (level 45)
-                [ 4] =  2470,   -- chest     Reinforced Leather Vest (level 45)
+                [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
-                [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
+                [ 6] =  2472,   -- legs      Reinforced Leather Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
                 [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
@@ -937,9 +937,9 @@ return {
             } },
             [55] = { items = {
                 [ 0] =  3893,   -- head      Reinforced Leather Cap (level 45)
-                [ 4] =  2470,   -- chest     Reinforced Leather Vest (level 45)
+                [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
-                [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
+                [ 6] =  2472,   -- legs      Reinforced Leather Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
                 [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
@@ -951,9 +951,9 @@ return {
         [409] = {   -- Rogue, all Combat
             [50] = { items = {
                 [ 0] =  3893,   -- head      Reinforced Leather Cap (level 45)
-                [ 4] =  2470,   -- chest     Reinforced Leather Vest (level 45)
+                [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
-                [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
+                [ 6] =  2472,   -- legs      Reinforced Leather Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
                 [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
@@ -963,9 +963,9 @@ return {
             } },
             [55] = { items = {
                 [ 0] =  3893,   -- head      Reinforced Leather Cap (level 45)
-                [ 4] =  2470,   -- chest     Reinforced Leather Vest (level 45)
+                [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
-                [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
+                [ 6] =  2472,   -- legs      Reinforced Leather Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
                 [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
@@ -977,9 +977,9 @@ return {
         [410] = {   -- Rogue, all Subtlety
             [50] = { items = {
                 [ 0] =  3893,   -- head      Reinforced Leather Cap (level 45)
-                [ 4] =  2470,   -- chest     Reinforced Leather Vest (level 45)
+                [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
-                [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
+                [ 6] =  2472,   -- legs      Reinforced Leather Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
                 [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
@@ -989,9 +989,9 @@ return {
             } },
             [55] = { items = {
                 [ 0] =  3893,   -- head      Reinforced Leather Cap (level 45)
-                [ 4] =  2470,   -- chest     Reinforced Leather Vest (level 45)
+                [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
-                [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
+                [ 6] =  2472,   -- legs      Reinforced Leather Pants (level 45)
                 [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
                 [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
@@ -2214,9 +2214,9 @@ return {
                 [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
                 [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
-                [ 7] =  2473,   -- feet      Reinforced Leather Boots (level 45)
+                [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
-                [ 9] =  2475,   -- hands     Reinforced Leather Gloves (level 45)
+                [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
                 [15] =  2535,   -- main hand War Staff (level 40)
             } },
             [55] = { items = {
@@ -2224,9 +2224,9 @@ return {
                 [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
                 [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
-                [ 7] =  2473,   -- feet      Reinforced Leather Boots (level 45)
+                [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
-                [ 9] =  2475,   -- hands     Reinforced Leather Gloves (level 45)
+                [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
                 [15] =  2535,   -- main hand War Staff (level 40)
             } },
         },
@@ -2280,9 +2280,9 @@ return {
                 [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
                 [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
-                [ 7] =  2473,   -- feet      Reinforced Leather Boots (level 45)
+                [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
-                [ 9] =  2475,   -- hands     Reinforced Leather Gloves (level 45)
+                [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
                 [15] =  2535,   -- main hand War Staff (level 40)
             } },
             [55] = { items = {
@@ -2290,9 +2290,9 @@ return {
                 [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
                 [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
-                [ 7] =  2473,   -- feet      Reinforced Leather Boots (level 45)
+                [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
-                [ 9] =  2475,   -- hands     Reinforced Leather Gloves (level 45)
+                [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
                 [15] =  2535,   -- main hand War Staff (level 40)
             } },
         },
@@ -2346,9 +2346,9 @@ return {
                 [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
                 [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
-                [ 7] =  2473,   -- feet      Reinforced Leather Boots (level 45)
+                [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
-                [ 9] =  2475,   -- hands     Reinforced Leather Gloves (level 45)
+                [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
                 [15] =  2535,   -- main hand War Staff (level 40)
             } },
             [55] = { items = {
@@ -2356,9 +2356,9 @@ return {
                 [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
                 [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
-                [ 7] =  2473,   -- feet      Reinforced Leather Boots (level 45)
+                [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
-                [ 9] =  2475,   -- hands     Reinforced Leather Gloves (level 45)
+                [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
                 [15] =  2535,   -- main hand War Staff (level 40)
             } },
         },
@@ -2390,9 +2390,9 @@ return {
                 [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
                 [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
-                [ 7] =  2473,   -- feet      Reinforced Leather Boots (level 45)
+                [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
-                [ 9] =  2475,   -- hands     Reinforced Leather Gloves (level 45)
+                [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
                 [15] =  2535,   -- main hand War Staff (level 40)
             } },
             [55] = { items = {
@@ -2400,9 +2400,9 @@ return {
                 [ 4] =  2435,   -- chest     Embroidered Armor (level 45)
                 [ 5] =  2471,   -- waist     Reinforced Leather Belt (level 45)
                 [ 6] =  2437,   -- legs      Embroidered Pants (level 45)
-                [ 7] =  2473,   -- feet      Reinforced Leather Boots (level 45)
+                [ 7] =  2438,   -- feet      Embroidered Boots (level 45)
                 [ 8] =  2474,   -- wrists    Reinforced Leather Bracers (level 45)
-                [ 9] =  2475,   -- hands     Reinforced Leather Gloves (level 45)
+                [ 9] =  2440,   -- hands     Embroidered Gloves (level 45)
                 [15] =  2535,   -- main hand War Staff (level 40)
             } },
         },

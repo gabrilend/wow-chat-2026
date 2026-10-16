@@ -12,6 +12,18 @@
 
 ## Current Behavior
 
+**Weapon masters swept, 2026-10-15; syntax-checked, not yet rebuilt or
+run** (`buddies_spells.cpp`, the weapon-skill lessons): weapon masters are
+filed as profession trainers in the world database (trainer type 2), so
+the class-trainer sweep never met them. Five level-44 buddies made that
+day had kit weapons refused for want of the skill (the hunter Montahmu's
+staff and gun, a druid's two-handed mace, a shaman's dagger, a rogue's
+gun). Now every lesson of any trainer whose skill line is a weapon skill
+(SkillLine.dbc category 6) is gathered once, and a buddy learns those its
+race and class allow, free, before its other lessons when it is made, and
+at every login (so buddies made earlier catch up). This closes the
+weapon half of the gap below.
+
 **Gap, 2026-10-04:** weapon masters are not visited and the armour
 proficiencies a trainer teaches at 40 are not known to be in the creation
 lessons (item 7 below); level-60 buddies made earlier lacked Plate Mail,

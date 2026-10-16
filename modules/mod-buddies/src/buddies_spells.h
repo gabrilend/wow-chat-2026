@@ -31,6 +31,15 @@ class Player;
 uint32 BuddyTrainAtTrainer(Player* bot, Creature* trainer);
 // }}}
 
+// {{{ BuddyLearnWeaponSkills
+// Every weapon skill a weapon master would teach this buddy (its class and
+// race allow it), free: weapon masters are profession-type trainers, so
+// BuddyLearnEverything's class-trainer sweep does not reach them on its
+// own (it calls this first). Safe before the buddy is in the world.
+// Returns how many were learned.
+uint32 BuddyLearnWeaponSkills(Player* bot);
+// }}}
+
 // {{{ BuddyLearnEverything
 // When a buddy is made: every lesson any class trainer valid for its race
 // teaches up to its level (ranks in order), and every quest spell its

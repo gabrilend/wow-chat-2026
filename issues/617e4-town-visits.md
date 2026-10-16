@@ -10,6 +10,17 @@
 
 ## Current Behavior
 
+**The pole goes back in a fight, 2026-10-15; syntax-checked, not yet
+rebuilt or run** (`buddies_town.cpp`, "the pole in a fight"): the fishing
+visit remembers what the buddy held only in memory, and puts it back only
+when the visit ends in town. A buddy whose owner left town mid-cast, or a
+server restart mid-cast, kept the pole in hand (Mozonn, level 1, its
+hammer in its backpack). Now, at login and whenever a fight starts, a
+buddy holding a pole takes the best weapon in its bags (highest item
+level, one it can use, never a profession tool). The owner's rule: a pole
+is for peace ("unless they are peace"). With no weapon in its bags, the
+pole stays and an error names the buddy and the `.buddy kit` command.
+
 **Buildings inside towns, 2026-09-29** (owner: "make sure we account for
 indoors areas inside of towns"): a building in a town often has its own
 area number without the town flag (an inn, a crypt, a guild hall).
