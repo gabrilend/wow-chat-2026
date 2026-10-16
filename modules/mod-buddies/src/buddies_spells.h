@@ -38,11 +38,15 @@ uint32 BuddyTrainAtTrainer(Player* bot, Creature* trainer);
 // least 1. The owner's rule, 2026-10-15.
 uint32 BuddyWeaponAllowance(uint32 ownerGuid);
 // Teaches the buddy a weapon kind (a skill line) from a weapon master's
-// lessons, free, if it lacks it and knows fewer kinds than `allowance`.
-// True when it knows the kind afterwards (or `skill` is not a weapon
-// kind); false with `why` filled when it may not or can't learn it. Safe
-// before the buddy is in the world.
-bool BuddyLearnWeaponKind(Player* bot, uint32 skill, uint32 allowance, std::string& why);
+// lessons, free, if it lacks it: a weapon its kit hands it is always
+// known (the owner, 2026-10-15: "That one they should know"). True when it
+// knows the kind afterwards (or `skill` is not a weapon kind); false with
+// `why` filled when no weapon master teaches it to its class and race.
+// Safe before the buddy is in the world.
+bool BuddyLearnWeaponKind(Player* bot, uint32 skill, std::string& why);
+// When a buddy is made: random kinds its class and race can learn, until
+// it knows `allowance` (BuddyWeaponAllowance). Returns how many learned.
+uint32 BuddyFillWeaponKinds(Player* bot, uint32 allowance);
 // }}}
 
 // {{{ BuddyLearnEverything

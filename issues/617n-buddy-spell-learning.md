@@ -12,6 +12,28 @@
 
 ## Current Behavior
 
+**Refined the same day (verbatim):** "the buddy-bot at each tier spawns
+in with possibly a different weapon type equipped. That one they should
+know. Otherwise, they should learn a random weapon skill from what their
+class can know, one for each of the player's learned weapon skills. Then,
+at capital cities and such, they can learn more." Built that way: the
+kind of every weapon its kit hands it is always learned (a re-dress too);
+when it is made (the starting kit, at each tier it is made at), random
+kinds its class and race can learn are added until it knows as many as
+its owner (`BuddyFillWeaponKinds`). The "past the count, refused" rule
+below is gone. **Not built:** learning more at weapon masters in the
+capitals (a town errand, like the class trainer's).
+
+On stand-ins (verbatim): "When they are instantiated as buddy-bots, they
+might lose weapon skills! That's fine. ... If the stand-in-becoming-
+buddy-bot wore a weapon in a battleground / dungeon, then they should
+have that skill trained first from among the potential weapon skills
+learned when instantiated. I don't think it could be the case that a
+player would have fewer than the buddy-bot has weapon appearances, but
+we should account for that possibility too." No stand-in becomes a
+buddy yet (617t); when one does, the kinds of the weapons it wore are
+kept first, even past its new owner's count.
+
 **Weapon kinds as many as the owner's, and quest spells first,
 2026-10-15; syntax-checked, not yet rebuilt or run** (`buddies_spells.cpp`):
 - The owner's rule: "buddy-bots should have one weaponskill trained
@@ -172,6 +194,13 @@ list of spells we teach to each class."
    spell row and a valid trainer per race.
 
 ## Open Questions
+
+- Weapon masters in the capitals: how many more kinds may a buddy learn
+  there (up to every kind its class can, or a few per visit), and does it
+  pay the 10 silver like a player?
+- "One for each of the player's learned weapon skills": built as "until
+  it knows as many kinds as its owner" (its starting kinds count). Or
+  should it be that many random kinds on top of what it starts with?
 
 - (Answered 2026-10-03) Creation lessons are free at every level, level 1
   included: "Yes."

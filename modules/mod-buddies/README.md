@@ -49,6 +49,11 @@ Files:
   town: errands at the class trainer, a vendor and a repairer, then
   leisure: townspeople, chairs with shared timers, sleep by the inn),
   taught to the bot module by the strategy file (617e4).
+- `src/buddies_arms.cpp` (+ `buddies_arms.h`) — how a buddy carries its
+  weapons: put in its bags in town (written down in the characters table
+  buddy_stowed_weapon), worn and sheathed in the wilds, drawn in danger
+  (dungeons, battlegrounds, arenas, the other faction's land) or a fight;
+  the fishing pole only while fishing (617e4b).
 - `src/buddies_party.cpp` — groups by distance from the owner: the
   owner's party within 60 yards (leave past 75), far buddies' own parties
   past 74 (617c2); needs config patch C029 (KeepAltsInGroup).

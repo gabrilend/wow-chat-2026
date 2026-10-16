@@ -36,6 +36,10 @@ Action*   NewBuddyTownStepAction(PlayerbotAI* ai);
 // for it before heading for the dock (617e8: "finish the current task").
 bool BuddyTownErrandUnderway(unsigned int buddyGuid);
 
+// Whether the buddy's town visit is fishing (walking to the shore
+// included): the weapons pass leaves the pole in hand then (617e4b).
+bool BuddyTownFishing(unsigned int buddyGuid);
+
 // {{{ the selling trip's use of the town visit's selling (617h1)
 // How full the buddy's bags are, 0..1, and the share at which they count
 // as full (the town visit clears them past it). And what a vendor stop

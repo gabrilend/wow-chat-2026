@@ -164,6 +164,10 @@ seat.
 
 ## Open Questions
 
+- When a stand-in becomes a buddy (not built), its weapon kinds follow
+  617n: the kinds of the weapons it wore in battlegrounds and dungeons are
+  kept first, even if its new owner knows fewer (owner, 2026-10-15).
+
 1. Meta gems on white weapons: can white weapons carry a meta socket, and
    how would a player (or a stand-in) come by the meta gem?
 2. (Answered 2026-10-04) Kept, scaled up a bracket (ten levels), used

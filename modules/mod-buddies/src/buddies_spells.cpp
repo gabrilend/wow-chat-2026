@@ -13,6 +13,7 @@
 #include "buddies.h"
 #include "buddies_spells.h"
 #include "buddies_quest_spells.h"
+#include "Containers.h"
 #include "Creature.h"
 #include "DBCStores.h"
 #include "DatabaseEnv.h"
@@ -159,13 +160,18 @@ uint32 BuddyTrainAtTrainer(Player* bot, Creature* npc)
 // game) per weaponskill that the player trains. So the buddy-bots of a
 // mage who has few weapon skills will have fewer themselves."
 //
-// So a buddy may know as many weapon kinds (Axes, Staves, Guns ... the
-// skill lines a weapon item asks for) as its owner knows, at least one.
-// What it starts with counts, and it is never made to forget one. When
-// the kit hands it a weapon whose kind it lacks, it learns that kind if
-// it is still under its owner's count, the main hand first (the kit goes
-// slot by slot), and is refused it otherwise; the refused weapon is not
-// worn and what it held stays (buddies_kit.cpp).
+// And, the same day, refined: "the buddy-bot at each tier spawns in with
+// possibly a different weapon type equipped. That one they should know.
+// Otherwise, they should learn a random weapon skill from what their
+// class can know, one for each of the player's learned weapon skills.
+// Then, at capital cities and such, they can learn more."
+//
+// So: the kind of every weapon its kit hands it is learned, whatever the
+// count (BuddyLearnWeaponKind); then, when it is made, random kinds its
+// class and race can learn are added until it knows as many kinds as its
+// owner, at least one (BuddyFillWeaponKinds). What it starts with counts,
+// and it is never made to forget one. Learning more at weapon masters in
+// the capitals is planned (617n).
 //
 // Weapon masters teach these, and they are filed as profession trainers
 // in the world database (trainer type 2), so the class-trainer sweep below
@@ -242,29 +248,55 @@ uint32 BuddyWeaponAllowance(uint32 ownerGuid)
     return std::max<uint32>(n, 1);                     // the owner's minimum: one, the weapon it starts with
 }
 
-bool BuddyLearnWeaponKind(Player* bot, uint32 skill, uint32 allowance, std::string& why)
+// The lesson that teaches `skill` to this buddy, if any weapon master has one.
+static WeaponLesson const* LessonFor(Player* bot, uint32 skill)
 {
-    FindWeaponLessons();
-    if (!sWeaponKinds.count(skill) || bot->HasSkill(skill))
-        return true;                                   // not a weapon kind (nothing to learn), or known already
-    uint32 known = WeaponKindsKnown(bot);
-    if (known >= allowance)
-    {
-        why = "it knows " + std::to_string(known) + " weapon kinds and its owner " + std::to_string(allowance)
-            + ", so it learns no more (skill " + std::to_string(skill) + ")";
-        return false;
-    }
     for (WeaponLesson const& l : sWeaponLessons)
         if (l.skill == skill)
             if (Trainer::Trainer* t = sObjectMgr->GetTrainer(l.trainerEntry))
                 if (Trainer::Spell const* sp = t->GetSpell(l.spellId); sp && t->IsTrainerValidForPlayer(bot) && t->CanTeachSpell(bot, sp))
-                {
-                    LearnOne(bot, l.spellId);
-                    if (bot->HasSkill(skill))
-                        return true;
-                }
+                    return &l;
+    return nullptr;
+}
+
+bool BuddyLearnWeaponKind(Player* bot, uint32 skill, std::string& why)
+{
+    FindWeaponLessons();
+    if (!sWeaponKinds.count(skill) || bot->HasSkill(skill))
+        return true;                                   // not a weapon kind (nothing to learn), or known already
+    if (WeaponLesson const* l = LessonFor(bot, skill))
+    {
+        LearnOne(bot, l->spellId);
+        if (bot->HasSkill(skill))
+            return true;
+        why = "learning spell " + std::to_string(l->spellId) + " did not give skill " + std::to_string(skill);
+        return false;
+    }
     why = "no weapon master teaches skill " + std::to_string(skill) + " to its class and race";
     return false;
+}
+
+uint32 BuddyFillWeaponKinds(Player* bot, uint32 allowance)
+{
+    FindWeaponLessons();
+    // the kinds it could still learn, each once, in a random order
+    std::vector<uint32> open;
+    for (uint32 skill : sWeaponKinds)
+        if (!bot->HasSkill(skill) && LessonFor(bot, skill))
+            open.push_back(skill);
+    Acore::Containers::RandomShuffle(open);
+    uint32 learned = 0;
+    for (uint32 skill : open)
+    {
+        if (WeaponKindsKnown(bot) >= allowance)
+            break;                                     // as many as its owner: enough
+        std::string why;
+        if (BuddyLearnWeaponKind(bot, skill, why))
+            ++learned;
+        else
+            LOG_ERROR("module", "mod-buddies: buddy {} could not learn weapon kind {}: {}", bot->GetName(), skill, why);
+    }
+    return learned;
 }
 // }}}
 

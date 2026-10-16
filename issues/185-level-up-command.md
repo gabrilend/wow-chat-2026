@@ -48,6 +48,14 @@ Answers, 2026-10-15 (verbatim):
 > up with them. Then they are leveling apace. Growing up together, how
 > sweet.
 
+Asked 2026-10-15 (verbatim): "is .buddy kit run from the class-change and
+level-change scripts? I'm wondering if they could be automatically
+applied to affect the modification. just to test the entire pipeline
+flow." Not today: the class-change tool works on the player with the
+server stopped, and this command is not built. Planned: this command runs
+`.buddy kit` for each buddy it moves (step 3 below), so one command tests
+the whole flow.
+
 ## Current Behavior
 
 No such script exists. Levels are changed by hand with the server's own

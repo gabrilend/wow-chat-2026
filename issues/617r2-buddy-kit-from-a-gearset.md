@@ -27,13 +27,19 @@ installed (E052) or run.**
   bot module then equipped the only weapon in its bags, its fishing pole
   (Montahmu, fighting Uldaman with one). A refusal now keeps the old item
   and names the server's reason number in the log line. A weapon of a
-  kind the buddy lacks is first learned if the buddy is under its
-  owner's count of weapon kinds (617n); otherwise it is refused this way.
+  kind the buddy lacks is first learned (617n: "That one they should
+  know").
   The owner: "check to see if there's any items in that slot before
   finding an item for them" - a slot whose record item can't be worn
   keeps what was there.
-- Every weapon put in a hand gets a permanent enchant, one of four at
-  random (621).
+- "Neta, nothing eta" (owner, 2026-10-15: "if we're changing a level 57
+  with trinkets to be level 1 and there's no level 1 trinkets, then we
+  should say 'neta, nothing eta' because we have no capacity to
+  deliver"): a worn item needing more than the buddy's level, in a slot
+  its record has nothing for, is named in the kit's problem line as
+  "neta, nothing eta at level N". It stays worn; nothing stands in for it.
+- The starting kit's hand weapons above level 30 get a permanent
+  enchant, one of four at random (621).
 - The translator now takes weapons from required level 1 (armour still
   from 2): the starter weapons (Short Staff, Dirk, Shortsword) need level
   1, and without them 23 level 2-9 records (mages, warlocks, feral

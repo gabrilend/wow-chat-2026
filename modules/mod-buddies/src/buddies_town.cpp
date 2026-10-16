@@ -51,6 +51,7 @@
  */
 
 #include "buddies.h"
+#include "buddies_arms.h"
 #include "buddies_explore.h"
 #include "buddies_spells.h"
 #include "buddies_steer.h"
@@ -89,7 +90,6 @@
 #include "Playerbots.h"
 #include "PlayerbotAI.h"
 #include "Random.h"
-#include "ScriptMgr.h"
 #include "Trainer.h"
 #include "TravelMgr.h"
 #include "Trigger.h"
@@ -231,6 +231,17 @@ bool BuddyTownErrandUnderway(uint32 buddyGuid)
     std::lock_guard<std::mutex> lock(sTownLock);
     auto it = sTown.find(buddyGuid);
     return it != sTown.end() && it->second.doing == Doing::Errand;
+}
+// }}}
+
+// {{{ BuddyTownFishing
+// Whether this buddy's town visit is fishing (walking to the shore
+// included): the weapons pass leaves its pole in hand then (617e4b).
+bool BuddyTownFishing(uint32 buddyGuid)
+{
+    std::lock_guard<std::mutex> lock(sTownLock);
+    auto it = sTown.find(buddyGuid);
+    return it != sTown.end() && it->second.doing == Doing::Fish;
 }
 // }}}
 
@@ -1001,6 +1012,8 @@ static bool CantSpare(PlayerbotAI* ai, Item* item)
         return true;                                   // the hearthstone; a tool (pick, knife, rod, hammer)
     if (p->Class == ITEM_CLASS_WEAPON && p->SubClass == ITEM_SUBCLASS_WEAPON_FISHING_POLE)
         return true;
+    if (BuddyIsStowedWeapon(ai->GetBot(), item))
+        return true;                                   // its weapons, put away for the town (617e4b)
     if (FateOf(ai, item) == Fate::MailOwner)
         return true;                                   // the owner's epic, waiting for a mailbox
     switch (ai->GetAiObjectContext()->GetValue<ItemUsage>("item usage", item->GetEntry())->Get())
@@ -2026,14 +2039,19 @@ private:
         return true;
     }
 
-    // What was held before the pole goes back, if it is still in the bags.
+    // What was held before the pole goes back, if it is still in the
+    // backpack or a bag. Not "IsInBag": the server means a bag only, not
+    // the backpack, so until 2026-10-15 a weapon that landed in the
+    // backpack was never put back (Mozonn's hammer, its pole in hand).
+    // Nothing remembered (its hands were empty in town, 617e4b): the pole
+    // stays until the weapons pass puts it in the bags.
     void PutPoleAway(TownState& s)
     {
         if (!s.mainHand.IsEmpty())
-            if (Item* item = bot->GetItemByGuid(s.mainHand); item && item->IsInBag())
+            if (Item* item = bot->GetItemByGuid(s.mainHand); item && !item->IsEquipped())
                 EquipInSlot(item, EQUIPMENT_SLOT_MAINHAND);
         if (!s.offHand.IsEmpty())
-            if (Item* item = bot->GetItemByGuid(s.offHand); item && item->IsInBag())
+            if (Item* item = bot->GetItemByGuid(s.offHand); item && !item->IsEquipped())
                 EquipInSlot(item, EQUIPMENT_SLOT_OFFHAND);
         s.mainHand.Clear();
         s.offHand.Clear();
@@ -2102,73 +2120,6 @@ public:
         triggers.push_back(new TriggerNode("buddy town due", { NextAction("buddy town step", TOWN_RELEVANCE) }));
     }
 };
-// }}}
-
-// {{{ the pole in a fight
-// A pole is for peace (owner, 2026-10-15: buddies hold a weapon "unless
-// they are peace"). The fishing pastime remembers what was held only in
-// memory and puts it back only when the visit ends in town; a buddy whose
-// owner walked out of town mid-cast, or a server restart mid-cast, kept
-// the pole in hand (Mozonn, level 1, its hammer in its backpack). So on
-// login (no one is fishing yet) and when a fight starts, a pole in the
-// main hand is swapped for the best weapon in its bags: the highest item
-// level main-hand, one-hand or two-hand weapon it can use, never a pole
-// or a profession tool (skinning knife, mining pick, blacksmith hammer:
-// weapon subclass 14). None in its bags: the pole stays and the log says
-// so, never a guess at something else to hold.
-static void PutStalePoleAway(Player* bot, char const* when)
-{
-    Item* held = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_MAINHAND);
-    if (!held || held->GetTemplate()->Class != ITEM_CLASS_WEAPON ||
-        held->GetTemplate()->SubClass != ITEM_SUBCLASS_WEAPON_FISHING_POLE)
-        return;                                        // not holding a pole: nothing to do
-    Item* best = nullptr;
-    for (Item* item : BagItems(bot))
-    {
-        ItemTemplate const* p = item->GetTemplate();
-        if (p->Class != ITEM_CLASS_WEAPON || p->SubClass == ITEM_SUBCLASS_WEAPON_FISHING_POLE ||
-            p->SubClass == ITEM_SUBCLASS_WEAPON_MISC)
-            continue;                                  // poles and profession tools are not for fighting
-        if (p->InventoryType != INVTYPE_WEAPON && p->InventoryType != INVTYPE_2HWEAPON &&
-            p->InventoryType != INVTYPE_WEAPONMAINHAND)
-            continue;                                  // off-hand-only, ranged and thrown go elsewhere
-        if (bot->CanUseItem(p) != EQUIP_ERR_OK)
-            continue;                                  // a skill it lacks, a level it hasn't reached
-        if (!best || p->ItemLevel > best->GetTemplate()->ItemLevel)
-            best = item;
-    }
-    if (!best)
-    {
-        LOG_ERROR("module", "mod-buddies: buddy {} holds a fishing pole {} and has no weapon in its bags it can use, so the pole "
-            "stays in hand. To debug: \".buddy kit {}\" gives its gearset's weapon (does the gearset record have slot 15? "
-            "does it know that weapon's skill?)", bot->GetName(), when, bot->GetName());
-        return;
-    }
-    WorldPacket packet(CMSG_AUTOEQUIP_ITEM_SLOT, 9);  // as the client asks, so every server rule applies (EquipInSlot)
-    packet << best->GetGUID() << uint8(EQUIPMENT_SLOT_MAINHAND);
-    WorldPackets::Item::AutoEquipItemSlot request(std::move(packet));
-    request.Read();
-    bot->GetSession()->HandleAutoEquipItemSlotOpcode(request);
-    BuddyTrace(bot, "pole put away {}: took {} in hand", when, best->GetTemplate()->Name1);
-}
-
-class buddies_pole_player : public PlayerScript
-{
-public:
-    buddies_pole_player() : PlayerScript("buddies_pole_player", { PLAYERHOOK_ON_LOGIN, PLAYERHOOK_ON_PLAYER_ENTER_COMBAT }) { }
-
-    static bool IsBuddy(Player* p)
-    {
-        return BuddiesEnabled() && p->GetSession() && BuddyIsCompanionAccount(p->GetSession()->GetAccountId());
-    }
-    void OnPlayerLogin(Player* player) override                    { if (IsBuddy(player)) PutStalePoleAway(player, "at login"); }
-    void OnPlayerEnterCombat(Player* player, Unit* /*enemy*/) override { if (IsBuddy(player)) PutStalePoleAway(player, "as a fight began"); }
-};
-
-void AddSC_buddies_town_pole()
-{
-    new buddies_pole_player();
-}
 // }}}
 
 // {{{ the makers

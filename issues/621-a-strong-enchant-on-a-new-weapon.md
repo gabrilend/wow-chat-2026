@@ -32,12 +32,18 @@ which goes on which weapon:
 
 ## Current Behavior
 
+Then (verbatim): "no, only when they are instantiated for the first time.
+Their starting gear weapon, for each of their level tiers they spawn as,
+is enchanted with the potential weapon enchantment. But only after level
+30."
+
 **Built for buddies, 2026-10-15** (`buddies_kit.cpp`, the kit's
-enchants): every weapon the kit puts in a main or off hand (not a
-shield or a held item) gets one of Fiery Weapon (803), Icy Chill (1894),
+enchants): the weapons the starting kit puts in a main or off hand (not
+a shield or a held item), for a buddy above level 30, when it is made or
+made again at a tier (617a6), get one of Fiery Weapon (803), Icy Chill (1894),
 Lifestealing (1898) or Unholy Weapon (1899), chosen at random, in the
-item's permanent enchant slot. That covers new buddies, `.buddy kit`,
-and stand-ins' new levels. An enchant number the server's tables lack is
+item's permanent enchant slot. A re-dress (`.buddy kit`, a stand-in's
+new level) enchants nothing. "After level 30" is built as 31 and up. An enchant number the server's tables lack is
 named in the kit's problem line. Not yet: the weapons of the level-up
 command (185) and the class-change tool (187), and players.
 

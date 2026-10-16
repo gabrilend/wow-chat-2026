@@ -10,8 +10,8 @@
 
 ## Current Behavior
 
-**The pole goes back in a fight, 2026-10-15; syntax-checked, not yet
-rebuilt or run** (`buddies_town.cpp`, "the pole in a fight"): the fishing
+**The pole goes back in a fight, 2026-10-15** (moved the same day into
+617e4b's weapons pass, `buddies_arms.cpp`, with the backpack fix there): the fishing
 visit remembers what the buddy held only in memory, and puts it back only
 when the visit ends in town. A buddy whose owner left town mid-cast, or a
 server restart mid-cast, kept the pole in hand (Mozonn, level 1, its
