@@ -17,6 +17,17 @@ Verbatim, 2026-09-25:
 > After we develop the jewelcrafting rework, let's add buddybot professions
 > to the list of tasks to accomplish.
 
+The owner, 2026-10-15 (verbatim): "when created at a certain level, they
+should have a proficiency level (and abilities learned, and required items
+given like runed arcanite rods) appropriate for their character level."
+And: "we also need to build buying at the auction house." Planned: a
+buddy made at a level gets each of its professions at the skill that level
+gives (185's table: five points a level, to 300 on basic), the trainer
+ranks that skill needs (Apprentice, Journeyman, Expert, Artisan), every
+recipe a trainer of it teaches at or below that skill, and the tools of
+that skill (an enchanter's runed rod of its rank: copper, silver, golden,
+truesilver, arcanite). Not built yet.
+
 ## Current Behavior
 
 **Secondary professions built 2026-09-27; compile-checked, not yet run**

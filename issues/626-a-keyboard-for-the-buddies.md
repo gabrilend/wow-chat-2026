@@ -24,6 +24,14 @@ Verbatim, 2026-10-15:
 > as we design. Bright! Brilliant! Unwavering to the cause! Spirit and
 > joyful holidays for all
 
+Corrections, 2026-10-15 (verbatim): of the binds, "not every key, just
+the ones that are specified in that file." And: "that system was built
+with extra limitations than what we have. We have the opportunity to
+deliver those commands using other messages as well, such as RTS style
+controls...!" (the bot module already has a point-and-click save of
+places for bots, `rtsc`, with a spell to click the ground; buddies take
+no chat commands, so it would come through the spoken orders, 617y).
+
 ## Current Behavior
 
 **The City of Heroes system, read 2026-10-15 (nothing touched).** It
@@ -31,7 +39,7 @@ lives in the game's Documents folder (`binds/`, a git repository with one
 commit, 2026-08-25; earlier copies in `binds-backup-2`, `binds-backup-4`,
 `backups-3`, `backups-5`, and a picture of it, `binds-operation.png`).
 It is a keyboard that changes its own meaning: every bind file rebinds
-the whole set of keys, and its keys load other bind files
+the keys it names (the rest keep theirs), and its keys load other bind files
 (`bindloadfilesilent`), so pressing a key moves the keyboard to a new
 state. `conprint` lines draw where you are.
 - **A command grammar for a mastermind's pets.** `mastermind-<kind>-start`

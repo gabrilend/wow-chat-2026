@@ -35,6 +35,14 @@ rings and trinkets at the specified level. When they are level
 appropriate. And don't forget the PvP gear..." (built the same day: gray
 cloaks in the white lists, the PvP necklace, rings and trinkets from 18).
 
+On the belt buckle's recipe (verbatim, 2026-10-15): "well obviously the
+recipe needs to come down as well, and it needs to come from a battle in
+the world. Any suggestions?" Suggestions given: a drop from the world
+bosses basic already respawns (Azuregos, Lord Kazzak, the Emerald
+Dragons), from Blackrock Depths' smiths (Lord Incendius, Golem Lord
+Argelmach), or from the ambush system's rarest elites; the recipe at
+blacksmithing 300 (basic's cap), the buckle at level 60.
+
 ## Current Behavior
 
 A buddy is made in white vendor gear with no neck, rings, trinkets or

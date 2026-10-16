@@ -102,6 +102,11 @@ Answers to the edge cases, verbatim, 2026-09-24:
 
 > yeah epics are always posted.
 
+The owner, 2026-10-15 (verbatim): "we also need to build buying at the
+auction house." Today a buddy buys only gems there (617j2, to fill empty
+sockets); buying upgrades, materials for its craft and consumables is not
+built.
+
 ## Current Behavior
 
 **Built 2026-09-30, not yet compiled or tried in game**

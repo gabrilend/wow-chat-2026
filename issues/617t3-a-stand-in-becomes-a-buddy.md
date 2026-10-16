@@ -45,6 +45,17 @@ which lived only in 176a1 and 617t's levelling rules, into its own plan;
 an earlier draft of it (the same day) wrongly said it had never been
 planned.
 
+The rule, 2026-10-15 (verbatim): "not just at max level. When a
+buddy-bot is created at any *higher* level than what the stand-in was
+standing-in for, then they have a chance of being selected for it. Higher
+priority goes to stand-ins who were higher level when they were
+stand-in'd, but they can never go down in level. After a certain point of
+continually standing-in for higher and higher adventures, eventually they
+can only stand in for level 60. Which means they'll probably do PvP a lot,
+at least until someone needs a buddy-bot at that tier (60 or above, and
+according to the server rules, just 60). Then, they no longer stand-in,
+their loyalty is to that party."
+
 ## Current Behavior
 
 Stand-ins (617t1) are characters on their own accounts, drawn into
@@ -55,10 +66,15 @@ a player as a buddy; a buddy is always made fresh from a roster slot
 ## Intended Behavior
 
 Stand-ins level only when used, on parallel tracks of different speeds
-(617t). Once a stand-in reaches the maximum level, it joins the pool new
-buddies are drawn from: when a player is given a buddy of its race and
-class (and role), it may be drawn at random from those stand-ins instead
-of being made fresh, keeping its name, face, race, class and history. On becoming a
+(617t), and never go down a level. When a buddy is made at a level
+higher than one a stand-in last stood in at, that stand-in may be chosen
+to become it, of its race and class (and role), instead of a fresh
+character: drawn at random, stand-ins who stood in at higher levels
+weighted more. A stand-in that keeps standing in for higher adventures
+ends at 60, where it stands in only for level-60 places (mostly
+battlegrounds) until someone needs a level-60 buddy. Chosen, it stops
+standing in: its loyalty is to that player. It keeps its name, face,
+race, class and history. On becoming a
 buddy it follows the buddy rules: its weapon kinds are cut to its new
 owner's count (617n), keeping first the kinds of the weapons it was seen
 wielding, even past the count if it wielded more kinds than the owner
@@ -75,9 +91,8 @@ knows.
 
 ## Open Questions
 
-1. "Randomly selected ... at max level": only max-level stand-ins enter the
-   pool, so only a player at the maximum level (or choosing a buddy
-   slot there) can be given one; is that the intent, or may a stand-in
-   at the player's own level be drawn too?
+1. (Answered 2026-10-15: any level higher than its last stand-in level,
+   not only the maximum.) What chance should a matching stand-in have
+   against a fresh character: always one when any matches, or a share?
 2. Does it take an owed roster slot, or replace a buddy the player has?
 3. Does it keep its gear, or get the kit of its level?
