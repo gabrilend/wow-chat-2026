@@ -11,6 +11,9 @@
 # This puts that right, from the command line, never from in-game chat
 # (the owner, 2026-10-15: "We shouldn't have a chat command tool that does
 # it ... build it using a script that we call from a command line"):
+# It also practises each character's professions to its level (five
+# points a level up to 300, the ranks and every trainer recipe at or below
+# that skill), as the buddy module does for a buddy it makes.
 #   1. checks: the world server is stopped (it keeps each character's
 #      spells in memory and would write them back) and each name exists;
 #   2. backup: each character's spell rows saved to backups/lessons/;
@@ -18,7 +21,8 @@
 #      the server's own trainer rules (level, race and class, the ability
 #      or talent a lesson asks for, the rank before, spell_required);
 #   4. apply: one transaction per character (all or nothing).
-# Only adds spells; never removes one. Running it again adds nothing.
+# Only adds spells and raises skills; never removes or lowers one. Running
+# it again adds nothing.
 #
 # Usage: scripts/teach-character-lessons [--dir PROJECT_DIR] [--dry-run] <name> [<name> ...]
 #        scripts/teach-character-lessons [--dir PROJECT_DIR] [--dry-run] --buddies-of <owner name>
@@ -67,6 +71,7 @@ if pgrep -x worldserver > /dev/null; then
 fi
 mkdir -p "${BACKUPS}" "${SCRATCH}"
 sql "${WORLD}" -e "SELECT spell_id, req_spell FROM spell_required" > "${SCRATCH}/required.tsv"
+sql "${WORLD}" -e "SELECT DISTINCT ts.SpellId, ts.ReqLevel, ts.ReqSkillLine, ts.ReqSkillRank FROM trainer t JOIN trainer_spell ts ON ts.TrainerId = t.Id WHERE t.Type = 2" > "${SCRATCH}/trade.tsv"
 # }}}
 
 for NAME in "${NAMES[@]}"; do
@@ -84,9 +89,9 @@ for NAME in "${NAMES[@]}"; do
     BACKUP="${BACKUPS}/${NAME}-$(date +%Y-%m-%d-%H%M%S)-spells.sql"
     {
         echo "-- written by scripts/teach-character-lessons before teaching ${NAME} (guid ${GUID});"
-        echo "-- to put back: DELETE FROM character_spell WHERE guid = ${GUID}; then load this file."
+        echo "-- to put back: DELETE FROM character_spell and character_skills WHERE guid = ${GUID}; then load this file."
         "${MYSQLDUMP}" -h127.0.0.1 -P3307 -uritz -pmenardi --no-create-info --skip-triggers \
-            --where="guid = ${GUID}" "${CHARS}" character_spell 2>&1 | grep -v "Using a password"
+            --where="guid = ${GUID}" "${CHARS}" character_spell character_skills 2>&1 | grep -v "Using a password"
     } > "${BACKUP}"
     echo "Backup: ${BACKUP}"
     # }}}
@@ -99,10 +104,11 @@ for NAME in "${NAMES[@]}"; do
     {
         printf 'char\t%s\t%s\t%s\t%s\n' "${GUID}" "${RACE}" "${CLASS}" "${LEVEL}"
         sql "${CHARS}" -e "SELECT 'spell', spell FROM character_spell WHERE guid = ${GUID}"
+        sql "${CHARS}" -e "SELECT 'skill', skill, value, max FROM character_skills WHERE guid = ${GUID}"
     } > "${STATE}"
     sql "${WORLD}" -e "SELECT DISTINCT ts.SpellId, ts.ReqLevel, ts.ReqAbility1, ts.ReqAbility2, ts.ReqAbility3, ts.ReqSkillLine, ts.ReqSkillRank
         FROM trainer t JOIN trainer_spell ts ON ts.TrainerId = t.Id WHERE t.Type = 0 AND t.Requirement = ${CLASS}" > "${LESSONS}"
-    luajit "${PLANNER}" "${DIR}" "${STATE}" "${LESSONS}" "${SCRATCH}/required.tsv" "${PLAN}"
+    luajit "${PLANNER}" "${DIR}" "${STATE}" "${LESSONS}" "${SCRATCH}/required.tsv" "${PLAN}" "${SCRATCH}/trade.tsv"
     # }}}
 
     # {{{ step 4: apply

@@ -254,7 +254,9 @@ static void Remake(Player* bot, uint32 owner, uint8 profile, uint8 role)
     bot->resetTalents(true);
 
     uint32 lessons = BuddyLearnEverything(bot);
-    std::string problems = BuddyGiveStartingKit(bot, owner, profile);   // its gear by talent shape (617r2)
+    std::string problems;
+    lessons += BuddyRaiseProfessions(bot, problems);   // its professions to its new level (617k)
+    problems += BuddyGiveStartingKit(bot, owner, profile);   // its gear by talent shape (617r2)
     problems += BuddyGemKit(bot, profile, role);       // its sockets filled, as at its making (617j2)
     bot->SaveToDB(false, false);
     // with its owner again; written directly, so a second login can't remake it twice
@@ -316,7 +318,10 @@ private:
         uint8  role    = (*row)[3].Get<uint8>();
         uint32 forgotten = level < oldLevel ? BuddyForgetLessons(bot) : 0;   // going down: the higher lessons go
         uint32 lessons = BuddyLearnEverything(bot);
-        std::string problems = BuddyRegear(bot, profile);
+        std::string problems;
+        if (level > oldLevel)
+            lessons += BuddyRaiseProfessions(bot, problems);   // up: its professions practised to the new level (617k)
+        problems += BuddyRegear(bot, profile);
         if (level >= BUDDY_PVP_JEWELLERY_FROM)
             problems += BuddyGivePvpJewellery(bot, profile, role);
         problems += BuddyGemKit(bot, profile, role);

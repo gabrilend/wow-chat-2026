@@ -17,14 +17,24 @@
 -- the two never disagree. Pure Lua with no server calls, so the server's
 -- Lua scripts can use the same rules.
 --
--- Usage: luajit lessons-sql.lua PROJECT_DIR STATE_TSV LESSONS_TSV REQUIRED_TSV OUT_SQL
+-- Professions too (owner, 2026-10-15, the buddy module's BuddyRaiseProfessions
+-- in plain Lua): every profession the character has, cooking, first aid
+-- and fishing included, raised to five points a level up to 300, with the
+-- rank spells that skill needs (Apprentice 75, Journeyman 150 from 10,
+-- Expert 225 from 20, Artisan 300 from 35) and every recipe its trainers
+-- teach at or below that skill and level. Never lowers a skill. (An
+-- enchanter's rod is an item; the buddy module gives it in the world.)
+--
+-- Usage: luajit lessons-sql.lua PROJECT_DIR STATE_TSV LESSONS_TSV REQUIRED_TSV OUT_SQL [TRADE_TSV]
 --   STATE_TSV     "char<TAB>guid<TAB>race<TAB>class<TAB>level", then "spell<TAB>id" per known spell
+--                 and "skill<TAB>id<TAB>value<TAB>max" per skill
+--   TRADE_TSV     the profession trainers' lessons: spell, level, skill line, skill rank
 --   LESSONS_TSV   the class trainers' lessons: spell, level, ability 1-3, skill line, skill rank
 --   REQUIRED_TSV  spell_required: spell, the spell it needs
 --   OUT_SQL       the plan (one transaction); prints a report to standard output
 
 -- {{{ arguments
-local DIR, STATE, LESSONS, REQUIRED, OUT = arg[1], arg[2], arg[3], arg[4], arg[5]
+local DIR, STATE, LESSONS, REQUIRED, OUT, TRADE = arg[1], arg[2], arg[3], arg[4], arg[5], arg[6]
 local function die(msg) io.stderr:write("lessons-sql: " .. msg .. "\n"); os.exit(1) end
 if not OUT then die("usage: lessons-sql.lua PROJECT_DIR STATE_TSV LESSONS_TSV REQUIRED_TSV OUT_SQL") end
 -- }}}
@@ -39,11 +49,12 @@ end
 -- }}}
 
 -- {{{ the character
-local ch, known = nil, {}
+local ch, known, skills = nil, {}, {}
 for line in (io.open(STATE) or die("cannot open " .. STATE)):lines() do
     local kind, a, b, c, d = line:match("^(%a+)\t(%d+)\t?(%d*)\t?(%d*)\t?(%d*)")
     if kind == "char" then ch = { guid = tonumber(a), race = tonumber(b), class = tonumber(c), level = tonumber(d) }
-    elseif kind == "spell" then known[tonumber(a)] = true end
+    elseif kind == "spell" then known[tonumber(a)] = true
+    elseif kind == "skill" then skills[tonumber(a)] = { value = tonumber(b), max = tonumber(c) } end
 end
 if not ch then die("state file has no 'char' line") end
 local raceBit, classBit = 2 ^ (ch.race - 1), 2 ^ (ch.class - 1)
@@ -163,6 +174,48 @@ repeat
 until not more or rounds > 40
 -- }}}
 
+-- {{{ professions
+-- skill line -> its four rank spells (Spell.dbc, all 56 checked by name)
+local RANKS = {
+    [171] = { 2259, 3101, 3464, 11611 }, [164] = { 2018, 3100, 3538, 9785 }, [333] = { 7411, 7412, 7413, 13920 },
+    [202] = { 4036, 4037, 4038, 12656 }, [773] = { 45357, 45358, 45359, 45360 }, [755] = { 25229, 25230, 28894, 28895 },
+    [165] = { 2108, 3104, 3811, 10662 }, [197] = { 3908, 3909, 3910, 12180 }, [182] = { 2366, 2368, 3570, 11993 },
+    [186] = { 2575, 2576, 3564, 10248 }, [393] = { 8613, 8617, 8618, 10768 }, [185] = { 2550, 3102, 3413, 18260 },
+    [129] = { 3273, 3274, 7924, 10846 }, [356] = { 7620, 7731, 7732, 18248 },
+}
+local RANK_FROM_LEVEL, RANK_MAX = { 1, 10, 20, 35 }, { 75, 150, 225, 300 }
+local skill_sql = {}
+if TRADE then
+    local target = math.min(ch.level * 5, 300)
+    local isRank = {}
+    for _, r in pairs(RANKS) do for _, sp in ipairs(r) do isRank[sp] = true end end
+    for skill, ranks in pairs(RANKS) do
+        local have = skills[skill]
+        if have then
+            local rank = 1
+            for r = 2, 4 do if target > RANK_MAX[r - 1] and ch.level >= RANK_FROM_LEVEL[r] then rank = r end end
+            for r = 1, rank do take({ ranks[r] }) end
+            local max = math.max(RANK_MAX[rank], have.max)
+            local value = math.max(math.min(target, RANK_MAX[rank]), have.value)
+            if value ~= have.value or max ~= have.max then
+                skill_sql[#skill_sql + 1] = string.format("UPDATE character_skills SET value = %d, max = %d WHERE guid = %d AND skill = %d;",
+                    value, max, ch.guid, skill)
+                have.value, have.max = value, max
+            end
+        end
+    end
+    for line in (io.open(TRADE) or die("cannot open " .. TRADE)):lines() do
+        local spell, lvl, skill, srank = line:match("^(%d+)\t(%d+)\t(%d+)\t(%d+)")
+        spell, lvl, skill, srank = tonumber(spell), tonumber(lvl), tonumber(skill), tonumber(srank)
+        if spell and skill ~= 0 and skills[skill] and skills[skill].value >= srank and lvl <= ch.level and fits(spell) then
+            local rankLesson = isRank[spell]
+            for _, t in ipairs(teaches[spell] or {}) do if isRank[t] then rankLesson = true end end
+            if not rankLesson then take(adds(spell)) end
+        end
+    end
+end
+-- }}}
+
 -- {{{ write the plan
 local out = io.open(OUT, "w") or die("cannot write " .. OUT)
 out:write(string.format("-- written by scripts/lib/lessons-sql.lua for character %d (race %d, class %d, level %d)\n",
@@ -172,8 +225,10 @@ table.sort(added)
 for _, s in ipairs(added) do
     out:write(string.format("INSERT IGNORE INTO character_spell (guid, spell, specMask) VALUES (%d, %d, 255);\n", ch.guid, s))
 end
+for _, line in ipairs(skill_sql) do out:write(line .. "\n") end
 out:write("COMMIT;\n")
 out:close()
 print(string.format("Lessons: %d known before, %d added (%d rounds)", (function() local c = 0 for _ in pairs(before) do c = c + 1 end return c end)(), #added, rounds))
 if #added > 0 then print("Added: " .. table.concat(added, " ")) end
+if #skill_sql > 0 then print(string.format("Professions raised: %d skills", #skill_sql)) end
 -- }}}

@@ -352,6 +352,128 @@ uint32 BuddyLearnEverything(Player* bot)
 }
 // }}}
 
+// {{{ BuddyRaiseProfessions
+// A buddy made at a level practises its professions as if it had been
+// playing (owner, 2026-10-15: "when created at a certain level, they
+// should have a proficiency level (and abilities learned, and required
+// items given like runed arcanite rods) appropriate for their character
+// level"): every profession it has, cooking, first aid and fishing too,
+// at five points a level up to 300 (185's rate; basic stops at 300), the
+// rank that skill needs (Apprentice 75, Journeyman 150 from level 10,
+// Expert 225 from 20, Artisan 300 from 35, as the trainers teach them),
+// every recipe its profession's trainers teach at or below that skill and
+// level, and an enchanter's runed rod of its skill. Never lowers a skill.
+//
+// The rank spells are learned and the skill set directly, the death knight
+// way (MaxDeathKnightProfessions): a rank is learned by casting it, and a
+// buddy being made isn't in the world to cast. Rank numbers read from
+// Spell.dbc, 2026-10-15 (all 56 by name).
+struct ProfessionRanks { uint32 skill; uint32 rank[4]; };
+static ProfessionRanks const sProfessionRanks[] = {
+    { SKILL_ALCHEMY,        {  2259,  3101,  3464, 11611 } },
+    { SKILL_BLACKSMITHING,  {  2018,  3100,  3538,  9785 } },
+    { SKILL_ENCHANTING,     {  7411,  7412,  7413, 13920 } },
+    { SKILL_ENGINEERING,    {  4036,  4037,  4038, 12656 } },
+    { SKILL_INSCRIPTION,    { 45357, 45358, 45359, 45360 } },
+    { SKILL_JEWELCRAFTING,  { 25229, 25230, 28894, 28895 } },
+    { SKILL_LEATHERWORKING, {  2108,  3104,  3811, 10662 } },
+    { SKILL_TAILORING,      {  3908,  3909,  3910, 12180 } },
+    { SKILL_HERBALISM,      {  2366,  2368,  3570, 11993 } },
+    { SKILL_MINING,         {  2575,  2576,  3564, 10248 } },
+    { SKILL_SKINNING,       {  8613,  8617,  8618, 10768 } },
+    { SKILL_COOKING,        {  2550,  3102,  3413, 18260 } },
+    { SKILL_FIRST_AID,      {  3273,  3274,  7924, 10846 } },
+    { SKILL_FISHING,        {  7620,  7731,  7732, 18248 } },
+};
+static constexpr uint8  RANK_FROM_LEVEL[4] = { 1, 10, 20, 35 };
+static constexpr uint16 RANK_MAX[4]        = { 75, 150, 225, 300 };
+static constexpr uint16 SKILL_PER_LEVEL    = 5;
+static constexpr uint16 SKILL_CAP          = 300;   // basic's professions stop here (155n)
+// an enchanter's rod by the skill its recipe needs: copper, silver,
+// golden, truesilver, arcanite (item_template, 2026-10-15)
+struct RodAtSkill { uint16 skill; uint32 item; };
+static constexpr RodAtSkill ENCHANTING_RODS[] = { { 1, 6218 }, { 100, 6339 }, { 150, 11130 }, { 200, 11145 }, { 275, 16207 } };
+
+static std::once_flag sTradeTrainersFound;
+static std::vector<uint32> sTradeTrainers;
+
+uint32 BuddyRaiseProfessions(Player* bot, std::string& problems)
+{
+    uint16 target = std::min<uint16>(uint16(bot->GetLevel()) * SKILL_PER_LEVEL, SKILL_CAP);
+    std::set<uint32> rankSpells;
+    for (ProfessionRanks const& p : sProfessionRanks)
+        for (uint32 r : p.rank)
+            rankSpells.insert(r);
+
+    // the skill and its rank
+    uint32 raised = 0;
+    for (ProfessionRanks const& p : sProfessionRanks)
+    {
+        if (!bot->HasSkill(p.skill))
+            continue;
+        uint8 rank = 0;                                // the highest rank its skill and level call for
+        for (uint8 r = 1; r < 4; ++r)
+            if (target > RANK_MAX[r - 1] && bot->GetLevel() >= RANK_FROM_LEVEL[r])
+                rank = r;
+        for (uint8 r = 0; r <= rank; ++r)
+            if (!bot->HasSpell(p.rank[r]))
+                bot->learnSpell(p.rank[r], false);
+        uint16 max   = std::max<uint16>(RANK_MAX[rank], bot->GetMaxSkillValue(p.skill));
+        uint16 value = std::max<uint16>(std::min(target, RANK_MAX[rank]), bot->GetBaseSkillValue(p.skill));
+        if (value != bot->GetBaseSkillValue(p.skill) || max != bot->GetMaxSkillValue(p.skill))
+        {
+            bot->SetSkill(p.skill, std::max<uint16>(rank + 1, bot->GetSkillStep(p.skill)), value, max);
+            ++raised;
+        }
+    }
+
+    // the recipes: every lesson of a profession trainer for a skill it has
+    // (never a new profession's first rank, which has no skill asked for;
+    // never a rank lesson, done above), pass after pass
+    std::call_once(sTradeTrainersFound, [] {
+        for (auto const& kv : *sObjectMgr->GetCreatureTemplates())
+            if (Trainer::Trainer* t = sObjectMgr->GetTrainer(kv.first))
+                if (t->GetTrainerType() == Trainer::Type::Tradeskill)
+                    sTradeTrainers.push_back(kv.first);
+    });
+    uint32 recipes = 0;
+    for (bool more = true; more; )
+    {
+        more = false;
+        for (uint32 entry : sTradeTrainers)
+            if (Trainer::Trainer* t = sObjectMgr->GetTrainer(entry))
+                if (t->IsTrainerValidForPlayer(bot))
+                    for (Trainer::Spell const& sp : t->GetSpells())
+                    {
+                        if (!sp.ReqSkillLine || !bot->HasSkill(sp.ReqSkillLine) || !t->CanTeachSpell(bot, &sp))
+                            continue;
+                        bool isRank = rankSpells.count(sp.SpellId) > 0;
+                        if (SpellInfo const* info = sSpellMgr->GetSpellInfo(sp.SpellId))
+                            for (SpellEffectInfo const& eff : info->GetEffects())
+                                if (eff.IsEffect(SPELL_EFFECT_LEARN_SPELL) && rankSpells.count(eff.TriggerSpell))
+                                    isRank = true;
+                        if (isRank)
+                            continue;                  // a rank: set above, by its skill
+                        uint32 n = LearnOne(bot, sp.SpellId);
+                        recipes += n;
+                        more = more || n > 0;
+                    }
+    }
+
+    // an enchanter's rod of its skill
+    if (bot->HasSkill(SKILL_ENCHANTING))
+    {
+        uint32 rod = 0;
+        for (RodAtSkill const& r : ENCHANTING_RODS)
+            if (bot->GetBaseSkillValue(SKILL_ENCHANTING) >= r.skill)
+                rod = r.item;
+        if (rod && !bot->HasItemCount(rod, 1, true) && !bot->StoreNewItemInBestSlots(rod, 1))
+            problems += "no room in its bags for runed rod " + std::to_string(rod) + "; ";
+    }
+    return raised + recipes;
+}
+// }}}
+
 // {{{ BuddyForgetLessons
 // The spells learning `spellId` adds (LearnOne's reading of it).
 static std::vector<uint32> Taught(uint32 spellId)

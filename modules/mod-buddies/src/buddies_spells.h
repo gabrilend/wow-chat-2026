@@ -57,6 +57,16 @@ uint32 BuddyFillWeaponKinds(Player* bot, uint32 allowance);
 uint32 BuddyLearnEverything(Player* bot);
 // }}}
 
+// {{{ BuddyRaiseProfessions
+// Every profession the buddy has (cooking, first aid and fishing too)
+// raised to its level's skill (five a level, up to 300), the rank spells
+// that skill needs, every recipe its profession trainers teach at or
+// below that skill and level, and an enchanter's runed rod of its skill.
+// Never lowers a skill. Safe before the buddy is in the world. Returns how
+// many skills and recipes changed; `problems` gains what could not be done.
+uint32 BuddyRaiseProfessions(Player* bot, std::string& problems);
+// }}}
+
 // {{{ BuddyForgetLessons
 // The reverse of BuddyLearnEverything, for a stored buddy brought back
 // (617a6): every lesson any class trainer valid for it teaches, and every

@@ -358,6 +358,11 @@ uint32 BuddyMakeCharacter(uint32 account, uint8 race, uint8 cls, uint8 level, ui
     // paladin's plate at 40) count when the kit chooses.
     uint32 lessons = BuddyLearnEverything(made);
     LOG_INFO("module", "mod-buddies: new {} {} (level {}) knows {} spells from trainers and quests", kind, name, made->GetLevel(), lessons);
+    // its professions practised to its level: skill, ranks, recipes, rod (617k)
+    std::string professionProblems;
+    uint32 practised = BuddyRaiseProfessions(made, professionProblems);
+    LOG_INFO("module", "mod-buddies: new {} {}: {} profession skills and recipes for level {}{}{}", kind, name, practised,
+        made->GetLevel(), professionProblems.empty() ? "" : "; ", professionProblems);
     // the starting kit: white gear, food (and drink), level x 1 silver,
     // bags like the owner's (617a4); made now, before the first save
     std::string kitProblems = BuddyGiveStartingKit(made, bagsLike, shape);   // its gear by talent shape (617r2)
