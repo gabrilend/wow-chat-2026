@@ -289,6 +289,34 @@ do
 end
 -- }}}
 
+-- {{{ no rare at this level: normal monsters come anyway, on one clock
+-- (the world database has no rare of the ambush's types at levels 1-5 or
+-- 16, and no rare elite below 19; that "nothing" used to add a clock)
+do
+    World.answer = { [0] = { { 500, 1, 60 } } }             -- normals only
+    local p = new_player("Newcomer", 104)
+    p.level = 3
+    silently(login, p)
+    silently(advance, 10 * 60 * 1000)
+    check(#p.spawned > 0, "a player at a level with no rares should still meet normal monsters")
+    check(pending(p, Ambush.spawnAndAttackPlayer) == 1,
+          "a level with no rares should not add ambush clocks, has " .. pending(p, Ambush.spawnAndAttackPlayer))
+    -- a group of three or more asks for rare elites first: none, then rares: none, then normals
+    p:SetData("queue", {})
+    p:SetData("rare-queue", {})
+    local asked = {}
+    local real = WorldDBQueryAsync
+    WorldDBQueryAsync = function(sql, cb) asked[#asked + 1] = tonumber(sql:match("`rank` = (%d+)")); real(sql, cb) end
+    silently(Ambush.setupAmbushQueue, p, 2)
+    WorldDBQueryAsync = real
+    check(#asked == 3 and asked[1] == 2 and asked[2] == 4 and asked[3] == 0,
+          "with no rare elites or rares, the ambush should ask rank 2, then 4, then 0 (asked " .. table.concat(asked, ",") .. ")")
+    check(#p:GetData("queue") > 0, "after asking down to normals the normal queue should be filled")
+    silently(logout, p)
+    World.events = {}
+end
+-- }}}
+
 -- shared setup for the spawning scenes: one normal creature, one rare
 World.answer = { [0] = { { 500, 1, 60 } }, [4] = { { 900, 1, 60 } } }
 

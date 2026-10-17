@@ -289,15 +289,33 @@ function Ambush.setupAmbushQueue(player, rank) -- {{{
             -- logged out during the async window, the lookup returns
             -- nil and we drop the query silently.
             local p = GetPlayerByName(playerName)
-            if p then Ambush.pushToAmbushQueue(p, query) end
+            if p then Ambush.pushToAmbushQueue(p, query, rank) end
         end)
 end -- }}}
+
+-- {{{ Ambush.NEXT_RANK_WHEN_NONE
+-- What to ask for next when a rank has nothing for this player's level
+-- (by rank: 2 = rare elite, 4 = rare, 0 = normal). Some levels have none:
+-- in the world database (2026-10-17) no rare of the ambush's creature types
+-- lives at levels 1-5 or 16, and no rare elite below 19, so a new character
+-- and any group of three or more below 19 always got "nothing" for its rare
+-- question. wow-chat-1 then simply stopped there (no rare, so the normal
+-- queue was never filled, and low-level players met no ambush at all).
+-- The January port answered it with a placeholder rare and a second try a
+-- second later; once the ambush wound its own clock (April), each second
+-- try started one more clock, so every "nothing" added one. Now the next
+-- rank down is asked straight away instead.
+--   2 (rare elite) found nothing: ask for a rare
+--   4 (rare) found nothing: ask for normal monsters
+--   0 (normal) found nothing: not in this table; reported as an error
+Ambush.NEXT_RANK_WHEN_NONE = { [2] = 4, [4] = 0 }
+-- }}}
 
 -- this function builds an Ambush queue based on the results of the sql query
 -- The caller (the closure in setupAmbushQueue) already re-resolved the
 -- player via GetPlayerByName, so `player` is guaranteed valid here.
 -- See issue 210 for the broadcast bug this design replaces.
-function Ambush.pushToAmbushQueue(player, query) -- {{{
+function Ambush.pushToAmbushQueue(player, query, rank) -- {{{
 
     local LEVEL_MAX = 0 -- differential between player level and monster level
     local LEVEL_MIN = 0 -- MAKE SURE YOU ALSO SET IN setup[Solo/Group]RareQueue()
@@ -337,21 +355,23 @@ function Ambush.pushToAmbushQueue(player, query) -- {{{
         creatures = tempTable
     end -- }}}
 
+    --   nothing fits (none at this level, or all of them banned): ask
+    --     the next rank down, or report it if there is none below
+    --   something fits: queue it below
     if #creatures == 0 then -- {{{
-        print("no creatures found")
-        queueType = "rare-queue" -- there will always be normal monsters, soooo...
-    end -- }}}
-
-    -- Empty results: stub the queue with {0} (an entry the spawner skips)
-    -- so the next tick moves on instead of asking the database again.
-    -- Applies only to the originating player now (used to broadcast).
-    -- This used to also start the spawner again a second later; since the
-    -- spawner winds its own clock, that started a second clock beside the
-    -- first, and every empty answer added one more (removed 2026-10-17).
-    if #creatures == 0 and next(player:GetData(queueType)) == nil then
-        player:SetData(queueType, {0})
+        local nextRank = Ambush.NEXT_RANK_WHEN_NONE[rank]
+        if nextRank then
+            print("[Ambush] no rank " .. tostring(rank) .. " creature for " .. player:GetName()
+                  .. " at level " .. player:GetLevel() .. "; asking for rank " .. nextRank)
+            Ambush.setupAmbushQueue(player, nextRank)
+        else
+            print("[Ambush] ERROR: no normal creature fits " .. player:GetName() .. " at level "
+                  .. player:GetLevel() .. " (creature types 2-6, 9, 10, with loot, no npc flags, not banned);"
+                  .. " no ambush until the next tick asks again. to debug: does the world database"
+                  .. " hold creature_template rows for this level? is the ban list (BANNED_CREATURE_IDS) eating them all?")
+        end
         return
-    end
+    end -- }}}
 
     -- Filter creatures by level appropriateness for THIS player and append
     -- to their queue. Used to do this for every player in the world — see

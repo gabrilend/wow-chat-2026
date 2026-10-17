@@ -472,6 +472,19 @@ sure that walking speed is at 100% of it's normal speed?". C034 is set in
 the installed basic config too (a restart picks it up); B053 needs a
 build.
 
+## 2026-10-17 — Beta: 200 random bots (C035)
+
+| Knob | Value | Where |
+|---|---|---|
+| Random bots in the world (`AiPlayerbot.MinRandomBots`, `MaxRandomBots`) | 200 (stock 500) | `config/patches/C035-beta-playerbot-population.sh` |
+
+Why: beta's ambush sends monsters at every bot as well as every player
+(wanted), so each bot is a stream of spawns and chases of its own; at 500
+that was about 12 spawns a second across the world. The owner, 2026-10-17:
+"We want monsters to spawn for playerbots. We might need to decrease the
+number of playerbots." and "if it's 500 bots now, then we should turn it
+down to 200." Takes effect at beta's next install, then a restart.
+
 ## How to add an entry
 
 ```markdown

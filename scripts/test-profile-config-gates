@@ -112,8 +112,8 @@ declare -a EXPECT_beta=(
     "authserver.conf|RealmServerPort|4362"                 # C010
     "modules/playerbots.conf|AiPlayerbot.RandomBotMinLevel|1"   # C012
     "modules/playerbots.conf|AiPlayerbot.RandomBotMaxLevel|20"  # C012
-    "modules/playerbots.conf|AiPlayerbot.MinRandomBots|500"     # stock; the bots are ambushed too
-    "modules/playerbots.conf|AiPlayerbot.MaxRandomBots|500"     # stock
+    "modules/playerbots.conf|AiPlayerbot.MinRandomBots|200"     # C035; the bots are ambushed too
+    "modules/playerbots.conf|AiPlayerbot.MaxRandomBots|200"     # C035
 )
 # }}}
 

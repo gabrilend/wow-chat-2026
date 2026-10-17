@@ -46,7 +46,7 @@ the real settings patches on scratch copies and reads every value back.
 | Run speed                       | 0.85       | C003  | |
 | Instant flight paths            | on         | C009  | |
 | Login as game master            | yes (3)    | C008  | development realm |
-| Random bots                     | 500, levels 1–20 | stock, C012 | every one is ambushed too |
+| Random bots                     | 200, levels 1–20 | C035, C012 | every one is ambushed too |
 | Realm id                        | 2          | C019  | |
 | Ports                           | world 4462, auth 4362 | C010 | shared with other profiles until 136b |
 
