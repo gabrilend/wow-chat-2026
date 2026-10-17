@@ -11,6 +11,12 @@
 - Blocked-ish 2026-09-03: the traveller system that would deliver these
   trainers is not loaded on the active profile — see *The delivery problem*
 - Phase: 5 (Friendly Encounters — the trainers who wander by)
+- Decided 2026-10-17 (owner): off for the beta profile ("for our
+  purposes, let's have it off for the beta profile"). Beta's custom
+  classes learn from trainers of their own class and from tomes instead:
+  issue 721. This design is kept for a realm that wants it, and is to be
+  renamed (721, open question 1). Its "gate two" study (the per-spell
+  class check, and the resource wall) is what 721 builds on.
 - Priority: Medium
 
 ## Origin

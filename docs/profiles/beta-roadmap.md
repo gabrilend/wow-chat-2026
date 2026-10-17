@@ -75,9 +75,12 @@ work needs, and treasure is fed by the selling that merchants allow.
   list): verify in the run and close.
 - **210** per-player ambush queue (built, checked offline): its in-game
   check, two players at different levels.
-- **151** bot population governor (in progress, built on vanilla): beta
-  keeps 500 random bots, each ambushed. Choosing how many is a knob,
-  recorded in `docs/balance-updates.md`.
+- **151** bot population governor (in progress, built on vanilla). Beta's
+  random bots go from 500 to 200 (owner, 2026-10-17; C035, recorded in
+  `docs/balance-updates.md`), each still ambushed.
+- **211** group hearthstone by invitation (new): a pop-up to each member
+  when someone hearths, moved when the cast completes, standing in a
+  circle by group number round the first hearther's arrival.
 
 ### 3. The scheduler
 
@@ -95,8 +98,11 @@ work needs, and treasure is fed by the selling that merchants allow.
 - **504** a traveller sits when the player sits (implemented, needs
   testing). **505** creature-class travellers (open). **501** custom
   merchant system (open).
-- With trainers walking again, beta's trainer-spell changes (E013, E014)
-  start meaning something, and a new character can learn.
+- With trainers walking again, a new character can learn. But beta's
+  trainer steps (E011 death knights, E013, E014) write the old
+  `npc_trainer` table, which the current server ignores; they are rewritten
+  onto `trainer` and `trainer_spell` first (721, step 1). Until then even a
+  death knight learns nothing past its starting abilities (206's note).
 
 ### 5. Treasure
 
@@ -127,10 +133,15 @@ work needs, and treasure is fed by the selling that merchants allow.
 
 ### 8. Custom classes on the stock client
 
-- **502** universal class trainers (designed in depth, not built): a
-  server setting lets any class train any trainer's spells, gold being the
-  only limit, with each borrowed spell re-costed in the learner's own
-  resource. This is the trainers approach, and it works on the stock client.
+- **721** class trainers and tomes of any ability (new, the beta design):
+  every class, stock or custom, has its own trainer list; its trainers
+  arrive as travellers and talk only to their own class; any ability works
+  for any class once learned, and is learned only from your class's
+  trainer or from a rare tome that teaches any ability.
+- **502** any class at any trainer for gold (designed, not built): off for
+  beta (owner, 2026-10-17), kept for a realm that wants it, to be renamed.
+  Its study of the per-spell class check and the resource wall is what 721
+  builds on.
 - **705** class selector NPC, **706** the Knight (design complete; its
   definition loads), **709** class file format, **711** configuration
   schema, **712** conditional selector spawn: the framework that turns a
@@ -154,8 +165,8 @@ work needs, and treasure is fed by the selling that merchants allow.
 
 The ambush announces a monster by its entry number ("here comes 1234!"),
 which stays for beta. The release version uses only the project's own
-assets, so its monsters need records of their own first. No issue holds
-that yet (issue 200, open question 2).
+assets, so its monsters need records of their own first: filed in 506
+(the gear gallery, whose loop is the template for every generated asset).
 
 ## Open questions
 
@@ -163,7 +174,10 @@ Kept in the issue they belong to, asked one at a time:
 
 - 136b: which profile keeps the existing databases; ports; release's
   world; how many realms run at once.
-- 200: how many random bots; where "new creature records" lives; whether
-  StackTracePlus runs; death knight creation under a cap of 20.
-- The group hearthstone: whether beta's should work like the buddies'
-  (see the reply of 2026-10-17 in the transcript).
+- 200: whether StackTracePlus runs; death knight creation under a cap
+  of 20.
+- 211: random bots and the hearth pop-up; two hearthers at once; Sargobras's
+  pop-up or the game's summon dialog.
+- 617e: the buddies' new hearthstone rule and what it replaces.
+- 718: which profile Chromie's death knight story belongs to.
+- 721: 502's new name; borrowed spells' cost; talents without AIO.

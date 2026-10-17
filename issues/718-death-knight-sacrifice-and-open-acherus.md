@@ -467,6 +467,57 @@ script (`ScarletEnclave/chapter2.cpp`), and a death knight gets only its
 own. Since 2026-10-12 the skip rewards none of them; the reset tool reads
 the list to know what to take off.
 
+### Proposal, 2026-10-17 (Ritz): the story in the past, through Chromie
+
+Asked during the beta audit what beta's death knights can do (they start
+at level 1 there, in an Acherus emptied of its people, with no trainer),
+verbatim:
+
+> what's the status on their abilities? What starting zone do they start
+> in? Can we make it specific to their race? or do we already have a plan
+> for the DK starting zone to downlevel it to... level 1? that doesn't seem
+> right, the NPCs are too powerful. How about we make it so level 55 DK's
+> can play the story by teleporting themselves into the past with Chromie?
+> She can hang out at Light's Hope Chapel. You should only be able to do it
+> at level 55, so it's a rite of passage, and if you miss it... Oh well.
+> Either that, or we temporarily down-level you using the basic profile's
+> tools. But I don't like that idea because it means there's no stakes or
+> reason for you to do it. How about we lock DK exp at 55 until they
+> complete that quest? Making it forced... Though they should be able to
+> talk to Chromie (who spawns and follows them Sargobras style) and say "I
+> want to skip the DK intro story" or "Can you teleport me to the DK intro
+> story?" etc. They should be able to use their current gear or request a
+> different set, maybe with a second level to the Chromie menu?
+
+As understood (to be confirmed, questions below):
+- A death knight starts outside Acherus. Chromie (168) appears and follows
+  it, Sargobras-style, and waits at Light's Hope Chapel.
+- At level 55, and only then, Chromie can send it into the past: into
+  Acherus to play the story ("a rite of passage, and if you miss it... Oh
+  well").
+- Its experience is held at 55 until the story's last quest is done, so
+  the story is the way on; or it tells Chromie "I want to skip the DK intro
+  story", which releases the hold.
+- Into the past with its own gear, or a different set asked for in a
+  second Chromie menu.
+
+Questions this raises (asked 2026-10-17):
+1. Which profile? Beta caps at 20 and starts death knights at 1, so no
+   beta death knight reaches 55. Basic (cap 60) starts them at 55, in
+   Acherus, with Sargobras's soul trade at the door and his story skip
+   (above). Is Chromie for basic, replacing or beside Sargobras's skip; for
+   beta with a different level; or for a profile yet to come?
+2. "Only at level 55 ... if you miss it, oh well" and "lock DK exp at 55
+   until they complete that quest" pull two ways: if experience is held at
+   55 until the story is done or skipped, nobody can miss it. Which one?
+3. "Into the past": does the death knight stay a level-55 death knight
+   in Acherus while there (the story's quests are tuned for 55-58), and
+   come back to Light's Hope when the story ends?
+4. Starting zone by race (the beta question): a death knight could start
+   in its race's own starting zone (vanilla did this for every class,
+   148n, through the server's start-position table) rather than Acherus.
+   Wanted for beta's level-1 death knights?
+
 ## Open Questions
 
 - (Answered 2026-10-04) Skipping and the story's gear choices: "isn't

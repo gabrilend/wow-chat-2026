@@ -367,3 +367,24 @@ Death Knights weren't designed for level 1-20. But the empty world needs all pla
 - Pet class (Raise Dead at 20)
 
 By scaling DKs down, we add build diversity without creating imbalance. The empty world is harsh—players need every class option available.
+
+## State on the current server (checked 2026-10-17)
+
+This was built in April against the schema of the time. Read against the
+current server and beta's install steps:
+
+- **Starting level:** from 2026-06-04 a settings patch (C017) started
+  beta's death knights at the level cap, 20. Fixed 2026-10-17: C017 now
+  gives beta 1, and `scripts/test-profile-config-gates <dir> beta` checks it.
+- **Abilities:** the ability kit for levels 2-20 is written into
+  `npc_trainer` (E011, `sql/beta/db_world.src/11-dk-class-system.apply.sql`),
+  a table the current server no longer reads: it reads `trainer` and
+  `trainer_spell`, and links a creature to its list through
+  `creature_default_trainer` (Amal'thazad, Lady Alistra and Lord Thorval,
+  creatures 29194-29196, all point at trainer list 13). So the kit is not
+  offered, and the three trainers are not in the world anyway: beta's
+  creature clearing (E012) removes their spawns along with everyone else's.
+  A beta death knight today has its starting abilities and nothing more.
+- **Exits from Ebon Hold:** unchanged (`src/lua-beta/death-knights.lua`).
+- Bringing the kit back is part of issue 721's first step (trainer lists
+  on the current tables) and the beta roadmap's step 4.

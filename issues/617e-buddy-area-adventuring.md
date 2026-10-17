@@ -217,6 +217,48 @@ buddy, since buddies never bind):
   version, `.buddies here <partner>`, brought Growth's six to Growth after
   a hearth.
 
+### Decision, 2026-10-17 (Ritz): buddies cast with the owner, and finish when they can
+
+Shown how the built hearthstone behaves (every buddy moved 1.5 seconds
+after the owner's cast completes, its own cast stopped), verbatim:
+
+> this buddy-behavior is wrong. They should start casting the hearthstone
+> spell as soon as they are able (fighting, eating, whatever) and cancel it
+> whenever the player does as well. If the player's completes before
+> theirs that's okay, they'll keep it on their highest priority list and
+> complete it as soon as they are able. But any interruption by the player
+> will cancel it.
+
+This returns to the 2026-09-25 rule above and replaces the 2026-10-04
+"always moved, even if their cast didn't complete" (`buddy-hearth.lua` as
+built). As stated:
+
+- **The owner starts a hearthstone:** each buddy starts its own as soon as
+  it is able: at once if it is free, otherwise as soon as it stops
+  fighting, eating, drinking or whatever holds it.
+- **The owner's cast is interrupted or cancelled:** every buddy's cast is
+  cancelled, and so is any hearth still waiting on a buddy's list.
+- **The owner's cast completes first:** the buddies' hearth stays at the
+  top of their to-do list, and each completes its own cast as soon as it
+  is able. Each arrives at its own stored spot round the owner's bind
+  (the 2026-10-04 bind record above; the arc round the owner until that is
+  built).
+
+Open questions (asked 2026-10-17):
+1. This replaces the 2026-10-04 guarantee ("Even if their cast didn't
+   complete, or if they were interrupted by combat or dying... we still
+   teleport them manually"). A buddy that keeps getting interrupted (a
+   long fight, death) then stays behind until it manages a cast. Is that
+   intended, or should something still bring it after a while?
+2. "Any interruption by the player will cancel it": does that apply once
+   the owner has arrived, or only while the owner is still casting? (As
+   written above: only while casting; after arrival nothing the owner does
+   cancels the buddies'.)
+3. The playerbots module decides what a buddy does next; "highest priority
+   until done" means either a strategy of its own in the module (a source
+   patch) or Lua casting the spell for the buddy each time it is free.
+   Which the playerbots code allows is checked first.
+
 ### Decisions, 2026-09-25 (Ritz): the owner dies, or enters an instance
 
 **The owner dies.** "There's two resolutions - either the player resurrects

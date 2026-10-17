@@ -134,3 +134,17 @@ animations").
 ## Related Issues
 
 - **159**; **155f**-era gear ladders for item levels when models become items
+
+## The monsters' own records, before release (filed 2026-10-17)
+
+The beta ambush announces a monster by its creature entry number ("Ambush!
+Watch out, here comes 1234!"). The owner, 2026-10-17: "I like that. Though
+we'll need to create new creature records before release." The release
+version uses only the project's own assets, so every monster it sends needs
+a record of its own: name, model, and the creature template that points at
+them. Filed here because this gallery's loop is the "template for
+templates" for exactly this (above: "each later bank, for a class's set, a
+creature, or a stock model being replaced, is a new question bank poured
+into the same shape"). A creature bank is a later round of this issue's
+loop; the records themselves (creature_template rows) are written by a
+generator from the bank's chosen designs, not by hand.

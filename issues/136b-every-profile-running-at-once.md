@@ -78,9 +78,9 @@ write into each other's files.
 - Every other listening port a worldserver opens is per profile too (SOAP,
   and remote admin if used), or switched off where a profile doesn't need
   it, so no two running servers ask for the same one.
-- Starting a profile's worldserver doesn't need any other profile stopped.
-  The realm list shows every realm, online or greyed out, as the game
-  already does.
+- The realm list shows every realm, online or greyed out, as the game
+  already does. On this machine one runs at a time (decision below); on
+  more machines, starting one never needs another stopped.
 - A test checks the whole table, so a new profile can't reuse another's
   port or databases: for every pair of profiles on the same database
   server, no port and no database name is shared (auth excepted, which is
@@ -113,20 +113,45 @@ write into each other's files.
    port and databases; `docs/profiles/index.md` gets the "running several
    at once" section and drops "they can't run concurrently".
 
+## Decisions, 2026-10-17 (owner)
+
+- **Own databases:** "I thought we transitioned to each profile having
+  it's own database?" Every profile but release and beta already has its
+  own; those two are split.
+- **A port for each profile:** "yes so we know what data is going where".
+  Players outside the house reach the realms through the router at
+  wow.ritzmenardi.com, so every new worldserver port also needs forwarding
+  there (a step for the owner, at the router).
+- **How many at once on this machine:** "no more than one". So on this
+  machine one realm is up at a time and the rest show greyed out in the
+  realm list; the own ports and databases are for keeping each realm's
+  data apart and plainly labelled. Several at once comes with more
+  machines (157).
+
 ## Open Questions
 
-1. When release and beta are split, which keeps the existing `acore_*`
-   databases (and the characters in them)? Beta was the last one
-   installed, so the world in them is beta's.
-2. What port scheme? For example 4462 + (realm id − 1) × 10 (release 4462,
-   beta 4472, vanilla 4482, basic 4502, cc-test 4512), which leaves room
-   between them for each profile's other ports. Or something else you
-   prefer.
-3. Release's world: undo beta's changes with E012's saved snapshot, or
-   import a fresh one?
-4. How many can this machine run at once? Each worldserver loads its own
-   maps and bots (beta's 500 random bots among them); this decides which
-   profiles are on by default and which are started on demand.
+1. **Families of shared characters.** The owner, verbatim: "or maybe we
+   can share some of them in families? Like the level 60 ones can't have
+   anyone who can level to 70... unless maybe we downgrade them by 10
+   levels exactly for anyone 61-70? And restore them similarly upon their
+   return..." As understood: realms of similar shape share one characters
+   database, so a character can visit; a character above the visited
+   realm's cap is lowered by the difference while there and given its
+   levels back when it returns. Which realms would form a family (basic
+   and expert, 156, are the obvious pair), and what is lowered with the
+   level: only the level, or also gear, talents and spells above the cap?
+2. **Which keeps the existing `acore_*` databases** when beta and release
+   are split. Following the decision above, the plan is: beta gets new
+   `_beta` databases and release keeps `acore_*` (which hold beta's
+   emptied world and two of the owner's characters, Feldowinn, level 1,
+   and Azurelen, level 40). Is that right, and do those two characters
+   move with beta?
+3. **The port scheme.** Proposed: 4462 + (realm id - 1) x 10: release
+   4462, beta 4472, vanilla 4482, alpha 4492, basic 4502, cc-test 4512.
+   Basic moving off 4462 means its router forwarding changes with it; or
+   basic keeps 4462 and release takes another.
+4. **Release's world back to stock:** undo beta's changes with E012's saved
+   snapshot, or import a fresh world?
 
 ## Related
 
