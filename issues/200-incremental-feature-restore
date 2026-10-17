@@ -1,194 +1,138 @@
-# 200: Incremental Feature Restore
+# 200: Incremental Feature Restore (beta, the wow-chat roguelike)
 
 ## Status
-- [x] In Progress
-- [ ] Completed
+- Created: 2026-03-31 (restore the stashed phase-2 work, one feature at a time)
+- Reopened: 2026-10-17, after an audit of the beta build, as the plan for
+  bringing beta's whole game back on the current server
+- Phase: 2 (The Empty World; the plan reaches into phases 3–9)
+- In progress. Reader's version, in order: `docs/profiles/beta-roadmap.md`
+
+## Origin
+
+**March 2026.** The phase-2 work (bot behaviors, the ambush's random
+walk, the portal design) sat in a git stash while the build was rebuilt
+on a clean branch. This issue listed it in groups and restored it one
+group at a time, testing each, with wow-chat-1's scripts kept in
+`libs/wow-chat-1/` as the reference. The stash is gone now; what was
+restored is in `src/lua-beta/`.
+
+**10 April 2026.** To set up the profile system, every custom feature was
+switched off to get a plain baseline (commit e42b59e: "Disabled all
+patches and custom features to establish vanilla baseline"). Every beta
+script was renamed to `*.lua.disabled`, and the behaviors folder to
+`behaviors.disabled/`. Only the ambush came back afterwards, rewritten so
+that it scheduled itself. The rest was never switched back on.
+
+**17 October 2026.** The owner asked for an audit "to bring up to the new
+quality standard". On learning that treasure and the wandering merchants
+and trainers were off: "treasure shouldn't be disabled, nor wandering
+merchant trainers". On what beta is for:
+
+> we are going to be able to run multiple at once. When the player
+> connects, for each server we have running it shows them in the realm
+> select list. Ideally, eventually, we'd run them all at once. They should
+> each offer a different experience, and we'll create as many as we can
+> think of just because we love the players and want to show more.
+
+And on the assets beta runs on:
+
+> If we can get it running in the beta version of our game that is still
+> attached to World of Warcraft (which by the way Blizzard has every access
+> to use as much as they'd please including all our assets and machinery
+> except for the celebratory "release version" where 100% of the assets
+> and components are ours, and any updates made after that)
+
+So beta is a playable realm of its own: the wow-chat survival game on the
+game's own content, running beside the others.
 
 ## Current Behavior
 
-All Phase 2 work is stashed in `stash@{0}`:
-- "WIP: Phase 2 behaviors, ALE fix, portal design - 2026-03-31"
+What beta's server does at boot today (src/lua-beta/, as the engine loads
+it; `scripts/test-beta-lua-load` lists it):
 
-The `clean-rebuild` branch is at commit `1fc133a` (2025-02-24).
+- **Runs:** the ambush (monsters sent at every player and bot, on a
+  drifting clock, with wow-chat-1's holds restored 2026-10-17), the death
+  knights' Ebon Hold exits and auto-completed starting quests, the group
+  hearthstone, the Knight's class definition (loaded, but nothing offers
+  it), and the extensions (per-object data, bag slots, stack traces).
+- **Switched off** (`*.lua.disabled`, or a folder with a leading dot):
+  the periodic-events scheduler, treasure chests, travellers (who carry
+  the trainers and merchants), ability tomes, death durability, chest
+  vulnerability, the custom-class framework, levelling (talent cap), and
+  the eleven bot behaviors.
+- **The world** after beta's install: creature spawns cleared except
+  critters and spirit healers (E012). Trainer spells reworked for 1–20
+  (E013, E014), class-selector NPCs and empty loot chests created (E015,
+  E016), but nothing places or uses them while travellers, treasure and
+  the class framework are off. A new character can't learn a spell.
+- **The build:** the installed server is from 9 April 2026, older than
+  the current upstream pin and the June folder rename; its script link
+  points at a folder that no longer exists, so it would boot with no
+  custom scripts. Its 11 source patches apply and revert cleanly at the
+  current pin (`scripts/test-source-patches <dir> beta`). Reinstalling is
+  the owner's build.
+- **Shared databases:** beta and release use the same world, characters
+  and playerbots databases (136b).
 
 ## Intended Behavior
 
-Restore features one-by-one, testing each before proceeding.
-Reference implementation preserved in `libs/wow-chat-1/`.
+Beta boots into the whole wow-chat loop, on its own realm, beside the
+other profiles:
 
-## Critical Path Index
+1. an empty world, filled around each player by what comes to them;
+2. danger: ambushes on a drifting clock, rares, held while the player rests;
+3. reward: treasure chests fed by what players sell, ability tomes;
+4. friends: travellers who wander by, among them trainers and merchants,
+   who sit when the player sits;
+5. companions: bots who behave by the same rules (they are ambushed too);
+6. identity: custom classes learned from trainers (502), on the stock
+   client where it can be done, with known gaps (tooltips) said plainly;
+7. progression and story layers on top (phases 8 and 9).
 
-Map concept → closest investigation point. Follow arrows for dependencies.
+Each part is switched back on only with a test that shows it working, in
+the toy world where it can be (as `scripts/test-ambush` does for the
+ambush) and in game where it must be.
 
-```
-CONCEPT                     ENTRY POINT                      DEPENDS ON
-─────────────────────────────────────────────────────────────────────────
-server won't start      →   scripts/azerothcore          →   (none)
-                        →   scripts/mysql-start          →   (none)
+## Suggested Implementation Steps
 
-lua scripts not loading →   worldserver.conf.dist        →   server starts
-                        →   src/lua/ambush.lua           →   config loaded
+The order and the issues behind each step are in
+`docs/profiles/beta-roadmap.md`. In short:
 
-monsters not spawning   →   src/lua/ambush.lua           →   lua loads
-                        →   libs/wow-chat-1/ambush.lua   →   (reference)
+1. **A realm of its own:** own databases and port (136b), then reinstall.
+2. **Boot clean and see it:** the boot load test, the ambush tests, an
+   in-game run of the ambush (302 closes there), the bot count (open
+   question 2).
+3. **The scheduler:** periodic_events back on, without starting a second
+   ambush clock (the ambush schedules itself now).
+4. **Travellers, trainers and merchants** (travel.lua; 503, 504, 505,
+   501), so spells can be learned again.
+5. **Treasure** (treasure.lua; 402, 404, 407–411), with the sell hook
+   (B006) beta already has.
+6. **Ability tomes and death durability** (405, 406).
+7. **Bot behaviors** one by one (601–616), each with its own check.
+8. **Custom classes on the stock client** (502's any-class trainers first,
+   then 705/706/709; 707 and 713 need AIO, which is not built).
+9. **Progression and story** (801–805, 901–913) as the owner chooses.
 
-bots acting weird       →   behaviors/find-monsters.lua  →   ambush works
-                        →   behaviors/avoid-monsters.lua →   find-monsters
-                        →   behaviors/orbit-player.lua   →   avoid-monsters
+## Open Questions
 
-bots not resting        →   behaviors/sit-and-rest.lua   →   avoid-monsters
+1. Beta keeps 500 random bots, and every one is ambushed (wanted). How
+   many should there be, given a single machine may run several realms?
+   The number goes in `docs/balance-updates.md` once chosen.
+2. Release's monsters should get records of their own before release (the
+   ambush announces a monster by its entry number today, which the owner
+   likes for beta). Which issue should hold "new creature records"?
+3. Should StackTracePlus run at all? Issue 209 (completed) switched it off
+   as possibly interfering with the engine's own error traces; the
+   enabled copy is still there and `_Misc.ext` asks for it.
+4. Beta's death knights start at level 1 (issue 206), but the server's
+   rule that an account needs a level-55 character before making a death
+   knight is still stock. With a cap of 20, only game masters can make
+   one. Lower it for beta?
 
-spawn timing wrong      →   src/lua/ambush.lua:INTERVAL  →   lua loads
-                        →   libs/wow-chat-1/periodic_events.lua (reference)
+## Related
 
-talent points broken    →   src/lua/levelling.lua        →   lua loads
-
-config not applied      →   worldserver.conf.dist        →   server starts
-                        →   authserver.conf.dist         →   (auth issues)
-
-can't find a file       →   docs/table-of-contents.md    →   (none)
-
-architecture question   →   docs/architecture.md         →   (none)
-                        →   notes/vision                 →   (none)
-
-playerbots question     →   issues/102-test-playerbots   →   server starts
-                        →   docs/playerbots/             →   (reference)
-
-phase progress          →   issues/phase-1-progress.md   →   (none)
-                        →   issues/phase-2-progress.md   →   (none)
-
-new feature ideas       →   notes/wow-chat-2-ideas       →   (none)
-                        →   tissues/                     →   (human review)
-```
-
-### Dependency Chain (Critical Path)
-
-```
-server starts
-    ↓
-config loaded
-    ↓
-lua engine init (ALE)
-    ↓
-ambush.lua loads ←──────────── libs/wow-chat-1/ambush.lua (reference)
-    ↓
-monsters spawn
-    ↓
-behaviors load
-    ├── find-monsters.lua
-    ├── avoid-monsters.lua ←── depends on find-monsters
-    ├── sit-and-rest.lua ←──── depends on avoid-monsters
-    └── orbit-player.lua ←──── depends on avoid-monsters
-```
-
-### Quick Lookup: "Where do I start?"
-
-| If you're debugging...        | Start here                    | Group |
-|-------------------------------|-------------------------------|-------|
-| Build/compile issues          | scripts/azerothcore           | 2     |
-| Database connection           | scripts/mysql-start           | 2     |
-| Server crashes on start       | worldserver.conf.dist         | 3     |
-| Lua not executing             | worldserver.conf.dist → ALE   | 3     |
-| Ambush system                 | src/lua/ambush.lua            | 4     |
-| Levelling/talents             | src/lua/levelling.lua         | 4     |
-| Bot AI behavior               | src/lua/behaviors/*           | 5     |
-| "What was the plan?"          | issues/phase-*-progress.md    | 6     |
-| "What files exist?"           | docs/table-of-contents.md     | 1     |
-
-## Stashed Features to Restore
-
-### Group 0: Bootstrap (Restored)
--- [x] CLAUDE.md - Project context for AI sessions
--- [x] issues/200-incremental-feature-restore - This testing document
--- [x] libs/wow-chat-1/ - Reference implementation cloned
-
-### Group 1: Documentation Updates (Low Risk)
--- [ ] docs/architecture.md - Title and naming updates
--- [ ] docs/table-of-contents.md - Directory structure documentation
--- [ ] notes/vision - Vision document updates
-
-### Group 2: Script Improvements
--- [x] scripts/azerothcore - Profile-based versioning (issue 201)
--- [ ] scripts/azerothcore - Remaining stashed improvements
--- [ ] scripts/mysql-start - 27 lines of improvements
--- [ ] scripts/client - New client launch script
--- [ ] scripts/install-client-addons - New addon installer
-
-### Group 3: Configuration Updates
--- [ ] installed-files/etc/authserver.conf.dist - 18 new lines
--- [ ] installed-files/etc/worldserver.conf.dist - 156 new lines
-
-### Group 4: Core Lua Scripts
--- [ ] src/lua/ambush.lua - 192 lines added (random walk interval)
--- [ ] src/lua/levelling.lua - Recreated with talent point cap
-
-### Group 5: Behavior System (New)
--- [ ] src/lua/behaviors/find-monsters.lua - Combat targeting
--- [ ] src/lua/behaviors/avoid-monsters.lua - Danger awareness
--- [ ] src/lua/behaviors/sit-and-rest.lua - Resource recovery
--- [ ] src/lua/behaviors/orbit-player.lua - Formation positioning
-
-### Group 6: Issue Tracking Updates
--- [ ] issues/102-test-playerbots-spawn - 14 new lines
--- [ ] issues/phase-1-progress.md - 20 new lines
--- [ ] issues/phase-2-progress.md - New file (untracked)
--- [ ] issues/114-119 - Behavior issue files (untracked)
--- [ ] issues/120-130 - System issue files (untracked)
-
-### Group 7: Supporting Structure
--- [ ] tissues/.gitkeep - Human expert tasks directory
--- [ ] pngs/ - Visual powerline directory structure
--- [ ] notes/wow-chat-2-ideas - Ideas document
-
-## Testing Protocol
-
-For each feature group:
-1. Extract specific files from stash: `git checkout stash@{0} -- <path>`
-2. Review changes: `git diff HEAD -- <path>`
-3. Test functionality (where applicable)
-4. Commit if passing: `git add <path> && git commit -m "restore: <description>"`
-5. Mark line as complete in this file
-
-## Stash Commands Reference
-
-```bash
--- View stash contents
-git stash show -p stash@{0}
-
--- Extract single file from stash
-git checkout stash@{0} -- path/to/file
-
--- Extract untracked file from stash
-git show stash@{0}^3:path/to/file > path/to/file
-
--- View specific file in stash
-git show stash@{0}:path/to/file
-
--- Drop stash when done (preserves in reflog for 30 days)
-git stash drop stash@{0}
-```
-
-## Reference: wow-chat-1
-
-Original Lua scripts available at `libs/wow-chat-1/`:
-- ambush.lua (17KB) - Original ambush system
-- movement.lua (4KB) - Movement helpers
-- travel.lua (34KB) - Traveler NPC system
-- treasure.lua (6KB) - Treasure spawns
-- periodic_events.lua (4KB) - Timing system
-- hearthstone.lua (3KB) - Hearthstone modifications
-- death-knights.lua (1KB) - DK modifications
-- tempo.lua (2KB) - Tempo/timing utilities
-
-## Validation Criteria
-
--- [ ] Server starts without errors after each group restore
--- [ ] Lua scripts load (check worldserver console for ALE messages)
--- [ ] No regression in existing functionality
--- [ ] New behaviors integrate with ambush/travel systems
-
-## Notes
-
-Started: 2026-03-31
-Branch: clean-rebuild
-Stash: stash@{0} (WIP: Phase 2 behaviors, ALE fix, portal design)
+- `docs/profiles/beta-roadmap.md` (the order), `docs/profiles/beta.md`
+- 136b (own databases and port), 302 (ambush not spawning), 306 (bots
+  fire the login hook; done by B002, to verify and close)
+- `libs/wow-chat-1/` (the reference implementation)

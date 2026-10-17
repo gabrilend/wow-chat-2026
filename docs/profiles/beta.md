@@ -1,83 +1,98 @@
 # Beta Profile
 
-**One-line summary:** Active development tier — release baseline
-plus every in-flight feature, all source patches applied, where
-new wow-chat features are written and tested before graduating to
-release.
+**One-line summary:** the wow-chat survival game — an empty world that
+fills in around each player with ambushes, treasure and wandering
+travellers — on the game's own content, levels 1–20. A realm of its own
+beside the other profiles.
 
-## What you get
+*Rewritten 2026-10-17 after an audit. The older page called beta "every
+B-patch, where features start". New features have been landing in basic
+since the summer, and beta runs 11 of the source patches. The plan for
+bringing the rest of its game back: [beta-roadmap.md](beta-roadmap.md).*
 
-Everything release has, plus everything currently in flight. Beta
-is where the project's experimental work happens. If a new ambush
-behavior is being prototyped, a new custom class is being tuned,
-a new ALE hook is being tested — beta is where it lives until it's
-proven out enough to promote to release.
+## What you get today
 
-The wow-chat design layer is fully active here, including the
-parts not yet promoted:
+- **The ambush.** Monsters are sent at every player and every bot, from
+  120–160 yards, on a clock that starts at 40 seconds and drifts 2–4
+  seconds each time (10-second floor, pulled back down above 100 and 200
+  seconds). None comes while you sit, lie dead or swim, while three are
+  already chasing you, or during a rare's fight. After more than ten
+  minutes offline you get 30 seconds' grace on login.
+- **An empty world.** Install step E012 clears every creature spawn except
+  critters and spirit healers.
+- **Death knights from level 1,** leaving Ebon Hold at once (their
+  starting quests are completed on first login; three exits teleport
+  them out).
+- **A group hearthstone:** when someone in a group hearths, the others
+  are pulled to them (sit down to decline).
 
-- All ambush spawn behaviors, including the experimental ones.
-- All custom classes, including in-progress balance.
-- All ALE hooks (the full B-patch set is applied).
-- Whatever experimental modules are currently being tried.
+Switched off for now (the roadmap brings them back in order): the
+scheduler, travellers (who carry the trainers and merchants), treasure,
+ability tomes, death durability, custom classes, bot behaviors. Until
+travellers return, a new character cannot learn spells.
 
-If you find a regression on beta and the same character on release
-works fine, that regression is the difference between the two.
+## Settings
+
+Checked by `scripts/test-profile-config-gates <project> beta`, which runs
+the real settings patches on scratch copies and reads every value back.
+
+| Setting                         | Value      | From  | Why |
+|---------------------------------|------------|-------|-----|
+| Level cap                       | 20         | C006b | the wow-chat design |
+| Starting level                  | 1          | C007b | |
+| Death knight starting level     | 1          | C017  | issue 206 |
+| Experience, kills and quests    | 2×         | C005  | |
+| Fall damage                     | 10×        | C004  | |
+| Run speed                       | 0.85       | C003  | |
+| Instant flight paths            | on         | C009  | |
+| Login as game master            | yes (3)    | C008  | development realm |
+| Random bots                     | 500, levels 1–20 | stock, C012 | every one is ambushed too |
+| Realm id                        | 2          | C019  | |
+| Ports                           | world 4462, auth 4362 | C010 | shared with other profiles until 136b |
 
 ## Installed modules
 
-- **mod-ale** — Lua scripting engine, runs the wow-chat corpus
-- **mod-playerbots** — AI companion bots
+`scripts/install` and `scripts/compile`, `PROFILE_MODULES["beta"]`:
+
+- **mod-ale** — Lua engine, runs `src/lua-beta/`
+- **mod-playerbots** — AI players
 - **mod-aoe-loot** — area loot
-- **mod-grownup** — character model size scales with level
-- *Plus any beta-only experimental modules currently being tried*
-
-The module set may expand with beta-only experiments and contract
-again as experiments end. Check `scripts/install` for the current
-authoritative `PROFILE_MODULES["beta"]` list.
-
-All modules track upstream HEAD.
+- **mod-grownup** — character size grows with level (cloned on install;
+  not in the shared source folder until then)
 
 ## Source patches
 
-Beta runs **every B-patch in the repository** (currently 23 of
-them, ALE feature additions, playerbots compile fixes, aoe-loot
-integration, accuracy-level cap, talent bonus, symmetric aggro
-radius). See `patches/patches.sh` for the authoritative
-`PHASE_BEGIN_PATCHES["beta"]` list.
+`patches/patches.sh`, `PHASE_BEGIN_PATCHES["beta"]`: B002 (bots fire the
+Lua login hook), B003 (game-object wildcard), B004 (warning fixes), B005
+(monster accuracy capped by level), B006 (a hook when items are sold),
+B007 (more unit methods for Lua), B020 (event removal lock), B022 (runtime
+config folder), B024 (symmetric aggro radius), B026 and B027 (playerbot
+login guards). `scripts/test-source-patches <project> beta` applies and
+reverts them on a copy in RAM.
 
-This makes beta the canonical "what does the project look like
-with all custom changes applied" build. Release applies a curated
-subset, vanilla applies almost none, alpha applies the minimum
-compile-fix set.
+## Install steps (after compiling)
 
-## E-patches (post-compile setup)
+`PHASE_END_PATCHES["beta"]`: E001 (link `src/lua-beta/` in as the
+scripts folder), E004 (logs), E005 (death knight level stats), E006
+(configs), E011 (death knight class system), E012 (clear creatures —
+destructive, with a saved snapshot for its undo), E013 (quest spells
+taught by trainers), E014 (trainer spells capped to level — destructive),
+E015 (class selector NPC types), E016 (empty loot chest types), E017
+(playerbot logout texts).
 
-Beta applies the wide E-patch set:
+## Databases
 
-- E001 (Lua script symlinks, pointing at `src/lua-beta/`)
-- E004 (RAM-backed log directory)
-- E005 (DK levelstats — the database support for the DK class)
-- E006 (config file initialization)
-- E011-E017 (DK class system, drop-creatures, quest-spells, trainer
-  spell level cap, class selector NPCs, empty loot chests,
-  playerbots logout-texts migration fix)
+Today beta shares `acore_world`, `acore_characters` and `acore_playerbots`
+with release, so installing beta empties release's world too. Issue 136b
+gives every profile its own, so they can run at once.
 
-The destructive E-patches (E012 drop-creatures, E014 trainer-spell
-cap) are why beta's worldserver looks the way it does — almost
-empty open world with the ambush system replacing static spawns.
+## Scripts and their checks
 
-## Promotion-pipeline position
-
-Beta is where features START. A feature graduates to release once
-it's been observed working under realistic load without crashing
-or regressing other systems. The promotion process is manual:
-edit the C-patch / B-patch / E-patch lists in
-`patches/patches.sh` and `config/patches/*.sh` to add `release` to
-the feature's profile list.
-
-If you want to play with everything the project does, run beta.
-If you want stability, run release.
+- `src/lua-beta/` — what the engine loads: `scripts/test-beta-lua-load`
+  loads them all as the engine does and fails on any that stop.
+  Files ending `.disabled`, and folders starting with a dot, are not
+  loaded (`scripts/test-lua-unique-names` checks this).
+- The ambush: `scripts/test-ambush` plays it in a toy world.
 
 ## How to switch to beta
 
@@ -89,16 +104,10 @@ echo beta > .profile
 ./scripts/worldserver
 ```
 
-Beta shares the `acore_*` databases with release (same schema, same
-MySQL port 3307, same auth/world ports 4362/4462) — they can't
-run concurrently because they collide.
-
 ## Where to ask for help
 
-- The promotion pipeline rules: [`issues/136-canonical-profile-definitions.md`](../../issues/136-canonical-profile-definitions.md)
-- Stable wow-chat tier: [release.md](release.md)
-- Stock WoW + bots: [vanilla.md](vanilla.md)
-- Historical snapshot: [alpha.md](alpha.md)
-- ALE Lua scripting reference: [`docs/scripting.md`](../scripting.md)
-- The wow-chat design itself: [`docs/concept-catalog.md`](../concept-catalog.md)
+- The plan: [beta-roadmap.md](beta-roadmap.md), issue 200
 - Profile system overview: [index.md](index.md)
+- ALE Lua scripting reference: [`docs/scripting.md`](../scripting.md)
+- The wow-chat design: [`docs/concept-catalog.md`](../concept-catalog.md)
+- The reference implementation: `libs/wow-chat-1/`

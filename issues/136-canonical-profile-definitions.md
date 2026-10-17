@@ -5,6 +5,12 @@
 - Phase: 1 (Foundation)
 - Priority: High (blocks correct release builds)
 
+## Sub-issues
+
+- 136a — unified realmlist: one login and one realm row per profile
+- 136b — every profile running at once: own databases and ports, so the
+  realm list shows them all and any can be up beside the others
+
 ## User-facing reference
 
 For an end-user view of each profile (what it gives you, how to

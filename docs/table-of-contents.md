@@ -75,7 +75,8 @@ wow-chat-2026/
 │   │   ├── socket-bonus-catalog.md Generated: every enchantment usable as a socket bonus, by kind and size; low-level cut gems (155p)
 │   │   ├── vanilla.md             Default WotLK + playerbots, light ruleset (148)
 │   │   ├── release.md             Wow-chat custom design, proven-working tier
-│   │   ├── beta.md                Active development tier (all in-flight features)
+│   │   ├── beta.md                The wow-chat survival game, levels 1-20 (its own realm)
+│   │   ├── beta-roadmap.md        Bringing beta's whole game back, step by step (200)
 │   │   └── alpha.md               Holiday relic — wow-chat-1 + mod-eluna snapshot
 │   └── wiki/                      AzerothCore wiki mirror
 │

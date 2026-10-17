@@ -50,6 +50,9 @@ TCP layer before any realm-list packet is exchanged.
   and sees every realm.
 - One shared authserver port `4362` and worldserver port `4462`. Only
   one of each runs at a time — the active profile owns the ports.
+  (2026-10-17: superseded for worldservers by 136b, where every profile
+  gets its own worldserver port and they can all run at once; the one
+  shared authserver stays.)
 - `acore_auth.realmlist` has one row per profile. All rows point to
   `127.0.0.1:4462` (or the configured public IP for the worldserver).
 - The active profile's realm row has `flag = 0` (online); the others
