@@ -136,21 +136,28 @@ end
 
 ### Persistence
 
-**Session-based tracking:**
-```lua
-player:SetData("ambush_interval", interval)
-player:SetData("ambush_logout_time", currentTime)
-```
+**Server-session memory, by character:** a table inside the ambush script
+(`AmbushMemory` in `src/lua-beta/ambush.lua`), keyed by the character's
+guid (low part, a number), holding `interval` (milliseconds, number) and
+`logoutTime` (unix seconds, number).
 
-Uses `SetData()` for session storage:
-- Preserved during play session
+It is not kept with `SetData()`: the object-variables extension
+(`extensions/ObjectVariables.ext`) wipes a player's `SetData` store when
+they log out, so a value kept there is gone at the next login. Until
+2026-10-17 the interval was kept there, and every login restarted the walk
+at 40 seconds; the logout time survived only because the ambush's logout
+handler happened to run after the wipe. The memory table:
+- Preserved through logouts and relogs, for as long as the server runs
 - Survives zone transfers
-- Resets on logout (random walk continues from last value)
+- Emptied by a server restart or `.reload ale` (every player then starts
+  from the base interval, with the grace period)
 
 **Not database-persisted** (future enhancement):
-- Could save to `character_stats` table
-- Would preserve random walk across sessions
-- Currently: each login starts new walk from last session value
+- Could save to the characters database
+- Would preserve the random walk across restarts
+
+Tested offline by `scripts/test-ambush` (a quick relog carries the walk on;
+more than ten minutes away gives the grace period).
 
 ---
 
@@ -300,7 +307,9 @@ Advantage: Gentle pull, not wall. More organic drift.
 - Requires SQL reads/writes
 - Good for long-term progression
 
-Random walk state is borderline: currently session-based, could become persistent.
+Random walk state is borderline: currently kept for the server's run (the
+memory table above, not `SetData()`, which logout wipes), could become
+persistent.
 
 ---
 

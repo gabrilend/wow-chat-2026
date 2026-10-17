@@ -7,26 +7,26 @@
 
 ## Current Behavior
 
-`Ambush.setupAmbushQueue(playerLevel, rank)` and its async callback
-`Ambush.pushToAmbushQueue(query)` do not carry the originating player
-through the callback. When the async SQL query returns, the callback
-has no way to know which player triggered it, so it does this
-(`src/lua/ambush.lua:267-298`):
+Built (2026-05-21) and checked offline (2026-10-17). The refill query is
+asked for one player, by name: `Ambush.setupAmbushQueue(player, rank)`
+in `src/lua-beta/ambush.lua` keeps the player's name (a plain string) in
+the callback and looks the player up again when the answer comes back, so
+the answer fills only that player's queue, and a player who logged out in
+the meantime is simply skipped (see *Post-deployment Crash and Real Fix*
+below for why the player object itself can't be kept). A creature put
+back into a queue (a chase broken at a map border) goes into that
+player's queue only.
 
-```lua
-all_players = { alliance = GetPlayersInWorld(0, false),
-                horde    = GetPlayersInWorld(1, false),
-                neutral  = GetPlayersInWorld(2, false) }
+`scripts/test-ambush` plays this with two players in a toy world: one
+asks, the other's queue is unchanged; a creature put back is found in the
+right queue and not the other. The in-game check in *Verification* (two
+real players at different levels) has not been run on beta, whose
+installed server predates it.
 
-for _, faction in pairs(all_players) do
-    for _, player in pairs(faction) do
-        -- if this creature is level-appropriate for this player, add to queue
-```
-
-It iterates **every player in the world** and fills their queues with
-the query results. This was an async-callback workaround: the function
-signature takes `playerLevel` not `player` precisely because the
-callback can't associate results with a single caller.
+The original problem this issue was opened for, kept as the record:
+the callback did not know which player had asked, and it walked every
+player in the world (`GetPlayersInWorld` for each faction), filling all
+their queues with one player's results.
 
 ## Why This Is a Problem
 

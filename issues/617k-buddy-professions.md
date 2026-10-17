@@ -174,7 +174,7 @@ it if the user wants."
   - it loops the zone in its own direction, sweeping nearby node spawns in a
     wavy line, and shifts its loop each lap so it doesn't retrace its path;
   - prior art: the beta behaviours' dispersion (issue 610) in
-    `src/lua-beta/behaviors.disabled/zone-consensus.lua`, and the 2-yard
+    `src/lua-beta/.behaviors.disabled/zone-consensus.lua`, and the 2-yard
     anti-clump rule in `bot-wander.lua` (both disabled today).
 - **Materials that don't come from gathering** (cloth, things to
   disenchant, vendor parts): "The buddy buys them. They should try and have

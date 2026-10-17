@@ -1,0 +1,123 @@
+#!/usr/bin/env luajit
+-- test-beta-lua-load - loads every Lua file the beta server would load, in
+-- the order it would load them, and reports any file that fails.
+--
+-- For a general audience: when the game server starts, its Lua engine
+-- reads each script file once from top to bottom. A file that stops with an
+-- error on that first read never works at all, and the only sign is a line
+-- in the server's log. On 2026-10-17 two such files were found in beta by
+-- reading (the Knight class, and two bot behaviors that asked for a file
+-- path that does not exist). This test does that first read here, without
+-- a server: it walks the scripts folder by the engine's own rules (skip
+-- names starting with a dot, extensions before scripts, each list in path
+-- order, a name loaded once), gives the files stand-ins for the handful of
+-- game calls they make while loading (registering for events, mostly),
+-- and runs each one. It checks loading only; what the scripts do later, in
+-- the game, is for tests like scripts/test-ambush.
+--
+-- Usage: scripts/test-beta-lua-load [PROJECT_DIR] [PROFILE]
+--   PROJECT_DIR defaults to the hard-coded path below.
+--   PROFILE defaults to beta (the folder src/lua-<PROFILE>/ is loaded).
+-- Exit status: 0 when every file loads, 1 otherwise.
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local PROFILE = arg[2] or "beta"
+local ROOT = DIR .. "/src/lua-" .. PROFILE
+
+-- {{{ local function list_files
+-- The engine's scan (mod-ale LuaEngine.cpp): every folder under the root,
+-- skipping any name that starts with "."; each folder joins the search
+-- path for require(); files ending .lua or .ext are kept (.moon, .out and
+-- compiled libraries are not used in this project). Returns the two lists
+-- of { path = string, name = string (no ending) } and the search path.
+local function list_files(root)
+    local found = io.popen('find "' .. root .. '" -mindepth 1 -name ".*" -prune -o \\( -type d -o -type f \\) -print | sort')
+    local exts, scripts, dirs = {}, {}, { root }
+    for path in found:lines() do
+        local name, ending = path:match("([^/]+)%.(%a+)$")
+        local isdir = os.execute('test -d "' .. path .. '"') == 0
+        if isdir then
+            dirs[#dirs + 1] = path
+        elseif ending == "ext" then
+            exts[#exts + 1] = { path = path, name = name }
+        elseif ending == "lua" then
+            scripts[#scripts + 1] = { path = path, name = name }
+        end
+    end
+    found:close()
+    local search = {}
+    for _, d in ipairs(dirs) do search[#search + 1] = d .. "/?.lua;" .. d .. "/?.ext" end
+    return exts, scripts, table.concat(search, ";")
+end
+-- }}}
+
+-- {{{ engine stand-ins
+-- Only what the files call while they load. Each records its call so the
+-- report can say what a file set up. Object classes are plain tables, as
+-- the extensions add methods to them (ObjectVariables.ext).
+local registered = 0
+local function count() registered = registered + 1 end
+RegisterPlayerEvent, RegisterServerEvent, RegisterCreatureEvent = count, count, count
+RegisterItemEvent, RegisterGameObjectEvent, RegisterCreatureGossipEvent = count, count, count
+RegisterPlayerGossipEvent, RegisterGameObjectGossipEvent = count, count
+CreateLuaEvent = function() count() return 1 end
+Map, Player, Creature, GameObject, Unit, WorldObject, Object = {}, {}, {}, {}, {}, {}, {}
+GetPlayersInWorld = function() return {} end
+-- }}}
+
+local exts, scripts, search = list_files(ROOT)
+package.path = search .. ";" .. package.path
+
+local loaded, fails, total = {}, 0, 0
+local realprint = print
+local all = {}
+for _, f in ipairs(exts) do all[#all + 1] = f end
+for _, f in ipairs(scripts) do all[#all + 1] = f end
+
+for _, f in ipairs(all) do
+    total = total + 1
+    local short = f.path:sub(#ROOT + 2)
+    --   a second file with a name already loaded: the engine refuses it
+    --   already pulled in by an earlier file's require(): the engine skips it
+    --   otherwise: run it, and report what it printed and whether it stopped
+    if loaded[f.name] then
+        fails = fails + 1
+        realprint("  FAIL: " .. short .. " — the engine refuses it: " .. loaded[f.name] .. " has the same name")
+    elseif package.loaded[f.name] ~= nil then
+        realprint("  ok:   " .. short .. " (already loaded by an earlier require)")
+    else
+        loaded[f.name] = short
+        local said = {}
+        print = function(...)
+            local parts = {}
+            for i = 1, select("#", ...) do parts[#parts + 1] = tostring((select(i, ...))) end
+            said[#said + 1] = table.concat(parts, " ")
+        end
+        local before = registered
+        local chunk, err = loadfile(f.path)
+        local ok = chunk ~= nil
+        if ok then
+            local result
+            ok, result = pcall(chunk, f.name)
+            if ok then
+                package.loaded[f.name] = result == nil and true or result
+            else
+                err = result
+            end
+        end
+        print = realprint
+        if ok then
+            realprint(string.format("  ok:   %s (%d event registration(s))", short, registered - before))
+            for _, line in ipairs(said) do
+                if line:find("not running") or line:find("ERROR") then realprint("          says: " .. line) end
+            end
+        else
+            fails = fails + 1
+            realprint("  FAIL: " .. short .. " — stops while loading: " .. tostring(err))
+        end
+    end
+end
+
+realprint(string.format("%d file(s) in src/lua-%s/, %d failed to load", total, PROFILE, fails))
+os.exit(fails == 0 and 0 or 1)

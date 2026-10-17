@@ -594,7 +594,7 @@ Built in the model (animations 17 and 18):
   the centre at the same Y and the buddy turns the other way round: S
   shapes, then figure eights. The count starts again after each crossing.
 - **The tunnel design found**: issue 612 (dungeon rail pathfinding, beta,
-  code in `src/lua-beta/behaviors.disabled/dungeon-rails.lua`, never
+  code in `src/lua-beta/.behaviors.disabled/dungeon-rails.lua`, never
   tested) classifies a place by sampling the ground in 8 directions: two
   walkable ways is a corridor, three or more a fork, one a dead end.
   Read for the owner's tunnel rule (not built): a waypoint whose place

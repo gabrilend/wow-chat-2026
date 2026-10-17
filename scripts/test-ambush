@@ -1,0 +1,476 @@
+#!/usr/bin/env luajit
+-- test-ambush - runs beta's ambush script (src/lua-beta/ambush.lua) in a
+-- small pretend world and checks what it does, without a game server.
+--
+-- For a general audience: the ambush sends monsters at a player now and
+-- then, on a clock that drifts a few seconds each time. This test builds a
+-- toy world in memory (players, monsters, ground heights, water, a clock
+-- that can be wound forward) with just the handful of game calls the
+-- ambush script uses, loads the real script into it, and plays scenes:
+-- logging out and back in, sitting down, three monsters already chasing,
+-- killing a monster, a player vanishing mid-chase, a chase crossing a map
+-- border, spawning beside water or a cliff. Each scene checks the outcome
+-- the script promises in its comments. The toy world is not the game: it
+-- checks the script's own decisions, not how the server carries them out.
+--
+-- Usage: scripts/test-ambush [PROJECT_DIR]
+--   PROJECT_DIR defaults to the hard-coded path below.
+-- Exit status: 0 when every check passes, 1 otherwise.
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+
+local fails, checks = 0, 0
+-- {{{ local function check
+local function check(ok, what)
+    checks = checks + 1
+    if not ok then fails = fails + 1; print("  FAIL: " .. what) end
+end
+-- }}}
+
+--------------------------------------------------------------------------------
+-- The toy world. Time is in milliseconds (number). Every object keeps its
+-- SetData values in its own table, and a player's are wiped at logout, as
+-- the object-variables extension does in the game.
+--------------------------------------------------------------------------------
+
+local World = { now = 0, events = {}, players = {}, nextGuid = 1, log = {} }
+
+-- {{{ local function schedule
+-- One pending timed call: { at = ms (number), fn = function, owner = object }.
+local function schedule(owner, fn, delay)
+    World.events[#World.events + 1] = { at = World.now + delay, fn = fn, owner = owner }
+end
+-- }}}
+
+-- {{{ local function advance
+-- Runs every pending call due within `ms`, in time order, skipping calls
+-- whose owner has left the world (a despawned monster, a logged-out
+-- player), as the game drops an object's timers with the object.
+local function advance(ms)
+    local stop = World.now + ms
+    while true do
+        table.sort(World.events, function(a, b) return a.at < b.at end)
+        local e = World.events[1]
+        if not e or e.at > stop then break end
+        table.remove(World.events, 1)
+        World.now = e.at
+        if not e.owner.gone then e.fn(0, 0, 1, e.owner) end
+    end
+    World.now = stop
+end
+-- }}}
+
+-- {{{ local function pending
+-- How many calls of `fn` are waiting for `owner`.
+local function pending(owner, fn)
+    local n = 0
+    for _, e in ipairs(World.events) do
+        if e.owner == owner and (fn == nil or e.fn == fn) then n = n + 1 end
+    end
+    return n
+end
+-- }}}
+
+-- {{{ local function data_methods
+-- GetData/SetData on a plain table, as ObjectVariables.ext gives objects.
+local function data_methods(obj)
+    obj.store = {}
+    function obj:GetData(k) if k == nil then return self.store end return self.store[k] end
+    function obj:SetData(k, v) self.store[k] = v end
+end
+-- }}}
+
+-- {{{ local function new_map
+-- A map: `height(x, y)` gives the ground (a number, or nil for none);
+-- `water(x, y)` says whether a spot is water (boolean).
+local function new_map(id, height, water)
+    local map = { id = id, height = height, water = water or function() return false end }
+    function map:GetHeight(x, y) return self.height(x, y) end
+    function map:GetMapId() return self.id end
+    return map
+end
+-- }}}
+
+local FLAT = new_map(0, function() return 0 end)
+
+-- {{{ local function new_creature
+local function new_creature(entry, map, x, y, z)
+    local c = { entry = entry, map = map, x = x, y = y, z = z, dead = false, combat = false, gone = false }
+    data_methods(c)
+    World.nextGuid = World.nextGuid + 1
+    c.guid = World.nextGuid
+    function c:GetEntry() return self.entry end
+    function c:GetLevel() return 10 end
+    function c:GetMap() return self.map end
+    function c:GetLocation() return self.x, self.y, self.z, 0 end
+    function c:GetX() return self.x end
+    function c:GetY() return self.y end
+    function c:IsInWater() return self.map.water(self.x, self.y) end
+    function c:NearTeleport(nx, ny, nz) self.x, self.y, self.z = nx, ny, nz end
+    function c:DespawnOrUnsummon() self.gone = true end
+    function c:IsDead() return self.dead end
+    function c:IsInCombat() return self.combat end
+    function c:RegisterEvent(fn, delay) schedule(self, fn, delay) end
+    function c:MoveTo(_, nx, ny, nz) self.x, self.y, self.z = nx, ny, nz end
+    function c:MoveRandom() end
+    function c:MoveClear() end
+    function c:MoveHome() end
+    function c:AttackStop() end
+    function c:AttackStart() self.combat = true end
+    function c:ClearInCombat() self.combat = false end
+    function c:SetAggroEnabled() end
+    function c:CanAggro() return false end
+    function c:SetHomePosition() end
+    function c:GetSpeed() return 1 end
+    return c
+end
+-- }}}
+
+-- {{{ local function new_player
+local function new_player(name, guidLow)
+    local p = { name = name, low = guidLow, map = FLAT, x = 0, y = 0, z = 0, o = 0,
+                standing = true, dead = false, wet = false, moving = false,
+                spawned = {}, gone = true, level = 10 }
+    data_methods(p)
+    function p:GetName() return self.name end
+    function p:GetGUIDLow() return self.low end
+    function p:GetGUID() return "player-" .. self.low end
+    function p:GetLevel() return self.level end
+    function p:IsStandState() return self.standing end
+    function p:IsDead() return self.dead end
+    function p:IsInWater() return self.wet end
+    function p:IsMoving() return self.moving end
+    function p:IsInGroup() return false end
+    function p:GetLocation() return self.x, self.y, self.z, self.o end
+    function p:GetZ() return self.z end
+    function p:GetMap() return self.map end
+    function p:GetMapId() return self.map.id end
+    function p:SendBroadcastMessage() end
+    function p:RegisterEvent(fn, delay) schedule(self, fn, delay) end
+    function p:SpawnCreature(entry, x, y, z)
+        local c = new_creature(entry, self.map, x, y, z)
+        self.spawned[#self.spawned + 1] = c
+        return c
+    end
+    return p
+end
+-- }}}
+
+-- The game calls the script reaches for, by name, as globals.
+local handlers = {}
+-- {{{ engine globals
+function RegisterPlayerEvent(event, fn) handlers[event] = handlers[event] or {}; table.insert(handlers[event], fn) end
+function GetPlayerByGUID(guid)
+    for _, p in pairs(World.players) do if p:GetGUID() == guid and not p.gone then return p end end
+    return nil
+end
+function GetPlayerByName(name)
+    for _, p in pairs(World.players) do if p.name == name and not p.gone then return p end end
+    return nil
+end
+-- The ambush's database question: which creatures fit this level and
+-- rank. World.answer[rank] is a list of { entry, min, max } or nil (no rows).
+World.answer = {}
+function WorldDBQueryAsync(sql, callback)
+    local rank = tonumber(sql:match("`rank` = (%d+)"))
+    local rows = World.answer[rank]
+    if not rows or #rows == 0 then callback(nil) return end
+    local i = 1
+    local q = {}
+    function q:GetUInt32(col)
+        local r = rows[i]
+        if col == 0 then return r[1] elseif col == 1 then return r[2] elseif col == 2 then return r[3] end
+        return rank
+    end
+    function q:NextRow() i = i + 1; return i <= #rows end
+    callback(q)
+end
+-- }}}
+
+-- {{{ local function login
+local function login(p)
+    p.gone = false
+    World.players[p.low] = p
+    for _, fn in ipairs(handlers[3] or {}) do fn(3, p) end
+end
+-- }}}
+
+-- {{{ local function logout
+-- The extension's wipe first, as its handler was registered first.
+local function logout(p)
+    for _, fn in ipairs(handlers[4] or {}) do fn(4, p) end
+    p.store = {}
+    p.gone = true
+end
+-- }}}
+
+-- the script under test (movement first: the ambush uses its helpers)
+local quiet = print
+print = function() end
+dofile(DIR .. "/src/lua-beta/movement.lua")
+dofile(DIR .. "/src/lua-beta/ambush.lua")
+print = quiet
+local Ambush = Ambush
+
+--------------------------------------------------------------------------------
+-- Scenes
+--------------------------------------------------------------------------------
+
+local function silently(fn, ...) print = function() end; local r = { fn(...) }; print = quiet; return unpack(r) end
+
+-- {{{ the clock: steps of 2, 3 or 4 seconds, never under the floor
+do
+    local p = new_player("Walker", 101)
+    local floorKept, stepsRight = true, true
+    local memory = Ambush.memoryOf(p)
+    memory.interval = 40000
+    for _ = 1, 20000 do
+        local before = memory.interval
+        local after  = silently(Ambush.getNextInterval, p)
+        local step   = math.abs(after - before)
+        if after < AMBUSH_INTERVAL_MIN then floorKept = false end
+        if not (step == 2000 or step == 3000 or step == 4000 or after == AMBUSH_INTERVAL_MIN) then stepsRight = false end
+    end
+    check(floorKept,  "the spawn interval went below its 10-second floor")
+    check(stepsRight, "the spawn interval moved by something other than 2, 3 or 4 seconds")
+
+    -- above the hard cap it is pulled down four times in five
+    local down = 0
+    for _ = 1, 5000 do
+        memory.interval = 210000
+        if silently(Ambush.getNextInterval, p) < 210000 then down = down + 1 end
+    end
+    check(down > 3700 and down < 4300, "above 200 s the walk should go down about 80% of the time, went down " .. down .. "/5000")
+end
+-- }}}
+
+-- {{{ a quick relog resumes the walk; a long absence gets the grace period
+do
+    local p = new_player("Relogger", 102)
+    silently(login, p)
+    local memory = Ambush.memoryOf(p)
+    memory.interval = 77000
+    silently(logout, p)
+    World.now = World.now + 60 * 1000                       -- one minute away (os.time is real time; see below)
+    silently(login, p)
+    check(memory.interval ~= 40000 and math.abs(memory.interval - 77000) <= 4000,
+          "after a quick relog the walk should carry on from 77 s, it is at " .. tostring(memory.interval))
+    -- the first tick after a quick relog is a walk step, not the 30 s grace
+    local graceArmed = false
+    for _, e in ipairs(World.events) do
+        if e.owner == p and e.fn == Ambush.spawnAndAttackPlayer and e.at - World.now == AMBUSH_GRACE_PERIOD then graceArmed = true end
+    end
+    check(not graceArmed, "a quick relog should not get the 30-second grace period")
+    silently(logout, p)
+    memory.logoutTime = os.time() - AMBUSH_OFFLINE_RESET - 5     -- as if away eleven minutes
+    World.events = {}
+    silently(login, p)
+    local grace = false
+    for _, e in ipairs(World.events) do
+        if e.owner == p and e.fn == Ambush.spawnAndAttackPlayer and e.at - World.now == AMBUSH_GRACE_PERIOD then grace = true end
+    end
+    check(grace, "after more than ten minutes away the first ambush should wait the 30-second grace period")
+    silently(logout, p)
+    World.events = {}
+end
+-- }}}
+
+-- {{{ one clock per player, even when the database finds nothing
+do
+    local p = new_player("Lonely", 103)
+    World.answer = {}                                       -- no creature fits: every query is empty
+    silently(login, p)
+    silently(advance, 10 * 60 * 1000)
+    check(pending(p, Ambush.spawnAndAttackPlayer) == 1,
+          "a player should have exactly one ambush clock, has " .. pending(p, Ambush.spawnAndAttackPlayer))
+    silently(logout, p)
+    World.events = {}
+end
+-- }}}
+
+-- shared setup for the spawning scenes: one normal creature, one rare
+World.answer = { [0] = { { 500, 1, 60 } }, [4] = { { 900, 1, 60 } } }
+
+-- {{{ local function fresh_player
+-- A logged-in player whose normal queue holds `n` copies of entry 500, and
+-- whose rare queue is stubbed, so the next tick spawns a normal monster.
+local function fresh_player(name, low, n)
+    local p = new_player(name, low)
+    silently(login, p)
+    World.events = {}
+    local q = {}
+    for i = 1, n or 8 do q[i] = 500 end
+    p:SetData("queue", q)
+    p:SetData("rare-queue", { 0 })
+    return p
+end
+-- }}}
+
+-- {{{ a refill reaches only the player who asked (issue 210)
+do
+    local a = new_player("Asker", 270)
+    local b = new_player("Bystander", 271)
+    silently(login, a)
+    silently(login, b)
+    World.events = {}
+    b:SetData("queue", { 777 })
+    silently(Ambush.setupAmbushQueue, a, 0)
+    local qa, qb = a:GetData("queue"), b:GetData("queue")
+    check(#qa >= 1 and qa[1] == 500, "the asking player's queue should be filled from the answer")
+    check(#qb == 1 and qb[1] == 777, "another player's queue should not change when someone else's refill returns")
+    silently(Ambush.addCreatureToQueue, a, 4242, 10, 10, false)
+    local found = false
+    for _, id in ipairs(a:GetData("queue")) do if id == 4242 then found = true end end
+    check(found, "a creature put back in a queue should be found there by its entry")
+    check(#b:GetData("queue") == 1, "putting a creature back in one queue should not touch another's")
+    silently(logout, a)
+    silently(logout, b)
+    World.events = {}
+end
+-- }}}
+
+-- {{{ the holds: sitting, dead, swimming, three chasing, a boss fight
+do
+    local cases = {
+        { "sitting",        function(p) p.standing = false end },
+        { "dead",           function(p) p.dead = true end },
+        { "swimming",       function(p) p.wet = true end },
+        { "three chasing",  function(p) p:SetData("num-ambushers", 3) end },
+        { "in a boss fight", function(p) p:SetData("is-in-boss-fight", true) end },
+    }
+    for i, case in ipairs(cases) do
+        local p = fresh_player("Held" .. i, 200 + i)
+        case[2](p)
+        silently(Ambush.spawnAndAttackPlayer, 0, 0, 1, p)
+        check(#p.spawned == 0, "no monster should come while the player is " .. case[1])
+        check(pending(p, Ambush.spawnAndAttackPlayer) == 1, "the clock should keep running while the player is " .. case[1])
+        silently(logout, p)
+        World.events = {}
+    end
+    local p = fresh_player("Free", 210)
+    p:SetData("num-ambushers", 2)
+    silently(Ambush.spawnAndAttackPlayer, 0, 0, 1, p)
+    check(#p.spawned == 1, "with two chasing, a third monster should still come")
+    silently(logout, p)
+    World.events = {}
+end
+-- }}}
+
+-- {{{ counting: each monster is taken off exactly once, however it ends
+do
+    local p = fresh_player("Counter", 220)
+    silently(Ambush.spawnAndAttackPlayer, 0, 0, 1, p)
+    silently(Ambush.spawnAndAttackPlayer, 0, 0, 1, p)
+    local c = p.spawned[1]
+    check(c ~= nil and p:GetData("num-ambushers") == 2, "two spawned monsters should count two ambushers")
+    -- killed by something that is not the player: the chase sees it dead
+    c.dead = true
+    silently(advance, 1000)
+    check(p:GetData("num-ambushers") == 1, "a monster killed by anyone should come off the count")
+    -- and the player's kill event after that changes nothing (two
+    -- monsters, so a second subtraction would show: the count floors at 0)
+    silently(Ambush.onCreatureDeath, 7, p, c)
+    check(p:GetData("num-ambushers") == 1, "a monster should come off the count once, not twice")
+    p.spawned[2].dead = true
+    silently(advance, 1000)
+    check(p:GetData("num-ambushers") == 0, "the second monster's death should bring the count to 0")
+
+    -- a fight that ends with the monster alive keeps it counted and chasing
+    silently(Ambush.spawnAndAttackPlayer, 0, 0, 1, p)
+    local c2 = p.spawned[3]
+    c2.x, c2.y = 10, 0                                       -- close enough to engage
+    silently(advance, 1000)
+    c2.combat = false
+    silently(advance, 600)
+    check(p:GetData("num-ambushers") == 1, "a monster still alive after a fight should stay counted")
+    check(pending(c2, Ambush.chasePlayer) == 1, "a monster still alive after a fight should go back to chasing")
+    silently(logout, p)
+    World.events = {}
+end
+-- }}}
+
+-- {{{ the player leaves mid-chase: the monster goes too, without an error
+do
+    local p = fresh_player("Leaver", 230)
+    silently(Ambush.spawnAndAttackPlayer, 0, 0, 1, p)
+    local c = p.spawned[1]
+    silently(logout, p)
+    local ok, err = pcall(silently, advance, 3000)
+    check(ok, "a chase whose player logged out should not raise an error (" .. tostring(err) .. ")")
+    check(c.gone, "a monster whose player logged out should be despawned")
+    World.events = {}
+end
+-- }}}
+
+-- {{{ the chase crosses a map border: despawned, queued again, sent again
+do
+    local p = fresh_player("Border", 240, 1)
+    silently(Ambush.spawnAndAttackPlayer, 0, 0, 1, p)
+    local c = p.spawned[1]
+    p.map = new_map(1, function() return 0 end)             -- the player stepped onto another map
+    local ok, err = pcall(silently, advance, 1000)
+    check(ok, "a chase across a map border should not raise an error (" .. tostring(err) .. ")")
+    check(c.gone, "a monster left on the other map should be despawned")
+    check(pending(c, nil) == 0, "a despawned monster should have nothing left to do")
+    check(p:GetData("num-ambushers") == 0, "the despawned monster should come off the count")
+    silently(advance, 1000)
+    check(#p.spawned == 2 and p.spawned[2].map == p.map, "the monster should be sent again on the player's new map")
+    silently(logout, p)
+    World.events = {}
+end
+-- }}}
+
+-- {{{ spawning beside water: retried round the player, kept when dry
+do
+    local p = fresh_player("Shore", 250)
+    p.x, p.y = 1000, 1000
+    local tries = 0
+    -- the first two places are water, the third is dry
+    p.map = new_map(0, function() return 0 end, function(x, y)
+        tries = tries + 1
+        return tries <= 2
+    end)
+    silently(Ambush.spawnAndAttackPlayer, 0, 0, 1, p)
+    local c = p.spawned[1]
+    check(c and not c.gone, "a monster that found dry land on its last try should be kept")
+    if c then
+        local d = math.sqrt((c.x - p.x) ^ 2 + (c.y - p.y) ^ 2)
+        check(d <= AMBUSH_MAX_DISTANCE * 1.5, "a retried spawn should stay near the player, it is " .. math.floor(d) .. " yards away")
+    end
+    silently(logout, p)
+    World.events = {}
+end
+-- }}}
+
+-- {{{ spawning beside a cliff: never retried closer than 30 yards
+do
+    local p = fresh_player("Cliff", 260)
+    -- ground is far below the player except within 20 yards of them: only
+    -- a retry nearer than the 30-yard floor would find it, so the right
+    -- answer is to give up
+    p.map = new_map(0, function(x, y)
+        local d = math.sqrt(x * x + y * y)
+        if d < 20 then return 0 end
+        return -100
+    end)
+    silently(Ambush.spawnAndAttackPlayer, 0, 0, 1, p)
+    local c = p.spawned[1]
+    if c and not c.gone then
+        local d = math.sqrt(c.x ^ 2 + c.y ^ 2)
+        check(d >= AMBUSH_RETRY_MIN_DIST - 0.001, "a retried spawn came " .. math.floor(d) .. " yards from the player, nearer than 30")
+    end
+    -- no ground anywhere: given up, without an error
+    local q = fresh_player("Void", 261)
+    q.map = new_map(0, function() return nil end)
+    local ok, err = pcall(silently, Ambush.spawnAndAttackPlayer, 0, 0, 1, q)
+    check(ok, "a spawn over ground with no height should not raise an error (" .. tostring(err) .. ")")
+    check(q.spawned[1] == nil or q.spawned[1].gone, "a spawn with no ground anywhere should be given up")
+    silently(logout, p)
+    silently(logout, q)
+    World.events = {}
+end
+-- }}}
+
+print(string.format("%d checks, %d failed", checks, fails))
+os.exit(fails == 0 and 0 or 1)

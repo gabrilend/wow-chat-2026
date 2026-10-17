@@ -7,7 +7,24 @@
 -- Healing: Flash of Light only (Desperate Prayer as emergency tank cooldown)
 -- Damage: Smite (holy) + melee auto-attacks
 
-local CustomClasses = CustomClasses or {}
+-- The class registry is made by the custom-class framework
+-- (custom-classes.lua), which is filed as custom-classes.lua.disabled
+-- because its talent window needs AIO, and AIO is not part of any build.
+-- The engine loads "custom-classes.lua" before this folder (a "." sorts
+-- before a "/"), so when the framework is running its registry is
+-- already here and this file only adds the Knight to it.
+--
+--   framework running: the Knight joins its registry, as designed (706)
+--   framework not running: the registry is made here so the definition
+--     still loads, and the server says out loud that nobody can become a
+--     Knight yet. Before 2026-10-17 this case stopped the file on its
+--     first line ("attempt to index field 'definitions'") on every boot.
+CustomClasses = CustomClasses or {}
+if not CustomClasses.definitions then
+    CustomClasses.definitions = {}
+    print("[custom-classes] Knight (1004) defined, but the custom-class framework is not running "
+          .. "(custom-classes.lua is disabled): no selector, trainer or talent window offers it yet")
+end
 
 -- {{{ Knight Definition
 CustomClasses.definitions[1004] = {

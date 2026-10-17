@@ -92,6 +92,29 @@ declare -a EXPECT_cc_test=(
     "modules/playerbots.conf|AiPlayerbot.KeepAltsInGroup|1"
     "modules/playerbots.conf|AiPlayerbot.InviteAltsOnLogin|0"
 )
+
+# Source of truth for beta: docs/profiles/beta.md ("Settings"), which
+# names the issue behind each value. Added 2026-10-17, when beta had no
+# table and its death knights had quietly been set to start at the cap.
+declare -a EXPECT_beta=(
+    "worldserver.conf|MaxPlayerLevel|20"                   # C006b
+    "worldserver.conf|StartPlayerLevel|1"                  # C007b
+    "worldserver.conf|StartHeroicPlayerLevel|1"            # C017: death knights at 1 (issue 206)
+    "worldserver.conf|RecruitAFriend.MaxLevel|20"          # C017
+    "worldserver.conf|Rate.XP.Kill|2.0"                    # C005
+    "worldserver.conf|Rate.XP.Quest|2.0"                   # C005
+    "worldserver.conf|Rate.Damage.Fall|10.0"               # C004
+    "worldserver.conf|Rate.MoveSpeed.Player|0.85"          # C003
+    "worldserver.conf|InstantFlightPaths|1"                # C009
+    "worldserver.conf|GM.LoginState|3"                     # C008
+    "worldserver.conf|RealmID|2"                           # C019
+    "worldserver.conf|WorldServerPort|4462"                # C010 (shared today; issue 136b)
+    "authserver.conf|RealmServerPort|4362"                 # C010
+    "modules/playerbots.conf|AiPlayerbot.RandomBotMinLevel|1"   # C012
+    "modules/playerbots.conf|AiPlayerbot.RandomBotMaxLevel|20"  # C012
+    "modules/playerbots.conf|AiPlayerbot.MinRandomBots|500"     # stock; the bots are ambushed too
+    "modules/playerbots.conf|AiPlayerbot.MaxRandomBots|500"     # stock
+)
 # }}}
 
 # {{{ scratch_setup

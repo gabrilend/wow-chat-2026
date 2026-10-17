@@ -1,18 +1,25 @@
 #!/bin/bash
-# test-lua-unique-names - checks that no two Lua files in one profile's
-# script folder share a file name.
+# test-lua-unique-names - checks the files a profile's Lua engine will load:
+# no two share a name, and none sits in a folder meant to be switched off.
 #
-# For a general audience: the server's Lua engine loads every .lua file
-# under its scripts folder, in any subfolder, and refuses a second file
-# whose name it has already seen elsewhere ("File with same name already
-# loaded ... rename either file"). The refused file simply never runs. On
-# 2026-10-04 a data file (data/elite-outfits.lua) shared its name with the
-# command script that read it, and the ".elite" command did not exist in
-# game. This finds such pairs before the server does.
+# For a general audience: the server's Lua engine loads every script file
+# (.lua, .ext, .moon, .out) under its scripts folder, in any subfolder, and
+# refuses a second file whose name, without its ending, it has already seen
+# elsewhere ("File with same name already loaded ... rename either file").
+# The refused file simply never runs. On 2026-10-04 a data file
+# (data/elite-outfits.lua) shared its name with the command script that read
+# it, and the ".elite" command did not exist in game.
+#
+# The engine skips only names that start with a dot. A folder named
+# "something.disabled" is still read, file by file: beta's eleven bot
+# behaviors sat in "behaviors.disabled/" from April to October 2026 and
+# loaded on every boot, two of them failing. So a folder is switched off by
+# a leading dot (".behaviors.disabled/"), and this test fails on any loaded
+# file with ".disabled" in a folder name of its path.
 #
 # Usage: scripts/test-lua-unique-names [PROJECT_DIR]
 #   Checks every src/lua-<profile>/ folder (each is one profile's scripts
-#   folder, linked in by install step E001). Exits non-zero on any clash.
+#   folder, linked in by install step E001). Exits non-zero on any finding.
 
 # {{{ set_dir
 DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
@@ -23,23 +30,41 @@ fi
 
 FAILS=0
 for TREE in "${DIR}"/src/lua-*/; do
-    NAMES="$(find "${TREE}" -name '*.lua' -printf '%f\n' | sort)"
-    CLASHES="$(echo "${NAMES}" | uniq -d)"
-    COUNT="$(echo "${NAMES}" | grep -c .)"
-    if [[ -z "${CLASHES}" ]]; then
-        echo "  ok:   ${TREE#${DIR}/} (${COUNT} Lua files, every name once)"
-    else
+    # The engine's own rules (mod-ale LuaEngine.cpp, the script scan): a name
+    # starting with "." is skipped, folder or file; these endings are loaded.
+    LOADED="$(find "${TREE}" -mindepth 1 -name '.*' -prune -o -type f \
+              \( -name '*.lua' -o -name '*.ext' -o -name '*.moon' -o -name '*.out' \) -print | sort)"
+    COUNT="$(echo "${LOADED}" | grep -c .)"
+    TREE_FAILS=0
+
+    # names compared without their ending, as the engine compares them
+    STEMS="$(echo "${LOADED}" | grep . | sed 's|.*/||; s|\.[^.]*$||' | sort)"
+    CLASHES="$(echo "${STEMS}" | uniq -d)"
+    if [[ -n "${CLASHES}" ]]; then
         while read -r NAME; do
-            echo "  FAIL: ${TREE#${DIR}/} has more than one ${NAME}:"
-            find "${TREE}" -name "${NAME}" | sed "s|^${DIR}/|          |"
-            FAILS=$((FAILS + 1))
+            echo "  FAIL: ${TREE#${DIR}/} loads more than one file named ${NAME}:"
+            echo "${LOADED}" | grep -E "/${NAME}\.[^./]+$" | sed "s|^${DIR}/|          |"
+            TREE_FAILS=$((TREE_FAILS + 1))
         done <<< "${CLASHES}"
     fi
+
+    # a folder marked disabled but still read (no leading dot)
+    SWITCHED_OFF="$(echo "${LOADED}" | grep . | sed "s|^${TREE}||" | grep -E '(^|/)[^/]*\.disabled/' )"
+    if [[ -n "${SWITCHED_OFF}" ]]; then
+        echo "  FAIL: ${TREE#${DIR}/} loads files from folders named as disabled (give the folder a leading dot):"
+        echo "${SWITCHED_OFF}" | sed 's|^|          |'
+        TREE_FAILS=$((TREE_FAILS + 1))
+    fi
+
+    if [[ "${TREE_FAILS}" -eq 0 ]]; then
+        echo "  ok:   ${TREE#${DIR}/} (${COUNT} loaded files, every name once, none switched off)"
+    fi
+    FAILS=$((FAILS + TREE_FAILS))
 done
 
 if [[ "${FAILS}" -eq 0 ]]; then
-    echo "All script folders have unique Lua file names"
+    echo "All script folders load unique names and nothing marked disabled"
 else
-    echo "${FAILS} name clash(es): the server loads only the first of each; rename one"
+    echo "${FAILS} finding(s): the server loads only the first file of each name, and every file in a folder without a leading dot"
 fi
 [[ "${FAILS}" -eq 0 ]]

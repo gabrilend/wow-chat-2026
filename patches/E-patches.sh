@@ -392,7 +392,7 @@ apply_config_values() {
 #      at its destination, so squatter (1)/(2) must be cleared BEFORE
 #      cmake --install; squatter (3) must be cleared AFTER, so the
 #      project's extensions/ superset (incl. GetFreeBagSlots.ext,
-#      StackTracePlus.disabled) overrides mod-ale's bundled set.
+#      .StackTracePlus.disabled, hidden by its dot) overrides mod-ale's bundled set.
 #
 # Parallelizable: Yes (unique directory)
 # Uses TARGET_INSTALL_DIR (defaults to INSTALL_DIR, can be set to INSTALL_DIR_SHADOW)

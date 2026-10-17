@@ -25,6 +25,12 @@
 #                          knights start at 60 (owner: "death knights are
 #                          starting at level 60 and they should start at
 #                          55").
+#                          Beta is the exception: its death knights start
+#                          at level 1, beside every other class (issue 206,
+#                          death-knight-level-1-scaling; its trainer and
+#                          level stats, E005/E011, are built for 1-20).
+#                          From 2026-06-04 until 2026-10-17 this patch gave
+#                          beta the cap (20) instead, and nothing said so.
 # RecruitAFriend.MaxLevel — ceiling on the RAF level-up bonus. Likewise
 #                          pinning to the level cap covers the full
 #                          progression range and silences the warning.
@@ -51,10 +57,19 @@ config_level_correlated_caps() {
         return 1
     fi
 
-    local dk_start=$(( max_level < 55 ? max_level : 55 ))   # stock 55, or the cap if lower
+    # Where a new death knight starts, per profile (a number, a level):
+    #   listed here: that level, whatever the cap
+    #   not listed: stock 55, or the cap if lower
+    local -A DK_START_BY_PROFILE=(
+        ["beta"]=1                                          # issue 206
+    )
+    local dk_start=$(( max_level < 55 ? max_level : 55 ))
+    if [[ -n "${DK_START_BY_PROFILE[${PROFILE}]:-}" ]]; then
+        dk_start="${DK_START_BY_PROFILE[${PROFILE}]}"
+    fi
     sed -i "s|^StartHeroicPlayerLevel[[:space:]]*=.*|StartHeroicPlayerLevel = ${dk_start}|" "${conf}"
     sed -i "s|^RecruitAFriend\.MaxLevel[[:space:]]*=.*|RecruitAFriend.MaxLevel = ${max_level}|" "${conf}"
 }
 CONFIG_PROFILES[config_level_correlated_caps]="release beta vanilla basic"
-CONFIG_DESCRIPTIONS[config_level_correlated_caps]="Death knights start at 55 (or the cap if lower); RecruitAFriend.MaxLevel pinned to MaxPlayerLevel"
+CONFIG_DESCRIPTIONS[config_level_correlated_caps]="Death knights start at 55 (or the cap if lower; beta: 1); RecruitAFriend.MaxLevel pinned to MaxPlayerLevel"
 # -- }}}

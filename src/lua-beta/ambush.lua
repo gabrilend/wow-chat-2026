@@ -8,6 +8,18 @@
             Ambush = {} -- table to hold the functions.
 local AmbushQueues = {} -- table to hold monsters that are queued to attack.
 
+-- What a player's ambush clock remembers between sessions, by character
+-- guid (low part, a number): { interval = ms (number), logoutTime = unix
+-- seconds (number) }. It is kept here and not in player:SetData because
+-- the object-variables extension wipes a player's SetData store on logout
+-- (extensions/ObjectVariables.ext, its logout handler), so a value kept
+-- there is gone by the next login. Before 2026-10-17 the interval was kept
+-- there and every login restarted the walk at 40 seconds. This table lives
+-- as long as the Lua state: a server restart or ".reload ale" empties it,
+-- and every player then starts from the base interval with a grace period
+-- (saving it in the characters database is the open TODO in setupPlayer).
+local AmbushMemory = {}
+
 -- {{{ Configuration
 --
 -- Spawn interval uses a random walk algorithm. Each spawn, the interval
@@ -35,6 +47,26 @@ AMBUSH_MIN_DISTANCE    =    120  -- yards minimum from player
 AMBUSH_MAX_DISTANCE    =    160  -- yards maximum from player
 AMBUSH_GRACE_PERIOD    =  30000  -- ms grace period on login (30 seconds)
 AMBUSH_OFFLINE_RESET   =    600  -- seconds offline to trigger grace (10 minutes)
+AMBUSH_MAX_AMBUSHERS   =      3  -- monsters chasing one player at once (wow-chat-1)
+AMBUSH_RETRY_MIN_DIST  =     30  -- yards: a retried spawn never comes closer (the attack distance)
+-- }}}
+
+-- {{{ Ambush.HOLDS
+-- Reasons not to spawn this time; the clock keeps running and the next
+-- tick asks again. Checked in order, the first that holds wins. These are
+-- wow-chat-1's (libs/wow-chat-1/periodic_events.lua), where a separate
+-- scheduler asked them before calling the ambush. That scheduler is
+-- periodic_events.lua.disabled here, and when this file started
+-- scheduling itself the questions were left behind: the ambusher count and
+-- the boss-fight flag were still kept, but nothing read them, and ambushes
+-- came while a player sat, lay dead or swam. Restored 2026-10-17.
+Ambush.HOLDS = {
+    { why = "player is sitting down", holds = function(p) return not p:IsStandState() end },
+    { why = "player is dead",         holds = function(p) return p:IsDead() end },
+    { why = "player is in water",     holds = function(p) return p:IsInWater() end },
+    { why = "too many ambushers",     holds = function(p) return (p:GetData("num-ambushers") or 0) >= AMBUSH_MAX_AMBUSHERS end },
+    { why = "in a boss fight",        holds = function(p) return p:GetData("is-in-boss-fight") == true end },
+}
 -- }}}
 
 -- {{{ Ambush.getJitterMagnitude
@@ -82,6 +114,15 @@ function Ambush.getJitterSign(currentInterval)
     end
 end -- }}}
 
+-- {{{ Ambush.memoryOf
+-- This player's entry in AmbushMemory (see the top of the file), made
+-- empty on first use.
+function Ambush.memoryOf(player)
+    local low = player:GetGUIDLow()
+    AmbushMemory[low] = AmbushMemory[low] or {}
+    return AmbushMemory[low]
+end -- }}}
+
 -- {{{ Ambush.getNextInterval
 -- Random walk: applies jitter to PREVIOUS interval, not base.
 --
@@ -92,7 +133,8 @@ end -- }}}
 -- - More interesting than pure randomness
 --
 function Ambush.getNextInterval(player)
-    local currentInterval = player:GetData("ambush-interval") or AMBUSH_BASE_INTERVAL
+    local memory          = Ambush.memoryOf(player)
+    local currentInterval = memory.interval or AMBUSH_BASE_INTERVAL
 
     local magnitude = Ambush.getJitterMagnitude()
     local sign      = Ambush.getJitterSign(currentInterval)
@@ -105,8 +147,8 @@ function Ambush.getNextInterval(player)
         newInterval = AMBUSH_INTERVAL_MIN
     end
 
-    -- store for next iteration
-    player:SetData("ambush-interval", newInterval)
+    -- store for next iteration (and the next session)
+    memory.interval = newInterval
 
     print("[Ambush] Interval walk: " .. (currentInterval / 1000) .. "s → " .. (newInterval / 1000) .. "s (offset " .. (offset / 1000) .. "s)")
 
@@ -165,6 +207,19 @@ Ambush.BANNED_RARE_IDS = { 0, -- {{{
 function Ambush.spawnAndAttackPlayer(_eventID, _delay, _repeats, player) -- {{{
     print("[Ambush] spawnAndAttackPlayer triggered for " .. player:GetName())
 
+    -- the clock is wound first, so a hold below only skips this one spawn
+    local interval = Ambush.getNextInterval(player)
+    player:RegisterEvent(Ambush.spawnAndAttackPlayer, interval, 1)
+
+    --   a hold applies: no spawn and no queue work this tick
+    --   none applies: spawn (or refill the queues) as below
+    for _, hold in ipairs(Ambush.HOLDS) do
+        if hold.holds(player) then
+            print("[Ambush] no ambush for " .. player:GetName() .. " - " .. hold.why)
+            return
+        end
+    end
+
     -- if there are no monsters queued for this player, then query the database
     local next = next
     local queue     = player:GetData("queue")     or {}
@@ -193,10 +248,6 @@ function Ambush.spawnAndAttackPlayer(_eventID, _delay, _repeats, player) -- {{{
         print("[Ambush] Spawning normal creature")
         Ambush.randomSpawn(player, false)
     end
-
-    -- re-register with new random interval (random walk)
-    local interval = Ambush.getNextInterval(player)
-    player:RegisterEvent(Ambush.spawnAndAttackPlayer, interval, 1)
 end -- }}}
 
 ---------------------------------------------------------------------------------------------------
@@ -291,11 +342,14 @@ function Ambush.pushToAmbushQueue(player, query) -- {{{
         queueType = "rare-queue" -- there will always be normal monsters, soooo...
     end -- }}}
 
-    -- Empty-results fallback: stub the queue with {0} and re-poll in 1s.
+    -- Empty results: stub the queue with {0} (an entry the spawner skips)
+    -- so the next tick moves on instead of asking the database again.
     -- Applies only to the originating player now (used to broadcast).
+    -- This used to also start the spawner again a second later; since the
+    -- spawner winds its own clock, that started a second clock beside the
+    -- first, and every empty answer added one more (removed 2026-10-17).
     if #creatures == 0 and next(player:GetData(queueType)) == nil then
         player:SetData(queueType, {0})
-        player:RegisterEvent(Ambush.spawnAndAttackPlayer, 1000, 1)
         return
     end
 
@@ -318,23 +372,21 @@ function Ambush.pushToAmbushQueue(player, query) -- {{{
     player:SetData(queueType, tempTable)
 end -- }}}
 
--- slower than regenerating the queue all at once
+-- Puts one creature entry back into a player's queue (used when a chase
+-- breaks at a map border and the monster is sent again). A queue is a list
+-- of creature entry ids (numbers), the same shape pushToAmbushQueue builds;
+-- the level range is accepted for the callers' sake and not stored, since
+-- the queue never held it. Before 2026-10-17 this walked the queue as
+-- "for k, v in <table>" (an error: a table is not a function) and stored a
+-- whole record where the queue holds ids.
 function Ambush.addCreatureToQueue(player, creatureId, minLevel, maxLevel, isRare) -- {{{
     local queueType
     if isRare then queueType = "rare-queue"
               else queueType = "queue"
     end
-    local creature = { id       = creatureId,
-                       minLevel = minLevel,
-                       maxLevel = maxLevel,
-                     }
-    local tempTable = {}
-    tempTable[1] = creature
-    for k, v in player:GetData(queueType) do
-        tempTable[k + 1] = v
-    end
-    player:SetData(queueType, tempTable)
-
+    local queue = player:GetData(queueType) or {}
+    table.insert(queue, creatureId)
+    player:SetData(queueType, queue)
 end -- }}}
 
 -- make sure this function is in the async callback function... it might take
@@ -386,7 +438,7 @@ function Ambush.randomSpawn(player, isRare) -- {{{
                              else spawnFunction = Movement.getPlusSpawnPosition end
         local x, y, z, o = player:GetLocation()
               x, y       = spawnFunction(x, y, ambush_min_distance, ambush_max_distance, o)
-                    z    = player:GetMap():GetHeight(x, y)
+                    z    = player:GetMap():GetHeight(x, y) or player:GetZ() -- no ground height there: spawn at the player's height, and the height check below moves it
                        o = math.random(0, 6.28)
         local creature = player:SpawnCreature(creatureId, x, y, z, o,
                                               corpseDespawnType,
@@ -397,43 +449,66 @@ function Ambush.randomSpawn(player, isRare) -- {{{
             -- check and make sure the creature did not spawn in the water
             -- if it did, then try 3 times to find a new spawn location.
             -- if one cannot be found, then just give up and despawn the creature
+            --
+            -- Each new place is drawn round the PLAYER. Before 2026-10-17 it
+            -- was drawn round the last (wet) place, so every try carried the
+            -- monster another 120-160 yards away from the player. Success is
+            -- judged by the water itself, not by the try count: the third try
+            -- finding dry land used to be despawned anyway.
+            local playerX, playerY = player:GetLocation()
             local tries = 0
             while creature:IsInWater() and tries < 3 do
                 tries = tries + 1
-                x, y = spawnFunction(x, y, ambush_min_distance, ambush_max_distance, o)
-                z    = player:GetMap():GetHeight(x, y)
+                x, y = spawnFunction(playerX, playerY, ambush_min_distance, ambush_max_distance, o)
+                z    = player:GetMap():GetHeight(x, y) or player:GetZ()
                 creature:NearTeleport(x, y, z, o)
             end
-            if tries == 3 then
+            --   still wet after the tries: give up on this monster
+            --   dry: carry on to the height check
+            if creature:IsInWater() then
                 Ambush.despawn(creature)
                 return
             end
             --- }}}
 
 ------ is-wrong-z check {{{
-            -- check if the Z level is weird. if it is, then try 3 times to find
-            -- a new spawn location. if one cannot be found, then just give up
-            -- and despawn the creature
+            -- check if the Z level is weird. if it is, then try 5 times to find
+            -- a new spawn location, each nearer the player (the ground close to
+            -- a player is more often at their height). if one cannot be found,
+            -- then just give up and despawn the creature
+            --
+            -- A place is wrong when the ground there is more than 15 yards above
+            -- or below the player, or there is no ground height at all (the map
+            -- has no height data there: past its edge, or over a void), which
+            -- GetHeight reports as nil. The distance halves each try but never
+            -- below AMBUSH_RETRY_MIN_DIST: halving alone reached under 4 yards,
+            -- a monster appearing at the player's elbow. Success is judged by
+            -- the place, as above, not by the try count.
 
-            local tries = 0 local TRIES_MAX = 5
-            local minDist = ambush_min_distance
-            local maxDist = ambush_max_distance
-            local playerX, playerY = player:GetLocation()
+            local TRIES_MAX = 5
+            local tries     = 0
+            local minDist   = ambush_min_distance
+            local maxDist   = ambush_max_distance
             local creatureMap = creature:GetMap() if creatureMap == nil then print("no creature map")
                                                                              Ambush.despawn(creature)
                                                                                          return end
+            local function wrongHeight(atX, atY)
+                local ground = creatureMap:GetHeight(atX, atY)
+                return ground == nil or ground > player:GetZ() + 15 or ground < player:GetZ() - 15
+            end
 
-            while ( creature:GetMap():GetHeight(x,y) > player:GetZ() + 15 or
-                    creature:GetMap():GetHeight(x,y) < player:GetZ() - 15 ) and tries < TRIES_MAX do
+            while wrongHeight(x, y) and tries < TRIES_MAX do
                 tries = tries + 1
-                minDist = minDist / 2
-                maxDist = maxDist / 2
+                minDist = math.max(minDist / 2, AMBUSH_RETRY_MIN_DIST)
+                maxDist = math.max(maxDist / 2, minDist + 10)
                 print("creature is too high/low, trying again with new distance: " .. minDist .. " - " .. maxDist)
                 x, y = spawnFunction(playerX, playerY, minDist, maxDist, o)
-                z    = creature:GetMap():GetHeight(x, y)
+                z    = creatureMap:GetHeight(x, y) or player:GetZ()
                 creature:NearTeleport(x, y, z, o)
             end
-            if tries == TRIES_MAX then
+            --   still wrong after the tries: give up on this monster
+            --   right: it is announced and starts its chase
+            if wrongHeight(x, y) then
                 print("cannot find an acceptable spawn location - creature is too high/low")
                 Ambush.despawn(creature)
                 return
@@ -451,28 +526,48 @@ function Ambush.randomSpawn(player, isRare) -- {{{
             creature:SetData("ambush-chase-target", playerID)
             creature:SetData("wander-radius", 30)
             creature:SetData("ambush-max-distance", ambush_max_distance)
+            -- counted from here until Ambush.release (it dies or is despawned)
             if isRare then   player:SetData("is-in-boss-fight", true)
                            creature:SetData("is-rare", true)
                       else   player:SetData("num-ambushers", player:GetData("num-ambushers") + 1)
                            creature:SetData("is-rare", false)
             end
+            creature:SetData("ambush-counted", true)
             creature:RegisterEvent(Ambush.chasePlayer, 1000, 1)
         end
     end
 end -- }}}
 
 function Ambush.despawn(creature) -- {{{
-    local playerID = creature:GetData("ambush-chase-target")
-    if    playerID == nil then creature:DespawnOrUnsummon(0) return end
-    Ambush.deregister(creature)
+    Ambush.release(creature)
     creature:DespawnOrUnsummon(0)
 end -- }}}
 
-function Ambush.deregister(creature) -- {{{
-    local playerID = creature:GetData("ambush-chase-target")
-    local player   = GetPlayerByGUID(playerID)
-    if     creature:GetData("is-rare") == true  then player:SetData("is-in-boss-fight", false)
-    elseif creature:GetData("is-rare") == false then player:SetData("num-ambushers", player:GetData("num-ambushers") - 1)
+-- {{{ Ambush.release
+-- Takes a monster off its player's count: the ambusher count for a normal
+-- monster, the boss-fight flag for a rare. Every way a monster's ambush
+-- ends comes here (it dies, by anyone's hand; it is despawned for being
+-- too far, wet, badly placed or across a map border), and the
+-- "ambush-counted" mark makes the second and later calls do nothing.
+-- Before 2026-10-17 three paths each subtracted on their own (the end of a
+-- fight, a player's kill, a despawn), so one monster could be taken off
+-- two or three times, while a monster killed by something that is not a
+-- player (a pet, a guard) was never taken off at all.
+--
+--   not counted (never placed, or already released): nothing to do
+--   counted, player online: their count goes down by one (rare: flag off)
+--   counted, player offline: nothing to change; their count starts at 0
+--     on their next login anyway (setupPlayer)
+function Ambush.release(creature)
+    if creature:GetData("ambush-counted") ~= true then return end
+    creature:SetData("ambush-counted", false)
+    local player = GetPlayerByGUID(creature:GetData("ambush-chase-target"))
+    if not player then return end
+    if creature:GetData("is-rare") == true then
+        player:SetData("is-in-boss-fight", false)
+    else
+        local count = player:GetData("num-ambushers") or 0
+        if count > 0 then player:SetData("num-ambushers", count - 1) end
     end
 end -- }}}
 
@@ -480,7 +575,9 @@ end -- }}}
 -- combat functions
 
 function Ambush.chasePlayer(_eventID, _delay, _repeats, creature) -- {{{
+    --   dead: its ambush is over (whoever killed it); stop chasing
     if creature:IsDead() then
+        Ambush.release(creature)
         return
     end
     local    ATTACK_DISTANCE    = 30
@@ -489,6 +586,16 @@ function Ambush.chasePlayer(_eventID, _delay, _repeats, creature) -- {{{
     local WANDER_ROTATION_DELAY = 2000 -------- time between each new waypoint on the circle
     local        playerID       = creature:GetData("ambush-chase-target") -- required
     local        player         = GetPlayerByGUID(playerID)
+
+    --   the player it hunts has left the world (logged out): it goes too.
+    --   Before 2026-10-17 the next line failed on the missing player, the
+    --   chase timer died with it, and the monster stood where it was until
+    --   a restart (a rare, never despawning on its own, for good).
+    if not player then
+        Ambush.despawn(creature)
+        return
+    end
+
     local        playerX,
                  playerY        = player:GetLocation()
     local       creatureX,
@@ -514,11 +621,14 @@ function Ambush.chasePlayer(_eventID, _delay, _repeats, creature) -- {{{
                                                  WANDER_ROTATION_DELAY,
                                                  angle,
                                                  dir )
-        if creatureMap:GetHeight(x, y) > creatureZ + 14 or
-           creatureMap:GetHeight(x, y) < creatureZ - 14 then
+        local ground = creatureMap:GetHeight(x, y)
+        --   no ground there, or a cliff: turn the other way round and wait for the next step
+        --   ground near its own height: walk there
+        if ground == nil or ground > creatureZ + 14 or ground < creatureZ - 14 then
             creature:SetData("orbit-direction", dir * -1)
+        else
+            creature:MoveTo(math.random(0, 4294967295), x, y, ground)
         end
-        creature:MoveTo(math.random(0, 4294967295), x, y, creatureMap:GetHeight(x, y))
         creature:RegisterEvent(Ambush.chasePlayer, WANDER_ROTATION_DELAY, 1)
         return
     end -- }}}
@@ -540,7 +650,7 @@ function Ambush.chasePlayer(_eventID, _delay, _repeats, creature) -- {{{
                                                        playerX,
                                                        playerY
                                                      )
-   if player:GetMapId() ~= creatureMap:GetMapId() then -- {{{
+        if player:GetMapId() ~= creatureMap:GetMapId() then -- {{{
             -- if the player is on the border between one map and another while
             -- the creatures are chasing them, then the creature will get stuck
             -- on the border and not be able to cross over. This is a problem
@@ -548,56 +658,57 @@ function Ambush.chasePlayer(_eventID, _delay, _repeats, creature) -- {{{
             -- the player will not be able to attack the creature. So, if the
             -- player and the creature are on different maps, then just despawn
             -- the creature and attempt to respawn it on the player's map.
+            --
+            -- The same entry goes back into the player's queue and one spawn
+            -- is made a second later from the normal queue (randomSpawn picks
+            -- at random, so it is often this entry, not always). Before
+            -- 2026-10-17 this asked for a function that never existed
+            -- ("spawnCreature"), and carried on chasing after the despawn.
             print("player and creature are on different maps, respawning")
             Ambush.addCreatureToQueue(player, creature:GetEntry(), creature:GetLevel(), creature:GetLevel(), false) -- setting isRare to false because it doesn't matter which queue the creature spawns in
-            player:RegisterEvent(Ambush.spawnCreature, 1000, 1)
+            player:RegisterEvent(function(_, _, _, p) Ambush.randomSpawn(p, false) end, 1000, 1)
             Ambush.despawn(creature)
+            return
         end -- }}}
 
         if Movement.getLazyDistance(creatureX, creatureY, targetX, targetY) > CREATURE_MAX_DISTANCE then
             print(Movement.getLazyDistance(creatureX, creatureY, targetX, targetY) .." yards is too far away, despawning")
             Ambush.despawn(creature)
+            return
         end
-        local targetZ = creatureMap:GetHeight(targetX, targetY)
+        local targetZ = creatureMap:GetHeight(targetX, targetY) or creatureZ -- no ground height at the midpoint: walk level
 
         creature:MoveTo(math.random(0, 4294967295), targetX, targetY, targetZ)
         creature:RegisterEvent(Ambush.chasePlayer, 1000, 1)
     end
 end -- }}}
 
+-- A player's kill (PLAYER_EVENT_ON_KILL_CREATURE): the monster's ambush is
+-- over. A kill by anything else is caught by the chase and fight checks
+-- seeing the monster dead; release counts it off only once either way.
 function Ambush.onCreatureDeath(event, killer, creature) -- {{{
-    local owning_player_ID = creature:GetData("ambush-chase-target") or nil
-    local isRare           = creature:GetData("is-rare") or false
-    if owning_player_ID then
-        local player = GetPlayerByGUID(owning_player_ID)
-        if player then
-            if isRare then
-                player:SetData("is-in-boss-fight", false)
-            else
-                local numAmbushers = player:GetData("num-ambushers")
-                if    numAmbushers > 0 then
-                    player:SetData("num-ambushers", numAmbushers - 1)
-                end
-            end
-        end
-    end
+    Ambush.release(creature)
 end -- }}}
 
--- this function checks if the nearest player is in combat, not necessarily the target
-function Ambush.inCombatCheck(event, delay, repeats, creature) -- {{{
-    if not creature then print("oops creature dead") return end
-    SELECT_TARGET_NEAREST = 3
-    local player = creature:GetAITarget(SELECT_TARGET_NEAREST, true, 0, 30, 0)
-    if not player then print("oops no player") return end
-    if not player:IsStandState() then -- {{{
-        creature:MoveHome()
-        creature:RegisterEvent(Ambush.chasePlayer, 2000, 1)
+-- {{{ Ambush.inCombatCheck
+-- Watches a monster that has engaged its player, every half second.
+--   dead: released, done
+--   still fighting: look again in half a second
+--   the fight ended with it alive (the player ran, fled, vanished): back
+--     to the chase, which re-engages when close or follows when not
+-- Before 2026-10-17 this looked up the nearest player within 30 yards
+-- rather than the monster's own player, failed when none was near, and
+-- took the monster off the count when the fight ended while it still lived
+-- and chased (so the count drifted below the real number of ambushers).
+function Ambush.inCombatCheck(event, delay, repeats, creature)
+    if creature:IsDead() then
+        Ambush.release(creature)
         return
-    end -- }}}
-    if  creature:IsInCombat() then
+    end
+    if creature:IsInCombat() then
         creature:RegisterEvent(Ambush.inCombatCheck, 500, 1)
     else
-        Ambush.deregister(creature)
+        creature:RegisterEvent(Ambush.chasePlayer, 1000, 1)
     end
 end -- }}}
 ---------------------------------------------------------------------------------------------------
@@ -622,11 +733,12 @@ function Ambush.setupPlayer(event, player) -- {{{
     player:SetData( "rare-queue",  {} )
     player:SetData("num-ambushers", 0 )
 
-    -- restore interval from database or use base
-    -- TODO: load from db_characters once persistence is added
-    local savedInterval = player:GetData("ambush-interval")
-    if not savedInterval then
-        player:SetData("ambush-interval", AMBUSH_BASE_INTERVAL)
+    -- restore interval from this server session's memory or use base
+    -- TODO: load from db_characters once persistence is added, so a
+    -- restart keeps it too (AmbushMemory, top of file, says why SetData can't)
+    local memory = Ambush.memoryOf(player)
+    if not memory.interval then
+        memory.interval = AMBUSH_BASE_INTERVAL
     end
 
     -- check if player was offline long enough to trigger grace period
@@ -636,7 +748,7 @@ function Ambush.setupPlayer(event, player) -- {{{
     -- - Long absences mean player needs time to reorient
     -- - 30 second grace lets them check inventory, look around, etc.
     --
-    local lastLogout   = player:GetData("ambush-logout-time") or 0
+    local lastLogout   = memory.logoutTime or 0
     local currentTime  = os.time()
     local offlineTime  = currentTime - lastLogout
     local useGrace     = (lastLogout == 0) or (offlineTime >= AMBUSH_OFFLINE_RESET)
@@ -655,9 +767,11 @@ function Ambush.setupPlayer(event, player) -- {{{
 end -- }}}
 
 -- {{{ Ambush.onPlayerLogout
--- Track logout time for grace period calculation
+-- Track logout time for grace period calculation. Kept in AmbushMemory:
+-- in SetData it lasted only by luck of order (this handler happened to run
+-- after the object-variables extension had already wiped the store).
 function Ambush.onPlayerLogout(event, player)
-    player:SetData("ambush-logout-time", os.time())
+    Ambush.memoryOf(player).logoutTime = os.time()
     print("[Ambush] Logout time saved for: " .. player:GetName())
 end -- }}}
 
