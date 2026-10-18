@@ -16,7 +16,7 @@
 #   Reads   docs/HTML/exploration-compare/explore-engine.js
 
 # {{{ set_dir
-DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+DIR="/mnt/kaun/wow-chat-2026"
 if [[ -n "$1" && "$1" != [0-9]* ]]; then
     DIR="$1"
     shift

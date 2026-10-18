@@ -6,7 +6,7 @@
 -- sector's kind and reach, and every waypoint's place, Y, direction and
 -- inward count. Prints counts and each disagreement; exits 1 on any.
 -- Usage: luajit lua-side.lua DIR JS_OUTPUT_FILE
-local DIR, JSOUT = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026", arg[2]
+local DIR, JSOUT = arg[1] or "/mnt/kaun/wow-chat-2026", arg[2]
 local Roam = dofile(DIR .. "/src/lua-basic/lib/buddy-roam.lua")
 local TOL = 1e-6
 

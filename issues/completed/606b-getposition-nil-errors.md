@@ -389,4 +389,4 @@ line says. The old 329 was split in two in April (`issues/MIGRATION_MAP.md`:
 `scripts/install` or `scripts/update` fetch before any compile can run,
 so the source is there when the quick tests are. From a git worktree,
 which has no source tree, run it with
-`--source /mnt/mtwo/games/azeroth-core/wow-chat-2026/source-beta`.
+`--source /mnt/kaun/wow-chat-2026/source-beta`.

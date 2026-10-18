@@ -31,7 +31,7 @@
 --   --strict     exit 1 when a linked test fails (with --run)
 -- Exit status: 0, or 1 with --strict and a failing test.
 
-local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = "/mnt/kaun/wow-chat-2026"
 local opt = { all = false, run = false, untested = false, strict = false }
 for _, a in ipairs(arg) do
     local flag = a:match("^%-%-(.+)$")

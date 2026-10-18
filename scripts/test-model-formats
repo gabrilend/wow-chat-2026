@@ -25,7 +25,7 @@
 --   reported as skipped, and the test fails, since they are its point.
 --   Exit 1 on any failure.
 
-local DIR = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = arg[1] or "/mnt/kaun/wow-chat-2026"
 local ffi = require("ffi")
 local Gltf = dofile(DIR .. "/src/tools/model/gltf.lua")
 local M2 = dofile(DIR .. "/src/tools/model/m2.lua")

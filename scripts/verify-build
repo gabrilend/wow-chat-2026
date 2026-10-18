@@ -6,7 +6,7 @@
 # Run after: compile, validate, promote
 # Exit code 0 = all checks pass; non-zero = at least one check failed.
 
-DIR="${1:-/home/ritz/games/azeroth-core/wow-chat-2026}"
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
 
 # Load active profile
 if [[ -f "${DIR}/.profile" ]]; then

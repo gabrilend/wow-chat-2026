@@ -15,7 +15,7 @@
 #   - a staged file removed is removed from the mirror.
 # Usage: scripts/test-sql-mirror [PROJECT_DIR]
 
-DIR="${1:-/mnt/mtwo/games/azeroth-core/wow-chat-2026}"
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
 WORK="${DIR}/tmp/shared-memory/test-sql-mirror"
 rm -rf "${WORK}"
 mkdir -p "${WORK}/staging" "${WORK}/core" || exit 1

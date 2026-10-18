@@ -17,7 +17,7 @@
 
 set -euo pipefail
 
-DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+DIR="/mnt/kaun/wow-chat-2026"
 if [[ -n "${1:-}" ]]; then DIR="$1"; fi
 PLANNER="${DIR}/scripts/lib/class-change-sql.lua"
 WORK="${DIR}/tmp/shared-memory/test-change-character-class"

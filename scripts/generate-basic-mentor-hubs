@@ -23,7 +23,7 @@
 -- positions and trainer lists in base data are what upstream updates start
 -- from; a hub whose trainers move upstream would need a re-run.
 
-local DIR = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = arg[1] or "/mnt/kaun/wow-chat-2026"
 local BASE = DIR .. "/source-beta/data/sql/base/db_world/"
 local DBC  = DIR .. "/data-files/dbc/FactionTemplate.dbc"
 local OUT  = DIR .. "/sql/basic/db_world.src/10-valley-universal-trainers.apply.sql"

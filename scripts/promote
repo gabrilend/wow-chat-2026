@@ -3,7 +3,7 @@
 # Copies shadow directory to main, preserving user customizations
 # Part of shadow-run-promote workflow: compile -> validate -> promote
 
-DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
+DIR="/mnt/kaun/wow-chat-2026"
 
 # =============================================================================
 # Load Profile

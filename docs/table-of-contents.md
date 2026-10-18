@@ -34,7 +34,7 @@ wow-chat-2026/
 │   ├── gear-3d-pipeline.md        Profile -> views (8 x 1/3/5 rings) -> mesh -> glTF kept / M2 exported -> skeleton -> generated animations (506e-506i)
 │   ├── m2-format-wotlk.md         The game's model files (M2 + .skin, version 264), measured from stock items; body armour is texture, not model
 │   ├── (the custom client's four documents moved to the W client on 2026-10-07, issue 173v:
-│   │    /mnt/mtwo/games/azeroth-core/custom-client/docs/045-datapath.md, 046-ingame-checks.md,
+│   │    /mnt/kaun/custom-client/docs/045-datapath.md, 046-ingame-checks.md,
 │   │    047-optimization-checklist.md, 048-stock-options.md; its table of contents is docs/010)
 │   ├── bot-governor.md            Host-load-driven bot population governor
 │   ├── context-placement.md       Put a thing where it is referred to

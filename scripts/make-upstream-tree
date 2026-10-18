@@ -26,7 +26,7 @@
 
 set -o pipefail
 
-DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+DIR="/mnt/kaun/wow-chat-2026"
 if [[ $# -eq 5 ]]; then DIR="$1"; shift; fi
 [[ $# -eq 4 ]] || { echo "usage: $0 [PROJECT_DIR] NAME CORE PLAYERBOTS ALE"; exit 1; }
 NAME="$1" CORE="$2" BOTS="$3" ALE="$4"

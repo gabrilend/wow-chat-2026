@@ -16,7 +16,7 @@
 -- compare prints the counts and exits 1 when any check failed.
 --------------------------------------------------------------------------------
 
-local DIR  = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR  = arg[1] or "/mnt/kaun/wow-chat-2026"
 local MODE = arg[2]
 local Maps = dofile(DIR .. "/tests/buddy-roam-core/drawn-maps.lua")
 

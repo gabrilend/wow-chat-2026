@@ -15,7 +15,7 @@
 # Exit status: 0 on the server's answer, 1 when it couldn't be reached,
 # refused the login, or reported the command failed (its words printed).
 
-DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+DIR="/mnt/kaun/wow-chat-2026"
 if [[ "${1:-}" == "--dir" ]]; then DIR="$2"; shift 2; fi
 COMMAND="${1:-}"
 if [[ -z "${COMMAND}" ]]; then
