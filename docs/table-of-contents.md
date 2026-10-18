@@ -105,6 +105,7 @@ wow-chat-2026/
 │   ├── phase-2-progress.md        Phase 2: Behaviors and Systems
 │   ├── phase-3-progress.md        Phase 3: World Immersion
 │   ├── phase-7-progress.md        Phase 7: ...
+│   ├── phase-12-progress.md       Phase 12: Example products, the framework outside World of Warcraft (1201 robot search party for Left 4 Dead 2, 1202 robot stage show for children)
 │   ├── 1xx-*.md                   Phase 1 issues
 │   ├── 2xx-*.md                   Phase 2 issues
 │   ├── 3xx-*.md                   Phase 3 issues
