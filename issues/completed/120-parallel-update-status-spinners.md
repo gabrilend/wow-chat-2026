@@ -60,3 +60,12 @@ Sequential checks - each git fetch blocked until complete, total time = sum of a
 - Core is treated the same as modules (first in list)
 - Network is the bottleneck - parallel saves ~5x time with 5 repos
 - Spinner uses braille dots: ⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏
+
+## Since then (checked 2026-10-17)
+
+Still built, in `scripts/update` and `scripts/install` (the old
+`scripts/azerothcore install` and `update`, split out by issue 142): each
+repository is checked in parallel with its own status line. The module
+list per profile (`PROFILE_MODULES`) has changed since (mod-grownup is
+beta's only now; basic adds mod-solo-lfg, mod-fireworks-on-level and the
+project's own mod-buddies), so the lines above are one profile's of April.

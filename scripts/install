@@ -75,7 +75,12 @@ DEFAULT_PROFILE="${PROFILE}"
 
 # {{{ Repository URLs
 declare -A PROFILE_REPO=(
-    ["alpha"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
+    # alpha: upstream AzerothCore (not the playerbots fork), the tree
+    # issue 134 made: source-alpha/ is a clone of it on a local branch,
+    # alpha-baseline, with mod-eluna and mod-transmog. Until 2026-10-17 this
+    # copy said the playerbots fork, since the 2026-04-14 script split;
+    # scripts/test-profile-tables-agree now compares every copy.
+    ["alpha"]="https://github.com/azerothcore/azerothcore-wotlk.git"
     ["beta"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
     ["release"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
     ["vanilla"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
@@ -86,7 +91,7 @@ declare -A PROFILE_REPO=(
 
 # {{{ Branch per profile
 declare -A PROFILE_BRANCH=(
-    ["alpha"]="Playerbot"
+    ["alpha"]="master"    # issue 134: alpha-baseline is a local branch made from master
     ["beta"]="Playerbot"
     ["release"]="Playerbot"
     ["vanilla"]="Playerbot"

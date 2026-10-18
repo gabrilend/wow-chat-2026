@@ -28,3 +28,14 @@ Both scripts should detect whether MySQL is running before starting the server b
 ## Notes
 
 The `start-mysql` script already handles the "already running" case gracefully by exiting 0, so calling it when MySQL is already running is safe.
+
+## Since then (checked 2026-10-17)
+
+Built as planned, a little simpler: `check_mysql` in `scripts/authserver`
+and `scripts/worldserver` just runs `scripts/start-mysql` (which returns
+at once when MySQL is already up) and stops with "MySQL is not available;
+not starting the server" if it cannot. The install's realm-list step
+(C011) does the same before writing to the database, and since 2026-05-19
+checks a real ping rather than the socket file, which can outlive the
+server. `scripts/test-mysql-start` tests the start script (with MySQL
+stopped).

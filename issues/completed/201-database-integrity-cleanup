@@ -295,3 +295,19 @@ This issue enables **Phase 2: Empty World** by ensuring:
 > "The empty world is clean, not just empty"
 
 Deleting creatures is easy. Cleaning up after yourself is professionalism. This fix demonstrates **care for correctness**, not just "make it work."
+
+## Since then (checked 2026-10-17)
+
+- **Still built**, as the cascade block of install step E012
+  (`sql/beta/db_world.src/12-drop-creatures-keep-essential.apply.sql`,
+  "cascade cleanup per issue 201"), which issue 203's creature removal
+  became when the SQL moved to per-profile folders (2026-06-04).
+- **Undoable since 2026-09-23**: E012 saves the `creature` table before
+  removing anything, and its undo restores it. `scripts/test-beta-sql-in-ram`
+  applies, re-applies and undoes it on a stock world database and checks
+  every touched table comes back exactly.
+- The lesson here (delete the dependents with the rows) is the same one
+  the October trainer work met from the other side: beta's trainer steps
+  now never delete the game's rows at all, but make copies and point at
+  them, so their undo has nothing to restore
+  (`docs/datapaths/travellers-and-trainers.md`).

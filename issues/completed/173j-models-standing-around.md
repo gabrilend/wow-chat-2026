@@ -73,3 +73,14 @@ models other than hers.
 
 None. (Which models: the first pick, with the ancient protector for the
 treant and the tiger model for the nightsaber; 2026-10-06.)
+
+## Since then (checked 2026-10-17)
+
+The custom client moved to its own project on 2026-10-07 (173v), the W
+client at `/mnt/mtwo/games/azeroth-core/custom-client/`, and is built,
+run and tested there (`scripts/build --test`; its own CLAUDE.md). Its code
+was renumbered into reading order (`src/NNN-name.c`) and rewritten to its
+error and handle conventions; `src/custom-client-c/` and `src/custom-client/`
+here are gone. The crosswalk from every 173 issue to where it continues is
+the table in the W client's `docs/009-roadmap.md`. This piece continues as
+W client issue 404 (characters and equipment), on top of 402's animation (`src/022-m2.c`, `src/023-anim.c`).

@@ -386,5 +386,12 @@ current server and beta's install steps:
   creature clearing (E012) removes their spawns along with everyone else's.
   A beta death knight today has its starting abilities and nothing more.
 - **Exits from Ebon Hold:** unchanged (`src/lua-beta/death-knights.lua`).
-- Bringing the kit back is part of issue 721's first step (trainer lists
-  on the current tables) and the beta roadmap's step 4.
+- Bringing the kit back: done on branch beta-homework (2026-10-17, to be
+  merged). E011 now writes the kit as a trainer list of its own (number
+  2060000) on the current tables and points the three trainers at it;
+  they reach players as travellers (503, `src/lua-beta/data/travel-trainers.lua`,
+  one per slice of levels 1-6, 7-13, 14-20). E005, which wrote the stats
+  into `player_levelstats` (also no longer read), left beta's install list:
+  the server reads `player_class_stats`, which E011 fills.
+- Not checked yet, in game: the death knight's stock starting outfit is
+  level-55 gear, which a level-1 death knight can't wear.

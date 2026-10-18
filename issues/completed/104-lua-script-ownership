@@ -220,3 +220,18 @@ This issue enables **Phase 1: Foundation** by ensuring:
 > "The game scripts exist within the project"
 
 Without this, the server runs but the game systems (ambush, treasure, travelers) don't spawn. The scripts are the **game**, not just code. Owning them means owning the experience.
+
+## Since then (checked 2026-10-17)
+
+- **Still owned by the project, now one folder per profile**:
+  `src/lua/` became `src/lua-beta/` (the wow-chat corpus this issue
+  brought in), beside `src/lua-basic/`, `src/lua-cc-test/`,
+  `src/lua-vanilla/` and `src/lua-alpha/` (2026-06-04). The server still
+  reads them through a link (install step E001 links the profile's folder
+  in as `lua_scripts/custom/`), but the link now points into the project,
+  which is this issue's point.
+- `src/lua/behaviors/` is `src/lua-beta/.behaviors.disabled/` (switched off
+  on 2026-04-10; given a leading dot on 2026-10-17, because the engine
+  skips only names starting with a dot).
+- The shared folder this issue left (`/home/ritz/games/azeroth-core/lua-scripts/`)
+  is wow-chat-1's; its scripts are kept for reference in `libs/wow-chat-1/`.

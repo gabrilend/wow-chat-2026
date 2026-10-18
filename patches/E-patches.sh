@@ -1150,10 +1150,11 @@ unpatch_E018_vanilla_kit_required_level_cap() {
 
 # -- {{{ patch_E011_beta_dk_class_system
 # Death Knight class system for beta profile (issue 206/167). Wires DK
-# from level 1 with progressive ability training via custom trainers
-# 29194/29195/29196. Mysql-pipe variant (beta shares acore_world with
-# release; cannot use UpdateFetcher without polluting release data).
-# Source: sql/beta/db_world.src/11-dk-class-system.apply.sql.
+# from level 1 with progressive ability training: the kit is its own
+# trainer list (2060000) and trainers 29194/29195/29196 are pointed at it.
+# Source: sql/beta/db_world.src/11-dk-class-system.apply.sql, undone by
+# its .revert.sql (both on the current trainer tables since 2026-10-17;
+# before, both wrote npc_trainer, which the server no longer reads).
 patch_E011_beta_dk_class_system() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/11-dk-class-system.sql"
     local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/11-dk-class-system.apply.sql"
@@ -1173,28 +1174,19 @@ patch_E011_beta_dk_class_system() {
 
 unpatch_E011_beta_dk_class_system() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/11-dk-class-system.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/11-dk-class-system.revert.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E011_REVERT" "${SQL_FILE}"; then
         echo "  [E011] Active file already holds revert-form content"
         return 0
     fi
 
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E011] Revert source missing: ${SRC_FILE}"; return 1; }
+
     _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
-    echo "  [E011] Writing revert-form SQL to ${SQL_FILE}"
-    cat > "${SQL_FILE}" <<'SQL'
--- MARKER_E011_REVERT beta-dk-class-system
--- Revert-form: mirror the apply source's idempotence-clear block.
--- Trainer IDs 29194-29196 are project-owned DK trainers; the spell
--- list matches what the apply teaches at those IDs.
-DELETE FROM `player_class_stats`            WHERE `Class` = 6 AND `Level` BETWEEN 1 AND 54;
-DELETE FROM `playercreateinfo_spell_custom` WHERE `classmask` = 32;
-DELETE FROM `playercreateinfo_item`         WHERE `class` = 6;
-DELETE FROM `npc_trainer`                   WHERE `ID` IN (29194, 29195, 29196) AND `SpellID` IN (
-    45902, 45477, 45462, 47541, 45470, 48263, 48266, 48265, 50842, 48721,
-    45524, 56222, 45529, 57330, 48707, 43265, 46584
-);
-SQL
+    echo "  [E011] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
 
@@ -1253,9 +1245,13 @@ SQL
 # -- }}}
 
 # -- {{{ patch_E013_beta_quest_spells_to_trainers
-# Adds quest-learned class abilities to custom trainer NPCs (issue 140).
-# Beta has no quest NPCs, so abilities normally taught via quests get
-# routed to trainers 200001-200020 instead.
+# Adds quest-learned class abilities to the class trainers' lists (issue
+# 701, formerly 140). Beta has no quest NPCs, so abilities normally taught
+# via quests are taught by trainers instead. Source and undo:
+# sql/beta/db_world.src/13-quest-spells-to-trainers.{apply,revert}.sql,
+# on the current trainer tables since 2026-10-17. The old undo deleted
+# every npc_trainer row numbered 200001-200020, which were mostly the
+# game's own reference lists (about 2,000 rows), not this step's.
 patch_E013_beta_quest_spells_to_trainers() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/13-quest-spells-to-trainers.sql"
     local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/13-quest-spells-to-trainers.apply.sql"
@@ -1275,33 +1271,31 @@ patch_E013_beta_quest_spells_to_trainers() {
 
 unpatch_E013_beta_quest_spells_to_trainers() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/13-quest-spells-to-trainers.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/13-quest-spells-to-trainers.revert.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E013_REVERT" "${SQL_FILE}"; then
         echo "  [E013] Active file already holds revert-form content"
         return 0
     fi
 
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E013] Revert source missing: ${SRC_FILE}"; return 1; }
+
     _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
-    echo "  [E013] Writing revert-form SQL to ${SQL_FILE}"
-    cat > "${SQL_FILE}" <<'SQL'
--- MARKER_E013_REVERT beta-quest-spells-to-trainers
--- Revert-form: drop every row in the project's custom trainer ID
--- range (200001-200020). All IDs in that range are project-owned.
-DELETE FROM `npc_trainer` WHERE `ID` BETWEEN 200001 AND 200020;
-SQL
+    echo "  [E013] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
 
 # -- {{{ patch_E014_beta_trainer_spell_level_cap
-# Caps each beta trainer's spell list to its assigned maxLevel (issue
-# 157). Creates tiered trainer system where different trainers teach
-# different level ranges.
-#
-# Snapshot-based revert: the apply source captures the full pre-apply
-# `npc_trainer` table into `wow_chat_e014_snapshot_npc_trainer` BEFORE
-# the per-trainer DELETEs run. The unpatch's revert reads from that
-# snapshot to restore the pre-apply state, then drops the snapshot.
+# Caps each travelling class trainer to the top of its level slice (issue
+# 503). Each gets its own copy of its class's lessons, cut off at its
+# slice, and is pointed at the copy; the game's lists are untouched, so the
+# undo points the trainers back and removes the copies. Both SQL files are
+# generated by scripts/generate-beta-trainer-tiers-sql from
+# src/lua-beta/data/travel-trainers.lua (the traveller script's own list).
+# Until 2026-10-17 the step deleted lessons from npc_trainer, which the
+# server no longer reads.
 patch_E014_beta_trainer_spell_level_cap() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/14-trainer-spell-level-cap.sql"
     local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/14-trainer-spell-level-cap.apply.sql"
@@ -1321,25 +1315,19 @@ patch_E014_beta_trainer_spell_level_cap() {
 
 unpatch_E014_beta_trainer_spell_level_cap() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/14-trainer-spell-level-cap.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/14-trainer-spell-level-cap.revert.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E014_REVERT" "${SQL_FILE}"; then
         echo "  [E014] Active file already holds revert-form content"
         return 0
     fi
 
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E014] Revert source missing: ${SRC_FILE}"; return 1; }
+
     _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
 
-    echo "  [E014] Writing revert-form SQL to ${SQL_FILE}"
-    cat > "${SQL_FILE}" <<'SQL'
--- MARKER_E014_REVERT beta-trainer-spell-level-cap
--- Revert-form: restore `npc_trainer` from the snapshot the apply
--- captured before its DELETEs ran, then drop the snapshot.
--- This also restores E011's DK-trainer rows and E013's 200xxx rows
--- (the snapshot was taken AFTER they ran, so they're in the snapshot).
-DELETE FROM `npc_trainer`;
-INSERT INTO `npc_trainer` SELECT * FROM `wow_chat_e014_snapshot_npc_trainer`;
-DROP TABLE IF EXISTS `wow_chat_e014_snapshot_npc_trainer`;
-SQL
+    echo "  [E014] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
 

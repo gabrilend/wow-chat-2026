@@ -183,3 +183,17 @@ Future developers might think "git worktrees would solve this!" This issue expla
 4. What actually solves the problem
 
 The best infrastructure is often the infrastructure you don't add.
+
+## Since then (checked 2026-10-17)
+
+Declined as planned: clean-build testing is done instead by building into
+a shadow install (`scripts/compile` builds into `build-shadow`/
+`installed-files-shadow`, validates, then promotes; issue 122, atomic
+shadow builds) and by testing patches on throwaway copies of the source in
+RAM (`scripts/test-source-patches`, `scripts/make-upstream-tree` for a
+clean tree at the pinned or newest commit).
+
+Git worktrees did arrive, for a different reason: several Claude sessions
+working in the project at once each take a worktree on their own branch
+(`../wow-chat-neuron`, `../wow-chat-beta-homework`) so they don't edit
+the same files, and the branches are merged after review.

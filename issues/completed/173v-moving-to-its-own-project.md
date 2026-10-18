@@ -305,3 +305,17 @@ behind in this project.
       between players) are in the conversation of 2026-10-07; what
       sending player to player is meant to save (server traffic, delay,
       or server work) decides whether it is worth it.
+
+## Since then (checked 2026-10-17)
+
+- The move stands: the W client builds and tests on its own, and this
+  project's documents point there. Paths in this file (`src/custom-client-c`,
+  `scripts/build`, `docs/009-roadmap.md` and so on) are the W client's, or
+  this project's old ones removed in step 8; `scripts/check-issue-references`
+  reports the old folders as "moved out" with a pointer here.
+- The creature-list generator that stayed here
+  (`scripts/generate-custom-client-creatures`, writing into the W client's
+  `assets/world/`) is still the one tie between the two projects' files.
+- The cc-test profile (176) is this project's side of the client's testing:
+  a stock server with playerbots, the Lua engine and the buddy module, for
+  the W client's test scenes.

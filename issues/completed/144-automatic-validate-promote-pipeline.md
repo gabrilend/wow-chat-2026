@@ -165,3 +165,15 @@ On STABLE: kill server, call promote
 3. **Heartbeat detection** - Recognizes periodic server output
 4. **Clean shutdown** - Graceful kill with SIGKILL fallback
 5. **Manual override** - `--no-validate` for debugging
+
+## Since then (checked 2026-10-17)
+
+- **Still the build's shape**: `scripts/compile` builds into the shadow
+  tree, then runs `scripts/validate`, which runs `scripts/promote`
+  (`--no-validate` to stop after the build).
+- **A step was added in front**: since 2026-09/10 the compile runs the
+  project's quick tests first (the `QUICK_TESTS` list in `scripts/compile`,
+  37 offline tests as of 2026-10-17, in parallel, each with its log in
+  `tmp/shared-memory/compile-tests/`), and stops before patching or
+  building if any fails (`--skip-tests` to build anyway).
+- `scripts/verify-build` checks a fresh build's binaries after the fact.

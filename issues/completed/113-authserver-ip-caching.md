@@ -255,3 +255,16 @@ This issue enables **Phase 1: Foundation & Tooling** by ensuring:
 Developer time is precious. Waiting 15 seconds every server restart is death by a thousand cuts. Caching the IP lookup removes friction from the most common development loop: change code, restart server, test.
 
 The server should start as fast as possible. Network calls on startup are a code smell unless absolutely necessary. Once per day is necessary; once per restart is not.
+
+## Since then (checked 2026-10-17)
+
+**Switched off on 2026-04-18 (82401a6)**, a week after it was built. The
+realm list now names the server by its DNS name, `wow.ritzmenardi.com`,
+written into every row by the install's realm-list step
+(`config/patches/C011-realmlist-setup.sh`), and the DNS name follows the
+house's changing IP by itself, so nothing needs to look the IP up. The
+call in `scripts/authserver` is commented out with that reason;
+`scripts/update-realmlist-ip` (with this issue's daily cache) is still in
+the project but unused. Two comments that still said the IP was rewritten
+on every launch (`scripts/authserver`, `scripts/set-active-realm`) were
+corrected on 2026-10-17; they cited this issue by its old number, 346.

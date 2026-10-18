@@ -195,3 +195,17 @@ This issue enables **Phase 1: Foundation** by ensuring:
 > "Builds complete without killing the system"
 
 A frozen computer during build is a bad developer experience. This fix makes builds feel **cooperative** rather than **hostile**.
+
+## Since then (checked 2026-10-17)
+
+- **The automatic thread count was taken out.** The old build script ended
+  with `nproc - 1` commented out and a fixed `THREADS=4`; when it was split
+  into separate commands (issue 142, 2026-04-14), `scripts/compile` kept
+  `THREADS="${THREADS:-4}"` with a `--threads N` option. The record does
+  not say why; the owner's standing note is that builds are long and tie
+  up the processor, which a fixed, low count protects against.
+- `MAKE_JOBS` from this issue is now `THREADS` (environment) or
+  `--threads` (option) on `scripts/compile`.
+- Compilation goes through a project-local ccache (`libs/ccache`, used by
+  `scripts/compile`; issue 149, still open), which cuts rebuild times more
+  than thread counts can.

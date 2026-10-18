@@ -71,9 +71,9 @@ declare -A PROFILE_COMMIT=(
 # vanilla (148): playerbots + three QoL modules, no ALE, no custom Lua.
 #   Light ruleset baseline for default-WotLK feel.
 declare -A PROFILE_MODULES=(
-    ["alpha"]="mod-eluna"
-    ["release"]="mod-ale mod-playerbots mod-aoe-loot mod-grownup"
-    ["beta"]="mod-ale mod-playerbots mod-aoe-loot mod-grownup"
+    ["alpha"]="mod-eluna mod-transmog"
+    ["release"]="mod-ale mod-playerbots"
+    ["beta"]="mod-ale mod-aoe-loot mod-grownup mod-playerbots"
     ["vanilla"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
     ["basic"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
     ["cc-test"]="mod-playerbots mod-ale"

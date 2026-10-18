@@ -45,12 +45,18 @@ trainer, with gold as the only limit), the owner, verbatim:
   (`custom-classes.lua.disabled`) is switched off, so no character has one.
 - **Travellers and tomes are off on beta** (`travel.lua.disabled`,
   `ability-tomes.lua.disabled`), so no trainer arrives and no tome drops.
-- **Beta's trainer data is written to an old table.** Beta's install steps
-  for trainers (E011 death knights, E013 quest spells, E014 the level cap)
-  write `npc_trainer`, which the current server no longer reads (it reads
-  `trainer` and `trainer_spell`, and links creatures to trainers through
-  `creature_default_trainer`). Their changes have had no effect since the
-  schema moved.
+- **Beta's trainer data is on the current tables** (branch beta-homework,
+  2026-10-17, to be merged). E011 (the death knight kit), E013 (quest
+  spells) and E014 (each travelling trainer's level slice) wrote
+  `npc_trainer`, which the current server no longer reads, and had no
+  effect; they now write `trainer` and `trainer_spell` and point
+  creatures through `creature_default_trainer`, with undo files, checked
+  on a stock world by `scripts/test-beta-sql-in-ram`. Step 1 below can
+  build on them: a class's trainer list is a `trainer` row of its own.
+- **503's custom-class redirection is the opposite rule:** a custom-class
+  player meets base-class trainers of its eligible classes, chosen at
+  random (travel.lua, dormant while the framework is off). This issue's
+  rule (a trainer talks only to its own class) replaces it for beta.
 
 ## Intended Behavior
 

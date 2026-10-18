@@ -304,3 +304,22 @@ This issue enables **Phase 2: Empty World** by ensuring:
 Travellers wander the empty world, bringing life and mystery. But they're transient—appearing near players, despawning when alone. This transience requires clean lifecycle management: spawn, wander, despawn, **cleanup**.
 
 Without this fix, the "empty" world accumulates invisible debris. With it, the world truly resets—empty again, ready for the next wanderer.
+
+## Since then (checked 2026-10-17)
+
+- **Still built as described.** `Travel.despawn` in `src/lua-beta/travel.lua`
+  (was `src/lua/travel.lua`; per-profile folders, 2026-06-04) stops the
+  traveller's timers and clears its heading before it goes. Travellers were
+  switched off from 2026-04-10 to 2026-10-17 (the profile baseline) and are
+  back with a clock of their own (`docs/datapaths/travellers-and-trainers.md`).
+- **The memory helper it also calls is gone.** `ObjectVariables.cleanupCreature`
+  was defined in `object-variables-events.lua`, switched off on 2026-04-10.
+  The call is guarded, so nothing breaks, and the data is still freed: the
+  object-variables extension (`src/lua-beta/extensions/ObjectVariables.ext`)
+  drops a creature's store when the game deletes the creature (its server
+  event 31).
+- **Travellers now also leave on their own after 5 minutes.** Their summon
+  kind named an unset global, so the 5-minute timer never applied and only
+  this function removed them (fixed 2026-10-17, checked by `scripts/test-travel`).
+- The same discipline for ambush monsters is issue 304's, which was lost
+  from the live ambush and restored the same day (304's own "Since then").

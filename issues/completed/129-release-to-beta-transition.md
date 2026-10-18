@@ -122,3 +122,14 @@ Features from beta branch that need systematic integration:
 - Each step should be a commit
 - If something breaks, we can bisect
 - Documentation updates are as important as code changes
+
+## Since then (checked 2026-10-17)
+
+The three-tier ladder here (release, then alpha, then beta, each adding
+to the last) did not survive: 136 redefined the profiles (alpha became
+the frozen wow-chat-1 relic; release the proven subset of beta), and
+later profiles were added beside rather than above them: vanilla (148),
+basic (155, the development baseline since September), cc-test (176).
+Beta itself turned out to be the wow-chat survival game rather than "alpha
+plus features"; `docs/profiles/beta.md` and its roadmap say what it is
+today. "Build in shadow realm" did happen (issue 122).

@@ -156,3 +156,20 @@ This issue enables **Phase 1: Foundation** by answering:
 > "What does this server do differently?"
 
 The answer is in docs/configuration.md. Every modified setting contributes to the empty-world roguelike survival experience.
+
+## Since then (checked 2026-10-17)
+
+- **Still the reference**: `docs/configuration.md` (last revised
+  2026-09-08). What changed under it is where settings live: since the
+  profile system (issue 136) every changed setting is written into the
+  generated `.conf` files at install time by a small settings patch per
+  setting, `config/patches/C*.sh`, each tagged with the profiles it applies
+  to and carrying its reason in its header. So the patch files are now the
+  first-hand record of "what changed and why"; this document is the guide
+  to them.
+- **Checked by a test now**: `scripts/test-profile-config-gates` runs the
+  real settings patches on scratch copies of the stock files and compares
+  every value with what the profile promises (basic, cc-test and beta have
+  tables; the build runs all three since 2026-10-17).
+- Small knob changes are logged in `docs/balance-updates.md` instead of
+  here.

@@ -397,3 +397,19 @@ Next steps:
 - [ ] Profile switching works
 
 Status: **Implementation complete, validation pending**
+
+## Since then (checked 2026-10-17)
+
+- **Single source tree: half happened.** Five of the six profiles build
+  from one tree, `source-beta/`; alpha keeps `source-alpha/`. The switch
+  between them is not a branch checkout but each profile's lists of
+  patches, install steps and settings patches, applied before a build and
+  reverted after (the upstream-patch method), with separate install trees
+  and databases per profile.
+- **Switching** is `echo <profile> > .profile` and the install or start
+  scripts, or `scripts/switch`; the `scripts/profile-switch` this issue
+  planned is retired as `scripts/profile-switch-deprecated`.
+- `docs/profile-transition-flow.md` moved to `docs/archive/`.
+- The profile meanings here are stale (see the note at the top); 136 holds
+  the current ones, and 136a/136b the realm list and running profiles side
+  by side.

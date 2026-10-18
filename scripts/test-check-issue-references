@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# test-check-issue-references - checks the issue reference checker against
+# a made-up issue whose every reference has a known right answer.
+#
+# For a general audience: scripts/check-issue-references reads an issue file
+# and says, for each file path and issue number in it, whether it still
+# exists, moved (and where), or is gone. This writes a small pretend issue
+# into RAM naming one path of each kind (one that exists, one renamed by the
+# per-profile split, one switched off, one gone for good, a wildcard that
+# must be skipped, a renumbered issue split in two, an issue that exists),
+# runs the checker on it, and compares each verdict with the expected one.
+#
+# Usage: scripts/test-check-issue-references [PROJECT_DIR]
+# Exit status: 0 when every verdict matches.
+
+DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+
+SCRATCH="${DIR}/tmp/shared-memory/test-check-issue-references"
+mkdir -p "${SCRATCH}" || { echo "ERROR: can't make ${SCRATCH} (is tmp/shared-memory linked?)"; exit 1; }
+ISSUE="${SCRATCH}/999-pretend-issue.md"
+cat > "${ISSUE}" <<'EOF'
+# 999 - A pretend issue for the checker's test
+
+The ambush lives in `src/lua-beta/ambush.lua` (exists) and once lived in
+`src/lua/movement.lua` (moved by the per-profile split). Travellers were
+`src/lua-beta/periodic_events.lua` (switched off since). The bounty board
+was to be `src/lua-beta/bounty-board-never-built.lua` (never existed).
+Every source patch is `patches/B*.sh` (a wildcard: skipped).
+See issue 329 (renumbered, split in two) and issue 210 (exists).
+EOF
+
+OUT="$("${DIR}/scripts/check-issue-references" "${DIR}" "${ISSUE}" 2>&1)"
+FAILS=0
+expect() {   # expect "what" "pattern that must appear in the output"
+    if grep -qE "$2" <<< "${OUT}"; then
+        echo "  ok:   $1"
+    else
+        echo "  FAIL: $1 (wanted a line matching: $2)"
+        FAILS=$((FAILS + 1))
+    fi
+}
+refuse() {   # refuse "what" "pattern that must not appear"
+    if grep -qE "$2" <<< "${OUT}"; then
+        echo "  FAIL: $1 (found a line matching: $2)"
+        FAILS=$((FAILS + 1))
+    else
+        echo "  ok:   $1"
+    fi
+}
+expect "an existing path counts as ok"                 "999-pretend-issue.md: [1-9][0-9]* paths ok"
+refuse "an existing path is not listed as a problem"   "src/lua-beta/ambush.lua"
+expect "a path renamed by the per-profile split moved" "moved .*src/lua/movement.lua +->  src/lua-beta/movement.lua"
+expect "a switched-off file is found as .disabled"     "moved .*src/lua-beta/periodic_events.lua +->  src/lua-beta/periodic_events.lua.disabled"
+expect "a file that never existed is missing"          "missing .*bounty-board-never-built.lua"
+refuse "a wildcard path is skipped"                    "patches/B"
+expect "a renumbered, split issue lists both successors" "329 does not exist +->  renumbered to 125 .* or 612b"
+refuse "an existing issue number is not a problem"     "issue .* 210 "
+
+echo "${OUT}" > "${SCRATCH}/checker-output.txt"
+if [[ "${FAILS}" -eq 0 ]]; then
+    echo "All verdicts as expected"
+else
+    echo "${FAILS} verdict(s) wrong; the checker's output is in ${SCRATCH}/checker-output.txt"
+fi
+[[ "${FAILS}" -eq 0 ]]

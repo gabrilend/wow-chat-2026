@@ -135,29 +135,31 @@ script explicitly handles the "remove for re-clone" action, making the workflow 
 - `scripts/start-mysql` - MySQL management (unchanged)
 - `scripts/stop-mysql` - MySQL management (unchanged)
 
-## What Came After
+## Since then (checked 2026-10-17)
 
-Added 2026-10-17 (the issue's own text above is left as it was written).
-
-- **The split held.** Every command it made still exists as its own
-  script (`compile`, `update`, `install`, `apply-patches`,
-  `redownload-source`, `validate`, `promote`, `worldserver`, `authserver`,
-  `profiles`). The monolith itself was deleted on 2026-06-04 (commit
-  6ee263b, with the 148 rule set); the old file is kept as
-  `scripts/azerothcore-deprecated` for reference, so `scripts/azerothcore`
-  named above no longer exists.
-- **One place still teaches the old way:** the project's CLAUDE.md, under
-  "Build and Run", still says `./scripts/azerothcore update` and
-  `./scripts/azerothcore authserver`. The commands are now
-  `scripts/update`, `scripts/authserver` and `scripts/worldserver`.
-- **The number 142 belongs to two issues.** In the April renumbering
+- **The split stands**: one script per command in `scripts/`, the old
+  monolith kept as `scripts/azerothcore-deprecated`. Commands have been
+  added since (`switch`, `promote`, `teach-character-lessons`, the
+  generators and tests).
+- **The cost of "profile definitions duplicated in each script"** showed
+  up: by October the copies disagreed. The alpha profile pointed at the
+  playerbots fork in `install` and `switch` (since this split), while the
+  real alpha tree is upstream AzerothCore (issue 134); `scripts/profiles`
+  listed release with modules it does not build. Corrected 2026-10-17, and
+  `scripts/test-profile-tables-agree` now compares every copy of every
+  profile table key by key, before every build. The duplication itself is
+  kept, as this issue chose (no script depends on another's file).
+- **Number clash**: 142 is also held by an open issue
+  (`issues/142-symmetric-aggro-radius.md`). How: in the April renumbering
   (`issues/MIGRATION_MAP.md`) the old 142, the custom spell system, became
-  702; this issue then took 142 on 2026-04-14. On 2026-05-21 the number was
-  handed out again, to `issues/142-symmetric-aggro-radius.md` (patch
-  B024), because the next free number was then chosen without looking in
-  `completed/`. So "142" elsewhere usually means the aggro radius (issues
-  126 and 801 cite it by name), and one old mention meant the spell system
-  (710; changed to 702 on 2026-10-17). The issue checker
-  (`validate-issues --next`) now counts completed files, so a number is
-  not given twice again; `scripts/trace-completed-issues` tells a
-  mention of this issue from one of the other 142 by the words around it.
+  702; this issue took 142 on 2026-04-14; the aggro radius issue was then
+  created as 142 on 2026-05-21, because the next free number was chosen
+  without looking in `completed/` (`validate-issues --next` counts
+  completed files now). So "142" in issues 126 and 801 means the aggro
+  radius, and an old "142 - Custom spell system" in 710 meant 702 (changed
+  2026-10-17). Name them with their slugs.
+- **The monolith's deletion:** `scripts/azerothcore` was removed on
+  2026-06-04 (commit 6ee263b, with the 148 rule set). The project's
+  CLAUDE.md still says `./scripts/azerothcore update` and
+  `./scripts/azerothcore authserver` under "Build and Run"; the commands
+  are `scripts/update`, `scripts/authserver`, `scripts/worldserver`.

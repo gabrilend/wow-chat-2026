@@ -1,31 +1,109 @@
-# 325 - ALE Gameobject Wildcard Registration
+# 307 - ALE Gameobject Wildcard Registration
 
-**MIGRATED TO:** issues-beta/307-ale-gameobject-wildcard.md
+**Phase:** 3 (Danger - Ambush System)
+**Effect:** Entry 0 acts as wildcard for gameobject events
+**Status:** Completed (2026-04-08)
 
-## Status
-- Created: 2026-04-08
-- Migrated: 2026-04-11 (325→307)
-- Phase: 3
-- Priority: Medium
+---
 
-## Current Behavior
+## The Effect
 
-When `RegisterGameObjectEvent(0, event, handler)` is called with entry 0 (intended as a wildcard to catch all gameobjects), ALE throws an error:
+When registering gameobject events in Lua, `entry = 0` acts as a wildcard matching ALL gameobjects. This enables universal event handlers without enumerating every gameobject template.
 
+```lua
+-- This works - catches all chest opens
+RegisterGameObjectEvent(0, GAMEOBJECT_EVENT_ON_USE, onAnyChestOpen)
 ```
-Couldn't find a gameobject with (ID: 0)!
+
+---
+
+## What This Solved
+
+### Before (Entry 0 Rejected)
+
+**ALE validation logic:**
+```cpp
+if (!eObjectMgr->GetGameObjectTemplate(entry))
+{
+    luaL_error(L, "Couldn't find a gameobject with (ID: %d)!", entry);
+    return 0;
+}
 ```
 
-This error appears in Server.log from:
-- `ability-tomes.lua:307`
-- `chest-vulnerability.lua:326`
+**Result:**
+- `RegisterGameObjectEvent(0, ...)` fails with error
+- Handler never registered
+- Features broken:
+  - Ability tome spawning (any chest → tome drop)
+  - Chest vulnerability (any chest → attackable mechanic)
 
-The handler is never registered, breaking these features.
+**Workarounds considered:**
+1. Register each chest entry individually (900+ entries)
+2. Query database at runtime for chest types
+3. Switch to player loot events (wrong semantics)
 
-## Root Cause
+All workarounds are verbose, fragile, or semantically incorrect.
 
-ALE validates gameobject templates before registration at `LuaEngine.cpp:1414-1417`:
+### After (Entry 0 = Wildcard)
 
+**Patched validation:**
+```cpp
+// entry 0 = wildcard for all gameobjects (Issue 307)
+if (entry != 0 && !eObjectMgr->GetGameObjectTemplate(entry))
+{
+    luaL_error(L, "Couldn't find a gameobject with (ID: %d)!", entry);
+    return 0;
+}
+```
+
+**Result:**
+- Entry 0 bypasses template validation
+- Handler registered for ALL gameobjects
+- Clean, maintainable Lua code
+- Matches behavior from other Eluna-based engines
+
+---
+
+## Why This Matters
+
+**Universal Event Handlers**
+
+Without wildcard support, every gameobject feature requires:
+- Database enumeration at load time
+- Hardcoded entry lists (outdated when content added)
+- Separate registration per template
+
+With wildcard support:
+- One registration handles all cases
+- Future-proof (works with new templates)
+- Cleaner code, easier maintenance
+
+**Feature Enablement**
+
+Two blocked features immediately work:
+1. **Ability tomes** - Drop tomes from ANY chest, not just specific ones
+2. **Chest vulnerability** - ANY chest can be attacked while searching
+
+Both features need global behavior, not per-chest config.
+
+**Pattern Consistency**
+
+Wildcard entry 0 already works for:
+- Creature events (entry 0 = all creatures)
+- Item events (entry 0 = all items)
+
+Gameobjects should match this pattern.
+
+---
+
+## Implementation
+
+### C++ Patch to ALE
+
+**File:** `modules/mod-ale/src/LuaEngine/LuaEngine.cpp`
+**Location:** Line 1414-1417 (gameobject event registration)
+
+**Before:**
 ```cpp
 if (!eObjectMgr->GetGameObjectTemplate(entry))
 {
@@ -35,106 +113,157 @@ if (!eObjectMgr->GetGameObjectTemplate(entry))
 }
 ```
 
-Since no gameobject template with entry 0 exists in the database, the validation fails.
-
-## Intended Behavior
-
-Entry 0 should act as a wildcard, matching ALL gameobjects for the specified event. This is a common pattern in WoW scripting:
-- Entry 0 for creature events = all creatures
-- Entry 0 for item events = all items
-- Entry 0 for gameobject events = all gameobjects
-
-## Affected Files
-
-- `src/lua/ability-tomes.lua:307` - Tome spawning on any chest open
-- `src/lua/chest-vulnerability.lua:326` - Vulnerability on any chest use
-
-## Suggested Implementation
-
-### Option 1: C++ Patch to ALE (Recommended)
-
-Patch `source-beta/modules/mod-ale/src/LuaEngine/LuaEngine.cpp` to skip template validation when entry is 0:
-
+**After:**
 ```cpp
-// Before line 1414, add:
-if (entry != 0)  // entry 0 = wildcard for all gameobjects
+// entry 0 = wildcard for all gameobjects (Issue 307)
+if (entry != 0 && !eObjectMgr->GetGameObjectTemplate(entry))
 {
-    if (!eObjectMgr->GetGameObjectTemplate(entry))
-    {
-        luaL_unref(L, LUA_REGISTRYINDEX, functionRef);
-        luaL_error(L, "Couldn't find a gameobject with (ID: %d)!", entry);
-        return 0;
-    }
+    luaL_unref(L, LUA_REGISTRYINDEX, functionRef);
+    luaL_error(L, "Couldn't find a gameobject with (ID: %d)!", entry);
+    return 0;
 }
 ```
 
-This matches how creature events handle entry 0 in other Eluna forks.
+**Change:** Added `entry != 0 &&` condition to skip validation for wildcard.
 
-### Option 2: Register Specific Entries
+### Patch Application
 
-Query database for all chest-type gameobjects and register each:
+**Method:** Automated sed replacement in build script
+**Phase:** PHASE_BEGIN (pre-compile source fix)
+**Patch ID:** B003
+**Documentation:** `docs/patches/ale-gameobject-wildcard.md`
 
-```lua
--- Query: SELECT entry FROM gameobject_template WHERE type = 3
-local CHEST_ENTRIES = {2843, 2844, 2849, ...}  -- Hundreds of entries
-for _, entry in ipairs(CHEST_ENTRIES) do
-    RegisterGameObjectEvent(entry, 14, handler)
-end
+**Build script:**
+```bash
+FILE="$SOURCE_DIR/modules/mod-ale/src/LuaEngine/LuaEngine.cpp"
+sed -i 's/if (!eObjectMgr->GetGameObjectTemplate(entry))/\/\/ entry 0 = wildcard (Issue 307)\n                if (entry != 0 \&\& !eObjectMgr->GetGameObjectTemplate(entry))/g' "$FILE"
 ```
 
-Downsides:
-- Verbose and unmaintainable
-- Misses dynamically spawned custom chests
-- Requires database queries at load time
+**Idempotent:** Safe to run multiple times (sed won't double-apply).
 
-### Option 3: Player Event Approach
+### Affected Lua Scripts
 
-Use `PLAYER_EVENT_ON_LOOT_ITEM` or packet events to detect chest interactions.
+**ability-tomes.lua:307**
+```lua
+RegisterGameObjectEvent(0, GAMEOBJECT_EVENT_ON_USE, AbilityTome.onChestOpen)
+```
 
-Downsides:
-- Fires after loot, not on chest open
-- Different event semantics
-- Requires restructuring the feature logic
+**chest-vulnerability.lua:326**
+```lua
+RegisterGameObjectEvent(0, GAMEOBJECT_EVENT_ON_USE, ChestVuln.onChestUse)
+```
 
-## Recommendation
+Both scripts now register successfully at server startup.
 
-**Option 1 (C++ patch)** is the correct fix. It:
-- Matches expected behavior from other Lua engines
-- Requires no changes to existing Lua scripts
-- Works for all current and future gameobjects
-- Is idempotent and can be added to PHASE_BEGIN patches
+---
 
-## Patch Documentation
+## Technical Details
 
-If implementing Option 1, create: `docs/patches/ale-gameobject-wildcard.md`
+### ALE Event Registration Flow
 
-## Related
+1. Lua calls `RegisterGameObjectEvent(entry, eventType, handler)`
+2. ALE pushes handler to registry, gets functionRef
+3. **Validation step:**
+   - Old: `GetGameObjectTemplate(entry)` must exist
+   - New: Skip validation if `entry == 0`
+4. Store binding in event map
+5. When gameobject triggers event, ALE checks:
+   - Specific entry handler (if registered)
+   - Wildcard handler (entry 0, if registered)
+   - Execute all matching handlers
 
-- Issue 405: Ability tome system
-- Issue 153: Chest vulnerability mechanic
-- B002: playerbots-ale-login-hook (similar C++ patch approach)
+### Why Entry 0?
 
-## What Came After
+- Entry 0 never exists in actual gameobject templates (reserved ID)
+- No collision with real content
+- Convention from Eluna/TrinityCore scripting APIs
+- Matches creature/item wildcard pattern
 
-Added 2026-10-17 (the text above is the copy from before the April
-renumbering, when this was issue 325; it is left as it was).
+### Runtime Behavior
 
-- **The fuller copy is `issues/307-ale-gameobject-wildcard.md`**, the
-  version kept up after the migration. It says "Completed (2026-04-08)" but
-  was never moved here, because it has the same file name as this one.
-  Which copy should stay is an open question for the owner.
-- **The fix lives on as patch B003** (`patches/B003-ale-gameobject-wildcard.sh`),
-  applied before every build and taken off after, as the patch system does.
-- **The two scripts that needed it moved and were switched off.** When the
-  Lua tree was split by profile (2026-06-02) `src/lua/` became
-  `src/lua-beta/`, and both scripts are there as
-  `ability-tomes.lua.disabled` and `chest-vulnerability.lua.disabled`:
-  beta's survival features were switched off for the profile baseline and
-  are being brought back by the beta roadmap (issue 200). The wildcard is
-  ready for them when they return.
-- **Built on by:** issue 405 (the ability tome system registers its chest events
-  with entry 0, and lists this issue as required) and issue 606b (the nil
-  position errors, which notes the gameobject errors as resolved here).
+**Specificity wins:**
+```lua
+RegisterGameObjectEvent(0, event, wildcardHandler)     -- All gameobjects
+RegisterGameObjectEvent(1234, event, specificHandler)  -- Chest template 1234
+```
+
+When gameobject 1234 fires event:
+- Both handlers execute
+- Specific handler runs first
+- Wildcard handler runs second
+
+This allows global + override patterns.
+
+---
+
+## Lessons Learned
+
+### Template Validation Rigidity
+
+ALE's strict validation helps catch typos but blocks intentional wildcards. The fix:
+- Validate specific entries (catch errors)
+- Allow entry 0 explicitly (enable wildcards)
+
+Best of both worlds.
+
+### Consistency Across Event Types
+
+Players expect similar patterns across event APIs:
+- If `RegisterCreatureEvent(0, ...)` works
+- Then `RegisterGameObjectEvent(0, ...)` should too
+
+Breaking consistency creates confusion. Matching behavior improves learnability.
+
+### Build-Time Patches vs Runtime Workarounds
+
+**Option:** Enumerate 900+ chest entries in Lua
+**Better:** One-line C++ patch enabling the intended API
+
+Don't work around bad APIs. Fix the API.
+
+### Documentation Before Implementation
+
+Created `docs/patches/ale-gameobject-wildcard.md` describing:
+- What to change
+- Where to change it
+- Why it's needed
+- How to verify
+
+LLM or human can read this and apply the patch to ANY fork. The documentation IS the implementation.
+
+---
+
+## Phase 3 Contribution
+
+This issue enables **Phase 3: Danger - Ambush System** by unblocking:
+
+> **Ability tomes (151):** Chests drop ability scrolls
+> **Chest vulnerability (153):** Chests attackable while searching
+
+Both features require global gameobject event hooks. Without wildcard support, these features remain incomplete or require fragile workarounds.
+
+By enabling entry 0 wildcards, we restore clean Lua scripting patterns and allow features to work as designed.
+
+## Since then (checked 2026-10-17)
+
+- **Still applied:** source patch B003 (`patches/B003-ale-gameobject-wildcard.sh`)
+  is in beta's list and applies and reverts cleanly at the current pin
+  (`scripts/test-source-patches <dir> beta`). Patch notes:
+  `docs/patches/ale-gameobject-wildcard.md`.
+- **Its users are switched off:** the two scripts that register for every
+  game object (`chest-vulnerability.lua`: chest use and loot state;
+  `ability-tomes.lua`: chest open) have been `.disabled` since 2026-04-10;
+  treasure, which leans on chest vulnerability, is being brought back on a
+  separate branch (treasure-pool), waiting on the owner's answer to
+  issue 200's open question 3 (who can loot a chest).
+- **Filing:** until 2026-10-17 this file sat among the open issues while
+  `completed/` held its pre-renumbering copy (numbered 325, "MIGRATED TO"
+  here). The copy is now `completed/325-ale-gameobject-wildcard.md`, under
+  its own old number, and this file is in `completed/`.
+- **Built on by:** issue 405 (the ability tome system registers its chest
+  events with entry 0, and lists this issue as required) and issue 606b
+  (the nil position errors, which notes the gameobject errors as resolved
+  here).
 - **The number 307 meant something else before April:** the narrator
   audience-facing issue, now 908. Narrator issues still said "307" for it;
   909, 910 and 100 were corrected on 2026-10-17.

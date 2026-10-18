@@ -1,3 +1,19 @@
+--------------------------------------------------------------------------------
+-- movement.lua - plain geometry the beta scripts share: where to place a
+-- spawn round a player, distances, angles, orbits.
+--
+-- For a general audience: these helpers only do arithmetic on map
+-- positions (x and y in yards, angles in radians); they never touch the
+-- game, except generateNewWanderPosition and getConsensusDirection, which
+-- ask the map for ground height and look at nearby players. Checked
+-- offline by scripts/test-movement.
+--
+-- Every value a helper works out is kept local to it. Until 2026-10-17
+-- several wrote their answers into globals named x, y and randInt, which
+-- any other script using those names could have read or overwritten
+-- between two lines of a helper.
+--------------------------------------------------------------------------------
+
 Movement = {}
 
 -- Register in package.loaded so require("movement") is a no-op after ALE loads this
@@ -8,13 +24,14 @@ package.loaded["movement"] = Movement
 function Movement.getCircleSpawnPosition(originX, originY, minDist, maxDist) -- {{{
     local theta = math.random(0, 6.28)
     local radius = math.random(minDist, maxDist)
-    x = originX + math.cos(theta) * radius
-    y = originY + math.sin(theta) * radius
+    local x = originX + math.cos(theta) * radius
+    local y = originY + math.sin(theta) * radius
     return x, y
 end -- }}}
 
 function Movement.getBoxSpawnPosition(originX, originY, minDist, maxDist) -- {{{
-    randInt = math.random(1, 4)
+    local x, y
+    local randInt = math.random(1, 4)
     if randInt == 1 then
         x = originX + math.random( minDist,  maxDist)
         y = originY + math.random(-maxDist,  maxDist)
@@ -35,7 +52,8 @@ end -- }}}
 -- this should make a rough circle around the player
 -- it's more like a plus shape but that's close enough
 function Movement.getPlusSpawnPosition(originX, originY, minDist, maxDist) -- {{{
-    randInt = math.random(1, 4)
+    local x, y
+    local randInt = math.random(1, 4)
     if randInt == 1 then
         x = originX + math.random( minDist,  maxDist)
         y = originY + math.random(-minDist,  minDist)
@@ -121,8 +139,8 @@ end -- }}}
 -- diagram:
 -- (initialX, initialY) ---------> (pivotX, pivotY) ---------> (x, y)
 function Movement.getPositionOppositePoint(initialX, initialY, pivotX, pivotY) -- {{{
-    x = initialX + ((pivotX - initialX) * 2)
-    y = initialY + ((pivotY - initialY) * 2)
+    local x = initialX + ((pivotX - initialX) * 2)
+    local y = initialY + ((pivotY - initialY) * 2)
 
     return x, y
 end -- }}}
@@ -135,8 +153,8 @@ function Movement.getPositionInFrontOfPoint(x, y, o, dist) -- {{{
 end -- }}}
 
 function Movement.getMidpoint(x1, y1, x2, y2) -- {{{
-    x = (x1 + x2) / 2
-    y = (y1 + y2) / 2
+    local x = (x1 + x2) / 2
+    local y = (y1 + y2) / 2
 
     return x, y
 end -- }}}
@@ -187,8 +205,10 @@ function Movement.nearestPointOnCircle(circleX, circleY, circleRadius, pointX, p
     -- calculate the direction vector from the circle center to the point
     local dx, dy = pointX - circleX, pointY - circleY
 
-    -- normalize the direction vector
-    dx, dy = normalize(dx, dy)
+    -- normalize the direction vector (Movement.normalize: a bare
+    -- "normalize" here named a global that never existed, so any call of
+    -- this function stopped with an error until 2026-10-17)
+    dx, dy = Movement.normalize(dx, dy)
 
     -- scale the direction vector by the radius of the circle
     dx, dy = dx * circleRadius, dy * circleRadius

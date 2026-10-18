@@ -563,6 +563,27 @@ function Ambush.despawn(creature) -- {{{
     creature:DespawnOrUnsummon(0)
 end -- }}}
 
+-- {{{ Ambush.layToRest
+-- A dead ambusher becomes scenery: it comes off its player's count, its
+-- timers stop, the move it was making is cancelled so the corpse stays
+-- where it fell, and its ambush data is cleared. Corpses of normal
+-- ambushers last 6 minutes, rares' until the server restarts.
+-- From issues 304 (clear the data and timers) and 305 (stop the corpse
+-- sliding along its last move), both completed on 2026-04-05 in the copy
+-- that is now ambush.lua.disabled. This file descends from the 2026-03-31
+-- stash instead (merged back after the 2026-04-10 switch-off), so it never
+-- had them; ported 2026-10-17. Called from every place a death is seen.
+function Ambush.layToRest(creature)
+    Ambush.release(creature)
+    creature:RemoveEvents()
+    creature:MoveClear()
+    creature:SetData("ambush-chase-target", nil)
+    creature:SetData("wander-radius",       nil)
+    creature:SetData("ambush-max-distance", nil)
+    creature:SetData("orbit-direction",     nil)
+    creature:SetData("is-rare",             nil)
+end -- }}}
+
 -- {{{ Ambush.release
 -- Takes a monster off its player's count: the ambusher count for a normal
 -- monster, the boss-fight flag for a rare. Every way a monster's ambush
@@ -595,9 +616,9 @@ end -- }}}
 -- combat functions
 
 function Ambush.chasePlayer(_eventID, _delay, _repeats, creature) -- {{{
-    --   dead: its ambush is over (whoever killed it); stop chasing
+    --   dead: its ambush is over (whoever killed it); laid to rest
     if creature:IsDead() then
-        Ambush.release(creature)
+        Ambush.layToRest(creature)
         return
     end
     local    ATTACK_DISTANCE    = 30
@@ -651,6 +672,12 @@ function Ambush.chasePlayer(_eventID, _delay, _repeats, creature) -- {{{
         end
         creature:RegisterEvent(Ambush.chasePlayer, WANDER_ROTATION_DELAY, 1)
         return
+    else
+        -- The player is standing: aggro back on, so the monster can fight
+        -- whoever attacks it, not only its own player (issue 305: circling a
+        -- sitting player turns aggro off, and before 305 nothing turned it
+        -- back on, so a monster that had circled once never aggroed again).
+        creature:SetAggroEnabled(true)
     end -- }}}
 
     if player:IsDead() then -- {{{
@@ -707,7 +734,7 @@ end -- }}}
 -- over. A kill by anything else is caught by the chase and fight checks
 -- seeing the monster dead; release counts it off only once either way.
 function Ambush.onCreatureDeath(event, killer, creature) -- {{{
-    Ambush.release(creature)
+    Ambush.layToRest(creature)
 end -- }}}
 
 -- {{{ Ambush.inCombatCheck
@@ -722,7 +749,7 @@ end -- }}}
 -- and chased (so the count drifted below the real number of ambushers).
 function Ambush.inCombatCheck(event, delay, repeats, creature)
     if creature:IsDead() then
-        Ambush.release(creature)
+        Ambush.layToRest(creature)
         return
     end
     if creature:IsInCombat() then

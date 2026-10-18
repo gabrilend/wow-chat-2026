@@ -2,7 +2,7 @@
 
 **Phase:** 4 (Economy - Currency & Rewards)
 **Effect:** Items cycle through player queues - sold gear reappears in chests
-**Status:** Partial (pool system implemented, per-player queues needed)
+**Status:** In progress (2026-10-17: queues built in April; fixing their faults, wiring despawn recycling, and a toy-world test). The whole system stays switched off (`treasure.lua.disabled`) until the owner answers the holder/searcher question (issue 200, open question 3).
 
 ---
 
@@ -216,27 +216,74 @@ end
 
 ## Implementation
 
-### Current Status (2026-04-04)
+### Current Behavior (2026-10-17)
 
-**Implemented:**
-- Global treasure pool (`Treasure.pool`)
-- FIFO queue: first items added are first pulled
-- `Treasure.addToPool(itemId, count)` - Add items to pool
-- `Treasure.pullFromPool(count)` - Pull items from pool for chest
-- Pool items added to chests on spawn (up to 2 items)
-- Chest spawn tracking (`Treasure.spawnedChests`)
-- Test commands: `#pooladd`, `#poolsize`, `#treasure`
+Read from `src/lua-beta/treasure.lua.disabled`; the file is switched off,
+so none of this runs in game today.
 
-**Partially Implemented:**
-- Item loot tracking (`PLAYER_EVENT_ON_LOOT_ITEM` hook)
-- Foundation for detecting unclaimed items
+**Built (since April, after this section was last written):**
+- Per-player queues (`Treasure.playerQueues`, keyed by low GUID) with the
+  global pool as a holding area only when no player fits.
+- Level matching: an item goes to an online player within 3 levels of it,
+  the one with the shortest queue, ties taken in turn (the mancala).
+- Waiting items retried at each login; a logging-out player's queue
+  returned to the pool and handed to others.
+- Queue items held on the chest as "pending loot" and injected when a
+  second player (the searcher) opens it (`chest-vulnerability`, 408).
+- Test chat commands: `#pooladd`, `#poolsize`, `#myqueue`, `#treasure`.
 
-**Not Yet Implemented:**
-- Per-player queue distribution (currently global FIFO)
-- Level-based item-to-player matching
-- Queue injection on chest spawn
-- Despawn recycling (items back to pool)
-- Multi-player chest access (implemented separately in 408)
+**Faults found and fixed on 2026-10-17** (the beta session's notes,
+reading the code, and `scripts/test-treasure`, which fails on the April
+code for every one of them):
+1. Items were queued for bots (the online list included them); a bot
+   never opens a chest. Now only real players receive items, as only
+   real players get travellers (`travel.lua`).
+2. Queue entries dropped the item's level, so an item returned at
+   despawn or logout went out again as level 1. Every record now keeps
+   its level wherever it travels.
+3. Players were looked up by their low GUID with a call that takes the
+   full one, so the lookup always failed. The chosen player now comes
+   with the choice.
+4. A player whose level fit no chest made chest spawning call itself
+   without end (a stack overflow in the test). The list is refilled
+   once; if still empty, the log says so and no chest is spawned.
+5. The despawn return was written but never called. Each chest now has
+   a lifetime of its own (`CHEST_LIFETIME_MS`, 5 minutes, a timer on the
+   chest so it ends with it); when it runs out the chest is taken out of
+   the world, and the game's removal event for the chest entries (13,
+   registered per entry) returns its unlooted queue items. The same
+   event covers a chest removed with its owner at logout.
+7. (Found while fixing 5.) During a logout the game still lists the
+   leaving player, so items handed back could go straight to them. A
+   leaving player is now marked and given nothing until they log in
+   again.
+
+**Known and left:**
+6. A loot event removes the first matching item from *any* chest's
+   record, including for loot from creatures, because the event does
+   not say where the item came from. Such an item is lost from
+   circulation, never duplicated. A fix needs the source on the event.
+
+**Not decided here:** whether the system is switched on. That waits on
+issue 200's open question 3: a chest shows its first opener nothing, so
+a player alone or with only bots gets nothing from their own chest. The
+five-minute chest lifetime is a first value, chosen without play; it
+belongs in `docs/balance-updates.md` once treasure is on and it is tuned.
+
+**Checked by** `scripts/test-treasure` (run with the compile's quick
+tests): fair shares, bots and far-off levels given nothing, a waiting
+item reaching a player who arrives, a logout's queue handed on with its
+levels, an expired chest's items back once each, a leaving owner's chest
+items going to the player who stayed, and a level no chest fits ending
+quietly. The toy world it plays in (`scripts/lib/toy-world.lua`, shared
+with the ambush and traveller tests) gained chests, items, bags and a
+buyback tab for it.
+
+### Suggested Implementation Steps (remaining)
+
+1. Switch treasure on (rename `treasure.lua.disabled`), once the owner
+   has answered issue 200's open question 3, and watch a chest's whole
+   life in game: spawn, open, loot, expiry, the return.
 
 ### Needed Changes
 
@@ -383,3 +430,9 @@ The treasure chest system transforms loot from "random template spawns" into a l
 - 408 - multiplayer-chest-access (multiple players looting same chest)
 - 407 - chest-vulnerability-mechanic (daze interrupt, defenseless while looting)
 - 405 - ability-tome-system (chest loot enhancement)
+
+## Related Documents
+
+- `docs/datapaths/treasure.md`: the whole path an item takes, in order, and the data kept
+- `src/lua-beta/treasure.info.md`: the script's functions
+- `scripts/test-treasure`: the toy-world check

@@ -111,6 +111,6 @@ cd build && make -j$(nproc) && make install
 
 ## Related
 
-- Issue: `issues/307-ale-gameobject-wildcard-registration.md`
+- Issue: `issues/completed/307-ale-gameobject-wildcard.md`
 - Affected Lua: `src/lua/ability-tomes.lua:307`, `src/lua/chest-vulnerability.lua:326`
 - Similar pattern: B002 playerbots-ale-login-hook

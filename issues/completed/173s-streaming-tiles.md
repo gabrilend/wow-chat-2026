@@ -96,3 +96,14 @@ to, could we build the entire continent?"
 ## Open Questions
 
 None yet.
+
+## Since then (checked 2026-10-17)
+
+The custom client moved to its own project on 2026-10-07 (173v), the W
+client at `/mnt/mtwo/games/azeroth-core/custom-client/`, and is built,
+run and tested there (`scripts/build --test`; its own CLAUDE.md). Its code
+was renumbered into reading order (`src/NNN-name.c`) and rewritten to its
+error and handle conventions; `src/custom-client-c/` and `src/custom-client/`
+here are gone. The crosswalk from every 173 issue to where it continues is
+the table in the W client's `docs/009-roadmap.md`. This piece continues as
+W client issue 303 (WDT and streaming), on 301's tile reader (`src/020-adt.c`).

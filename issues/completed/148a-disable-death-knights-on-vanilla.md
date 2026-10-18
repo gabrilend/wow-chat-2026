@@ -210,26 +210,25 @@ the disablement.
   (Still open, but belongs to the future re-enable — see "Future Work"
   — not to this disablement issue.)
 
-## What Came After
+## Since then (checked 2026-10-17)
 
-Added 2026-10-17 (the text above, including its 2026-09-25 correction, is
-left as it was written).
-
-- **Why the premise fell.** This issue disabled death knights because it
-  believed the client hard-codes the Acherus start. Issue 206 (beta's
-  level-1 death knight, completed) had already started death knights at
-  level 1 outside Acherus with no client patch: the start is the server's
-  `playercreateinfo` table. Issue 718 (the death knight sacrifice and an
-  open Acherus) noticed the contradiction and corrected the reasoning
-  here; the disablement itself stands on vanilla, now as a choice rather
-  than a necessity.
-- **Each profile chose differently.** Vanilla keeps C015 (this issue's
-  knob). Basic, derived from vanilla by issue 155, does not take C015 (issue
-  155b, the config gates): it allows stock death knights with two rules
-  in C024, both stock settings (an account needs a level-55 character
-  first, and no death knight bot logs in), and turns random bots off
-  altogether with C023. Buddies are the exception: issue 617b (the buddy
-  selector) gives a death knight's owner death knight buddies.
-- **Still open, as this issue left it:** at what level a re-enabled
-  vanilla death knight would start (its last question), which is now a
-  server-side setting, not a client patch.
+- **Still built on vanilla**: `config/patches/C015-vanilla-disable-deathknight.sh`.
+- **Its premise about the client was corrected later.** This issue reasoned
+  that the client hard-codes the Acherus start, so a death knight could
+  not begin anywhere else without a client patch. Issue 206 (beta) already
+  started death knights at level 1, and 718 records that the start place
+  is the server's own table (`playercreateinfo`), not the client's. The
+  other reason here, that Acherus is a level-55 story that does not fit a
+  level-40 world, still holds for vanilla.
+- **The other profiles answered the same question differently**, which is
+  why three death-knight arrangements exist: beta starts them at 1 with a
+  kit of its own (206; its training reached the game on 2026-10-17);
+  basic keeps the stock level-55 start and adds Sargobras's soul trade and
+  an optional story skip (718); release and alpha are stock. 718's
+  Chromie proposal (2026-10-17) is the next variation, its profile still
+  to be chosen.
+- **Basic's two rules, both stock settings** (C024, issue 155b): an
+  account needs a level-55 character before it may make a death knight,
+  and no death knight bot logs in; random bots are off on basic anyway
+  (C023). Buddies are the exception: issue 617b (the buddy selector) gives
+  a death knight's owner death knight buddies.

@@ -84,32 +84,41 @@ work needs, and treasure is fed by the selling that merchants allow.
 
 ### 3. The scheduler
 
-- `periodic_events.lua.disabled` back on: the clock that sends travellers
-  and treasure (and, in wow-chat-1, the ambush). The ambush now runs its
-  own clock, so the scheduler must not start a second one. A toy-world
-  test like the ambush's goes with it.
+- Done differently (branch beta-homework, 2026-10-17): wow-chat-1's
+  scheduler (`periodic_events.lua.disabled`) stays off, because its bot
+  half was left mid-way through a crash hunt. Each system keeps its own
+  clock instead, as the ambush does, asking the scheduler's questions
+  first: travellers now (travel.lua), treasure when it returns, the bot
+  behaviors in step 7.
 
 ### 4. Travellers, who carry the trainers and merchants
 
-- `travel.lua.disabled` back on, with its tests.
-- **503** dynamic trainer spawning (marked completed, but its trainers
-  come from the traveller pool, which is off: complete again once seen in
-  game, then move to completed/).
+- Done on branch beta-homework (2026-10-17, to be merged): `travel.lua`
+  back on, its own clock, five bugs fixed, `scripts/test-travel`
+  (every class at every level 1-20 for both factions meets one trainer of
+  its class whose slice holds its level). Needs an in-game look.
+- **503** dynamic trainer spawning: its level slices are real now (E014
+  gives each travelling trainer its own cut copy of its class's lessons).
+  Complete once seen in game, then move to completed/.
 - **504** a traveller sits when the player sits (implemented, needs
   testing). **505** creature-class travellers (open). **501** custom
   merchant system (open).
-- With trainers walking again, a new character can learn. But beta's
-  trainer steps (E011 death knights, E013, E014) write the old
-  `npc_trainer` table, which the current server ignores; they are rewritten
-  onto `trainer` and `trainer_spell` first (721, step 1). Until then even a
-  death knight learns nothing past its starting abilities (206's note).
+- With trainers walking again, a new character can learn: beta's trainer
+  steps (E011 death knights, E013 quest spells, E014 slices) now write the
+  current `trainer` and `trainer_spell` tables (branch beta-homework); they
+  had written `npc_trainer`, which the server ignores.
 
 ### 5. Treasure
 
-- `treasure.lua.disabled` back on.
-- **402** shared chest loot (partial: pool built, per-player queues
-  needed), **404** sold items feed the treasure pool (partial; the sell
-  hook B006 is in beta's list), **409** empty loot chest templates (E016
+- `treasure.lua.disabled` back on — **waits on the owner**: a chest shows
+  its first opener nothing (issue 200, open question 3).
+- **402** shared chest loot and **404** sold items feed the treasure pool
+  (2026-10-17, in progress): the circulation is written and checked in a
+  toy world by `scripts/test-treasure` (bots and leaving players given
+  nothing, levels kept, unlooted chest items returned when a chest
+  expires or its owner leaves, a sold item held while it can still be
+  bought back, a seller never given their own copy back). Still open:
+  the money a recycled sale pays (404). **409** empty loot chest templates (E016
   makes them), **407** chest vulnerability, **408** several players at one
   chest, **410** hearthstones bound to chests, **411** no zero-value
   duplicates.

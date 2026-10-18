@@ -2,7 +2,7 @@
 
 **Phase:** 4 (Economy - Currency & Rewards)
 **Effect:** Items sold to vendors enter treasure pool and reappear in chests
-**Status:** Open (depends on 403 - ale-sell-item-hook)
+**Status:** In progress (2026-10-17). The sell hook (B006, issue 403) is in beta's patch list; the handler is being written into `treasure.lua.disabled`, which stays off until issue 200's open question 3 is answered.
 
 ---
 
@@ -205,6 +205,107 @@ This creates economy tiering:
 
 ---
 
+## Current Behavior (2026-10-17)
+
+Written and checked in a toy world; not running in game, because
+`treasure.lua.disabled` stays off until issue 200's open question 3 is
+answered.
+
+B006 adds the sell event to the Lua engine (event 74: player, item,
+vendor, count), fired inside the server's sell handling after the item
+leaves the bags and **just before it is put in the vendor's buyback
+tab**. The treasure script now listens for it (`Treasure.onSellItem`):
+
+- Every sale goes on the seller's counter (below). An item is marked to
+  be recycled when it is uncommon or better, not a quest item, and does
+  not stack (`Treasure.isRecycled`).
+- Its level for matching is its required level, or its item level when
+  it has none (`Treasure.saleLevel`).
+- Leaving the counter, a marked item enters the pool and goes to a real
+  player near its level — **never back to its seller** (see the open
+  question).
+- Bots' sales recycle like players'; bots never receive (402).
+
+Checked by `scripts/test-treasure`: a sold sword waits; bought back, it
+never enters; kept sold, it enters at the seller's logout, once; the
+13th sale releases the first; a sold copy whose only fitting player is
+its seller waits in the pool for the next one; white, stacking and quest
+items never enter; an item sold, bought back and sold again enters
+once; a bot's sale reaches a real player; the required level decides.
+
+## The Buyback Problem (found 2026-10-17)
+
+A sold item is not gone when the sale fires. It sits in the seller's
+buyback tab, and the seller can buy it back. If the sale put it straight
+into the pool, buying it back would leave two copies — the one thing this
+design forbids ("ONE sword, circulating"). What the server does, read
+from `source-beta/`:
+
+- The buyback tab holds **12** items (`BUYBACK_SLOT_START` 74 to
+  `BUYBACK_SLOT_END` 86, `Player.h`). A 13th sale pushes out the oldest,
+  which is deleted (`Player::AddItemToBuyBackSlot`).
+- The tab is **not saved**: at the save that comes with logging out,
+  items still in it are deleted (`Player::_SaveInventory`).
+- Buying back moves the **same item, with the same GUID**, back into the
+  bags (`WorldSession::HandleBuybackItem`, `StoreItem`).
+- Lua cannot read the buyback slots: the position lookup returns nothing
+  for slots 74–85 (`Player::GetItemByPos`), and the lookup by GUID
+  searches bags, bank and equipment but not buyback
+  (`Player::GetItemByGuid`).
+- No event fires on a buyback.
+
+So the handler keeps a sold item **on the counter** — a per-seller list,
+oldest first, of { GUID, item, level, count, recycle } — until it surely
+cannot come back. Every sale goes on the counter, recycled or not,
+because every sale takes a buyback slot and so pushes the others along;
+only entries marked `recycle` enter the pool when they leave:
+
+- At every sale and at logout, any counter item found in the seller's
+  bags by its GUID was bought back: it leaves the counter and never
+  enters the pool.
+- When the counter holds more than 12, the oldest has been pushed out of
+  the tab and deleted by the server: it enters the pool.
+- At logout, everything left on the counter was deleted by the logout
+  save: it all enters the pool.
+
+The GUID check fails if a bought-back item merges into a stack (it then
+has no GUID of its own), so **only items that do not stack** are
+recycled. With "uncommon or better" that is nearly all equipment.
+
+Remaining gap, recorded: an item bought back and then traded, mailed or
+destroyed before the next check is not in the bags, so it is counted as
+gone and also enters the pool — a duplicate in the trade or mail case.
+Rare, and visible in the log; closing it needs a buyback event in the
+engine (a B-patch beside B006).
+
+## Open Questions (2026-10-17)
+
+1. **A recycled sale still pays.** The vendor pays the usual price, and
+   the item is not destroyed: it comes back in someone's chest, and they
+   can sell it again, for the same price. So every turn of the circle
+   makes money from nothing — the opposite of "Vendor gold balanced by
+   item circulation" above. The test found the shortest loop (a player
+   finding their own sold sword in their next chest) and the script now
+   never gives a seller their own copy back. Two players can still pass
+   an item between them, each selling it for gold. Should a recycled
+   sale pay nothing, pay less, or pay as usual and accept the loop?
+2. **Bought back, then traded or mailed.** As in the buyback problem
+   above: such an item is counted as gone and also enters the pool, a
+   second copy. Close it with a buyback event in the engine (a B-patch
+   beside B006, the owner's build), or accept the gap?
+
+## Suggested Implementation Steps (remaining)
+
+1. Answer the open questions; if a recycled sale should pay less or
+   nothing, take the difference back in the sell handler (the event
+   carries the vendor and the count).
+2. Switch treasure on with 402, and in game: sell a green to a vendor,
+   log out, see it reach another player's chest.
+
+The configuration lines suggested below (`WowChat2.TreasurePool.*`) are
+not used: these scripts keep their settings in the script, per the
+project's style (configuration in structure).
+
 ## Implementation
 
 ### Lua Script
@@ -383,3 +484,9 @@ The economy shifts from create/destroy to circulate. Items feel tangible, action
 - 402 - treasure-chest-shared-loot (pool infrastructure)
 - 403 - ale-sell-item-hook (C++ hook required)
 - 401 - bounty-board-currency-system (complementary economy mechanic)
+
+## Related Documents
+
+- `docs/datapaths/treasure.md`: the whole path an item takes, selling included
+- `src/lua-beta/treasure.info.md`: the script's functions
+- `scripts/test-treasure`: the toy-world check

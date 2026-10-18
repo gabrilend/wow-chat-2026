@@ -188,3 +188,23 @@ Apply Patches (Issue 409)
 DRY RUN - Would revert:
   PHASE_END: E004 E006
 ```
+
+## Since then (checked 2026-10-17)
+
+- **Built, as its own command**: `scripts/apply-patches` (the
+  `scripts/azerothcore apply-patches` above, split out by issue 142 the
+  next day). The patch lists it reads are still `patches/patches.sh`.
+- **Testing patches without a build**, item 2 of the problem above, grew
+  well past this command: `scripts/test-source-patches` (a profile's source
+  patches applied and undone on a RAM copy of the tree),
+  `scripts/verify-patches` (each patch's undo returns the tree exactly),
+  `scripts/test-patched-syntax` (the patched files still compile), and for
+  the install steps `scripts/test-basic-sql-in-ram` and
+  `scripts/test-beta-sql-in-ram` (the SQL steps applied, re-applied and
+  undone on a RAM database).
+- `issues/408-release-profile-build-fixes.md` is
+  `issues/135-release-profile-build-fixes.md` since the April renumbering.
+- **Number clash**: this issue's number, 141, is also held by an open issue
+  (`issues/141-ale-formatquery-dangling-pointer.md`): this one was made on
+  2026-04-13, two weeks before the renumbering gave 141 to the other. Both
+  are kept; name them with their slugs.

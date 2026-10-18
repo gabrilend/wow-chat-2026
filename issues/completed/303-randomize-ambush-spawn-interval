@@ -344,3 +344,21 @@ durations, so the prints are no longer needed.
 The constants `AMBUSH_GRACE_PERIOD` and `AMBUSH_OFFLINE_RESET`
 remain documented in the configuration block at the top of
 `src/lua/ambush.lua`.
+
+## Since then (checked 2026-10-17)
+
+- **Still the live design**, in `src/lua-beta/ambush.lua` (was
+  `src/lua/ambush.lua`; per-profile folders, 2026-06-04). This walk belongs
+  to the line of the ambush that runs today, made in the 2026-03-31 stash;
+  `docs/datapaths/ambush.md` tells the story of the two lines.
+- **Persistence was never what the text said** (see Persistence above,
+  corrected 2026-10-17): `SetData` is wiped at logout, so until then every
+  login restarted at 40 seconds.
+- **The clock booking itself** (this walk) is what turned an old
+  one-second retry into a second clock whenever the database had no rare
+  for the player's level (levels 1-5 and 16): fixed 2026-10-17 by asking
+  the next rank down.
+- **The scheduler's holds**, lost when the ambush started booking itself,
+  were restored the same day. `scripts/test-ambush` checks the walk's steps,
+  floor and caps statistically, a quick relog, the grace period, and one
+  clock per player.

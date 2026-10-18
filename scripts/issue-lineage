@@ -1,0 +1,106 @@
+#!/usr/bin/env luajit
+-- issue-lineage - for one issue, everything that came after it: the later
+-- issues that name it, the commits that name it, and what happened since to
+-- each file it names.
+--
+-- For a general audience: a finished issue describes how something was
+-- built at the time. Later work often changes it: a later issue replaces
+-- it, a file it made is renamed or switched off, a commit fixes a bug in
+-- it. To keep the finished issue honest, its reader needs a thread to
+-- those later changes and the reasons for them. This gathers the raw
+-- material for that thread in one place, so writing a "since then" note
+-- for an old issue starts from the record instead of from memory:
+--   1. later issues (open, completed or declined) whose text names this
+--      issue's number, with the line that names it
+--   2. commits whose message names the number (as "(NNN)", "issue NNN"
+--      or "NNN-") with their dates
+--   3. for each project file the issue names: whether it still exists,
+--      and the last few commits that touched it (renames followed)
+-- It reads only; it changes nothing.
+--
+-- Usage: scripts/issue-lineage [PROJECT_DIR] ISSUE
+--   ISSUE   the issue's number (e.g. 209) or its file path
+--   PROJECT_DIR defaults to the hard-coded path below
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local target
+for _, a in ipairs(arg) do
+    if a:match("^/") and not a:find("/issues/") then DIR = a else target = a end
+end
+if not target then io.stderr:write("usage: scripts/issue-lineage [PROJECT_DIR] ISSUE\n"); os.exit(1) end
+
+-- {{{ local function lines_of
+local function lines_of(cmd)
+    local out, f = {}, io.popen(cmd)
+    for l in f:lines() do out[#out + 1] = l end
+    f:close()
+    return out
+end
+-- }}}
+local function q(s) return "'" .. tostring(s):gsub("'", "'\\''") .. "'" end
+
+-- {{{ find the issue file
+local file, id
+if target:find("/") then
+    file = target
+    id = file:match("([^/]+)$"):match("^(%d+%a*%d*)")
+else
+    id = target
+    for _, p in ipairs(lines_of("find " .. q(DIR .. "/issues") .. " -maxdepth 2 -name " .. q(id .. "-*") .. " -type f")) do
+        file = file or p
+        if p:find("/completed/") then file = p end
+    end
+end
+if not file then io.stderr:write("no issue file for " .. target .. "\n"); os.exit(1) end
+local f = assert(io.open(file)); local text = f:read("*a"); f:close()
+print("Issue " .. id .. ": " .. file:sub(#DIR + 2))
+print(("  " .. (text:match("^#%s*([^\n]+)") or "")))
+-- }}}
+
+-- {{{ 1. later issues that name it
+print("\nIssues that name " .. id .. ":")
+local pattern = "(issue[s]?[ /]" .. id .. "[^0-9a-z]|[^0-9]" .. id .. "-[a-z]|\\(" .. id .. "\\)|\\b" .. id .. " \\()"
+local hits = lines_of("grep -rniE " .. q(pattern) .. " " .. q(DIR .. "/issues") .. " --include='*' -I")
+local n = 0
+for _, h in ipairs(hits) do
+    local path, line, body = h:match("^([^:]+):(%d+):(.*)$")
+    if path and path ~= file and not path:find("MIGRATION_MAP") then
+        n = n + 1
+        if n <= 40 then
+            print(string.format("  %s:%s  %s", path:sub(#DIR + 2), line, body:gsub("^%s+", ""):sub(1, 140)))
+        end
+    end
+end
+if n > 40 then print("  ... and " .. (n - 40) .. " more") end
+if n == 0 then print("  (none)") end
+-- }}}
+
+-- {{{ 2. commits that name it
+print("\nCommits that name " .. id .. ":")
+local commits = lines_of("git -C " .. q(DIR) .. " log --format='%h %ad %s' --date=short -E --grep=" ..
+    q("(\\(" .. id .. "[,)]|issue " .. id .. "\\b|[^0-9]" .. id .. "-[a-z]| " .. id .. "[,)])") .. " | head -25")
+for _, c in ipairs(commits) do print("  " .. c) end
+if #commits == 0 then print("  (none)") end
+-- }}}
+
+-- {{{ 3. what happened to the files it names
+print("\nFiles it names, and their later history:")
+local seen = {}
+local PREFIXES = { "src/", "scripts/", "patches/", "config/", "sql/", "docs/", "tests/", "libs/", "tools/" }
+for tok in text:gmatch("[%w_%./%-]+") do
+    for _, pre in ipairs(PREFIXES) do
+        if tok:sub(1, #pre) == pre then
+            local p = tok:gsub("[%.,;:%)]+$", "")
+            if #p > #pre + 1 and not seen[p] and not p:match("/$") then
+                seen[p] = true
+                local now = os.execute("test -e " .. q(DIR .. "/" .. p))
+                local here = (now == 0 or now == true)
+                local log = lines_of("git -C " .. q(DIR) .. " log --follow --format='%h %ad %s' --date=short -3 -- " .. q(p) .. " 2>/dev/null")
+                print(string.format("  %s  [%s]", p, here and "exists" or "gone"))
+                for _, l in ipairs(log) do print("      " .. l:sub(1, 130)) end
+            end
+            break
+        end
+    end
+end
+-- }}}
