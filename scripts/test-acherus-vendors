@@ -32,6 +32,12 @@ LOOK="SELECT CONCAT('flags ', GROUP_CONCAT(entry, ':', npcflag & 128 ORDER BY en
 SELECT CONCAT('rows ', COUNT(*)) FROM npc_vendor WHERE entry IN (28471, 28357);
 SELECT CONCAT('prices ', GROUP_CONCAT(entry, ':', BuyPrice, '/', SellPrice ORDER BY entry)) FROM item_template WHERE entry IN (39320, 38664, 39322, 38632, 38633);"
 
+[[ -x "${MYSQL}" ]] || { echo "ERROR: no mysql client at ${MYSQL} (run from the main project folder, where MySQL is built)"; exit 1; }
+
+# The database's answer is caught whole, then judged. Under "set -e" a
+# failed pipeline inside the capture used to end the test before it printed
+# anything, so a stopped MySQL looked like a silent failure. Now the
+# client's own words are printed, with what to look at.
 OUT="$(
     {
         echo "START TRANSACTION;"
@@ -44,7 +50,12 @@ OUT="$(
         echo "SELECT 'reverted';"; echo "${LOOK}"
         echo "ROLLBACK;"
     } | "${MYSQL}" -h127.0.0.1 -P3307 -uritz -pmenardi -N "${DB}" 2>&1 | grep -v "Using a password"
-)"
+)" || {
+    echo "${OUT}"
+    echo "ERROR: the database did not answer the vendor step's looks (nothing was checked; the transaction never committed)."
+    echo "       to debug: is MySQL up on port 3307 (scripts/start-mysql)? does ${DB} exist (the basic profile installed)?"
+    exit 1
+}
 echo "${OUT}"
 
 before="$(  echo "${OUT}" | sed -n '2,4p')"
