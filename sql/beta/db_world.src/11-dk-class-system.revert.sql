@@ -13,8 +13,8 @@ CREATE TABLE IF NOT EXISTS `wow_chat_e011_snapshot_creature_default_trainer` LIK
 UPDATE `creature_default_trainer` d JOIN `wow_chat_e011_snapshot_creature_default_trainer` s ON s.`CreatureId` = d.`CreatureId`
     SET d.`TrainerId` = s.`TrainerId`;
 DROP TABLE `wow_chat_e011_snapshot_creature_default_trainer`;
-DELETE FROM `trainer_spell` WHERE `TrainerId` = 2060000;
-DELETE FROM `trainer`       WHERE `Id`        = 2060000;
+DELETE FROM `trainer_spell` WHERE `TrainerId` = 2060001;
+DELETE FROM `trainer`       WHERE `Id`        = 2060001;
 -- }}}
 
 -- {{{ level 1-54 stats, the starting ability, the starting gear

@@ -1152,7 +1152,7 @@ unpatch_E018_vanilla_kit_required_level_cap() {
 # -- {{{ patch_E011_beta_dk_class_system
 # Death Knight class system for beta profile (issue 206/167). Wires DK
 # from level 1 with progressive ability training: the kit is its own
-# trainer list (2060000) and trainers 29194/29195/29196 are pointed at it.
+# trainer list (2060001) and trainers 29194/29195/29196 are pointed at it.
 # Source: sql/beta/db_world.src/11-dk-class-system.apply.sql, undone by
 # its .revert.sql (both on the current trainer tables since 2026-10-17;
 # before, both wrote npc_trainer, which the server no longer reads).

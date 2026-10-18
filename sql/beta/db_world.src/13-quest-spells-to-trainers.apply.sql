@@ -15,8 +15,9 @@
 -- `npc_trainer` under old reference numbers (200001-200020), a table the
 -- server no longer reads, so none of these lessons was offered.
 --
--- Lists numbered 1,000,000 and up are this profile's own copies (E014's
--- per-trainer slices, E011's death knight kit) and are left out: E014 copies
+-- Lists numbered 1,000,000 and up are project lists (E014's per-trainer
+-- slices in issue 503's block, E011's death knight kit in 206's; the game's
+-- own are numbered under 1,000) and are left out: E014 copies
 -- from the class lists after this step runs, so its copies get these
 -- lessons too, cut at each trainer's slice.
 --

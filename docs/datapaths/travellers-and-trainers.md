@@ -40,9 +40,9 @@ stock game. Beta's install steps change that, in order:
 
 | Step | What it does | Lists it makes |
 |---|---|---|
-| E011 | the death knight kit for levels 2-20; the three death knight trainers (29194-29196) point at it | 2060000 |
+| E011 | the death knight kit for levels 2-20; the three death knight trainers (29194-29196) point at it | 2060001 |
 | E013 | 21 quest-taught lessons (Defensive Stance, Call Pet, the totems...) added to every class list of their class; a record of what it added | none (adds to the game's lists) |
-| E014 | each travelling class trainer gets its own copy of its class's list, cut at the top of its slice, and points at it | 1000000 + creature entry |
+| E014 | each travelling class trainer gets its own copy of its class's list, cut at the top of its slice, and points at it | 5030001 onward, one per trainer (issue 503's block) |
 
 E014's SQL is generated (`scripts/generate-beta-trainer-tiers-sql`) from
 `data/travel-trainers.lua`, the same list travel.lua reads, so the slice a

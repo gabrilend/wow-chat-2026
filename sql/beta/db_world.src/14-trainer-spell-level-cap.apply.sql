@@ -26,1135 +26,1135 @@ INSERT IGNORE INTO `wow_chat_e014_snapshot_creature_default_trainer`
 
 -- {{{ creature 3354: horde warrior trainer, levels 1-2
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003354, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030001, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3354;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003354, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030001, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3354 AND ts.`ReqLevel` <= 2;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003354 WHERE `CreatureId` = 3354;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030001 WHERE `CreatureId` = 3354;
 -- }}}
 -- {{{ creature 3353: horde warrior trainer, levels 3-4
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003353, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030002, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3353;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003353, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030002, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3353 AND ts.`ReqLevel` <= 4;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003353 WHERE `CreatureId` = 3353;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030002 WHERE `CreatureId` = 3353;
 -- }}}
 -- {{{ creature 3041: horde warrior trainer, levels 5-6
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003041, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030003, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3041;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003041, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030003, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3041 AND ts.`ReqLevel` <= 6;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003041 WHERE `CreatureId` = 3041;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030003 WHERE `CreatureId` = 3041;
 -- }}}
 -- {{{ creature 3043: horde warrior trainer, levels 7-8
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003043, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030004, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3043;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003043, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030004, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3043 AND ts.`ReqLevel` <= 8;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003043 WHERE `CreatureId` = 3043;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030004 WHERE `CreatureId` = 3043;
 -- }}}
 -- {{{ creature 3042: horde warrior trainer, levels 9-11
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003042, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030005, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3042;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003042, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030005, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3042 AND ts.`ReqLevel` <= 11;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003042 WHERE `CreatureId` = 3042;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030005 WHERE `CreatureId` = 3042;
 -- }}}
 -- {{{ creature 4594: horde warrior trainer, levels 12-13
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1004594, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030006, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 4594;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1004594, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030006, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 4594 AND ts.`ReqLevel` <= 13;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1004594 WHERE `CreatureId` = 4594;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030006 WHERE `CreatureId` = 4594;
 -- }}}
 -- {{{ creature 3408: horde warrior trainer, levels 14-15
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003408, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030007, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3408;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003408, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030007, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3408 AND ts.`ReqLevel` <= 15;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003408 WHERE `CreatureId` = 3408;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030007 WHERE `CreatureId` = 3408;
 -- }}}
 -- {{{ creature 4595: horde warrior trainer, levels 16-17
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1004595, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030008, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 4595;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1004595, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030008, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 4595 AND ts.`ReqLevel` <= 17;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1004595 WHERE `CreatureId` = 4595;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030008 WHERE `CreatureId` = 4595;
 -- }}}
 -- {{{ creature 4593: horde warrior trainer, levels 18-20
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1004593, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030009, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 4593;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1004593, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030009, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 4593 AND ts.`ReqLevel` <= 20;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1004593 WHERE `CreatureId` = 4593;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030009 WHERE `CreatureId` = 4593;
 -- }}}
 -- {{{ creature 5113: alliance warrior trainer, levels 1-1
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005113, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030010, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5113;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005113, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030010, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5113 AND ts.`ReqLevel` <= 1;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005113 WHERE `CreatureId` = 5113;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030010 WHERE `CreatureId` = 5113;
 -- }}}
 -- {{{ creature 5480: alliance warrior trainer, levels 2-3
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005480, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030011, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5480;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005480, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030011, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5480 AND ts.`ReqLevel` <= 3;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005480 WHERE `CreatureId` = 5480;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030011 WHERE `CreatureId` = 5480;
 -- }}}
 -- {{{ creature 1901: alliance warrior trainer, levels 4-5
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1001901, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030012, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 1901;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1001901, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030012, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 1901 AND ts.`ReqLevel` <= 5;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1001901 WHERE `CreatureId` = 1901;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030012 WHERE `CreatureId` = 1901;
 -- }}}
 -- {{{ creature 914: alliance warrior trainer, levels 6-7
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1000914, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030013, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 914;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1000914, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030013, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 914 AND ts.`ReqLevel` <= 7;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1000914 WHERE `CreatureId` = 914;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030013 WHERE `CreatureId` = 914;
 -- }}}
 -- {{{ creature 5114: alliance warrior trainer, levels 8-9
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005114, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030014, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5114;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005114, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030014, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5114 AND ts.`ReqLevel` <= 9;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005114 WHERE `CreatureId` = 5114;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030014 WHERE `CreatureId` = 5114;
 -- }}}
 -- {{{ creature 17120: alliance warrior trainer, levels 10-10
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1017120, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030015, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 17120;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1017120, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030015, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 17120 AND ts.`ReqLevel` <= 10;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1017120 WHERE `CreatureId` = 17120;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030015 WHERE `CreatureId` = 17120;
 -- }}}
 -- {{{ creature 5479: alliance warrior trainer, levels 11-12
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005479, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030016, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5479;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005479, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030016, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5479 AND ts.`ReqLevel` <= 12;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005479 WHERE `CreatureId` = 5479;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030016 WHERE `CreatureId` = 5479;
 -- }}}
 -- {{{ creature 4087: alliance warrior trainer, levels 13-14
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1004087, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030017, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 4087;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1004087, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030017, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 4087 AND ts.`ReqLevel` <= 14;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1004087 WHERE `CreatureId` = 4087;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030017 WHERE `CreatureId` = 4087;
 -- }}}
 -- {{{ creature 4089: alliance warrior trainer, levels 15-16
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1004089, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030018, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 4089;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1004089, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030018, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 4089 AND ts.`ReqLevel` <= 16;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1004089 WHERE `CreatureId` = 4089;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030018 WHERE `CreatureId` = 4089;
 -- }}}
 -- {{{ creature 16771: alliance warrior trainer, levels 17-18
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1016771, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030019, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 16771;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1016771, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030019, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 16771 AND ts.`ReqLevel` <= 18;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1016771 WHERE `CreatureId` = 16771;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030019 WHERE `CreatureId` = 16771;
 -- }}}
 -- {{{ creature 7315: alliance warrior trainer, levels 19-20
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1007315, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030020, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 7315;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1007315, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030020, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 7315 AND ts.`ReqLevel` <= 20;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1007315 WHERE `CreatureId` = 7315;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030020 WHERE `CreatureId` = 7315;
 -- }}}
 -- {{{ creature 16679: horde paladin trainer, levels 1-4
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1016679, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030021, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 16679;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1016679, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030021, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 16679 AND ts.`ReqLevel` <= 4;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1016679 WHERE `CreatureId` = 16679;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030021 WHERE `CreatureId` = 16679;
 -- }}}
 -- {{{ creature 16680: horde paladin trainer, levels 5-8
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1016680, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030022, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 16680;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1016680, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030022, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 16680 AND ts.`ReqLevel` <= 8;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1016680 WHERE `CreatureId` = 16680;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030022 WHERE `CreatureId` = 16680;
 -- }}}
 -- {{{ creature 16681: horde paladin trainer, levels 9-12
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1016681, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030023, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 16681;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1016681, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030023, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 16681 AND ts.`ReqLevel` <= 12;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1016681 WHERE `CreatureId` = 16681;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030023 WHERE `CreatureId` = 16681;
 -- }}}
 -- {{{ creature 20406: horde paladin trainer, levels 13-16
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1020406, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030024, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 20406;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1020406, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030024, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 20406 AND ts.`ReqLevel` <= 16;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1020406 WHERE `CreatureId` = 20406;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030024 WHERE `CreatureId` = 20406;
 -- }}}
 -- {{{ creature 23128: horde paladin trainer, levels 17-20
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1023128, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030025, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 23128;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1023128, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030025, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 23128 AND ts.`ReqLevel` <= 20;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1023128 WHERE `CreatureId` = 23128;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030025 WHERE `CreatureId` = 23128;
 -- }}}
 -- {{{ creature 5149: alliance paladin trainer, levels 1-2
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005149, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030026, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5149;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005149, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030026, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5149 AND ts.`ReqLevel` <= 2;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005149 WHERE `CreatureId` = 5149;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030026 WHERE `CreatureId` = 5149;
 -- }}}
 -- {{{ creature 5148: alliance paladin trainer, levels 3-5
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005148, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030027, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5148;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005148, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030027, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5148 AND ts.`ReqLevel` <= 5;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005148 WHERE `CreatureId` = 5148;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030027 WHERE `CreatureId` = 5148;
 -- }}}
 -- {{{ creature 5147: alliance paladin trainer, levels 6-8
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005147, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030028, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5147;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005147, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030028, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5147 AND ts.`ReqLevel` <= 8;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005147 WHERE `CreatureId` = 5147;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030028 WHERE `CreatureId` = 5147;
 -- }}}
 -- {{{ creature 17509: alliance paladin trainer, levels 9-11
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1017509, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030029, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 17509;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1017509, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030029, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 17509 AND ts.`ReqLevel` <= 11;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1017509 WHERE `CreatureId` = 17509;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030029 WHERE `CreatureId` = 17509;
 -- }}}
 -- {{{ creature 928: alliance paladin trainer, levels 12-14
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1000928, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030030, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 928;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1000928, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030030, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 928 AND ts.`ReqLevel` <= 14;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1000928 WHERE `CreatureId` = 928;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030030 WHERE `CreatureId` = 928;
 -- }}}
 -- {{{ creature 5492: alliance paladin trainer, levels 15-17
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005492, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030031, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5492;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005492, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030031, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5492 AND ts.`ReqLevel` <= 17;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005492 WHERE `CreatureId` = 5492;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030031 WHERE `CreatureId` = 5492;
 -- }}}
 -- {{{ creature 5491: alliance paladin trainer, levels 18-20
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005491, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030032, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5491;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005491, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030032, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5491 AND ts.`ReqLevel` <= 20;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005491 WHERE `CreatureId` = 5491;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030032 WHERE `CreatureId` = 5491;
 -- }}}
 -- {{{ creature 3406: horde hunter trainer, levels 1-2
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003406, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030033, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3406;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003406, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030033, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3406 AND ts.`ReqLevel` <= 2;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003406 WHERE `CreatureId` = 3406;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030033 WHERE `CreatureId` = 3406;
 -- }}}
 -- {{{ creature 3040: horde hunter trainer, levels 3-5
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003040, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030034, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3040;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003040, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030034, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3040 AND ts.`ReqLevel` <= 5;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003040 WHERE `CreatureId` = 3040;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030034 WHERE `CreatureId` = 3040;
 -- }}}
 -- {{{ creature 3352: horde hunter trainer, levels 6-8
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003352, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030035, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3352;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003352, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030035, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3352 AND ts.`ReqLevel` <= 8;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003352 WHERE `CreatureId` = 3352;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030035 WHERE `CreatureId` = 3352;
 -- }}}
 -- {{{ creature 3039: horde hunter trainer, levels 9-11
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003039, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030036, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3039;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003039, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030036, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3039 AND ts.`ReqLevel` <= 11;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003039 WHERE `CreatureId` = 3039;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030036 WHERE `CreatureId` = 3039;
 -- }}}
 -- {{{ creature 3038: horde hunter trainer, levels 12-14
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003038, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030037, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3038;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003038, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030037, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3038 AND ts.`ReqLevel` <= 14;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003038 WHERE `CreatureId` = 3038;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030037 WHERE `CreatureId` = 3038;
 -- }}}
 -- {{{ creature 16673: horde hunter trainer, levels 15-17
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1016673, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030038, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 16673;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1016673, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030038, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 16673 AND ts.`ReqLevel` <= 17;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1016673 WHERE `CreatureId` = 16673;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030038 WHERE `CreatureId` = 16673;
 -- }}}
 -- {{{ creature 3407: horde hunter trainer, levels 18-20
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003407, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030039, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3407;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003407, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030039, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3407 AND ts.`ReqLevel` <= 20;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003407 WHERE `CreatureId` = 3407;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030039 WHERE `CreatureId` = 3407;
 -- }}}
 -- {{{ creature 5117: alliance hunter trainer, levels 1-2
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005117, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030040, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5117;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005117, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030040, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5117 AND ts.`ReqLevel` <= 2;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005117 WHERE `CreatureId` = 5117;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030040 WHERE `CreatureId` = 5117;
 -- }}}
 -- {{{ creature 4146: alliance hunter trainer, levels 3-5
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1004146, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030041, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 4146;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1004146, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030041, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 4146 AND ts.`ReqLevel` <= 5;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1004146 WHERE `CreatureId` = 4146;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030041 WHERE `CreatureId` = 4146;
 -- }}}
 -- {{{ creature 5515: alliance hunter trainer, levels 6-7
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005515, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030042, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5515;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005515, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030042, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5515 AND ts.`ReqLevel` <= 7;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005515 WHERE `CreatureId` = 5515;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030042 WHERE `CreatureId` = 5515;
 -- }}}
 -- {{{ creature 17505: alliance hunter trainer, levels 8-10
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1017505, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030043, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 17505;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1017505, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030043, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 17505 AND ts.`ReqLevel` <= 10;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1017505 WHERE `CreatureId` = 17505;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030043 WHERE `CreatureId` = 17505;
 -- }}}
 -- {{{ creature 5116: alliance hunter trainer, levels 11-12
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005116, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030044, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5116;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005116, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030044, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5116 AND ts.`ReqLevel` <= 12;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005116 WHERE `CreatureId` = 5116;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030044 WHERE `CreatureId` = 5116;
 -- }}}
 -- {{{ creature 5115: alliance hunter trainer, levels 13-15
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005115, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030045, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5115;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005115, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030045, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5115 AND ts.`ReqLevel` <= 15;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005115 WHERE `CreatureId` = 5115;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030045 WHERE `CreatureId` = 5115;
 -- }}}
 -- {{{ creature 4205: alliance hunter trainer, levels 16-17
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1004205, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030046, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 4205;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1004205, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030046, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 4205 AND ts.`ReqLevel` <= 17;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1004205 WHERE `CreatureId` = 4205;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030046 WHERE `CreatureId` = 4205;
 -- }}}
 -- {{{ creature 5516: alliance hunter trainer, levels 18-20
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005516, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030047, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5516;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005516, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030047, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5516 AND ts.`ReqLevel` <= 20;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005516 WHERE `CreatureId` = 5516;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030047 WHERE `CreatureId` = 5516;
 -- }}}
 -- {{{ creature 3327: horde rogue trainer, levels 1-3
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003327, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030048, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3327;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003327, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030048, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3327 AND ts.`ReqLevel` <= 3;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003327 WHERE `CreatureId` = 3327;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030048 WHERE `CreatureId` = 3327;
 -- }}}
 -- {{{ creature 3401: horde rogue trainer, levels 4-6
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003401, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030049, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3401;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003401, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030049, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3401 AND ts.`ReqLevel` <= 6;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003401 WHERE `CreatureId` = 3401;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030049 WHERE `CreatureId` = 3401;
 -- }}}
 -- {{{ creature 4582: horde rogue trainer, levels 7-10
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1004582, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030050, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 4582;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1004582, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030050, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 4582 AND ts.`ReqLevel` <= 10;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1004582 WHERE `CreatureId` = 4582;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030050 WHERE `CreatureId` = 4582;
 -- }}}
 -- {{{ creature 4583: horde rogue trainer, levels 11-13
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1004583, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030051, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 4583;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1004583, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030051, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 4583 AND ts.`ReqLevel` <= 13;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1004583 WHERE `CreatureId` = 4583;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030051 WHERE `CreatureId` = 4583;
 -- }}}
 -- {{{ creature 3328: horde rogue trainer, levels 14-16
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003328, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030052, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3328;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003328, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030052, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3328 AND ts.`ReqLevel` <= 16;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003328 WHERE `CreatureId` = 3328;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030052 WHERE `CreatureId` = 3328;
 -- }}}
 -- {{{ creature 4584: horde rogue trainer, levels 17-20
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1004584, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030053, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 4584;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1004584, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030053, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 4584 AND ts.`ReqLevel` <= 20;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1004584 WHERE `CreatureId` = 4584;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030053 WHERE `CreatureId` = 4584;
 -- }}}
 -- {{{ creature 5167: alliance rogue trainer, levels 1-3
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005167, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030054, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5167;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005167, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030054, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5167 AND ts.`ReqLevel` <= 3;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005167 WHERE `CreatureId` = 5167;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030054 WHERE `CreatureId` = 5167;
 -- }}}
 -- {{{ creature 4163: alliance rogue trainer, levels 4-6
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1004163, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030055, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 4163;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1004163, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030055, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 4163 AND ts.`ReqLevel` <= 6;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1004163 WHERE `CreatureId` = 4163;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030055 WHERE `CreatureId` = 4163;
 -- }}}
 -- {{{ creature 5166: alliance rogue trainer, levels 7-10
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005166, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030056, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5166;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005166, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030056, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5166 AND ts.`ReqLevel` <= 10;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005166 WHERE `CreatureId` = 5166;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030056 WHERE `CreatureId` = 5166;
 -- }}}
 -- {{{ creature 918: alliance rogue trainer, levels 11-13
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1000918, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030057, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 918;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1000918, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030057, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 918 AND ts.`ReqLevel` <= 13;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1000918 WHERE `CreatureId` = 918;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030057 WHERE `CreatureId` = 918;
 -- }}}
 -- {{{ creature 5165: alliance rogue trainer, levels 14-16
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005165, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030058, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5165;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005165, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030058, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5165 AND ts.`ReqLevel` <= 16;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005165 WHERE `CreatureId` = 5165;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030058 WHERE `CreatureId` = 5165;
 -- }}}
 -- {{{ creature 13283: alliance rogue trainer, levels 17-20
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1013283, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030059, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 13283;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1013283, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030059, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 13283 AND ts.`ReqLevel` <= 20;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1013283 WHERE `CreatureId` = 13283;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030059 WHERE `CreatureId` = 13283;
 -- }}}
 -- {{{ creature 4607: horde priest trainer, levels 1-2
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1004607, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030060, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 4607;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1004607, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030060, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 4607 AND ts.`ReqLevel` <= 2;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1004607 WHERE `CreatureId` = 4607;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030060 WHERE `CreatureId` = 4607;
 -- }}}
 -- {{{ creature 16659: horde priest trainer, levels 3-4
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1016659, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030061, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 16659;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1016659, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030061, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 16659 AND ts.`ReqLevel` <= 4;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1016659 WHERE `CreatureId` = 16659;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030061 WHERE `CreatureId` = 16659;
 -- }}}
 -- {{{ creature 3044: horde priest trainer, levels 5-6
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003044, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030062, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3044;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003044, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030062, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3044 AND ts.`ReqLevel` <= 6;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003044 WHERE `CreatureId` = 3044;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030062 WHERE `CreatureId` = 3044;
 -- }}}
 -- {{{ creature 6018: horde priest trainer, levels 7-8
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1006018, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030063, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 6018;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1006018, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030063, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 6018 AND ts.`ReqLevel` <= 8;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1006018 WHERE `CreatureId` = 6018;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030063 WHERE `CreatureId` = 6018;
 -- }}}
 -- {{{ creature 4608: horde priest trainer, levels 9-11
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1004608, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030064, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 4608;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1004608, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030064, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 4608 AND ts.`ReqLevel` <= 11;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1004608 WHERE `CreatureId` = 4608;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030064 WHERE `CreatureId` = 4608;
 -- }}}
 -- {{{ creature 6014: horde priest trainer, levels 12-13
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1006014, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030065, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 6014;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1006014, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030065, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 6014 AND ts.`ReqLevel` <= 13;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1006014 WHERE `CreatureId` = 6014;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030065 WHERE `CreatureId` = 6014;
 -- }}}
 -- {{{ creature 3045: horde priest trainer, levels 14-15
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003045, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030066, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3045;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003045, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030066, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3045 AND ts.`ReqLevel` <= 15;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003045 WHERE `CreatureId` = 3045;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030066 WHERE `CreatureId` = 3045;
 -- }}}
 -- {{{ creature 5994: horde priest trainer, levels 16-17
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005994, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030067, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5994;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005994, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030067, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5994 AND ts.`ReqLevel` <= 17;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005994 WHERE `CreatureId` = 5994;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030067 WHERE `CreatureId` = 5994;
 -- }}}
 -- {{{ creature 4606: horde priest trainer, levels 18-20
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1004606, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030068, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 4606;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1004606, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030068, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 4606 AND ts.`ReqLevel` <= 20;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1004606 WHERE `CreatureId` = 4606;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030068 WHERE `CreatureId` = 4606;
 -- }}}
 -- {{{ creature 5143: alliance priest trainer, levels 1-2
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005143, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030069, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5143;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005143, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030069, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5143 AND ts.`ReqLevel` <= 2;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005143 WHERE `CreatureId` = 5143;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030069 WHERE `CreatureId` = 5143;
 -- }}}
 -- {{{ creature 5142: alliance priest trainer, levels 3-4
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005142, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030070, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5142;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005142, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030070, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5142 AND ts.`ReqLevel` <= 4;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005142 WHERE `CreatureId` = 5142;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030070 WHERE `CreatureId` = 5142;
 -- }}}
 -- {{{ creature 11406: alliance priest trainer, levels 5-6
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1011406, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030071, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 11406;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1011406, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030071, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 11406 AND ts.`ReqLevel` <= 6;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1011406 WHERE `CreatureId` = 11406;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030071 WHERE `CreatureId` = 11406;
 -- }}}
 -- {{{ creature 5489: alliance priest trainer, levels 7-8
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005489, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030072, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5489;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005489, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030072, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5489 AND ts.`ReqLevel` <= 8;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005489 WHERE `CreatureId` = 5489;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030072 WHERE `CreatureId` = 5489;
 -- }}}
 -- {{{ creature 5484: alliance priest trainer, levels 9-11
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005484, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030073, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5484;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005484, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030073, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5484 AND ts.`ReqLevel` <= 11;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005484 WHERE `CreatureId` = 5484;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030073 WHERE `CreatureId` = 5484;
 -- }}}
 -- {{{ creature 376: alliance priest trainer, levels 12-13
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1000376, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030074, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 376;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1000376, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030074, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 376 AND ts.`ReqLevel` <= 13;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1000376 WHERE `CreatureId` = 376;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030074 WHERE `CreatureId` = 376;
 -- }}}
 -- {{{ creature 4092: alliance priest trainer, levels 14-15
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1004092, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030075, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 4092;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1004092, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030075, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 4092 AND ts.`ReqLevel` <= 15;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1004092 WHERE `CreatureId` = 4092;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030075 WHERE `CreatureId` = 4092;
 -- }}}
 -- {{{ creature 4091: alliance priest trainer, levels 16-17
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1004091, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030076, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 4091;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1004091, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030076, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 4091 AND ts.`ReqLevel` <= 17;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1004091 WHERE `CreatureId` = 4091;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030076 WHERE `CreatureId` = 4091;
 -- }}}
 -- {{{ creature 11401: alliance priest trainer, levels 18-20
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1011401, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030077, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 11401;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1011401, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030077, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 11401 AND ts.`ReqLevel` <= 20;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1011401 WHERE `CreatureId` = 11401;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030077 WHERE `CreatureId` = 11401;
 -- }}}
 -- {{{ creature 3032: horde shaman trainer, levels 1-3
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003032, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030078, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3032;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003032, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030078, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3032 AND ts.`ReqLevel` <= 3;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003032 WHERE `CreatureId` = 3032;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030078 WHERE `CreatureId` = 3032;
 -- }}}
 -- {{{ creature 3030: horde shaman trainer, levels 4-6
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003030, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030079, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3030;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003030, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030079, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3030 AND ts.`ReqLevel` <= 6;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003030 WHERE `CreatureId` = 3030;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030079 WHERE `CreatureId` = 3030;
 -- }}}
 -- {{{ creature 13417: horde shaman trainer, levels 7-10
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1013417, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030080, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 13417;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1013417, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030080, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 13417 AND ts.`ReqLevel` <= 10;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1013417 WHERE `CreatureId` = 13417;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030080 WHERE `CreatureId` = 13417;
 -- }}}
 -- {{{ creature 3403: horde shaman trainer, levels 11-13
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003403, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030081, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3403;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003403, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030081, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3403 AND ts.`ReqLevel` <= 13;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003403 WHERE `CreatureId` = 3403;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030081 WHERE `CreatureId` = 3403;
 -- }}}
 -- {{{ creature 3031: horde shaman trainer, levels 14-16
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003031, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030082, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3031;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003031, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030082, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3031 AND ts.`ReqLevel` <= 16;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003031 WHERE `CreatureId` = 3031;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030082 WHERE `CreatureId` = 3031;
 -- }}}
 -- {{{ creature 3344: horde shaman trainer, levels 17-20
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003344, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030083, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3344;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003344, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030083, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3344 AND ts.`ReqLevel` <= 20;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003344 WHERE `CreatureId` = 3344;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030083 WHERE `CreatureId` = 3344;
 -- }}}
 -- {{{ creature 17520: alliance shaman trainer, levels 1-4
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1017520, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030084, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 17520;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1017520, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030084, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 17520 AND ts.`ReqLevel` <= 4;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1017520 WHERE `CreatureId` = 17520;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030084 WHERE `CreatureId` = 17520;
 -- }}}
 -- {{{ creature 17204: alliance shaman trainer, levels 5-8
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1017204, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030085, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 17204;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1017204, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030085, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 17204 AND ts.`ReqLevel` <= 8;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1017204 WHERE `CreatureId` = 17204;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030085 WHERE `CreatureId` = 17204;
 -- }}}
 -- {{{ creature 17219: alliance shaman trainer, levels 9-12
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1017219, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030086, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 17219;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1017219, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030086, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 17219 AND ts.`ReqLevel` <= 12;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1017219 WHERE `CreatureId` = 17219;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030086 WHERE `CreatureId` = 17219;
 -- }}}
 -- {{{ creature 23127: alliance shaman trainer, levels 13-16
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1023127, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030087, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 23127;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1023127, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030087, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 23127 AND ts.`ReqLevel` <= 16;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1023127 WHERE `CreatureId` = 23127;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030087 WHERE `CreatureId` = 23127;
 -- }}}
 -- {{{ creature 20407: alliance shaman trainer, levels 17-20
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1020407, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030088, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 20407;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1020407, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030088, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 20407 AND ts.`ReqLevel` <= 20;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1020407 WHERE `CreatureId` = 20407;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030088 WHERE `CreatureId` = 20407;
 -- }}}
 -- {{{ creature 16651: horde mage trainer, levels 1-1
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1016651, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030089, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 16651;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1016651, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030089, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 16651 AND ts.`ReqLevel` <= 1;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1016651 WHERE `CreatureId` = 16651;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030089 WHERE `CreatureId` = 16651;
 -- }}}
 -- {{{ creature 4568: horde mage trainer, levels 2-3
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1004568, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030090, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 4568;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1004568, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030090, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 4568 AND ts.`ReqLevel` <= 3;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1004568 WHERE `CreatureId` = 4568;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030090 WHERE `CreatureId` = 4568;
 -- }}}
 -- {{{ creature 5885: horde mage trainer, levels 4-5
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005885, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030091, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5885;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005885, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030091, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5885 AND ts.`ReqLevel` <= 5;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005885 WHERE `CreatureId` = 5885;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030091 WHERE `CreatureId` = 5885;
 -- }}}
 -- {{{ creature 7311: horde mage trainer, levels 6-7
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1007311, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030092, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 7311;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1007311, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030092, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 7311 AND ts.`ReqLevel` <= 7;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1007311 WHERE `CreatureId` = 7311;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030092 WHERE `CreatureId` = 7311;
 -- }}}
 -- {{{ creature 3047: horde mage trainer, levels 8-9
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003047, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030093, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3047;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003047, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030093, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3047 AND ts.`ReqLevel` <= 9;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003047 WHERE `CreatureId` = 3047;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030093 WHERE `CreatureId` = 3047;
 -- }}}
 -- {{{ creature 5883: horde mage trainer, levels 10-10
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005883, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030094, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5883;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005883, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030094, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5883 AND ts.`ReqLevel` <= 10;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005883 WHERE `CreatureId` = 5883;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030094 WHERE `CreatureId` = 5883;
 -- }}}
 -- {{{ creature 4567: horde mage trainer, levels 11-12
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1004567, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030095, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 4567;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1004567, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030095, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 4567 AND ts.`ReqLevel` <= 12;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1004567 WHERE `CreatureId` = 4567;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030095 WHERE `CreatureId` = 4567;
 -- }}}
 -- {{{ creature 4566: horde mage trainer, levels 13-14
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1004566, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030096, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 4566;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1004566, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030096, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 4566 AND ts.`ReqLevel` <= 14;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1004566 WHERE `CreatureId` = 4566;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030096 WHERE `CreatureId` = 4566;
 -- }}}
 -- {{{ creature 5882: horde mage trainer, levels 15-16
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005882, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030097, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5882;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005882, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030097, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5882 AND ts.`ReqLevel` <= 16;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005882 WHERE `CreatureId` = 5882;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030097 WHERE `CreatureId` = 5882;
 -- }}}
 -- {{{ creature 3048: horde mage trainer, levels 17-18
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003048, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030098, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3048;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003048, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030098, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3048 AND ts.`ReqLevel` <= 18;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003048 WHERE `CreatureId` = 3048;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030098 WHERE `CreatureId` = 3048;
 -- }}}
 -- {{{ creature 3049: horde mage trainer, levels 19-20
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003049, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030099, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3049;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003049, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030099, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3049 AND ts.`ReqLevel` <= 20;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003049 WHERE `CreatureId` = 3049;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030099 WHERE `CreatureId` = 3049;
 -- }}}
 -- {{{ creature 5144: alliance mage trainer, levels 1-2
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005144, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030100, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5144;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005144, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030100, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5144 AND ts.`ReqLevel` <= 2;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005144 WHERE `CreatureId` = 5144;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030100 WHERE `CreatureId` = 5144;
 -- }}}
 -- {{{ creature 5497: alliance mage trainer, levels 3-5
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005497, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030101, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5497;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005497, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030101, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5497 AND ts.`ReqLevel` <= 5;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005497 WHERE `CreatureId` = 5497;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030101 WHERE `CreatureId` = 5497;
 -- }}}
 -- {{{ creature 331: alliance mage trainer, levels 6-8
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1000331, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030102, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 331;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1000331, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030102, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 331 AND ts.`ReqLevel` <= 8;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1000331 WHERE `CreatureId` = 331;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030102 WHERE `CreatureId` = 331;
 -- }}}
 -- {{{ creature 7312: alliance mage trainer, levels 9-11
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1007312, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030103, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 7312;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1007312, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030103, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 7312 AND ts.`ReqLevel` <= 11;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1007312 WHERE `CreatureId` = 7312;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030103 WHERE `CreatureId` = 7312;
 -- }}}
 -- {{{ creature 5498: alliance mage trainer, levels 12-14
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005498, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030104, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5498;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005498, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030104, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5498 AND ts.`ReqLevel` <= 14;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005498 WHERE `CreatureId` = 5498;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030104 WHERE `CreatureId` = 5498;
 -- }}}
 -- {{{ creature 16749: alliance mage trainer, levels 15-17
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1016749, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030105, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 16749;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1016749, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030105, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 16749 AND ts.`ReqLevel` <= 17;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1016749 WHERE `CreatureId` = 16749;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030105 WHERE `CreatureId` = 16749;
 -- }}}
 -- {{{ creature 5145: alliance mage trainer, levels 18-20
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005145, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030106, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5145;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005145, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030106, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5145 AND ts.`ReqLevel` <= 20;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005145 WHERE `CreatureId` = 5145;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030106 WHERE `CreatureId` = 5145;
 -- }}}
 -- {{{ creature 3324: horde warlock trainer, levels 1-3
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003324, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030107, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3324;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003324, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030107, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3324 AND ts.`ReqLevel` <= 3;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003324 WHERE `CreatureId` = 3324;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030107 WHERE `CreatureId` = 3324;
 -- }}}
 -- {{{ creature 3325: horde warlock trainer, levels 4-6
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003325, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030108, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3325;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003325, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030108, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3325 AND ts.`ReqLevel` <= 6;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003325 WHERE `CreatureId` = 3325;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030108 WHERE `CreatureId` = 3325;
 -- }}}
 -- {{{ creature 3326: horde warlock trainer, levels 7-10
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003326, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030109, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3326;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003326, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030109, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3326 AND ts.`ReqLevel` <= 10;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003326 WHERE `CreatureId` = 3326;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030109 WHERE `CreatureId` = 3326;
 -- }}}
 -- {{{ creature 4564: horde warlock trainer, levels 11-13
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1004564, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030110, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 4564;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1004564, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030110, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 4564 AND ts.`ReqLevel` <= 13;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1004564 WHERE `CreatureId` = 4564;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030110 WHERE `CreatureId` = 4564;
 -- }}}
 -- {{{ creature 4563: horde warlock trainer, levels 14-16
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1004563, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030111, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 4563;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1004563, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030111, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 4563 AND ts.`ReqLevel` <= 16;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1004563 WHERE `CreatureId` = 4563;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030111 WHERE `CreatureId` = 4563;
 -- }}}
 -- {{{ creature 4565: horde warlock trainer, levels 17-20
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1004565, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030112, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 4565;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1004565, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030112, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 4565 AND ts.`ReqLevel` <= 20;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1004565 WHERE `CreatureId` = 4565;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030112 WHERE `CreatureId` = 4565;
 -- }}}
 -- {{{ creature 5495: alliance warlock trainer, levels 1-3
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005495, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030113, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5495;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005495, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030113, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5495 AND ts.`ReqLevel` <= 3;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005495 WHERE `CreatureId` = 5495;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030113 WHERE `CreatureId` = 5495;
 -- }}}
 -- {{{ creature 5172: alliance warlock trainer, levels 4-6
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005172, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030114, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5172;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005172, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030114, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5172 AND ts.`ReqLevel` <= 6;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005172 WHERE `CreatureId` = 5172;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030114 WHERE `CreatureId` = 5172;
 -- }}}
 -- {{{ creature 5496: alliance warlock trainer, levels 7-10
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005496, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030115, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5496;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005496, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030115, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5496 AND ts.`ReqLevel` <= 10;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005496 WHERE `CreatureId` = 5496;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030115 WHERE `CreatureId` = 5496;
 -- }}}
 -- {{{ creature 461: alliance warlock trainer, levels 11-13
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1000461, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030116, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 461;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1000461, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030116, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 461 AND ts.`ReqLevel` <= 13;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1000461 WHERE `CreatureId` = 461;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030116 WHERE `CreatureId` = 461;
 -- }}}
 -- {{{ creature 5171: alliance warlock trainer, levels 14-16
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005171, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030117, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5171;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005171, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030117, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5171 AND ts.`ReqLevel` <= 16;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005171 WHERE `CreatureId` = 5171;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030117 WHERE `CreatureId` = 5171;
 -- }}}
 -- {{{ creature 5173: alliance warlock trainer, levels 17-20
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005173, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030118, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5173;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005173, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030118, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5173 AND ts.`ReqLevel` <= 20;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005173 WHERE `CreatureId` = 5173;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030118 WHERE `CreatureId` = 5173;
 -- }}}
 -- {{{ creature 3034: horde druid trainer, levels 1-6
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003034, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030119, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3034;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003034, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030119, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3034 AND ts.`ReqLevel` <= 6;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003034 WHERE `CreatureId` = 3034;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030119 WHERE `CreatureId` = 3034;
 -- }}}
 -- {{{ creature 3033: horde druid trainer, levels 7-13
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003033, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030120, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3033;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003033, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030120, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3033 AND ts.`ReqLevel` <= 13;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003033 WHERE `CreatureId` = 3033;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030120 WHERE `CreatureId` = 3033;
 -- }}}
 -- {{{ creature 3036: horde druid trainer, levels 14-20
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1003036, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030121, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 3036;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1003036, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030121, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 3036 AND ts.`ReqLevel` <= 20;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1003036 WHERE `CreatureId` = 3036;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030121 WHERE `CreatureId` = 3036;
 -- }}}
 -- {{{ creature 4218: alliance druid trainer, levels 1-4
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1004218, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030122, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 4218;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1004218, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030122, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 4218 AND ts.`ReqLevel` <= 4;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1004218 WHERE `CreatureId` = 4218;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030122 WHERE `CreatureId` = 4218;
 -- }}}
 -- {{{ creature 4219: alliance druid trainer, levels 5-8
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1004219, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030123, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 4219;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1004219, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030123, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 4219 AND ts.`ReqLevel` <= 8;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1004219 WHERE `CreatureId` = 4219;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030123 WHERE `CreatureId` = 4219;
 -- }}}
 -- {{{ creature 5505: alliance druid trainer, levels 9-12
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005505, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030124, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5505;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005505, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030124, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5505 AND ts.`ReqLevel` <= 12;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005505 WHERE `CreatureId` = 5505;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030124 WHERE `CreatureId` = 5505;
 -- }}}
 -- {{{ creature 4217: alliance druid trainer, levels 13-16
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1004217, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030125, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 4217;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1004217, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030125, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 4217 AND ts.`ReqLevel` <= 16;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1004217 WHERE `CreatureId` = 4217;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030125 WHERE `CreatureId` = 4217;
 -- }}}
 -- {{{ creature 5504: alliance druid trainer, levels 17-20
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 1005504, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
+    SELECT 5030126, t.`Type`, t.`Requirement`, t.`Greeting`, t.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer` t ON t.`Id` = s.`TrainerId` WHERE s.`CreatureId` = 5504;
 INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
-    SELECT 1005504, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
+    SELECT 5030126, ts.`SpellId`, ts.`MoneyCost`, ts.`ReqSkillLine`, ts.`ReqSkillRank`, ts.`ReqAbility1`, ts.`ReqAbility2`, ts.`ReqAbility3`, ts.`ReqLevel`, ts.`VerifiedBuild`
     FROM `wow_chat_e014_snapshot_creature_default_trainer` s JOIN `trainer_spell` ts ON ts.`TrainerId` = s.`TrainerId` WHERE s.`CreatureId` = 5504 AND ts.`ReqLevel` <= 20;
-UPDATE `creature_default_trainer` SET `TrainerId` = 1005504 WHERE `CreatureId` = 5504;
+UPDATE `creature_default_trainer` SET `TrainerId` = 5030126 WHERE `CreatureId` = 5504;
 -- }}}

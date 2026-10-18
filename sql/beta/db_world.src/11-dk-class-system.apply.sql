@@ -13,8 +13,8 @@
 -- the three death knight trainers all point at list 13, the game's own
 -- death knight lessons (levels 55-80). Until then this step wrote the kit
 -- into `npc_trainer`, a table the server no longer reads, so the kit was
--- never offered. Now the kit is a list of its own, number 2060000 (206 for
--- the issue), and the three trainers are pointed at it; their original
+-- never offered. Now the kit is a list of its own, number 2060001 (the first
+-- of issue 206's block, docs/custom-id-ranges.md), and the three trainers are pointed at it; their original
 -- links are saved in `wow_chat_e011_snapshot_creature_default_trainer` so
 -- the revert (11-dk-class-system.revert.sql) points them back. Nothing of
 -- list 13 is changed.
@@ -47,36 +47,36 @@ INSERT INTO `playercreateinfo_spell_custom` (`racemask`, `classmask`, `Spell`)
 VALUES (0, 32, 45902);  -- Blood Strike (basic melee attack)
 -- }}}
 
--- {{{ The death knight kit, levels 2-20: trainer list 2060000
+-- {{{ The death knight kit, levels 2-20: trainer list 2060001
 -- One list for all three trainers (they taught the same kit before too).
 -- Its kind and greeting are copied from the game's death knight list (13).
 INSERT IGNORE INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`)
-    SELECT 2060000, `Type`, `Requirement`, `Greeting`, 0 FROM `trainer` WHERE `Id` = 13;
-DELETE FROM `trainer_spell` WHERE `TrainerId` = 2060000;
+    SELECT 2060001, `Type`, `Requirement`, `Greeting`, 0 FROM `trainer` WHERE `Id` = 13;
+DELETE FROM `trainer_spell` WHERE `TrainerId` = 2060001;
 INSERT INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`, `VerifiedBuild`)
 VALUES
-    (2060000, 45477, 50 , 0, 0, 0, 0, 0, 2 , 0),  -- Icy Touch (ranged, Frost Fever disease)
-    (2060000, 45462, 100, 0, 0, 0, 0, 0, 4 , 0),  -- Plague Strike (melee, Blood Plague disease)
-    (2060000, 47541, 150, 0, 0, 0, 0, 0, 6 , 0),  -- Death Coil (shadow damage)
-    (2060000, 45470, 200, 0, 0, 0, 0, 0, 8 , 0),  -- Death Strike (healing strike for tanking)
-    (2060000, 48263, 250, 0, 0, 0, 0, 0, 10, 0),  -- Blood Presence (DPS stance)
-    (2060000, 48266, 250, 0, 0, 0, 0, 0, 10, 0),  -- Frost Presence (tank stance)
-    (2060000, 48265, 250, 0, 0, 0, 0, 0, 10, 0),  -- Unholy Presence (speed stance)
-    (2060000, 50842, 350, 0, 0, 0, 0, 0, 12, 0),  -- Pestilence (spread diseases)
-    (2060000, 48721, 350, 0, 0, 0, 0, 0, 12, 0),  -- Blood Boil (AoE disease damage)
-    (2060000, 45524, 450, 0, 0, 0, 0, 0, 14, 0),  -- Chains of Ice (ranged snare)
-    (2060000, 56222, 450, 0, 0, 0, 0, 0, 14, 0),  -- Dark Command (taunt for tank role)
-    (2060000, 45529, 550, 0, 0, 0, 0, 0, 16, 0),  -- Blood Tap (convert blood rune)
-    (2060000, 57330, 550, 0, 0, 0, 0, 0, 16, 0),  -- Horn of Winter (group buff)
-    (2060000, 48707, 650, 0, 0, 0, 0, 0, 18, 0),  -- Anti-Magic Shell (magic shield)
-    (2060000, 43265, 650, 0, 0, 0, 0, 0, 18, 0),  -- Death and Decay (AoE ground effect)
-    (2060000, 46584, 750, 0, 0, 0, 0, 0, 20, 0);  -- Raise Dead (summon ghoul)
+    (2060001, 45477, 50 , 0, 0, 0, 0, 0, 2 , 0),  -- Icy Touch (ranged, Frost Fever disease)
+    (2060001, 45462, 100, 0, 0, 0, 0, 0, 4 , 0),  -- Plague Strike (melee, Blood Plague disease)
+    (2060001, 47541, 150, 0, 0, 0, 0, 0, 6 , 0),  -- Death Coil (shadow damage)
+    (2060001, 45470, 200, 0, 0, 0, 0, 0, 8 , 0),  -- Death Strike (healing strike for tanking)
+    (2060001, 48263, 250, 0, 0, 0, 0, 0, 10, 0),  -- Blood Presence (DPS stance)
+    (2060001, 48266, 250, 0, 0, 0, 0, 0, 10, 0),  -- Frost Presence (tank stance)
+    (2060001, 48265, 250, 0, 0, 0, 0, 0, 10, 0),  -- Unholy Presence (speed stance)
+    (2060001, 50842, 350, 0, 0, 0, 0, 0, 12, 0),  -- Pestilence (spread diseases)
+    (2060001, 48721, 350, 0, 0, 0, 0, 0, 12, 0),  -- Blood Boil (AoE disease damage)
+    (2060001, 45524, 450, 0, 0, 0, 0, 0, 14, 0),  -- Chains of Ice (ranged snare)
+    (2060001, 56222, 450, 0, 0, 0, 0, 0, 14, 0),  -- Dark Command (taunt for tank role)
+    (2060001, 45529, 550, 0, 0, 0, 0, 0, 16, 0),  -- Blood Tap (convert blood rune)
+    (2060001, 57330, 550, 0, 0, 0, 0, 0, 16, 0),  -- Horn of Winter (group buff)
+    (2060001, 48707, 650, 0, 0, 0, 0, 0, 18, 0),  -- Anti-Magic Shell (magic shield)
+    (2060001, 43265, 650, 0, 0, 0, 0, 0, 18, 0),  -- Death and Decay (AoE ground effect)
+    (2060001, 46584, 750, 0, 0, 0, 0, 0, 20, 0);  -- Raise Dead (summon ghoul)
 
 -- save the three trainers' original links once, then point them at the kit
 CREATE TABLE IF NOT EXISTS `wow_chat_e011_snapshot_creature_default_trainer` LIKE `creature_default_trainer`;
 INSERT IGNORE INTO `wow_chat_e011_snapshot_creature_default_trainer`
     SELECT * FROM `creature_default_trainer` WHERE `CreatureId` IN (29194, 29195, 29196);
-UPDATE `creature_default_trainer` SET `TrainerId` = 2060000 WHERE `CreatureId` IN (29194, 29195, 29196);
+UPDATE `creature_default_trainer` SET `TrainerId` = 2060001 WHERE `CreatureId` IN (29194, 29195, 29196);
 -- }}}
 
 -- {{{ Starting Gear - All races get Worn Greatsword

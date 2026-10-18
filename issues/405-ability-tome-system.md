@@ -321,6 +321,20 @@ Requires Issue 307 (ale-gameobject-wildcard) for entry 0 registration.
   surely gone) is the shape to reuse. Found by the treasure session,
   2026-10-17 (also recorded in 404's open question 3).
 
+### Design conflict with 721 (noted 2026-10-17)
+
+This issue's tomes are **crafted** (inscription, a class implement, dusts
+and gems), **for the crafter's own class**, and teach the next rank of a
+spell family the player already knows. The owner's later design in issue
+721 (2026-10-17) has **rare tomes, found** (in treasure and on rares),
+that teach **any ability to anyone**, as one of only two ways to learn
+beside a trainer of your own class. Both can't be the tome. Which one
+beta builds (or both: crafted rank-up tomes beside rare any-ability tomes)
+decides the SQL below, so it is not written yet. Also: the item entries
+proposed below (900001...) are free as items, but the same numbers are
+creature types (E015's class selectors) and chest types (E016) in beta;
+pick a range named in `docs/custom-id-ranges.md`.
+
 ### SQL Requirements
 
 **1. Remove Glyphs**

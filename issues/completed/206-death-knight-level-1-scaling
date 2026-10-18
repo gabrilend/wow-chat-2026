@@ -388,7 +388,7 @@ current server and beta's install steps:
 - **Exits from Ebon Hold:** unchanged (`src/lua-beta/death-knights.lua`).
 - Bringing the kit back: done on branch beta-homework (2026-10-17, to be
   merged). E011 now writes the kit as a trainer list of its own (number
-  2060000) on the current tables and points the three trainers at it;
+  2060001) on the current tables and points the three trainers at it;
   they reach players as travellers (503, `src/lua-beta/data/travel-trainers.lua`,
   one per slice of levels 1-6, 7-13, 14-20). E005, which wrote the stats
   into `player_levelstats` (also no longer read), left beta's install list:

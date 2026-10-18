@@ -31,11 +31,14 @@
 local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
 if arg[1] and arg[1] ~= "" then DIR = arg[1] end
 
--- Copies are numbered 1,000,000 + the trainer's creature entry (creature
--- entries are below 1,000,000; the game's own trainer lists are numbered
--- under 1,000). The range 1,000,000-1,999,999 belongs to this step alone,
--- and its undo removes exactly that range.
-local COPY_BASE = 1000000
+-- Copies are numbered in issue 503's block, by the project's rule (issue
+-- number times 10,000; docs/custom-id-ranges.md): 5,030,001 for the first
+-- trainer in data/travel-trainers.lua's order, 5,030,002 for the next, and
+-- so on. The undo removes exactly that block. (First written as 1,000,000
+-- plus the creature entry, which broke the rule and overlapped the blocks
+-- of issues 100-199, basic's 155 among them; renumbered 2026-10-17.)
+local COPY_BASE = 5030000
+local COPY_LAST = 5039999
 local SNAPSHOT  = "wow_chat_e014_snapshot_creature_default_trainer"
 local OLD_SNAP  = "wow_chat_e014_snapshot_npc_trainer"
 
@@ -115,8 +118,9 @@ INSERT IGNORE INTO `]] .. SNAPSHOT .. [[`
 local CLASS_NAME = { [-1] = "warrior", [-2] = "paladin", [-3] = "hunter", [-4] = "rogue", [-5] = "priest",
                      [-7] = "shaman", [-8] = "mage", [-9] = "warlock", [-11] = "druid" }
 local FACTION = { [1] = "horde", [2] = "alliance", [3] = "either" }
-for _, r in ipairs(capped) do
-    local copy = COPY_BASE + r.trainerID
+assert(#capped <= COPY_LAST - COPY_BASE, "more trainers than issue 503's block holds")
+for n, r in ipairs(capped) do
+    local copy = COPY_BASE + n
     add(apply, string.format("-- {{{ creature %d: %s %s trainer, levels %d-%d", r.trainerID,
         FACTION[r.rel] or "?", CLASS_NAME[r.id], r.minLevel, r.maxLevel))
     add(apply, string.format([[
@@ -145,7 +149,7 @@ UPDATE `creature_default_trainer` d JOIN `%s` s ON s.`CreatureId` = d.`CreatureI
     SET d.`TrainerId` = s.`TrainerId`;
 DELETE FROM `trainer_spell` WHERE `TrainerId` BETWEEN %d AND %d;
 DELETE FROM `trainer`       WHERE `Id`        BETWEEN %d AND %d;
-DROP TABLE `%s`;]], SNAPSHOT, SNAPSHOT, COPY_BASE, COPY_BASE * 2 - 1, COPY_BASE, COPY_BASE * 2 - 1, SNAPSHOT))
+DROP TABLE `%s`;]], SNAPSHOT, SNAPSHOT, COPY_BASE + 1, COPY_LAST, COPY_BASE + 1, COPY_LAST, SNAPSHOT))
 -- }}}
 
 local out = DIR .. "/sql/beta/db_world.src/14-trainer-spell-level-cap"
