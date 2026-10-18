@@ -276,3 +276,31 @@ This issue enables **Phase 1: Foundation** by answering:
 The answer: `mysql/databases/`, tracked in git, owned by the project.
 
 Without this, the server runs but the world is Blizzard's. With this, the world is ours.
+
+## What Came After
+
+Added 2026-10-17 (the text above is left as it was written).
+
+- **The local MySQL stayed; how custom data is kept changed.** The
+  database still lives in `mysql/` on port 3307. But custom world data is
+  no longer dumped into `sql/custom/` (`loot.sql`, `db_world/*.sql`, as
+  "Git Tracking Strategy" above describes): on 2026-06-04 (commit b55a774)
+  `sql/custom/db_*/` was replaced by one folder per profile,
+  `sql/<profile>/db_world.src/` and `db_characters.src/`, where each change
+  is a numbered pair of files, `NN-name.apply.sql` and
+  `NN-name.revert.sql`, applied by the install steps and reversible. Why:
+  the profiles (basic, vanilla, beta, cc-test) each need different world
+  data from the same source, and a dump of the whole table can't be taken
+  back out; an apply/revert pair can.
+- **Built on by:**
+  - issue 121 (MySQL script naming): this issue planned `mysql-start` and
+    `mysql-stop`, the work used `start-mysql` and `stop-mysql`, and 121
+    plans the first names back as aliases;
+  - issue 154 (portable dependency bootstrap): `scripts/mysql-install`
+    builds this MySQL on any machine; it keeps `mysql/conf/my.cnf`
+    tracked, as this issue chose ("TRACKED - server config"), but notes
+    the absolute paths that came along inside it as the defect;
+  - issue 157 and issue 157d (three-machine deployment, the database
+    machine): this MySQL moves to its own computer, listening on the
+    network instead of 127.0.0.1, which makes its password (public since
+    January) matter.

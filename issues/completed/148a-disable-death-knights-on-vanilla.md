@@ -209,3 +209,27 @@ the disablement.
   game), or the chosen world's natural starting level for that race?
   (Still open, but belongs to the future re-enable — see "Future Work"
   — not to this disablement issue.)
+
+## What Came After
+
+Added 2026-10-17 (the text above, including its 2026-09-25 correction, is
+left as it was written).
+
+- **Why the premise fell.** This issue disabled death knights because it
+  believed the client hard-codes the Acherus start. Issue 206 (beta's
+  level-1 death knight, completed) had already started death knights at
+  level 1 outside Acherus with no client patch: the start is the server's
+  `playercreateinfo` table. Issue 718 (the death knight sacrifice and an
+  open Acherus) noticed the contradiction and corrected the reasoning
+  here; the disablement itself stands on vanilla, now as a choice rather
+  than a necessity.
+- **Each profile chose differently.** Vanilla keeps C015 (this issue's
+  knob). Basic, derived from vanilla by issue 155, does not take C015 (issue
+  155b, the config gates): it allows stock death knights with two rules
+  in C024, both stock settings (an account needs a level-55 character
+  first, and no death knight bot logs in), and turns random bots off
+  altogether with C023. Buddies are the exception: issue 617b (the buddy
+  selector) gives a death knight's owner death knight buddies.
+- **Still open, as this issue left it:** at what level a re-enabled
+  vanilla death knight would start (its last question), which is now a
+  server-side setting, not a client patch.

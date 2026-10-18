@@ -170,7 +170,7 @@ end
 local function issues_named(text)
     local found, seen = {}, {}
     local function add(id) if id and issue_shaped(id) and not seen[id] then seen[id] = true; found[#found + 1] = id end end
-    for list in text:gmatch("[Ii]ssues? ([%d%w ,/&and]+)") do
+    for list in text:gmatch("[Ii]ssues?%s+([%d%w ,/&%s]+)") do   -- %s: a reference may wrap onto the next line
         for id in list:gmatch("%f[%w](%d%d%d%d?%l?%d?%l?)%f[%W]") do add(id) end
     end
     for id in text:gmatch("%f[%w](%d%d%d%d?%l?%d?%l?)%-%l") do add(id) end
@@ -215,8 +215,16 @@ for _, f in ipairs(issue_files) do
         local after_note = texts[f.rel]:match("\n## What Came After(.*)$") or ""
         local explained = {}
         for _, p in ipairs(paths_named(text)) do
-            local base = p:match("([^/]+)$")
-            if not tracked[p] and (after_note:find(p, 1, true) or after_note:find(base, 1, true)) then
+            -- explained: the note names the path, its file name, or a folder
+            -- it was in ("sql/custom/" explains sql/custom/db_world/x.sql)
+            local base, told = p:match("([^/]+)$"), false
+            if after_note:find(p, 1, true) or after_note:find(base, 1, true) then told = true end
+            local dir = p:match("^(.*)/[^/]+$")
+            while dir and dir:find("/", 1, true) and not told do
+                if after_note:find(dir .. "/", 1, true) then told = true end
+                dir = dir:match("^(.*)/[^/]+$")
+            end
+            if not tracked[p] and told then
                 explained[#explained + 1] = p
             elseif not tracked[p] then
                 local base, moved = p:match("([^/]+)$"), nil
