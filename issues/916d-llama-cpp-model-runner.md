@@ -151,15 +151,36 @@ The W custom client links `libllama` itself (that project's issue 907,
 `/home/ritz/games/azeroth-core/custom-client/issues/907-the-model-in-the-client.md`).
 The server still decides everything; the client only lends its GPU:
 
-- The worker sends the request to that player as addon messages
-  (`Player:SendAddonMessage`, a whisper-to-self chat packet carrying a
-  prefix and a payload). A 3.3.5a chat packet holds about 250 bytes, so
-  a prompt goes in numbered pieces under the prefix `SOREN`, with a
-  request number.
+- The worker sends the request to that player as an addon message
+  (`player:SendAddonMessage(prefix, message, channel, receiver)`, a chat
+  packet in the addon language carrying `prefix .. "\t" .. message`),
+  prefix `SOREN`, with a request number.
 - The client generates and answers the same way; the server hears the
   pieces through ALE's addon-message hook (server event 30,
   `ADDON_EVENT_ON_MESSAGE`), joins them by request number, and hands the
   text to the worker as its result.
+- **The two directions have different limits** (read from AzerothCore's
+  source in `source-beta/`, 2026-10-17):
+  - *Server to client:* ALE's `SendAddonMessage` writes the message's
+    length into the packet and checks nothing, so the server can send a
+    whole prompt in one message. What a client accepts is the client's
+    choice, and the W client is ours (its issue 907 decides).
+  - *Client to server:* `ChatHandler.cpp` drops any chat message longer
+    than **255 bytes** without a word, addon messages included. So a
+    reply longer than one piece is sent in numbered pieces, each with
+    its header inside the 255.
+  - *Flood protection, client to server:* every addon message a client
+    sends less than `ChatFlood.AddonMessageDelay` (1 second) after its
+    previous one adds one to a count; at `ChatFlood.AddonMessageCount`
+    (100) the player is **muted for `ChatFlood.MuteTime` (10 seconds)**,
+    their ordinary chat included (`Player::UpdateSpeakTime`,
+    `PlayerMisc.cpp`). A gap of a second or more resets the count. A
+    one-sentence chat reply fits in one piece, so this is far off for
+    one reply, but a player contributing steadily for minutes, plus
+    their own addons' messages, could reach it. The client paces its
+    replies so a one-second gap falls before each hundredth message;
+    raising the limit on the server instead would loosen it for every
+    player's addons, not just contributors.
 - A player's client is a contributed place, under the same rules as
   916o's companion program: **chat requests only**, never guidance (which
   decides bot strategy); every prompt passes 916o's scrubber first; the
