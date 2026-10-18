@@ -159,10 +159,10 @@ wow-chat-2026/
 │   ├── redownload-source          Re-clone source-{profile}/
 │   ├── keira                      Keira3 database editor
 │   ├── export-html                Render docs as HTML
+│   ├── check-issue-tests          Which issues a test checks, which have none; --run shows pass/fail beside each
+│   ├── test-ale-method-names      Every method and engine function a server script calls exists in the Lua engine (606b's lesson; a quick test)
 │   ├── find-issue-refs            Find cross-references to issue numbers
 │   ├── update-issue-refs          Rewrite issue-number references after a migration
-│   ├── check-issue-tests          Which issues a test checks, which have none; --run shows pass/fail beside each
-│   ├── test-ale-method-names      Every method a server script calls is one the Lua engine has (606b's lesson; a quick test)
 │   └── update-realmlist-ip        Update C011's realm address
 │
 ├── source-{profile}/              AzerothCore source per profile
