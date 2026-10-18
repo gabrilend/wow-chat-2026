@@ -100,7 +100,8 @@ gives every profile its own, so they can run at once.
   Files ending `.disabled`, and folders starting with a dot, are not
   loaded (`scripts/test-lua-unique-names` checks this).
 - The ambush: `scripts/test-ambush` plays it in a toy world; travellers:
-  `scripts/test-travel`; the shared geometry: `scripts/test-movement`.
+  `scripts/test-travel`; treasure (still switched off): `scripts/test-treasure`;
+  the shared geometry: `scripts/test-movement`.
 - The world database steps: `scripts/test-beta-sql-in-ram` applies,
   re-applies and undoes them on a stock world database in RAM.
 

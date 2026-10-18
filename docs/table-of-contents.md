@@ -50,6 +50,8 @@ wow-chat-2026/
 │   ├── archive/                   Historical / one-shot transition docs
 │   │   ├── migration-guide.md     Release-to-beta transition process
 │   │   └── profile-transition-flow.md  Profile system rollout plan
+│   ├── datapaths/                 How each major feature's data moves, in order, and how it came to be
+│   │   └── treasure.md            Beta's items: sold or left in chests, through the pool, into another player's chest (402, 404)
 │   ├── patches/                   C++ patch documentation
 │   │   ├── patch-registry.md      Build patch system (BEGIN/END/CONFIG phases)
 │   │   ├── accuracy-level-cap.md  Monster hit chance level cap

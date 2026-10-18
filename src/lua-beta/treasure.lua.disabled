@@ -11,28 +11,49 @@ package.loaded["treasure"] = Treasure
 -- Each player has a personal queue that injects into their next chest spawn
 -- Despawned chest items return to global pool and redistribute
 
-Treasure.globalPool     = {}  -- items awaiting distribution: { {itemId, itemLevel, count}, ... }
-Treasure.playerQueues   = {}  -- [playerGUID] = { {itemId, count}, ... }
-Treasure.activeChests   = {}  -- [chestGUID] = { queueItems = {}, spawnerGUID = guid, spawnTime = time }
+-- Every item record, wherever it sits (pool, queue, chest, counter), keeps
+-- its level and who sold it: { itemId = number, itemLevel = number,
+-- count = number, seller = low GUID (number) or nil }. The level is what
+-- sends a returned item to the right players again; records that lost it
+-- once sent everything back as level 1 (402, fault 2). The seller is never
+-- given their own sold copy back: they were paid for it, and finding it in
+-- their next chest to sell again would be gold from nothing (found by
+-- scripts/test-treasure, 2026-10-17; issue 404, open question).
+Treasure.globalPool     = {}  -- items awaiting distribution: { {itemId, itemLevel, count, seller}, ... }
+Treasure.playerQueues   = {}  -- [playerGUIDLow] = { {itemId, itemLevel, count, seller}, ... }
+Treasure.activeChests   = {}  -- [chestGUIDLow] = { queueItems = {}, spawnerGUID = guid, spawnTime = time, ... }
+Treasure.counters       = {}  -- [sellerGUIDLow] = sales still possibly in the buyback tab (404), oldest first
+Treasure.leaving        = {}  -- [playerGUIDLow] = true while their logout runs: they get nothing more
 Treasure.distributionIndex = 0  -- mancala rotation counter
 
 -- Level range for item-to-player matching (item level +/- this value matches player)
-local ITEM_LEVEL_RANGE = 3
+local ITEM_LEVEL_RANGE    = 3
+
+-- How long a chest stays before it is taken away and its unlooted queue
+-- items go back to the pool (402, fault 5). Milliseconds.
+local CHEST_LIFETIME_MS   = 300000
+
+-- Selling (404): what is recycled, and the server's buyback tab size.
+local RECYCLE_MIN_QUALITY = 2       -- 0 poor, 1 common, 2 uncommon, 3 rare, 4 epic
+local QUEST_ITEM_CLASS    = 12      -- item class of quest items: never recycled
+local BUYBACK_SLOTS       = 12      -- BUYBACK_SLOT_START 74 .. BUYBACK_SLOT_END 86, Player.h
+local PLAYER_EVENT_ON_SELL_ITEM = 74  -- added to the engine by patch B006
+local GAMEOBJECT_EVENT_ON_REMOVE = 13
 
 -- {{{ Treasure.getOnlinePlayers
--- Get list of online player GUIDs with their levels
+-- The real players who can receive items, in the game's own order (a list,
+-- so the mancala's turn order does not depend on table hashing):
+-- { { player = Player, level = number, guid = number (low GUID) }, ... }.
+-- Bots are left out: they never open a chest, so an item queued for one
+-- left circulation for good (402, fault 1). A player whose logout is
+-- running is left out too: the game still lists them, and an item handed
+-- to them then would go to someone who has already gone.
 function Treasure.getOnlinePlayers()
     local players = {}
-    -- GetPlayersInWorld returns all online players
-    local worldPlayers = GetPlayersInWorld()
-    if worldPlayers then
-        for _, player in ipairs(worldPlayers) do
-            local guid = player:GetGUIDLow()
-            players[guid] = {
-                player = player,
-                level  = player:GetLevel(),
-                guid   = guid,
-            }
+    for _, player in ipairs(GetPlayersInWorld() or {}) do
+        local guid = player:GetGUIDLow()
+        if not player:IsBot() and not Treasure.leaving[guid] then
+            players[#players + 1] = { player = player, level = player:GetLevel(), guid = guid }
         end
     end
     return players
@@ -41,68 +62,54 @@ end -- }}}
 -- {{{ Treasure.findEligiblePlayer
 -- Find a player whose level matches the item level using mancala distribution
 -- Prefers players who have received fewer items (fairer distribution)
--- Returns playerGUID or nil if no eligible players
-function Treasure.findEligiblePlayer(itemLevel)
-    local players = Treasure.getOnlinePlayers()
+-- Returns the chosen player's online-list entry ({ player, level, guid }),
+-- or nil if nobody fits. `seller` (low GUID or nil) is never chosen.
+function Treasure.findEligiblePlayer(itemLevel, seller)
     local eligible = {}
 
-    for guid, info in pairs(players) do
-        local levelDiff = math.abs(info.level - itemLevel)
-        if levelDiff <= ITEM_LEVEL_RANGE then
-            -- Count items already in this player's queue
-            local queueSize = Treasure.playerQueues[guid] and #Treasure.playerQueues[guid] or 0
-            table.insert(eligible, { guid = guid, queueSize = queueSize })
+    -- players within range of the item's level, with their queue lengths
+    for _, info in ipairs(Treasure.getOnlinePlayers()) do
+        if math.abs(info.level - itemLevel) <= ITEM_LEVEL_RANGE and info.guid ~= seller then
+            local queue = Treasure.playerQueues[info.guid]
+            eligible[#eligible + 1] = { info = info, queueSize = queue and #queue or 0 }
         end
     end
 
     if #eligible == 0 then
-        return nil
+        return nil  -- nobody fits: the caller keeps the item in the global pool
     end
 
-    -- Sort by queue size (ascending) - players with fewer items first
-    table.sort(eligible, function(a, b) return a.queueSize < b.queueSize end)
-
-    -- Find all players tied for lowest queue size
+    -- the shortest queue wins; among those tied, take turns (the mancala).
+    -- A stable minimum, not a sort: table.sort is not stable, and the turn
+    -- order among tied players must stay the game's own order
     local minQueueSize = eligible[1].queueSize
+    for _, entry in ipairs(eligible) do minQueueSize = math.min(minQueueSize, entry.queueSize) end
     local tied = {}
     for _, entry in ipairs(eligible) do
-        if entry.queueSize == minQueueSize then
-            table.insert(tied, entry.guid)
-        end
+        if entry.queueSize == minQueueSize then tied[#tied + 1] = entry.info end
     end
 
-    -- Mancala rotation among tied players
     Treasure.distributionIndex = Treasure.distributionIndex + 1
-    local selectedIdx = ((Treasure.distributionIndex - 1) % #tied) + 1
-    return tied[selectedIdx]
+    return tied[((Treasure.distributionIndex - 1) % #tied) + 1]
 end -- }}}
 
 -- {{{ Treasure.distributeToQueue
 -- Distribute a single item to an eligible player's queue
 -- Returns true if distributed, false if no eligible player
-function Treasure.distributeToQueue(itemId, itemLevel, count)
-    local targetGUID = Treasure.findEligiblePlayer(itemLevel)
+function Treasure.distributeToQueue(itemId, itemLevel, count, seller)
+    local target = Treasure.findEligiblePlayer(itemLevel, seller)
 
-    if not targetGUID then
-        -- No eligible player - item stays in global pool
-        return false
+    if not target then
+        return false  -- no eligible player: the caller keeps it in the global pool
     end
 
-    -- Initialize queue if needed
-    if not Treasure.playerQueues[targetGUID] then
-        Treasure.playerQueues[targetGUID] = {}
-    end
+    -- the player object comes with the choice: looking it up again by the
+    -- low GUID failed, because the lookup takes the full one (402, fault 3)
+    local queue = Treasure.playerQueues[target.guid] or {}
+    Treasure.playerQueues[target.guid] = queue
+    queue[#queue + 1] = { itemId = itemId, itemLevel = itemLevel, count = count or 1, seller = seller }
 
-    -- Add to player's queue
-    table.insert(Treasure.playerQueues[targetGUID], {
-        itemId = itemId,
-        count  = count or 1,
-    })
-
-    local player = GetPlayerByGUID(targetGUID)
-    local playerName = player and player:GetName() or "unknown"
-    print("[Treasure] Queued item " .. itemId .. " (lvl " .. itemLevel .. ") for " .. playerName)
-
+    print("[Treasure] Queued item " .. itemId .. " (lvl " .. itemLevel .. ") for " .. target.player:GetName())
     return true
 end -- }}}
 
@@ -113,7 +120,7 @@ function Treasure.processGlobalPool()
     local remaining = {}
 
     for _, item in ipairs(Treasure.globalPool) do
-        local distributed = Treasure.distributeToQueue(item.itemId, item.itemLevel, item.count)
+        local distributed = Treasure.distributeToQueue(item.itemId, item.itemLevel, item.count, item.seller)
         if not distributed then
             -- Keep in global pool for later
             table.insert(remaining, item)
@@ -128,13 +135,14 @@ function Treasure.processGlobalPool()
 end -- }}}
 
 -- {{{ Treasure.addToPool
--- Add an item to the system - immediately tries to distribute to a player queue
-function Treasure.addToPool(itemId, itemLevel, count)
+-- Add an item to the system - immediately tries to distribute to a player queue.
+-- `seller` (low GUID or nil): the player who sold this copy, never given it back.
+function Treasure.addToPool(itemId, itemLevel, count, seller)
     count = count or 1
-    itemLevel = itemLevel or 1  -- default to level 1 if not specified
+    itemLevel = itemLevel or 1  -- default to level 1 if not specified (the #pooladd test command)
 
     -- Try to distribute immediately
-    local distributed = Treasure.distributeToQueue(itemId, itemLevel, count)
+    local distributed = Treasure.distributeToQueue(itemId, itemLevel, count, seller)
 
     if not distributed then
         -- No eligible player online - add to global pool for later
@@ -142,6 +150,7 @@ function Treasure.addToPool(itemId, itemLevel, count)
             itemId    = itemId,
             itemLevel = itemLevel,
             count     = count,
+            seller    = seller,
         })
         print("[Treasure] Item " .. itemId .. " (lvl " .. itemLevel .. ") added to global pool (no eligible players)")
     end
@@ -166,8 +175,8 @@ function Treasure.returnToPool(chestGUID)
 
     local returned = 0
     for _, item in ipairs(chestData.queueItems) do
-        -- Re-add to pool (will redistribute immediately)
-        Treasure.addToPool(item.itemId, item.itemLevel or 1, item.count)
+        -- Re-add to pool (will redistribute immediately), at its own level
+        Treasure.addToPool(item.itemId, item.itemLevel, item.count, item.seller)
         returned = returned + 1
     end
 
@@ -185,6 +194,27 @@ function Treasure.returnToPool(chestGUID)
     end
 
     Treasure.activeChests[chestGUID] = nil
+end -- }}}
+
+-- {{{ Treasure.onChestRemove
+-- The game's removal event for a treasure chest entry: the chest's
+-- lifetime ran out (Treasure.expireChest), its summoner logged out (the
+-- game removes a player's summoned objects with them), or anything else
+-- took it away. Its unlooted queue items go back to the pool (402,
+-- fault 5: the return was written but nothing called it).
+function Treasure.onChestRemove(_event, chest)
+    if Treasure.activeChests[chest:GetGUIDLow()] then
+        Treasure.returnToPool(chest:GetGUIDLow())
+    end
+end -- }}}
+
+-- {{{ Treasure.expireChest
+-- The chest's own timer (registered on the chest, so it ends with the
+-- chest): take it out of the world, which fires Treasure.onChestRemove.
+-- RemoveFromWorld rather than Despawn: Despawn only marks a chest
+-- deactivated and the game may bring it back.
+function Treasure.expireChest(_eventId, _delay, _repeats, chest)
+    chest:RemoveFromWorld(false)
 end -- }}}
 -- }}}
 
@@ -252,10 +282,17 @@ function Treasure.spawnTreasure(player)
     local chestQueue      = player:GetData("treasureChests")
     local next            = next
 
+    -- an empty chest list is refilled once from the player's level. If it
+    -- is still empty, no chest fits that level: say so and spawn nothing.
+    -- (This used to call itself after refilling, which never ended for
+    -- such a player: 402, fault 4.)
     if chestQueue == nil or next(chestQueue) == nil then
         Treasure.regenerateQueue(player)
-        Treasure.spawnTreasure(player)
-        return
+        chestQueue = player:GetData("treasureChests")
+        if next(chestQueue) == nil then
+            print("[Treasure] No chest fits level " .. player:GetLevel() .. " (" .. player:GetName() .. "); none spawned")
+            return
+        end
     end
 
     local chestID   = Treasure.getRandomChestFromQueue(player:GetGUID())
@@ -306,6 +343,9 @@ function Treasure.spawnTreasure(player)
         mapId        = chest:GetMapId(),
         instanceId   = chest:GetInstanceId(),
     }
+
+    -- the chest's lifetime, on the chest itself so the timer ends with it
+    chest:RegisterEvent(Treasure.expireChest, CHEST_LIFETIME_MS, 1)
 
     print("[Treasure] Chest spawned with " .. #queuedItems .. " pending items (holder will see empty)")
 end -- }}}
@@ -422,6 +462,7 @@ end -- }}}
 -- {{{ Treasure.setupTreasure
 -- Called on login to set up chest queue and try distributing global pool items
 function Treasure.setupTreasure(_event, player)
+    Treasure.leaving[player:GetGUIDLow()] = nil  -- back: they can receive items again
     local playerQueue = {}
     local playerLevel = player:GetLevel()
 
@@ -439,7 +480,9 @@ end -- }}}
 -- can be used to either create a new queue from scratch
 -- or to insert objects into a currently existing queue - quest items?
 function Treasure.regenerateQueue(player)
-    local playerQueue = player:GetData("treasureChests")
+    -- the login handler gives every player a list; a player has none only
+    -- when this script was (re)loaded after they logged in, so start one
+    local playerQueue = player:GetData("treasureChests") or {}
     local playerLevel = player:GetLevel()
 
     for i, chest in pairs(Treasure.chests) do
@@ -460,7 +503,12 @@ end
 
 
 -- {{{ Treasure.onLootItem
--- Track items looted from chests - remove from chest tracking so they don't recycle
+-- Track items looted from chests - remove from chest tracking so they don't recycle.
+-- The game's loot event does not say where the item came from, so this
+-- strikes the first matching item from ANY chest's record, even for loot
+-- from a creature. Such an item then never returns to the pool: lost from
+-- circulation, never duplicated. Known and left (402, fault 6); a fix
+-- needs the loot source on the event.
 function Treasure.onLootItem(event, player, item, count)
     local itemId   = item:GetEntry()
     local itemName = item:GetName()
@@ -482,26 +530,127 @@ function Treasure.onLootItem(event, player, item, count)
 end -- }}}
 
 -- {{{ Treasure.onPlayerLogout
--- Clean up player queue when they log out (items return to global pool)
+-- A player leaving: mark them as leaving first (the game still lists them
+-- while this runs, and nothing handed out below may go to them), settle
+-- their sales counter (404: whatever is left was deleted by the logout
+-- save), then hand their queue back to the pool for others. The mark is
+-- cleared when they log in again (Treasure.setupTreasure).
 function Treasure.onPlayerLogout(event, player)
     local playerGUID = player:GetGUIDLow()
-    local queue      = Treasure.playerQueues[playerGUID]
+    Treasure.leaving[playerGUID] = true
 
+    Treasure.settleCounter(player, true)
+
+    local queue = Treasure.playerQueues[playerGUID]
     if queue and #queue > 0 then
         print("[Treasure] Player " .. player:GetName() .. " logged out with " .. #queue .. " queued items, returning to pool")
         for _, item in ipairs(queue) do
-            -- Return to global pool (will be redistributed to other players)
-            table.insert(Treasure.globalPool, {
-                itemId    = item.itemId,
-                itemLevel = item.itemLevel or player:GetLevel(),  -- estimate level from player
-                count     = item.count,
-            })
+            -- each queue entry kept its own level (402, fault 2)
+            Treasure.globalPool[#Treasure.globalPool + 1] = { itemId = item.itemId, itemLevel = item.itemLevel, count = item.count, seller = item.seller }
         end
-        Treasure.playerQueues[playerGUID] = nil
-
-        -- Try to redistribute to remaining players
-        Treasure.processGlobalPool()
     end
+    Treasure.playerQueues[playerGUID] = nil
+
+    -- try to give everything waiting to the players still here
+    Treasure.processGlobalPool()
+end -- }}}
+
+-- {{{ Treasure.saleLevel
+-- The level an item is matched to players by (404): its required level,
+-- or its item level when it has none (much low-level gear has none).
+function Treasure.saleLevel(item)
+    local required = item:GetRequiredLevel()
+    if required > 0 then return required end
+    return item:GetItemLevel()
+end -- }}}
+
+-- {{{ Treasure.isRecycled
+-- Whether a sold item enters the pool (404). Uncommon or better, so the
+-- pool does not fill with vendor junk; never quest items, which would
+-- break someone's quest; only items that do not stack, because a bought-
+-- back item that merges into a stack loses the GUID the counter knows it
+-- by, and would then be counted as gone and enter the pool too.
+function Treasure.isRecycled(item)
+    return item:GetQuality()       >= RECYCLE_MIN_QUALITY
+       and item:GetClass()         ~= QUEST_ITEM_CLASS
+       and item:GetMaxStackCount() == 1
+end -- }}}
+
+-- {{{ local function release
+-- A counter entry that can no longer come back: into the pool if it is a
+-- recycled kind, otherwise simply gone, as an ordinary sale is.
+local function release(entry)
+    if entry.recycle then
+        Treasure.addToPool(entry.itemId, entry.itemLevel, entry.count, entry.seller)
+    end
+end
+-- }}}
+
+-- {{{ Treasure.settleCounter
+-- The counter (404) is a seller's sales, oldest first, that may still be
+-- in their buyback tab: { guid = full item GUID, itemId, itemLevel, count,
+-- recycle = boolean }. Every sale is on it, recycled or not, because every
+-- sale takes one of the tab's 12 slots and pushes the others along. What
+-- the server does, read from its source: the tab holds 12 and a 13th sale
+-- deletes the oldest; buying back returns the same item (same GUID) to the
+-- bags; the tab is not saved, so logging out deletes what is in it. Lua can
+-- see none of the tab itself, only the bags.
+--
+-- So: an entry whose GUID is back in the seller's bags was bought back and
+-- leaves without entering the pool. Past 12 entries, the oldest was pushed
+-- out and deleted: released. At logout, all the rest were deleted: released.
+function Treasure.settleCounter(player, atLogout)
+    local guid    = player:GetGUIDLow()
+    local counter = Treasure.counters[guid]
+    if not counter then return end
+
+    -- bought back: in the bags again under the same GUID
+    local kept = {}
+    for _, entry in ipairs(counter) do
+        if player:GetItemByGUID(entry.guid) then
+            print("[Treasure] " .. player:GetName() .. " bought back item " .. entry.itemId .. "; it stays theirs")
+        else
+            kept[#kept + 1] = entry
+        end
+    end
+
+    -- pushed out of the tab, or deleted with it at logout
+    local limit = atLogout and 0 or BUYBACK_SLOTS
+    while #kept > limit do
+        release(table.remove(kept, 1))
+    end
+
+    Treasure.counters[guid] = (#kept > 0) and kept or nil
+end -- }}}
+
+-- {{{ Treasure.onSellItem
+-- The sell event (patch B006, event 74), fired just before the server puts
+-- the sold item in the seller's buyback tab. The sale goes on the counter
+-- rather than straight into the pool, because the seller can still buy it
+-- back (see Treasure.settleCounter). Bots' sales count as players' do.
+function Treasure.onSellItem(_event, player, item, _vendor, count)
+    local guid    = player:GetGUIDLow()
+    local counter = Treasure.counters[guid] or {}
+    Treasure.counters[guid] = counter
+
+    -- the server has already taken the item out of the bags when this fires
+    -- (RemoveItem, then the buyback slot: HandleSellItemOpcode), so it is
+    -- never mistaken for bought back below. An item sold, bought back and
+    -- sold again has the same GUID: its old entry is the same thing, and
+    -- goes, or it would be released twice
+    for i = #counter, 1, -1 do
+        if counter[i].guid == item:GetGUID() then table.remove(counter, i) end
+    end
+
+    counter[#counter + 1] = {
+        guid      = item:GetGUID(),
+        itemId    = item:GetEntry(),
+        itemLevel = Treasure.saleLevel(item),
+        count     = count,
+        recycle   = Treasure.isRecycled(item),
+        seller    = guid,
+    }
+    Treasure.settleCounter(player, false)
 end -- }}}
 
 -- {{{ Treasure.handleChat
@@ -562,6 +711,12 @@ RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, Treasure.setupTreasure)
 RegisterPlayerEvent(PLAYER_EVENT_ON_LOGOUT, Treasure.onPlayerLogout)
 RegisterPlayerEvent(PLAYER_EVENT_ON_LOOT_ITEM, Treasure.onLootItem)
 RegisterPlayerEvent(PLAYER_EVENT_ON_CHAT, Treasure.handleChat)
+RegisterPlayerEvent(PLAYER_EVENT_ON_SELL_ITEM, Treasure.onSellItem)
+
+-- the removal event is registered per object entry, so once per chest kind
+for _, chest in ipairs(Treasure.chests) do
+    RegisterGameObjectEvent(chest.id, GAMEOBJECT_EVENT_ON_REMOVE, Treasure.onChestRemove)
+end
 
 print("[Treasure] Treasure system loaded with per-player queue distribution")
 

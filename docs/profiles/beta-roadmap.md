@@ -110,10 +110,15 @@ work needs, and treasure is fed by the selling that merchants allow.
 
 ### 5. Treasure
 
-- `treasure.lua.disabled` back on.
-- **402** shared chest loot (partial: pool built, per-player queues
-  needed), **404** sold items feed the treasure pool (partial; the sell
-  hook B006 is in beta's list), **409** empty loot chest templates (E016
+- `treasure.lua.disabled` back on — **waits on the owner**: a chest shows
+  its first opener nothing (issue 200, open question 3).
+- **402** shared chest loot and **404** sold items feed the treasure pool
+  (2026-10-17, in progress): the circulation is written and checked in a
+  toy world by `scripts/test-treasure` (bots and leaving players given
+  nothing, levels kept, unlooted chest items returned when a chest
+  expires or its owner leaves, a sold item held while it can still be
+  bought back, a seller never given their own copy back). Still open:
+  the money a recycled sale pays (404). **409** empty loot chest templates (E016
   makes them), **407** chest vulnerability, **408** several players at one
   chest, **410** hearthstones bound to chests, **411** no zero-value
   duplicates.
