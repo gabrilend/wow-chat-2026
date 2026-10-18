@@ -116,7 +116,12 @@ for f in pairs(tracked) do
     local c = f:match("^config/patches/(C%d%d%d%a?)[%-%._]")
     if c then patch_state[c] = "live" end
 end
-for e in (read(DIR .. "/patches/E-patches.sh") or ""):gmatch("\n# (E%d%d%d%a?):") do patch_state[e] = "live" end
+-- E steps are written two ways in E-patches.sh: a "# E004:" header, or
+-- only as their functions, "patch_E008_..." (first read from headers
+-- alone, which reported E008 as gone while it ran on two profiles)
+local esrc = read(DIR .. "/patches/E-patches.sh") or ""
+for e in esrc:gmatch("\n# (E%d%d%d%a?):") do patch_state[e] = "live" end
+for e in esrc:gmatch("\npatch_(E%d%d%d%a?)_[%w_]*%(%)") do patch_state[e] = "live" end
 -- }}}
 
 -- {{{ reading one issue's references
