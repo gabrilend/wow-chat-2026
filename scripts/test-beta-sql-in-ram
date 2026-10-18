@@ -1,0 +1,259 @@
+#!/usr/bin/env bash
+# test-beta-sql-in-ram - run the beta profile's world database steps against
+# a throwaway MySQL that lives entirely in RAM, undo them, and check the undo
+# put everything back.
+#
+# For a general audience: beta changes the game world with SQL files run at
+# install time (death knights from level 1, quest spells taught by trainers,
+# each travelling trainer teaching its own slice of levels, the world
+# emptied of creatures, and so on). Writing SQL against a schema from memory
+# goes wrong when upstream renames tables: in October 2026 three of beta's
+# steps were found writing a table the server had stopped reading. This
+# builds a private copy of the stock world database in /dev/shm (RAM, no
+# network port), brought up to date the way the real server does it, then
+# for each beta step: applies it, applies it again (it must be safe to
+# repeat), and checks what it should have done; then undoes every step in
+# reverse order with the undo the install script itself writes, and checks
+# that the tables the steps touch are exactly as before. The project's own
+# MySQL is never touched, and everything is deleted afterwards unless you
+# ask to keep it.
+#
+# The undo forms are produced by the install script's real functions
+# (patches/E-patches.sh, sourced with its database registration switched
+# off) into a scratch copy of the SQL folders, so the test checks the undo
+# that an install would actually run.
+#
+# Usage: scripts/test-beta-sql-in-ram [PROJECT_DIR] [--source SOURCE_TREE] [--keep]
+#   PROJECT_DIR defaults to the hard-coded path below
+#   --source   the AzerothCore tree whose data/sql holds the stock database
+#              (default PROJECT_DIR/source-beta; a separate checkout of this
+#              project has none, so name the main one's)
+#   --keep     leave the RAM server running and print how to reach it
+#
+# Needs ~3 GB free in /dev/shm and a few minutes. Exit status: 0 if every
+# step ran and every check passed.
+
+set -o pipefail
+
+DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+SOURCE_TREE=""
+KEEP=false
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --keep)   KEEP=true ;;
+        --source) SOURCE_TREE="$2"; shift ;;
+        *)        DIR="$1" ;;
+    esac
+    shift
+done
+[[ -n "${SOURCE_TREE}" ]] || SOURCE_TREE="${DIR}/source-beta"
+
+# {{{ paths
+BIN="${DIR}/mysql/installed-files/bin"
+# a separate checkout has no MySQL build of its own: use the one beside the
+# source tree (the main project's)
+[[ -x "${BIN}/mysqld" ]] || BIN="$(dirname "${SOURCE_TREE}")/mysql/installed-files/bin"
+SRC="${SOURCE_TREE}/data/sql"
+WORK="/dev/shm/$(basename "${DIR}")/beta-sql-in-ram"
+DATA="${WORK}/data"
+SOCK="${WORK}/mysql.sock"
+LOG="${WORK}/steps.log"
+STAGE="${WORK}/project"           # scratch copy the install functions write into
+WORLD="acore_world"
+for f in "${BIN}/mysqld" "${BIN}/mysql"; do
+    [[ -x "${f}" ]] || { echo "ERROR: ${f} missing (the project's MySQL build; looked beside PROJECT_DIR and the source tree)"; exit 1; }
+done
+[[ -d "${SRC}/base/db_world" ]] || { echo "ERROR: no stock world SQL at ${SRC}/base/db_world (pass --source <tree>)"; exit 1; }
+# }}}
+
+# {{{ helpers
+mysql_run() {          # mysql_run DB  (SQL on stdin)
+    "${BIN}/mysql" --no-defaults --socket="${SOCK}" -uroot --default-character-set=utf8mb4 "$@"
+}
+value() {              # value "SQL"  — one value, no header
+    echo "$1" | mysql_run "${WORLD}" -N -s 2>>"${LOG}"
+}
+step() {               # step "what" FILE  — run one SQL file, stop on error
+    local what="$1" file="$2"
+    if mysql_run "${WORLD}" < "${file}" >> "${LOG}" 2>&1; then
+        printf '  [✓] %s\n' "${what}"
+    else
+        printf '  [✗] %s — %s\n' "${what}" "${file#${WORK}/}"
+        tail -5 "${LOG}" | sed 's/^/        /'
+        FAILED=$((FAILED + 1))
+    fi
+}
+expect() {             # expect "what" "SQL giving one value" WANTED
+    local got
+    got="$(value "$2")"
+    if [[ "${got}" == "$3" ]]; then
+        printf '  [✓] %s\n' "$1"
+    else
+        printf '  [✗] %s — got %s, wanted %s\n' "$1" "${got:-nothing}" "$3"
+        FAILED=$((FAILED + 1))
+    fi
+}
+stop_server() {        # wait for the process, not the socket (see test-basic-sql-in-ram)
+    [[ -f "${WORK}/mysqld.pid" ]] || return 0
+    local pid
+    pid="$(cat "${WORK}/mysqld.pid")"
+    kill "${pid}" 2>/dev/null || return 0
+    for _ in $(seq 120); do kill -0 "${pid}" 2>/dev/null || return 0; sleep 1; done
+    echo "WARNING: RAM server ${pid} did not stop in 120 s; killing it"
+    kill -9 "${pid}" 2>/dev/null
+    sleep 1
+}
+FAILED=0
+# }}}
+
+# {{{ start a private server in RAM
+stop_server
+rm -rf "${WORK}"
+mkdir -p "${DATA}"
+: > "${LOG}"
+echo "Starting a private MySQL in ${WORK} (no network port)..."
+"${BIN}/mysqld" --no-defaults --initialize-insecure --datadir="${DATA}" >> "${LOG}" 2>&1 \
+    || { echo "ERROR: could not initialize the RAM datadir; see ${LOG}"; exit 1; }
+"${BIN}/mysqld" --no-defaults --datadir="${DATA}" --socket="${SOCK}" --skip-networking \
+    --pid-file="${WORK}/mysqld.pid" --log-error="${WORK}/mysqld.err" --skip-log-bin \
+    --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci \
+    --innodb-buffer-pool-size=1G --innodb-flush-log-at-trx-commit=2 \
+    --log-bin-trust-function-creators=1 &
+for _ in $(seq 60); do [[ -S "${SOCK}" ]] && break; sleep 1; done
+[[ -S "${SOCK}" ]] || { echo "ERROR: server did not start; see ${WORK}/mysqld.err"; exit 1; }
+[[ "${KEEP}" == "true" ]] || trap 'stop_server; rm -rf "${WORK}"' EXIT
+# }}}
+
+# {{{ the stock world database, updated the way the server's updater does it
+echo "Loading the stock world database (a few minutes)..."
+echo "CREATE DATABASE \`${WORLD}\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" | mysql_run mysql
+n=0
+for f in "${SRC}/base/db_world"/*.sql; do
+    mysql_run "${WORLD}" < "${f}" >> "${LOG}" 2>&1 || { echo "  [✗] base: $(basename "${f}")"; tail -3 "${LOG}"; exit 1; }
+    n=$((n + 1))
+done
+applied=$(echo "SELECT name FROM updates;" | mysql_run "${WORLD}" -N 2>>"${LOG}")
+u=0
+for f in "${SRC}/updates/db_world"/*.sql "${SRC}/custom/db_world"/*.sql; do
+    [[ -f "${f}" ]] || continue
+    grep -qxF "$(basename "${f}")" <<< "${applied}" && continue
+    mysql_run "${WORLD}" < "${f}" >> "${LOG}" 2>&1 || { echo "  [✗] update: $(basename "${f}")"; tail -3 "${LOG}"; exit 1; }
+    u=$((u + 1))
+done
+echo "  ${WORLD}: ${n} base files, ${u} updates applied on top"
+# }}}
+
+# {{{ the install script's own apply and undo forms, into a scratch copy
+# Each step's function copies (or, for older steps, writes) its SQL into
+# sql/beta/db_world/<file>.sql; that file is what the server's updater would
+# run. The database registration is replaced by a no-op so nothing reaches
+# the project's MySQL.
+OWN_DIR="${DIR}"
+mkdir -p "${STAGE}/sql"
+cp -r "${DIR}/sql/beta" "${STAGE}/sql/"
+rm -rf "${STAGE}/sql/beta/db_world" "${STAGE}/sql/beta/db_playerbots"
+form() {               # form apply|revert E0NN function_suffix FILE_BASE  → path of the produced SQL
+    local which="$1" id="$2" fn="$3" base="$4"
+    (
+        DIR="${STAGE}"; PROFILE="beta"
+        source "${OWN_DIR}/patches/E-patches.sh" >/dev/null 2>&1
+        _register_with_updatefetcher() { mkdir -p "$1"; }
+        rm -f "${STAGE}/sql/beta/db_world/${base}.sql"
+        if [[ "${which}" == "apply" ]]; then "patch_${id}_${fn}"; else "unpatch_${id}_${fn}"; fi
+    ) >> "${LOG}" 2>&1
+    local out="${STAGE}/sql/beta/db_world/${base}.sql"
+    cp "${out}" "${WORK}/${id}-${which}.sql" 2>/dev/null || { echo "  [✗] ${id}: the install script produced no ${which} form"; FAILED=$((FAILED + 1)); return 1; }
+    echo "${WORK}/${id}-${which}.sql"
+}
+# id, function suffix, file base, what it does
+STEPS=(
+
+    "E011|beta_dk_class_system|11-dk-class-system|death knights from level 1, their kit"
+    "E013|beta_quest_spells_to_trainers|13-quest-spells-to-trainers|quest spells taught by trainers"
+    "E014|beta_trainer_spell_level_cap|14-trainer-spell-level-cap|each travelling trainer its own slice"
+    "E015|beta_class_selector_npcs|15-class-selector-npcs|class selector NPC types"
+    "E016|beta_empty_loot_chests|16-empty-loot-chests|empty loot chest types"
+    "E012|beta_drop_creatures_keep_essential|12-drop-creatures-keep-essential|world emptied but critters and spirit healers"
+)
+# E012 runs last: it deletes spawns, and nothing after it here needs them.
+# E005 (death knight stats into player_levelstats) left beta's list on
+# 2026-10-17: the server no longer reads that table.
+# E017 (playerbots database) is not covered: this builds the world only.
+# }}}
+
+# {{{ the tables the steps touch, checksummed before
+TOUCHED="trainer, trainer_spell, creature_default_trainer, npc_trainer, player_class_stats, playercreateinfo_spell_custom, playercreateinfo_item, creature_template, creature_template_model, creature, gameobject_template, gameobject, gameobject_loot_template"
+stock_sum=$(echo "CHECKSUM TABLE ${TOUCHED};" | mysql_run "${WORLD}" -N 2>>"${LOG}")
+stock_lessons=$(value "SELECT COUNT(*) FROM trainer_spell")
+stock_dk_list=$(value "SELECT COUNT(*) FROM trainer_spell WHERE TrainerId = 13")
+# }}}
+
+# {{{ apply, twice
+echo "Apply:"
+for s in "${STEPS[@]}"; do
+    IFS='|' read -r id fn base what <<< "${s}"
+    f="$(form apply "${id}" "${fn}" "${base}")" && step "${id} ${what}" "${f}"
+done
+echo "Apply again (each step must be safe to repeat):"
+for s in "${STEPS[@]}"; do
+    IFS='|' read -r id fn base what <<< "${s}"
+    step "${id} again" "${WORK}/${id}-apply.sql"
+done
+# }}}
+
+# {{{ what the trainer steps should have done
+echo "Checks:"
+expect "the three death knight trainers point at the kit (2060000)" \
+    "SELECT COUNT(*) FROM creature_default_trainer WHERE CreatureId IN (29194,29195,29196) AND TrainerId = 2060000" 3
+expect "the kit holds its 16 lessons, levels 2-20" \
+    "SELECT COUNT(*) FROM trainer_spell WHERE TrainerId = 2060000 AND ReqLevel BETWEEN 2 AND 20" 16
+expect "the game's death knight list (13) is unchanged in size" \
+    "SELECT COUNT(*) FROM trainer_spell WHERE TrainerId = 13" "${stock_dk_list}"
+expect "Defensive Stance (71) is on every warrior class list" \
+    "SELECT COUNT(*) FROM trainer t LEFT JOIN trainer_spell ts ON ts.TrainerId = t.Id AND ts.SpellId = 71 WHERE t.Type = 0 AND t.Requirement = 1 AND t.Id < 1000000 AND ts.SpellId IS NULL" 0
+expect "creature 3354 (horde warrior, levels 1-2) points at its own copy" \
+    "SELECT TrainerId FROM creature_default_trainer WHERE CreatureId = 3354" 1003354
+expect "that copy teaches nothing above level 2" \
+    "SELECT COUNT(*) FROM trainer_spell WHERE TrainerId = 1003354 AND ReqLevel > 2" 0
+expect "that copy teaches something" \
+    "SELECT COUNT(*) > 0 FROM trainer_spell WHERE TrainerId = 1003354" 1
+expect "every capped copy teaches at least one lesson" \
+    "SELECT COUNT(*) FROM trainer t WHERE t.Id BETWEEN 1000000 AND 1999999 AND NOT EXISTS (SELECT 1 FROM trainer_spell ts WHERE ts.TrainerId = t.Id)" 0
+expect "126 travelling trainers point at their own copies" \
+    "SELECT COUNT(*) FROM creature_default_trainer WHERE TrainerId BETWEEN 1000000 AND 1999999" 126
+expect "the alliance hunter trainer for levels 8-10 (17505) teaches Call Pet (level 10)" \
+    "SELECT COUNT(*) FROM trainer_spell WHERE TrainerId = 1017505 AND SpellId = 883" 1
+expect "the game's death knight start row (no Scourgestone) is still there" \
+    "SELECT COUNT(*) FROM playercreateinfo_item WHERE race = 0 AND class = 6 AND itemid = 40582" 1
+# }}}
+
+# {{{ undo, in reverse order, and compare
+echo "Undo (reverse order):"
+for (( i=${#STEPS[@]}-1; i>=0; i-- )); do
+    IFS='|' read -r id fn base what <<< "${STEPS[$i]}"
+    f="$(form revert "${id}" "${fn}" "${base}")" && step "${id} undo" "${f}"
+done
+reverted_sum=$(echo "CHECKSUM TABLE ${TOUCHED};" | mysql_run "${WORLD}" -N 2>>"${LOG}")
+if [[ "${stock_sum}" == "${reverted_sum}" ]]; then
+    echo "  [✓] after the undo, every touched table checksums exactly as before"
+else
+    echo "  [✗] after the undo, these tables differ from before the apply:"
+    diff <(echo "${stock_sum}") <(echo "${reverted_sum}") | sed 's/^/      /'
+    FAILED=$((FAILED + 1))
+fi
+expect "the lesson count is the stock count again" "SELECT COUNT(*) FROM trainer_spell" "${stock_lessons}"
+leftover=$(value "SELECT GROUP_CONCAT(table_name) FROM information_schema.tables WHERE table_schema = '${WORLD}' AND table_name LIKE 'wow\\_chat\\_%'")
+if [[ -z "${leftover}" || "${leftover}" == "NULL" ]]; then
+    echo "  [✓] no saved-copy tables are left behind"
+else
+    echo "  [✗] tables left behind after the undo: ${leftover}"
+    FAILED=$((FAILED + 1))
+fi
+# }}}
+
+echo "Failed: ${FAILED}. Full log: ${LOG}"
+if [[ "${KEEP}" == "true" ]]; then
+    echo "Kept running. Reach it with: ${BIN}/mysql --no-defaults --socket=${SOCK} -uroot ${WORLD}"
+    echo "Stop it with: kill \$(cat ${WORK}/mysqld.pid), wait until that process is gone, then rm -rf ${WORK}"
+fi
+[[ "${FAILED}" -eq 0 ]]
