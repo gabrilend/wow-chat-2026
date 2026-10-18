@@ -18,7 +18,15 @@ each "border" between one or more objective".
 
 ## Current Behavior
 
-Not built. No battleground has a recorded heading, and no objective
+**On paper, 2026-10-17** (homework branch): `Front.axis`, `Front.to_world`
+and `Front.borders` (`src/lua-basic/lib/battleground-front.lua`), checked by
+`scripts/test-battleground-front` (heading 0 pushes north; Alterac
+Valley's Alliance at heading pi pushes south; neighbours held by one side
+share no border; an unknown neighbour is an error). The paper matches
+run on one front only; no battleground's heading or objectives are
+written down yet, and borders are not recomputed on capture.
+
+Before this, not built. No battleground has a recorded heading, and no objective
 knows its neighbours.
 
 ## Intended Behavior

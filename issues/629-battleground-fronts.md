@@ -53,9 +53,43 @@ Verbatim, 2026-10-17:
 > to the database if we want, if we think that'll make it easier to send
 > them along.
 
+Said by the owner later the same day, while these rules were being drawn
+on paper (verbatim, 2026-10-17):
+
+> human brains cannot compute recursion
+
 ## Current Behavior
 
-Not built. In a battleground, buddies (617i) and stand-ins (planned,
+**On paper, 2026-10-17** (the homework branch, not yet merged; no server
+code). `src/lua-basic/lib/battleground-front.lua` holds every rule below
+as plain arithmetic on one front: the push axis and the borders between
+objectives, a deck per bot per fork (two branches: a switch), sections
+and the fewest-allies pick, the help rule with both readings of question
+2 behind a switch, each bot keeping its own place across its section,
+ranged shelter, melee backsteps, breakthroughs that stop to heal, and a
+chase limit. `scripts/test-battleground-front` checks each rule and whole
+matches (the same seed repeats exactly; a full line stays within the
+help gap; no melee bot on the line ever gives ground faster than a
+backstep). `scripts/generate-battleground-front-gifs` draws matches from
+above into `docs/HTML/battleground-front/`, with each side's bars.
+
+What the paper matches showed, each changing the design:
+- **Without places in the line, bots clump.** Walking at the nearest foe
+  in their section, a section's bots pile on one spot. Each bot now keeps
+  its own place across the section (spread evenly, in id order) and turns
+  aside to its foe only for the last few yards.
+- **The chase limit is measured from the enemy's line.** Measured from a
+  bot's own line (an average that includes the ranged standing 20 yards
+  back), melee could never reach the enemy and the lines stood 45 yards
+  apart.
+- **The help order (question 2) rarely matters at 20 a side.** With
+  places in the line, two sections are almost never short at once, so
+  "worst last" and "worst first" play the same match; at 40 a side
+  (Alterac Valley's size) they begin to differ.
+- **No breakthroughs yet**: the lines stay too even for a bot to pass
+  every foe.
+
+Before this, not built. In a battleground, buddies (617i) and stand-ins (planned,
 617t) are played by the bot module's battleground tactics: each bot picks
 its own objective by the module's priorities and walks the module's road
 paths to it, alone. Nothing keeps a line; bots bunch on whatever the

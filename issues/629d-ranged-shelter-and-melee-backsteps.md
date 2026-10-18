@@ -20,7 +20,17 @@ foe." / "Melee units don't run, they back up and recede when need is
 
 ## Current Behavior
 
-Not built. The bot module's ranged bots stand at casting range and step
+**On paper, 2026-10-17** (homework branch): `Front.shelter_spot` and the
+backstep rule in `Front.tick` (`src/lua-basic/lib/battleground-front.lua`),
+checked by `scripts/test-battleground-front` (the spot lies behind the
+ally on the foe's line, inside casting reach; no melee bot on the line
+ever gives ground faster than a backstep, which also caps any ground
+given while closing on a foe that got past). "Need is great" is set to
+health under 30% or 2 more foes than allies within 10 yards (question 1);
+at that setting backsteps are frequent in the paper matches. Not in the
+buddy module.
+
+Before this, not built. The bot module's ranged bots stand at casting range and step
 back to keep it; its bots flee when in trouble.
 
 ## Intended Behavior

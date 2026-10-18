@@ -22,9 +22,19 @@ the database if we want".
 
 ## Current Behavior
 
-Not built for fronts. Arathi Basin's routes (176a2c, built on paper)
-keep one pointer per side, per crossing, per road arrived by, and turn it
-for the next squad, so squads of one side alternate.
+**On paper, 2026-10-17** (homework branch): `Front.new_deck` and
+`Front.deal` in `src/lua-basic/lib/battleground-front.lua`, checked by
+`scripts/test-battleground-front` (two branches flip every pass, across
+the refill too; three branches take each once a round, 100 each in 300
+passes; six bots' orders differ; one seed deals the same cards). The
+first version swapped a two-branch deck's order at each refill, which
+dealt a, b, b, a; the test caught it. In the paper matches every fork is
+a two-way split (the road tree in `Front.road_path`), so every deck there
+is a switch. Not in the buddy module.
+
+Arathi Basin's routes (176a2c, built on paper) keep one pointer per side,
+per crossing, per road arrived by, and turn it for the next squad, so
+squads of one side alternate.
 
 ## Intended Behavior
 
@@ -62,3 +72,11 @@ small integer). A switch is the same with two cards.
 1. Arathi Basin's roads already alternate per side (176a2c). Should those
    become per bot too, or do squads keep the side's pointer and lone bots
    use their own decks?
+2. **Kept, or worked out?** The starting-valley deck (155d1,
+   `src/lua-basic/lib/valley-deck.lua`) gives each character a fixed order
+   worked out from its id every time and never stored. A bot's fork decks
+   could work the same way: the order from the bot's id and the fork's
+   number, with only "how many times has it passed this fork" to count.
+   That would need no database writes at all, batched or not. Which do
+   you want: decks kept and written in a batch, or orders worked out from
+   the id?

@@ -24,7 +24,25 @@ the frontline is more important."
 
 ## Current Behavior
 
-Not built.
+**On paper, 2026-10-17** (homework branch; not in the buddy module):
+`Front.pick_section`, `Front.help_moves`, `Front.counts` and the line
+rules in `Front.tick` (`src/lua-basic/lib/battleground-front.lua`),
+checked by `scripts/test-battleground-front` and drawn by
+`scripts/generate-battleground-front-gifs`. Question 1 is set to 5
+sections for now; question 2 counts only the living; the help order is
+built both ways.
+
+Learned from the paper matches:
+- **Places in the line.** Bots that walk at the nearest foe in their
+  section pile into a knot. Each bot on the line now has its own place
+  across its section (the section's bots spread evenly, in id order),
+  and turns aside to its foe only for the last few yards. This is a
+  rule the owner didn't state; it is what makes a section a stretch of
+  line.
+- **The chase limit counts from the enemy's line**, not the bot's own;
+  from its own, the lines stood 45 yards apart and melee never met.
+- **The help order rarely matters below about 40 a side**: with places
+  in the line, two sections are almost never short at once.
 
 ## Intended Behavior
 

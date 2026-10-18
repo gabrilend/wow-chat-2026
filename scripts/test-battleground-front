@@ -1,0 +1,176 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- test-battleground-front - the battleground front's rules, checked on paper
+--
+-- For a general audience: bots in a battleground are planned to hold a
+-- front like two armies meeting (issue 629): a push axis per battleground
+-- or per border between objectives, a shuffled deck of road branches per
+-- bot at each fork, a line cut into sections that bots join where it is
+-- thinnest and send help to where it is uneven, ranged bots sheltering
+-- behind melee ones, and melee giving ground only by slow backsteps. The
+-- rules are plain arithmetic (src/lua-basic/lib/battleground-front.lua),
+-- so each one is checked here without a server, and then whole matches
+-- are played to check the line spreads itself out and repeats exactly.
+--
+-- Usage: scripts/test-battleground-front [PROJECT_DIR]
+--------------------------------------------------------------------------------
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local Front = dofile(DIR .. "/src/lua-basic/lib/battleground-front.lua")
+
+local fails, checks = 0, 0
+local function check(ok, what)
+    checks = checks + 1
+    if ok then print("  ok:   " .. what) else print("  FAIL: " .. what); fails = fails + 1 end
+end
+local function near(a, b) return math.abs(a - b) < 1e-6 end
+local O = Front.DEFAULTS
+
+print("axes (629a)")
+local ax, ay = Front.axis(0)
+check(near(ax, 0) and near(ay, 1), "heading 0 pushes north")
+ax, ay = Front.axis(math.pi)
+check(near(ax, 0) and near(ay, -1), "Alterac Valley's Alliance (heading pi) pushes south, so the Horde pushes north")
+local wx, wy = Front.to_world({ ox = 100, oy = 200, ax = 0, ay = 1 }, 10, 30)
+check(near(wx, 110) and near(wy, 230), "a front facing north: across is east, along is north")
+
+print("borders between objectives (629a)")
+local objs = {
+    { name = "Stables",    x = 0,   y = 0,   holder = "a", neighbours = { "Blacksmith", "Lumber Mill" } },
+    { name = "Blacksmith", x = 100, y = 0,   holder = "b", neighbours = { "Stables", "Lumber Mill" } },
+    { name = "Lumber Mill",x = 0,   y = 100, holder = "a", neighbours = { "Stables", "Blacksmith" } },
+}
+local bs = Front.borders(objs, 40)
+check(#bs == 2, "held by the same side, Stables and Lumber Mill share no border; the two others do (got " .. #bs .. ")")
+check(near(bs[1].mx, 50) and near(bs[1].my, 0) and near(bs[1].ax, 1) and near(bs[1].ay, 0),
+      "Stables to Blacksmith: the border's middle is halfway, its axis points from one to the other")
+local ok = pcall(Front.borders, { { name = "A", x = 0, y = 0, neighbours = { "Nowhere" } } }, 40)
+check(not ok, "a neighbour missing from the list is an error, not skipped")
+
+print("decks at forks (629b)")
+local r = Front.rand(3)
+local d2 = Front.new_deck(2, r)
+local seq = {}
+for k = 1, 10 do seq[k] = Front.deal(d2, r) end
+local flips = true
+for k = 2, 10 do if seq[k] == seq[k - 1] then flips = false end end
+check(flips, "two branches: a switch, flipped every pass (" .. table.concat(seq, "") .. ")")
+local d3, tally, rounds_ok = Front.new_deck(3, r), { 0, 0, 0 }, true
+for round = 1, 100 do
+    local seen = {}
+    for _ = 1, 3 do local c = Front.deal(d3, r); seen[c] = true; tally[c] = tally[c] + 1 end
+    if not (seen[1] and seen[2] and seen[3]) then rounds_ok = false end
+end
+check(rounds_ok, "three branches: every round of three passes takes each branch once")
+check(tally[1] == 100 and tally[2] == 100 and tally[3] == 100, "300 passes: 100 down each branch")
+local function orders(seed)
+    local rr, out = Front.rand(seed), {}
+    for b = 1, 6 do
+        local d = Front.new_deck(4, rr)
+        local s = {}
+        for k = 1, 4 do s[k] = Front.deal(d, rr) end
+        out[b] = table.concat(s)
+    end
+    return out
+end
+local o1, o1b = orders(11), orders(11)
+local differ = false
+for b = 2, 6 do if o1[b] ~= o1[1] then differ = true end end
+check(differ, "six bots' decks are not all in the same order (" .. table.concat(o1, " ") .. ")")
+check(table.concat(o1) == table.concat(o1b), "the same seed deals the same cards")
+
+print("joining the line (629c)")
+check(Front.pick_section(O, { 4, 2, 3, 2, 5 }, 10) == 2, "the fewest allies, a tie going to the nearest")
+check(Front.pick_section(O, { 4, 2, 3, 2, 5 }, 70) == 4, "the same counts from the other side pick the other tie")
+check(Front.section_of(O, 0) == 1 and Front.section_of(O, 80) == 5 and Front.section_of(O, 31.9) == 2 and Front.section_of(O, 32) == 3,
+      "positions across the front fall in five sections of 16 yards")
+
+print("help where it's uneven (629c)")
+local mv = Front.help_moves(O, { 6, 3, 6, 6, 6 })
+check(#mv == 2 and mv[1].to == 2 and mv[2].to == 2, "a gap of 3: 2 allies move over")
+mv = Front.help_moves(O, { 5, 3, 5, 5, 5 })
+check(#mv == 0, "a gap of 2: nobody moves")
+local function served(order, counts)
+    local o = {}
+    for k, v in pairs(O) do o[k] = v end
+    o.help_order = order
+    local out = {}
+    for _, m in ipairs(Front.help_moves(o, counts)) do out[#out + 1] = m.to end
+    return table.concat(out, ",")
+end
+local wl, wf = served("worst last", { 9, 2, 5, 9, 9 }), served("worst first", { 9, 2, 5, 9, 9 })
+check(wl:sub(1, 1) == "3", "\"worst last\": the less desperate section (3) is helped first (" .. wl .. ")")
+check(wf:sub(1, 1) == "2", "\"worst first\": the most desperate section (2) is helped first (" .. wf .. ")")
+ok = pcall(served, "sometimes", { 9, 2, 5, 9, 9 })
+check(not ok, "an unknown help order is an error")
+
+print("shelter and backsteps (629d)")
+local su, sv = Front.shelter_spot(O, 40, 60, 40, 50)
+check(near(su, 40) and near(sv, 46), "foe at 60, ally at 50: stand 4 behind the ally, on the same line")
+local fd = math.sqrt((su - 40) ^ 2 + (sv - 60) ^ 2)
+check(fd <= O.ranged_reach - 1, "still within casting reach of the foe (" .. fd .. " yards)")
+su, sv = Front.shelter_spot(O, 40, 60, 40, 30)
+check(near(sv, 60 - (O.ranged_reach - 1)), "an ally standing far back: the ranged bot stops at its reach")
+
+print("whole matches")
+local function play(seed, ticks, order)
+    local m = Front.new_match({ seed = seed, per_side = 20, help_order = order })
+    local spread_sum, spread_n, line_min, line_max = 0, 0, math.huge, -math.huge
+    local melee_fast, sheltered_ok = 0, true
+    for t = 1, ticks do
+        local before = {}
+        for _, b in ipairs(m.bots) do before[b.id] = { b.u, b.v, b.state } end
+        Front.tick(m)
+        for _, b in ipairs(m.bots) do
+            -- a melee bot on the line never moves away from the enemy's home faster than a backstep
+            local p = before[b.id]
+            if b.role == "melee" and p[3] == "line" and b.state == "line" then
+                local back = (p[2] - b.v) * (b.side == "a" and 1 or -1)
+                if back > O.backstep_per_tick + 1e-6 then melee_fast = melee_fast + 1 end
+            end
+        end
+        if t > 120 then
+            for _, side in ipairs({ "a", "b" }) do
+                local c = Front.counts(m, side)
+                local lo, hi, total = math.huge, 0, 0
+                for s = 1, O.sections do lo = math.min(lo, c[s]); hi = math.max(hi, c[s]); total = total + c[s] end
+                if total >= O.sections * 2 then spread_sum, spread_n = spread_sum + (hi - lo), spread_n + 1 end
+            end
+        end
+    end
+    local la, lb = Front.line_positions(m)
+    return m, (spread_n > 0 and spread_sum / spread_n or 0), melee_fast, la, lb
+end
+local m1, spread1, fast1 = play(7, 1200, "worst last")
+local m1b = play(7, 1200, "worst last")
+local function fingerprint(m)
+    local parts = {}
+    for _, b in ipairs(m.bots) do parts[#parts + 1] = string.format("%d:%s:%.3f:%.3f:%d", b.id, b.state, b.u, b.v, b.hp) end
+    return table.concat(parts, "|") .. string.format("|%d,%d,%d", m.stats.kills.a, m.stats.kills.b, m.stats.moves)
+end
+check(fingerprint(m1) == fingerprint(m1b), "ten simulated minutes played twice from one seed end the same")
+check(m1.stats.kills.a > 0 and m1.stats.kills.b > 0, string.format("both sides fight (kills %d and %d)", m1.stats.kills.a, m1.stats.kills.b))
+check(spread1 < O.help_gap, string.format("a full line stays spread: the fullest section averages %.2f more than the thinnest (under the gap of %d)", spread1, O.help_gap))
+check(fast1 == 0, "no melee bot on the line ever gives ground faster than a backstep (" .. fast1 .. " times)")
+check(m1.stats.joins > 0 and m1.stats.deals > 0, string.format("bots took the roads (%d deals) and joined the line (%d times)", m1.stats.deals, m1.stats.joins))
+check(m1.stats.shelters > 0, "struck ranged bots took shelter (" .. m1.stats.shelters .. " times)")
+local m2 = play(7, 1200, "worst first")
+check(fingerprint(m2) == fingerprint(m1) or m1.stats.crowded_needs > 0,
+      string.format("at 20 a side the order of help matters only when two sections are short at once (%d times here)", m1.stats.crowded_needs))
+-- The order changes a match only when two or more sections are short at
+-- once, which a spread line makes rare below about 40 a side (2026-10-17:
+-- 0 or 1 times in ten minutes at 20 a side; 6 to 10 at 40; 27 to 37 at 60)
+local function big(order)
+    local m = Front.new_match({ seed = 7, per_side = 40, help_order = order })
+    for _ = 1, 1200 do Front.tick(m) end
+    return m
+end
+local b1, b2 = big("worst last"), big("worst first")
+check(b1.stats.crowded_needs > 0 and fingerprint(b1) ~= fingerprint(b2),
+      string.format("at 40 a side (Alterac Valley's size) two sections are short at once %d times, and the two orders make different matches", b1.stats.crowded_needs))
+print(string.format("  (20 a side: %d moves, %d backsteps, %d breakthroughs; 40 a side, worst last: kills %d/%d; worst first: kills %d/%d)",
+    m1.stats.moves, m1.stats.backsteps, m1.stats.breakthroughs, b1.stats.kills.a, b1.stats.kills.b, b2.stats.kills.a, b2.stats.kills.b))
+
+print(string.format("%d checks, %d failed", checks, fails))
+os.exit(fails == 0 and 0 or 1)
