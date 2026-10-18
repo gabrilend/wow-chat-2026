@@ -14,18 +14,21 @@
 -- (llm-transcripts/) are left as they were written: they are history.
 -- Every change is listed. With --dry-run nothing is written.
 --
--- Usage: move-project-paths DIR [--untracked] [--dry-run]
+-- Usage: move-project-paths DIR [--untracked] [--databases] [--dry-run]
 --   DIR          the project folder at its NEW place (a git checkout)
 --   --untracked  also the untracked files and links named in UNTRACKED
 --                below, and every symbolic link pointing into an old place
+--   --databases  also the update folders the database updater has recorded
+--                (every database's updates_include rows), through the
+--                project's MySQL at DIR, which must be running
 -- The moves are the table MOVES below (old parent folders -> new parent).
 
 -- {{{ settings
 local DIR = arg[1]
 if not DIR or DIR:match("^%-%-") then
-    io.stderr:write("usage: move-project-paths DIR [--untracked] [--dry-run]\n"); os.exit(1)
+    io.stderr:write("usage: move-project-paths DIR [--untracked] [--databases] [--dry-run]\n"); os.exit(1)
 end
-local opt = { untracked = false, ["dry-run"] = false }
+local opt = { untracked = false, databases = false, ["dry-run"] = false }
 for i = 2, #arg do
     local f = arg[i]:match("^%-%-(.+)$")
     if not f or opt[f] == nil then io.stderr:write("move-project-paths: unknown option " .. arg[i] .. "\n"); os.exit(1) end
@@ -107,10 +110,12 @@ end
 -- {{{ tracked files
 print("tracked files in " .. DIR .. ":")
 local tracked = lines_of("git -C '" .. DIR .. "' ls-files -z | tr '\\0' '\\n'")
+-- Files that name the old places on purpose: this tool (its table and its
+-- own description; rewriting itself once turned its example into the new
+-- path) and the move's own record, which describes where things were.
+local KEEP_AS_WRITTEN = { ["scripts/move-project-paths"] = true, ["issues/188-move-to-kaun.md"] = true }
 for _, rel in ipairs(tracked) do
-    -- this tool names the old places on purpose (its table and its own
-    -- description); rewriting itself once turned its example into the new path
-    if not rel:match("^llm%-transcripts/") and rel ~= "scripts/move-project-paths" then
+    if not rel:match("^llm%-transcripts/") and not KEEP_AS_WRITTEN[rel] then
         local kind = lines_of("test -L '" .. DIR .. "/" .. rel .. "' && echo link || echo file")[1]
         if kind == "file" then handle(rel) end
     end
@@ -143,5 +148,51 @@ if opt.untracked then
 end
 -- }}}
 
-print(string.format("%s%d change(s) in %d file(s)%s", opt["dry-run"] and "(dry run) " or "",
-    changes, changedFiles, opt.untracked and string.format(", %d link(s) re-made", relinked) or ""))
+-- {{{ the updater's recorded folders
+-- The server's database updater remembers each folder it reads update files
+-- from, by full path, in every database's updates_include table; the install
+-- steps record them resolved (patches/E-patches.sh, _register_with_updatefetcher).
+-- After a move the old rows still name the old place, which the links left
+-- there still reach, and the next install records the new place too; the
+-- updater then reads every file twice and the worldserver stops ("Duplicate
+-- filename ... every name needs to be unique"). Found by the beta session,
+-- 2026-10-18. Each old row moves to the new path; if the new path's row is
+-- already there (an install ran first), the old one goes instead (the path is
+-- the table's key). One transaction per database.
+local rowsMoved = 0
+if opt.databases then
+    print("database update folders:")
+    local mysql = "'" .. DIR .. "/mysql/installed-files/bin/mysql' --no-defaults --socket='" .. DIR ..
+                  "/mysql/databases/mysql.sock' -uritz -pmenardi -N 2>/dev/null"
+    local dbs = lines_of(mysql .. " -e \"SELECT table_schema FROM information_schema.tables WHERE table_name = 'updates_include'\"")
+    if #dbs == 0 then
+        io.stderr:write("move-project-paths: no database answered with an updates_include table (is the project's MySQL running at " ..
+                        DIR .. "/mysql?); none were changed\n")
+        os.exit(1)
+    end
+    for _, db in ipairs(dbs) do
+        for _, parent in ipairs(OLD_PARENTS) do
+            for _, name in ipairs(MOVED) do
+                local old, new = parent .. name, NEW_PARENT .. name
+                local rows = lines_of(mysql .. " " .. db .. " -e \"SELECT path FROM updates_include WHERE path = '" .. old ..
+                                      "' OR path LIKE '" .. old .. "/%'\"")
+                for _, path in ipairs(rows) do
+                    rowsMoved = rowsMoved + 1
+                    local target = new .. path:sub(#old + 1)
+                    print("  " .. db .. ": " .. path .. "  ->  " .. target)
+                    if not opt["dry-run"] then
+                        os.execute(mysql .. " " .. db .. " -e \"START TRANSACTION; " ..
+                            "DELETE FROM updates_include WHERE path = '" .. path .. "' AND EXISTS " ..
+                            "(SELECT 1 FROM (SELECT path FROM updates_include WHERE path = '" .. target .. "') AS t); " ..
+                            "UPDATE updates_include SET path = '" .. target .. "' WHERE path = '" .. path .. "'; COMMIT;\"")
+                    end
+                end
+            end
+        end
+    end
+end
+-- }}}
+
+print(string.format("%s%d change(s) in %d file(s)%s%s", opt["dry-run"] and "(dry run) " or "",
+    changes, changedFiles, opt.untracked and string.format(", %d link(s) re-made", relinked) or "",
+    opt.databases and string.format(", %d database row(s) moved", rowsMoved) or ""))

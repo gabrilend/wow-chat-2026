@@ -52,6 +52,20 @@ renamed, on the same disk, into
 whole, git history included. Anything still naming an old path now
 reaches the new copy.
 
+**2026-10-18, the database updater's folders (found by wow-chat-2026-32):**
+every database's `updates_include` table records, by full resolved path,
+the folders the server reads update files from. Five rows still named the
+old place (`acore_world_basic`, `acore_characters_basic`,
+`acore_world_vanilla`, `acore_characters_vanilla`, `acore_world_neuron`).
+The links there still reach those folders, so the next install, which
+records the new place, would have left two rows for each folder, and the
+worldserver stops on the duplicate files that makes. All five now name
+`/mnt/kaun/...` (old values in `/dev/shm/move-to-kaun/updates-include.log`
+until a reboot). `scripts/move-project-paths --databases` does this for any
+later move: tested on a scratch table in `_smoke_test`, it moved old rows,
+removed one whose new twin already existed, and left a look-alike folder
+and the updater's own relative rows alone.
+
 Left, the owner's: build one profile at the new place (`scripts/compile`
 from `/mnt/kaun/wow-chat-2026`; the build folders configure afresh). Then
 step 15, now only this: delete `moved-to-kaun-2026-10-18/` when the new

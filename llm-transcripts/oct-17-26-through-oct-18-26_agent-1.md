@@ -1,6 +1,6 @@
 # Conversation Summary: 1ca38611-9673-4322-8dc2-8d10922c6746
 
-Generated on: 2026-10-18 16:40:48
+Generated on: 2026-10-18 16:41:17
 Models: claude-opus-5-5
 
 ## Contents
@@ -2235,6 +2235,40 @@ correct on failure and on success, and early output reaches the log.
 **When the watcher reports,** I'll tell you how this build ended, then apply the
 change and commit it. From then on I can watch any compile by its receipt, with
 no need to see your terminal.
+
+--------------------------------------------------------------------------------
+
+### User Request 33
+
+<bash-input>touch /tmp/claude-allow-foreign-commit</bash-input>
+
+--------------------------------------------------------------------------------
+
+### User Request 34
+
+<bash-stdout>(Bash completed with no
+output)</bash-stdout><bash-stderr></bash-stderr>
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 34
+
+> You've created the one-time token that lets a plain `git commit` through. The
+> one commit the house tool couldn't make for me is the move plan,
+> `issues/188-move-to-kaun.md`, because it holds lines from all three threads
+> (signatures and notes). I'll commit only that file. First checking that
+> nothing else is staged in the shared staging area:
+
+*[commit] 53cfdfdc0 - The plan that moved the project to /mnt/kaun, with its three signatures and how it went*
+
+I used your one-time leave to commit the move plan,
+`issues/188-move-to-kaun.md`, as `53cfdfd` in the new copy. It was the one file
+the house commit tool couldn't take, because it holds lines from all three
+threads: the plan, everyone's signatures and notes, and the record of the move.
+Nothing else was staged or included, and the token has now been used up.
+
+The compile is still running. The watcher will report when it ends, and then
+I'll apply and commit the logging change.
 
 --------------------------------------------------------------------------------
 
