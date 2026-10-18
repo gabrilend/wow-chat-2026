@@ -123,10 +123,10 @@ working system, not a dependency of it.
 - Parent: [1101 - Bellwether](1101-bellwether-attended-play.md)
 - [916d - The model runner](../916d-llama-cpp-model-runner.md) — the existing
   client; reuse candidate
-- [916e - effil worker pool](916e-effil-worker-pool.md) and
-  [916f - Cluster health rotation](916f-cluster-health-rotation.md) —
+- [916e - effil worker pool](../916e-effil-worker-pool.md) and
+  [916f - Cluster health rotation](../916f-cluster-health-rotation.md) —
   the machinery this issue may either reuse or duplicate
-- [916m - Bash health check](916m-bash-health-check.md) — the pre-flight
+- [916m - Bash health check](../916m-bash-health-check.md) — the pre-flight
   curl of all three hosts; an attended session should run the same check
   at session start
 - [1101i - Utterance validator](1101i-utterance-validator.md) — the box

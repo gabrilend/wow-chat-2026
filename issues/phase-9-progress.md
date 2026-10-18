@@ -74,7 +74,7 @@ just moves it is part of the same question.
 
 | Issue | Title | Status | Notes |
 |-------|-------|--------|-------|
-| 916 | mod-soren-chat | Open | Parent. LLM-driven bot chat + gameplay guidance. Supersedes 914/915. Fourteen sub-issues, 916a–916n. |
+| 916 | mod-soren-chat | Open | Parent. LLM-driven bot chat + gameplay guidance. Supersedes 914/915. Fifteen sub-issues, 916a–916o (916o: players lend their machines). The model runs in llama.cpp (916d). |
 | 917 | ask-the-bots-in-plain-text | Open | Player states intent in ordinary language; the layer writes the bot commands. Four sub-issues, 917a–917d. |
 | 918 | fg-sora-cluster-mirror-companions | Open | Three bots, one per box, all built to look and talk like the player, cross-feeding thoughts. "Two truths and a lie" is the acceptance test. |
 

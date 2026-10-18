@@ -231,7 +231,7 @@ re-uses what mod-playerbots already has.
 
 ## Sub-Issues
 
-Twelve sub-issues, organized in implementation order. Each is small enough
+Fifteen sub-issues, organized in implementation order. Each is small enough
 to land in one or two sessions.
 
 ### Foundation (no LLM yet)
@@ -328,14 +328,25 @@ to land in one or two sessions.
 - **916n — Debug commands and observability.** `99-debug.lua`: adds
   `.soren status`, `.soren queue`, `.soren reload`, `.soren benchmark`
   console commands for the GM operator. Periodic stats logged
-  (requests/sec per host, p50/p99 latency, error rate, current queue
-  depth). Operator can see at a glance if the cluster is healthy.
+  (requests/sec per place, p50/p99 latency, tokens/s, error rate,
+  grammar bugs, queue depth per inbox). Operator can see at a glance if
+  the places are healthy.
 
-That's fourteen sub-issues total. The first six (916a-f) are foundation
+### Contributed compute (added 2026-10-04)
+
+- **916o — Player-contributed LLM compute.** Players who opt in lend
+  their machines to the chat layer: a companion program wrapping
+  `llama-server` that dials out to a job broker (any client), or the W
+  custom client running llama.cpp itself (916d's in-client). Chat
+  requests only, prompts scrubbed, untrusted answers checked like any
+  other; an in-game gizmo shows the player what their machine is doing;
+  player-written "nature prompts" shape how characters are performed.
+
+That's fifteen sub-issues total. The first six (916a-f) are foundation
 work that produces nothing user-visible. The middle four (916g-j) are
 the guidance layer — first user-visible value, bots adapt their
 strategies to situations. The next two (916k-l) are the social layer.
-The last two (916m-n) are operations.
+Then two of operations (916m-n), and contributed compute (916o).
 
 ## Implementation Order
 
@@ -350,8 +361,9 @@ sequence is:
 6. 916h (guidance prompt) + 916i (response/apply) — together; depends on 916b, 916e, 916g
 7. 916j (SorenDirected strategy) — depends on a working mod-playerbots build with the B-patch system; can land any time after 916a
 8. 916k + 916l (chat layer) — depends on 916e; lower priority than guidance
-9. 916m (bash health check) — depends on cluster being real; can land any time
+9. 916m (bash health check) — depends on a "beside" place being real; can land any time
 10. 916n (debug commands) — depends on most of the rest existing to be debuggable
+11. 916o (contributed compute) — depends on 916e's two inboxes, 916f and the chat layer; the W client's half also waits on its own networking and chat (custom-client 907)
 
 Realistic ordering for a single-developer session timeline: aim to land
 916a-f in one sprint (foundation week), then 916g-i + 916j in a second

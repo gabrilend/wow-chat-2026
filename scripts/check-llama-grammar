@@ -1,5 +1,8 @@
 #!/usr/bin/env luajit
 -- check-llama-grammar - ask the real llama.cpp library whether it can read
+-- the bots' grammars: the guidance one (issue 916h, step 6), the chat
+-- line (issue 916l) and the command list (issue 917c). It checks that each
+-- is read, not how replies come out.
 --
 -- For a general audience: the bots' tactical planner hands the language
 -- model a "grammar", a set of rules for what its reply may look like, so it
@@ -118,6 +121,7 @@ local CASES = {
     -- name                          grammar                                 should parse
     { "guidance (916h step 6)",      GUIDANCE,                               true  },
     { "chat line (916l)",            CHAT,                                   true  },
+    { "bot commands (917c)",         COMMANDS,                               true  },
     { "undefined rule",              'root ::= "{" missing-rule "}"\n',      false },
     { "underscore in a rule name",   'root ::= a_b\na_b ::= "x"\n',          false },
 }
