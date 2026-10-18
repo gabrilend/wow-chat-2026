@@ -254,3 +254,15 @@ This issue enables **Phase 1: Foundation & Tooling** by ensuring:
 Developers need to trust their tools. When you add a patch and run update, it should apply. When you run update twice, it should be idempotent. When upstream changes conflict with patches, the build should detect it.
 
 Patch staleness detection makes the build system trustworthy. Without trust, every "it doesn't work" bug starts with "did the patch apply?" Instead, we can assume patches applied and debug actual problems.
+
+## Since then (checked 2026-10-17)
+
+- **Still built**: `scripts/update` asks `patches_need_applying` and says
+  "Patches pending - rebuild required" (the old `scripts/azerothcore update`,
+  split out by issue 142).
+- Grew into more checks of the patches themselves:
+  `scripts/verify-patches` (each patch's undo returns the source exactly,
+  one at a time), `scripts/test-source-patches` (all of a profile's
+  patches apply and undo on a RAM copy), `scripts/test-patched-syntax`
+  (the patched files still compile). A command listing each patch's state
+  is planned in open issue 146.

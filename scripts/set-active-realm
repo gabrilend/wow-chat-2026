@@ -67,9 +67,12 @@ fi
 
 # {{{ seed_realmlist
 # Idempotent — INSERT IGNORE means existing rows are preserved as-is.
-# Address defaults to 127.0.0.1; scripts/update-realmlist-ip rewrites
-# every row's address to the detected public IP on each authserver
-# launch (issue 346 — extended to all rows under 136a).
+# Address defaults to 127.0.0.1; the install's realm-list step (config
+# patch C011) sets every row's address to the DNS name
+# wow.ritzmenardi.com. (Until 2026-04-18 scripts/update-realmlist-ip
+# rewrote every row to the detected public IP on each authserver launch,
+# issue 113, which was 346 before the April renumbering; it is no longer
+# called, since the DNS name follows the IP by itself.)
 "${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" \
     -u ritz -pmenardi acore_auth 2>/dev/null <<'SQL'
 INSERT IGNORE INTO realmlist (id, name, address, localAddress, localSubnetMask, port, gamebuild)

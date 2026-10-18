@@ -267,3 +267,14 @@ This issue enables **Phase 1: Foundation** by ensuring:
 > "Developers can iterate quickly without wasting time"
 
 A build system that respects your time is a build system you trust. This fix makes the workflow **fast by default, thorough when needed**.
+
+## Since then (checked 2026-10-17)
+
+- **Still built**, in `scripts/update` (the old `scripts/azerothcore update`,
+  split out by issue 142): it pulls each repository, and rebuilds only if
+  something changed, patches are pending (issue 112), or modules need it;
+  `--force` rebuilds anyway.
+- Pulls now go to pinned commits rather than the newest (the pins in
+  `scripts/install` and `scripts/update`, moved deliberately, e.g. on
+  2026-10-09), so "nothing changed upstream" usually means "the pin did
+  not move".

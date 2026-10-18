@@ -146,7 +146,7 @@ check_mysql
 # NOTE: Public IP auto-detection disabled (2026-04-18)
 # Realmlist now uses DNS hostname (wow.ritzmenardi.com) instead of raw IP.
 # DNS handles IP changes externally, so this script is no longer needed.
-# See: issues/completed/346-authserver-public-ip-detection.md
+# See: issues/completed/113-authserver-ip-caching.md (it was issue 346 before the April renumbering)
 #
 # if [[ -x "${DIR}/scripts/update-realmlist-ip" ]]; then
 #     echo "Updating realmlist with public IP..."

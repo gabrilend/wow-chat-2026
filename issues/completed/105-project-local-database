@@ -276,3 +276,22 @@ This issue enables **Phase 1: Foundation** by answering:
 The answer: `mysql/databases/`, tracked in git, owned by the project.
 
 Without this, the server runs but the world is Blizzard's. With this, the world is ours.
+
+## Since then (checked 2026-10-17)
+
+- **The local MySQL stands as built**: `mysql/` in the project, port 3307,
+  started by `scripts/start-mysql`.
+- **"Databases tracked in git" never happened.** No database file was ever
+  committed (git's history of `mysql/databases/` holds only a placeholder,
+  added and removed in January); `.gitignore` still carries a "TRACKED"
+  comment above folder names that are not tracked. What the project does
+  instead is keep every world change as SQL source, applied at install
+  time and undone by its own undo file: `sql/<profile>/db_world.src/*.apply.sql`
+  and `.revert.sql`, run by the install steps in `patches/E-patches.sh`.
+  So `git diff` shows world changes as readable SQL rather than binary
+  table files, and a fresh database is rebuilt from the stock dump plus
+  those files. `scripts/test-basic-sql-in-ram` and `scripts/test-beta-sql-in-ram`
+  build such a database in RAM and check the files apply and undo exactly.
+- Databases are per profile now (`acore_world_basic`, `acore_world_vanilla`,
+  ...; beta and release still share `acore_*`, issue 136b), with one shared
+  `acore_auth`.
