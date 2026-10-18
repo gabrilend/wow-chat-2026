@@ -1,0 +1,257 @@
+#!/usr/bin/env luajit
+-- check-issue-tests - which issues a test checks, whether those tests still
+-- pass, and which finished issues have no test at all.
+--
+-- For a general audience: a finished issue says "this works", and the
+-- project's rule is that what was built or fixed gets a test that would
+-- notice if it broke again. Nothing showed which finished issue that test
+-- is, or whether one exists. This reads both sides and joins them:
+--   * a test names an issue in its opening comment ("issue 404",
+--     "issues 402/404", "(617b)"), or
+--   * an issue names a test ("scripts/test-treasure").
+-- Then, for each issue (the finished ones by default), it prints the tests
+-- that check it, or that none do. With --run it also runs each of those
+-- tests and prints pass or fail with the time taken, so a finished issue
+-- whose test has started failing shows up beside its number.
+--
+-- Only the compile's quick tests are run (the QUICK_TESTS list in
+-- scripts/compile, which are safe to run at any time; several need the
+-- project's MySQL). A test outside that list is shown as "not run", with
+-- the compile's own reason for leaving it out where it gives one, since
+-- those need a prepared state (RAM extracts, MySQL stopped, minutes of
+-- building) a quick check should not create.
+--
+-- It changes nothing in the project. Test output goes to
+-- tmp/shared-memory/issue-tests/<test>.log.
+--
+-- Usage: scripts/check-issue-tests [PROJECT_DIR] [options]
+--   --all        every issue, open, completed and declined (default: completed/)
+--   --run        run the linked quick tests and show pass/fail
+--   --untested   only list issues with no test
+--   --strict     exit 1 when a linked test fails (with --run)
+-- Exit status: 0, or 1 with --strict and a failing test.
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local opt = { all = false, run = false, untested = false, strict = false }
+for _, a in ipairs(arg) do
+    local flag = a:match("^%-%-(.+)$")
+    if flag and opt[flag] ~= nil then opt[flag] = true
+    elseif flag then io.stderr:write("check-issue-tests: unknown option --" .. flag .. "\n"); os.exit(1)
+    else DIR = a end
+end
+
+-- {{{ local function lines_of
+-- Every line a shell command prints (list of strings).
+local function lines_of(cmd)
+    local out, f = {}, io.popen(cmd)
+    for l in f:lines() do out[#out + 1] = l end
+    f:close()
+    return out
+end
+-- }}}
+
+-- {{{ local function read
+local function read(path)
+    local f = io.open(path, "r")
+    if not f then return nil end
+    local s = f:read("*a")
+    f:close()
+    return s
+end
+-- }}}
+
+-- {{{ the issues: number -> { path, name, folder }
+-- An issue's number is the leading digits and letters of its file name
+-- (404, 617b, 173b1); "folder" is "open", "completed" or "declined".
+local issues, order = {}, {}
+local function add_issues(folder, label)
+    for _, path in ipairs(lines_of("find '" .. DIR .. "/issues/" .. folder .. "' -maxdepth 1 -type f 2>/dev/null | sort")) do
+        local name = path:match("([^/]+)$")
+        local num  = name:match("^(%d%d%d%w-)%-") or name:match("^(%d%d%d%w-)%.md$")
+        if num then
+            issues[num] = { path = path, name = name, folder = label, tests = {} }
+            order[#order + 1] = num
+        end
+    end
+end
+add_issues("", "open")
+add_issues("completed", "completed")
+add_issues("declined", "declined")
+-- }}}
+
+-- {{{ the tests: name -> { path, header, issues }
+-- A test's header is its opening comment block (lines starting with "--"
+-- or "#" before the first line of code), where its purpose is written.
+local tests, testOrder = {}, {}
+for _, path in ipairs(lines_of("ls '" .. DIR .. "/scripts/'test-* 2>/dev/null")) do
+    local name = path:match("([^/]+)$")
+    local header = {}
+    local f = io.open(path, "r")
+    if f then
+        for line in f:lines() do
+            if line:match("^#!") then
+                -- the interpreter line: not part of the comment
+            elseif line:match("^%-%-") or line:match("^#") then
+                header[#header + 1] = line
+            elseif line:match("^%s*$") and #header == 0 then
+                -- a blank line before the comment starts
+            else
+                break
+            end
+        end
+        f:close()
+    end
+    tests[name] = { path = path, header = table.concat(header, "\n") }
+    testOrder[#testOrder + 1] = name
+end
+-- }}}
+
+-- {{{ joining them
+-- A number in a test's header links it to an issue only when it is written
+-- as an issue reference, and only if an issue of that number exists:
+--   after the word "issue" or "issues", with what follows it in the same
+--     list ("issues 402/404", "issues 210, 302, 303 and 617b");
+--   alone in brackets: "(617b)", "(issue 304)", "(402, 404)".
+-- A bare number is not enough: a header that says "a 304-byte header"
+-- linked a file-format test to the ambush issue 304 when any number counted.
+local function link(num, testName)
+    local i = issues[num]
+    if not i then return end
+    for _, t in ipairs(i.tests) do if t == testName then return end end
+    i.tests[#i.tests + 1] = testName
+end
+local function numbers_in(run, testName)
+    for num in (" " .. run .. " "):gmatch("[^%w](%d%d%d%l?%d?)[^%w%-]") do link(num, testName) end
+end
+for _, name in ipairs(testOrder) do
+    local h = tests[name].header:gsub("\n%-%-%s*", " "):gsub("\n#%s*", " ")
+    for run in h:gmatch("[Ii]ssues?%s+([%w/,%s]-)[^%w/,%s]") do numbers_in(run, name) end
+    for run in h:gmatch("%(([%d%l,%s/]+)%)") do numbers_in(run, name) end
+end
+for _, num in ipairs(order) do
+    local text = read(issues[num].path) or ""
+    for name in text:gmatch("scripts/(test%-[%w%-]+)") do
+        if tests[name] then link(num, name) end
+    end
+end
+-- }}}
+
+-- {{{ the quick tests, and the compile's reasons for the others
+-- QUICK_TESTS=( ... ) in scripts/compile: the set safe to run any time.
+-- The comment above it says, per test left out, why ("test-x, test-y:
+-- reason"); those reasons are shown for tests that are not run.
+local quick, leftOut = {}, {}
+do
+    local compile = read(DIR .. "/scripts/compile") or ""
+    local list = compile:match("QUICK_TESTS=%((.-)%)")
+    for name in (list or ""):gmatch("(test%-[%w%-]+)") do quick[name] = true end
+    local notes = compile:match("# Left out, and why:\n(.-)\nQUICK_TESTS")
+    local current
+    for line in (notes or ""):gmatch("[^\n]+") do
+        local names, why = line:match("^#%s+(test%-[%w%-, ]-):%s*(.+)$")
+        if names then
+            current = { why = why, names = {} }
+            for n in names:gmatch("(test%-[%w%-]+)") do current.names[#current.names + 1] = n end
+        elseif current and line:match("^#%s+%S") then
+            current.why = current.why .. " " .. line:gsub("^#%s+", "")
+        end
+        if current then for _, n in ipairs(current.names) do leftOut[n] = current.why end end
+    end
+end
+-- }}}
+
+-- {{{ running a test
+-- Runs one test with the project folder as its argument; returns "pass" or
+-- "fail" and the seconds taken. Each test runs once however many issues
+-- it serves.
+local results = {}
+local LOG_DIR = DIR .. "/tmp/shared-memory/issue-tests"
+local RAM_TIERS = "/home/ritz/programming/ai-stuff/scripts/libs/ensure-ram-tiers"
+local tiersReady = false
+local function run(name)
+    if results[name] then return results[name] end
+    if not quick[name] then
+        results[name] = { state = "not run", why = leftOut[name] or "not in the compile's quick tests" }
+        return results[name]
+    end
+    -- the logs live in RAM behind the project's tmp/ link; the house helper
+    -- rebuilds that after a reboot, and makes the link in a folder that has
+    -- none (a fresh worktree), so mkdir never makes a real folder on disk
+    if not tiersReady then
+        local ready = os.execute("'" .. RAM_TIERS .. "' '" .. DIR .. "'")
+        if not (ready == 0 or ready == true) then
+            io.stderr:write("check-issue-tests: could not prepare " .. DIR .. "/tmp/shared-memory (ensure-ram-tiers said why, above); no tests were run\n")
+            os.exit(1)
+        end
+        tiersReady = true
+    end
+    os.execute("mkdir -p '" .. LOG_DIR .. "'")
+    local started = os.time()
+    local ok = os.execute("'" .. tests[name].path .. "' '" .. DIR .. "' > '" .. LOG_DIR .. "/" .. name .. ".log' 2>&1")
+    -- LuaJIT's os.execute gives the shell's status number; 0 is success
+    local passed = (ok == 0 or ok == true)
+    results[name] = { state = passed and "pass" or "fail", seconds = os.time() - started }
+    return results[name]
+end
+-- }}}
+
+-- {{{ the report
+-- A folder without the git-ignored trees (a git worktree has no
+-- source-beta/, installed-files-*/ or mysql/) cannot run the tests that
+-- read them: they fail there for that reason alone. Said first, so such a
+-- failure is not read as the issue's.
+if opt.run then
+    local missing = {}
+    for _, tree in ipairs({ "source-beta", "mysql" }) do
+        local present = os.execute("test -d '" .. DIR .. "/" .. tree .. "'")
+        if not (present == 0 or present == true) then
+            missing[#missing + 1] = tree .. "/"
+        end
+    end
+    if #missing > 0 then
+        print("NOTE: " .. DIR .. " has no " .. table.concat(missing, " or ") ..
+              " (git ignores them, so a worktree has none); tests that read them fail here for that reason." ..
+              " Run against the main project folder to judge the issues.\n")
+    end
+end
+
+local wanted = { completed = true, open = opt.all, declined = opt.all }
+local shown, untested, failing, covered = 0, 0, 0, 0
+for _, num in ipairs(order) do
+    local i = issues[num]
+    if wanted[i.folder] then
+        shown = shown + 1
+        if #i.tests == 0 then
+            untested = untested + 1
+            print(string.format("%-8s %-10s no test   %s", num, i.folder, i.name))
+        elseif not opt.untested then
+            covered = covered + 1
+            local parts = {}
+            for _, t in ipairs(i.tests) do
+                if opt.run then
+                    local r = run(t)
+                    if r.state == "fail" then failing = failing + 1 end
+                    local detail = r.state == "not run" and ("not run: " .. r.why) or (r.state .. ", " .. r.seconds .. " s")
+                    parts[#parts + 1] = t .. " (" .. detail .. ")"
+                else
+                    parts[#parts + 1] = t
+                end
+            end
+            print(string.format("%-8s %-10s tested   %s\n         %s", num, i.folder, i.name, table.concat(parts, "\n         ")))
+        end
+    end
+end
+local orphans = {}
+for _, name in ipairs(testOrder) do
+    local linked = false
+    for _, num in ipairs(order) do for _, t in ipairs(issues[num].tests) do if t == name then linked = true end end end
+    if not linked then orphans[#orphans + 1] = name end
+end
+print(string.format("\n%d issue(s): %d with a test, %d with none%s",
+    shown, covered, untested, opt.run and string.format("; %d linked test run(s) failing", failing) or ""))
+if #orphans > 0 then
+    print("tests that name no issue, and that no issue names: " .. table.concat(orphans, ", "))
+end
+if opt.run then print("test logs: " .. LOG_DIR) end
+os.exit((opt.strict and failing > 0) and 1 or 0)
+-- }}}
