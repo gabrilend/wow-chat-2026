@@ -109,16 +109,29 @@ for _, p in ipairs(lines_of("ls '" .. DIR .. "/issues' '" .. DIR .. "/issues/com
     local id = p:match("^(%d+%a*%d*)%-")
     if id then issueIds[id] = true end
 end
-local migrated = {}  -- old number -> { new, slug }
+-- old number -> list of { new = number, slug = name }. A list, because
+-- the April renumbering split some old numbers in two (327, 328, 329 and
+-- 332 each named two different issues before; the map says "dup-N split").
+-- Until 2026-10-17 only the last row was kept, and "328" was reported as
+-- 124 when the text meant 606b.
+local migrated = {}
 do
     local f = io.open(DIR .. "/issues/MIGRATION_MAP.md")
     if f then
         for l in f:lines() do
-            local old, new, slug = l:match("^|%s*(%d+%a*)%s*|%s*(%d+%a*)%s*|%s*([%w%-]+)%s*|")
-            if old and old ~= new then migrated[old] = { new = new, slug = slug } end
+            local old, new, slug = l:match("^|%s*(%d+%a*)%s*|%s*(%d+%a*)%s*|%s*([%w%-]+)")
+            if old and old ~= new then
+                migrated[old] = migrated[old] or {}
+                table.insert(migrated[old], { new = new, slug = slug })
+            end
         end
         f:close()
     end
+end
+local function candidates(old)
+    local out = {}
+    for _, m in ipairs(migrated[old] or {}) do out[#out + 1] = m.new .. " (" .. m.slug .. ")" end
+    return table.concat(out, " or ")
 end
 -- }}}
 
@@ -226,13 +239,12 @@ for _, file in ipairs(files) do
             if r.id ~= own then
                 if not issueIds[r.id] then
                     totals.badIssues = totals.badIssues + 1
-                    local m = migrated[r.id]
                     report[#report + 1] = string.format("    issue   line %-4d %s does not exist%s", r.line, r.id,
-                        m and ("  ->  renumbered to " .. m.new .. " (" .. m.slug .. ")") or "")
+                        migrated[r.id] and ("  ->  renumbered to " .. candidates(r.id)) or "")
                 elseif migrated[r.id] and opt.suspect then
                     totals.renumbered = totals.renumbered + 1
-                    report[#report + 1] = string.format("    issue?  line %-4d %s exists, but was also an old number: if written before 2026-04-29 it may mean %s (%s)",
-                        r.line, r.id, migrated[r.id].new, migrated[r.id].slug)
+                    report[#report + 1] = string.format("    issue?  line %-4d %s exists, but was also an old number: if written before 2026-04-29 it may mean %s",
+                        r.line, r.id, candidates(r.id))
                 end
             end
         end
