@@ -334,17 +334,20 @@ extensions define (`ObjectVariables.ext` attaches `GetData` and
 methods; then it reports every `x:Name(` call whose name is in none of
 them. `GetPosition` appears nowhere today.
 
-**Its first run found six more of the same kind**, all in the bot
+**Its first runs found five more of the same kind**, all in the bot
 behaviors that have been switched off since April
-(`src/lua-beta/.behaviors.disabled/`): `IsHostileTo` (avoid-monsters,
-find-monsters), `MovementExpired` (convoy, gestures), `SetTarget`
-(find-monsters), `GetPhase` (gestures; the engine has `GetPhaseMask`),
+(`src/lua-beta/.behaviors.disabled/`): `MovementExpired` (convoy,
+gestures), `SetTarget` (find-monsters), `GetPhase` (gestures; the engine
+has `GetPhaseMask`),
 `GetUnitsInRange` (orbit-player; the engine has `GetFriendlyUnitsInRange`
 and `GetUnfriendlyUnitsInRange`) and `UseItem` (sit-and-rest). Each would
 fail the way `GetPosition` did the first time its line ran. They are
 reported by the test (switched-off scripts do not fail it) and passed
 to the beta session, whose roadmap brings those behaviors back one at a
-time (`docs/profiles/beta-roadmap.md`, step 7).
+time (`docs/profiles/beta-roadmap.md`, step 7). A sixth, `IsHostileTo`,
+was a mistake of the test's: beta's patch B007 adds it, writing the
+registration as `\&` inside its sed command, which the test did not read
+until the beta session pointed it out the same day.
 
 **The scripts it names have moved.** `src/lua/behaviors/` became
 `src/lua-beta/behaviors/` with the per-profile folders (2026-06-04),

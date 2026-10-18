@@ -120,7 +120,11 @@ do
         patchNames[profile] = {}
         for id in ids:gmatch("B%d+") do
             for _, file in ipairs(lines_of("ls '" .. DIR .. "/patches/'" .. id .. "-*.sh 2>/dev/null")) do
-                for name in (read(file) or ""):gmatch('{%s*\\?"([%a_][%w_]*)\\?"%s*,%s*&') do
+                -- a patch writes the registration inside a sed or a here-document,
+                -- so the quotes may be escaped (\") and so may the & (\&, as
+                -- B007 writes it; missing that made B007's IsHostileTo look
+                -- unknown, found by the beta session on 2026-10-17)
+                for name in (read(file) or ""):gmatch('{%s*\\?"([%a_][%w_]*)\\?"%s*,%s*\\?&') do
                     patchNames[profile][name] = id
                 end
             end
