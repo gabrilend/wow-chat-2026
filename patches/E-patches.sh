@@ -213,7 +213,8 @@ _unregister_one() {
 _profile_db_name() {
     local base="$1"
     case "${PROFILE}" in
-        release|beta) echo "${base}" ;;
+        release)      echo "${base}" ;;
+        beta)         echo "${base}_beta" ;;   # its own since 2026-10-17 (issue 136b): it used to share release's, so installing beta emptied release's world
         vanilla)      echo "${base}_vanilla" ;;
         basic)        echo "${base}_basic" ;;
         cc-test)      echo "${base}_cc_test" ;;   # underscore: a hyphen is not allowed in an unquoted database name

@@ -52,7 +52,8 @@ local function profile_db()
     if not f then error("no .profile in " .. DIR .. "; name the database with --db") end
     local profile = f:read("*l"):gsub("%s+", "")
     f:close()
-    local SUFFIX = { release = "", beta = "", vanilla = "_vanilla", basic = "_basic", alpha = "_alpha" }
+    -- the project's naming rule (_profile_db_name in patches/E-patches.sh)
+    local SUFFIX = { release = "", beta = "_beta", vanilla = "_vanilla", basic = "_basic", ["cc-test"] = "_cc_test", alpha = "_alpha" }
     if not SUFFIX[profile] then error("unknown profile '" .. profile .. "' in .profile; name the database with --db") end
     return "acore_world" .. SUFFIX[profile], profile
 end

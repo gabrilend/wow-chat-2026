@@ -219,6 +219,27 @@ done
 echo "Expectations: ${pass} passed, ${fail} failed"
 # }}}
 
+# {{{ check_database_names
+# The databases the servers are told to use (C001) must be the ones the
+# install creates and seeds and the install steps write to
+# (_profile_db_name in patches/E-patches.sh). Two copies of one naming rule:
+# until 2026-10-17 both said beta used release's databases, and nothing
+# would have noticed one changing without the other.
+db_fail=0
+for pair in "worldserver.conf|WorldDatabaseInfo|acore_world" \
+            "worldserver.conf|CharacterDatabaseInfo|acore_characters"; do
+    IFS='|' read -r file key base <<< "${pair}"
+    got=$(grep -E "^${key}[[:space:]]*=" "${SCRATCH}/etc/${file}" | head -1 | sed 's|.*;||; s|"[[:space:]]*$||')
+    want="$(_profile_db_name "${base}")"
+    if [[ "${got}" == "${want}" ]]; then
+        printf "  [✓] %-52s names %s, as the install creates\n" "${key}" "${got}"
+    else
+        printf "  [✗] %-52s names %s, but the install creates %s (C001 and _profile_db_name disagree)\n" "${key}" "${got:-<unset>}" "${want}"
+        db_fail=$((db_fail + 1))
+    fi
+done
+# }}}
+
 # {{{ check_keys_exist
 # Every key any config patch edits (for any profile) must exist in the
 # stock config files, or the patch's sed matches nothing and the setting
@@ -242,4 +263,4 @@ done
 echo "Edited keys missing from stock configs: ${missing}"
 # }}}
 
-[[ "${failed}" -eq 0 && "${fail}" -eq 0 && "${missing}" -eq 0 ]]
+[[ "${failed}" -eq 0 && "${fail}" -eq 0 && "${missing}" -eq 0 && "${db_fail}" -eq 0 ]]

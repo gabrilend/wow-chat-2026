@@ -89,9 +89,12 @@ E015 (class selector NPC types), E016 (empty loot chest types), E017
 
 ## Databases
 
-Today beta shares `acore_world`, `acore_characters` and `acore_playerbots`
-with release, so installing beta empties release's world too. Issue 136b
-gives every profile its own, so they can run at once.
+Beta's own since 2026-10-17 (issue 136b, branch beta-homework):
+`acore_world_beta`, `acore_characters_beta`, `acore_playerbots_beta`, and
+the shared `acore_auth`. Until then beta used release's, so installing beta
+emptied release's world too; release's `acore_world` still holds that
+emptied world until it is restored (136b, open question 4). The next beta
+install builds the new databases from the stock ones.
 
 ## Scripts and their checks
 
