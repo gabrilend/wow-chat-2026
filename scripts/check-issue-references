@@ -41,6 +41,17 @@
 --                    that name it and whether it names them back (a thread
 --                    tied at both ends); a mention whose words fit another
 --                    issue's name is a reused number, not this issue
+--   --rewrite-moved  rewrite, in open issues only, each path that moved
+--                    in a way the checker is certain of (a known folder
+--                    rename, a file switched off or on, a script retired
+--                    with a -deprecated or -done ending) to where it is
+--                    now. Same-name guesses are left alone and listed.
+--                    Completed issues are never rewritten: they are
+--                    history, and say what became of them under "Since
+--                    then" instead.
+--   --skip LIST      with --rewrite-moved: a file listing issue paths
+--                    (relative to the project, one a line) to leave alone,
+--                    such as those another session is editing
 --   ISSUE_FILE ...   check just these files
 --
 -- Also checked (added 2026-10-17 from scripts/trace-completed-issues, the
@@ -57,7 +68,7 @@
 
 local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
 local args, files = {}, {}
-local opt = { all = false, summary = false, strict = false, source = nil, suspect = false, threads = false }
+local opt = { all = false, summary = false, strict = false, source = nil, suspect = false, threads = false, rewrite = false, skip = nil }
 local i = 1
 while i <= #arg do
     local a = arg[i]
@@ -66,6 +77,8 @@ while i <= #arg do
     elseif a == "--strict" then opt.strict = true
     elseif a == "--suspect" then opt.suspect = true
     elseif a == "--threads" then opt.threads = true
+    elseif a == "--rewrite-moved" then opt.rewrite = true
+    elseif a == "--skip" then i = i + 1; opt.skip = arg[i]
     elseif a == "--source" then i = i + 1; opt.source = arg[i]
     elseif a:match("^/") and not a:match("%.md$") and not a:find("/issues/") then DIR = a
     else files[#files + 1] = a end
@@ -219,16 +232,16 @@ local function classify_path(p)
     for _, r in ipairs(RENAMES) do
         if p:sub(1, #r[1]) == r[1] then
             local np = r[2] .. p:sub(#r[1] + 1)
-            if exists[np] or exists[np .. ".disabled"] then return "moved", np .. (exists[np] and "" or ".disabled") .. "  (" .. r[3] .. ")" end
+            if exists[np] or exists[np .. ".disabled"] then return "moved", np .. (exists[np] and "" or ".disabled") .. "  (" .. r[3] .. ")", np .. (exists[np] and "" or ".disabled") end
         end
     end
     -- switched off or on since, or retired with a "deprecated" ending
-    if exists[p .. ".disabled"] then return "moved", p .. ".disabled  (switched off)" end
+    if exists[p .. ".disabled"] then return "moved", p .. ".disabled  (switched off)", p .. ".disabled" end
     for _, ending in ipairs({ ".deprecated", "-deprecated", "-done" }) do
-        if exists[p .. ending] then return "moved", p .. ending .. "  (retired, kept for the record)" end
+        if exists[p .. ending] then return "moved", p .. ending .. "  (retired, kept for the record)", p .. ending end
     end
     local undis = p:gsub("%.disabled$", "")
-    if undis ~= p and exists[undis] then return "moved", undis .. "  (switched on again)" end
+    if undis ~= p and exists[undis] then return "moved", undis .. "  (switched on again)", undis end
     -- a file of the same name elsewhere
     local name = p:match("[^/]+$")
     local found = byName[name] or byName[name .. ".disabled"] or (undis ~= p and byName[undis:match("[^/]+$")])
@@ -298,6 +311,16 @@ end
 -- }}}
 
 local totals = { ok = 0, moved = 0, missing = 0, explained = 0, issues = 0, badIssues = 0, renumbered = 0, threaded = 0, badPatches = 0 }
+
+-- {{{ the skip list for --rewrite-moved
+skipSet = {}
+if opt.skip then
+    local fh = io.open(opt.skip)
+    if not fh then io.stderr:write("check-issue-references: cannot read the skip list " .. opt.skip .. "\n"); os.exit(2) end
+    for l in fh:lines() do if l ~= "" then skipSet[l] = true end end
+    fh:close()
+end
+-- }}}
 
 -- {{{ every issue file's text, for --threads and the misfiled list
 local allIssues = {}
@@ -371,8 +394,10 @@ for _, file in ipairs(files) do
         end
         local paths, issues, patches = refs_in(body)
         local report, c = {}, { ok = 0, moved = 0, missing = 0, explained = 0 }
+        local rewrites = {}
         for _, r in ipairs(paths) do
-            local kind, hint = classify_path(r.path)
+            local kind, hint, certain = classify_path(r.path)
+            if kind == "moved" and certain then rewrites[#rewrites + 1] = { from = r.path, to = certain } end
             if kind ~= "ok" and told(r.path) then kind, hint = "explained", "named in the issue's Since then section" end
             c[kind] = c[kind] + 1
             if kind ~= "ok" then
@@ -405,6 +430,40 @@ for _, file in ipairs(files) do
                 end
             end
         end
+        -- {{{ --rewrite-moved: open issues only, certain moves only
+        if opt.rewrite and #rewrites > 0 then
+            local rel = file:sub(#DIR + 2)
+            local skipped = file:find("/issues/completed/", 1, true) or skipSet[rel]
+            if skipped then
+                report[#report + 1] = "    kept    " .. #rewrites .. " certain move(s) not rewritten: " ..
+                    (skipSet[rel] and "on the skip list" or "a completed issue (history; explain under Since then)")
+            else
+                local new = text
+                for _, w in ipairs(rewrites) do
+                    -- whole path only: not followed by more path characters
+                    local pos = 1
+                    while true do
+                        local a, b = new:find(w.from, pos, true)
+                        if not a then break end
+                        local nxt = new:sub(b + 1, b + 1)
+                        if nxt:match("[%w_%-/]") or (nxt == "." and new:sub(b + 2, b + 2):match("%w")) then
+                            pos = b + 1
+                        else
+                            new = new:sub(1, a - 1) .. w.to .. new:sub(b + 1)
+                            pos = a + #w.to
+                        end
+                    end
+                    report[#report + 1] = "    rewrote " .. w.from .. "  ->  " .. w.to
+                end
+                if new ~= text then
+                    local fh = assert(io.open(file, "w"))
+                    fh:write(new)
+                    fh:close()
+                    totals.rewritten = (totals.rewritten or 0) + 1
+                end
+            end
+        end
+        -- }}}
         if opt.threads then
             local yes, unanswered, reused, unsure = thread_of(own, file:match("([^/]+)$"), text)
             if #yes + #reused + #unsure > 0 then
@@ -447,4 +506,5 @@ end
 -- }}}
 print(string.format("%d issue file(s), %d with a Since then thread: %d paths ok, %d moved, %d missing, %d explained; %d issue numbers that do not exist, %d that may mean a renumbered issue; %d patch steps gone or retired",
     totals.issues, totals.threaded, totals.ok, totals.moved, totals.missing, totals.explained, totals.badIssues, totals.renumbered, totals.badPatches))
+if opt.rewrite then print(string.format("--rewrite-moved: %d issue file(s) rewritten", totals.rewritten or 0)) end
 os.exit((opt.strict and totals.missing > 0) and 1 or 0)

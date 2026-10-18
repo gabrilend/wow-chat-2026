@@ -13,7 +13,9 @@
 # checker on it, and compares each verdict with the expected one. Then it
 # builds a tiny pretend project (a git index and a few issue files) to check
 # the two whole-project checks: the thread to later issues, with a reused
-# number told apart by its words, and an issue finished but filed as open.
+# number told apart by its words, and an issue finished but filed as open;
+# and it checks --rewrite-moved on a copy (certain moves rewritten, the rest
+# left alone, a completed issue never touched).
 #
 # Usage: scripts/test-check-issue-references [PROJECT_DIR]
 # Exit status: 0 when every verdict matches.
@@ -78,6 +80,23 @@ refuse "a config step family (C006 for C006a-d) is live" "patch .* C006 "
 expect "a gone path named under Since then is explained" "999-pretend-issue.md: .*[1-9] explained"
 refuse "an explained path is not counted missing"      "missing .*never-was.lua"
 
+# {{{ --rewrite-moved, on a copy of the pretend issue
+COPY="${SCRATCH}/998-pretend-rewrite.md"
+cp "${ISSUE}" "${COPY}"
+"${DIR}/scripts/check-issue-references" "${DIR}" --rewrite-moved "${COPY}" > /dev/null 2>&1
+REWRITTEN="$(cat "${COPY}")"
+check_text() {   # check_text "what" "pattern" yes|no
+    if grep -qE "$2" <<< "${REWRITTEN}"; then found=yes; else found=no; fi
+    if [[ "${found}" == "$3" ]]; then echo "  ok:   $1"; else echo "  FAIL: $1"; FAILS=$((FAILS + 1)); fi
+}
+check_text "a path moved by a known rename is rewritten"     "src/lua-beta/movement.lua"            yes
+check_text "the old path is gone after the rewrite"          "src/lua/movement.lua"                 no
+check_text "a switched-off file is rewritten to .disabled"   "periodic_events.lua.disabled"         yes
+check_text "an existing path is left as it was"              "src/lua-beta/ambush.lua\\b"           yes
+check_text "a missing path is left for a person"             "bounty-board-never-built.lua"         yes
+rm -f "${COPY}"
+# }}}
+
 # {{{ the whole-project checks, on a pretend project
 FAKE="${SCRATCH}/pretend-project"
 rm -rf "${FAKE}"
@@ -93,6 +112,17 @@ expect "a later issue naming it by its words is in the thread" "after .*named by
 expect "a later issue not named back is listed"          "not named back: 997"
 expect "the same number with another name is a reused number" "meaning another issue in: 996"
 expect "an issue finished but filed as open is listed"   "995-finished-but-open.md: marked completed"
+# a completed issue is never rewritten, even with a certain move in it
+mkdir -p "${FAKE}/src/lua-beta"
+printf -- '-- x\n' > "${FAKE}/src/lua-beta/thing.lua"
+printf '# 994 - Old Thing\n\nIt lived in `src/lua/thing.lua`.\n' > "${FAKE}/issues/completed/994-old-thing.md"
+git -C "${FAKE}" add -A
+"${DIR}/scripts/check-issue-references" "${FAKE}" --rewrite-moved > /dev/null 2>&1
+if grep -q "src/lua/thing.lua" "${FAKE}/issues/completed/994-old-thing.md"; then
+    echo "  ok:   a completed issue is never rewritten"
+else
+    echo "  FAIL: a completed issue was rewritten"; FAILS=$((FAILS + 1))
+fi
 rm -rf "${FAKE}"
 # }}}
 
