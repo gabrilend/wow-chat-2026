@@ -484,3 +484,9 @@ The economy shifts from create/destroy to circulate. Items feel tangible, action
 - 402 - treasure-chest-shared-loot (pool infrastructure)
 - 403 - ale-sell-item-hook (C++ hook required)
 - 401 - bounty-board-currency-system (complementary economy mechanic)
+
+## Related Documents
+
+- `docs/datapaths/treasure.md`: the whole path an item takes, selling included
+- `src/lua-beta/treasure.info.md`: the script's functions
+- `scripts/test-treasure`: the toy-world check

@@ -430,3 +430,9 @@ The treasure chest system transforms loot from "random template spawns" into a l
 - 408 - multiplayer-chest-access (multiple players looting same chest)
 - 407 - chest-vulnerability-mechanic (daze interrupt, defenseless while looting)
 - 405 - ability-tome-system (chest loot enhancement)
+
+## Related Documents
+
+- `docs/datapaths/treasure.md`: the whole path an item takes, in order, and the data kept
+- `src/lua-beta/treasure.info.md`: the script's functions
+- `scripts/test-treasure`: the toy-world check
