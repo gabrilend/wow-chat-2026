@@ -13,8 +13,11 @@
 #
 # Usage: scripts/test-profile-config-gates [PROJECT_DIR] [PROFILE]
 #   PROJECT_DIR defaults to the hard-coded path below.
-#   PROFILE defaults to basic. Profiles with an expectation table: basic,
-#   cc-test (add a table below to cover another).
+#   PROFILE: check that one profile. Without it, every profile with an
+#   expectation table below is checked in turn (basic, cc-test, beta), so
+#   the build's quick tests, which pass only the project folder, check
+#   them all. (Until 2026-10-17 it defaulted to basic alone, and beta's
+#   table, added that day, was never checked by a build.)
 #
 # Input: the stock .conf.dist files from any installed tree (they are
 # identical across profiles built from source-beta).
@@ -24,7 +27,21 @@ set -o pipefail
 
 DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
 [[ -n "${1:-}" ]] && DIR="$1"
-PROFILE="${2:-basic}"
+
+# {{{ every profile with a table, when none is named
+#   a profile named: check it below
+#   none named: run this script once per profile with a table, and pass
+#     only if every one passes
+if [[ -z "${2:-}" ]]; then
+    overall=0
+    for each in basic cc-test beta; do
+        echo "=== ${each}"
+        "$0" "${DIR}" "${each}" || overall=1
+    done
+    exit "${overall}"
+fi
+PROFILE="$2"
+# }}}
 
 # {{{ expectations
 # Each row: file (relative to etc/) | key | expected value.
