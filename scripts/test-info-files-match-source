@@ -70,11 +70,21 @@ end
 --   function Table.name(       function Table:name(       Table.name = function(
 -- with Table one of the handed-out tables; and a top-level global function,
 -- "function name(" with no "local" (a function every file can call, so it
--- belongs in the summary, or should not be global).
+-- belongs in the summary, or should not be global). A name declared local
+-- earlier in the file ("local paint_wall_cells   -- forward", then
+-- "function paint_wall_cells(g)" further down) is not global: Lua fills
+-- in that local, the usual way to call a function above its body. The
+-- first version missed this and called buddy-roam's forward-declared
+-- helper a leaked global.
 local function defined_in(src)
     local found, n, out = {}, 0, handed_out(src)
+    local declared_local = {}
     for line in (src .. "\n"):gmatch("([^\n]*)\n") do
         n = n + 1
+        local names = line:match("^%s*local%s+([%a_][%w_%s,]*)")
+        if names and not line:match("^%s*local%s+function") then
+            for nm in names:gmatch("[%a_][%w_]*") do declared_local[nm] = true end
+        end
         local name = line:match("^%s*function%s+([%a_][%w_]*[.:][%a_][%w_.:]*)%s*%(")
                   or line:match("^%s*([%a_][%w_]*%.[%a_][%w_.]*)%s*=%s*function%s*%(")
         if name then
@@ -82,6 +92,7 @@ local function defined_in(src)
             if not out[name:match("^([^.]+)")] then name = nil end
         else
             name = line:match("^function%s+([%a_][%w_]*)%s*%(")
+            if name and declared_local[name] then name = nil end
         end
         if name then found[name] = found[name] or n end
     end
