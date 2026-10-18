@@ -378,7 +378,13 @@ do
         for level, rec in pairs(by_level) do
             for slot, id in pairs(rec.items) do
                 local f = bf[id]
-                local ok = f and f.quality == 1 and f.sold > 0 and f.req <= level and f.req >= 2
+                -- white and sold by a vendor; or, since 2026-10-15 (commit
+                -- 964a1a7), gray worn armour where no white item of the
+                -- level fills the slot ("no vendor sells a white cloak"),
+                -- which no vendor sells either. Weapons stay white.
+                local white = f and f.quality == 1 and f.sold > 0
+                local gray  = f and f.quality == 0 and f.class == ITEM_CLASS_ARMOR
+                local ok = f and (white or gray) and f.req <= level and f.req >= 2
                     and SLOT_FITS[slot] and SLOT_FITS[slot][f.inv]
                     and (f.allow == -1 or bit.band(f.allow, bit.lshift(1, class - 1)) ~= 0)
                     and (f.class ~= ITEM_CLASS_WEAPON or WEAPONS[class][f.sub])
@@ -387,7 +393,7 @@ do
             end
         end
     end
-    check(bad == 0, "every item is white, sold by a vendor, wearable at its record's level (2 or more), fits its slot and suits its class")
+    check(bad == 0, "every item is white and sold by a vendor, or gray armour, wearable at its record's level (2 or more), fits its slot and suits its class")
     local pipe = io.popen(DIR .. "/scripts/generate-gearset-sql " .. DIR .. " --stdout")
     local made = pipe:read("*a"); pipe:close()
     local f = io.open(DIR .. "/sql/basic/db_world.src/33-gearsets.apply.sql")
