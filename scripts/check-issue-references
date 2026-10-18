@@ -232,13 +232,22 @@ local function classify_path(p)
     for _, r in ipairs(RENAMES) do
         if p:sub(1, #r[1]) == r[1] then
             local np = r[2] .. p:sub(#r[1] + 1)
-            if exists[np] or exists[np .. ".disabled"] then return "moved", np .. (exists[np] and "" or ".disabled") .. "  (" .. r[3] .. ")", np .. (exists[np] and "" or ".disabled") end
+            if exists[np] or exists[np .. ".disabled"] then
+                local target = np .. (exists[np] and "" or ".disabled")
+                -- a move into a retired name ("scripts/azerothcore-deprecated")
+                -- is reported but never rewritten: a current blueprint should
+                -- name the successor, which only a person can choose (first
+                -- rewritten automatically, 2026-10-17: issue 157b ended up
+                -- pointing at the dead script instead of scripts/worldserver)
+                local retired = target:match("[%-%.]deprecated$") or target:match("%-done$")
+                return "moved", target .. "  (" .. r[3] .. ")", (not retired) and target or nil
+            end
         end
     end
     -- switched off or on since, or retired with a "deprecated" ending
     if exists[p .. ".disabled"] then return "moved", p .. ".disabled  (switched off)", p .. ".disabled" end
     for _, ending in ipairs({ ".deprecated", "-deprecated", "-done" }) do
-        if exists[p .. ending] then return "moved", p .. ending .. "  (retired, kept for the record)", p .. ending end
+        if exists[p .. ending] then return "moved", p .. ending .. "  (retired, kept for the record)" end
     end
     local undis = p:gsub("%.disabled$", "")
     if undis ~= p and exists[undis] then return "moved", undis .. "  (switched on again)", undis end

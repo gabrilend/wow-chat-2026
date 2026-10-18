@@ -16,8 +16,9 @@ needed, it goes into this tool.
 
 ## Current Behavior
 
-- `scripts/azerothcore`, `scripts/start-mysql` and `scripts/stop-mysql`
-  start the roles on the local machine only.
+- `scripts/authserver`, `scripts/worldserver`, `scripts/start-mysql` and
+  `scripts/stop-mysql` start the roles on the local machine only (one
+  script per role since issue 142 split the old `scripts/azerothcore`).
 
 ## Intended Behavior
 
@@ -49,4 +50,4 @@ tool works today on one machine.
 
 ## Related
 - `issues/157a-role-hosts-file.md`
-- `scripts/azerothcore`, `scripts/start-mysql`
+- `scripts/authserver`, `scripts/worldserver`, `scripts/start-mysql`

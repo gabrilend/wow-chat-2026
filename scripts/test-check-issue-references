@@ -40,6 +40,7 @@ The wildcard is patch B003 (live); patch B998 never existed; install step
 E008 is written only as its functions. The level caps are C006 (a family:
 C006a to C006d).
 The old helper was `src/lua/never-was.lua` (gone; explained below).
+The servers were started by `scripts/azerothcore` (retired, split up).
 
 ## Since then (checked 2026-10-17)
 
@@ -94,6 +95,7 @@ check_text "the old path is gone after the rewrite"          "src/lua/movement.l
 check_text "a switched-off file is rewritten to .disabled"   "periodic_events.lua.disabled"         yes
 check_text "an existing path is left as it was"              "src/lua-beta/ambush.lua\\b"           yes
 check_text "a missing path is left for a person"             "bounty-board-never-built.lua"         yes
+check_text "a move into a retired name is not rewritten"     "scripts/azerothcore-deprecated"       no
 rm -f "${COPY}"
 # }}}
 
