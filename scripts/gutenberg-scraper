@@ -1,0 +1,120 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- gutenberg-scraper - download the narrators' books and cut them into
+-- sentences (issue 909)
+--
+-- For a general audience: narrators read public-domain books aloud one
+-- sentence at a time. This tool fetches each book on the shelf
+-- (src/lua-beta/data/gutenberg-books.lua) from Project Gutenberg, checks
+-- it is the book the shelf names, cuts it into sentences
+-- (src/lua-beta/lib/gutenberg-sentences.lua), and writes one folder per
+-- book: its sentences, one per line, and a note of what it is and how it
+-- was made. Downloads are kept in the RAM scratch folder, so running it
+-- again re-cuts without fetching again; they are fetched one at a time,
+-- two seconds apart, as Gutenberg asks of tools (one book at a time is
+-- also why this isn't spread over several threads: the time is the
+-- waiting, not the cutting).
+--
+-- Usage: scripts/gutenberg-scraper [PROJECT_DIR] [ID ...]
+--   no ids: every book on the shelf; with ids: only those
+--   Reads   src/lua-beta/data/gutenberg-books.lua
+--           https://www.gutenberg.org/cache/epub/<id>/pg<id>.txt (once per book)
+--   Writes  tmp/shared-memory/gutenberg-raw/pg<id>.txt (the downloads)
+--           src/lua-beta/data/texts/<id>-<slug>/sentences.txt and metadata.txt
+--   Exit 1 if any book failed; the others are still written.
+--------------------------------------------------------------------------------
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+if arg[1] and arg[1] ~= "" and not tonumber(arg[1]) then DIR = arg[1] end
+local Sentences = dofile(DIR .. "/src/lua-beta/lib/gutenberg-sentences.lua")
+local SHELF     = dofile(DIR .. "/src/lua-beta/data/gutenberg-books.lua")
+local RAW       = DIR .. "/tmp/shared-memory/gutenberg-raw"
+local TEXTS     = DIR .. "/src/lua-beta/data/texts"
+local URL       = "https://www.gutenberg.org/cache/epub/%d/pg%d.txt"
+local CHAT_MAX  = 255
+
+-- {{{ which books
+local only = {}
+for k = 1, #arg do if tonumber(arg[k]) then only[tonumber(arg[k])] = true end end
+local books = {}
+for _, b in ipairs(SHELF) do if next(only) == nil or only[b.id] then books[#books + 1] = b end end
+for id in pairs(only) do
+    local found = false
+    for _, b in ipairs(SHELF) do if b.id == id then found = true end end
+    if not found then io.stderr:write("gutenberg-scraper: book ", id, " is not on the shelf (src/lua-beta/data/gutenberg-books.lua)\n"); os.exit(1) end
+end
+-- }}}
+
+-- {{{ local function read_file / fetch
+local function read_file(path)
+    local f = io.open(path, "rb")
+    if not f then return nil end
+    local d = f:read("*a")
+    f:close()
+    return d
+end
+
+local fetched = 0
+local function fetch(id)
+    local path = RAW .. "/pg" .. id .. ".txt"
+    local have = read_file(path)
+    if have and #have > 0 then return have, "kept" end
+    if fetched > 0 then os.execute("sleep 2") end
+    fetched = fetched + 1
+    local tmp = path .. ".part"
+    local cmd = string.format("curl -sS -f -L -A 'wow-chat-2 narrator library (issue 909)' -o '%s' '%s'", tmp, string.format(URL, id, id))
+    local ok = os.execute(cmd)
+    if ok ~= 0 and ok ~= true then os.remove(tmp); return nil, "download failed (curl: " .. tostring(ok) .. ") from " .. string.format(URL, id, id) end
+    os.rename(tmp, path)
+    return read_file(path), "fetched"
+end
+-- }}}
+
+os.execute("mkdir -p '" .. RAW .. "' '" .. TEXTS .. "'")
+local made, failed = {}, {}
+for _, b in ipairs(books) do
+    local text, how = fetch(b.id)
+    local why
+    if not text then why = how end
+    local title = text and Sentences.title_of(text)
+    if not why and not title then why = "the download has no \"Title:\" line" end
+    if not why and not title:lower():find(b.match, 1, true) then
+        why = string.format("the download's title is %q, which doesn't contain %q: the shelf's number is wrong", title, b.match)
+    end
+    local list
+    if not why then
+        local ok, res = pcall(Sentences.from_gutenberg, text, b)
+        if ok then list = res else why = "cutting failed: " .. tostring(res) end
+    end
+    if not why and #list < 50 then why = "only " .. #list .. " sentences: the cutting went wrong" end
+
+    if why then
+        failed[#failed + 1] = string.format("%d %s: %s", b.id, b.slug, why)
+    else
+        local folder = TEXTS .. "/" .. b.id .. "-" .. b.slug
+        os.execute("mkdir -p '" .. folder .. "'")
+        local f = assert(io.open(folder .. "/sentences.txt", "w"))
+        for _, s in ipairs(list) do f:write(s, "\n") end
+        f:close()
+        local long, longest, words = 0, 0, 0
+        for _, s in ipairs(list) do
+            if #s > CHAT_MAX then long = long + 1 end
+            if #s > longest then longest = #s end
+            for _ in s:gmatch("%S+") do words = words + 1 end
+        end
+        local m = assert(io.open(folder .. "/metadata.txt", "w"))
+        m:write("made by scripts/gutenberg-scraper (issue 909) from Project Gutenberg's plain text, ", os.date("!%Y-%m-%d"), ":\n")
+        m:write("the licence before and after the story, headings and picture markers removed, cut into sentences, one per line\n")
+        m:write("id: ", b.id, "\n", "title: ", b.title, "\n", "author: ", b.author, "\n", "genre: ", b.genre, "\n")
+        m:write("gutenberg title: ", title, "\n", "source: ", string.format(URL, b.id, b.id), "\n")
+        m:write("sentences: ", #list, "\n", "words: ", words, "\n")
+        m:write("longer than one chat line (", CHAT_MAX, " bytes): ", long, " (said in parts)\n", "longest: ", longest, " bytes\n")
+        m:close()
+        made[#made + 1] = string.format("%5d %-26s %6d sentences, %3d over one chat line (%s)", b.id, b.slug, #list, long, how)
+    end
+end
+
+print(string.format("gutenberg-scraper: %d books asked for, %d written, %d failed", #books, #made, #failed))
+for _, line in ipairs(made) do print("  " .. line) end
+for _, line in ipairs(failed) do print("  FAILED " .. line) end
+if #failed > 0 then os.exit(1) end

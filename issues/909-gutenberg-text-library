@@ -5,8 +5,62 @@ content for the narrator NPC system.
 
 ## Current Behavior
 
-No text content system exists. Narrator NPCs have no source material to read
-from.
+**Built 2026-10-17 on the homework branch (`fronts-homework`), not yet
+merged; nothing in game calls it yet (that is 910).** Open questions below
+keep it in progress.
+
+- **The shelf**, `src/lua-beta/data/gutenberg-books.lua`: 19 books chosen
+  for a fantasy world (fairy tales, fables, myths, legends, adventures,
+  old philosophy), each with its Gutenberg number, a word its downloaded
+  title must contain (`match`), the first words of the story (`starts`)
+  and, where notes or an index follow it, the first words after it
+  (`ends`). The list in "Example Curated Books" below was not used as
+  given: several numbers there name other books (28054 is not Grimm's
+  tales, whose number is 2591), and novels with no place in a fantasy
+  world (Pride and Prejudice, Ulysses, Dorian Gray, Sherlock Holmes) were
+  left off.
+- **The cutter**, `src/lua-beta/lib/gutenberg-sentences.lua` (notes in
+  `gutenberg-sentences.info.md`): strips the licence, headings, titles,
+  bylines, tables of contents, picture and footnote markers, marginal
+  notes and footnote paragraphs; joins hard-wrapped lines; plain ASCII
+  punctuation; cuts at `. ! ?` and never at commas, abbreviations,
+  initials or spaced dots; keeps the story between `starts` and `ends`.
+  Long sentences stay whole in the files; `speakable_parts` cuts one into
+  chat-sized parts (255 bytes) when it is said.
+- **The scraper**, `scripts/gutenberg-scraper [PROJECT_DIR] [ID ...]`:
+  downloads each book once into the RAM scratch folder
+  (`tmp/shared-memory/gutenberg-raw/`), two seconds apart, refuses a book
+  whose title doesn't contain `match` (it caught 4928 listed as "The Age
+  of Fable": it is the whole "Bulfinch's Mythology", kept under that
+  name), and writes `src/lua-beta/data/texts/<id>-<slug>/sentences.txt`
+  (one per line) and `metadata.txt` (what made it, the source, sentence
+  and word counts, how many sentences need more than one chat line).
+  Run 2026-10-17: all 19 written, about 64,000 sentences, 6.6 MB.
+- **The narrators' library**, `src/lua-beta/lib/narrator-library.lua`
+  (notes in `narrator-library.info.md`): the API below, one reader per
+  spawned narrator (book, place, mode), a finished book followed by a
+  different one at random, books read from disk once and kept. Kept in
+  memory only: the `POSITION_FILE` in "Configuration" below was dropped,
+  as step 6 says no persistence is needed and a respawned narrator is a
+  new reader.
+- **The test**, `scripts/test-gutenberg-library`: 39 checks (cutting
+  cases, a made-up Gutenberg file, chat-line parts, the library on a
+  two-book test shelf, and the real shelf: every book built, none under
+  50 sentences).
+
+Not done: the texts are not committed (question 1); the rmail forwarding
+described below is not part of this library (question 4).
+
+What the first cut taught (each now a rule, and in the cutter's
+comments): the opening of most books is not story (prefaces,
+translators, publishers), hence `starts`; several end in notes, glossaries
+or indexes, hence `ends`; Beowulf's translator numbers every fifth verse
+line and glosses in `{braces}`; Le Morte d'Arthur glues "CHAPTER X." to
+each chapter's summary, where "X." reads as an initial; footnotes are
+numbered `[46]` or `[454b]`.
+
+Before this, no text content system existed, and narrators had no source
+material.
 
 ## Intended Behavior
 
@@ -286,3 +340,23 @@ src/lua/
 - **Priority:** Medium (enables narrator content)
 - **Complexity:** Medium (scraping, parsing, persistence)
 - **Dependencies:** None (standalone utility)
+
+## Open Questions
+
+1. **Commit the texts, or make them at install?** The 19 books come to
+   6.6 MB of sentence files. Committed, every clone has them and the
+   server needs no network; made at install (an install step running the
+   scraper), the repository stays small but installing needs Gutenberg
+   to answer. Which?
+2. **Is the shelf right?** 19 books: Alice and Through the Looking-Glass,
+   Peter Pan, Aesop, the Wizard of Oz, Treasure Island, the Jungle Book,
+   the Wind in the Willows, Robinson Crusoe, Gulliver, Andersen, Grimm,
+   Marcus Aurelius, the Odyssey, Beowulf, Le Morte d'Arthur (volume 1),
+   the Tao Teh King, the Arabian Nights, Bulfinch's Mythology. Any to
+   drop, or to add?
+3. **Curly quotes in the game's font.** Quotes and dashes are turned into
+   plain ASCII in case the client's font lacks the typographic ones. Keep
+   it so, or check the font and keep the originals?
+4. **The rmail forwarding** ("only what you heard in person", above)
+   needs a narrator speaking near a player, which is 910, and the mail
+   bridge (1004). Move it into 910, so this issue is the library alone?
