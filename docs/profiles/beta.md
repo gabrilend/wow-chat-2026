@@ -107,6 +107,11 @@ install builds the new databases from the stock ones.
 - The ambush: `scripts/test-ambush` plays it in a toy world; travellers:
   `scripts/test-travel`; treasure (still switched off): `scripts/test-treasure`;
   the shared geometry: `scripts/test-movement`.
+- The whole loop at once: `scripts/demo-beta-toy-session [--minutes N]
+  [--players N] [--seed N]` plays a stretch of beta in the pretend world
+  with the real scripts (ambush, travellers, treasure, the group
+  hearthstone) and reports, per player, the monsters, travellers, trainers
+  and chests they met; its receipt goes to `output/goodbye`.
 - The world database steps: `scripts/test-beta-sql-in-ram` applies,
   re-applies and undoes them on a stock world database in RAM.
 

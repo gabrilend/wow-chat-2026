@@ -167,7 +167,14 @@ end
 World.answer = {}
 function WorldDBQueryAsync(sql, callback)
     local rank = tonumber(sql:match("`rank` = (%d+)"))
-    local rows = World.answer[rank]
+    -- the level filter the real query has ("minlevel <= L AND maxlevel >= L");
+    -- until 2026-10-17 the toy answered every row whatever the level
+    local lo = tonumber(sql:match("minlevel <= (%d+)"))
+    local hi = tonumber(sql:match("maxlevel >= (%d+)"))
+    local rows = {}
+    for _, r in ipairs(World.answer[rank] or {}) do
+        if (not lo or r[2] <= lo) and (not hi or r[3] >= hi) then rows[#rows + 1] = r end
+    end
     if not rows or #rows == 0 then callback(nil) return end
     local i = 1
     local q = {}
