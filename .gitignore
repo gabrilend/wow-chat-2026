@@ -36,6 +36,11 @@ tmp
 # Game data (extracted from client, too large for git)
 data-files/
 
+# The narrators' books, cut from Project Gutenberg at install time by
+# install step E059 (scripts/gutenberg-scraper; issue 909), so a book added
+# to the shelf arrives on the next install
+src/lua-beta/data/texts/
+
 # Editor files
 *.swp
 *.swo

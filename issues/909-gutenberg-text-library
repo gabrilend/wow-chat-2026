@@ -48,8 +48,16 @@ keep it in progress.
   two-book test shelf, and the real shelf: every book built, none under
   50 sentences).
 
-Not done: the texts are not committed (question 1); the rmail forwarding
-described below is not part of this library (question 4).
+- **Made at install time** (question 1, answered 2026-10-18): install
+  step E059 (`patches/E-patches.sh`) runs the scraper when the beta
+  profile is installed, and its revert removes the cut books; the books
+  are kept out of git (`.gitignore`: `src/lua-beta/data/texts/`). Both
+  directions run and repeat safely (tried 2026-10-18). Not yet in beta's
+  install list (`patches/patches.sh`), which the beta session is adding
+  on its branch, where it keeps that list.
+
+Not done: the rmail forwarding described below is not part of this
+library (question 4).
 
 What the first cut taught (each now a rule, and in the cutter's
 comments): the opening of most books is not story (prefaces,
@@ -343,11 +351,9 @@ src/lua/
 
 ## Open Questions
 
-1. **Commit the texts, or make them at install?** The 19 books come to
-   6.6 MB of sentence files. Committed, every clone has them and the
-   server needs no network; made at install (an install step running the
-   scraper), the repository stays small but installing needs Gutenberg
-   to answer. Which?
+1. (Answered 2026-10-18) **Commit the texts, or make them at install?**
+   The owner: "made at install time, so we can always include new
+   additions." Built as install step E059.
 2. **Is the shelf right?** 19 books: Alice and Through the Looking-Glass,
    Peter Pan, Aesop, the Wizard of Oz, Treasure Island, the Jungle Book,
    the Wind in the Willows, Robinson Crusoe, Gulliver, Andersen, Grimm,
