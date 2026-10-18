@@ -150,16 +150,10 @@ script explicitly handles the "remove for re-clone" action, making the workflow 
   profile table key by key, before every build. The duplication itself is
   kept, as this issue chose (no script depends on another's file).
 - **Number clash**: 142 is also held by an open issue
-  (`issues/142-symmetric-aggro-radius.md`). How: in the April renumbering
-  (`issues/MIGRATION_MAP.md`) the old 142, the custom spell system, became
-  702; this issue took 142 on 2026-04-14; the aggro radius issue was then
-  created as 142 on 2026-05-21, because the next free number was chosen
-  without looking in `completed/` (`validate-issues --next` counts
-  completed files now). So "142" in issues 126 and 801 means the aggro
-  radius, and an old "142 - Custom spell system" in 710 meant 702 (changed
-  2026-10-17). Name them with their slugs.
-- **The monolith's deletion:** `scripts/azerothcore` was removed on
-  2026-06-04 (commit 6ee263b, with the 148 rule set). The project's
-  CLAUDE.md still says `./scripts/azerothcore update` and
-  `./scripts/azerothcore authserver` under "Build and Run"; the commands
-  are `scripts/update`, `scripts/authserver`, `scripts/worldserver`.
+  (`issues/142-symmetric-aggro-radius.md`), made on 2026-05-21, after this
+  one (2026-04-14) had kept 142 through the April renumbering (the legacy
+  142, custom-spell-system, became 702). The number looked free because
+  finished issues live in `completed/`; `validate-issues --next` now looks
+  there too. Name them with their slugs. (Corrected 2026-10-17 by the
+  fronts-homework session: this note first said the renumbering gave 142
+  to the other.)
