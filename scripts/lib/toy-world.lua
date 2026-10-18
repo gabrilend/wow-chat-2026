@@ -428,6 +428,62 @@ end
 function Toy.spell(entry) return { GetEntry = function() return entry end } end
 -- }}}
 
+-- {{{ extra pieces the druids' Moonglade return uses (added 2026-10-18, issue 211a)
+-- A player's known spells (p.spells, a set of spell numbers) and zone
+-- (p.zone, a number); the messages they are sent (p.messages, a list of
+-- strings); a map's areas (new_map's fourth argument, area(x, y, z) ->
+-- area number; 0 without one); and the characters database for the one
+-- table this script keeps (Toy.chardb.moonglade, rows by guid). Any other
+-- statement is an error, not an empty answer: a test that meets one needs
+-- this stand-in taught it first. A database row survives a logout, as in
+-- the game; a test plays a server restart by emptying the script's own
+-- memory (Moonglade.spots) and logging the player in again.
+Toy.chardb = { moonglade = {} }
+function FLAT:GetAreaId() return 0 end
+local base_map_m = new_map
+new_map = function(id, height, water, area)
+    local m = base_map_m(id, height, water)
+    m.area = area
+    function m:GetAreaId(x, y, z) return self.area and self.area(x, y, z) or 0 end
+    return m
+end
+local base_player_m = new_player
+new_player = function(name, guidLow)
+    local p = base_player_m(name, guidLow)
+    p.spells, p.zone, p.messages, p.class = {}, 0, {}, p.class or 1
+    function p:HasSpell(id) return self.spells[id] == true end
+    function p:LearnSpell(id) self.spells[id] = true end
+    function p:GetZoneId() return self.zone end
+    function p:SendBroadcastMessage(text) self.messages[#self.messages + 1] = text end
+    return p
+end
+local function moonglade_row(sql)
+    local g, m, x, y, z, o = sql:match("^REPLACE INTO beta_211a_moonglade_return %(guid, map, x, y, z, o%) VALUES %((%d+), (%d+), ([%d.-]+), ([%d.-]+), ([%d.-]+), ([%d.-]+)%)$")
+    if g then Toy.chardb.moonglade[tonumber(g)] = { tonumber(m), tonumber(x), tonumber(y), tonumber(z), tonumber(o) }; return true end
+    g = sql:match("^DELETE FROM beta_211a_moonglade_return WHERE guid = (%d+)$")
+    if g then Toy.chardb.moonglade[tonumber(g)] = nil; return true end
+    return false
+end
+function CharDBExecute(sql)
+    if not moonglade_row(sql) then error("toy CharDBExecute does not know this statement: " .. sql, 2) end
+end
+-- {{{ local function new_query
+-- An answer as CharDBQuery gives it: columns from 0, one row (this table
+-- has one per guid).
+local function new_query(row)
+    return { GetUInt32 = function(_, c) return math.floor(row[c + 1]) end,
+             GetFloat  = function(_, c) return row[c + 1] end,
+             NextRow   = function() return false end }
+end
+-- }}}
+function CharDBQuery(sql)
+    local g = sql:match("^SELECT map, x, y, z, o FROM beta_211a_moonglade_return WHERE guid = (%d+)$")
+    if not g then error("toy CharDBQuery does not know this question: " .. sql, 2) end
+    local row = Toy.chardb.moonglade[tonumber(g)]
+    return row and new_query(row) or nil
+end
+-- }}}
+
 Toy.World, Toy.handlers = World, handlers
 Toy.schedule, Toy.advance, Toy.pending = schedule, advance, pending
 Toy.new_map, Toy.FLAT = new_map, FLAT

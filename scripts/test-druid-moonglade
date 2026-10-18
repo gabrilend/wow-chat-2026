@@ -1,0 +1,185 @@
+#!/usr/bin/env luajit
+-- test-druid-moonglade - plays the druids' Moonglade return (issue 211a) in
+-- the pretend world, with beta's real script.
+--
+-- For a general audience: on beta a druid's way home is the spell Teleport:
+-- Moonglade. Every druid knows it from the start; cast out in the world it
+-- takes them to the glade, to a random spot on its open ground, and
+-- remembers where they were; cast in the glade it sends them back there.
+-- This loads src/lua-beta/druid-moonglade.lua unchanged into the pretend
+-- world of scripts/lib/toy-world.lua and plays each promise as a scene: a
+-- new druid learning the spell, out and back, back with nothing to go to,
+-- a cast from a dungeon, the spot kept through a logout and a restart, the
+-- arrival spots spread over the glade and never in the lake, on a
+-- mountainside or on a cliff, and other spells and classes left alone. No
+-- server or database is needed.
+--
+-- Usage: scripts/test-druid-moonglade [PROJECT_DIR]
+-- Exit status: 0 if every check passes, 1 otherwise.
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+
+local here = (arg[0]:match("^(.*[/\\])") or "./")
+local Toy = dofile(here .. "lib/toy-world.lua")
+local quiet = print
+print = function() end                   -- the script's log lines
+dofile(DIR .. "/src/lua-beta/druid-moonglade.lua")
+print = quiet
+
+local checks, fails = 0, 0
+-- {{{ local function check
+local function check(ok, what)
+    checks = checks + 1
+    if not ok then fails = fails + 1; print("  FAIL " .. what) end
+end
+-- }}}
+
+local LOGIN, CAST = Toy.handlers[3][#Toy.handlers[3]], Toy.handlers[5][#Toy.handlers[5]]
+local G = Moonglade.GLADE
+
+-- {{{ the glade: a pretend Kalimdor
+-- Ground: the valley floor at 512 inside a ring round the glade's middle;
+-- a lake (area 656) in the middle; mountains (ground at 700) beyond the
+-- ring; a cliff at x 7600-7620, rising 2 yards for every yard (steeper
+-- than the script's 45-degree rule), then back down. Flat ground right
+-- beside it is fine to stand on.
+local MID_X, MID_Y = 7850, -2400
+local function height(x, y)
+    local d = math.sqrt((x - MID_X) ^ 2 + (y - MID_Y) ^ 2)
+    if d > 500 then return 700 end
+    if x > 7600 and x < 7620 then return 512 + 2 * math.min(x - 7600, 7620 - x) end
+    return 512
+end
+local function area(x, y)
+    local d = math.sqrt((x - MID_X) ^ 2 + (y - MID_Y) ^ 2)
+    if d < 120 then return 656 end                      -- Lake Elune'ara
+    if x > 7950 and y < -2600 then return 2361 end      -- Nighthaven
+    return 493
+end
+local KALIMDOR = Toy.new_map(1, height, nil, area)
+local EK = Toy.new_map(0, function() return 40 end)
+local DUNGEON = Toy.new_map(36, function() return 0 end) -- the Deadmines: not the open world
+Toy.maps[1], Toy.maps[0], Toy.maps[36] = KALIMDOR, EK, DUNGEON
+-- }}}
+
+-- {{{ local function druid
+-- A druid standing somewhere: map, x, y, zone.
+local function druid(name, low, map, x, y, zone)
+    local p = Toy.new_player(name, low)
+    p.class, p.map, p.x, p.y, p.z, p.zone = 11, map, x, y, map.height(x, y), zone
+    return p
+end
+-- }}}
+-- {{{ local function land_in_nighthaven
+-- What the spell itself does between the cast and our move: the druid is in
+-- Nighthaven (map 1, zone 493).
+local function land_in_nighthaven(p)
+    p.map, p.x, p.y, p.z, p.zone = KALIMDOR, 7991.88, -2679.84, 512.1, 493
+end
+-- }}}
+
+-- {{{ 1. learning the spell
+local ann = druid("Ann", 501, EK, -8900, 500, 12)
+Toy.login(ann)
+check(ann:HasSpell(18960), "a druid without Teleport: Moonglade learns it at login")
+local warrior = Toy.new_player("Wat", 502)
+warrior.class = 1
+Toy.login(warrior)
+check(not warrior:HasSpell(18960), "a warrior is not taught Teleport: Moonglade")
+local taught = 0
+local bea = druid("Bea", 503, EK, 0, 0, 12)
+bea.spells[18960] = true
+function bea:LearnSpell(id) taught = taught + 1; self.spells[id] = true end
+Toy.login(bea)
+check(taught == 0, "a druid who knows it is not taught it again")
+-- }}}
+
+-- {{{ 2. out and back
+CAST(5, ann, Toy.spell(18960))
+check(Toy.chardb.moonglade[501] ~= nil, "casting from the world remembers the spot in the database")
+local row = Toy.chardb.moonglade[501] or {}
+check(row[1] == 0 and math.abs(row[2] - -8900) < 0.01 and math.abs(row[3] - 500) < 0.01, "the remembered spot is where the druid stood (map 0, -8900, 500)")
+land_in_nighthaven(ann)
+Toy.advance(Moonglade and 1500 or 0)
+check(#ann.teleports == 1 and ann.teleports[1].map == 1, "a moment after landing, the druid is moved within Kalimdor")
+local t = ann.teleports[1] or {}
+check(t.x and t.x >= G.x_min and t.x <= G.x_max and t.y >= G.y_min and t.y <= G.y_max, "the arrival lies in the glade's box")
+-- now in the glade, cast again: back to the remembered spot
+ann.x, ann.y, ann.z = t.x or ann.x, t.y or ann.y, t.z or ann.z
+CAST(5, ann, Toy.spell(18960))
+land_in_nighthaven(ann)
+Toy.advance(1500)
+local back = ann.teleports[2] or {}
+check(back.map == 0 and math.abs((back.x or 0) - -8900) < 0.01 and math.abs((back.y or 0) - 500) < 0.01, "casting in the glade sends the druid back to where they cast it from")
+check(Toy.chardb.moonglade[501] == nil, "going back forgets the spot in the database")
+check(#ann.teleports == 2, "going back is one move, not also a random arrival")
+-- }}}
+
+-- {{{ 3. back with nothing remembered
+local cid = druid("Cid", 504, KALIMDOR, 7900, -2700, 493)
+Toy.login(cid)
+CAST(5, cid, Toy.spell(18960))
+Toy.advance(1500)
+check(#cid.teleports == 0, "in the glade with nothing remembered, the druid is not moved (the spell's own Nighthaven)")
+check(#cid.messages == 1 and cid.messages[1]:match("nowhere to return"), "and is told there is nowhere to return to")
+-- }}}
+
+-- {{{ 4. a cast from a dungeon forgets
+local dot = druid("Dot", 505, EK, 100, 100, 12)
+Toy.login(dot)
+CAST(5, dot, Toy.spell(18960))
+check(Toy.chardb.moonglade[505] ~= nil, "a first trip from the world is remembered")
+dot.map, dot.zone = DUNGEON, 1581
+CAST(5, dot, Toy.spell(18960))
+check(Toy.chardb.moonglade[505] == nil, "a cast from a dungeon forgets the earlier spot")
+check(Moonglade.spots[505] == false, "and forgets it in memory too")
+-- }}}
+
+-- {{{ 5. kept through a logout and a restart
+local eli = druid("Eli", 506, EK, 300, 300, 12)
+Toy.login(eli)
+CAST(5, eli, Toy.spell(18960))
+Toy.logout(eli)
+Moonglade.spots = {}                                       -- a server restart: the script's memory is empty
+Toy.login(eli)
+check(type(Moonglade.spots[506]) == "table" and math.abs(Moonglade.spots[506].x - 300) < 0.01, "after a logout and a restart the spot is read back from the database")
+eli.map, eli.x, eli.y, eli.zone = KALIMDOR, 7900, -2700, 493
+CAST(5, eli, Toy.spell(18960))
+Toy.advance(1500)
+local e = eli.teleports[#eli.teleports] or {}
+check(e.map == 0 and math.abs((e.x or 0) - 300) < 0.01, "and the return still goes there")
+-- }}}
+
+-- {{{ 6. the arrivals: spread over the glade, never in the lake, on the mountains or the cliff
+local seen, bad, cells = 0, 0, {}
+math.randomseed(211)
+for i = 1, 400 do
+    local x, y, z = Moonglade.drawArrival(KALIMDOR)
+    if x then
+        seen = seen + 1
+        local a = area(x, y, z)
+        if a == 656 or height(x, y) ~= 512 or (x > 7600 and x < 7620) then bad = bad + 1 end
+        cells[math.floor(x / 150) .. ":" .. math.floor(y / 150)] = true
+    end
+end
+local spread = 0
+for _ in pairs(cells) do spread = spread + 1 end
+check(seen == 400, "every arrival draw finds a spot in this glade (" .. seen .. " of 400)")
+check(bad == 0, "no arrival in the lake, on a mountain, or on or beside the cliff (" .. bad .. " bad)")
+check(spread >= 12, "arrivals are spread over the glade, not one spot (" .. spread .. " of the 150-yard squares)")
+-- a glade with no open ground: nothing drawn, so the druid stays in Nighthaven
+local all_lake = Toy.new_map(1, function() return 512 end, nil, function() return 656 end)
+check(Moonglade.drawArrival(all_lake) == nil, "with no open ground at all, no arrival is drawn")
+-- }}}
+
+-- {{{ 7. other spells and classes
+local fay = druid("Fay", 507, EK, 0, 0, 12)
+Toy.login(fay)
+CAST(5, fay, Toy.spell(8690))                              -- a Hearthstone
+Toy.advance(1500)
+check(Toy.chardb.moonglade[507] == nil and #fay.teleports == 0, "another spell is left alone")
+-- }}}
+
+print(string.format("%d checks, %d failed", checks, fails))
+os.exit(fails == 0 and 0 or 1)

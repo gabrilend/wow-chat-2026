@@ -25,6 +25,9 @@ It checks a script's own decisions, not how the game would carry them out.
 - `RegisterItemEvent(entry, event, fn)`: kept in `Toy.itemHandlers[entry][event]`.
 - `RegisterPlayerGossipEvent(menu, event, fn)`: kept in
   `Toy.gossipHandlers[menu][event]`.
+- `CharDBExecute(sql)`, `CharDBQuery(sql)`: the characters database, for
+  the one table the druids' Moonglade return keeps (`Toy.chardb.moonglade`,
+  rows by guid). Any other statement is an error: teach the stand-in first.
 
 ## The table it returns (`Toy`)
 
@@ -34,15 +37,18 @@ It checks a script's own decisions, not how the game would carry them out.
 - `schedule(owner, fn, delay)`, `advance(ms)` (runs due calls in time
   order, skipping despawned or logged-out owners), `pending(owner, fn) ->
   count`
-- `new_map(id, height(x, y) -> number or nil, water(x, y) -> boolean)`,
-  `FLAT` (ground 0 everywhere), `maps` (by map number)
+- `new_map(id, height(x, y) -> number or nil, water(x, y) -> boolean,
+  area(x, y, z) -> area number)`, `FLAT` (ground 0 everywhere, area 0),
+  `maps` (by map number)
 - `new_creature(entry, map, x, y, z)`, `new_player(name, guidLow)`: plain
   tables with the methods the scripts call. Fields a test sets or reads
   directly: `x, y, z, standing, dead, wet, moving, level, class, horde,
   bot`; `spawned` (creatures a player summoned), `objects` (chests),
   `bags`, `buyback` (12 slots), `home` (bind point `{ mapId, x, y, z }`),
   `teleports` (list of `{ map, x, y, z, o }`), `window` (the open gossip
-  window: `{ menu, items = list of { text, sender, intid, popup } }`).
+  window: `{ menu, items = list of { text, sender, intid, popup } }`),
+  `spells` (set of known spell numbers), `zone` (number), `messages`
+  (what they were sent, a list of strings).
 - `login(p)`, `logout(p)`: run the registered handlers. Logout wipes the
   player's data (as the object-variables extension does), removes their
   chests and empties the buyback tab (as the game does).

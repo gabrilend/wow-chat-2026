@@ -341,7 +341,8 @@ function Travel.getTravelerTypeMask(class)
     if class == 9 then -- 9 = warlock
         return 0 + 2 + 4 + 8 + 0  + 32 + 64 + 0   + 256 + 512
     end
-    if class == 11 then -- 11 = druid
+    if class == 11 then -- 11 = druid: no innkeepers (2), on purpose: their hearthstone is
+                        -- Teleport: Moonglade (the owner, 2026-10-18; druid-moonglade.lua, issue 211a)
         return 0 + 0 + 4 + 8 + 0  + 32 + 64 + 0   + 256 + 512
     end
 end

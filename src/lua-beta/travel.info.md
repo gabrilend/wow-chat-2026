@@ -36,7 +36,8 @@ Armor 256, Food 512). Every class meets trainers, consumables, others,
 melee and armour. Only hunters meet ammunition sellers and only rogues
 poison sellers; ranged sellers come to warriors, hunters and rogues;
 mages meet no food sellers (they conjure their own), and druids no
-innkeepers (the source gives no reason).
+innkeepers (their way home is Teleport: Moonglade instead, issue 211a,
+`druid-moonglade.lua`).
 
 ### `Travel.getRandomTravellerId(playerGuid, count) -> creature entry (number), 0 if none`
 ### `Travel.isTrainer(entry) -> boolean`, `Travel.getTrainerForClass(class, level, faction) -> entry or nil`

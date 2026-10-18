@@ -7,6 +7,8 @@
 - Related: 617e (the buddies' hearthstone, same family: its 2026-10-17
   decision), 168 (Chromie: another talking helper with menus), 617b
   (Sargobras's menus and pop-ups, the technique reused here)
+- Sub-issues: 211a (druids hearth by Teleport: Moonglade instead: out to
+  a random spot in the glade, and back)
 - Priority: Medium
 - State: planned; open questions first
 

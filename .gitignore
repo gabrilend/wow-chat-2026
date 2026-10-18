@@ -120,6 +120,7 @@ sql/vanilla/db_world/
 sql/vanilla/db_characters/
 sql/beta/db_world/
 sql/beta/db_playerbots/
+sql/beta/db_characters/
 sql/basic/db_world/
 sql/basic/db_characters/
 sql/cc-test/db_world/

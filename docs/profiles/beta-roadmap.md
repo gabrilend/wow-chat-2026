@@ -81,6 +81,9 @@ work needs, and treasure is fed by the selling that merchants allow.
 - **211** group hearthstone by invitation (new): a pop-up to each member
   when someone hearths, moved when the cast completes, standing in a
   circle by group number round the first hearther's arrival.
+- **211a** druids hearth by Teleport: Moonglade (new, built offline):
+  known from level 1; out to a random spot of the glade's open ground, and
+  back to where they cast it.
 
 ### 3. The scheduler
 
@@ -198,6 +201,8 @@ Kept in the issue they belong to, asked one at a time:
   of 20.
 - 211: random bots and the hearth pop-up; two hearthers at once; Sargobras's
   pop-up or the game's summon dialog.
+- 211a: whether the group comes along on a druid's Moonglade trip; what a
+  cast from an instance does to the remembered spot; a cooldown or none.
 - 617e: the buddies' new hearthstone rule and what it replaces.
 - 718: which profile Chromie's death knight story belongs to.
 - 721: 502's new name; borrowed spells' cost; talents without AIO.
