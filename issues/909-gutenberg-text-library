@@ -137,7 +137,7 @@ This is NOT remote listening - you must physically be near the narrator in-game.
 The rmail forwarding just gives you a permanent copy of what you already heard,
 so you can review it later or share it with others.
 
-See issue 306 (rmail-ingame-bridge) for rmail integration patterns.
+See issue 1004 (rmail-ingame-bridge) for rmail integration patterns.
 
 ## Design Considerations
 
@@ -332,7 +332,7 @@ src/lua/
 ## Related Issues
 
 - Narrator/Storyteller system (not yet filed)
-- Issue 307: narrator-audience-facing
+- Issue 908: narrator-audience-facing
 
 ## Stats
 

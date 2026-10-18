@@ -113,3 +113,28 @@ If implementing Option 1, create: `docs/patches/ale-gameobject-wildcard.md`
 - Issue 405: Ability tome system
 - Issue 153: Chest vulnerability mechanic
 - B002: playerbots-ale-login-hook (similar C++ patch approach)
+
+## What Came After
+
+Added 2026-10-17 (the text above is the copy from before the April
+renumbering, when this was issue 325; it is left as it was).
+
+- **The fuller copy is `issues/307-ale-gameobject-wildcard.md`**, the
+  version kept up after the migration. It says "Completed (2026-04-08)" but
+  was never moved here, because it has the same file name as this one.
+  Which copy should stay is an open question for the owner.
+- **The fix lives on as patch B003** (`patches/B003-ale-gameobject-wildcard.sh`),
+  applied before every build and taken off after, as the patch system does.
+- **The two scripts that needed it moved and were switched off.** When the
+  Lua tree was split by profile (2026-06-02) `src/lua/` became
+  `src/lua-beta/`, and both scripts are there as
+  `ability-tomes.lua.disabled` and `chest-vulnerability.lua.disabled`:
+  beta's survival features were switched off for the profile baseline and
+  are being brought back by the beta roadmap (issue 200). The wildcard is
+  ready for them when they return.
+- **Built on by:** issue 405 (the ability tome system registers its chest events
+  with entry 0, and lists this issue as required) and issue 606b (the nil
+  position errors, which notes the gameobject errors as resolved here).
+- **The number 307 meant something else before April:** the narrator
+  audience-facing issue, now 908. Narrator issues still said "307" for it;
+  909, 910 and 100 were corrected on 2026-10-17.

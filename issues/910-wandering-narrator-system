@@ -15,7 +15,7 @@ basic movement behaviors.
 Wandering narrators are **playerbots** that:
 - Wander like any other traveler (walking speed)
 - Stop moving when a player/bot sits within 5 yards
-- Read sentences from Project Gutenberg library (issue 308)
+- Read sentences from Project Gutenberg library (issue 909)
 - Share and propagate rumors through PM interactions
 - Can be followed by players (playerbot functionality)
 
@@ -23,9 +23,9 @@ Wandering narrators are **playerbots** that:
 
 When narrating stories:
 - Read **one sentence at a time** in /say chat
-- Split on periods, not commas (see issue 308)
+- Split on periods, not commas (see issue 909)
 - Sometimes read from a book (animation), sometimes recite from memory
-- Continue through book sequentially per-instance (issue 308)
+- Continue through book sequentially per-instance (issue 909)
 
 ### Rumor Mechanics
 
@@ -50,7 +50,7 @@ Narrators use association-based matching:
 ### Multi-Instance Sharing
 
 Same NPC type spawns across the world:
-- Each instance has independent story position (issue 308)
+- Each instance has independent story position (issue 909)
 - **Rumors ARE shared** across instances (telephone game)
 - Player A tells rumor to McGee in Elwynn
 - Player B might hear it from McGee in Northrend
@@ -143,7 +143,7 @@ NarratorName
 
 See `docs/rmail-integration.md` for full setup instructions.
 
-See also issues 306 (rmail bridge) and 308 (Gutenberg library) for integration.
+See also issues 1004 (rmail bridge) and 909 (Gutenberg library) for integration.
 
 ## Hook Architecture
 
@@ -476,7 +476,7 @@ Narrators are playerbots, not standard NPCs:
 ### State Management
 
 Per-instance state (keyed by spawn GUID):
-- Current book and sentence position (issue 308)
+- Current book and sentence position (issue 909)
 - Current behavior mode (story/rumors/sleep)
 - Collected rumors with keyword associations
 - Movement pattern state
@@ -522,7 +522,7 @@ end
    - Reuse traveler movement patterns
    - Add stop-on-seated-nearby trigger
 
-3. **Integrate Gutenberg library (issue 308)**
+3. **Integrate Gutenberg library (issue 909)**
    - Connect to Library API for sentence retrieval
    - Speak sentences in /say with timing
 
@@ -562,11 +562,11 @@ end
     - 30-minute duration
     - State reset on wake
 
-11. **Integrate with issue 307 (audience facing)**
+11. **Integrate with issue 908 (audience facing)**
     - Sitting behavior when audience seated
     - Optimal facing calculation
 
-12. **Connect rmail integration (issue 306)**
+12. **Connect rmail integration (issue 1004)**
     - Subscribe/unsubscribe handling
     - Speech forwarding to subscribers
     - TTS generation (future)
@@ -611,14 +611,14 @@ NARRATOR_PACE_STEP_COUNT    = 2       -- steps between stops
 
 ## Related Issues
 
-- Issue 306: rmail-ingame-bridge (TTS distribution)
-- Issue 307: narrator-audience-facing (sitting behavior)
-- Issue 308: gutenberg-text-library (content source)
+- Issue 1004: rmail-ingame-bridge (TTS distribution)
+- Issue 908: narrator-audience-facing (sitting behavior)
+- Issue 909: gutenberg-text-library (content source)
 
 ## Stats
 
 - **Phase:** 3
 - **Priority:** High (central social system)
 - **Complexity:** High (multiple behaviors, rumor mechanics, integrations)
-- **Dependencies:** Issues 306, 307, 308, Playerbot module
+- **Dependencies:** Issues 1004, 908, 909, Playerbot module
 

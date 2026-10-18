@@ -150,7 +150,7 @@ The following are NOT in the README and are deferred:
 - Language barrier system (302)
 - Chest-bound hearthstones (303)
 - rmail integration (306, 313-317)
-- Narrator/storytelling system (307, 308, 310-312)
+- Narrator/storytelling system (908, 909, 910-912)
 - Invisible level progression (309)
 - Bounty board currency (121)
 - Portal dimension system (129)

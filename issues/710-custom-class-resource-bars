@@ -512,7 +512,7 @@ CREATE TABLE character_custom_resources (
 ## Related Issues
 - 159 - Knight custom class (first test case)
 - 345 - Custom talent interface (same AIO infrastructure)
-- 142 - Custom spell system (may need for resource modifications)
+- 702 - Custom spell system (may need for resource modifications)
 
 ## Related Files
 - `src/lua/custom-resources.lua` (to be created)
