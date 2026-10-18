@@ -582,6 +582,7 @@ QUICK_TESTS=(
     test-line-edits test-lua-unique-names test-movement test-navmesh-caves test-profile-config-gates test-redirect-listener test-roam-pattern
     test-sargobras-follow test-sql-mirror test-steady-mtimes test-valley-deal test-world-boss-countdown
     test-treasure
+    test-ale-method-names
 )
 run_quick_tests() {
     local out="${DIR}/tmp/shared-memory/compile-tests"

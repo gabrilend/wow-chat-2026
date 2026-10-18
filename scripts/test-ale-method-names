@@ -1,0 +1,180 @@
+#!/usr/bin/env luajit
+-- test-ale-method-names - checks that every method the server-side Lua
+-- scripts call on a game object is one the Lua engine really has.
+--
+-- For a general audience: the game server runs our Lua scripts through
+-- its Lua engine (ALE), which offers a fixed list of things a script can
+-- ask of a player, a creature or a chest ("where are you", "what level").
+-- A script that asks for something not on the list fails only when that
+-- line runs, in the middle of play. In April that happened 17,188 times
+-- in one session: four scripts asked for a position with a method the
+-- engine does not have (`GetPosition`, issue 606b). This reads the
+-- engine's own list of names from its source, adds the names our scripts
+-- and the engine's Lua extensions define themselves and Lua's own string
+-- and file methods, then reads every script and reports each method call
+-- whose name is in none of them. Scripts switched off (".disabled", or a
+-- folder starting with a dot) are checked too and reported apart, so a
+-- problem is found before something is switched back on.
+--
+-- What it cannot see: a real method called on the wrong kind of object
+-- (asking a chest for its level). It checks names, not types.
+--
+-- Usage: scripts/test-ale-method-names [PROJECT_DIR] [--source TREE]
+--   TREE   a source tree holding modules/mod-ale (default
+--          PROJECT_DIR/source-beta; a git worktree has none, so point it
+--          at the main project's)
+-- Exit status: 0 when no switched-on script calls an unknown method,
+-- 1 otherwise (switched-off scripts are reported, not failed).
+
+local DIR, SOURCE = "/mnt/mtwo/games/azeroth-core/wow-chat-2026", nil
+do
+    local i = 1
+    while arg[i] do
+        if arg[i] == "--source" then SOURCE = arg[i + 1]; i = i + 2
+        else DIR = arg[i]; i = i + 1 end
+    end
+end
+SOURCE = SOURCE or (DIR .. "/source-beta")
+local ALE = SOURCE .. "/modules/mod-ale/src/LuaEngine"
+
+-- the profile folders whose scripts run in ALE (lua-alpha runs in the
+-- older mod-eluna engine, with its own list; not checked here)
+local SCRIPT_DIRS = { "src/lua-beta", "src/lua-basic", "src/lua-vanilla" }
+
+-- {{{ local function lines_of / read
+local function lines_of(cmd)
+    local out, f = {}, io.popen(cmd)
+    for l in f:lines() do out[#out + 1] = l end
+    f:close()
+    return out
+end
+local function read(path)
+    local f = io.open(path, "r")
+    if not f then return nil end
+    local s = f:read("*a")
+    f:close()
+    return s
+end
+-- }}}
+
+-- {{{ local function strip
+-- A script with its comments and the insides of its strings removed, so
+-- "call :GetPosition() here" in a comment or a message is not a call.
+-- Line breaks are kept, so line numbers stay right.
+local function strip(src)
+    src = src:gsub("%-%-%[(=*)%[.-%]%1%]", function(c) return (c:gsub("[^\n]", "")) end)
+    src = src:gsub("%[(=*)%[.-%]%1%]", function(c) return (c:gsub("[^\n]", "")) end)
+    src = src:gsub('"[^"\n]*"', '""'):gsub("'[^'\n]*'", "''")
+    src = src:gsub("%-%-[^\n]*", "")
+    return src
+end
+-- }}}
+
+-- {{{ the known names
+local known, from = {}, {}
+local function know(name, source) if not known[name] then known[name] = true; from[name] = source end end
+
+-- 1. the engine's registration list: { "Name", &LuaClass::Function }
+local functions = read(ALE .. "/LuaFunctions.cpp")
+if not functions then
+    io.stderr:write("test-ale-method-names: no " .. ALE .. "/LuaFunctions.cpp; the engine's list of method names is read from there.\n" ..
+                    "  (a git worktree has no source-beta/: pass --source /mnt/mtwo/games/azeroth-core/wow-chat-2026/source-beta)\n")
+    os.exit(1)
+end
+local engineCount = 0
+for name in functions:gmatch('{%s*"([%a_][%w_]*)"%s*,%s*&') do
+    if not known[name] then engineCount = engineCount + 1 end
+    know(name, "engine")
+end
+
+-- 2. Lua's own methods on strings and files, called with a colon
+for _, name in ipairs({ "byte", "find", "format", "gmatch", "gsub", "len", "lower", "match", "rep",
+                        "reverse", "sub", "upper", "close", "flush", "lines", "read", "seek",
+                        "setvbuf", "write" }) do
+    know(name, "Lua")
+end
+
+-- 3. names defined in Lua: our scripts and the engine's extensions
+--    ("function Thing:Name(" or "Thing.Name = function"). An extension
+--    (.ext) also attaches methods by assignment to each object kind in a
+--    loop ("_G[k].SetData = SetData", ObjectVariables.ext), so in those
+--    files any "x.Name =" counts.
+local function learn_from(path, label)
+    local src = strip(read(path) or "")
+    for name in src:gmatch("function%s+[%w_%.]+:([%a_][%w_]*)%s*%(") do know(name, label) end
+    for name in src:gmatch("[%w_]+%.([%a_][%w_]*)%s*=%s*function") do know(name, label) end
+    if path:match("%.ext$") then
+        for name in src:gmatch("[%w_%]]%.([%a_][%w_]*)%s*=") do know(name, label) end
+    end
+end
+
+-- 4. names our B-patches add to the engine's list, known only to the
+--    profile whose patch list applies that patch (patches/patches.sh,
+--    PHASE_BEGIN_PATCHES). The source tree has its patches reverted after
+--    each build, so these are not in LuaFunctions.cpp as read above.
+local profileOf = { ["src/lua-beta"] = "beta", ["src/lua-basic"] = "basic", ["src/lua-vanilla"] = "vanilla" }
+local patchNames = {}   -- [profile] = { [name] = "Bxxx" }
+do
+    local lists = (read(DIR .. "/patches/patches.sh") or ""):match("PHASE_BEGIN_PATCHES=%((.-)\n%)") or ""
+    for profile, ids in lists:gmatch('%["([%w%-]+)"%]="([^"]*)"') do
+        patchNames[profile] = {}
+        for id in ids:gmatch("B%d+") do
+            for _, file in ipairs(lines_of("ls '" .. DIR .. "/patches/'" .. id .. "-*.sh 2>/dev/null")) do
+                for name in (read(file) or ""):gmatch('{%s*\\?"([%a_][%w_]*)\\?"%s*,%s*&') do
+                    patchNames[profile][name] = id
+                end
+            end
+        end
+    end
+end
+local defined = lines_of("find '" .. ALE .. "/extensions' -type f 2>/dev/null")
+for _, d in ipairs(SCRIPT_DIRS) do
+    for _, p in ipairs(lines_of("find '" .. DIR .. "/" .. d .. "' -type f \\( -name '*.lua' -o -name '*.lua.disabled' -o -name '*.ext' \\) 2>/dev/null | sort")) do
+        defined[#defined + 1] = p
+    end
+end
+for _, p in ipairs(defined) do learn_from(p, p:gsub("^" .. DIR:gsub("%p", "%%%0") .. "/", "")) end
+-- }}}
+
+-- {{{ the calls
+-- "x:Name(" anywhere in code, with its line number. A file is switched off
+-- when its name ends ".disabled" or a folder on its path starts with a dot
+-- (the engine skips only names that begin with a dot).
+local unknown, offUnknown, calls = {}, {}, 0
+local scripts = {}
+for _, d in ipairs(SCRIPT_DIRS) do
+    for _, p in ipairs(lines_of("find '" .. DIR .. "/" .. d .. "' -type f \\( -name '*.lua' -o -name '*.lua.disabled' \\) 2>/dev/null | sort")) do
+        scripts[#scripts + 1] = p
+    end
+end
+for _, path in ipairs(scripts) do
+    local rel = path:sub(#DIR + 2)
+    local off = rel:match("%.disabled$") ~= nil or rel:match("/%.[^/]+/") ~= nil
+    local patched = patchNames[profileOf[rel:match("^(src/lua%-[%w]+)")] or ""] or {}
+    local n = 0
+    for line in (strip(read(path) or "") .. "\n"):gmatch("([^\n]*)\n") do
+        n = n + 1
+        for name in line:gmatch("[%w_%)%]]%s*:%s*([%a_][%w_]*)%s*[%(\"'{]") do
+            calls = calls + 1
+            if not known[name] and not patched[name] then
+                local list = off and offUnknown or unknown
+                list[#list + 1] = string.format("  %s:%d  :%s(", rel, n, name)
+            end
+        end
+    end
+end
+-- }}}
+
+-- {{{ the report
+print(string.format("test-ale-method-names: %d engine names, %d scripts, %d method calls", engineCount, #scripts, calls))
+if #unknown > 0 then
+    print("\nCalls to methods nothing defines, in scripts the engine loads:")
+    print(table.concat(unknown, "\n"))
+end
+if #offUnknown > 0 then
+    print("\nThe same, in switched-off scripts (fix before switching them on):")
+    print(table.concat(offUnknown, "\n"))
+end
+print(string.format("\n%d unknown in loaded scripts, %d in switched-off ones", #unknown, #offUnknown))
+os.exit(#unknown == 0 and 0 or 1)
+-- }}}

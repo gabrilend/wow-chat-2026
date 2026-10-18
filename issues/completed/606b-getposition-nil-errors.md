@@ -318,3 +318,51 @@ With ~100 bots and 2-second wander tick: 3000 errors/minute = 15,000+ in 5 minut
 **Design principle applied:** "Adding guard rails implies there's a chance you can fall down. Not ideal - build the system to proceed with grace."
 
 The architectural fix (Option A or B) ensures bots never receive behavior events until they're ready. The dangerous state becomes impossible, not just guarded against.
+
+## Since then (checked 2026-10-17)
+
+**The lesson is now a test.** The fault here was a call to a method the
+Lua engine does not have, found only by its 17,188 failures in a running
+server. `scripts/test-ale-method-names` now looks for that before any
+server runs: it reads the engine's own list of method names from its
+source (`modules/mod-ale/src/LuaEngine/LuaFunctions.cpp`, 1,555 names),
+adds the names our B-patches give each profile (from
+`patches/patches.sh`'s lists, so a basic script may use B041's methods
+and a beta script may not), the names our scripts and the engine's
+extensions define (`ObjectVariables.ext` attaches `GetData` and
+`SetData` to every object kind), and Lua's own string and file
+methods; then it reports every `x:Name(` call whose name is in none of
+them. `GetPosition` appears nowhere today.
+
+**Its first run found six more of the same kind**, all in the bot
+behaviors that have been switched off since April
+(`src/lua-beta/.behaviors.disabled/`): `IsHostileTo` (avoid-monsters,
+find-monsters), `MovementExpired` (convoy, gestures), `SetTarget`
+(find-monsters), `GetPhase` (gestures; the engine has `GetPhaseMask`),
+`GetUnitsInRange` (orbit-player; the engine has `GetFriendlyUnitsInRange`
+and `GetUnfriendlyUnitsInRange`) and `UseItem` (sit-and-rest). Each would
+fail the way `GetPosition` did the first time its line ran. They are
+reported by the test (switched-off scripts do not fail it) and passed
+to the beta session, whose roadmap brings those behaviors back one at a
+time (`docs/profiles/beta-roadmap.md`, step 7).
+
+**The scripts it names have moved.** `src/lua/behaviors/` became
+`src/lua-beta/behaviors/` with the per-profile folders (2026-06-04),
+then `src/lua-beta/.behaviors.disabled/` (2026-10-17): the engine skips
+only names starting with a dot, so the folder had been read since April
+although meant to be off. `src/lua/periodic_events.lua` is
+`src/lua-beta/periodic_events.lua.disabled`. The playerbots source files
+under Key Files exist in the build's source tree
+(`source-beta/modules/mod-playerbots/...`), which git ignores.
+
+**Issue numbers.** "Issue 329" (Option B, the centralized WorldTick) is
+now 125, the algorism priority scheduler, as this file's own Related
+line says. The old 329 was split in two in April (`issues/MIGRATION_MAP.md`:
+125 and 612b); here it means 125.
+
+**Run with every build.** It is one of the compile's quick tests
+(`scripts/compile`, QUICK_TESTS). It reads the engine's source, which
+`scripts/install` or `scripts/update` fetch before any compile can run,
+so the source is there when the quick tests are. From a git worktree,
+which has no source tree, run it with
+`--source /mnt/mtwo/games/azeroth-core/wow-chat-2026/source-beta`.
