@@ -138,7 +138,12 @@ script explicitly handles the "remove for re-clone" action, making the workflow 
 ## Since then (checked 2026-10-17)
 
 - **The split stands**: one script per command in `scripts/`, the old
-  monolith kept as `scripts/azerothcore-deprecated`. Commands have been
+  monolith kept as `scripts/azerothcore-deprecated`. The `scripts/azerothcore`
+  name itself stayed a while longer and was deleted on 2026-06-04 (6ee263b,
+  with the vanilla rule set); the project's CLAUDE.md "Build and Run" still
+  shows `./scripts/azerothcore update`, `authserver`, `worldserver`, which
+  are now `scripts/update`, `scripts/authserver`, `scripts/worldserver`
+  (left for the owner, who keeps that file). Commands have been
   added since (`switch`, `promote`, `teach-character-lessons`, the
   generators and tests).
 - **The cost of "profile definitions duplicated in each script"** showed
@@ -154,6 +159,7 @@ script explicitly handles the "remove for re-clone" action, making the workflow 
   one (2026-04-14) had kept 142 through the April renumbering (the legacy
   142, custom-spell-system, became 702). The number looked free because
   finished issues live in `completed/`; `validate-issues --next` now looks
-  there too. Name them with their slugs. (Corrected 2026-10-17 by the
-  fronts-homework session: this note first said the renumbering gave 142
-  to the other.)
+  there too. Name them with their slugs: "142" in issues 126 and 801
+  means the aggro radius, and 710's old "142 - Custom spell system" meant
+  the legacy 142, now 702. (Corrected 2026-10-17 by the fronts-homework
+  session: this note first said the renumbering gave 142 to the other.)
