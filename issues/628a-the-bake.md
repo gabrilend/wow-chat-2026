@@ -16,9 +16,34 @@ See 628 (the owner's words, 2026-10-17, quoted in full there).
 
 ## Current Behavior
 
-Not built. B047's outfit list holds three hand-written entries (the
-Sargobras, `buddies_outfits.cpp`); nothing derives an entry from a
-character.
+**The reading half, 2026-10-17** (homework branch):
+`scripts/generate-buddy-bake-sql` reads every buddy (the roster joined
+to its character row: name, level, race, sex, skin, face, hair, hair
+colour, beard, and the 19 slots of its equipment cache), each worn
+item's picture, each race's body and faction (ChrRaces.dbc), and writes
+an apply and a revert SQL file to `tmp/shared-memory/buddy-bake/`,
+changing no database. Each buddy gets: a creature record copied from the
+wandering Sargobras (6170002) as the buddy-selector step does, at entry
+6280000 + its guid (the range stops below 7180001); its race and sex's
+body; its weapons as the creature's equipment row; and an outfit row (11
+places in the client's order, plus the line it was baked from) in a new
+`creature_outfit` table the file creates. Run 2026-10-17 on the basic
+databases: 27 buddies read, 27 baked, none left out.
+
+Not yet:
+- **Nothing reads `creature_outfit`.** B047's list is still filled in
+  code (`buddies_outfits.cpp`); step 1 below.
+- **Health and mana are the creature's normal for its class and level**,
+  not the buddy's: the character row saves health as it was at logout
+  (1 for buddies that logged out dead), and the saved maximums
+  (`character_stats`) are empty while `PlayerSave.Stats.MinLevel` is 0.
+  The tool says so on every run (question 2).
+- **The apply file has not been tried on a database.**
+- The change watcher and the skip-when-unchanged check (the line it was
+  baked from is written, not yet compared).
+
+Before this, B047's outfit list held three hand-written entries (the
+Sargobras); nothing derived an entry from a character.
 
 ## Intended Behavior
 
@@ -72,3 +97,9 @@ says which were.
 1. When a buddy's name or look changes, the client keeps the old
    creature name in its cache until told (160). Rebake to a fresh entry
    each time, or send the name again?
+2. **The buddy's own health.** The server doesn't save a character's
+   maximum health and mana unless stat saving is on
+   (`PlayerSave.Stats.MinLevel`, 0 today on basic). Turn it on (a config
+   patch; it writes one row per character at logout), so the baked
+   creature has the buddy's own health, or is a creature's normal health
+   for its class and level good enough for a body that only wanders?
