@@ -20,7 +20,7 @@
 --           match's counts
 --------------------------------------------------------------------------------
 
-local DIR = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = arg[1] or "/mnt/kaun/wow-chat-2026"
 local GEN = arg[2] or "/home/ritz/programming/ai-stuff/gif-generator"
 package.path = GEN .. "/src/?.lua;" .. package.path
 local ffi   = require("ffi")

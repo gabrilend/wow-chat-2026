@@ -179,7 +179,7 @@ output/
 # scripts/export-html
 # Export project source tree to static HTML site
 
-DIR="${1:-/mnt/mtwo/games/azeroth-core/wow-chat-2026}"
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
 OUTPUT="${2:-${DIR}/output/html-export}"
 
 # Run Lua generator

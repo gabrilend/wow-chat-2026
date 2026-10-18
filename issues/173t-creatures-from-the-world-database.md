@@ -1,6 +1,6 @@
 # 173t - Creatures from the World Database
 
-*Continues in the W client (`/mnt/mtwo/games/azeroth-core/custom-client/`), since the move on 2026-10-07 (173v): 404, then Phase 5. This issue stays as the record of how the client began; its paths are as they were then.*
+*Continues in the W client (`/mnt/kaun/custom-client/`), since the move on 2026-10-07 (173v): 404, then Phase 5. This issue stays as the record of how the client began; its paths are as they were then.*
 
 ## Status
 - Created: 2026-10-06

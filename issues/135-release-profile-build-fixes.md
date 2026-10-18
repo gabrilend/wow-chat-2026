@@ -11,7 +11,7 @@
 Release profile build completed successfully but worldserver failed to start:
 
 ```
-> Config::LoadFile: Failed open file '/home/ritz/games/azeroth-core/wow-chat-2026/installed-files-release/etc/worldserver.conf'
+> Config::LoadFile: Failed open file '/mnt/kaun/wow-chat-2026/installed-files-release/etc/worldserver.conf'
 ```
 
 ### Root Causes
@@ -34,8 +34,8 @@ cmake --install . --prefix "${INSTALL_DIR_SHADOW}"  # Points to installed-files-
 
 **Build log evidence:**
 ```
--- Up-to-date: /home/ritz/games/azeroth-core/wow-chat-2026/installed-files-release/etc/authserver.conf.dist
--- Installing: /home/ritz/games/azeroth-core/wow-chat-2026/installed-files-shadow/bin/authserver
+-- Up-to-date: /mnt/kaun/wow-chat-2026/installed-files-release/etc/authserver.conf.dist
+-- Installing: /mnt/kaun/wow-chat-2026/installed-files-shadow/bin/authserver
 ```
 
 Notice how `.dist` files show "Up-to-date" in final location, binaries get installed to shadow.
@@ -201,14 +201,14 @@ Removed old hardcoded `apply_patches_end()` function, replaced with:
 
 ```bash
 # Clean slate
-rm -rf /mnt/mtwo/games/azeroth-core/wow-chat-2026/installed-files-release
-rm -rf /mnt/mtwo/games/azeroth-core/wow-chat-2026/build-release
+rm -rf /mnt/kaun/wow-chat-2026/installed-files-release
+rm -rf /mnt/kaun/wow-chat-2026/build-release
 
 # Rebuild
 ./scripts/azerothcore update --profile release
 
 # Verify
-ls /mnt/mtwo/games/azeroth-core/wow-chat-2026/installed-files-release/etc/
+ls /mnt/kaun/wow-chat-2026/installed-files-release/etc/
 # Should show: authserver.conf, worldserver.conf, dbimport.conf
 
 # Start worldserver
@@ -222,7 +222,7 @@ ls /mnt/mtwo/games/azeroth-core/wow-chat-2026/installed-files-release/etc/
 ./scripts/azerothcore update --profile beta --force
 
 # Verify beta-specific patches applied
-ls /mnt/mtwo/games/azeroth-core/wow-chat-2026/installed-files-beta/bin/lua_scripts/
+ls /mnt/kaun/wow-chat-2026/installed-files-beta/bin/lua_scripts/
 # Should show: custom -> symlink to src/lua
 ```
 

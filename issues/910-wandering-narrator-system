@@ -165,7 +165,7 @@ local sender   = arg[1]
 local subject  = arg[2]
 local filepath = arg[3]
 
-local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = "/mnt/kaun/wow-chat-2026"
 local NARRATOR_DIR = DIR .. "/game-mail/narrator"
 local SUBSCRIPTIONS_FILE = NARRATOR_DIR .. "/subscriptions.txt"
 
@@ -238,8 +238,8 @@ When a narrator speaks, ALE queues it for subscribers:
 -- {{{ onNarratorSpeech (ALE)
 -- Queue narrator speech for rmail forwarding
 
-local PENDING_FILE = "/mnt/mtwo/games/azeroth-core/wow-chat-2026/game-mail/narrator/.pending-speech.txt"
-local SUBSCRIPTIONS_FILE = "/mnt/mtwo/games/azeroth-core/wow-chat-2026/game-mail/narrator/subscriptions.txt"
+local PENDING_FILE = "/mnt/kaun/wow-chat-2026/game-mail/narrator/.pending-speech.txt"
+local SUBSCRIPTIONS_FILE = "/mnt/kaun/wow-chat-2026/game-mail/narrator/subscriptions.txt"
 
 local speechId = 0
 
@@ -286,7 +286,7 @@ local recipient = arg[1]
 local subject   = arg[2]
 local filepath  = arg[3]
 
-local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = "/mnt/kaun/wow-chat-2026"
 local PENDING_FILE = DIR .. "/game-mail/narrator/.pending-speech.txt"
 local OUTBOX_PATH = DIR .. "/game-mail/narrator/outbox/"
 local TTS_CACHE_PATH = DIR .. "/game-mail/narrator/.tts-cache/"
@@ -372,7 +372,7 @@ Triggered by ALE when a player logs in:
 -- {{{ narrator-onlogin.lua
 -- Flush pending narrator speech on player login
 
-local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = "/mnt/kaun/wow-chat-2026"
 local PENDING_FILE = DIR .. "/game-mail/narrator/.pending-speech.txt"
 
 -- {{{ flushPendingSpeech
@@ -399,7 +399,7 @@ flushPendingSpeech()
 -- {{{ OnPlayerLogin (ALE)
 local function OnPlayerLogin(event, player)
     -- Run narrator flush script
-    os.execute("lua /mnt/mtwo/games/azeroth-core/wow-chat-2026/game-mail/narrator/scripts/narrator-onlogin.lua &")
+    os.execute("lua /mnt/kaun/wow-chat-2026/game-mail/narrator/scripts/narrator-onlogin.lua &")
 end
 RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, OnPlayerLogin)
 -- }}}
@@ -450,8 +450,8 @@ game-mail/narrator/
 # game-mail/narrator/config
 name = narrator
 port = 4862
-on_receive = /mnt/mtwo/games/azeroth-core/wow-chat-2026/game-mail/narrator/scripts/narrator-subscribe.lua
-on_send = /mnt/mtwo/games/azeroth-core/wow-chat-2026/game-mail/narrator/scripts/narrator-onsend.lua
+on_receive = /mnt/kaun/wow-chat-2026/game-mail/narrator/scripts/narrator-subscribe.lua
+on_send = /mnt/kaun/wow-chat-2026/game-mail/narrator/scripts/narrator-onsend.lua
 ```
 
 ### TTS Considerations

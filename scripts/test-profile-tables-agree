@@ -21,7 +21,7 @@
 # Usage: scripts/test-profile-tables-agree [PROJECT_DIR]
 # Exit status: 0 when every copy of every table agrees.
 
-DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+DIR="/mnt/kaun/wow-chat-2026"
 [[ -n "${1:-}" ]] && DIR="$1"
 
 TABLES=(PROFILE_REPO PROFILE_BRANCH PROFILE_COMMIT PROFILE_MODULES PROFILE_MODULE_COMMITS MODULE_REPOS)

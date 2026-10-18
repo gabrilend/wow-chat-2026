@@ -148,7 +148,7 @@ together or the build stops resolving.
 **Do not estimate the count — measure it.** Before starting:
 
 ```bash
-grep -rn "vanilla" /mnt/mtwo/games/azeroth-core/wow-chat-2026 \
+grep -rn "vanilla" /mnt/kaun/wow-chat-2026 \
   --exclude-dir=source-beta --exclude-dir=source-alpha \
   --exclude-dir=build-cache --exclude-dir=.git \
   --exclude-dir=llm-transcripts

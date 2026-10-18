@@ -56,7 +56,7 @@
 
 local ffi = require("ffi")
 
-local DIR    = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR    = "/mnt/kaun/wow-chat-2026"
 local GEN    = "/home/ritz/programming/ai-stuff/gif-generator"
 local FRAMES, SEED = 420, 7
 local WORKER = nil

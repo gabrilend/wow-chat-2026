@@ -10,7 +10,7 @@ config_directory_paths() {
 
     # DIR must be set - fail early if not
     # Fallback to hardcoded path if not set (shouldn't happen)
-    local PROJECT_DIR="${DIR:-/home/ritz/games/azeroth-core/wow-chat-2026}"
+    local PROJECT_DIR="${DIR:-/mnt/kaun/wow-chat-2026}"
 
     # Define paths locally to avoid dependency on caller context
     local LOGS_DIR="${PROJECT_DIR}/logs-${PROFILE}"

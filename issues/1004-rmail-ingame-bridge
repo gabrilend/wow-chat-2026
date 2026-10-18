@@ -162,7 +162,7 @@ local sender   = arg[1]
 local subject  = arg[2]
 local filepath = arg[3]
 
-local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = "/mnt/kaun/wow-chat-2026"
 local MAIL_DIR = DIR .. "/game-mail/mail"
 local SUBSCRIPTIONS_FILE = MAIL_DIR .. "/subscriptions.txt"
 
@@ -248,8 +248,8 @@ When in-game mail arrives, ALE queues it for forwarding:
 -- {{{ OnMailReceive hook (ALE)
 -- Queue mail for rmail forwarding when it arrives in-game
 
-local PENDING_FILE = "/mnt/mtwo/games/azeroth-core/wow-chat-2026/game-mail/mail/.pending-forwards.txt"
-local SUBSCRIPTIONS_FILE = "/mnt/mtwo/games/azeroth-core/wow-chat-2026/game-mail/mail/subscriptions.txt"
+local PENDING_FILE = "/mnt/kaun/wow-chat-2026/game-mail/mail/.pending-forwards.txt"
+local SUBSCRIPTIONS_FILE = "/mnt/kaun/wow-chat-2026/game-mail/mail/subscriptions.txt"
 
 local function OnMailReceive(event, receiver, mailId)
     local receiverName = receiver:GetName()
@@ -288,7 +288,7 @@ local recipient = arg[1]  -- contact that just received a message
 local subject   = arg[2]
 local filepath  = arg[3]  -- path to sent message
 
-local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = "/mnt/kaun/wow-chat-2026"
 local PENDING_FILE = DIR .. "/game-mail/mail/.pending-forwards.txt"
 local OUTBOX_PATH = DIR .. "/game-mail/mail/outbox/"
 
@@ -339,7 +339,7 @@ for any pending forwards for all online rmail recipients:
 -- Called by ALE when player logs in
 -- Attempts to flush any pending mail forwards
 
-local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = "/mnt/kaun/wow-chat-2026"
 local PENDING_FILE = DIR .. "/game-mail/mail/.pending-forwards.txt"
 local OUTBOX_PATH = DIR .. "/game-mail/mail/outbox/"
 
@@ -372,7 +372,7 @@ flushPendingForwards()
 -- {{{ OnPlayerLogin (ALE)
 local function OnPlayerLogin(event, player)
     -- Run the mail flush script
-    os.execute("lua /mnt/mtwo/games/azeroth-core/wow-chat-2026/game-mail/mail/scripts/mail-onlogin.lua &")
+    os.execute("lua /mnt/kaun/wow-chat-2026/game-mail/mail/scripts/mail-onlogin.lua &")
 end
 RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, OnPlayerLogin)
 -- }}}
@@ -455,8 +455,8 @@ game-mail/mail/
 # game-mail/mail/config
 name = mail
 port = 4762
-on_receive = /mnt/mtwo/games/azeroth-core/wow-chat-2026/game-mail/mail/scripts/mail-receive.lua
-on_send = /mnt/mtwo/games/azeroth-core/wow-chat-2026/game-mail/mail/scripts/mail-onsend.lua
+on_receive = /mnt/kaun/wow-chat-2026/game-mail/mail/scripts/mail-receive.lua
+on_send = /mnt/kaun/wow-chat-2026/game-mail/mail/scripts/mail-onsend.lua
 ```
 
 ## Configuration

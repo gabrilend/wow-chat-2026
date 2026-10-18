@@ -411,7 +411,7 @@ Patch documentation:
 ## Compiling
 
 **The custom client moved to its own project on 2026-10-07** (issue
-173v): `/mnt/mtwo/games/azeroth-core/custom-client/` (the W client). Its
+173v): `/mnt/kaun/custom-client/` (the W client). Its
 CLAUDE.md carries the permission to build it (`scripts/build --test`
 there) and the same five-minute rule.
 

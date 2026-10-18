@@ -15,7 +15,7 @@
 --   Writes a two-book test shelf to tmp/shared-memory/test-gutenberg-library/
 --------------------------------------------------------------------------------
 
-local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = "/mnt/kaun/wow-chat-2026"
 if arg[1] and arg[1] ~= "" then DIR = arg[1] end
 local LIB = DIR .. "/src/lua-beta/lib/"
 local S   = dofile(LIB .. "gutenberg-sentences.lua")

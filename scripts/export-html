@@ -5,7 +5,7 @@
 # issues, and documentation with syntax highlighting and navigation.
 
 # {{{ DIR Configuration
-DIR="${DIR:-/mnt/mtwo/games/azeroth-core/wow-chat-2026}"
+DIR="${DIR:-/mnt/kaun/wow-chat-2026}"
 
 # Allow override via argument
 if [[ "$1" =~ ^--dir= ]]; then

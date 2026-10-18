@@ -79,7 +79,7 @@ NOTE: Please don't call this in scripts.
    echo "      Use mysql-stop && sleep 2 && mysql-start instead."
    echo ""
 
-   DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
+   DIR="/mnt/kaun/wow-chat-2026"
    "${DIR}/scripts/mysql-stop" "$@"
    sleep 3
    "${DIR}/scripts/mysql-start" "$@"

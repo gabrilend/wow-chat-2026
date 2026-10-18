@@ -24,7 +24,7 @@
 --   Exit 1 if any book failed; the others are still written.
 --------------------------------------------------------------------------------
 
-local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = "/mnt/kaun/wow-chat-2026"
 if arg[1] and arg[1] ~= "" and not tonumber(arg[1]) then DIR = arg[1] end
 local Sentences = dofile(DIR .. "/src/lua-beta/lib/gutenberg-sentences.lua")
 local SHELF     = dofile(DIR .. "/src/lua-beta/data/gutenberg-books.lua")

@@ -30,7 +30,7 @@
 --           (nothing else; apply them by hand, or leave them be)
 --------------------------------------------------------------------------------
 
-local DIR     = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR     = arg[1] or "/mnt/kaun/wow-chat-2026"
 local CHAR_DB = arg[2] or "acore_characters_basic"
 local WORLD   = arg[3] or "acore_world_basic"
 local DBC     = DIR .. "/data-files/dbc/"

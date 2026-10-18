@@ -28,7 +28,7 @@
 
 local ffi = require("ffi")
 
-local DIR     = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR     = arg[1] or "/mnt/kaun/wow-chat-2026"
 local MAPS    = DIR .. "/data-files/maps"
 local DBC     = DIR .. "/data-files/dbc"
 local OUT     = DIR .. "/assets/barrens/barrens-data.lua"

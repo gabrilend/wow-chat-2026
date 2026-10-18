@@ -66,7 +66,7 @@
 --   misfiled  with no files named, issues still in issues/ whose status
 --             says completed are listed at the end
 
-local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = "/mnt/kaun/wow-chat-2026"
 local args, files = {}, {}
 local opt = { all = false, summary = false, strict = false, source = nil, suspect = false, threads = false, rewrite = false, skip = nil }
 local i = 1

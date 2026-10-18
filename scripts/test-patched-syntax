@@ -28,7 +28,7 @@
 
 set -o pipefail
 
-DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+DIR="/mnt/kaun/wow-chat-2026"
 [[ -n "${1:-}" ]] && DIR="$1"
 PROFILE="${2:-basic}"
 BUILD_NAME="${3:-build-shadow}"
@@ -176,8 +176,8 @@ for e in json.load(open(cc)):
         out += ['-fsyntax-only', tree + '/' + target]
         line = ' '.join(shlex.quote(x) for x in out)
         # "-I.../__TREE__/x" → the RAM copy
-        line = line.replace('/mnt/mtwo/games/azeroth-core/wow-chat-2026/__TREE__/', tree + '/') \
-                   .replace('/home/ritz/games/azeroth-core/wow-chat-2026/__TREE__/', tree + '/')
+        line = line.replace('/mnt/kaun/wow-chat-2026/__TREE__/', tree + '/') \
+                   .replace('/mnt/kaun/wow-chat-2026/__TREE__/', tree + '/')
         print('cd ' + shlex.quote(e['directory']) + ' && ' + line)
         break
 EOF

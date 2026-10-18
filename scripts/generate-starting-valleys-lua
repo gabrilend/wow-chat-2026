@@ -14,7 +14,7 @@
 -- Usage: scripts/generate-starting-valleys-lua [PROJECT_DIR] [--check]
 
 -- {{{ configuration
-local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = "/mnt/kaun/wow-chat-2026"
 local CHECK = false
 for _, a in ipairs(arg) do
     if a == "--check" then CHECK = true elseif a ~= "" then DIR = a end

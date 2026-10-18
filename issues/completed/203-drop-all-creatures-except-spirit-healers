@@ -108,7 +108,7 @@ Deleting creatures leaves orphaned references. Script cleans all related tables:
 ./scripts/mysql-start
 
 # 2. Run script
-./scripts/mysql-client -e "SOURCE /mnt/mtwo/games/azeroth-core/wow-chat-2026/source-beta/data/sql/custom/db_world/drop-creatures-keep-essential.sql"
+./scripts/mysql-client -e "SOURCE /mnt/kaun/wow-chat-2026/source-beta/data/sql/custom/db_world/drop-creatures-keep-essential.sql"
 
 # 3. Verify counts
 mysql> SELECT COUNT(*) FROM creature;  -- Small number (critters + spirit healers)

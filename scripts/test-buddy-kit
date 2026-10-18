@@ -3,7 +3,7 @@
 # (issue 617a4): builds the small bag-split test with the system compiler and
 # runs it, at low priority so the machine stays usable.
 # Usage: scripts/test-buddy-kit [PROJECT_DIR]
-DIR="${1:-/mnt/mtwo/games/azeroth-core/wow-chat-2026}"
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
 OUT="${DIR}/tmp/tmp"
 mkdir -p "${OUT}"
 g++ -std=c++17 -O1 -Wall -Wextra -Werror -I"${DIR}/modules/mod-buddies/src" \

@@ -26,7 +26,7 @@
 --     spell   <spell id>
 --   Prints a plain-English report of the plan on standard output.
 
-local DIR       = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR       = arg[1] or "/mnt/kaun/wow-chat-2026"
 local STATE     = arg[2]
 local NEW_CLASS = tonumber(arg[3] or "")
 local SQL_OUT   = arg[4]
