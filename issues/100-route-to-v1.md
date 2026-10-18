@@ -152,7 +152,7 @@ The following are NOT in the README and are deferred:
 - rmail integration (306, 313-317)
 - Narrator/storytelling system (307, 308, 310-312)
 - Invisible level progression (309)
-- Bounty board currency (121)
+- Bounty board currency (401, was 121; never built: see its "Since then")
 - Portal dimension system (129)
 - Dungeon room spawn zones (126-128)
 - Embedding-based creature selection (128)

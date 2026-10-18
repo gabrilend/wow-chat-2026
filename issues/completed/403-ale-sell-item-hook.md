@@ -405,3 +405,57 @@ By exposing vendor sales to Lua, we complete the item lifecycle: loot → equip 
 ## Documentation
 
 Full patch specification: `docs/patches/ale-sell-item-hook.md`
+
+## Since then (checked 2026-10-17)
+
+**The sold item is not destroyed when the hook fires; it goes to the
+buyback tab.** "Timing Critical" above shows the hook followed by
+`DestroyItem`. The server does something else, read from
+`source-beta/src/server/game/Handlers/ItemHandler.cpp`
+(`HandleSellItemOpcode`): it takes the item out of the bags
+(`RemoveItem`), then the hook fires (where B006 puts it), then the item
+is moved into the seller's buyback tab (`AddItemToBuyBackSlot`). It is
+deleted only later: pushed out by a 13th sale, or with the whole tab at
+the logout save. Until then the seller can buy back the very same item,
+GUID and all. The pointer the hook gets is therefore still valid after
+the hook, and the crash warned of above was never the risk. The real
+consequence came when issue 404 used the hook: a sale cannot go straight
+into the treasure pool, or a buyback would leave two copies. 404 holds
+each sale on a per-seller counter until the server has surely deleted it
+(`Treasure.settleCounter`, `src/lua-beta/treasure.lua.disabled`; the
+whole path in `docs/datapaths/treasure.md`).
+
+**Who uses it.** Only beta's patch list applies B006
+(`patches/patches.sh`; release, basic and cc-test do not, and vanilla
+skips it on purpose: "ALE feature patches not yet needed", 2026-06-02).
+Two scripts were written for event 74, both switched off:
+- treasure (404, 2026-10-17) registers for it, and waits out the
+  buyback tab before recycling anything;
+- ability tomes (405, April) has a handler, `AbilityTomes.onPlayerSellItem`
+  in `src/lua-beta/ability-tomes.lua.disabled`, whose registration was
+  left commented out "when patch is applied" — the patch was applied
+  days later, and the line never uncommented. That handler returns a
+  sold tome to the tome pool at once, so a buyback would leave two
+  copies (404's problem, unsolved there); and a tome that is uncommon
+  or better and does not stack would also be recycled by treasure, one
+  sale feeding two pools. Recorded in 404's open questions; 405 needs
+  the counter, or treasure needs to leave tomes alone, before both are
+  switched on.
+
+**How it is checked.** `scripts/test-source-patches` applies every
+B-patch to a copy of the source, B006 included, and checks it reverts
+byte for byte. `scripts/test-treasure` checks the Lua side, firing a
+pretend event 74 at the point the patch places it. Nothing yet runs the
+real hook in a running server. `scripts/check-issue-tests` lists this
+issue as having no test of its own.
+
+What differs from the text above, and why:
+- `scripts/azerothcore` was split in April into `scripts/compile`,
+  `install`, `update` and the others (issue 142); the patch runner is
+  `patches/patches.sh`, and B006 is `patches/B006-ale-sell-item-hook.sh`.
+- "Issue 334 - patch-staleness-detection" was renumbered to 127 in the
+  April renumbering (`issues/MIGRATION_MAP.md`).
+- The hook's two call sites are as described; in the partial-stack case
+  the clone is what goes to the buyback tab, not destroyed either.
+
+Data path: `docs/datapaths/treasure.md`.

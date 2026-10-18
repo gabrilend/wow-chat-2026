@@ -77,7 +77,7 @@ The following files were removed from the active codebase pending completion of 
   - Should be applied when merchants.lua is completed
 
 ## Related Issues
-- 121 - bounty board currency (could integrate with merchant pricing)
+- 401 (was 121) - bounty board currency (could integrate with merchant pricing; never built: see its "Since then")
 - 205 - talent points system (training currency could use merchant system)
 
 ## Technical Notes
