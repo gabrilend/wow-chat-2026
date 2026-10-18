@@ -12,8 +12,8 @@
 Operator-facing console commands and lightweight metrics for inspecting
 mod-soren-chat's state at runtime. Builds on the rest of the system —
 this sub-issue is where you find out what's actually happening when
-guidance feels off, when chat seems silent, or when one box is
-underperforming.
+guidance feels off, when chat seems silent, or when one place (916d: the
+worldserver itself, a LAN box, a player's machine) is underperforming.
 
 ## Current Behavior
 
@@ -27,10 +27,11 @@ After this sub-issue lands, the GM can run console commands:
 
 | Command | Behavior |
 |---|---|
-| `.soren status` | Per-host health, current queue depth (in/out), worker error rates, recent latency p50/p99 |
-| `.soren queue` | Snapshot of pending requests with age and target host |
+| `.soren status` | Per-place health — each place's placement (in-server, beside, in-client), whether it is trusted or contributed (916o), its health — then queue depth per inbox (guidance, chat) and out, worker error rates, recent latency p50/p99, tokens per second |
+| `.soren queue` | Snapshot of pending requests with age, type and target place |
 | `.soren reload` | Hot-reload the Lua scripts (via ALE) |
-| `.soren benchmark` | Submit a synthetic round of guidance + chat requests, report timings |
+| `.soren benchmark` | Submit a synthetic round of guidance + chat requests, report timings per place. (For the machines alone, outside the game, llama.cpp's own `llama-bench` measures a model's prompt-reading and token-writing speed on each box; its numbers are the baseline these are compared to.) |
+| `.soren grammar` | Print the grammar the next guidance request for a party would carry (916h), so a "grammar bug" error from 916i can be read against the grammar that caused it |
 | `.soren persona <botname>` | Show the bot's stored persona archetype and origin story |
 | `.soren policy <botname>` | Show the bot's current LLM-set policy (stance, focus, multiplier overrides) |
 | `.soren history <botname>` | Show the last N chat lines this bot has emitted |
@@ -40,28 +41,32 @@ Plus periodic logging of aggregate stats every minute when the cluster
 is active:
 
 ```
-[soren-chat] stats: 14 requests/min (4.7/box avg), p50 1.8s, p99 6.2s,
-                    0 errors, queue 0/16, 4 chats emitted
+[soren-chat] stats: 14 requests/min (4.7/place avg), p50 1.8s, p99 6.2s,
+                    31 tokens/s, 0 errors, 0 grammar bugs,
+                    queue guidance 0/8 chat 0/16, 4 chats emitted
 ```
 
-Steady-state with healthy cluster: one of these lines per minute,
+Steady-state with healthy places: one of these lines per minute,
 nothing else.
 
 ## Metrics Tracked
 
-Per-host (rolling 60-second window):
+Per place (rolling 60-second window):
 - Requests submitted
 - Requests succeeded
 - Requests failed
 - Median latency
 - p99 latency
+- Tokens per second (the model runner's result carries `tokens` and
+  `millis` from every placement, 916d)
 - Current health state
 
 Global (rolling 60-second window):
-- Total queue depth (current)
+- Queue depth per inbox (current)
 - Chat emissions
 - Guidance applications
-- Validation rejection rate
+- Grammar bugs (916i: a reply the grammar should have made impossible)
+- Contradictions retried (916i)
 
 In memory, no DB persistence. Reset on worldserver restart.
 

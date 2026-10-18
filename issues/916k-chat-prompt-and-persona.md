@@ -44,7 +44,12 @@ After this sub-issue lands:
   prompt), race/class/spec, current location, recent events, the
   trigger type (greeting, ambient observation, victory line, etc.),
   and any specific addressee
-- Output expected: `{ "text": "in-character line, 1-2 sentences max" }`
+- Output expected: one in-character sentence as plain text — no JSON
+  around it. Since 2026-10-17 the request carries 916l's chat grammar,
+  which llama.cpp enforces, so the reply is one line ending in `.`, `!`
+  or `?`. (This was `{ "text": "...", 1-2 sentences }`; the JSON wrapper
+  only costs tokens once a grammar shapes the text, and 916l's filter
+  already kept the first sentence alone.)
 
 ## Persona Schema
 
@@ -166,6 +171,13 @@ We're not porting:
   time. Should the placeholder origin be a generic "you are a
   {race} {class}" until the LLM call completes, with the cached
   origin replacing it on the next trigger? Lean yes.
+- Where may the origin story be generated? It is a chat-kind request,
+  so under 916e's rule it may go to a player's machine (916o, 916d's
+  in-client) — but unlike a chat line, which is said once, the origin
+  story is stored and becomes part of every later prompt for that bot.
+  Should requests whose answer is kept forever run on trusted places
+  only? Lean yes: a third request type, `persona`, popped only by
+  trusted workers.
 - Archetype distribution tables: writing all 10 races × 9 classes (or
   even just the cross-product that exists in WotLK) is a lot. Probably
   start with a "default by class" distribution and add race-specific

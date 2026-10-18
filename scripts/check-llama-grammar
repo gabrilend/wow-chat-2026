@@ -1,6 +1,5 @@
 #!/usr/bin/env luajit
 -- check-llama-grammar - ask the real llama.cpp library whether it can read
--- the bots' guidance grammar (issue 916h, step 6).
 --
 -- For a general audience: the bots' tactical planner hands the language
 -- model a "grammar", a set of rules for what its reply may look like, so it
@@ -98,9 +97,27 @@ target     ::= ]] .. quoted_alternatives({ "Tankzilla", "Lumen", "Brisk", "Gnoll
 ws         ::= [ \t\n]{0,4}
 ]]
 
+-- 916l's one-line chat reply: a capital, up to 180 characters with no line
+-- break, double quote, sentence end or bracket, then one sentence end
+local CHAT = 'root ::= [A-Z] [^\\n".!?\\[\\]()<>]{0,180} [.!?]\n'
+
+-- 917c's command reply: up to six lines of party or whisper commands, from
+-- a curated list, to this player's own bots. Unlike the guidance grammar,
+-- these names are bare text, not quoted JSON strings
+local function bare_alternatives(names)
+    local parts = {}
+    for i, name in ipairs(names) do parts[i] = '"' .. name .. '"' end
+    return table.concat(parts, " | ")
+end
+local COMMANDS = 'root    ::= line ( "\\n" line ){0,5}\n' ..
+                 'line    ::= "/p " command | "/w " bot " " command\n' ..
+                 'command ::= ' .. bare_alternatives({ "maintenance", "follow", "stay", "attack", "co +dps aoe" }) .. '\n' ..
+                 'bot     ::= ' .. bare_alternatives({ "Tankzilla", "Lumen", "Brisk" }) .. '\n'
+
 local CASES = {
     -- name                          grammar                                 should parse
     { "guidance (916h step 6)",      GUIDANCE,                               true  },
+    { "chat line (916l)",            CHAT,                                   true  },
     { "undefined rule",              'root ::= "{" missing-rule "}"\n',      false },
     { "underscore in a rule name",   'root ::= a_b\na_b ::= "x"\n',          false },
 }

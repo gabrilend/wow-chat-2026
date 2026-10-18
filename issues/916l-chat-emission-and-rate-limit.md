@@ -73,6 +73,41 @@ local function sanitize(text)
 end
 ```
 
+## The Chat Grammar (llama.cpp, 2026-10-17)
+
+Every chat request carries a one-line grammar (GBNF, the rule notation
+llama.cpp enforces token by token; 916h has the guidance one):
+
+```
+root ::= [A-Z] [^\n".!?\[\]()<>]{0,180} [.!?]
+```
+
+In words: a capital letter, then up to 180 characters that are not a
+line break, a double quote, a sentence end or a bracket, then exactly one
+sentence end. A model under it **cannot** write a second sentence, a
+second paragraph, surrounding quote marks, an `[OOC]` or `(OOC)` marker,
+or any address with a dot in it (`www.`, `https://x.com`), and it stops
+at about 180 characters. `scripts/check-llama-grammar` confirms the real
+library accepts its syntax (2026-10-17). That it restricts replies as
+described is not yet observed: it needs a model that writes text (the
+machine has only embedding models so far). The first chat replies
+generated under it should be checked against the list above.
+
+What it cannot rule out: the leading "As a [class], I..." and "As an
+AI..." patterns, and modern words in plain letters. Those stay with
+`sanitize`.
+
+**The filter still runs in full, on every reply.** Chat is the one kind
+of request that may run on a player's machine (916d's in-client, 916o's
+companion program). The grammar is applied by whichever machine
+generates, and a player's machine can ignore it or be modified to. So
+the grammar makes good replies likely; `sanitize` on the server is the
+only part that makes them certain. A reply from a trusted place that
+`sanitize` had to change in a way the grammar forbids (a line break, a
+second sentence) is a grammar bug and is logged as one (916i, 916n); the
+same from a contributed place counts toward that place's quarantine
+(916f, 916o).
+
 ## Cooldown Logic
 
 Per-bot, in-memory:

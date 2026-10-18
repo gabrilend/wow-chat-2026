@@ -188,8 +188,10 @@ The user prompt is the party state, formatted as a compact text block.
    returns `prompt, grammar` together.
 
    **Checked 2026-10-17:** `scripts/check-llama-grammar` gives this draft
-   (with sample names) to the real llama.cpp library, which accepts it,
-   bounded repeats (`{1,120}`, `{0,4}`) included. The same check found
+   (with sample names) to the real llama.cpp library, which accepts its
+   syntax, bounded repeats (`{1,120}`, `{0,4}`) included. That replies
+   under it come out as intended is checked only once a text-writing
+   model generates with it (916i's hundred-reply test). The same check found
    one rule the builder must keep: **GBNF rule names may hold letters,
    digits and dashes, never underscores** (`a_b ::= ...` is refused).
    Underscores inside quoted text (`"\"party_intent\""`) are fine. So if

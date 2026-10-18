@@ -308,7 +308,8 @@ to land in one or two sessions.
   awareness, response triggers). Each bot gets a permanent persona seed
   stored in a new `soren_chat_persona` table (acore_characters_vanilla).
   Triggers: nearby player chat, level-up, zone-entry, periodic ambient.
-  Output schema: simple, just `{text: string}`.
+  Output: one sentence of plain text, shaped by 916l's chat grammar
+  (was `{text: string}` before llama.cpp grammars).
 
 - **916l — Chat emission and rate limiting.** `09-chat-emit.lua`: bot
   speaks via the appropriate channel (`/say` for nearby, `/whisper` for

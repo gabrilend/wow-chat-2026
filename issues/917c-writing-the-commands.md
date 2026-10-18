@@ -14,7 +14,7 @@ the party-chat form, or installs an addon that knows it for them.
 
 ## Intended Behavior
 
-The request plus the state block go to the cluster. What comes back is a
+The request plus the state block go to the model (916d). What comes back is a
 list of commands to issue — the same chat commands and dot-commands a
 player would have typed.
 
@@ -35,6 +35,37 @@ This is the same shape as the response validation in 916i — reject,
 retry once with the failure named, then say plainly that it couldn't be
 done. Small models fix a specific complaint they wouldn't have avoided
 in general.
+
+### Shaped by a grammar (llama.cpp, 2026-10-17)
+
+The request carries a grammar (GBNF, as in 916h and 916l) built per
+request from the curated vocabulary and this player's bots:
+
+```
+root    ::= line ( "\n" line ){0,5}
+line    ::= "/p " command | "/w " bot " " command
+command ::= <the curated command list, each a quoted literal>
+bot     ::= <this player's bot names>
+```
+
+So "the command exists" and "the bot named belongs to this player"
+cannot fail on a reply from a trusted place; if they do, that is a bug in
+how the grammar was built, reported as one (916i's rule). "The target
+makes sense" stays with the validator: the grammar does not know what is
+in sight. At most six lines, so a reply cannot run on. The real
+library accepts this grammar's syntax (`scripts/check-llama-grammar`,
+2026-10-17).
+
+### Where it may run
+
+Commands steer bots, like guidance, so the 916e rule would keep them off
+players' machines. But "parity, not permission" (below) changes the
+answer for one machine: a request about a player's own bots, built only
+from that player's words and that player's state, may run on **that
+player's own** machine (916d's in-client, or their 916o companion
+program). Whatever comes back, the player could have typed. It still
+never runs on a *different* player's machine, and its reply still passes
+the full validator, since that machine can ignore the grammar.
 
 ### Parity, not permission
 

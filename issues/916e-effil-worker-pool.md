@@ -135,6 +135,15 @@ which place answered.
 
 ## Open Questions
 
+- **Requests for one player's own machine.** 917c's plain-text commands
+  steer bots, so they belong with guidance — except that a player's
+  commands for their own bots may run on that same player's machine,
+  because the player could have typed them (917c, "Where it may run").
+  Two shared inboxes cannot express "this player's worker or a trusted
+  one". Options: a small inbox per in-client worker that only its own
+  player's requests go into, checked before the shared ones; or keep
+  commands on trusted places only and give up the exception. Leaning
+  the per-player inbox, which 916f's per-worker routing needs anyway.
 - Per-worker inbox vs single shared inbox: shared is simpler and gives
   natural load balancing. Per-worker lets us route around an unhealthy
   worker. Lean toward shared in v0, add per-worker routing in 916f
