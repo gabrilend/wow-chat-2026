@@ -15,15 +15,53 @@
 -- and runs each one. It checks loading only; what the scripts do later, in
 -- the game, is for tests like scripts/test-ambush.
 --
--- Usage: scripts/test-beta-lua-load [PROJECT_DIR] [PROFILE]
+-- Usage: scripts/test-beta-lua-load [PROJECT_DIR] [PROFILE] [--source TREE]
 --   PROJECT_DIR defaults to the hard-coded path below.
---   PROFILE defaults to beta (the folder src/lua-<PROFILE>/ is loaded).
+--   PROFILE: load src/lua-<PROFILE>/ (beta, basic, cc-test, vanilla...).
+--     Without it, every profile's folder is loaded in turn, each in a
+--     fresh run, and the test passes only if all do; the build runs it so.
+--   --source: the AzerothCore tree whose engine's function names are read
+--     (default PROJECT_DIR/source-beta, else the main project's).
 -- Exit status: 0 when every file loads, 1 otherwise.
 
 local DIR = "/mnt/kaun/wow-chat-2026"
-if arg[1] and arg[1] ~= "" then DIR = arg[1] end
-local PROFILE = arg[2] or "beta"
+local PROFILE, SOURCE = nil, nil
+do
+    local pos, i = {}, 1
+    while i <= #arg do
+        if arg[i] == "--source" then i = i + 1; SOURCE = arg[i] else pos[#pos + 1] = arg[i] end
+        i = i + 1
+    end
+    if pos[1] and pos[1] ~= "" then DIR = pos[1] end
+    if pos[2] then PROFILE = pos[2] end
+end
+
+-- {{{ no profile named: every profile's folder, each in a fresh run
+-- (a fresh Lua state each, so one profile's globals never help another's).
+--   a profile named: check that one, below
+--   none named: run once per src/lua-<profile>/ folder; pass only if all do
+if not PROFILE then
+    local overall = 0
+    local h = io.popen("ls -d '" .. DIR .. "'/src/lua-*/ 2>/dev/null")
+    for d in h:lines() do
+        local prof = d:match("/src/lua%-([^/]+)/?$")
+        print("=== " .. prof); io.stdout:flush()
+        local cmd = string.format("'%s' '%s' '%s'%s", arg[0], DIR, prof, SOURCE and (" --source '" .. SOURCE .. "'") or "")
+        local r = os.execute(cmd)
+        if not (r == 0 or r == true) then overall = 1 end
+    end
+    h:close()
+    os.exit(overall)
+end
+-- }}}
 local ROOT = DIR .. "/src/lua-" .. PROFILE
+-- the engine's source, for the names of its global functions: this tree's,
+-- or the main project's when run from a separate checkout
+-- os.execute answers 0 or true for success, by LuaJIT's build
+local function ran(cmd) local r = os.execute(cmd); return r == 0 or r == true end
+local function isdir(p) return ran("test -d '" .. p .. "'") end
+SOURCE = SOURCE or (isdir(DIR .. "/source-beta") and DIR .. "/source-beta")
+         or "/mnt/kaun/wow-chat-2026/source-beta"
 
 -- {{{ local function list_files
 -- The engine's scan (mod-ale LuaEngine.cpp): every folder under the root,
@@ -36,7 +74,7 @@ local function list_files(root)
     local exts, scripts, dirs = {}, {}, { root }
     for path in found:lines() do
         local name, ending = path:match("([^/]+)%.(%a+)$")
-        local isdir = os.execute('test -d "' .. path .. '"') == 0
+        local isdir = (function() local r = os.execute('test -d "' .. path .. '"'); return r == 0 or r == true end)()
         if isdir then
             dirs[#dirs + 1] = path
         elseif ending == "ext" then
@@ -64,6 +102,32 @@ RegisterPlayerGossipEvent, RegisterGameObjectGossipEvent = count, count
 CreateLuaEvent = function() count() return 1 end
 Map, Player, Creature, GameObject, Unit, WorldObject, Object = {}, {}, {}, {}, {}, {}, {}
 GetPlayersInWorld = function() return {} end
+
+-- Every other global function the engine registers, read from its own
+-- list (GlobalMethods in mod-ale's LuaFunctions.cpp) and from the source
+-- patches that add to it, stands in as a function that does nothing and
+-- returns nothing (a database question then finds no rows). So a file
+-- fails here only for a name the engine does not have, the real fault.
+-- Added 2026-10-17, when the test grew from beta's scripts to every
+-- profile's (basic's ask the database while loading).
+local engineGlobals = 0
+do
+    local function names_in(cmd)
+        local h = io.popen(cmd)
+        for name in h:lines() do
+            if _G[name] == nil then _G[name] = function() return nil end; engineGlobals = engineGlobals + 1 end
+        end
+        h:close()
+    end
+    local src = SOURCE .. "/modules/mod-ale/src/LuaEngine/LuaFunctions.cpp"
+    if not ran("test -f '" .. src .. "'") then
+        io.stderr:write("ERROR: the engine's function list is not at " .. src ..
+                        "\n  to debug: pass --source <AzerothCore tree>, the one beta builds from\n")
+        os.exit(1)
+    end
+    names_in("awk '/luaL_Reg GlobalMethods\\[\\]/{f=1} f&&/^};/{exit} f' '" .. src .. "' | grep -o '\"[A-Za-z_]*\"' | tr -d '\"'")
+    names_in("grep -ho 'LuaGlobalFunctions::[A-Za-z_]*' '" .. DIR .. "'/patches/B*.sh 2>/dev/null | sed 's/.*:://' | sort -u")
+end
 -- }}}
 
 local exts, scripts, search = list_files(ROOT)
@@ -119,5 +183,5 @@ for _, f in ipairs(all) do
     end
 end
 
-realprint(string.format("%d file(s) in src/lua-%s/, %d failed to load", total, PROFILE, fails))
+realprint(string.format("%d file(s) in src/lua-%s/, %d failed to load (%d engine functions stood in)", total, PROFILE, fails, engineGlobals))
 os.exit(fails == 0 and 0 or 1)
