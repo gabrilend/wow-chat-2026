@@ -211,12 +211,12 @@ place forever.
 
 ## Cross-References
 
-- `issues/701-quest-spells-to-trainers` — the decision this reverses,
+- `issues/701-quest-spells-to-trainers.md` — the decision this reverses,
   and the authoritative table of which spells come from which quests
   at which level.
 - `issues/210-ambush-per-player-queue.md` — the blocker. Its "Why
   This Is a Problem" section names this feature explicitly.
-- `issues/503-dynamic-trainer-spawning` — the completed precedent for
+- `issues/503-dynamic-trainer-spawning.md` — the completed precedent for
   selecting a per-player NPC and inserting it into the traveler
   stream. The quest giver is the same mechanism, different predicate.
 - `issues/505-creature-class-travelers.md` — the traveler pool the

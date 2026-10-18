@@ -81,7 +81,7 @@ The stash mentioned in issue 200 is now empty - work was committed to branches.
 
 ## Related Documents
 
-- issues/200-incremental-feature-restore - Original feature restore tracking
+- issues/200-incremental-feature-restore.md - Original feature restore tracking
 - scripts/azerothcore - Profile system (alpha/beta/release server builds)
 - CLAUDE.md - Branch references to update
 

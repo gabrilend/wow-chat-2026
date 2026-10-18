@@ -43,4 +43,4 @@ whose members are on different continents.
 1. How do the chat bots (916, 917) see players on other nodes?
 
 ## Related
-- `issues/913-clustered-worldserver`: "Inter-Node Communication"
+- `issues/913-clustered-worldserver.md`: "Inter-Node Communication"

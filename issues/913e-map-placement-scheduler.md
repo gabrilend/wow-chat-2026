@@ -58,4 +58,4 @@ would become a round trip.
 2. What happens to a map's players when its node stops sending heartbeats?
 
 ## Related
-- `issues/913-clustered-worldserver`: "Map Placement by Thread Weight"
+- `issues/913-clustered-worldserver.md`: "Map Placement by Thread Weight"

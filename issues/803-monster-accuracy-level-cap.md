@@ -1,0 +1,243 @@
+# 803 - Monster Accuracy Level Cap
+
+## Status
+- Created: 2026-04-04
+- Implemented: 2026-04-05
+- **PATCH RE-IMPLEMENTED** (2026-04-09)
+- Phase: 2
+- Priority: Medium
+
+**Note (2026-04-09):** Patch added to `scripts/azerothcore` as B005.
+- `patch_B005_accuracy_level_cap()` adds ACCURACY_LEVEL_CAP defines and caps level diff in combat
+- `unpatch_B005_accuracy_level_cap()` removes the caps after build
+- Source is now patched during build and reverted after (Issue 334)
+
+## Current Behavior
+- Basic (2026-09-27, B031 retargeted, not yet compiled): crushing blows start
+  at 8 levels above the target (stock 4) and ramp to the stock chance at 12;
+  B005 caps the hit/miss/skill level gap at 3. The lines below describe the
+  stock server this issue started from.
+- Monster accuracy scales linearly with level difference
+- Higher level monsters are much harder to hit and hit you more often
+- Lower level monsters are trivial - easy to hit, rarely hit you
+- Large level gaps create unfightable or trivial encounters
+
+## Intended Behavior
+
+### Accuracy Cap at ±3 Levels
+- Level difference beyond **±3 levels** has **no additional accuracy impact**
+- A monster 3 levels above you has the same accuracy modifier as one 10 levels above
+- A monster 3 levels below you has the same accuracy modifier as one 10 levels below
+
+### Why This Matters
+- **All monsters provide a foe** - large and small, powerful and weak
+- High level monsters are dangerous but not impossible
+- Low level monsters remain somewhat threatening
+- Encourages diverse combat encounters
+- Prevents "grey mob" syndrome where low level = no threat
+
+### Accuracy Scaling
+
+```
+Level Difference    Accuracy Modifier
+-----------------   -----------------
+-10 to -4           Same as -3 (capped)
+-3                  Max bonus (easiest to hit, hardest for them)
+-2                  Medium bonus
+-1                  Small bonus
+0                   Baseline
++1                  Small penalty
++2                  Medium penalty
++3                  Max penalty (hardest to hit, easiest for them)
++4 to +10           Same as +3 (capped)
+```
+
+### Combat Implications
+- You CAN fight monsters much higher level than you (challenging but possible)
+- You CANNOT trivialize monsters much lower level (still some threat)
+- Group composition matters less for level spread
+- Encourages exploration beyond "safe" level ranges
+
+## Implementation Steps
+
+1. Identify accuracy calculation location
+   - Find where hit/miss is calculated in combat
+   - Locate level difference modifier application
+
+2. Implement level difference cap
+   - Before applying level difference to accuracy:
+   ```lua
+   levelDiff = targetLevel - attackerLevel
+   cappedDiff = math.max(-3, math.min(3, levelDiff))
+   -- Use cappedDiff instead of levelDiff for accuracy
+   ```
+
+3. Apply to both directions
+   - Player attacking monster: cap monster's defense bonus
+   - Monster attacking player: cap monster's attack bonus
+
+4. Test edge cases
+   - Level 1 player vs level 20 monster
+   - Level 20 player vs level 1 monster
+   - Verify combat is challenging but not impossible
+
+## Technical Notes
+
+### Accuracy Formula (conceptual)
+```lua
+function calculateHitChance(attacker, defender)
+    local baseLevelDiff = defender:GetLevel() - attacker:GetLevel()
+
+    -- Cap level difference at ±3
+    local cappedLevelDiff = math.max(-3, math.min(3, baseLevelDiff))
+
+    -- Apply capped difference to accuracy calculation
+    local levelModifier = cappedLevelDiff * ACCURACY_PER_LEVEL
+    local hitChance = BASE_HIT_CHANCE - levelModifier
+
+    return math.max(MIN_HIT_CHANCE, math.min(MAX_HIT_CHANCE, hitChance))
+end
+```
+
+### Where to Hook
+**Requires C++ patch** - ALE does not expose hit/miss calculation hooks to Lua.
+
+Hit chance is calculated in:
+- `Unit::RollMeleeOutcomeAgainst()` - melee attacks
+- `Unit::MagicSpellHitResult()` - spell attacks
+
+Both use `GetLevelDiff()` or similar level difference calculations.
+
+See patch documentation: `docs/patches/accuracy-level-cap.md`
+
+## Extension: the other level-gap effects (basic, 2026-09-24)
+
+Raised by 155f's +4 Outland dungeons, where creatures reach level 76
+against level-60 players. Ritz, verbatim, 2026-09-24:
+
+> Hmmmm. Aggro radius concerns me, we should add it to the patch. Armor
+> mitigation too, I didn't realize that was tied to level. Spell resists as
+> well.
+
+And on crushing blows, three options named, undecided: patch them out once
+a character reaches 60, patch them out for everyone, or "accept them as
+trials of the champion and balance around them".
+
+### Current behavior (stock server code, read 2026-09-24)
+
+| Effect | Where | How level enters it | 60 vs 63 | 60 vs 76 |
+|---|---|---|---|---|
+| Crushing blows | `Unit::RollMeleeOutcomeAgainst` | creature ≥4 levels above; chance = 2% per weapon-skill point over 15 above target's defense (target defense capped at level × 5) | none | every hit not avoided |
+| Armor | `Unit::CalcArmorReducedDamage` | reduction = armor ÷ (armor + 85 × L′ + 400), L′ = L + 4.5 × (L − 59), L = attacker level | 9,000 armor: 55% | 40% |
+| Spell partial resist | `Unit::GetEffectiveResistChance` | +5 resistance per level the target is above the caster; the resistance constant grows with the *target's* level (150 + (L − 60)(L − 67.5) above 60) | ~11% average | ~22% average |
+| Aggro radius | `Creature::GetAggroRange` | 20 yards + 1 yard per level the creature is above the player (max 45) | 23 yards | 36 yards |
+
+B005 already caps: spell hit (`MagicSpellHitResult`), melee miss
+(`MeleeSpellMissChance`) and the skill bonus in the melee outcome roll
+(dodge, parry, block, crit). It does not cap anything above.
+
+### Intended behavior
+
+Ritz, verbatim, 2026-09-24: "let's say that crushing blows do not take
+effect for creatures level 64 and higher." And: "Seems like armor and
+resist scale fairly linearly, so it's okay to keep them. I want to remove
+exponential difficulty increases. I want it to be possible, but not easy."
+Then, reversing the aggro cap: "I think the aggro radius should be stock, it
+makes sense for more powerful foes to approach from farther away. That's
+okay." And on beta: "they can pull from our patchlist if they want. Let's
+keep them separate so they can be separately applied."
+
+- **Crushing blows** (as first decided, 2026-09-24; replaced 2026-09-27,
+  below): a creature of level 64 or higher never crushes. (Below 64 the
+  stock rule stood.) This was the one steep effect: it jumps from none to
+  every landed hit over about four levels.
+- **Aggro radius, armor and spell resists stay stock.** Aggro radius grows
+  1 yard per level (stronger foes notice you from farther). Armor's level
+  term is linear. Resists are bounded: the +5-per-level bonus is linear,
+  and the constant it is divided by grows with the square of the target's
+  level, so a level-60 caster's average resist rises to ~22% around level
+  76 and then falls again (~20% at 80).
+
+### Decision, 2026-09-27 (Ritz): crushing blows later, ramped
+
+Verbatim: "can we re-enable the crushing blow penalty at +4 the level it
+normally is? And have it scale up to it's nominal percentage with another
+4 levels." And, asked: "Is it 100% damage bonus or 150% damage applied?"
+(Answer: 150% damage applied, a 50% bonus; unchanged.)
+
+- For creatures of every level (the level-64 cut is gone): no crushing
+  blows below a level gap of 8; from 8 to 11 the stock chance times
+  (gap − 7) / 5 (1/5 at 8 so a creature 8 levels up really can crush, 4/5
+  at 11); the stock chance from 12 up. At a gap of 8: 13% instead of the
+  stock 65%; 10: 51% instead of 85%; the full table is in the patch doc.
+
+### Built (2026-09-24, retargeted 2026-09-27)
+
+`patches/B031-crushing-blows-late.sh` (was `B031-no-crushing-blows-64.sh`,
+renamed with its history when its meaning changed), listed for basic in
+`patches/patches.sh`, with a probe; patch doc
+`docs/patches/crushing-blows-late.md` (was `no-crushing-blows-64.md`). Two
+lines of the crushing branch change: the opening condition's "+ 4" levels
+becomes "+ 8", and the chance line gains the ramp factor below a gap of 12.
+`scripts/test-source-patches` and `scripts/test-patched-syntax` pass for
+basic (2026-09-27).
+
+As first built (2026-09-24): the crushing branch's opening condition gained
+"attacker below level 64". `scripts/test-source-patches`
+applies all 23 basic source patches to a RAM copy of the tree and reverts
+them byte-identically; a second apply is a no-op. **Not yet compiled**
+(Ritz runs the compile); after it, a level-60 tank against a +4 Outland
+creature should see no "crushing" hits in the combat log.
+
+### Suggested implementation
+
+A **separate source patch**, not an addition to B005, so beta (or any
+profile) can take it or leave it on its own: in the melee outcome roll
+(`Unit::RollMeleeOutcomeAgainst`), skip the crushing branch when the
+attacker is a creature of level 64 or more. Listed for basic in
+`patches/patches.sh`; B005 is unchanged.
+
+### Open questions (extension)
+
+- (Answered 2026-09-24; replaced 2026-09-27 by the late ramp above)
+  Crushing blows: none from level 64 up, as its own patch. Armor, resists and aggro radius: stock. Beta: may pull the patch
+  from basic's list.
+
+## Design Philosophy
+
+The world should feel dangerous everywhere. A level 20 character wandering into a level 5 zone should still respect the monsters there - not because they can kill the player, but because they're not completely trivial. Similarly, a level 5 player seeing a level 15 monster shouldn't think "impossible" but rather "very dangerous, need to be careful."
+
+This creates a flatter power curve where skill and tactics matter more than pure level advantage.
+
+## Related Issues
+- 155 - Custom class selection (trainer level filtering uses similar scaling)
+
+## Implementation Notes (2026-04-05)
+
+### Files Modified
+
+**src/server/game/Entities/Unit/Unit.h:**
+- Added `ACCURACY_LEVEL_CAP 3` and `ACCURACY_SKILL_CAP 15` defines
+
+**src/server/game/Entities/Unit/Unit.cpp:**
+- `MagicSpellHitResult()` (line 3455-3457): Cap `levelDiff` at ±3
+- `MeleeSpellMissChance()` (line 15221-15223): Cap `skillDiff` at ±15
+- `RollMeleeOutcomeAgainst()` (line 2925-2928): Cap `skillBonus` calculation
+
+### What's Capped
+- **Spell hit chance**: Level difference capped at ±3
+- **Melee miss chance**: Skill difference capped at ±15 (3 levels × 5 skill/level)
+- **Combat outcome rolls**: Skill bonus for dodge/parry/block/crit capped
+
+### What's NOT Capped (intentionally)
+- Damage calculations (high level monsters still hit harder)
+- Health/armor differences
+- Other mechanics that don't involve hit/miss
+
+### Build Required
+```bash
+cd source-beta/build && cmake .. && make -j$(nproc) && make install
+```
+
+### Patch Doc
+Full specification: `docs/patches/accuracy-level-cap.md`

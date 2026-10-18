@@ -89,7 +89,7 @@ gets its own issue and its own test.
 ## Related
 - `issues/154-portable-dependency-bootstrap.md`: installing the toolchain on a
   new machine
-- `issues/completed/105-project-local-database`
+- `issues/completed/105-project-local-database.md`
 - `issues/completed/113-authserver-ip-caching.md`
-- `issues/107-credential-manager-script`
+- `issues/107-credential-manager-script.md`
 - `issues/913b-connectivity-reliance-improvements-required.md`

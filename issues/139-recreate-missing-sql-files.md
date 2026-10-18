@@ -1,0 +1,158 @@
+# 139 - Recreate Missing SQL Files
+
+## Status
+- Created: 2026-04-06
+- Completed: 2026-04-06
+- Phase: 2
+- Priority: Critical
+
+## Problem
+
+Multiple SQL files were documented in issue files and LLM transcripts but **never committed to git**. The `source-beta/data/sql/custom/db_world/` directory was empty.
+
+## Missing Files
+
+### 1. custom-class-selector-npcs.sql (Issue 155)
+
+Race-specific selector NPCs for custom class selection system.
+
+**Entries 900001-900011:**
+| Entry | Race | Name | DisplayId |
+|-------|------|------|-----------|
+| 900001 | Human | Mysterious Guide | 4217 |
+| 900002 | Orc | Spirit Walker | 3581 |
+| 900003 | Dwarf | Stone Seer | 2715 |
+| 900004 | Night Elf | Moonshadow Oracle | 5708 |
+| 900005 | Undead | Deathwhisper Sage | 10698 |
+| 900006 | Tauren | Earthmother's Voice | 8022 |
+| 900007 | Gnome | Probability Engine | 7574 |
+| 900008 | Troll | Loa Speaker | 8071 |
+| 900010 | Blood Elf | Sunwell Seer | 18097 |
+| 900011 | Draenei | Light of the Naaru | 17083 |
+
+Note: 900009 skipped (Goblin not in WotLK)
+
+**Source:** LLM transcript 767f396d, issue 155 implementation notes
+
+### 2. custom-empty-loot-chests.sql (Issue 160)
+
+37 custom chest gameobject templates with `data1=0` (no loot table).
+
+**Purpose:** Holder sees empty chest, searcher triggers Lua loot injection.
+
+**Entries 900001-900037:** Copy vanilla chest visual properties but set `data1=0`
+
+**Source:** LLM transcript 929d7154, issue 160 implementation notes
+
+### 3. quest-spells-to-trainers.sql (Issue 140)
+
+Adds quest-learned abilities to class trainers.
+
+**Trainer Template IDs:**
+- Warrior: 200001, 200002
+- Paladin: 200003, 200004, 200020
+- Druid: 200005, 200006
+- Mage: 200007, 200008
+- Warlock: 200009, 200010
+- Priest: 200011, 200012
+- Hunter: 200013, 200014
+- Rogue: 200015, 200016
+- Shaman: 200017, 200018
+
+**Spells to add:**
+- **Warrior (level 10):** Defensive Stance (71), Taunt (355), Sunder Armor (7386)
+- **Paladin (level 12):** Redemption (7328)
+- **Hunter (level 10):** Call Pet (883), Revive Pet (982), Tame Beast (1515), Feed Pet (6991), Dismiss Pet (2641)
+- **Rogue (level 20):** Deadly Poison (2835), Crippling Poison (3420)
+- **Shaman:** Stoneskin Totem (8071) @ 4, Searing Totem (3599) @ 10, Healing Stream Totem (5394) @ 10, Fire Resistance Totem (8184) @ 20
+- **Warlock:** Summon Voidwalker (697) @ 10, Summon Succubus (712) @ 20
+- **Druid (level 10):** Bear Form (5487), Growl (6795), Maul (6807); Cower (8998) @ 20
+
+**Source:** LLM transcript 9dcbadc3, issue 140 implementation notes
+
+### 4. drop-creatures-keep-essential.sql (Issue 203/201)
+
+**STATUS: RECREATED** (2026-04-06)
+
+Drops all creatures except critters (type=8) and spirit healers (npcflag & 16384).
+
+### 5. death-knights.sql (Issue 206)
+
+**STATUS: RECREATED** (2026-04-06)
+
+Death Knight level 1-20 scaling system:
+- Class stats for levels 1-54 (copied from warrior)
+- Starting ability: Blood Strike (45902)
+- Trainer abilities for DK trainers 29194/29195/29196 (levels 2-20)
+- Starting gear: Race-specific armor + Worn Greatsword (49778)
+
+**Source:** Issue 206 implementation notes, death-knights.lua references
+
+### 6. trainer-spell-level-cap.sql (Issue 157)
+
+**STATUS: RECREATED** (2026-04-06)
+
+Per-trainer DELETE statements to cap spell levels at assigned maxLevel.
+Creates a tiered trainer system where different trainers teach different level ranges.
+
+**Trainer counts:**
+| Class | Horde | Alliance |
+|-------|-------|----------|
+| Warrior | 9 | 11 |
+| Paladin | 5 | 7 |
+| Hunter | 7 | 8 |
+| Rogue | 6 | 6 |
+| Priest | 9 | 9 |
+| DK | 3 (neutral) | - |
+| Shaman | 6 | 5 |
+| Mage | 11 | 7 |
+| Warlock | 6 | 6 |
+| Druid | 3 | 5 |
+
+**Source:** LLM transcript 767f396d, travel.lua trainers table
+
+## Root Cause
+
+SQL files were created during LLM sessions but:
+1. Created in `source-beta/data/sql/custom/` which is GITIGNORED (`source*/` pattern)
+2. Never noticed because `git status` didn't show them
+3. Lost when project directory was moved
+4. Only documented in issue notes and LLM transcripts
+
+**FIX:** Custom SQL files now live in `sql/custom/db_world/` (tracked by git)
+The source-beta copy is for server's auto-import, but the tracked copy is the source of truth.
+
+## Prevention
+
+1. **Create SQL files in `sql/custom/db_world/`** (tracked location)
+2. **Copy to `source-beta/data/sql/custom/db_world/`** for server auto-import
+3. **Run `git status`** after creating any file - files should appear as untracked
+4. **If file doesn't appear** - it's probably in a gitignored directory
+5. **Verify file is tracked** before marking issue as "Implemented"
+
+## Implementation Status
+
+| File | Status | Created |
+|------|--------|---------|
+| drop-creatures-keep-essential.sql | DONE | 2026-04-06 |
+| custom-class-selector-npcs.sql | DONE | 2026-04-06 |
+| custom-empty-loot-chests.sql | DONE | 2026-04-06 |
+| quest-spells-to-trainers.sql | DONE | 2026-04-06 |
+| death-knights.sql | DONE | 2026-04-06 |
+| trainer-spell-level-cap.sql | DONE | 2026-04-06 |
+
+## Related Issues
+
+- 201 - database-integrity-cleanup (completed, SQL lost)
+- 203 - drop-all-creatures-except-spirit-healers (SQL recreated)
+- 206 - death-knight-level-1-scaling (SQL recreated)
+- 140 - quest-spells-to-trainers (SQL recreated)
+- 155 - custom-class-selection-npc (SQL recreated)
+- 157 - dynamic-trainer-spawning (SQL recreated)
+- 160 - custom-empty-loot-chest-templates (SQL recreated)
+
+## Related LLM Transcripts
+
+- `767f396d-5a0b-493c-8aa0-3a65b351b0bc_summary.md` - Custom class selector NPCs
+- `929d7154-19df-49bb-8501-5fe40bed75a4_summary.md` - Empty loot chests
+- `9dcbadc3-a82c-4bc2-914b-c384d8394176_summary.md` - Quest spells to trainers

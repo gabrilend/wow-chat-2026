@@ -79,7 +79,7 @@ doesn't care which one it is, and shouldn't be written so that it does.
 - Parent: [917 - Ask the bots in plain text](917-ask-the-bots-in-plain-text.md)
 - [616 - Public healer frames addon](616-public-healer-frames-addon.md) —
   the AIO precedent if the addon surface is chosen
-- [1006 - rmail in-game text editor](1006-rmail-ingame-text-editor) —
+- [1006 - rmail in-game text editor](1006-rmail-ingame-text-editor.md) —
   the existing thinking about typing prose inside the client
 
 ## Shared Build Pass (neuron)

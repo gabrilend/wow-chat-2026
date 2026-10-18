@@ -163,7 +163,7 @@ new one has taken over.
    of by normal login?
 
 ## Related
-- Parent: `issues/913-clustered-worldserver`
+- Parent: `issues/913-clustered-worldserver.md`
 - `source-beta/src/server/game/Server/Protocol/Opcodes.cpp`: opcode table
   rows 0x50D / 0x50E / 0x512
 - `source-beta/src/server/game/Server/WorldSocket.cpp`: normal login path

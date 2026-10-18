@@ -139,7 +139,7 @@ exists to make, and the test below is what proves it.
   marks facts as alarm-qualifying
 - [1101j - Interfaces as sub-maps](1101j-interfaces-as-submaps.md) —
   inherits the cancellation requirement
-- [406 - Death durability system](406-death-durability-system) and
+- [406 - Death durability system](../406-death-durability-system.md) and
   [806 - Proximity raid system](806-proximity-raid-system.md) — what
   death costs, which is what makes a death alarm worth interrupting for
 </content>

@@ -217,7 +217,7 @@ Issues already in `issues-beta/completed/` from prior work:
 | File | Disposition |
 |------|-------------|
 | `issues/100-route-to-v1.md` | Meta — kept at root as v1.0 release manifest |
-| `issues/200-incremental-feature-restore` | Meta — kept at root as testing critical-path runbook |
+| `issues/200-incremental-feature-restore.md` | Meta — kept at root as testing critical-path runbook |
 | `issues/TONIGHT.md` | Kept until everything in it is done, then delete |
 | `issues/next-issue-please` | Empty — deleted |
 | `issues/wandering-dogs` | Verbatim text moved into 505; original deleted |
