@@ -1,0 +1,248 @@
+#!/usr/bin/env luajit
+-- check-issue-references - reads issue files and checks that the files,
+-- folders and other issues they name still exist, and says where each
+-- missing one went when it can tell.
+--
+-- For a general audience: an issue file is the blueprint of a piece of the
+-- project, and it names the files it built ("src/lua/ambush.lua",
+-- "scripts/azerothcore"). The project moves on after an issue is closed:
+-- folders are renamed, scripts are split, files are switched off. A
+-- blueprint that names files which are gone no longer tells a reader how
+-- to rebuild the thing, and nothing says so. This reads every issue (the
+-- completed ones by default), pulls out each file path and each issue
+-- number it names, and checks them against the project as it is now:
+--   ok       the path or issue exists
+--   moved    the path is gone, but a file of the same name (or the same
+--            name switched off, ".disabled", or switched on again) exists
+--            elsewhere, or a known rename explains it; the new place is
+--            printed
+--   missing  gone, and nothing of that name exists
+-- Issue numbers are checked against the issue folders; a number listed in
+-- issues/MIGRATION_MAP.md's "Old" column is reported with its new number,
+-- since a reference written before the April 2026 renumbering may mean the
+-- old issue.
+--
+-- It reads only; it changes nothing. It is an audit, not a gate: it exits
+-- 0 unless --strict is given, in which case any "missing" makes it exit 1.
+--
+-- Usage: scripts/check-issue-references [PROJECT_DIR] [options] [ISSUE_FILE ...]
+--   PROJECT_DIR      defaults to the hard-coded path below
+--   --all            every issue, open and completed (default: completed/)
+--   --source TREE    where "source-beta/..." paths are looked for (default
+--                    PROJECT_DIR/source-beta; a separate checkout has none)
+--   --summary        one line per issue, no detail
+--   --suspect        also list issue numbers that exist now but were old
+--                    numbers before the renumbering (often harmless: the
+--                    2026-04-29 sweep rewrote most of them)
+--   --strict         exit 1 if anything is missing
+--   ISSUE_FILE ...   check just these files
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local args, files = {}, {}
+local opt = { all = false, summary = false, strict = false, source = nil, suspect = false }
+local i = 1
+while i <= #arg do
+    local a = arg[i]
+    if a == "--all" then opt.all = true
+    elseif a == "--summary" then opt.summary = true
+    elseif a == "--strict" then opt.strict = true
+    elseif a == "--suspect" then opt.suspect = true
+    elseif a == "--source" then i = i + 1; opt.source = arg[i]
+    elseif a:match("^/") and not a:match("%.md$") and not a:find("/issues/") then DIR = a
+    else files[#files + 1] = a end
+    i = i + 1
+end
+local SOURCE = opt.source or (DIR .. "/source-beta")
+
+-- {{{ local function lines_of
+local function lines_of(cmd)
+    local out, f = {}, io.popen(cmd)
+    for l in f:lines() do out[#out + 1] = l end
+    f:close()
+    return out
+end
+-- }}}
+
+-- {{{ what exists now
+-- Every tracked path (files, and every folder above them), plus anything
+-- on disk at the project root's top levels, so untracked build folders
+-- that issues name (installed-files-*, build-*) are not "missing".
+local exists, byName = {}, {}
+for _, p in ipairs(lines_of("git -C '" .. DIR .. "' ls-files")) do
+    exists[p] = true
+    local name = p:match("[^/]+$")
+    byName[name] = byName[name] or {}
+    table.insert(byName[name], p)
+    local d = p
+    while true do
+        d = d:match("^(.*)/[^/]+$")
+        if not d then break end
+        exists[d] = true
+    end
+end
+local function on_disk(path)
+    local ok = os.execute("test -e '" .. path:gsub("'", "") .. "'")
+    return ok == 0 or ok == true
+end
+-- }}}
+
+-- {{{ known renames: a prefix that moved, and when
+-- Each row: old prefix, new prefix, why. Checked in order; the first that
+-- gives a path that exists wins.
+local RENAMES = {
+    { "src/lua/",    "src/lua-beta/",  "2026-06-04: per-profile Lua folders (src/lua became src/lua-beta)" },
+    { "issues-beta/", "issues/",       "2026-04-29: the renumbered issues folder became issues/" },
+    { "sql/custom/", "sql/beta/",      "2026-06-04: per-profile SQL folders" },
+    { "src/lua-beta/behaviors/", "src/lua-beta/.behaviors.disabled/", "2026-04-10 switched off, 2026-10-17 hidden with a dot" },
+    { "src/lua-beta/behaviors.disabled/", "src/lua-beta/.behaviors.disabled/", "2026-10-17: hidden with a dot so the engine skips it" },
+    { "scripts/azerothcore", "scripts/azerothcore-deprecated", "2026-04-14: split into scripts/compile, install, update, worldserver... (issue 142); the old one kept as -deprecated" },
+    { "scripts/profile-switch", "scripts/profile-switch-deprecated", "2026-04-14: replaced by scripts/switch; kept as -deprecated" },
+}
+-- Paths inside the game's own source tree, as an issue may write them
+-- without the "source-beta/" in front.
+local SOURCE_TOP = { "modules/mod-", "src/server/", "src/common/", "data/sql/" }
+-- }}}
+
+-- {{{ issue numbers that exist, and the renumbering map
+local issueIds = {}
+for _, p in ipairs(lines_of("ls '" .. DIR .. "/issues' '" .. DIR .. "/issues/completed' '" .. DIR .. "/issues/declined' 2>/dev/null")) do
+    local id = p:match("^(%d+%a*%d*)%-")
+    if id then issueIds[id] = true end
+end
+local migrated = {}  -- old number -> { new, slug }
+do
+    local f = io.open(DIR .. "/issues/MIGRATION_MAP.md")
+    if f then
+        for l in f:lines() do
+            local old, new, slug = l:match("^|%s*(%d+%a*)%s*|%s*(%d+%a*)%s*|%s*([%w%-]+)%s*|")
+            if old and old ~= new then migrated[old] = { new = new, slug = slug } end
+        end
+        f:close()
+    end
+end
+-- }}}
+
+-- {{{ local function classify_path
+-- Returns "ok" | "moved", where | "missing", hint
+local PREFIXES = { "src/", "scripts/", "patches/", "config/", "sql/", "docs/", "tests/", "libs/",
+                   "modules/", "tools/", "notes/", "issues/", "issues-beta/", "assets/", "source-beta/" }
+local function classify_path(p)
+    for _, top in ipairs(SOURCE_TOP) do
+        if p:sub(1, #top) == top and not exists[p] then
+            if on_disk(SOURCE .. "/" .. p) then return "ok" end
+            return "missing", "not in " .. SOURCE .. " either (source tree path)"
+        end
+    end
+    if p:match("^source%-beta/") then
+        if on_disk(SOURCE .. p:sub(#"source-beta" + 1)) then return "ok" end
+        return "missing", "not in " .. SOURCE
+    end
+    if exists[p] or on_disk(DIR .. "/" .. p) then return "ok" end
+    for _, r in ipairs(RENAMES) do
+        if p:sub(1, #r[1]) == r[1] then
+            local np = r[2] .. p:sub(#r[1] + 1)
+            if exists[np] or exists[np .. ".disabled"] then return "moved", np .. (exists[np] and "" or ".disabled") .. "  (" .. r[3] .. ")" end
+        end
+    end
+    -- switched off or on since
+    if exists[p .. ".disabled"] then return "moved", p .. ".disabled  (switched off)" end
+    local undis = p:gsub("%.disabled$", "")
+    if undis ~= p and exists[undis] then return "moved", undis .. "  (switched on again)" end
+    -- a file of the same name elsewhere
+    local name = p:match("[^/]+$")
+    local found = byName[name] or byName[name .. ".disabled"] or (undis ~= p and byName[undis:match("[^/]+$")])
+    if found then
+        local where = {}
+        for k = 1, math.min(#found, 3) do where[k] = found[k] end
+        return "moved", table.concat(where, ", ") .. (#found > 3 and ", ..." or "") .. "  (same name)"
+    end
+    return "missing", nil
+end
+-- }}}
+
+-- {{{ local function refs_in
+-- Pulls path-like and issue-number references out of one issue's text.
+-- A path: a known top folder followed by name characters, trailing
+-- punctuation and ":line" removed; wildcards and placeholders skipped.
+local function refs_in(text)
+    local paths, issues, seenP, seenI = {}, {}, {}, {}
+    local n = 0
+    for line in (text .. "\n"):gmatch("([^\n]*)\n") do
+        n = n + 1
+        for tok in line:gmatch("[%w_%./%-]+") do
+            for _, pre in ipairs(PREFIXES) do
+                local s = tok:find(pre, 1, true)
+                if s == 1 or (s and tok:sub(s - 1, s - 1) == "/" and false) then
+                    local p = tok:gsub("[%.,;:%)]+$", ""):gsub(":%d+$", "")
+                    -- skip wildcards, placeholders, "..." elisions, and stubs
+                    -- left where a wildcard was cut off ("patches/B" from
+                    -- "patches/B*.sh": a last part of one character)
+                    local stub = (p:match("[^/]+$") or ""):len() < 2
+                    local cut = line:find(p .. "*", 1, true) or line:find(p .. "...", 1, true) or p:find("...", 1, true)
+                    if not p:find("[%*<>{}%$]") and #p > #pre and not p:match("/$") and not stub and not cut and not seenP[p] then
+                        seenP[p] = true
+                        paths[#paths + 1] = { path = p, line = n }
+                    end
+                    break
+                end
+            end
+        end
+        for id in line:gmatch("[Ii]ssues?%s+(%d%d%d+%a*%d*)") do
+            if not seenI[id] then seenI[id] = true; issues[#issues + 1] = { id = id, line = n } end
+        end
+        for id in line:gmatch("issues/(%d%d%d+%a*%d*)%-") do
+            if not seenI[id] then seenI[id] = true; issues[#issues + 1] = { id = id, line = n } end
+        end
+    end
+    return paths, issues
+end
+-- }}}
+
+-- {{{ which issues to read
+if #files == 0 then
+    local where = opt.all and ("'" .. DIR .. "/issues' -maxdepth 2") or ("'" .. DIR .. "/issues/completed' -maxdepth 1")
+    for _, p in ipairs(lines_of("find " .. where .. " -type f \\( -name '[0-9]*' \\) | sort")) do
+        if not p:find("/archived/") then files[#files + 1] = p end
+    end
+end
+-- }}}
+
+local totals = { ok = 0, moved = 0, missing = 0, issues = 0, badIssues = 0, renumbered = 0 }
+for _, file in ipairs(files) do
+    local f = io.open(file)
+    if not f then print("  cannot read " .. file) else
+        local text = f:read("*a"); f:close()
+        local paths, issues = refs_in(text)
+        local report, c = {}, { ok = 0, moved = 0, missing = 0 }
+        for _, r in ipairs(paths) do
+            local kind, hint = classify_path(r.path)
+            c[kind] = c[kind] + 1
+            if kind ~= "ok" then
+                report[#report + 1] = string.format("    %-7s line %-4d %s%s", kind, r.line, r.path, hint and ("  ->  " .. hint) or "")
+            end
+        end
+        local own = file:match("([^/]+)$"):match("^(%d+%a*%d*)")
+        for _, r in ipairs(issues) do
+            if r.id ~= own then
+                if not issueIds[r.id] then
+                    totals.badIssues = totals.badIssues + 1
+                    local m = migrated[r.id]
+                    report[#report + 1] = string.format("    issue   line %-4d %s does not exist%s", r.line, r.id,
+                        m and ("  ->  renumbered to " .. m.new .. " (" .. m.slug .. ")") or "")
+                elseif migrated[r.id] and opt.suspect then
+                    totals.renumbered = totals.renumbered + 1
+                    report[#report + 1] = string.format("    issue?  line %-4d %s exists, but was also an old number: if written before 2026-04-29 it may mean %s (%s)",
+                        r.line, r.id, migrated[r.id].new, migrated[r.id].slug)
+                end
+            end
+        end
+        totals.ok, totals.moved, totals.missing = totals.ok + c.ok, totals.moved + c.moved, totals.missing + c.missing
+        totals.issues = totals.issues + 1
+        local name = file:sub(#DIR + 2)
+        print(string.format("%s: %d paths ok, %d moved, %d missing", name, c.ok, c.moved, c.missing))
+        if not opt.summary then for _, l in ipairs(report) do print(l) end end
+    end
+end
+print(string.format("%d issue file(s): %d paths ok, %d moved, %d missing; %d issue numbers that do not exist, %d that may mean a renumbered issue",
+    totals.issues, totals.ok, totals.moved, totals.missing, totals.badIssues, totals.renumbered))
+os.exit((opt.strict and totals.missing > 0) and 1 or 0)
