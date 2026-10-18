@@ -1,6 +1,6 @@
 # Conversation Summary: 90bf80e4-2922-4058-918c-551568e85c2a
 
-Generated on: 2026-10-18 16:22:59
+Generated on: 2026-10-18 16:41:00
 Models: claude-opus-5-5
 
 ## Contents
@@ -1970,6 +1970,340 @@ questions need your answers first.
 3. When a `cd` would land in the same folder under another name, should the gate
    refuse it, so the refusal message itself tells the session, or let it pass
    with a note?
+
+--------------------------------------------------------------------------------
+
+### User Request 32
+
+<pasted_content id="ee2b">
+> 3. There's no way to switch a session to a folder's new name. Fix: the gate's
+> guide explains
+>      starting a fresh session there, and removing the old name from the saved list of extra
+     folders.
+</pasted_content id="ee2b">
+
+
+let's expand that functionality to allow for directory switching when
+specifically allowed. That's the intended behavior and the current
+implementation doesn't suit it. Please work on it until you're done or tired.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 32
+
+> Before designing anything I need to know where the move is lost. If the
+> harness drops the `cd` before our gate sees it, nothing the gate does can
+> help. If the gate sees it but the harness resets the folder afterwards, the
+> gate can. With no permission file present, a `cd` the gate can see should be
+> refused:
+
+> Nobody else is editing the gate or its test. Running the gate test suite as it
+> stands, so I know the baseline before changing anything:
+
+> Baseline: 183 cases, 0 failures. Writing the new cases first, so they fail
+> against the current gate and prove the change when they pass:
+
+> Eight failures, exactly the new behaviours. Now the gate itself:
+
+> All 199 cases pass, including the 16 new ones. The gate is live as soon as
+> it's saved, since the hook runs this file directly. Now the gates' guide:
+> finding its section on the folder gate.
+
+> The guide is updated. Now issue 041: its current-behavior section, and its
+> open questions with the defaults I chose:
+
+> That preview also picked up my soren-ds "looks" issue and its link lines from
+> earlier, still uncommitted. Committing the folder gate on its own first:
+
+*[commit] 7b2950bf3 in ai-stuff - The folder gate lets the session move when the person allows it, by name, for a while*
+
+> Now the soren-ds "looks" issue and its seven link lines, as their own commit:
+
+*[commit] e7f403055 in ai-stuff - Plan: every soren-ds app split into its state and a look the user chooses*
+
+Moving the session's folder now works when you allow it, including between two
+names of the same folder. It's committed in the scripts project, and the gate
+test suite passes: 199 cases, 16 of them new.
+
+**What changed in the folder gate:**
+- **You can name the folder.** `! echo /new/place >
+  /tmp/claude-allow-cwd-change` allows a move to that folder only. A `cd`
+  anywhere else is refused, and the permission is kept for the move it was meant
+  for. An empty file (`! touch …`) still allows any one move. Folders are
+  compared by where they really are, so an old name that's now a link matches
+  its new name.
+- **Permissions expire after ten minutes.** An older one is removed and not
+  used, and the refusal says when it was made. This closes the hole we hit,
+  where a move dropped before reaching the gate left its permission armed.
+- **A switch between names of one folder is recognised.** Without permission,
+  the refusal says it's the same folder under another name. With permission, it
+  goes through and you see a notice saying so.
+- **Every refusal explains how to ask for a move that happens:** a `cd` alone on
+  its line, because Claude Code silently drops a chained `cd DIR &&` when DIR is
+  where the session already is.
+
+I also updated the gates' guide and issue 041, and committed the soren-ds
+"looks" issue that had been waiting since earlier.
+
+**One thing only a live try can show:** whether Claude Code keeps the session at
+the new name once the move is allowed. Earlier it seemed to fall back after you
+ran a `!` command. To test it:
+1. You type `! echo /mnt/kaun/wow-chat-2026 > /tmp/claude-allow-cwd-change`
+2. I run `cd /mnt/kaun/wow-chat-2026` alone, then check `pwd` on the next
+   command.
+3. You run any `!` command, and I check `pwd` again.
+
+If it falls back, the cause is in Claude Code rather than the gate, and I'll
+write down exactly when it happens.
+
+**Open questions,** each with a default built in:
+1. **Time limit:** is ten minutes right for a permission to last, or should it
+   be shorter, like two or five?
+2. **Scope:** the time limit applies only to the folder gate's permission for
+   now. Should the other gates' permissions expire too?
+3. **Same folder, new name:** I treated a move between two names of one folder
+   as a real move, needing permission and showing a notice. Is that what you
+   want?
+
+--------------------------------------------------------------------------------
+
+### User Request 33
+
+<bash-input> echo /new/place > /tmp/claude-allow-cwd-change</bash-input>
+
+--------------------------------------------------------------------------------
+
+### User Request 34
+
+<bash-stdout>(Bash completed with no
+output)</bash-stdout><bash-stderr></bash-stderr>
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 34
+
+> You wrote my placeholder, `/new/place`, rather than the real folder. That's a
+> useful live test in itself: the permission now allows a move to `/new/place`
+> only. Trying the real move to show what happens:
+
+The live gate behaved correctly on both counts:
+- **It recognised the move as a switch of names:** "the same folder the session
+  is in now, under another name".
+- **It refused the move and kept the permission,** because the permission names
+  `/new/place`, a folder that doesn't exist. The file still holds `/new/place`;
+  it'll expire within ten minutes, or be replaced by your next one.
+
+To run the real test, type the actual folder:
+
+`! echo /mnt/kaun/wow-chat-2026 > /tmp/claude-allow-cwd-change`
+
+Then I'll run `cd /mnt/kaun/wow-chat-2026` alone and check whether the session
+keeps the new name.
+
+--------------------------------------------------------------------------------
+
+### User Request 35
+
+> ! echo /mnt/kaun/wow-chat-2026 > /tmp/claude-allow-cwd-change
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 35
+
+That command didn't run. It reached me as a message rather than a command,
+probably because of the spaces before the `!`. The permission file still says
+`/new/place`, unchanged since 16:30.
+
+I won't write the permission file myself. It's yours by design: that's what
+makes it a person's permission. Please type it again, with the `!` as the very
+first character of the line:
+
+`! echo /mnt/kaun/wow-chat-2026 > /tmp/claude-allow-cwd-change`
+
+--------------------------------------------------------------------------------
+
+### User Request 36
+
+<bash-input>echo /mnt/kaun/wow-chat-2026 >
+/tmp/claude-allow-cwd-change</bash-input>
+
+--------------------------------------------------------------------------------
+
+### User Request 37
+
+<bash-stdout>(Bash completed with no
+output)</bash-stdout><bash-stderr></bash-stderr>
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 37
+
+*[commit] fb4150483 in ai-stuff - The folder gate tried live: it lets the move through, and Claude Code puts the name back*
+
+The gate now does its part, but the session still won't keep the new name. Both
+live tries:
+1. **Placeholder permission (`/new/place`):** the move was refused and the
+   permission kept. The refusal said it was "the same folder … under another
+   name".
+2. **Permission naming the real folder:** the gate let the move through and
+   spent the permission. But the next command ran at the old name again.
+
+So the fallback is in Claude Code, not our script. Claude Code seems to start
+every command in the folder it has on record for the session. When the old and
+new names lead to the same real folder, it keeps the name it already had. I've
+written this into the issue and the gates' guide, and committed both.
+
+For a session that goes by the new name:
+1. Start a fresh session in `/mnt/kaun/wow-chat-2026`.
+2. Remove `/home/ritz/games/azeroth-core/wow-chat-2026` from this project's
+   saved extra folders (`/permissions`), so the old name isn't picked up again.
+
+In this session nothing is wrong except the name shown: both names lead to the
+same folder, and all my work uses `/mnt/kaun` paths.
+
+One new question in the issue: should this be reported to Claude Code's makers
+through `/bug`? The behaviour to report is that after a permitted `cd` to
+another name of the same folder, the session goes back to the old name. Or
+should it just stay written down, with "start a new session there" as the
+answer?
+
+--------------------------------------------------------------------------------
+
+### User Request 38
+
+please continue
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 38
+
+> Continuing. First, the watch on the old copies:
+
+> That trial isn't trustworthy yet: `merge-tree` prints a tree even when its
+> merge had conflicts, and I didn't check the first two merges. Checking each
+> step's result:
+
+I've reached the end of what I can do without your answers.
+
+**Done since your last message:**
+- **Folder gate:** finished, tested live, and committed, as reported above.
+- **The two failing quick tests:** already fixed on main, so they come in when
+  my branch is merged.
+- **Merge order:** trial merges confirm that if the beta branch goes into main
+  first, keeping its versions, my branch then conflicts on just one line. That's
+  the beta install list, which should read "... E017 E058 E059". I've sent the
+  details to the session writing the merge guide.
+- **A false alarm from the beta session's new check:** it reported a leaked
+  global in the buddy roaming library. The library is the beta session's, not
+  mine, and it found the global was correctly declared earlier in the file. It's
+  now adding a check that libraries don't leak globals, which I suggested.
+- **The old copies:** still in `moved-to-kaun-2026-10-18/`, and the old disk is
+  at 69 MB free. The watch is still running, so I'll make the git-history copies
+  as soon as you delete that folder.
+
+**Waiting on you, most pressing first:**
+1. **Folder gate, time limit:** a permission to move folders currently expires
+   after ten minutes. Is that right, or should it be shorter?
+2. **Folder gate, the bug in Claude Code:** after the gate lets a move between
+   two names of one folder through, the session goes back to the old name.
+   Report that through `/bug`, or just keep it written down with "start a new
+   session there" as the workaround?
+3. **The narrators' bookshelf:** is the list of 19 books right?
+4. **Buddies as creatures:** while a buddy wanders as a creature, is the real
+   buddy logged in and hidden beside it, or logged out until someone talks to
+   it?
+5. **Battlegrounds:** when two sections of the front are both short of help,
+   should the more desperate one get help last, as your wording reads, or first?
+
+--------------------------------------------------------------------------------
+
+### User Request 39
+
+> 5. Battlegrounds: when two sections of the front are both short of help,
+> should the more
+>      desperate one get help last, as your wording reads, or first?
+
+yes, to create the behavior of encirclement. In-universe it's justified like
+thinner lines are harder to reinforce.
+
+
+
+<pasted_content id="ee2b">
+> 2. Folder gate, the bug in Claude Code: after the gate lets a move between two
+> names of one
+>      folder through, the session goes back to the old name. Report that through /bug, or just keep
+>      it written down with "start a new session there" as the workaround?
+</pasted_content id="ee2b">
+
+
+fix our hook scripts please
+
+> 1. Folder gate, time limit: a permission to move folders currently expires
+> after ten minutes. Is
+>      that right, or should it be shorter?
+
+huh? sure fine whatever
+
+>   3. The narrators' bookshelf: is the list of 19 books right?
+
+sure
+
+> 4. Buddies as creatures: while a buddy wanders as a creature, is the real
+> buddy logged in and
+>      hidden beside it, or logged out until someone talks to it?
+
+logged in to receive chat messages, but we don't have to render or update
+anything else about them so they're essentially static.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 39
+
+> Thanks, I have all five answers. Recording the four quick ones in their issues
+> first, then the folder gate.
+>
+> On the gate: since Claude Code only updates its record of the session's folder
+> when the real place changes, a two-step move should get around it. The session
+> steps out to the parent folder first, which is a real change of place, then
+> steps into the new name. I'll build that into the gate and try it live.
+>
+> Recording the answers:
+
+> Also marking the answer in the battleground rules' own comment, then
+> committing these:
+
+*[commit] 4fd09d8d1 in wow-chat-fronts-homework - The owner's answers: encirclement by design, static baked buddies, the bookshelf stands*
+
+> Eight failures, exactly the new two-step behaviours. Now the gate:
+
+> All 207 cases pass. The gate's own header comment and the guide still describe
+> the one-step behaviour, so updating both before the live try:
+
+*[commit] 929e40452 in ai-stuff - The folder gate changes a folder's name in two steps, so Claude Code keeps it*
+
+I've recorded your four answers and committed them:
+- **Battlegrounds:** the most desperate section gets help last, on purpose, so
+  encirclements happen ("thinner lines are harder to reinforce").
+- **Buddies as creatures:** a baked buddy stays logged in so chat reaches it,
+  but is held still: not drawn, not thinking. The creature does the wandering.
+- **The bookshelf:** the 19 books stand as chosen.
+- **The folder gate's time limit:** ten minutes stays.
+
+**The hook fix is built** and committed, and the 207 gate tests pass. A new
+folder name now takes two steps: out to the new name's parent, which is a real
+change of place, then into the new name. That way Claude Code should update its
+record. One permission naming the new folder covers both steps. A single-step
+move between two names of the same folder is refused, the refusal spells out the
+two steps, and no permission is used up.
+
+**It still needs a live try**, the same as last time:
+1. You type `! echo /mnt/kaun/wow-chat-2026 > /tmp/claude-allow-cwd-change`
+2. I run `cd /mnt/kaun` (the permission is kept), then `cd
+   /mnt/kaun/wow-chat-2026` (the permission is used up).
+3. I check `pwd` on the commands that follow.
+
+If the session falls back to the old name even after this, the cause is beyond
+what our hooks can reach, and I'll write down exactly what happened.
 
 --------------------------------------------------------------------------------
 
