@@ -74,11 +74,14 @@ What the world keeps, and a test reads or sets:
 
 | Test | What it plays |
 |---|---|
-| `scripts/test-ambush` | the ambush: clock, holds, queues, spawns, chases, deaths (52 checks) |
-| `scripts/test-travel` | travellers and trainers, every class at every level 1-20 (1225 checks) |
+| `scripts/test-ambush` | the ambush: clock, holds, queues, spawns, chases, deaths |
+| `scripts/test-travel` | travellers and trainers, every class at every level 1-20 |
 | `scripts/test-treasure` | the treasure pool and chests, selling and buying back |
-| `scripts/test-hearthstone` | the group hearthstone by invitation (140 checks) |
+| `scripts/test-hearthstone` | the group hearthstone by invitation |
 | `scripts/demo-beta-toy-session` | all of beta at once, as a session, with a report |
+
+Each test prints how many checks it ran and how many passed; run it for
+the current count rather than trusting a number written here.
 
 Beside it, two checks that need no world at all:
 `scripts/test-beta-lua-load` reads every profile's scripts once, as the

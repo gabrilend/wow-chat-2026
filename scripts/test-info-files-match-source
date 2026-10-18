@@ -1,0 +1,184 @@
+#!/usr/bin/env luajit
+-- test-info-files-match-source - checks that each Lua file's ".info.md"
+-- summary still names the functions the file defines, and only those.
+--
+-- For a general audience: beside each Lua source file sits a short summary
+-- (name.info.md) listing the functions other files may call, so a reader can
+-- use the file without reading its code. A summary is written once and then
+-- quietly goes out of date: a function is added and never listed, or renamed
+-- and still listed under its old name. This reads each pair and compares the
+-- two lists: the functions the source defines where others can reach them
+-- (on a table, "Ambush.release", or as a global), and the function names the
+-- summary writes in backticks with a parenthesis ("`Ambush.release(`").
+-- Local functions are the file's own business and are not compared.
+--
+-- Usage: scripts/test-info-files-match-source [PROJECT_DIR] [FILE.lua ...]
+--   without files: every .lua under src/ and scripts/lib/ that has an
+--   .info.md beside it (name.lua -> name.info.md)
+--   with files: just those (paths relative to PROJECT_DIR)
+-- Exit status: 0 if every pair agrees, 1 otherwise; each disagreement is
+-- named with its file and line.
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+local only = {}
+for i, a in ipairs(arg) do
+    if i == 1 and a:sub(-4) ~= ".lua" then DIR = a else only[#only + 1] = a end
+end
+
+local function lines_of(cmd)
+    local out, h = {}, io.popen(cmd)
+    for l in h:lines() do out[#out + 1] = l end
+    h:close()
+    return out
+end
+local function q(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
+local function read(path)
+    local h = io.open(path, "rb")
+    if not h then return nil end
+    local s = h:read("*a"); h:close()
+    return s
+end
+
+-- {{{ local function handed_out
+-- The tables a source file hands to other files, as a set of names. Only
+-- functions on these are the file's outside face; a table built inside a
+-- function (a pretend creature's methods) or a local dispatch table is the
+-- file's own business. A table is handed out when it is
+--   a global table, made without "local":  Ambush = {}   Travel = Travel or {}
+--     (indented counts: ambush.lua lines its globals up in a column)
+--   put in package.loaded:                 package.loaded["ambush"] = Ambush
+--   the file's last return:                return M
+local function handed_out(src)
+    local out = {}
+    for line in (src .. "\n"):gmatch("([^\n]*)\n") do
+        local g = line:match("^%s*([%a_][%w_]*)%s*=%s*{")
+               or line:match("^%s*([%a_][%w_]*)%s*=%s*[%a_][%w_]*%s+or%s+{")
+               or line:match("^package%.loaded%b[]%s*=%s*([%a_][%w_]*)")
+        if g == "local" then g = nil end
+        if g then out[g] = true end
+    end
+    local last = src:match("\nreturn%s+([%a_][%w_]*)%s*$") or src:match("\nreturn%s+([%a_][%w_]*)%s*\n[%s%-]*$")
+    if last then out[last] = true end
+    return out
+end
+-- }}}
+
+-- {{{ local function defined_in
+-- The reachable functions a source file defines, name -> line number.
+-- Spelled, at the start of a line (indented counts: a function made inside
+-- another and put on a handed-out table is still reachable):
+--   function Table.name(       function Table:name(       Table.name = function(
+-- with Table one of the handed-out tables; and a top-level global function,
+-- "function name(" with no "local" (a function every file can call, so it
+-- belongs in the summary, or should not be global).
+local function defined_in(src)
+    local found, n, out = {}, 0, handed_out(src)
+    for line in (src .. "\n"):gmatch("([^\n]*)\n") do
+        n = n + 1
+        local name = line:match("^%s*function%s+([%a_][%w_]*[.:][%a_][%w_.:]*)%s*%(")
+                  or line:match("^%s*([%a_][%w_]*%.[%a_][%w_.]*)%s*=%s*function%s*%(")
+        if name then
+            name = name:gsub(":", ".")
+            if not out[name:match("^([^.]+)")] then name = nil end
+        else
+            name = line:match("^function%s+([%a_][%w_]*)%s*%(")
+        end
+        if name then found[name] = found[name] or n end
+    end
+    return found, out
+end
+-- }}}
+
+-- {{{ local function listed
+-- Whether a summary's names cover a defined one: written in full
+-- ("Toy.new_player"), or by its last part alone ("new_player", the way a
+-- summary of a one-table file often writes them).
+local function listed(named, name)
+    return named[name] or named[name:match("([^.]+)$")]
+end
+-- }}}
+
+-- {{{ local function named_in
+-- The function names a summary lists, name -> line number: anything in
+-- backticks that is a name followed by "(" ("`Ambush.release(player)`").
+-- A colon is read as a dot, as in defined_in, so "Obj:method(" and
+-- "Obj.method(" are one name.
+local function named_in(md)
+    local found, n = {}, 0
+    for line in (md .. "\n"):gmatch("([^\n]*)\n") do
+        n = n + 1
+        for name in line:gmatch("`([%a_][%w_.:]*)%(") do
+            name = name:gsub(":", ".")
+            found[name] = found[name] or n
+        end
+    end
+    return found
+end
+-- }}}
+
+-- {{{ the pairs to check
+local pairs_to_check = {}
+if #only > 0 then
+    for _, f in ipairs(only) do pairs_to_check[#pairs_to_check + 1] = f end
+else
+    for _, f in ipairs(lines_of("cd " .. q(DIR) .. " && git ls-files 'src/*.lua' 'scripts/lib/*.lua'")) do
+        if read(DIR .. "/" .. f:sub(1, -5) .. ".info.md") then pairs_to_check[#pairs_to_check + 1] = f end
+    end
+end
+-- }}}
+
+-- {{{ comparing each pair
+local problems, checked = 0, 0
+for _, f in ipairs(pairs_to_check) do
+    local info = f:sub(1, -5) .. ".info.md"
+    local src, md = read(DIR .. "/" .. f), read(DIR .. "/" .. info)
+    if not src or not md then
+        print("  FAIL " .. f .. ": " .. (src and "" or "no source ") .. (md and "" or "no " .. info))
+        problems = problems + 1
+    else
+        checked = checked + 1
+        local defined, out = defined_in(src)
+        local named = named_in(md)
+        local missing, gone = {}, {}
+        for name, line in pairs(defined) do if not listed(named, name) then missing[#missing + 1] = { name, line } end end
+        for name, line in pairs(named) do
+            -- a name the summary lists on one of this file's handed-out tables,
+            -- which the file no longer defines: gone. A plain name ("dofile(")
+            -- or one on another table (the engine's, another file's) may be
+            -- mentioned in passing and cannot be told from a lost one, so it is
+            -- not judged.
+            local table_name = name:match("^([^.]+)%.")
+            if table_name and out[table_name] and not defined[name] then gone[#gone + 1] = { name, line } end
+        end
+        table.sort(missing, function(a, b) return a[2] < b[2] end)
+        table.sort(gone, function(a, b) return a[2] < b[2] end)
+        for _, m in ipairs(missing) do
+            print(string.format("  FAIL %s:%d defines %s, which %s does not list", f, m[2], m[1], info))
+        end
+        for _, g in ipairs(gone) do
+            print(string.format("  FAIL %s:%d lists %s, which %s no longer defines", info, g[2], g[1], f))
+        end
+        problems = problems + #missing + #gone
+        local count = 0
+        for _ in pairs(defined) do count = count + 1 end
+        -- a file whose outside face reads as empty has nothing compared, so
+        -- its "agree" would mean nothing: said as a failure, to be looked at
+        -- (a table handed out in a way handed_out does not know)
+        local listed_count = 0
+        for _ in pairs(named) do listed_count = listed_count + 1 end
+        -- no functions on either side: a data file or a script, whose
+        -- summary describes its data or its run; nothing to compare, and fine
+        if count == 0 and listed_count == 0 then
+            print(string.format("  ok   %s and %s agree (no functions: a data file or a script)", f, info))
+        elseif count == 0 then
+            print("  FAIL " .. f .. ": no handed-out function found, though " .. info .. " lists some; nothing was compared")
+            problems = problems + 1
+        elseif #missing + #gone == 0 then
+            print(string.format("  ok   %s and %s agree (%d functions)", f, info, count))
+        end
+    end
+end
+-- }}}
+
+print(string.format("%d pair(s) checked; %d disagreement(s)", checked, problems))
+os.exit(problems == 0 and 0 or 1)

@@ -24,9 +24,19 @@ sits, leaves when no player is within 200 yards or the ground fails.
 
 ### `Travel.setupPlayer(event, player)`, `Travel.updatePlayerTravellers(playerGuid)`
 Make (and remake, when the lists run out) the player's lists from the
-categories below, by class (`Travel.getTravelerTypeMask`), faction and
-current level; trainers: one of the player's class whose slice holds the
-level.
+categories below, by class, faction and current level; trainers: one of
+the player's class whose slice holds the level.
+
+### `Travel.getTravelerTypeMask(class) -> number`
+Which traveller categories a class meets, as bits that add up: each
+category's `typeMask` is one bit (1, 2, 4 … 512), and a category is drawn
+from when its bit is in the class's number (Ammo 1, Innkeepers 2,
+Trainers 4, Consumables 8, Poisons 16, Others 32, Melee 64, Ranged 128,
+Armor 256, Food 512). Every class meets trainers, consumables, others,
+melee and armour. Only hunters meet ammunition sellers and only rogues
+poison sellers; ranged sellers come to warriors, hunters and rogues;
+mages meet no food sellers (they conjure their own), and druids no
+innkeepers (the source gives no reason).
 
 ### `Travel.getRandomTravellerId(playerGuid, count) -> creature entry (number), 0 if none`
 ### `Travel.isTrainer(entry) -> boolean`, `Travel.getTrainerForClass(class, level, faction) -> entry or nil`

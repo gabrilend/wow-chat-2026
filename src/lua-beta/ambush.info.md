@@ -31,6 +31,11 @@ refills.
 The next interval by the random walk: previous interval ±2, 3 or 4
 seconds, floor 10 s, pulled down above 100 s (2 in 3) and 200 s (4 in 5).
 
+### `Ambush.getJitterMagnitude() -> ms (number)`, `Ambush.getJitterSign(interval) -> 1 or -1`
+The walk's two halves: a step of 2, 3 or 4 seconds, and its direction
+(always up at the floor, even below 100 s, 1 in 3 up above it, 1 in 5 up
+above 200 s).
+
 ### `Ambush.setupAmbushQueue(player, rank)`
 Asks the world database, asynchronously, for creatures of `rank` (0
 normal, 4 rare, 2 rare elite) at the player's level; the answer goes to
@@ -57,6 +62,15 @@ the chase.
 
 ### `Ambush.release(creature)`
 Takes a monster off its player's count, once (rare: the boss-fight flag).
+
+### `Ambush.layToRest(creature)`
+A dead monster becomes scenery: released, its timers stopped, its last
+move cancelled so the corpse stays where it fell, its ambush data cleared
+(issues 304 and 305). Called wherever a death is seen.
+
+### `Ambush.onCreatureDeath(event, killer, creature)`
+A player's kill (the kill-creature event): lays the monster to rest. A
+death by anything else is seen by the chase or fight check instead.
 
 ### `Ambush.despawn(creature)`, `Ambush.addCreatureToQueue(player, entry, min, max, isRare)`,
 ### `Ambush.isCreatureBanned(entry, isRare) -> boolean`, `Ambush.memoryOf(player) -> table`
