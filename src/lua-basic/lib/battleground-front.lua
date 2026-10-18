@@ -25,13 +25,14 @@
 -- side b toward -v. Front.to_world turns (u, v) into map yards through the
 -- front's axis (629a), so the same rules run on any battleground.
 --
--- One choice the owner left open is held behind a switch, both readings
--- built (629 question 2):
---   opts.help_order = "worst last"   (default; the owner's words read
---                                      literally: "greater need having
---                                      lesser priority")
+-- The order help goes in (629 question 2) is held behind a switch:
+--   opts.help_order = "worst last"   (the design, confirmed 2026-10-18:
+--                                      "yes, to create the behavior of
+--                                      encirclement. In-universe it's
+--                                      justified like thinner lines are
+--                                      harder to reinforce.")
 --                   = "worst first"  (the most desperate section is
---                                      helped first)
+--                                      helped first; kept for comparison)
 -- Section counts include only the living (629c question 2, default
 -- chosen here and said so; the dead are not on the ground to count).
 --------------------------------------------------------------------------------

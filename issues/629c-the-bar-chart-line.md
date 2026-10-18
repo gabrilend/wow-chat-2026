@@ -73,7 +73,9 @@ Learned from the paper matches:
 - **Help where it's uneven.** Where a section holds 3 more allies than
   another, 2 allies leave the fuller section for the thinner one. With
   several thin sections, the order of help follows the owner's "greater
-  need having lesser priority" (629's question 2).
+  need having lesser priority" (629's question 2, answered 2026-10-18:
+  last, so a thin section can be encircled; "thinner lines are harder to
+  reinforce").
 - **Encircled, fighting to the last.** A section left thin can be
   surrounded. Those in it don't break and run; they fight until they
   fall (melee giving ground only by backsteps, 629d).

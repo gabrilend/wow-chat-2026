@@ -128,6 +128,14 @@ both need 628b; 628c also needs 623's buddy-opened trade).
      thinking and the player update too, which is where the server's
      time goes; costs a wait before every conversation and every heal.
    "The player is actually there" reads like (a). Is it?
+   (Answered 2026-10-18) Neither quite: the owner, "logged in to receive
+   chat messages, but we don't have to render or update anything else
+   about them so they're essentially static." The buddy stays logged in
+   so whispers and party chat reach it, but while baked it is held still:
+   not drawn to anyone, its bot's thinking and the server's per-tick
+   update of it paused, so it costs almost nothing beyond the open
+   session. The creature does the wandering; the buddy wakes (player
+   body back, thinking on) only for 628b's reasons.
 2. **Who walks?** In (a), does the creature follow the hidden player's
    steps (the buddy's roaming unchanged, the creature a puppet), or does
    the creature walk by creature pathing and the hidden player follow

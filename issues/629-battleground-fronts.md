@@ -174,6 +174,10 @@ Order: 629a and 629b (parallel foundations) → 629c (needs both) → 629d
    the owner describes (the worst-off section is left to fight to the
    last while the nearly-even ones are evened). Or did you mean the
    greater need goes first?
+   (Answered 2026-10-18) Last, on purpose: the owner, "yes, to create the
+   behavior of encirclement. In-universe it's justified like thinner
+   lines are harder to reinforce." The default ("worst last") is the
+   design; "worst first" stays in the paper rules only for comparison.
 3. **"A skeleton path system road".** The bot module's hand-placed road
    paths (as in Arathi Basin, 176a2c), or a skeleton drawn from the
    walkable ground (the middle line of the navigation mesh's corridors),
