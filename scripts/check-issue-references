@@ -458,8 +458,29 @@ for _, file in ipairs(files) do
                         if nxt:match("[%w_%-/]") or (nxt == "." and new:sub(b + 2, b + 2):match("%w")) then
                             pos = b + 1
                         else
-                            new = new:sub(1, a - 1) .. w.to .. new:sub(b + 1)
-                            pos = a + #w.to
+                            -- keep columns lined up: a longer path takes its
+                            -- extra length out of the spaces after it, when
+                            -- at least one space would be left (box drawings
+                            -- and aligned tables keep their right edge)
+                            local grow, after = #w.to - #w.from, b + 1
+                            local spaces = new:match("^ +", after) or ""
+                            local ls = (new:sub(1, a):match(".*\n()") or 1)
+                            local line = new:sub(ls, (new:find("\n", a, true) or #new + 1) - 1)
+                            local drawing = line:find("\226\148[\130\131]") or line:find("\226\149\145")
+                            if grow > 0 and #spaces > grow then
+                                after = after + grow
+                            elseif grow > 0 and drawing then
+                                -- a box drawing with no room: redrawing it is
+                                -- a person's job; this occurrence is kept
+                                report[#report + 1] = "    kept    " .. w.from .. " in a box drawing with no room for " .. w.to .. " (redraw by hand)"
+                                after = nil
+                            end
+                            if after then
+                                new = new:sub(1, a - 1) .. w.to .. new:sub(after)
+                                pos = a + #w.to
+                            else
+                                pos = b + 1
+                            end
                         end
                     end
                     report[#report + 1] = "    rewrote " .. w.from .. "  ->  " .. w.to
