@@ -42,7 +42,12 @@ local MOVED = { "wow-chat-2026", "wow-chat-neuron", "custom-client",
 
 -- untracked files that name the old places (checked, not guessed: found by
 -- reading the project on 2026-10-17)
-local UNTRACKED = { "mysql/conf/my.cnf" }
+-- my.cnf turned out to be tracked; the servers' generated settings
+-- (installed-files-<profile>/etc/*.conf, written at install from the
+-- .conf.dist files) are not, and name the data and log folders by full
+-- path: a server started from the new copy before a reinstall would read
+-- and write the old one. Shell patterns, expanded in DIR.
+local UNTRACKED = { "mysql/conf/my.cnf", "installed-files-*/etc/*.conf", "installed-files-*/etc/modules/*.conf" }
 -- }}}
 
 -- {{{ local function lines_of / read / write
@@ -103,7 +108,9 @@ end
 print("tracked files in " .. DIR .. ":")
 local tracked = lines_of("git -C '" .. DIR .. "' ls-files -z | tr '\\0' '\\n'")
 for _, rel in ipairs(tracked) do
-    if not rel:match("^llm%-transcripts/") then
+    -- this tool names the old places on purpose (its table and its own
+    -- description); rewriting itself once turned its example into the new path
+    if not rel:match("^llm%-transcripts/") and rel ~= "scripts/move-project-paths" then
         local kind = lines_of("test -L '" .. DIR .. "/" .. rel .. "' && echo link || echo file")[1]
         if kind == "file" then handle(rel) end
     end
@@ -114,7 +121,13 @@ end
 local relinked = 0
 if opt.untracked then
     print("untracked files:")
-    for _, rel in ipairs(UNTRACKED) do handle(rel) end
+    for _, pattern in ipairs(UNTRACKED) do
+        -- expand the shell pattern inside DIR; a pattern matching nothing
+        -- expands to nothing (the profile is not installed)
+        for _, rel in ipairs(lines_of("cd '" .. DIR .. "' && for f in " .. pattern .. "; do [ -f \"$f\" ] && echo \"$f\"; done")) do
+            handle(rel)
+        end
+    end
     print("symbolic links into an old place:")
     for _, line in ipairs(lines_of("find '" .. DIR .. "' -path '" .. DIR .. "/.git' -prune -o -type l -printf '%P\\t%l\\n'")) do
         local rel, target = line:match("^(.-)\t(.*)$")
