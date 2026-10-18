@@ -117,6 +117,7 @@ declare -a EXPECT_beta=(
     "worldserver.conf|MaxPlayerLevel|20"                   # C006b
     "worldserver.conf|StartPlayerLevel|1"                  # C007b
     "worldserver.conf|StartHeroicPlayerLevel|1"            # C017: death knights at 1 (issue 206)
+    "worldserver.conf|CharacterCreating.MinLevelForHeroicCharacter|0"   # C036: no level-55 character needed first
     "worldserver.conf|RecruitAFriend.MaxLevel|20"          # C017
     "worldserver.conf|Rate.XP.Kill|2.0"                    # C005
     "worldserver.conf|Rate.XP.Quest|2.0"                   # C005

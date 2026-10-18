@@ -140,9 +140,11 @@ Still open:
    enabled copy is still there and `_Misc.ext` asks for it.
 2. Beta's death knights start at level 1 (issue 206), but the server's
    rule that an account needs a level-55 character before making a death
-   knight is still stock. With a cap of 20, only game masters can make
-   one. Lower it for beta? (And 718's Chromie proposal asks which profile
-   the death knight story belongs to.)
+   knight was still stock, so with a cap of 20 only game masters could
+   make one. Answered by 206's design ("DKs are an option, not an
+   exception") on branch beta-homework: C036 sets the requirement to 0 on
+   beta. Say so if that is wrong. (718's Chromie proposal still asks which
+   profile the death knight story belongs to.)
 3. Treasure: a chest shows its first opener (the "holder") nothing, and
    gives its loot to whoever opens it second (the "searcher"; issues 407
    and 408, `chest-vulnerability.lua.disabled`). A player alone, or with

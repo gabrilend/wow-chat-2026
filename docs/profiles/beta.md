@@ -49,6 +49,7 @@ the real settings patches on scratch copies and reads every value back.
 | Level cap                       | 20         | C006b | the wow-chat design |
 | Starting level                  | 1          | C007b | |
 | Death knight starting level     | 1          | C017  | issue 206 |
+| Death knights need a level-55 character first | no (0) | C036 | issue 206: an option, not an exception |
 | Experience, kills and quests    | 2×         | C005  | |
 | Fall damage                     | 10×        | C004  | |
 | Run speed                       | 0.85       | C003  | |
