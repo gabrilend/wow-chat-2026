@@ -107,12 +107,12 @@ local function new_creature(entry, map, x, y, z)
     function c:RegisterEvent(fn, delay) schedule(self, fn, delay) end
     function c:MoveTo(_, nx, ny, nz) self.x, self.y, self.z = nx, ny, nz end
     function c:MoveRandom() end
-    function c:MoveClear() end
+    function c:MoveClear() self.moveCleared = (self.moveCleared or 0) + 1 end
     function c:MoveHome() end
     function c:AttackStop() end
     function c:AttackStart() self.combat = true end
     function c:ClearInCombat() self.combat = false end
-    function c:SetAggroEnabled() end
+    function c:SetAggroEnabled(v) self.aggro = v end
     function c:CanAggro() return false end
     function c:SetHomePosition() end
     function c:GetSpeed() return 1 end

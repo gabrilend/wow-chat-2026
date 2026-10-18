@@ -254,6 +254,32 @@ do
 end
 -- }}}
 
+-- {{{ issues 304 and 305: aggro back when the player stands; a death lays the monster to rest
+do
+    local p = fresh_player("Rester", 225)
+    silently(Ambush.spawnAndAttackPlayer, 0, 0, 1, p)
+    local c = p.spawned[1]
+    p.standing = false
+    silently(advance, 1000)
+    check(c.aggro == false, "while the player sits, a circling monster's aggro should be off")
+    p.standing = true
+    silently(advance, 2000)
+    check(c.aggro == true, "when the player stands, the monster's aggro should be back on (issue 305)")
+    schedule(c, function() end, 60000)                 -- some other timer of its own, still pending
+    c.dead = true
+    local cleared = c.moveCleared or 0
+    silently(advance, 1000)
+    check((c.moveCleared or 0) > cleared, "a dead monster's last move should be cancelled, so its corpse stays put (issue 305)")
+    check(pending(c, nil) == 0, "a dead monster should have no timers left (issue 304)")
+    check(c:GetData("ambush-chase-target") == nil and c:GetData("is-rare") == nil, "a dead monster's ambush data should be cleared (issue 304)")
+    check(p:GetData("num-ambushers") == 0, "a monster laid to rest should come off the count")
+    silently(Ambush.onCreatureDeath, 7, p, c)
+    check(p:GetData("num-ambushers") == 0, "a player's kill after the monster was laid to rest should change nothing")
+    silently(logout, p)
+    World.events = {}
+end
+-- }}}
+
 -- {{{ the player leaves mid-chase: the monster goes too, without an error
 do
     local p = fresh_player("Leaver", 230)
