@@ -1,6 +1,6 @@
 # Conversation Summary: 1ca38611-9673-4322-8dc2-8d10922c6746
 
-Generated on: 2026-10-18 16:20:58
+Generated on: 2026-10-18 16:23:31
 Models: claude-opus-5-5
 
 ## Contents
@@ -1895,6 +1895,91 @@ The new watcher reads only files:
   lines and any errors.
 
 If your run never reaches the build stage, nothing will appear.
+
+--------------------------------------------------------------------------------
+
+### User Request 27
+
+<pasted_content id="28c4">
+$ ./scripts/compile --threads 5 --profile basic
+Compiling profile: basic
+  (skipping git checks)
+Build type: RelWithDebInfo (optimized, with debug symbols; --debug for Debug)
+
+Running 32 quick tests...
+
+===============================================================================
+COMPILE FAILED (exit status 123). Nothing was promoted; the installed
+server in installed-files-basic/ is unchanged.
+
+It stopped without an error message of its own, at:
+  ./scripts/compile:602
+  running: xargs -P "$(nproc)" -I{} bash -c 'timeout 600 "$1/scripts/$2" "$1" >
+  "$3/$2.log" 2>&1 && touch "$3/$2.ok"' _ "${DIR}" {} "${out}"
+That command failed, and the script's stop-on-any-failure rule (set -e)
+ended the run there. The script should explain this failure itself; the
+line above is where to add that.
+===============================================================================
+</pasted_content id="28c4">
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 27
+
+> That's the quick tests failing, which I expected: two of the 32 were already
+> failing before the move, `test-gearsets` and `test-gm-command-reference`. When
+> any test fails, `xargs` exits with status 123, and the script's
+> stop-on-any-error rule ends the run right there, before its own code lists the
+> failed tests. That's a bug in the compile script. Reading that part, and the
+> test logs from your run:
+
+> Now the two failing tests themselves, starting with the stale command-help
+> SQL. Reading the generator's description before running it:
+
+> The regenerated SQL adds the `.buddy gems` command and updates `.buddy kit`'s
+> help text, matching the 15 October edit to the command list. Rerunning that
+> test:
+
+> That test now passes all 153 checks. Now `test-gearsets`. Finding the rule it
+> checks and what talent shape 808 is:
+
+> Shape key 808 means class 8, the mage, talent shape 8. Checking each failing
+> item against the test's rules in basic's world database:
+
+*[commit] 9521451bc - A failing quick test no longer stops the compile before it can say which*
+
+*[commit] c10054817 - Two quick tests catch up with the buddies' gear and commands of 15 October*
+
+The compile failed in its quick tests, the two that were failing before the
+move, and a bug in the compile then hid which tests they were. I've fixed the
+bug and one of the two tests; the other is down to a rule only you can decide.
+
+**What I changed:**
+- **Compile:** a failing quick test no longer ends the run before the report.
+  The compile now lists the failed tests with the end of each log, as it was
+  written to.
+- **`test-gm-command-reference` passes again.** Its SQL was out of date; I
+  regenerated it, which adds the `.buddy gems` command and updates `.buddy
+  kit`'s help.
+- **`test-gearsets` is brought in line with your 15 October change** ("gray
+  where no white exists"): grey armour is allowed where no white item fills the
+  slot.
+
+**What still fails `test-gearsets`:** every staff user (mages, priests, druids)
+wears the Short Staff at level 2. It's white and vendor-sold, but needs only
+level 1, and the test requires a level of 2 or more. Which is right?
+- **A level-1 item is fine in level-2 gear:** I relax the test.
+- **Buddies' gear must need level 2 or more:** the gear lists need a different
+  level-2 weapon for staff users.
+
+Until you decide, you can compile with the tests skipped:
+
+```
+cd /mnt/kaun/wow-chat-2026
+./scripts/compile --threads 5 --profile basic --skip-tests
+```
+
+The watcher is still running and will report as soon as the build log appears.
 
 --------------------------------------------------------------------------------
 

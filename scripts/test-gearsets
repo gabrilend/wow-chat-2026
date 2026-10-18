@@ -384,7 +384,15 @@ do
                 -- which no vendor sells either. Weapons stay white.
                 local white = f and f.quality == 1 and f.sold > 0
                 local gray  = f and f.quality == 0 and f.class == ITEM_CLASS_ARMOR
-                local ok = f and (white or gray) and f.req <= level and f.req >= 2
+                -- the lowest required level: 2 for armour, 1 for weapons
+                -- (617r2, 2026-10-15: the starter weapons, Short Staff, Dirk
+                -- and Shortsword, need level 1, and without them 23 level
+                -- 2-9 records had no weapon; armour stays at 2, because
+                -- "everything from 0" put holiday mantles and romance
+                -- goggles on every buddy). Level 1 has no record at all: a
+                -- level-1 buddy keeps the game's own starting outfit.
+                local lowest = (f and f.class == ITEM_CLASS_WEAPON) and 1 or 2
+                local ok = f and (white or gray) and f.req <= level and f.req >= lowest
                     and SLOT_FITS[slot] and SLOT_FITS[slot][f.inv]
                     and (f.allow == -1 or bit.band(f.allow, bit.lshift(1, class - 1)) ~= 0)
                     and (f.class ~= ITEM_CLASS_WEAPON or WEAPONS[class][f.sub])
@@ -393,7 +401,7 @@ do
             end
         end
     end
-    check(bad == 0, "every item is white and sold by a vendor, or gray armour, wearable at its record's level (2 or more), fits its slot and suits its class")
+    check(bad == 0, "every item is white and sold by a vendor, or gray armour, wearable at its record's level (from 2 for armour, 1 for weapons), fits its slot and suits its class")
     local pipe = io.popen(DIR .. "/scripts/generate-gearset-sql " .. DIR .. " --stdout")
     local made = pipe:read("*a"); pipe:close()
     local f = io.open(DIR .. "/sql/basic/db_world.src/33-gearsets.apply.sql")

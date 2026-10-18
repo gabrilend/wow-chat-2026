@@ -1,6 +1,6 @@
 # Conversation Summary: 9611fd64-2739-4282-8913-4ea703371d8e
 
-Generated on: 2026-10-18 16:18:15
+Generated on: 2026-10-18 16:24:42
 Models: claude-opus-5-5
 
 ## Contents
@@ -2623,6 +2623,76 @@ merge is committed, I'll rerun the beta tests.
 
 If you'd rather I could run merges myself in future, you can add a Bash
 permission rule for `git merge` in your settings.
+
+--------------------------------------------------------------------------------
+
+### User Request 18
+
+oh don't merge anything yet, we aren't ready for it. Keep working on your own
+branch and only modify the changes that seem suited to you and what you've
+already worked on.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 18
+
+> Understood, no merging. I'll stay on my branch and on work I've already done.
+> First, a small one: `docs/toy-world.md` gives fixed check counts ("52 checks",
+> "1225 checks"). Those go stale, and your house rule is to point at the tool
+> instead.
+
+> There's no such tool. I'll build one for the files I wrote. First, the format
+> of the summaries:
+
+> I'm still updating the summaries the new checker flagged; ambush and travel
+> are nearly done. Before saying which classes meet which travellers, I'm
+> checking what the categories behind those bits are:
+
+> I'm rewriting the test world's summary. It was written before the treasure and
+> group-hearthstone pieces were added, so it lists none of them.
+
+> Both breaks are caught. Committing:
+
+I added a check that each Lua file's `.info.md` summary still lists the
+functions the file defines, and only those. It found 18 gaps in my own
+summaries, which are now filled. All of this is committed on my branch, and
+nothing is merged.
+
+**The new check** (`scripts/test-info-files-match-source`):
+- It compares each pair in both directions: functions the summary doesn't list,
+  and listed names the file no longer defines.
+- It only counts functions the file hands to other files, not internal helpers.
+  If a file's summary lists functions but none could be compared, it fails
+  rather than passing quietly.
+- I broke a copy of the group hearthstone files two ways, deleting one listing
+  and renaming one function. It caught both.
+
+**The 18 gaps it found in my summaries:**
+- **Ambush:** missing the two halves of its random-walk clock, the step that
+  lets a dead monster lie still, and the handler for a player's kill.
+- **Travel:** missing which kinds of traveller each class meets.
+- **Test world:** written before the treasure and group-hearthstone pieces were
+  added, so none of those were listed. I rewrote it.
+
+I also removed the fixed check counts from the test world guide; each test
+prints its own count.
+
+**Open questions:**
+1. **Druids never meet innkeepers.** Writing out the travel table showed it:
+   every other class has innkeepers among its travellers, but druids don't, and
+   the source gives no reason. (Mages meeting no food sellers makes sense, since
+   they conjure their own.) Is the druid gap meant, or a slip carried over from
+   the original design?
+2. **The buddy roaming library** has 9 gaps of its own, and one is a real slip:
+   the function `paint_wall_cells` is global by accident, so every other script
+   can see it. That library belongs to the session that works on the buddy
+   companions. Should I tell that session, or leave it to you?
+3. **The build's quick tests:** I haven't added the new check to them. Added
+   now, it would fail every build until the buddy library's summary is fixed.
+   Should it go in once that's done?
+4. **The old stock settings files:** two leftover folders of them still sit in
+   my checkout and nothing reads them now. Should I delete them, or leave them
+   for you?
 
 --------------------------------------------------------------------------------
 
