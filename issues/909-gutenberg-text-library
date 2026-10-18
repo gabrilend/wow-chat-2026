@@ -52,9 +52,10 @@ keep it in progress.
   step E059 (`patches/E-patches.sh`) runs the scraper when the beta
   profile is installed, and its revert removes the cut books; the books
   are kept out of git (`.gitignore`: `src/lua-beta/data/texts/`). Both
-  directions run and repeat safely (tried 2026-10-18). Not yet in beta's
-  install list (`patches/patches.sh`), which the beta session is adding
-  on its branch, where it keeps that list.
+  directions run and repeat safely (tried 2026-10-18). Listed in beta's
+  install steps (`patches/patches.sh`) on this branch; the beta branch
+  added E058 to the same line, so where the two meet the line reads
+  "... E017 E058 E059" with both comments.
 
 Not done: the rmail forwarding described below is not part of this
 library (question 4).
