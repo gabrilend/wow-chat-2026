@@ -9,8 +9,14 @@ owner can see the rules before any server code is written.
   owner's words, read literally: "greater need having lesser priority").
 - `worst-first.gif`: the most desperate section is helped first.
 
-Both are 40 a side (Alterac Valley's size), seed 7, 40% ranged, four
-simulated minutes at twice real time. Side a (blue) starts at the
+- `doubled-worst-last.gif`, `doubled-worst-first.gif`: twice the bots
+  (80 a side) on a field twice as wide, in 10 sections, so each section
+  holds as many as before and two sections fall short at once more often
+  (the owner's "double the number of units", issue 629c).
+
+The first two are 40 a side (Alterac Valley's size) on an 80-yard
+field in 5 sections. All are seed 7, 40% ranged, four simulated
+minutes at twice real time. Side a (blue) starts at the
 bottom and pushes up; side b (red) at the top pushes down. Filled dots
 are melee, hollow dots ranged, a white rim a bot that broke through
 and is healing. The dashed lines across the field are each side's line

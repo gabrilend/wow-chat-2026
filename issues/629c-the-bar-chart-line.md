@@ -43,6 +43,24 @@ Learned from the paper matches:
   from its own, the lines stood 45 yards apart and melee never met.
 - **The help order rarely matters below about 40 a side**: with places
   in the line, two sections are almost never short at once.
+- **Doubling, two ways** (owner, 2026-10-17: "maybe we need to double the
+  number of units on each side? If we want to display that mechanic. I
+  think it'd either help or hurt, and we'd learn more as we trouble
+  explored."). Ten-minute matches, three seeds each:
+  - 80 a side on the same field (80 yards, 5 sections): two sections
+    short at once about five times as often as at 40 (46 to 59 times
+    against 7 to 18), so the help order is used; but sections facing
+    three times their number mostly vanish (3 to 15, one seed 67),
+    because every section is thick with bots.
+  - 80 a side on a field twice as wide, in 10 sections (the same bots per
+    section as 40 on the small field): both show, two short at once 36 to
+    50 times and outnumbered sections 31 to 151.
+  - Neither help order gives more encirclements than the other across
+    seeds: encirclement comes from how thin a section gets, not from
+    the order help arrives.
+  The pictures now include the doubled field (`doubled-worst-last.gif`,
+  `doubled-worst-first.gif`). Its roads still split four ways, so ten
+  sections fill from four entry points.
 
 ## Intended Behavior
 

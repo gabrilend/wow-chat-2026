@@ -29,7 +29,7 @@ local Front = dofile(DIR .. "/src/lua-basic/lib/battleground-front.lua")
 local OUT_DIR = DIR .. "/docs/HTML/battleground-front"
 
 -- {{{ canvas and palette
-local O        = Front.DEFAULTS
+local O        = Front.DEFAULTS                 -- the match's tuning; reset per scene by render()
 local SCALE    = 3                              -- pixels per yard
 local BAR      = 48                             -- pixels for each bar chart band
 local PER_ALLY = 3                              -- pixels of bar per ally: 13 fit, enough for 40 a side over 5 sections
@@ -146,6 +146,8 @@ end
 -- {{{ render
 local function render(name, opts)
     local m      = Front.new_match(opts)
+    -- each scene may have its own field size: the canvas follows it
+    O, W, H = m.o, m.o.width * SCALE + 2 * PAD, m.o.depth * SCALE + 2 * BAR + 2 * PAD
     local field  = base()
     local frames = {}
     for t = 1, FRAMES do
@@ -179,3 +181,12 @@ os.execute("mkdir -p '" .. OUT_DIR .. "'")
 print("battleground front, seed 7, 40 a side (Alterac Valley's size), 40% ranged:")
 render("worst-last",  { seed = 7, per_side = 40, help_order = "worst last" })
 render("worst-first", { seed = 7, per_side = 40, help_order = "worst first" })
+-- Doubled (owner, 2026-10-17: "maybe we need to double the number of
+-- units on each side? If we want to display that mechanic"). Twice the
+-- bots on the same field crowds every section, and encirclements vanish;
+-- twice the bots on twice the field, in twice the sections, keeps each
+-- section as thin as before, so both the help order and encirclements
+-- show (scratch survey, 2026-10-17, in issue 629c).
+print("doubled: seed 7, 80 a side on a field twice as wide, 10 sections:")
+render("doubled-worst-last",  { seed = 7, per_side = 80, width = 160, sections = 10, help_order = "worst last" })
+render("doubled-worst-first", { seed = 7, per_side = 80, width = 160, sections = 10, help_order = "worst first" })
