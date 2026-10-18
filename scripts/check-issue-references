@@ -100,6 +100,14 @@ local RENAMES = {
     { "scripts/azerothcore", "scripts/azerothcore-deprecated", "2026-04-14: split into scripts/compile, install, update, worldserver... (issue 142); the old one kept as -deprecated" },
     { "scripts/profile-switch", "scripts/profile-switch-deprecated", "2026-04-14: replaced by scripts/switch; kept as -deprecated" },
 }
+-- Prefixes of things that left this project for another one: reported as
+-- "moved" with where they went, since no file here will ever match them.
+local MOVED_OUT = {
+    { "src/custom-client-c", "the W client project, ../custom-client/src/ (issue 173v, 2026-10-07)" },
+    { "src/custom-client",   "the W client project, ../custom-client/ (issue 173v; the Lua first version was removed)" },
+    { "scripts/custom-client", "the W client project's scripts/run (issue 173v)" },
+    { "scripts/build-custom-client", "the W client project's scripts/build (issue 173v)" },
+}
 -- Paths inside the game's own source tree, as an issue may write them
 -- without the "source-beta/" in front.
 local SOURCE_TOP = { "modules/mod-", "src/server/", "src/common/", "data/sql/" }
@@ -142,6 +150,9 @@ end
 local PREFIXES = { "src/", "scripts/", "patches/", "config/", "sql/", "docs/", "tests/", "libs/",
                    "modules/", "tools/", "notes/", "issues/", "issues-beta/", "assets/", "source-beta/" }
 local function classify_path(p)
+    for _, m in ipairs(MOVED_OUT) do
+        if p:sub(1, #m[1]) == m[1] and not exists[p] then return "moved", m[2] end
+    end
     for _, top in ipairs(SOURCE_TOP) do
         if p:sub(1, #top) == top and not exists[p] then
             if on_disk(SOURCE .. "/" .. p) then return "ok" end

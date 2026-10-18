@@ -98,3 +98,14 @@ speed the original client plays them for her movement speed (120%).
 
 None. (Answered 2026-10-06, owner: strafing straight sideways, "she
 turns": the body turns 90 degrees and runs, as built.)
+
+## Since then (checked 2026-10-17)
+
+The custom client moved to its own project on 2026-10-07 (173v), the W
+client at `/mnt/mtwo/games/azeroth-core/custom-client/`, and is built,
+run and tested there (`scripts/build --test`; its own CLAUDE.md). Its code
+was renumbered into reading order (`src/NNN-name.c`) and rewritten to its
+error and handle conventions; `src/custom-client-c/` and `src/custom-client/`
+here are gone. The crosswalk from every 173 issue to where it continues is
+the table in the W client's `docs/009-roadmap.md`. This piece continues as
+W client issue 402 (skeletons and animation; code `src/023-anim.c`), with 801 (movement by the server's rules) using it.

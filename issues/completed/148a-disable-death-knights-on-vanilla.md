@@ -209,3 +209,21 @@ the disablement.
   game), or the chosen world's natural starting level for that race?
   (Still open, but belongs to the future re-enable — see "Future Work"
   — not to this disablement issue.)
+
+## Since then (checked 2026-10-17)
+
+- **Still built on vanilla**: `config/patches/C015-vanilla-disable-deathknight.sh`.
+- **Its premise about the client was corrected later.** This issue reasoned
+  that the client hard-codes the Acherus start, so a death knight could
+  not begin anywhere else without a client patch. Issue 206 (beta) already
+  started death knights at level 1, and 718 records that the start place
+  is the server's own table (`playercreateinfo`), not the client's. The
+  other reason here, that Acherus is a level-55 story that does not fit a
+  level-40 world, still holds for vanilla.
+- **The other profiles answered the same question differently**, which is
+  why three death-knight arrangements exist: beta starts them at 1 with a
+  kit of its own (206; its training reached the game on 2026-10-17);
+  basic keeps the stock level-55 start and adds Sargobras's soul trade and
+  an optional story skip (718); release and alpha are stock. 718's
+  Chromie proposal (2026-10-17) is the next variation, its profile still
+  to be chosen.

@@ -207,3 +207,18 @@ which feels appropriate for the deliberate-travel design.
   are evocative — they could be moved to flag duty (e.g. fishing
   hobbyist, town guard) instead of just standing on an empty
   platform. Out of scope for v1, but worth noting.
+
+## Since then (checked 2026-10-17)
+
+- **Still built, and shared**: the SQL is install step E008,
+  `sql/vanilla/db_world.src/03-remove-flight-paths.apply.sql` (the
+  `sql/vanilla/03-remove-flight-paths.sql` above, moved into the per-profile
+  `.src/` folders); its undo is written by E008's revert in
+  `patches/E-patches.sh`. Basic runs it too: asked whether the 1-60 baseline
+  keeps flight paths, the owner chose "Remove, like vanilla" (2026-09-23).
+- **Basic then brought some flight back, on purpose and by hand**: the
+  Dark Portal front's flight masters (155l) and "flight at hand" (155z7)
+  give flights where the design wants them, rather than the whole network.
+- `scripts/test-basic-sql-in-ram` applies E008 to a stock database before
+  its other checks (its undo lives inline in `E-patches.sh`, so that test
+  does not undo it).
