@@ -575,7 +575,7 @@ print_build_failure() {
 #   test-basic-sql-in-ram: builds a whole database in RAM (minutes); run it
 #       by hand after changing basic's SQL
 QUICK_TESTS=(
-    test-acherus-vendors test-ambush test-arathi-basin-rules test-beta-lua-load test-buddy-arc test-buddy-choice
+    test-acherus-vendors test-ambush test-arathi-basin-rules test-beta-lua-load test-buddy-arc test-buddy-choice test-travel
     test-buddy-gems test-buddy-gm test-buddy-hearth test-buddy-kit test-buddy-roam-core
     test-buddy-stand-ins test-buddy-talents test-compile-module-set test-dk-buddies-by-level test-dk-buddy-gear test-dk-skip-story
     test-dk-soul-trade test-gear-designs test-gearsets test-gm-command-reference

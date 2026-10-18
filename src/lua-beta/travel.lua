@@ -1,6 +1,45 @@
+--------------------------------------------------------------------------------
+-- travel.lua - travellers who wander by: vendors, innkeepers, and the
+-- player's class trainers, each of the player's level.
+--
+-- For a general audience: beta's world is empty, so the people a player
+-- would meet in towns come to them instead. Every couple of minutes one
+-- traveller appears 30-45 yards from the player and walks past; it sits
+-- when the player sits, and leaves when no player is near. Which travellers
+-- a player can meet depends on their class (a mage meets no ammunition
+-- vendor) and level, from the lists below and data/travel-trainers.lua.
+-- Checked offline by scripts/test-travel.
+--
+-- History: wow-chat-1's scheduler (periodic_events.lua) sent travellers,
+-- with the ambush and treasure. It was switched off on 2026-04-10 and its
+-- bot half was left mid-investigation, so on 2026-10-17 travellers got a
+-- clock of their own here, as the ambush has (ambush.lua), asking the
+-- scheduler's questions before each one: not while the player is dead,
+-- swimming or sitting. Real players only, as the scheduler had it.
+--------------------------------------------------------------------------------
+
 require("movement") -- movement.lua
 
 Travel = { travellers = {} }
+
+-- {{{ Configuration
+TRAVEL_INTERVAL        = 130000  -- ms between travellers (periodic_events.lua's, 130 s)
+TRAVEL_FIRST_INTERVAL  =  60000  -- ms after login before the first one
+TRAVEL_SPAWN_MIN       =     30  -- yards from the player
+TRAVEL_SPAWN_MAX       =     45
+TRAVEL_DESPAWN_AFTER   = 300000  -- ms a traveller lasts (5 minutes) unless killed sooner
+TEMPSUMMON_TIMED_OR_DEAD_DESPAWN = 1  -- the game's summon kind: gone after the time above, or when dead
+-- }}}
+
+-- {{{ Travel.HOLDS
+-- Reasons not to send a traveller this time; the clock keeps running.
+-- wow-chat-1's (libs/wow-chat-1/periodic_events.lua, PeriodicSpawnTravellers).
+Travel.HOLDS = {
+    { why = "player is dead",         holds = function(p) return p:IsDead() end },
+    { why = "player is in water",     holds = function(p) return p:IsInWater() end },
+    { why = "player is sitting down", holds = function(p) return not p:IsStandState() end },
+}
+-- }}}
 
 -- Register in package.loaded so require() is a no-op after ALE loads this
 -- Must be AFTER Travel table is created so require() returns the module
@@ -50,6 +89,10 @@ function Travel.updatePlayerTravellers(playerID)
         Travel.setupPlayer(nil, player)
         return
     end
+    -- the lists follow the player's level now, not the level they logged
+    -- in at (until 2026-10-17 a player who levelled kept meeting
+    -- travellers of their login level until the next login)
+    playerData.playerLevel = player:GetLevel()
     local next = next
     for _, traveller_category in pairs(Travel.travellers) do
         -- bit_and is ALE global (LuaJIT doesn't have bit32)
@@ -123,7 +166,12 @@ function Travel.spawnAndTravel(player)
     if travellerId ~= 0 then
         -- Custom class players get trainers from their eligible classes (equal probability)
         -- instead of their base class trainer - uses existing world trainers
-        if Travel.isTrainer(travellerId) and CustomClasses then
+        -- The custom-class framework's helpers, when it runs. The Knight's
+        -- file makes an empty class registry even while the framework is
+        -- switched off, so the registry existing is not enough: ask for the
+        -- helper itself (2026-10-17; calling the missing helper stopped the
+        -- traveller with an error).
+        if Travel.isTrainer(travellerId) and CustomClasses and CustomClasses.getCustomClass then
             local customClassId = CustomClasses.getCustomClass(player)
             if customClassId then
                 local eligibleClasses = CustomClasses.getEligibleClasses(player)
@@ -146,14 +194,22 @@ function Travel.spawnAndTravel(player)
         end
 
         local x, y, z, o = player:GetLocation()
-              x, y       = Movement.getBoxSpawnPosition(x, y, 30, 45)
+              x, y       = Movement.getBoxSpawnPosition(x, y, TRAVEL_SPAWN_MIN, TRAVEL_SPAWN_MAX)
                     z    = player:GetMap():GetHeight(x, y)
                        o = math.random(0, 6) + math.random()
-        local TEMPSUMMON_DEAD_DESPAWN  = 7          -- despawn when creature disappears
-        local TEMPSUMMON_DESPAWN_TIMER = 300 * 1000 -- 5 minutes
+        --   no ground height there (past the map's edge, over a void): no
+        --     traveller this time
+        --   ground: it appears there
+        if z == nil then
+            print("[Travel] no ground at the spot picked for a traveller, none this time")
+            return
+        end
+        -- Gone after TRAVEL_DESPAWN_AFTER or when killed. Until 2026-10-17
+        -- the summon kind named here was a global nobody set, so the game
+        -- used its default, and travellers never left on their own.
         local traveller = player:SpawnCreature(travellerId, x, y, z, o,
                                                TEMPSUMMON_TIMED_OR_DEAD_DESPAWN,
-                                               TEMPSUMMON_DESPAWN_TIMER)
+                                               TRAVEL_DESPAWN_AFTER)
 
         if traveller then
             print("Spawning traveller " .. tostring(travellerId ..
@@ -161,7 +217,7 @@ function Travel.spawnAndTravel(player)
                   " for " .. player:GetName())
             traveller:SetSpeed(0, 1)
             traveller:SetWalk(true)
-            playerX, playerY = player:GetLocation()
+            local playerX, playerY = player:GetLocation()
             x, y = Movement.getPositionOppositePoint(x, y, playerX, playerY)
             z    = player:GetMap():GetHeight(x, y)
             -- If terrain invalid, despawn traveller instead of crashing
@@ -456,163 +512,15 @@ local others      = { { id = 20980, minLevel = 30, maxLevel = 60, rel = 3 },
                       { id = 29716, minLevel = 56, maxLevel = 56, rel = 3 },
                       { id = 28993, minLevel = 1,  maxLevel = 30, rel = 3 },
                     }
--- trainers have a negative ID value so that we can break them up into different
--- categories based on their class
--- -1 = warrior     -4 = rogue            -7 = shaman     -10 = druid
--- -2 = paladin     -5 = priest           -8 = mage
--- -3 = hunter      -6 = death knight     -9 = warlock
--- Normalized to level 1-20 cap using ALL available trainers per class/faction
--- Level ranges distributed evenly: 20 levels / N trainers per class
--- More trainers = finer level granularity, more NPC variety
-local trainers    = {   -- horde warrior (9 trainers)
-                      { trainerID =  3354, minLevel =  1, maxLevel =  2, rel = 1, id =  -1 },
-                      { trainerID =  3353, minLevel =  3, maxLevel =  4, rel = 1, id =  -1 },
-                      { trainerID =  3041, minLevel =  5, maxLevel =  6, rel = 1, id =  -1 },
-                      { trainerID =  3043, minLevel =  7, maxLevel =  8, rel = 1, id =  -1 },
-                      { trainerID =  3042, minLevel =  9, maxLevel = 11, rel = 1, id =  -1 },
-                      { trainerID =  4594, minLevel = 12, maxLevel = 13, rel = 1, id =  -1 },
-                      { trainerID =  3408, minLevel = 14, maxLevel = 15, rel = 1, id =  -1 },
-                      { trainerID =  4595, minLevel = 16, maxLevel = 17, rel = 1, id =  -1 },
-                      { trainerID =  4593, minLevel = 18, maxLevel = 20, rel = 1, id =  -1 },
-                        -- alliance warrior (11 trainers)
-                      { trainerID =  5113, minLevel =  1, maxLevel =  1, rel = 2, id =  -1 },
-                      { trainerID =  5480, minLevel =  2, maxLevel =  3, rel = 2, id =  -1 },
-                      { trainerID =  1901, minLevel =  4, maxLevel =  5, rel = 2, id =  -1 },
-                      { trainerID =   914, minLevel =  6, maxLevel =  7, rel = 2, id =  -1 },
-                      { trainerID =  5114, minLevel =  8, maxLevel =  9, rel = 2, id =  -1 },
-                      { trainerID = 17120, minLevel = 10, maxLevel = 10, rel = 2, id =  -1 },
-                      { trainerID =  5479, minLevel = 11, maxLevel = 12, rel = 2, id =  -1 },
-                      { trainerID =  4087, minLevel = 13, maxLevel = 14, rel = 2, id =  -1 },
-                      { trainerID =  4089, minLevel = 15, maxLevel = 16, rel = 2, id =  -1 },
-                      { trainerID = 16771, minLevel = 17, maxLevel = 18, rel = 2, id =  -1 },
-                      { trainerID =  7315, minLevel = 19, maxLevel = 20, rel = 2, id =  -1 },
-                        -- horde paladin (5 trainers)
-                      { trainerID = 16679, minLevel =  1, maxLevel =  4, rel = 1, id =  -2 },
-                      { trainerID = 16680, minLevel =  5, maxLevel =  8, rel = 1, id =  -2 },
-                      { trainerID = 16681, minLevel =  9, maxLevel = 12, rel = 1, id =  -2 },
-                      { trainerID = 20406, minLevel = 13, maxLevel = 16, rel = 1, id =  -2 },
-                      { trainerID = 23128, minLevel = 17, maxLevel = 20, rel = 1, id =  -2 },
-                        -- alliance paladin (7 trainers)
-                      { trainerID =  5149, minLevel =  1, maxLevel =  2, rel = 2, id =  -2 },
-                      { trainerID =  5148, minLevel =  3, maxLevel =  5, rel = 2, id =  -2 },
-                      { trainerID =  5147, minLevel =  6, maxLevel =  8, rel = 2, id =  -2 },
-                      { trainerID = 17509, minLevel =  9, maxLevel = 11, rel = 2, id =  -2 },
-                      { trainerID =   928, minLevel = 12, maxLevel = 14, rel = 2, id =  -2 },
-                      { trainerID =  5492, minLevel = 15, maxLevel = 17, rel = 2, id =  -2 },
-                      { trainerID =  5491, minLevel = 18, maxLevel = 20, rel = 2, id =  -2 },
-                        -- horde hunter (7 trainers)
-                      { trainerID =  3406, minLevel =  1, maxLevel =  2, rel = 1, id =  -3 },
-                      { trainerID =  3040, minLevel =  3, maxLevel =  5, rel = 1, id =  -3 },
-                      { trainerID =  3352, minLevel =  6, maxLevel =  8, rel = 1, id =  -3 },
-                      { trainerID =  3039, minLevel =  9, maxLevel = 11, rel = 1, id =  -3 },
-                      { trainerID =  3038, minLevel = 12, maxLevel = 14, rel = 1, id =  -3 },
-                      { trainerID = 16673, minLevel = 15, maxLevel = 17, rel = 1, id =  -3 },
-                      { trainerID =  3407, minLevel = 18, maxLevel = 20, rel = 1, id =  -3 },
-                        -- alliance hunter (8 trainers)
-                      { trainerID =  5117, minLevel =  1, maxLevel =  2, rel = 2, id =  -3 },
-                      { trainerID =  4146, minLevel =  3, maxLevel =  5, rel = 2, id =  -3 },
-                      { trainerID =  5515, minLevel =  6, maxLevel =  7, rel = 2, id =  -3 },
-                      { trainerID = 17505, minLevel =  8, maxLevel = 10, rel = 2, id =  -3 },
-                      { trainerID =  5116, minLevel = 11, maxLevel = 12, rel = 2, id =  -3 },
-                      { trainerID =  5115, minLevel = 13, maxLevel = 15, rel = 2, id =  -3 },
-                      { trainerID =  4205, minLevel = 16, maxLevel = 17, rel = 2, id =  -3 },
-                      { trainerID =  5516, minLevel = 18, maxLevel = 20, rel = 2, id =  -3 },
-                        -- horde rogue (6 trainers)
-                      { trainerID =  3327, minLevel =  1, maxLevel =  3, rel = 1, id =  -4 },
-                      { trainerID =  3401, minLevel =  4, maxLevel =  6, rel = 1, id =  -4 },
-                      { trainerID =  4582, minLevel =  7, maxLevel = 10, rel = 1, id =  -4 },
-                      { trainerID =  4583, minLevel = 11, maxLevel = 13, rel = 1, id =  -4 },
-                      { trainerID =  3328, minLevel = 14, maxLevel = 16, rel = 1, id =  -4 },
-                      { trainerID =  4584, minLevel = 17, maxLevel = 20, rel = 1, id =  -4 },
-                        -- alliance rogue (6 trainers)
-                      { trainerID =  5167, minLevel =  1, maxLevel =  3, rel = 2, id =  -4 },
-                      { trainerID =  4163, minLevel =  4, maxLevel =  6, rel = 2, id =  -4 },
-                      { trainerID =  5166, minLevel =  7, maxLevel = 10, rel = 2, id =  -4 },
-                      { trainerID =   918, minLevel = 11, maxLevel = 13, rel = 2, id =  -4 },
-                      { trainerID =  5165, minLevel = 14, maxLevel = 16, rel = 2, id =  -4 },
-                      { trainerID = 13283, minLevel = 17, maxLevel = 20, rel = 2, id =  -4 },
-                        -- horde priest (9 trainers)
-                      { trainerID =  4607, minLevel =  1, maxLevel =  2, rel = 1, id =  -5 },
-                      { trainerID = 16659, minLevel =  3, maxLevel =  4, rel = 1, id =  -5 },
-                      { trainerID =  3044, minLevel =  5, maxLevel =  6, rel = 1, id =  -5 },
-                      { trainerID =  6018, minLevel =  7, maxLevel =  8, rel = 1, id =  -5 },
-                      { trainerID =  4608, minLevel =  9, maxLevel = 11, rel = 1, id =  -5 },
-                      { trainerID =  6014, minLevel = 12, maxLevel = 13, rel = 1, id =  -5 },
-                      { trainerID =  3045, minLevel = 14, maxLevel = 15, rel = 1, id =  -5 },
-                      { trainerID =  5994, minLevel = 16, maxLevel = 17, rel = 1, id =  -5 },
-                      { trainerID =  4906, minLevel = 18, maxLevel = 20, rel = 1, id =  -5 },
-                        -- alliance priest (9 trainers)
-                      { trainerID =  5143, minLevel =  1, maxLevel =  2, rel = 2, id =  -5 },
-                      { trainerID =  5142, minLevel =  3, maxLevel =  4, rel = 2, id =  -5 },
-                      { trainerID = 11406, minLevel =  5, maxLevel =  6, rel = 2, id =  -5 },
-                      { trainerID =  5489, minLevel =  7, maxLevel =  8, rel = 2, id =  -5 },
-                      { trainerID =  5484, minLevel =  9, maxLevel = 11, rel = 2, id =  -5 },
-                      { trainerID =   376, minLevel = 12, maxLevel = 13, rel = 2, id =  -5 },
-                      { trainerID =  4092, minLevel = 14, maxLevel = 15, rel = 2, id =  -5 },
-                      { trainerID =  4091, minLevel = 16, maxLevel = 17, rel = 2, id =  -5 },
-                      { trainerID = 11401, minLevel = 18, maxLevel = 20, rel = 2, id =  -5 },
-                        -- neutral death knight (3 trainers)
-                      { trainerID = 29194, minLevel =  1, maxLevel =  6, rel = 3, id =  -6 },
-                      { trainerID = 29195, minLevel =  7, maxLevel = 13, rel = 3, id =  -6 },
-                      { trainerID = 29196, minLevel = 14, maxLevel = 20, rel = 3, id =  -6 },
-                        -- horde shaman (6 trainers)
-                      { trainerID =  3032, minLevel =  1, maxLevel =  3, rel = 1, id =  -7 },
-                      { trainerID =  3030, minLevel =  4, maxLevel =  6, rel = 1, id =  -7 },
-                      { trainerID = 13417, minLevel =  7, maxLevel = 10, rel = 1, id =  -7 },
-                      { trainerID =  3403, minLevel = 11, maxLevel = 13, rel = 1, id =  -7 },
-                      { trainerID =  3031, minLevel = 14, maxLevel = 16, rel = 1, id =  -7 },
-                      { trainerID =  3344, minLevel = 17, maxLevel = 20, rel = 1, id =  -7 },
-                        -- alliance shaman (5 trainers)
-                      { trainerID = 17520, minLevel =  1, maxLevel =  4, rel = 2, id =  -7 },
-                      { trainerID = 17204, minLevel =  5, maxLevel =  8, rel = 2, id =  -7 },
-                      { trainerID = 17219, minLevel =  9, maxLevel = 12, rel = 2, id =  -7 },
-                      { trainerID = 23127, minLevel = 13, maxLevel = 16, rel = 2, id =  -7 },
-                      { trainerID = 20407, minLevel = 17, maxLevel = 20, rel = 2, id =  -7 },
-                        -- horde mage (11 trainers)
-                      { trainerID = 16651, minLevel =  1, maxLevel =  1, rel = 1, id =  -8 },
-                      { trainerID =  4568, minLevel =  2, maxLevel =  3, rel = 1, id =  -8 },
-                      { trainerID =  5885, minLevel =  4, maxLevel =  5, rel = 1, id =  -8 },
-                      { trainerID =  7311, minLevel =  6, maxLevel =  7, rel = 1, id =  -8 },
-                      { trainerID =  3047, minLevel =  8, maxLevel =  9, rel = 1, id =  -8 },
-                      { trainerID =  5883, minLevel = 10, maxLevel = 10, rel = 1, id =  -8 },
-                      { trainerID =  4567, minLevel = 11, maxLevel = 12, rel = 1, id =  -8 },
-                      { trainerID =  4566, minLevel = 13, maxLevel = 14, rel = 1, id =  -8 },
-                      { trainerID =  5882, minLevel = 15, maxLevel = 16, rel = 1, id =  -8 },
-                      { trainerID =  3048, minLevel = 17, maxLevel = 18, rel = 1, id =  -8 },
-                      { trainerID =  3049, minLevel = 19, maxLevel = 20, rel = 1, id =  -8 },
-                        -- alliance mage (7 trainers)
-                      { trainerID =  5144, minLevel =  1, maxLevel =  2, rel = 2, id =  -8 },
-                      { trainerID =  5497, minLevel =  3, maxLevel =  5, rel = 2, id =  -8 },
-                      { trainerID =   331, minLevel =  6, maxLevel =  8, rel = 2, id =  -8 },
-                      { trainerID =  7312, minLevel =  9, maxLevel = 11, rel = 2, id =  -8 },
-                      { trainerID =  5498, minLevel = 12, maxLevel = 14, rel = 2, id =  -8 },
-                      { trainerID = 16749, minLevel = 15, maxLevel = 17, rel = 2, id =  -8 },
-                      { trainerID =  5145, minLevel = 18, maxLevel = 20, rel = 2, id =  -8 },
-                        -- horde warlock (6 trainers)
-                      { trainerID =  3324, minLevel =  1, maxLevel =  3, rel = 1, id =  -9 },
-                      { trainerID =  3325, minLevel =  4, maxLevel =  6, rel = 1, id =  -9 },
-                      { trainerID =  3326, minLevel =  7, maxLevel = 10, rel = 1, id =  -9 },
-                      { trainerID =  4564, minLevel = 11, maxLevel = 13, rel = 1, id =  -9 },
-                      { trainerID =  4563, minLevel = 14, maxLevel = 16, rel = 1, id =  -9 },
-                      { trainerID =  4565, minLevel = 17, maxLevel = 20, rel = 1, id =  -9 },
-                        -- alliance warlock (6 trainers)
-                      { trainerID =  5495, minLevel =  1, maxLevel =  3, rel = 2, id =  -9 },
-                      { trainerID =  5172, minLevel =  4, maxLevel =  6, rel = 2, id =  -9 },
-                      { trainerID =  5496, minLevel =  7, maxLevel = 10, rel = 2, id =  -9 },
-                      { trainerID =   461, minLevel = 11, maxLevel = 13, rel = 2, id =  -9 },
-                      { trainerID =  5171, minLevel = 14, maxLevel = 16, rel = 2, id =  -9 },
-                      { trainerID =  5173, minLevel = 17, maxLevel = 20, rel = 2, id =  -9 },
-                        -- horde druid (3 trainers)
-                      { trainerID =  3043, minLevel =  1, maxLevel =  6, rel = 1, id = -10 },
-                      { trainerID =  3033, minLevel =  7, maxLevel = 13, rel = 1, id = -10 },
-                      { trainerID =  3036, minLevel = 14, maxLevel = 20, rel = 1, id = -10 },
-                        -- alliance druid (5 trainers)
-                      { trainerID =  4218, minLevel =  1, maxLevel =  4, rel = 2, id = -10 },
-                      { trainerID =  4219, minLevel =  5, maxLevel =  8, rel = 2, id = -10 },
-                      { trainerID =  5505, minLevel =  9, maxLevel = 12, rel = 2, id = -10 },
-                      { trainerID =  4217, minLevel = 13, maxLevel = 16, rel = 2, id = -10 },
-                      { trainerID =  5504, minLevel = 17, maxLevel = 20, rel = 2, id = -10 },
-                    }
+-- Class trainers who may travel by, and the levels each teaches: kept in
+-- data/travel-trainers.lua (its header lists the fields) since 2026-10-17,
+-- because install step E014's SQL is generated from the same list
+-- (scripts/generate-beta-trainer-tiers-sql) and the two must not disagree.
+local function script_dir()
+    local src = debug.getinfo(1, "S").source
+    return (src:sub(1, 1) == "@" and src:sub(2) or src):match("^(.*[/\\])") or "./"
+end
+local trainers = dofile(script_dir() .. "data/travel-trainers.lua")
 
 -- Weapon trainers (all teach at any level since weapon skills are level-independent)
  local wep_trainers = { { id = 17005, minLevel = 1,  maxLevel = 20,  rel = 1 },
@@ -694,7 +602,36 @@ function Travel.getTrainerForClass(classId, playerLevel, playerFaction)
 end
 -- }}}
 
+-- {{{ Travel.tick
+-- The traveller clock, per real player. Wound first, so a hold or an error
+-- below skips only this traveller, not the rest of the session.
+--   a hold applies: no traveller this time
+--   none applies: one traveller is sent
+function Travel.tick(_eventID, _delay, _repeats, player)
+    player:RegisterEvent(Travel.tick, TRAVEL_INTERVAL, 1)
+    for _, hold in ipairs(Travel.HOLDS) do
+        if hold.holds(player) then
+            print("[Travel] no traveller for " .. player:GetName() .. " - " .. hold.why)
+            return
+        end
+    end
+    Travel.spawnAndTravel(player)
+end -- }}}
+
+-- {{{ Travel.onLogin
+-- Every character's traveller lists are made at login (bots' too: cheap,
+-- and the chat command below can use them); only real players get the
+-- clock, as wow-chat-1's scheduler gave it (open question for the owner:
+-- whether bots should meet travellers too, as they meet ambushes).
+--   a bot: lists only
+--   a player: lists, and the first traveller a minute after login
+function Travel.onLogin(_event, player)
+    Travel.setupPlayer(nil, player)
+    if player:IsBot() then return end
+    player:RegisterEvent(Travel.tick, TRAVEL_FIRST_INTERVAL, 1)
+end -- }}}
+
 PLAYER_EVENT_ON_LOGIN = 3
 PLAYER_EVENT_ON_CHAT  = 18
-RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, Travel.setupPlayer)
+RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, Travel.onLogin)
 RegisterPlayerEvent(PLAYER_EVENT_ON_CHAT,  Travel.handleChat)
