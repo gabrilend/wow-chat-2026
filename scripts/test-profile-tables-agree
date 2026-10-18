@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+# test-profile-tables-agree - checks that every script holding a copy of a
+# profile table holds the same copy.
+#
+# For a general audience: each profile (basic, beta, vanilla...) is built
+# from a repository at a branch and a pinned commit, with a list of add-on
+# modules, each module pinned too. Since the old build script was split
+# into one script per command (issue 142, 2026-04-14), each script carries
+# its own copy of those tables on purpose, so no script depends on another.
+# The cost is that a copy can be updated in one script and forgotten in
+# another ("Must match scripts/update's block", says a comment in install),
+# and a profile then builds one way and installs another. This reads each
+# table out of every script that has it, and compares the copies key by
+# key. It runs nothing else from the scripts.
+#
+# Tables checked: PROFILE_REPO, PROFILE_BRANCH, PROFILE_COMMIT,
+# PROFILE_MODULES, PROFILE_MODULE_COMMITS, MODULE_REPOS. Scripts read:
+# every file in scripts/ that declares one, except retired ones
+# (names ending -deprecated or -done).
+#
+# Usage: scripts/test-profile-tables-agree [PROJECT_DIR]
+# Exit status: 0 when every copy of every table agrees.
+
+DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+
+TABLES=(PROFILE_REPO PROFILE_BRANCH PROFILE_COMMIT PROFILE_MODULES PROFILE_MODULE_COMMITS MODULE_REPOS)
+FAILS=0
+
+# {{{ table_of
+# Prints one table from one script as sorted "key=value" lines. The table
+# is the text from "declare -A NAME=(" to the first line that is only ")",
+# evaluated alone in a subshell (the declaration holds literal strings).
+table_of() {
+    local file="$1" name="$2"
+    local block
+    block="$(awk -v n="${name}" '
+        $0 ~ "^[[:space:]]*declare -A " n "=\\(" { on = 1 }
+        on { print }
+        on && $0 ~ "^[[:space:]]*\\)[[:space:]]*$" { exit }
+    ' "${file}")"
+    [[ -z "${block}" ]] && return 1
+    (
+        eval "${block}" 2>/dev/null || exit 2
+        declare -n t="${name}"
+        # module lists are compared as sets: their order does not matter
+        # to the build, which switches each module on or off by name
+        for k in "${!t[@]}"; do
+            v="${t[$k]}"
+            [[ "${name}" == "PROFILE_MODULES" ]] && v="$(tr ' ' '\n' <<< "${v}" | grep . | sort | tr '\n' ' ')"
+            printf '%s=%s\n' "${k}" "${v% }"
+        done | sort
+    )
+}
+# }}}
+
+for name in "${TABLES[@]}"; do
+    holders=()
+    for f in "${DIR}"/scripts/*; do
+        [[ -f "${f}" ]] || continue
+        case "${f}" in *-deprecated|*-done|*.bak) continue ;; esac
+        grep -qE "^[[:space:]]*declare -A ${name}=\(" "${f}" 2>/dev/null && holders+=("${f}")
+    done
+    if [[ ${#holders[@]} -lt 2 ]]; then
+        echo "  ok:   ${name}: one copy only (${#holders[@]})"
+        continue
+    fi
+    first="${holders[0]}"
+    reference="$(table_of "${first}" "${name}")"
+    if [[ -z "${reference}" ]]; then
+        echo "  FAIL: ${name}: could not read it out of ${first#${DIR}/}"
+        FAILS=$((FAILS + 1))
+        continue
+    fi
+    agree=1
+    for other in "${holders[@]:1}"; do
+        copy="$(table_of "${other}" "${name}")"
+        if [[ "${copy}" != "${reference}" ]]; then
+            agree=0
+            FAILS=$((FAILS + 1))
+            echo "  FAIL: ${name} differs between ${first#${DIR}/} and ${other#${DIR}/}:"
+            diff <(echo "${reference}") <(echo "${copy}") | grep '^[<>]' | sed "s|^<|      ${first##*/}:|; s|^>|      ${other##*/}:|"
+        fi
+    done
+    names=""
+    for h in "${holders[@]}"; do names+="${h##*/} "; done
+    [[ ${agree} -eq 1 ]] && echo "  ok:   ${name}: ${#holders[@]} copies agree (${names% })"
+done
+
+if [[ "${FAILS}" -eq 0 ]]; then
+    echo "Every copy of every profile table agrees"
+else
+    echo "${FAILS} disagreement(s): a profile would build from one value and install or update with another"
+fi
+[[ "${FAILS}" -eq 0 ]]

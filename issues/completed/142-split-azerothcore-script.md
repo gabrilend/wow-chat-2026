@@ -134,3 +134,21 @@ script explicitly handles the "remove for re-clone" action, making the workflow 
 - `.profile` - Current profile name
 - `scripts/start-mysql` - MySQL management (unchanged)
 - `scripts/stop-mysql` - MySQL management (unchanged)
+
+## Since then (checked 2026-10-17)
+
+- **The split stands**: one script per command in `scripts/`, the old
+  monolith kept as `scripts/azerothcore-deprecated`. Commands have been
+  added since (`switch`, `promote`, `teach-character-lessons`, the
+  generators and tests).
+- **The cost of "profile definitions duplicated in each script"** showed
+  up: by October the copies disagreed. The alpha profile pointed at the
+  playerbots fork in `install` and `switch` (since this split), while the
+  real alpha tree is upstream AzerothCore (issue 134); `scripts/profiles`
+  listed release with modules it does not build. Corrected 2026-10-17, and
+  `scripts/test-profile-tables-agree` now compares every copy of every
+  profile table key by key, before every build. The duplication itself is
+  kept, as this issue chose (no script depends on another's file).
+- **Number clash**: 142 is also held by an open issue
+  (`issues/142-symmetric-aggro-radius.md`); this one predates the
+  renumbering that gave 142 to the other. Name them with their slugs.

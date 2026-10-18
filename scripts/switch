@@ -14,7 +14,7 @@ DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
 # below. Adding vanilla here is what makes `./scripts/switch vanilla`
 # legal. Must stay in sync with scripts/install's PROFILE_REPO.
 declare -A PROFILE_REPO=(
-    ["alpha"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
+    ["alpha"]="https://github.com/azerothcore/azerothcore-wotlk.git"   # upstream, not the fork (issue 134; corrected 2026-10-17)
     ["beta"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
     ["release"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
     ["vanilla"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
