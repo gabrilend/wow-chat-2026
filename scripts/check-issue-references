@@ -269,9 +269,11 @@ end
 -- punctuation and ":line" removed; wildcards and placeholders skipped.
 local function refs_in(text)
     local paths, issues, seenP, seenI, patches, seenX = {}, {}, {}, {}, {}, {}
-    local n = 0
-    for line in (text .. "\n"):gmatch("([^\n]*)\n") do
+    local n, all = 0, {}
+    for l in (text .. "\n"):gmatch("([^\n]*)\n") do all[#all + 1] = l end
+    for _, line in ipairs(all) do
         n = n + 1
+        local context = line .. " " .. (all[n + 1] or "")   -- an annotation may wrap onto the next line
         for tok in line:gmatch("[%w_%./%-]+") do
             for _, pre in ipairs(PREFIXES) do
                 local s = tok:find(pre, 1, true)
@@ -284,7 +286,7 @@ local function refs_in(text)
                     local cut = line:find(p .. "*", 1, true) or line:find(p .. "...", 1, true) or p:find("...", 1, true)
                     if not p:find("[%*<>{}%$]") and #p > #pre and not p:match("/$") and not stub and not cut and not seenP[p] then
                         seenP[p] = true
-                        paths[#paths + 1] = { path = p, line = n }
+                        paths[#paths + 1] = { path = p, line = n, text = context }
                     end
                     break
                 end
@@ -408,6 +410,17 @@ for _, file in ipairs(files) do
             local kind, hint, certain = classify_path(r.path)
             if kind == "moved" and certain then rewrites[#rewrites + 1] = { from = r.path, to = certain } end
             if kind ~= "ok" and told(r.path) then kind, hint = "explained", "named in the issue's Since then section" end
+            -- annotated where it stands: the same line already says what it
+            -- is now ("scripts/custom-client (now scripts/run in the W
+            -- client project)", "then scripts/azerothcore; now scripts/compile")
+            if kind ~= "ok" and kind ~= "explained" then
+                local line = r.text or ""
+                if line:find("%(now ") or line:find("; now ") or line:find("now[%a%s]*`") or line:find("built as `")
+                   or line:find("when this was written") or line:find("%(then ") or line:find("; then ")
+                   or line:find("the old `") or line:find("was removed") then
+                    kind, hint = "explained", "the line says what it is now"
+                end
+            end
             c[kind] = c[kind] + 1
             if kind ~= "ok" then
                 report[#report + 1] = string.format("    %-7s line %-4d %s%s", kind, r.line, r.path, hint and ("  ->  " .. hint) or "")

@@ -41,6 +41,7 @@ E008 is written only as its functions. The level caps are C006 (a family:
 C006a to C006d).
 The old helper was `src/lua/never-was.lua` (gone; explained below).
 The servers were started by `scripts/azerothcore` (retired, split up).
+The client ran from `scripts/custom-client` (now `scripts/run` in another project).
 | path                       | edge |
 | src/lua/movement.lua       | x    |
 │ src/lua/periodic_events.lua │
@@ -83,6 +84,7 @@ refuse "an install step written only as functions is live" "patch .* E008"
 refuse "a config step family (C006 for C006a-d) is live" "patch .* C006 "
 expect "a gone path named under Since then is explained" "999-pretend-issue.md: .*[1-9] explained"
 refuse "an explained path is not counted missing"      "missing .*never-was.lua"
+refuse "a path whose line says what it is now is explained" "moved .*scripts/custom-client"
 
 # {{{ --rewrite-moved, on a copy of the pretend issue
 COPY="${SCRATCH}/998-pretend-rewrite.md"

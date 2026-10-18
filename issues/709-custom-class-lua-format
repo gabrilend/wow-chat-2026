@@ -560,7 +560,7 @@ Current Knight definition has ~40 spells across 7 classes. Convert to new format
 2. Write `CustomClasses.loadClassFromString(content, className)` with sandbox
 3. Write `CustomClasses.validateDefinition()` with all rules
 4. Write `CustomClasses.formatErrorReport()` for annotated output
-5. Convert Knight to new file format as `src/custom-classes/knight.lua` (built-in example)
+5. Convert Knight to new file format as `src/custom-classes/knight.lua` (built-in example; built as `src/lua-beta/custom-classes/knight.lua`)
 6. Remove deprecated example classes from custom-classes.lua
 7. Write `CustomClasses.createSnapshot(author, className, content)` - saves to snapshots/
 8. Write `CustomClasses.loadSnapshot(snapshotFile)` - loads character's pinned version
