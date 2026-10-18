@@ -7,7 +7,7 @@
 # runs it, at low priority so the machine stays usable; then applies the
 # stand-ins' table twice and reverts it in the test database.
 # Usage: scripts/test-buddy-stand-ins [PROJECT_DIR]
-DIR="${1:-/mnt/mtwo/games/azeroth-core/wow-chat-2026}"
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
 OUT="${DIR}/tmp/tmp"
 mkdir -p "${OUT}"
 g++ -std=c++17 -O1 -Wall -Wextra -Werror -I"${DIR}/modules/mod-buddies/src" \

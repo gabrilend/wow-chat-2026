@@ -29,7 +29,7 @@
 -- Usage: scripts/translate-buddy-kit-to-gearset [PROJECT_DIR] [MAX_LEVEL]
 
 -- {{{ configuration
-local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = "/mnt/kaun/wow-chat-2026"
 if arg[1] and arg[1] ~= "" then DIR = arg[1] end
 local MAX_LEVEL = tonumber(arg[2] or "") or 60          -- basic's level cap (C006)
 local MYSQL  = DIR .. "/mysql/installed-files/bin/mysql"

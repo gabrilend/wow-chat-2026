@@ -20,7 +20,7 @@
 -- print() only reaches the worldserver console, not a log file).
 --------------------------------------------------------------------------------
 
-local DIR      = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR      = "/mnt/kaun/wow-chat-2026"
 local LOG_PATH = DIR .. "/tmp/shared-memory/gossip-trace.log"
 
 -- {{{ local function trace

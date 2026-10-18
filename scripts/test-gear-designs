@@ -16,7 +16,7 @@
 --   (RAM), removed and made again each run. Exit 1 on any failure.
 
 -- {{{ arguments and helpers
-local DIR, SD, LIBS = "/mnt/mtwo/games/azeroth-core/wow-chat-2026", "/mnt/kaun/stable-diffusion", "/home/ritz/programming/ai-stuff/libs/lua"
+local DIR, SD, LIBS = "/mnt/kaun/wow-chat-2026", "/mnt/kaun/stable-diffusion", "/home/ritz/programming/ai-stuff/libs/lua"
 do
     local i = 1
     while i <= #arg do

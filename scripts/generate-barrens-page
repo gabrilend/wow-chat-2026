@@ -19,7 +19,7 @@
 --           scripts/templates/barrens-zone.html (the page; /*BARRENS_DATA*/ marks the data)
 --   Writes  docs/HTML/barrens-zone.html (beside docs/HTML/barrens/barrens-zone.gif)
 
-local DIR  = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR  = arg[1] or "/mnt/kaun/wow-chat-2026"
 local D    = dofile(DIR .. "/assets/barrens/barrens-data.lua")
 local TPL  = DIR .. "/scripts/templates/barrens-zone.html"
 local OUT  = DIR .. "/docs/HTML/barrens-zone.html"

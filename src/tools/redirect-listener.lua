@@ -18,7 +18,7 @@
 --               packet (0x1EE) to see whether the client then carries on
 -- Log: DIR/tmp/shared-memory/redirect-listener.log (appended), and stdout.
 
-local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = "/mnt/kaun/wow-chat-2026"
 local LIBS = "/home/ritz/programming/ai-stuff/libs/lua/luasocket"
 
 -- {{{ argument parsing

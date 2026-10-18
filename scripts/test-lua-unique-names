@@ -22,7 +22,7 @@
 #   folder, linked in by install step E001). Exits non-zero on any finding.
 
 # {{{ set_dir
-DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+DIR="/mnt/kaun/wow-chat-2026"
 if [[ -n "$1" ]]; then
     DIR="$1"
 fi

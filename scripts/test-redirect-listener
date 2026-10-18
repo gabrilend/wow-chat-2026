@@ -11,7 +11,7 @@
 
 set -euo pipefail
 
-DIR="${1:-/mnt/mtwo/games/azeroth-core/wow-chat-2026}"
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
 PORT=14463
 # a made-up session key: 40 bytes 01..28, never a real account's
 KEY="0102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F202122232425262728"

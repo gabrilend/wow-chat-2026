@@ -23,7 +23,7 @@ Establish `source-alpha/` as the known-good regression point based on wow-chat-1
 ### AzerothCore Base
 
 ```bash
-cd /mnt/mtwo/games/azeroth-core/wow-chat-2026
+cd /mnt/kaun/wow-chat-2026
 git clone https://github.com/azerothcore/azerothcore-wotlk.git source-alpha
 cd source-alpha
 git checkout 5af3d2d6

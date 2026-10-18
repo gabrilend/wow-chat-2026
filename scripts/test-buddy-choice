@@ -23,7 +23,7 @@
 --   RUNS  random clans per faction and owner kind (default 300)
 -- Exit status 0 if all pass.
 
-local DIR  = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR  = arg[1] or "/mnt/kaun/wow-chat-2026"
 local RUNS = tonumber(arg[2]) or 300
 
 local RC      = dofile(DIR .. "/src/lua-basic/data/race-class-data.lua")

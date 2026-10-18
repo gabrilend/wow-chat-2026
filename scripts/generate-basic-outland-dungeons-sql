@@ -21,7 +21,7 @@
 --           (only the GENERATED block; the same list in both: the gear
 --           scaler uses it to find the bosses a script summons)
 
-local DIR     = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR     = arg[1] or "/mnt/kaun/wow-chat-2026"
 local SCRIPTS = DIR .. "/source-beta/src/server/scripts/"
 local OUTS    = { DIR .. "/sql/basic/db_world.src/09-outland-dungeons-64.apply.sql",
                   DIR .. "/sql/basic/db_world.src/16-outland-gear-scaling.apply.sql" }

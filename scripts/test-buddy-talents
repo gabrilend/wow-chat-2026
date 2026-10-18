@@ -29,7 +29,7 @@
 --   SEEDS  random seeds per class and shape (default 100)
 -- Classes run in parallel, one process each. Exit status 0 if all pass.
 
-local DIR   = (arg[1] and arg[1] ~= "--class") and arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR   = (arg[1] and arg[1] ~= "--class") and arg[1] or "/mnt/kaun/wow-chat-2026"
 local SEEDS = tonumber(arg[2]) or 100
 local SELF  = arg[0]
 

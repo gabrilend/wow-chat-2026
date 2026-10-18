@@ -22,7 +22,7 @@
 --   ISSUE   the issue's number (e.g. 209) or its file path
 --   PROJECT_DIR defaults to the hard-coded path below
 
-local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = "/mnt/kaun/wow-chat-2026"
 local target
 for _, a in ipairs(arg) do
     if a:match("^/") and not a:find("/issues/") then DIR = a else target = a end
