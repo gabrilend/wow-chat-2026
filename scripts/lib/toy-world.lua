@@ -249,6 +249,123 @@ function GetMapById(id) return Toy.maps[id] or FLAT end
 function bit_and(a, b) return bit.band(a, b) end
 -- }}}
 
+-- {{{ extra pieces the treasure script uses (added 2026-10-17, issues 402/404)
+-- The online list in login order; game objects (chests) with their own
+-- timers and the game's removal event; items with the fields the sale
+-- rules read; a player's bags and the vendor's buyback tab as the server
+-- keeps it (12 slots, the oldest pushed out by a 13th sale, the same item
+-- returned by a buyback, everything in it gone at logout; read from
+-- Player::AddItemToBuyBackSlot, HandleBuybackItem and _SaveInventory).
+World.order = {}              -- players in the order they logged in
+local goHandlers = {}         -- [entry] = { [event] = { functions } }
+function GetPlayersInWorld()
+    local list = {}
+    for _, p in ipairs(World.order) do if not p.gone then list[#list + 1] = p end end
+    return list
+end
+function RegisterGameObjectEvent(entry, event, fn)
+    goHandlers[entry] = goHandlers[entry] or {}
+    goHandlers[entry][event] = goHandlers[entry][event] or {}
+    table.insert(goHandlers[entry][event], fn)
+end
+
+-- {{{ local function new_gameobject
+-- A summoned object: its loot is a list of { itemId, count } as AddLoot
+-- received them; RemoveFromWorld fires the removal event (13) once.
+local function new_gameobject(entry, map, x, y, z)
+    World.nextGuid = World.nextGuid + 1
+    local g = { entry = entry, map = map, x = x, y = y, z = z, gone = false, loot = {}, low = World.nextGuid }
+    function g:GetEntry() return self.entry end
+    function g:GetGUIDLow() return self.low end
+    function g:GetMapId() return self.map.id end
+    function g:GetInstanceId() return 0 end
+    function g:AddLoot(itemId, count) self.loot[#self.loot + 1] = { itemId = itemId, count = count } end
+    function g:RegisterEvent(fn, delay) schedule(self, fn, delay) end
+    function g:RemoveFromWorld()
+        if self.gone then return end
+        self.gone = true
+        for _, fn in ipairs((goHandlers[self.entry] or {})[13] or {}) do fn(13, self) end
+    end
+    return g
+end
+-- }}}
+
+-- {{{ local function new_item
+-- An item: entry (number) and the fields the sale rules read, each with a
+-- plain default: quality 2 (uncommon), required level 0, item level 10,
+-- maximum stack 1, class 2 (weapon), count 1. Its GUID is unique.
+local function new_item(entry, f)
+    f = f or {}
+    World.nextGuid = World.nextGuid + 1
+    local it = { entry = entry, quality = f.quality or 2, required = f.required or 0, ilvl = f.ilvl or 10,
+                 stack = f.stack or 1, class = f.class or 2, count = f.count or 1, guid = "item-" .. World.nextGuid }
+    function it:GetEntry() return self.entry end
+    function it:GetGUID() return self.guid end
+    function it:GetName() return "item " .. self.entry end
+    function it:GetQuality() return self.quality end
+    function it:GetRequiredLevel() return self.required end
+    function it:GetItemLevel() return self.ilvl end
+    function it:GetMaxStackCount() return self.stack end
+    function it:GetClass() return self.class end
+    function it:GetCount() return self.count end
+    return it
+end
+-- }}}
+
+local player_before_treasure = new_player
+new_player = function(name, guidLow)
+    local p = player_before_treasure(name, guidLow)
+    p.bags, p.buyback, p.objects = {}, {}, {}
+    function p:GetItemByGUID(guid)
+        for _, it in ipairs(self.bags) do if it.guid == guid then return it end end
+        return nil   -- the buyback tab is not searched, as in the game
+    end
+    function p:SummonGameObject(entry, x, y, z)
+        local g = new_gameobject(entry, self.map, x, y, z)
+        self.objects[#self.objects + 1] = g
+        return g
+    end
+    return p
+end
+
+-- {{{ local function give / sell / buy_back
+-- give: an item into the bags. sell: out of the bags, the sell event (74),
+-- then into the buyback tab, the oldest pushed out past 12 (the event fires
+-- between the two, as patch B006 places it). buy_back: from the tab to the
+-- bags, the same item; no event, as in the game.
+local function give(p, it) p.bags[#p.bags + 1] = it; return it end
+local function sell(p, it)
+    for i, b in ipairs(p.bags) do if b == it then table.remove(p.bags, i) break end end
+    for _, fn in ipairs(handlers[74] or {}) do fn(74, p, it, nil, it.count) end
+    p.buyback[#p.buyback + 1] = it
+    if #p.buyback > 12 then table.remove(p.buyback, 1) end
+end
+local function buy_back(p, it)
+    for i, b in ipairs(p.buyback) do
+        if b == it then table.remove(p.buyback, i); p.bags[#p.bags + 1] = it; return true end
+    end
+    return false
+end
+-- }}}
+
+-- login keeps the order; logout, after the handlers, removes the player's
+-- summoned objects and empties the buyback tab, as the game does
+local login_before_treasure, logout_before_treasure = login, logout
+login = function(p)
+    local listed = false
+    for _, q in ipairs(World.order) do if q == p then listed = true end end
+    if not listed then World.order[#World.order + 1] = p end
+    login_before_treasure(p)
+end
+logout = function(p)
+    logout_before_treasure(p)
+    for _, g in ipairs(p.objects or {}) do g:RemoveFromWorld() end
+    p.objects, p.buyback = {}, {}
+end
+Toy.new_gameobject, Toy.new_item = new_gameobject, new_item
+Toy.give, Toy.sell, Toy.buy_back = give, sell, buy_back
+-- }}}
+
 Toy.World, Toy.handlers = World, handlers
 Toy.schedule, Toy.advance, Toy.pending = schedule, advance, pending
 Toy.new_map, Toy.FLAT = new_map, FLAT
