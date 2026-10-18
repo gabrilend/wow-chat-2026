@@ -11,7 +11,7 @@
 -- Reads the lists and asks the project's MySQL; writes nothing.
 -- Usage: tests/buddy-kit/gearsets-hold-weapons.lua [PROJECT_DIR]
 
-local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = "/mnt/kaun/wow-chat-2026"
 if arg[1] and arg[1] ~= "" then DIR = arg[1] end
 local MYSQL = DIR .. "/mysql/installed-files/bin/mysql"
 local WORLD = "acore_world_basic"

@@ -24,7 +24,7 @@
 --     (default PROJECT_DIR/source-beta, else the main project's).
 -- Exit status: 0 when every file loads, 1 otherwise.
 
-local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = "/mnt/kaun/wow-chat-2026"
 local PROFILE, SOURCE = nil, nil
 do
     local pos, i = {}, 1
@@ -61,7 +61,7 @@ local ROOT = DIR .. "/src/lua-" .. PROFILE
 local function ran(cmd) local r = os.execute(cmd); return r == 0 or r == true end
 local function isdir(p) return ran("test -d '" .. p .. "'") end
 SOURCE = SOURCE or (isdir(DIR .. "/source-beta") and DIR .. "/source-beta")
-         or "/mnt/mtwo/games/azeroth-core/wow-chat-2026/source-beta"
+         or "/mnt/kaun/wow-chat-2026/source-beta"
 
 -- {{{ local function list_files
 -- The engine's scan (mod-ale LuaEngine.cpp): every folder under the root,

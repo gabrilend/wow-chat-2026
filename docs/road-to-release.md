@@ -91,7 +91,7 @@ Most of basic's content issues wait on these being finished and checked.
 ## After release: the custom client and generated content
 
 - **The custom client**, a third project of its own
-  (`/mnt/mtwo/games/azeroth-core/custom-client/`), separate from this one
+  (`/mnt/kaun/custom-client/`), separate from this one
   and from world-edit-to-execute, playing the assets and gameplay of both;
   the two projects do most of the work on it (owner, 2026-10-01). Its
   first stages come from world-edit-to-execute's phase W: readers for the

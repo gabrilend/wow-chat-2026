@@ -18,7 +18,7 @@ called by neuron's generator, so `world.spawn` itself is unchanged.
 
 Before this: `../wow-chat-neuron/` was a sibling checkout (its
 `config/deployment.lua` already hard-codes
-`root = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"`, and it holds its own
+`root = "/mnt/kaun/wow-chat-2026"`, and it holds its own
 sandbox database set, `acore_*_neuron`, inside this project's MySQL
 instance) that nothing in this project called into. Pulling one of its
 levers meant knowing its absolute path and its CLI's flag shapes by heart.

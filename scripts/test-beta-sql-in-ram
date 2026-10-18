@@ -35,7 +35,7 @@
 
 set -o pipefail
 
-DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+DIR="/mnt/kaun/wow-chat-2026"
 SOURCE_TREE=""
 KEEP=false
 while [[ $# -gt 0 ]]; do

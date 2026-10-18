@@ -29,7 +29,7 @@
 --   --dbc   the outfit file (default PROJECT_DIR/data-files/dbc/CharStartOutfit.dbc,
 --           or the main project's when run from a separate checkout)
 
-local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = "/mnt/kaun/wow-chat-2026"
 local opt = { db = "acore_world_basic", cap = 20, dbc = nil }
 local i = 1
 while i <= #arg do
@@ -40,7 +40,7 @@ while i <= #arg do
     else DIR = a end
     i = i + 1
 end
-local MAIN = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local MAIN = "/mnt/kaun/wow-chat-2026"
 local function exists(p) local f = io.open(p, "rb"); if f then f:close() return true end return false end
 local dbc = opt.dbc or (exists(DIR .. "/data-files/dbc/CharStartOutfit.dbc") and DIR .. "/data-files/dbc/CharStartOutfit.dbc")
             or (MAIN .. "/data-files/dbc/CharStartOutfit.dbc")

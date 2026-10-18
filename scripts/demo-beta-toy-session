@@ -28,7 +28,7 @@
 -- and, last, the run's receipt to output/goodbye (the house rule: present
 -- and fresh means the run ended cleanly).
 
-local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = "/mnt/kaun/wow-chat-2026"
 local opt = { minutes = 15, players = 3, seed = os.time() }
 local i = 1
 while i <= #arg do

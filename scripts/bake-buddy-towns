@@ -21,7 +21,7 @@
 
 set -euo pipefail
 
-DIR="${1:-/mnt/mtwo/games/azeroth-core/wow-chat-2026}"
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
 PROFILE="$(cat "${DIR}/.profile")"
 DATA="$(sed -n 's|^DataDir[[:space:]]*=[[:space:]]*"\{0,1\}\([^"]*\)"\{0,1\}.*|\1|p' "${DIR}/installed-files-${PROFILE}/etc/worldserver.conf" | tail -1)"
 WORLD_DB="$(sed -n 's|^WorldDatabaseInfo[[:space:]]*=[[:space:]]*"[^;]*;[^;]*;[^;]*;[^;]*;\([^"]*\)".*|\1|p' "${DIR}/installed-files-${PROFILE}/etc/worldserver.conf" | tail -1)"

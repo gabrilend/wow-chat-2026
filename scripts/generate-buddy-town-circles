@@ -26,7 +26,7 @@
 --   Writes  sql/basic/db_world.src/31-buddy-town-circles.{apply,revert}.sql
 --           and prints every circle found
 
-local DIR   = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR   = arg[1] or "/mnt/kaun/wow-chat-2026"
 local DB    = arg[2] or "acore_world_basic"
 local DATA  = DIR .. "/data-files"
 local OUT_APPLY  = DIR .. "/sql/basic/db_world.src/31-buddy-town-circles.apply.sql"

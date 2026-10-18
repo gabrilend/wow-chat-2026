@@ -17,7 +17,7 @@
 --           the GIF encoder of the gif-generator project (src/004-gif.lua)
 --   Writes  docs/HTML/buddy-roaming/*.gif and docs/HTML/buddy-roaming.html
 
-local DIR = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = arg[1] or "/mnt/kaun/wow-chat-2026"
 local GEN = arg[2] or "/home/ritz/programming/ai-stuff/gif-generator"
 package.path = GEN .. "/src/?.lua;" .. package.path
 local ffi  = require("ffi")

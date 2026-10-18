@@ -20,7 +20,7 @@
 --   Reads   data-files/dbc/{SpellItemEnchantment,Map,WorldMapArea}.dbc
 --   Writes  sql/basic/db_world.src/20-sockets.apply.sql (GENERATED block)
 
-local DIR = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = arg[1] or "/mnt/kaun/wow-chat-2026"
 local DBC = DIR .. "/data-files/dbc/"
 local OUT = DIR .. "/sql/basic/db_world.src/20-sockets.apply.sql"
 

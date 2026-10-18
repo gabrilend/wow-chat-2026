@@ -28,7 +28,7 @@
 -- step left them: their lessons are beta's own death knight kit (E011),
 -- levels 2-20, which every death knight trainer teaches whole.
 
-local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = "/mnt/kaun/wow-chat-2026"
 if arg[1] and arg[1] ~= "" then DIR = arg[1] end
 
 -- Copies are numbered in issue 503's block, by the project's rule (issue

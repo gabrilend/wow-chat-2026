@@ -20,7 +20,7 @@
 --   Reads   data-files/dbc/{SkillLineAbility,CharSections}.dbc
 --   Writes  src/lua-basic/data/death-knight-soul-data.lua
 
-local DIR = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = arg[1] or "/mnt/kaun/wow-chat-2026"
 local DBC = DIR .. "/data-files/dbc/"
 local OUT = DIR .. "/src/lua-basic/data/death-knight-soul-data.lua"
 

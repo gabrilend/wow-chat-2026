@@ -14,7 +14,7 @@
 -- Usage: scripts/test-hearthstone [PROJECT_DIR]
 -- Exit status: 0 when every check passes, 1 otherwise.
 
-local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = "/mnt/kaun/wow-chat-2026"
 if arg[1] and arg[1] ~= "" then DIR = arg[1] end
 
 local fails, checks = 0, 0

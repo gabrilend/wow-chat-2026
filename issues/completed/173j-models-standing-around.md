@@ -1,6 +1,6 @@
 # 173j - Models Standing Around
 
-*Continues in the W client (`/mnt/mtwo/games/azeroth-core/custom-client/`), since the move on 2026-10-07 (173v): issue 404. This issue stays as the record of how the client began; its paths are as they were then.*
+*Continues in the W client (`/mnt/kaun/custom-client/`), since the move on 2026-10-07 (173v): issue 404. This issue stays as the record of how the client began; its paths are as they were then.*
 
 ## Status
 - Created: 2026-10-05
@@ -77,7 +77,7 @@ treant and the tiger model for the nightsaber; 2026-10-06.)
 ## Since then (checked 2026-10-17)
 
 The custom client moved to its own project on 2026-10-07 (173v), the W
-client at `/mnt/mtwo/games/azeroth-core/custom-client/`, and is built,
+client at `/mnt/kaun/custom-client/`, and is built,
 run and tested there (`scripts/build --test`; its own CLAUDE.md). Its code
 was renumbered into reading order (`src/NNN-name.c`) and rewritten to its
 error and handle conventions; `src/custom-client-c/` and `src/custom-client/`
