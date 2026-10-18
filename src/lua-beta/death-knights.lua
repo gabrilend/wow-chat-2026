@@ -35,7 +35,9 @@ function DK.printPosition(_eventID, player, msg)
 end
 -- }}}
 
-PLAYER_EVENT_ON_CHAT = 18
+-- the engine's event numbers are local in every beta script: they share one
+-- Lua state, and a restated global would overwrite another file's copy
+local PLAYER_EVENT_ON_CHAT = 18
 RegisterPlayerEvent(PLAYER_EVENT_ON_CHAT, DK.printPosition)
 
 -- {{{ DK.onFirstLogin
@@ -142,8 +144,8 @@ end
 -- }}}
 
 -- {{{ Event registration
-PLAYER_EVENT_ON_FIRST_LOGIN = 30
-PLAYER_EVENT_ON_LOGIN       = 3
+local PLAYER_EVENT_ON_FIRST_LOGIN = 30
+local PLAYER_EVENT_ON_LOGIN       = 3
 RegisterPlayerEvent(PLAYER_EVENT_ON_FIRST_LOGIN, DK.onFirstLogin)
 RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, DK.onLogin)
 -- }}}

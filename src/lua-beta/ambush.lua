@@ -834,9 +834,13 @@ function Ambush.onPlayerLogout(event, player)
     print("[Ambush] Logout time saved for: " .. player:GetName())
 end -- }}}
 
-PLAYER_EVENT_ON_LOGIN         = 3
-PLAYER_EVENT_ON_LOGOUT        = 4
-PLAYER_EVENT_ON_KILL_CREATURE = 7
+-- the engine's event numbers, local: every beta script shares one Lua
+-- state, so a global restated here would quietly overwrite (or be
+-- overwritten by) another file's copy; travel.lua and death-knights.lua
+-- name the same events (scripts/test-lua-globals)
+local PLAYER_EVENT_ON_LOGIN         = 3
+local PLAYER_EVENT_ON_LOGOUT        = 4
+local PLAYER_EVENT_ON_KILL_CREATURE = 7
 
 RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN,         Ambush.setupPlayer)
 RegisterPlayerEvent(PLAYER_EVENT_ON_LOGOUT,        Ambush.onPlayerLogout)

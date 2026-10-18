@@ -631,7 +631,8 @@ function Travel.onLogin(_event, player)
     player:RegisterEvent(Travel.tick, TRAVEL_FIRST_INTERVAL, 1)
 end -- }}}
 
-PLAYER_EVENT_ON_LOGIN = 3
-PLAYER_EVENT_ON_CHAT  = 18
+-- local, as in ambush.lua: the beta scripts share one Lua state
+local PLAYER_EVENT_ON_LOGIN = 3
+local PLAYER_EVENT_ON_CHAT  = 18
 RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, Travel.onLogin)
 RegisterPlayerEvent(PLAYER_EVENT_ON_CHAT,  Travel.handleChat)
