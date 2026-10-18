@@ -64,7 +64,7 @@ local prompt = builder.build({
     enemy_summary = "3 Defias Pillagers, level 18-20, ranged-and-melee mix",
     party_recent_events = { "took 30% damage in 5 seconds", "interrupted a spell cast" },
 })
--- returns a string ready to send to Ollama
+-- returns the prompt string and its grammar, ready for the model runner (916d)
 ```
 
 ## Directive Vocabulary
@@ -137,19 +137,31 @@ The user prompt is the party state, formatted as a compact text block.
    substitute it into the system prompt for the LLM to see.
 4. Write a smoke test that builds a prompt for a 3-bot party and dumps
    to stdout for human inspection. Iterate on the wording.
-5. Send the smoke-test prompt to one of the boxes manually and inspect
-   the LLM's output for vocabulary fit and JSON validity. Iterate on
-   prompt phrasing until small models (llama3.2:1b) produce valid JSON
-   reliably (target: >95% of attempts).
+5. Send the smoke-test prompt to one of the places manually and inspect
+   the LLM's output for vocabulary fit. Iterate on prompt phrasing until
+   small models (a 1B model) name real strategies reliably (target: >95%
+   of attempts). JSON validity is not the target any more: the grammar
+   guarantees it.
+6. Write the guidance **grammar** beside the prompt: a GBNF text (the
+   rule notation llama.cpp reads) describing exactly the output schema —
+   a list of `{bot_name, strategies_add, strategies_remove,
+   multiplier_overrides}`. Better still, generate it at startup with the
+   strategy names as a closed list of alternatives (`strategy ::=
+   "\"tank\"" | "\"heal\"" | ...`) read from mod-playerbots' registry, so
+   the model cannot even spell a strategy that does not exist. The
+   builder returns `prompt, grammar` together.
 
 ## Notes on Small-Model Behavior
 
-llama3.2:1b and qwen2.5:1.5b are not naturally reliable at structured
+Llama 3.2 1B and Qwen 2.5 1.5B are not naturally reliable at structured
 output. Mitigations stacked together:
 
-- Use Ollama's `format: "json"` option in the request (916d's call site)
-  to force JSON output via grammar constraints. This is the single
-  biggest reliability improvement.
+- Pass the grammar from step 6 with the request (916d's call site).
+  llama.cpp then only lets the model pick tokens the grammar allows, in
+  every placement (in-server, beside, in-client), so the reply always
+  parses. This is the single biggest reliability improvement; it
+  replaces Ollama's `format: "json"`, which only promised "some JSON",
+  not this schema.
 - Keep the schema small and use short field names (no nested objects
   more than two levels deep)
 - Provide one or two few-shot examples in the system prompt showing a

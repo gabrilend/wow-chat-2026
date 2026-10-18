@@ -4,7 +4,7 @@
 - Created: 2026-08-01
 - Phase: 9 (sibling of 916 — shares its cluster and bindings)
 - Priority: Medium
-- Depends on: 916 family (Ollama client, worker pool, ALE bindings)
+- Depends on: 916 family (model runner, worker pool, ALE bindings)
 
 ## Overview
 
@@ -97,8 +97,8 @@ player types:  "have everyone repair and meet me at the bridge"
 
 ## Related
 
-- [916 - mod-soren-chat](916-mod-soren-chat.md) — the cluster, the Ollama
-  client, the effil workers, and the ALE bindings into playerbots. This
+- [916 - mod-soren-chat](916-mod-soren-chat.md) — the model's places, the model
+  runner, the effil workers, and the ALE bindings into playerbots. This
   is a second consumer of all of it, driven by a person instead of by
   proximity.
 - [607 - Player bot behavior commands](607-player-bot-behavior-commands.md)

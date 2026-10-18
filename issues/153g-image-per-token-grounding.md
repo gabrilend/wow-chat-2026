@@ -4,7 +4,7 @@
 - Created: 2026-09-03
 - Phase: 1
 - Parent: 153
-- Depends: 153f (a voice to ground), 916d (Ollama HTTP client), 916e (effil
+- Depends: 153f (a voice to ground), 916d (the model runner), 916e (effil
   worker pool)
 - Priority: Low in build order, high in interest — this is the research the
   profile exists to host.
@@ -148,8 +148,9 @@ principle and its other applications are written up in
 token N is being produced. If render time and step time are within an order of
 magnitude of each other, the wall-clock cost collapses to roughly the larger of
 the two per token rather than their sum. The project already has the machinery
-for this: three Ollama machines on the LAN, an effil worker pool, and a design
-principle that the worldserver tick never blocks on inference.
+for this: llama.cpp on the LAN machines (or in the worldserver or the W client),
+an effil worker pool, and a design principle that the worldserver tick never
+blocks on inference.
 
 **And this is the one profile where the latency does not matter.** Nothing in
 explore is on a global cooldown. There is no combat, no rotation, nothing timed.
@@ -286,10 +287,13 @@ system this expensive must be cheap to give up on.
 
 ## Affected Files (anticipated)
 
-- a diffusion client alongside `916d`'s Ollama HTTP client
+- a diffusion client alongside `916d`'s model runner
 - the render-ahead queue in the effil worker pool
 - a low-level generation driver, since the per-token image swap is below what
-  a chat endpoint exposes
+  a chat endpoint exposes. llama.cpp used as a library (916d's in-server and
+  in-client placements) is that driver already: its loop produces one token at
+  a time, so the swap can happen between two tokens; `llama-server`, like any
+  chat endpoint, would need streaming to get close
 - `916f`'s cluster health rotation, extended to render hosts
 - a species-level line cache
 
@@ -300,7 +304,7 @@ system this expensive must be cheap to give up on.
 
 ## Related Issues
 
-- **916d** Ollama HTTP client — the existing pattern for talking to the cluster
+- **916d** the model runner (llama.cpp) — the existing pattern for talking to a model
 - **916e** effil worker pool — where this runs so the tick does not block
 - **916f** cluster health rotation — must learn about render hosts
 - **153f** the voice being grounded

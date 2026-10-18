@@ -5,7 +5,7 @@
 - Parent: Issue 1101 (Bellwether — attended play)
 - Phase: 11
 - Priority: Medium (the map is deliverable without it)
-- Depends on: 1101e (the map), 916d (the Ollama client, if reused)
+- Depends on: 1101e (the map), 916d (the model runner, if reused)
 
 ## Overview
 
@@ -121,7 +121,7 @@ working system, not a dependency of it.
 ## Related
 
 - Parent: [1101 - Bellwether](1101-bellwether-attended-play.md)
-- [916d - Ollama HTTP client](916d-ollama-http-client.md) — the existing
+- [916d - The model runner](../916d-llama-cpp-model-runner.md) — the existing
   client; reuse candidate
 - [916e - effil worker pool](916e-effil-worker-pool.md) and
   [916f - Cluster health rotation](916f-cluster-health-rotation.md) —

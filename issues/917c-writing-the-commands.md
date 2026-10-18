@@ -5,7 +5,7 @@
 - Parent: Issue 917 (Ask the bots in plain text)
 - Phase: 9
 - Priority: High (this is the feature)
-- Depends on: 917a (state), 916d (the Ollama client)
+- Depends on: 917a (state), 916d (the model runner)
 
 ## Current Behavior
 
@@ -83,7 +83,7 @@ that trust.
 ## Related
 
 - Parent: [917 - Ask the bots in plain text](917-ask-the-bots-in-plain-text.md)
-- [916d - Ollama HTTP client](916d-ollama-http-client.md) — the client
+- [916d - The model runner](916d-llama-cpp-model-runner.md) — llama.cpp in one of three places
 - [916i - Response validator and directive apply](916i-response-validator-and-directive-apply.md)
   — the validate-retry-report shape to match
 - `docs/playerbots/Playerbot-Commands.md` — the vocabulary

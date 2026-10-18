@@ -12,7 +12,8 @@
 Install the three Lua libraries mod-soren-chat needs (luasocket, dkjson,
 effil-jit) by copying them from the user's existing local library
 directory at install time. No package manager involvement. Establishes
-the pattern for any future Lua library mod-soren-chat needs.
+the pattern for any future Lua library mod-soren-chat needs. Also builds
+the one C library it needs, llama.cpp (step 6), from a pinned upstream tag.
 
 ## Current Behavior
 
@@ -73,11 +74,37 @@ After this sub-issue lands:
    print("effil-jit: ok")
    ```
 5. Run the smoke test, confirm all three load
+6. **llama.cpp** (added 2026-10-17, when it replaced Ollama; see 916d).
+   It is a C library, not a Lua one, and it is not in `libs/lua/`, so it
+   is built rather than copied:
+   - A bash script with the house `${DIR}` header clones
+     <https://github.com/ggml-org/llama.cpp> at a **pinned tag** into the
+     RAM-backed `tmp/`, configures it with CMake (`-DGGML_CUDA=ON` and the
+     GPU's compute capability when building for a GPU; CPU-only for the
+     mini-PCs), and installs only `bin/`, `lib/`, `include/` into
+     `libs/llama.cpp/` with an RPATH of `$ORIGIN/../lib` so the binaries
+     find their libraries without `LD_LIBRARY_PATH`.
+   - The sibling project neocities-modernization already does exactly
+     this in its `scripts/build-deps.sh` (its issue 10-049), including the
+     CUDA 12.9 pin the 1080 Ti (Pascal) needs. Copy its shape; do not
+     depend on its directory.
+   - The install step copies `libs/llama.cpp/lib/libllama.so` (and the
+     `ggml` libraries beside it) to where in-server ALE's `ffi.load`
+     finds it, and `bin/llama-server` to what gets copied to each
+     "beside" machine.
+   - The model file (`.gguf`) lives in `assets/models/`, downloaded by the
+     same script, not checked in.
+   - The owner runs this build (the project's rule for long compiles).
+7. Smoke test for llama.cpp: `luajit` loads `libllama.so` through `ffi`,
+   loads the model, prints its parameter count; `llama-server` started on
+   a spare port answers `GET /health` with 200.
 
 ## Files to Create
 
 - `source-beta/modules/mod-soren-chat/lua/00-libs-bootstrap.lua` — sets
   package.path and cpath so subsequent scripts can require the libs
+- `scripts/build-llama-cpp` — the pinned clone, CMake build and install
+  of llama.cpp into `libs/llama.cpp/`, and the model download (step 6)
 - (Possibly) a CMake helper script for the file copies, e.g.
   `source-beta/modules/mod-soren-chat/cmake/install-lua-libs.cmake`
 
@@ -105,8 +132,8 @@ After this sub-issue lands:
 
 - Parent: [916 - mod-soren-chat](916-mod-soren-chat.md)
 - [916a - Skeleton](916a-mod-soren-chat-skeleton.md) — blocks this
-- [916d - Ollama HTTP client](916d-ollama-http-client.md) — consumes
-  luasocket and dkjson
+- [916d - The model runner](916d-llama-cpp-model-runner.md) — consumes
+  luasocket, dkjson and the built llama.cpp
 - [916e - effil worker pool](916e-effil-worker-pool.md) — consumes
   effil-jit
 - CLAUDE.md note: "you can find all needed libraries at

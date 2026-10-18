@@ -17,7 +17,9 @@ other 90% would pull from JSON. Single-host Ollama at localhost:11434.
 
 Issue 916 supersedes both this and 914 with a different architecture:
 - LLM is the primary source for chat, not a 10% overlay
-- Three Ollama boxes on the LAN, not single localhost
+- Three Ollama boxes on the LAN, not single localhost (and since
+  2026-10-17, llama.cpp instead of Ollama, in the worldserver, on the LAN
+  boxes, or in the W client: 916d)
 - effil-jit worker threads in-process, not async-callback via "ALE HTTP
   capabilities or external curl" (which this ticket explicitly noted as
   unsolved)
