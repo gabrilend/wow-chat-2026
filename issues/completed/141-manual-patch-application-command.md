@@ -205,6 +205,10 @@ DRY RUN - Would revert:
 - `issues/408-release-profile-build-fixes.md` is
   `issues/135-release-profile-build-fixes.md` since the April renumbering.
 - **Number clash**: this issue's number, 141, is also held by an open issue
-  (`issues/141-ale-formatquery-dangling-pointer.md`): this one was made on
-  2026-04-13, two weeks before the renumbering gave 141 to the other. Both
-  are kept; name them with their slugs.
+  (`issues/141-ale-formatquery-dangling-pointer.md`). This one was made on
+  2026-04-13 and kept its number through the 2026-04-29 renumbering (which
+  moved the older legacy 141, talent-tier-limit, to 802); the other was
+  made on 2026-05-20 and took 141 again, the number looking free because
+  finished issues live in `completed/`. Both are kept; name them with
+  their slugs. New numbers now come from `validate-issues --next`, which
+  looks in `completed/` too.
