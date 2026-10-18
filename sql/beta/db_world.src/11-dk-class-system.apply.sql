@@ -26,7 +26,7 @@
 -- {{{ Clean up existing custom entries
 DELETE FROM `player_class_stats` WHERE `Class` = 6 AND `Level` BETWEEN 1 AND 54;
 DELETE FROM `playercreateinfo_spell_custom` WHERE `classmask` = 32;  -- class 6 = 2^5 = 32
-DELETE FROM `playercreateinfo_item` WHERE `class` = 6 AND `race` <> 0;  -- this step's own rows; the game's one race-0 row (no Scourgestone) stays
+DELETE FROM `playercreateinfo_item` WHERE `class` = 6 AND `race` <> 0 AND `amount` > 0;  -- this step's own rows (amount 1); the game's race-0 removal row and E058's removal rows (amount -1) stay
 -- (The old form's rows in `npc_trainer` are left where they are: the
 -- server doesn't read that table, and the game ships rows there under the
 -- same numbers, which a cleanup would take with them.)

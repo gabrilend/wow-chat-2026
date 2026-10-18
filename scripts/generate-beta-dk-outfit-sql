@@ -1,0 +1,173 @@
+#!/usr/bin/env luajit
+-- generate-beta-dk-outfit-sql - writes beta's install step E058: a new
+-- death knight starts without the starting-outfit items it can never use.
+--
+-- For a general audience: every new character is handed a starting
+-- outfit listed in the game's own data (CharStartOutfit.dbc, by race,
+-- class and sex). A death knight's is level-55 gear: the Acherus Knight's
+-- armour, rings, a choker and food that needs level 55. Beta starts death
+-- knights at level 1 (issue 206) and caps every character at 20, so none
+-- of it can ever be worn or eaten there; the game tries to put each piece
+-- on, cannot, and leaves it in the backpack (Player::StoreNewItemInBestSlots),
+-- where it fills eleven or twelve of sixteen slots. The game's own way to
+-- strike an item from a starting outfit is a starting-item row with an
+-- amount of -1 (the stock data does this once, for a placeholder
+-- Scourgestone). This reads each death knight outfit from the game data
+-- and each item's required level from the world database, and writes one
+-- such row for every item a beta character could never use, race by race,
+-- so each row names an item that race's outfit really holds (a row for an
+-- item a race lacks makes the server log "not found in dbc").
+--
+-- Writes:
+--   sql/beta/db_world.src/18-dk-outfit-for-level-1.apply.sql
+--   sql/beta/db_world.src/18-dk-outfit-for-level-1.revert.sql
+--
+-- Usage: scripts/generate-beta-dk-outfit-sql [PROJECT_DIR] [--db WORLD] [--cap LEVEL] [--dbc FILE]
+--   --db    world database to read item levels from (default acore_world_basic,
+--           any world built from the stock data serves: item levels are stock)
+--   --cap   the highest level a beta character reaches (default 20, C006b)
+--   --dbc   the outfit file (default PROJECT_DIR/data-files/dbc/CharStartOutfit.dbc,
+--           or the main project's when run from a separate checkout)
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local opt = { db = "acore_world_basic", cap = 20, dbc = nil }
+local i = 1
+while i <= #arg do
+    local a = arg[i]
+    if a == "--db" then i = i + 1; opt.db = arg[i]
+    elseif a == "--cap" then i = i + 1; opt.cap = tonumber(arg[i])
+    elseif a == "--dbc" then i = i + 1; opt.dbc = arg[i]
+    else DIR = a end
+    i = i + 1
+end
+local MAIN = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local function exists(p) local f = io.open(p, "rb"); if f then f:close() return true end return false end
+local dbc = opt.dbc or (exists(DIR .. "/data-files/dbc/CharStartOutfit.dbc") and DIR .. "/data-files/dbc/CharStartOutfit.dbc")
+            or (MAIN .. "/data-files/dbc/CharStartOutfit.dbc")
+local MYSQL = (exists(DIR .. "/mysql/installed-files/bin/mysql") and DIR or MAIN) .. "/mysql/installed-files/bin/mysql"
+local SOCK  = MAIN .. "/mysql/databases/mysql.sock"
+
+local DEATH_KNIGHT = 6
+local RACE_NAME = { [1] = "human", [2] = "orc", [3] = "dwarf", [4] = "night elf", [5] = "undead",
+                    [6] = "tauren", [7] = "gnome", [8] = "troll", [10] = "blood elf", [11] = "draenei" }
+
+-- {{{ local function read_outfits
+-- CharStartOutfit.dbc (3.3.5): a "WDBC" header, then records of 296 bytes:
+-- id (uint32), race, class, sex, outfit (one byte each), 24 item entries
+-- (int32), 24 display ids, 24 inventory types. Returns race -> set of
+-- item entries over both sexes, for death knights.
+local function read_outfits(path)
+    local f = assert(io.open(path, "rb"), "cannot read " .. path)
+    local d = f:read("*a"); f:close()
+    assert(d:sub(1, 4) == "WDBC", path .. " is not a DBC file")
+    local function u32(pos) local a, b, c, e = d:byte(pos, pos + 3); return a + b * 256 + c * 65536 + e * 16777216 end
+    local nrec, recsize = u32(5), u32(13)
+    assert(recsize == 296, "unexpected record size " .. recsize .. " (expected 296, the 3.3.5 layout)")
+    local byRace = {}
+    for r = 0, nrec - 1 do
+        local base = 21 + r * recsize
+        local race, class = d:byte(base + 4), d:byte(base + 5)
+        if class == DEATH_KNIGHT then
+            byRace[race] = byRace[race] or {}
+            for k = 0, 23 do
+                local v = u32(base + 8 + k * 4)
+                if v > 0 and v < 2147483648 then byRace[race][v] = true end
+            end
+        end
+    end
+    return byRace
+end
+-- }}}
+
+-- {{{ local function query
+local function query(sql)
+    local cmd = string.format("%s --no-defaults --socket=%s -uritz -pmenardi -N -B -D %s -e %q 2>/dev/null",
+                              MYSQL, SOCK, opt.db, sql)
+    local out, h = {}, io.popen(cmd)
+    for l in h:lines() do out[#out + 1] = l end
+    h:close()
+    return out
+end
+-- }}}
+
+local byRace = read_outfits(dbc)
+local all, seen = {}, {}
+for _, set in pairs(byRace) do
+    for item in pairs(set) do
+        if not seen[item] then seen[item] = true; all[#all + 1] = item end
+    end
+end
+table.sort(all)
+if #all == 0 then io.stderr:write("ERROR: no death knight outfit in " .. dbc .. "\n"); os.exit(1) end
+
+local level, name = {}, {}
+for _, row in ipairs(query("SELECT entry, RequiredLevel, name FROM item_template WHERE entry IN (" .. table.concat(all, ",") .. ")")) do
+    local e, l, n = row:match("^(%d+)\t(%d+)\t(.*)$")
+    if e then level[tonumber(e)], name[tonumber(e)] = tonumber(l), n end
+end
+local unknown = {}
+for _, item in ipairs(all) do if not level[item] then unknown[#unknown + 1] = item end end
+if #unknown > 0 then
+    io.stderr:write("ERROR: " .. #unknown .. " outfit item(s) not in " .. opt.db .. ".item_template: " .. table.concat(unknown, ", ") ..
+                    "\n  to debug: is the project's MySQL up (scripts/start-mysql)? is --db a world database?\n")
+    os.exit(1)
+end
+
+-- Every (race, item) to strike: the item needs more than the cap.
+local rows, struck = {}, {}
+local races = {}
+for race in pairs(byRace) do races[#races + 1] = race end
+table.sort(races)
+for _, race in ipairs(races) do
+    local items = {}
+    for item in pairs(byRace[race]) do items[#items + 1] = item end
+    table.sort(items)
+    for _, item in ipairs(items) do
+        if level[item] > opt.cap then
+            rows[#rows + 1] = string.format("    (%2d, 6, %5d, -1)", race, item)
+            struck[item] = true
+        end
+    end
+end
+local kept = {}
+for _, item in ipairs(all) do if not struck[item] then kept[#kept + 1] = item .. " " .. name[item] end end
+local list = {}
+for _, item in ipairs(all) do
+    if struck[item] then list[#list + 1] = string.format("--   %5d  %-36s level %d", item, name[item], level[item]) end
+end
+
+local HEADER = string.format([[
+-- Generated by scripts/generate-beta-dk-outfit-sql from the game's
+-- CharStartOutfit.dbc and item_template (%s); run it again rather than
+-- editing this file. Issue 206 (death knights from level 1).
+--
+-- Struck from every death knight's starting outfit, by race, because each
+-- needs a level above beta's cap of %d:
+%s
+-- Kept: %s.
+]], opt.db, opt.cap, table.concat(list, "\n"), #kept > 0 and table.concat(kept, ", ") or "nothing")
+
+local apply = "-- MARKER_E058_APPLY beta-dk-outfit-for-level-1\n" .. HEADER .. [[
+-- An amount of -1 removes the item from the outfit when the server loads
+-- (ObjectMgr::PlayerCreateInfoAddItemHelper). INSERT IGNORE: safe to run
+-- again. E011's own starting items (amount 1) are separate rows; its
+-- clean-up and undo touch only rows with a positive amount.
+INSERT IGNORE INTO `playercreateinfo_item` (`race`, `class`, `itemid`, `amount`) VALUES
+]] .. table.concat(rows, ",\n") .. ";\n"
+
+local deletes = {}
+for _, r in ipairs(rows) do
+    local race, item = r:match("%((%s*%d+), 6, (%s*%d+), %-1%)")
+    deletes[#deletes + 1] = string.format("(%d, %d)", tonumber(race), tonumber(item))
+end
+local revert = "-- MARKER_E058_REVERT beta-dk-outfit-for-level-1\n" .. HEADER .. [[
+-- Removes exactly the rows the apply adds; the game's own removal row
+-- (race 0, the placeholder Scourgestone) is not among them.
+DELETE FROM `playercreateinfo_item` WHERE `class` = 6 AND `amount` = -1 AND (`race`, `itemid`) IN (
+    ]] .. table.concat(deletes, ", ") .. ");\n"
+
+local out = DIR .. "/sql/beta/db_world.src/18-dk-outfit-for-level-1"
+local f = assert(io.open(out .. ".apply.sql", "w")); f:write(apply); f:close()
+f = assert(io.open(out .. ".revert.sql", "w")); f:write(revert); f:close()
+print(string.format("wrote %s.{apply,revert}.sql: %d rows over %d races; %d item(s) struck, %d kept",
+    out:sub(#DIR + 2), #rows, #races, #all - #kept, #kept))

@@ -173,6 +173,7 @@ STEPS=(
     "E014|beta_trainer_spell_level_cap|14-trainer-spell-level-cap|each travelling trainer its own slice"
     "E015|beta_class_selector_npcs|15-class-selector-npcs|class selector NPC types"
     "E016|beta_empty_loot_chests|16-empty-loot-chests|empty loot chest types"
+    "E058|beta_dk_outfit_for_level_1|18-dk-outfit-for-level-1|death knights without the level-55 outfit"
     "E012|beta_drop_creatures_keep_essential|12-drop-creatures-keep-essential|world emptied but critters and spirit healers"
 )
 # E012 runs last: it deletes spawns, and nothing after it here needs them.
@@ -223,6 +224,10 @@ expect "126 travelling trainers point at their own copies" \
     "SELECT COUNT(*) FROM creature_default_trainer WHERE TrainerId BETWEEN 1000000 AND 1999999" 126
 expect "the alliance hunter trainer for levels 8-10 (17505) teaches Call Pet (level 10)" \
     "SELECT COUNT(*) FROM trainer_spell WHERE TrainerId = 1017505 AND SpellId = 883" 1
+expect "every death knight race loses its 13 level-55 outfit items (E058)" \
+    "SELECT COUNT(*) FROM playercreateinfo_item WHERE class = 6 AND amount = -1 AND race <> 0" 130
+expect "E011's own 40 starting items survive E058 (4 for each of 10 races: a sword and three pieces of clothing)" \
+    "SELECT COUNT(*) FROM playercreateinfo_item WHERE class = 6 AND amount > 0" 40
 expect "the game's death knight start row (no Scourgestone) is still there" \
     "SELECT COUNT(*) FROM playercreateinfo_item WHERE race = 0 AND class = 6 AND itemid = 40582" 1
 # }}}
