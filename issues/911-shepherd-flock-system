@@ -358,8 +358,8 @@ ULDUAR_BOSS_HP_MULTIPLIER   = 10      -- HP scaling
 
 ## Related Files
 
-- src/lua/travel.lua - Wandering NPC patterns
-- src/lua/ambush.lua - Spawn patterns
+- src/lua-beta/travel.lua - Wandering NPC patterns
+- src/lua-beta/ambush.lua - Spawn patterns
 
 ## Related Issues
 

@@ -317,4 +317,4 @@ end
 - scripts/generate-creature-embeddings.py (new)
 - assets/creature-embeddings.bin (generated)
 - src/lua/embeddings.lua (loader + similarity)
-- src/lua/ambush.lua (integration)
+- src/lua-beta/ambush.lua (integration)

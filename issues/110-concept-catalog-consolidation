@@ -90,7 +90,7 @@ Read through all 1000 concepts, identified:
 
 **Abstract Generic Concepts:**
 - Instead of listing each math function (sin, cos, tan, atan2, sqrt):
-  - Combined into "Movement Math Functions (src/lua/movement.lua)"
+  - Combined into "Movement Math Functions (src/lua-beta/movement.lua)"
 - Instead of each algorithm (quicksort, binary search):
   - Combined into "Standard Algorithms Used"
 

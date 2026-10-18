@@ -132,7 +132,7 @@ Structure:
 ```
 Phase 1: Foundation
   ├── 101-initial-setup.md → src/lua/init.lua
-  ├── 102-ambush-system.md → src/lua/ambush.lua
+  ├── 102-ambush-system.md → src/lua-beta/ambush.lua
   └── ...
 
 Phase 2: Behaviors

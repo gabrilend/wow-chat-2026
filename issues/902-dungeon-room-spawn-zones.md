@@ -221,7 +221,7 @@ CREATE TABLE dungeon_zone_state (
 - 905-portal-dimension-system (shared instance management)
 
 ## Related Files
-- src/lua/ambush.lua (spawn logic reference)
-- src/lua/movement.lua (position utilities)
+- src/lua-beta/ambush.lua (spawn logic reference)
+- src/lua-beta/movement.lua (position utilities)
 - assets/waypoint_data (existing waypoint backup)
 - pngs/dungeons/ (zone visualization output)

@@ -141,7 +141,7 @@ end
 ## Related Documents
 
 - docs/scripting.md
-- src/lua/periodic_events.lua (contains timing constants)
+- src/lua-beta/periodic_events.lua.disabled (contains timing constants)
 
 ## Notes
 

@@ -102,7 +102,7 @@ CustomClasses.baseClassesWithCustoms = {}
 
 ## Related Files
 
-- src/lua/custom-classes.lua - Selector NPC spawn logic
+- src/lua-beta/custom-classes.lua.disabled - Selector NPC spawn logic
 - custom-class-json/ - Custom class definition directory
 
 ## Related Issues

@@ -91,5 +91,5 @@ all behaviors ──────── PLAYER_EVENT_ON_LOGIN ──────�
 
 ## Related Files
 - src/lua/behaviors/*.lua (demonstration case)
-- src/lua/movement.lua (shared datastructure)
+- src/lua-beta/movement.lua (shared datastructure)
 - docs/architecture.md (could include powerline maps)

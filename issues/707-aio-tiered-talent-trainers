@@ -255,7 +255,7 @@ not benefit from tiering. Keep those as "learn max rank at level X".
 
 ## Related Files
 
-- `src/lua/custom-classes.lua` - Custom class definitions
+- `src/lua-beta/custom-classes.lua.disabled` - Custom class definitions
 - `src/lua/custom-trainers.lua` - (new) Tiered talent trainer logic
 - `src/aio/custom-trainer-frame.lua` - (new) AIO client frame
 

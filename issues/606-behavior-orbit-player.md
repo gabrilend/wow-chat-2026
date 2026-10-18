@@ -45,5 +45,5 @@
 - src/lua/behaviors/orbit-player.lua
 - src/lua/behaviors/avoid-monsters.lua
 - src/lua/behaviors/sit-and-rest.lua
-- src/lua/movement.lua (getOrbitPosition already exists)
+- src/lua-beta/movement.lua (getOrbitPosition already exists)
 - docs/playerbots/

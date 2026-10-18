@@ -136,8 +136,8 @@ SHOW_POOL_INDICATOR = false
 
 ## Related Files
 
-- src/lua/treasure.lua - Pool management
-- src/lua/chest-vulnerability.lua - Chest interaction
+- src/lua-beta/treasure.lua.disabled - Pool management
+- src/lua-beta/chest-vulnerability.lua.disabled - Chest interaction
 
 ## Related Issues
 

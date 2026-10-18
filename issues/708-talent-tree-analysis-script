@@ -122,7 +122,7 @@ Ratio: 60/43 = 140% (MORE POINTS THAN OPTIONS - ADD MORE TALENTS!)
 - Reference: https://www.wowhead.com/wotlk/talent-calc
 
 ### Custom Classes
-- Read from `src/lua/custom-classes.lua`
+- Read from `src/lua-beta/custom-classes.lua.disabled`
 - Parse the talent definitions with tier/tree assignments
 - Requires custom classes to define tree structure
 
@@ -179,7 +179,7 @@ CustomClasses.definitions[1004] = {
 
 ## Related Files
 - `scripts/analyze-talents.lua` (to be created)
-- `src/lua/custom-classes.lua` (extend with talentTrees)
+- `src/lua-beta/custom-classes.lua.disabled` (extend with talentTrees)
 - `docs/class-talents-tier-1-3.md` (reference data, to be created)
 
 ## Open Questions

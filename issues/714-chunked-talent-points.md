@@ -227,7 +227,7 @@ For v1.0, mode is server-wide. Future consideration:
 
 ## Files to Modify
 
-- `src/lua/levelling.lua` - Talent point grant logic
+- `src/lua-beta/levelling.lua.disabled` - Talent point grant logic
 - `src/lua/talent-restrictions.lua` (new) - Respec and tier restrictions
 - `config/beta/worldserver.conf` - Add TALENT_MODE setting (optional)
 

@@ -327,7 +327,7 @@ src/lua/
 
 ## Related Files
 
-- src/lua/travel.lua - Narrator NPC system (future)
+- src/lua-beta/travel.lua - Narrator NPC system (future)
 
 ## Related Issues
 

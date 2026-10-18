@@ -26,7 +26,7 @@ This creates a natural "let's chat" moment where the world respects your convers
 
 ## Implementation
 
-Modify `Travel.continueTravelling()` in `src/lua/travel.lua`:
+Modify `Travel.continueTravelling()` in `src/lua-beta/travel.lua`:
 
 ```lua
 -- Check player stand state and mirror it
@@ -80,7 +80,7 @@ From WoW API:
 
 ## Files to Modify
 
-- `src/lua/travel.lua` - Add sit mirroring in `continueTravelling()`
+- `src/lua-beta/travel.lua` - Add sit mirroring in `continueTravelling()`
 
 ## Related Issues
 

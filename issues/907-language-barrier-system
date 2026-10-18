@@ -138,8 +138,8 @@ Scribes become valuable for language distribution:
 
 ## Related Files
 
-- src/lua/treasure.lua - Item handling patterns
-- src/lua/custom-classes.lua - Gossip and NPC interaction patterns
+- src/lua-beta/treasure.lua.disabled - Item handling patterns
+- src/lua-beta/custom-classes.lua.disabled - Gossip and NPC interaction patterns
 - Database: `playercreateinfo`, `skill_discovery_template`
 
 ## Related Issues

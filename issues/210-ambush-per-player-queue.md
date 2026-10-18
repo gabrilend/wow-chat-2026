@@ -48,7 +48,7 @@ their queues with one player's results.
 
 ## The Sync Predecessor Did It Right
 
-`src/lua/ambush.lua.disabled` took the player object directly:
+`src/lua-beta/ambush.lua.disabled` took the player object directly:
 `Ambush.setupAmbushQueue(player, 4)`. Because the predecessor was
 synchronous, the query returned to the same call frame that initiated
 it, and only the originating player's queue was filled. Async broke
@@ -140,8 +140,8 @@ Programmatic test (a later issue could automate this):
 - `issues/141-ale-formatquery-dangling-pointer.md` — the FormatQuery
   bug that prompted the original async switch (which created this
   broadcast workaround as a side effect)
-- `src/lua/ambush.lua` — the file being refactored
-- `src/lua/ambush.lua.disabled` — the sync predecessor with the
+- `src/lua-beta/ambush.lua` — the file being refactored
+- `src/lua-beta/ambush.lua.disabled` — the sync predecessor with the
   correct per-player design
 - `issues/completed/305-ambush-aggro-and-corpse-movement.md` —
   earlier ambush work for context

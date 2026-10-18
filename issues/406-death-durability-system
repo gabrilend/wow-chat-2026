@@ -4,7 +4,7 @@
 - Created: 2026-04-04
 - Phase: 2
 - Priority: Medium
-- **Implemented:** src/lua/death-durability.lua
+- **Implemented:** src/lua-beta/death-durability.lua.disabled
 
 ### Implementation Notes
 - Uses low-level Object:GetUInt32Value/SetUInt32Value for durability access

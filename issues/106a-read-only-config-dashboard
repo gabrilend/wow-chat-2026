@@ -145,7 +145,7 @@ end
 ## Related Documents
 
 - docs/scripting.md (Eluna API reference)
-- src/lua/periodic_events.lua (contains timing constants to expose)
+- src/lua-beta/periodic_events.lua.disabled (contains timing constants to expose)
 
 ## Notes
 

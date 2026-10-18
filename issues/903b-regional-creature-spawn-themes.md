@@ -829,7 +829,7 @@ ORDER BY 1, 3;
 ---
 
 ## Related Files
-- src/lua/ambush.lua (creature selection logic)
+- src/lua-beta/ambush.lua (creature selection logic)
 - src/lua/regional-spawns.lua (new - continental configuration)
 - issues/903b1-outland-demon-felorc-spawns.md (supplemental - Outland detail)
 - issues/127-contextual-creature-spawns.md (zone-level system)

@@ -46,5 +46,5 @@
 ## Related Files
 - src/lua/behaviors/find-monsters.lua
 - src/lua/behaviors/avoid-monsters.lua
-- src/lua/travel.lua
-- src/lua/movement.lua
+- src/lua-beta/travel.lua
+- src/lua-beta/movement.lua

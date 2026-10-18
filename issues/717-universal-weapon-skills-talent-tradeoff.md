@@ -130,9 +130,9 @@ cost localized to the trade-off being made.
 
 ## Affected Files (anticipated)
 
-- `src/lua/extensions/_Misc.ext` or a new `src/lua/weapon-universality.lua` —
+- `src/lua-beta/extensions/_Misc.ext` or a new `src/lua/weapon-universality.lua` —
   proficiency-granting hook
-- `src/lua/levelling.lua` (currently disabled — see git status) — talent-XP
+- `src/lua-beta/levelling.lua.disabled` (currently disabled — see git status) — talent-XP
   track addition
 - `src/custom-class-json/*.json` and any Lua class definitions — strip
   proficiency restrictions

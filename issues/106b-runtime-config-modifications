@@ -150,8 +150,8 @@ end
 ## Related Documents
 
 - docs/scripting.md
-- src/lua/periodic_events.lua
-- src/lua/ambush.lua
+- src/lua-beta/periodic_events.lua.disabled
+- src/lua-beta/ambush.lua
 
 ## Notes
 

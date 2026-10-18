@@ -34,5 +34,5 @@
 
 ## Related Files
 - src/lua/behaviors/find-monsters.lua
-- src/lua/movement.lua
+- src/lua-beta/movement.lua
 - issues/116-behavior-avoid-monsters.md

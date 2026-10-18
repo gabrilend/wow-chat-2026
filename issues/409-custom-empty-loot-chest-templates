@@ -11,7 +11,7 @@
 - SQL: `source-beta/data/sql/custom/db_world/custom-empty-loot-chests.sql`
   - 37 custom chest entries (900001-900037) with `data1=0` (no loot template)
   - Copies visual properties from vanilla chests
-- Lua: `src/lua/treasure.lua`
+- Lua: `src/lua-beta/treasure.lua.disabled`
   - Chest table updated to use custom IDs
   - `Treasure.generateBaseLoot()` - generates level-appropriate loot
   - `Treasure.injectPendingLoot()` - injects base loot + queued items when searcher opens

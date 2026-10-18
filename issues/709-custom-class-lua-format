@@ -602,7 +602,7 @@ This ensures:
 **Shared validation code:**
 The validation rules should be defined once and used by both:
 - External hook script (`scripts/validate-custom-class.lua`)
-- ALE module (`src/lua/custom-classes.lua`)
+- ALE module (`src/lua-beta/custom-classes.lua.disabled`)
 
 Options:
 - Duplicate the validation code (simple, some drift risk)
@@ -746,7 +746,7 @@ end
 | rmail hook script | `wow-chat-2/scripts/validate-custom-class.lua` | git repo |
 | Snapshots | `wow-chat-2/src/custom-class-snapshots/` | ALE |
 | Built-in classes | `wow-chat-2/src/custom-classes/` | git repo |
-| ALE module | `wow-chat-2/src/lua/custom-classes.lua` | git repo |
+| ALE module | `wow-chat-2/src/lua-beta/custom-classes.lua.disabled` | git repo |
 
 ### Configuration Files
 
@@ -928,7 +928,7 @@ A level-12 character learning Renew gets "Renew (Level 12)" automatically.
 ## Files to Modify/Create
 
 ### Existing Files
-- `src/lua/custom-classes.lua` - Add parser, validation, inbox scanning, snapshot management
+- `src/lua-beta/custom-classes.lua.disabled` - Add parser, validation, inbox scanning, snapshot management
 
 ### New Files
 - `scripts/validate-custom-class.lua` - rmail on_receive hook (standard Lua)

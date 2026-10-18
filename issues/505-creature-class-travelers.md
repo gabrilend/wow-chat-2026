@@ -63,7 +63,7 @@ distillation is approximate.
   traveler system) but engage hostile monsters on sight.
 - **Selection pool** = creatures from the base game *not* in the
   ambush-spawn pool (the "banned creature IDs" exclusion in
-  `src/lua/ambush.lua`). Plus elementals, which can appear in both.
+  `src/lua-beta/ambush.lua`). Plus elementals, which can appear in both.
 - **Class assignment** — each base class is assigned a creature type
   (humanoid / beast / elemental / etc.). If there are more classes than
   creature types, the most-populous types get split (shared) between

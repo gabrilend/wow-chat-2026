@@ -32,5 +32,5 @@
 - Movement system must handle long distances
 
 ## Related Files
-- src/lua/movement.lua
+- src/lua-beta/movement.lua
 - assets/waypoint_data (from smart_scripts backup)

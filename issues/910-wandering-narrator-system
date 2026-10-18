@@ -606,7 +606,7 @@ NARRATOR_PACE_STEP_COUNT    = 2       -- steps between stops
 
 ## Related Files
 
-- src/lua/travel.lua - Traveler movement patterns
+- src/lua-beta/travel.lua - Traveler movement patterns
 - src/lua/behaviors/ - Behavior implementations
 
 ## Related Issues

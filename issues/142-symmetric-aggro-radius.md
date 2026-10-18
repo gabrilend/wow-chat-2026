@@ -30,7 +30,7 @@ high-level characters.
 The Everland Ghostsong world has no static populated zones with
 level-distributed mobs that a player gradually outgrows. Instead,
 the ambush system spawns creatures *at the triggering player's
-level* (the SQL query at `src/lua/ambush.lua` filters on
+level* (the SQL query at `src/lua-beta/ambush.lua` filters on
 `minlevel <= playerLevel <= maxlevel`). Every creature is by
 construction level-appropriate for the player who summoned it.
 

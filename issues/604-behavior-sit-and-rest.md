@@ -44,5 +44,5 @@
 ## Related Files
 - src/lua/behaviors/sit-and-rest.lua
 - src/lua/behaviors/avoid-monsters.lua
-- src/lua/movement.lua
+- src/lua-beta/movement.lua
 - docs/ale/ (for stand state constants)

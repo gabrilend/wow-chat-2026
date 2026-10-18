@@ -182,7 +182,7 @@ The ambush system is the core danger loop. Without periodic spawns, the empty wo
 
 ## Files Modified
 
-- `src/lua/ambush.lua` - Added configuration constants, registered spawn event, fixed hardcoded values
+- `src/lua-beta/ambush.lua` - Added configuration constants, registered spawn event, fixed hardcoded values
 
 ---
 

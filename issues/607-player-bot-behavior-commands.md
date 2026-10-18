@@ -79,5 +79,5 @@ end
 
 ## Related Files
 - src/lua/behaviors/*.lua
-- src/lua/travel.lua (wander behavior reference)
+- src/lua-beta/travel.lua (wander behavior reference)
 - docs/playerbots/Playerbot-Commands.md (command style reference)

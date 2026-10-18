@@ -126,8 +126,8 @@ HEARTHSTONE_CAST_TIME  = 10000    -- 10 seconds
 
 ## Related Files
 
-- src/lua/treasure.lua - Chest loot and redistribution
-- src/lua/chest-vulnerability.lua - Chest interaction hooks
+- src/lua-beta/treasure.lua.disabled - Chest loot and redistribution
+- src/lua-beta/chest-vulnerability.lua.disabled - Chest interaction hooks
 - Database: item_template for new items
 
 ## Related Issues

@@ -5,7 +5,7 @@
 - Phase: 2
 - Priority: Medium
 - Depends: 153 (Chest vulnerability mechanic)
-- **Implemented:** src/lua/chest-vulnerability.lua
+- **Implemented:** src/lua-beta/chest-vulnerability.lua.disabled
 
 ### Implementation Notes
 - Combined with 153 (vulnerability) in same file

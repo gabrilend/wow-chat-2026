@@ -232,6 +232,6 @@ end
 - 904-embedding-based-creature-selection (semantic selection within type)
 
 ## Related Files
-- src/lua/ambush.lua (current spawn system)
+- src/lua-beta/ambush.lua (current spawn system)
 - src/lua/zone-types.lua (new, type detection)
 - assets/smart_scripts_backup.sql (waypoint data reference)

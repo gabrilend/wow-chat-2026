@@ -56,7 +56,7 @@ entirely and work fine.
 
 ## Discovery Path
 
-Found 2026-05-20 while diagnosing why `src/lua/ambush.lua.disabled`
+Found 2026-05-20 while diagnosing why `src/lua-beta/ambush.lua.disabled`
 existed and what its replacement preserved or lost. The disabled file
 carried a comment:
 
@@ -144,7 +144,7 @@ When upstream merges, B023 retires:
 
 ## Follow-up
 
-Once B023 is committed and verified in-game, `src/lua/ambush.lua.disabled`
+Once B023 is committed and verified in-game, `src/lua-beta/ambush.lua.disabled`
 becomes safe to retire. Its only justification was the FormatQuery bug;
 once the bug is fixed, the disabled file is pure code drift. Track in a
 follow-up issue or as a final step of this one.
@@ -155,4 +155,4 @@ follow-up issue or as a final step of this one.
 - `issues/126-upstream-warning-fixes.md` — patch inventory + lifecycle rules
 - `issues/210-ambush-per-player-queue.md` — the ambush refactor unblocked
   by switching to async (which sidestepped this bug)
-- `src/lua/ambush.lua.disabled` — historical cache workaround
+- `src/lua-beta/ambush.lua.disabled` — historical cache workaround

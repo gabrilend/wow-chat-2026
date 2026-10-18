@@ -210,7 +210,7 @@ Future enhancement: different ratios per Outland zone
 - Nagrand: could allow beasts (less corrupted zone)
 
 ## Related Files
-- src/lua/ambush.lua (creature selection logic)
+- src/lua-beta/ambush.lua (creature selection logic)
 - issues/127-contextual-creature-spawns.md (general system)
 - issues/128-embedding-based-creature-selection.md (diversity within type)
 

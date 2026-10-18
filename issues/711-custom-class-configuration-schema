@@ -14,7 +14,7 @@
 - Depends on: 713 (custom talent interface), 710 (custom resource bars)  <!-- legacy 345/163, per MIGRATION_MAP.md -->
 
 ## Current Behavior
-- Custom classes defined in `src/lua/custom-classes.lua`
+- Custom classes defined in `src/lua-beta/custom-classes.lua.disabled`
 - Flat spell list with level, sourceClass, and implicit auto-learn
 - No distinction between trainer abilities and talents
 - No talent tree structure defined
@@ -405,7 +405,7 @@ end -- }}}
 - 345 - Custom talent interface (renders this data)
 
 ## Related Files
-- `src/lua/custom-classes.lua` (update schema)
+- `src/lua-beta/custom-classes.lua.disabled` (update schema)
 - `src/lua/custom-class-validation.lua` (new)
 
 ## Open Questions
