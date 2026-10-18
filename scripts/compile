@@ -599,8 +599,12 @@ run_quick_tests() {
     for t in "${QUICK_TESTS[@]}"; do
         [[ -x "${DIR}/scripts/${t}" ]] || { echo "ERROR: scripts/${t} is missing or not executable (the compile's test list names it)"; exit 1; }
     done
+    # xargs exits 123 when any test fails; under set -e that ended the run
+    # right here, before the report below could say which tests failed
+    # (2026-10-18: "COMPILE FAILED (exit status 123)" naming only this line).
+    # The .ok files are the verdict, so the exit status is not needed.
     printf '%s\n' "${QUICK_TESTS[@]}" | xargs -P "$(nproc)" -I{} bash -c \
-        'timeout 600 "$1/scripts/$2" "$1" > "$3/$2.log" 2>&1 && touch "$3/$2.ok"' _ "${DIR}" {} "${out}"
+        'timeout 600 "$1/scripts/$2" "$1" > "$3/$2.log" 2>&1 && touch "$3/$2.ok"' _ "${DIR}" {} "${out}" || true
 
     local failed=()
     for t in "${QUICK_TESTS[@]}"; do
