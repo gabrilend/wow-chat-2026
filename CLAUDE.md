@@ -79,16 +79,21 @@ mod-eluna scripts. E001 symlinks the profile-matching dir into
 ## Build and Run
 
 ```bash
-# Build/update server
-./scripts/azerothcore update
+# Build/update server (pull source, then compile)
+./scripts/update
+./scripts/compile          # compile only
 
 # Start MySQL (required first)
 ./scripts/start-mysql
 
 # Run servers
-./scripts/azerothcore authserver
-./scripts/azerothcore worldserver
+./scripts/authserver
+./scripts/worldserver
 ```
+
+One script per command since issue 142 (2026-04-14); the old
+`scripts/azerothcore` dispatcher was deleted on 2026-06-04 and survives as
+`scripts/azerothcore-deprecated`, for reference only.
 
 ## Database
 
@@ -411,5 +416,6 @@ CLAUDE.md carries the permission to build it (`scripts/build --test`
 there) and the same five-minute rule.
 
 Everything else (the AzerothCore server, its modules, anything through
-`scripts/azerothcore` or `scripts/compile`) is still built by the owner.
+`scripts/update`, `scripts/compile` or `scripts/install`) is still built
+by the owner.
 Those builds are long and tie up the processor.
