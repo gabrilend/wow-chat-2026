@@ -86,6 +86,31 @@ Re-stated from 916h for convenience:
 }
 ```
 
+## What the Grammar Already Guarantees
+
+Since the model moved to llama.cpp (2026-10-17), every guidance request
+carries a grammar (916h, step 6) that llama.cpp enforces token by token.
+Built per request, it holds closed lists — this party's bot names, the
+strategy names in mod-playerbots' registry, the four stances — and a
+number rule that only spells values from `0.0` to `2.0`. So these
+failures can no longer come from the model:
+
+- JSON that does not parse, or prose instead of JSON
+- a field missing or of the wrong type
+- an unknown bot, strategy or stance
+- a multiplier out of bounds
+
+The validator still checks all of them. If one fails now, the grammar
+(or the code that built it) is wrong, not the model: that is logged as
+an **error** naming the request and the grammar's rule, and the request
+is dropped, not retried — a retry would hit the same wrong grammar. What
+the grammar cannot express is left to the validator and the one retry:
+the same bot listed twice, a strategy both added and removed, a focus
+target who is not in sight.
+
+(Guidance requests only ever run on trusted places — in-server and the
+LAN boxes — so a player's machine never produces one; 916e, 916o.)
+
 ## Implementation Steps
 
 1. Write `lua/06-response-parse.lua`:
@@ -100,40 +125,48 @@ Re-stated from 916h for convenience:
      state-table update
 3. Wire response draining into the main update loop — extend the
    tick handler from 916g (or use a separate periodic timer)
-4. Implement the retry path: on first validation failure, the response
-   draining loop re-submits the request with a "your previous output
-   was malformed" suffix to the prompt. Track retry count per
-   request_id; cap at 1 retry.
+4. Implement the retry path, for contradictions only: the response
+   draining loop re-submits the request with the contradiction named in
+   a suffix to the prompt. Track retry count per request_id; cap at 1
+   retry. Every other validation failure is a grammar bug (see "What the
+   Grammar Already Guarantees") and is logged as an error, not retried.
 5. Smoke test:
    - Feed a known-good JSON through the validator → confirm directives
      extracted
-   - Feed malformed JSON → confirm rejection with clear error
-   - Feed JSON with unknown strategy name → confirm rejection
-   - Feed JSON with out-of-bounds multiplier → confirm rejection
+   - Feed malformed JSON → confirm rejection, logged as a grammar bug
+   - Feed JSON with unknown strategy name → same
+   - Feed JSON with out-of-bounds multiplier → same
+   - Feed a contradiction → confirm exactly one retry
+   - Generate 100 replies with the real grammar and a real model →
+     confirm zero parse or name failures (this is the test that the
+     grammar does its job)
    - Send a real LLM request, watch the apply path light up
 
 ## Notes on Retry Strategy
 
-One retry is the right number. Zero means small-model JSON glitches
-cost real guidance opportunities. More than one risks burning inference
-budget on a request the LLM clearly can't satisfy.
+One retry is the right number. Zero means a contradictory reply (the
+kind the grammar cannot rule out) costs a real guidance opportunity.
+More than one risks burning inference budget on a request the LLM
+clearly can't satisfy.
 
-The retry prompt should be terse and include the error message. Don't
-re-send the full party state — the worker still has it in flight.
-(May require small change to 916e to retain request context across
-retry.)
+The retry prompt should be terse and include the error message. The
+retry re-sends the full prompt with the error appended, and that is
+cheap with llama.cpp: the prompt's unchanged beginning is still in the
+worker's key/value cache (in-server: the worker keeps its context;
+beside: `cache_prompt` on the same slot), so only the appended tokens
+are read again.
 
 ## Failure Modes
 
 | Failure | Behavior |
 |---|---|
-| JSON parse error | Retry once, then fall back silently |
-| Schema violation | Retry once with error in prompt, then fall back |
-| Unknown strategy name | Log, drop that directive only, apply the rest |
-| Unknown bot name | Log, drop that directive only |
-| Out-of-bounds multiplier | Clamp to [0.0, 2.0], apply |
+| JSON parse error | Grammar bug: log as an error, drop the request, no retry |
+| Schema violation (missing field, wrong type) | Grammar bug: same |
+| Unknown strategy name | Grammar bug: same (the grammar's list is out of date with the registry) |
+| Unknown bot name | Grammar bug: same (the grammar's list is not this party's) |
+| Out-of-bounds multiplier | Grammar bug: same |
+| Contradiction (bot twice, strategy added and removed) | Retry once with the error in the prompt, then drop with a log line |
 | Empty directives array | No-op, but not an error |
-| LLM returns explanation prose instead of JSON | Same as JSON parse error |
 
 ## Files to Create
 

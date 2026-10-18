@@ -12,7 +12,7 @@
 Spin up effil-jit worker threads on worldserver startup, one per
 place-and-slot in `01-config.lua`'s `model_places` (for the three LAN
 mini-PCs at three slots each, nine workers; for an in-server place at two
-slots, two more). Each worker pops requests from a shared inbox channel,
+slots, two more). Each worker pops requests from shared inbox channels (step 2),
 calls the model runner from 916d for its own place, and pushes results
 onto a shared outbox channel. The main worldserver thread interacts
 entirely via the two channels — never blocks on the model.
@@ -26,7 +26,13 @@ What a worker holds depends on its place (916d has the detail):
   slots. Nine workers for three servers at `-np 3` keeps every slot busy.
 - **in-client:** created when a W client offers its GPU, retired when
   that player logs out (custom-client issue 907). One worker per offering
-  player.
+  player. 916o's companion programs join the same way through its job
+  broker.
+
+Workers on players' machines (in-client, and 916o's companion programs)
+are untrusted and take **chat requests only**. The request's `type`
+field (`"guidance"` or `"chat"`) is what the pool routes on, so this
+rule is one check at dispatch, not a convention (916o, step 1).
 
 This is the load-bearing concurrency layer. Everything else in 916 is
 "produce requests" or "consume responses" feeding into / out of this
@@ -72,7 +78,7 @@ which place answered.
 
 1. Write `lua/03-effil-workers.lua`:
    - Read `model_places` from `01-config.lua`
-   - Create two effil channels: inbox and outbox
+   - Create three effil channels: the guidance inbox, the chat inbox, the outbox
    - For each place, spawn `slots` effil threads running the worker loop
    - Pass the placement, `where`, the place name and slot number, the
      channels, and a stop-signal sentinel as initial state to each thread
@@ -80,9 +86,14 @@ which place answered.
      and pass its address as a number (916d explains why a number)
    - Expose `submit(request)` and `drain()` as the public API
    - Maintain a per-request_id counter for unique IDs
-2. Dispatch: for v0 use a single shared inbox channel — all workers pop
-   from the same channel, effil's blocking pop handles fairness. A slow
-   place simply takes fewer requests. (Per-worker inboxes come in 916f if
+2. Dispatch: two shared inbox channels, one per request type —
+   `guidance` and `chat`. Trusted workers pop from both (guidance first);
+   workers on players' machines pop only from `chat`. Within one channel
+   effil's blocking pop handles fairness, and a slow place simply takes
+   fewer requests. (One shared channel would let an untrusted worker pop
+   a guidance request, so the split is the trust rule made structural.)
+   effil's pop takes a timeout, so a trusted worker checks `guidance`
+   with a zero wait before blocking briefly on `chat`. (Per-worker inboxes come in 916f if
    health tracking wants targeted routing.)
 3. On worldserver shutdown, push one stop signal per worker so each exits
    cleanly, then join, then free the in-server model.

@@ -196,12 +196,19 @@ Three places, any mix of them at once (916d has the detail):
   Each starts `llama-server` with its model file and `-np 3` slots (one
   model in memory, three conversations interleaved; subject to benchmark
   tuning per the ratchet table in 148-adjacent notes). It could equally
-  be the owner's desktop, or a player's own computer if the program can
-  be reached (916d, Open Questions).
+  be the owner's desktop. A player's own computer joins as 916o's
+  companion program instead, which dials out to a job broker because the
+  server cannot dial through a home router.
 - **in-client.** A player on the W custom client lends their GPU: the
   server sends the prompt to their client as addon messages and gets the
   text back the same way (custom-client issue 907). The answer is
   checked like any other; the client never decides anything.
+
+Fixed places (in-server, the LAN boxes) are trusted and take any request.
+Places on players' machines (916o's companion program, in-client) are
+contributed and untrusted: **chat requests only**, never guidance, with
+every prompt scrubbed of names, account data and whisper text first
+(916o).
 
 The Lua bridge keeps one effil worker per place-and-slot; workers take
 requests round-robin. Health is tracked per worker; a place that stops

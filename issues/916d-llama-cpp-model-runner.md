@@ -17,8 +17,9 @@ guidance layer, 917's plain-text commands, 918's mirror companions,
 153g's grounding — calls this one module and does not know where the
 model actually runs.
 
-The model is run by **llama.cpp**, a C library (`libllama`, with the
-`ggml` math library under it) that loads one model file into memory and
+The model is run by **llama.cpp**, a library (`libllama`, with the
+`ggml` math library under it; written in C++, with a plain C interface,
+`llama.h`, which is what LuaJIT's `ffi` and the W client call) that loads one model file into memory and
 produces tokens from it. It replaces Ollama, which was a separate
 daemon wrapped around the same kind of engine. llama.cpp is used as a
 library, bundled with the project, in one of three places:
@@ -38,7 +39,10 @@ not."
 ## Current Behavior
 
 No runner exists in mod-soren-chat. luasocket is installed (via 916c)
-but nothing wraps it. Nothing in this project has built llama.cpp yet;
+but nothing wraps it. One piece of the in-server path is proven:
+`scripts/check-llama-grammar` (2026-10-17) calls `libllama.so` from
+`luajit` through `ffi`, loading a model's word list and checking 916h's
+grammar. Nothing in this project has built llama.cpp yet;
 a built copy exists in a sibling project
 (`/home/ritz/programming/ai-stuff/neocities-modernization/libs/llama.cpp/`,
 `bin/`, `lib/`, `include/`), made by that project's
@@ -129,12 +133,17 @@ front on it. One runs on each machine that lends its processor:
   `timings.predicted_ms`. Those fill the result table.
 - `GET /health` answers 200 when the model is loaded and 503 while it is
   still loading. 916f and 916m use it.
-- Network direction matters. The worldserver dials the program, so the
-  program must be reachable from the server: true for the LAN
-  mini-PCs, usually false for a player's computer at home behind a
-  router. A player's own computer as a "beside" place needs either the
-  program to dial out to the server, or the in-client placement instead.
-  Recorded as an open question.
+- Network direction decides two kinds of "beside" place:
+  - **Fixed and trusted** (the LAN mini-PCs, the owner's desktop): the
+    worldserver dials the program, so it must be reachable from the
+    server. Named in `01-config.lua`. Gets any kind of request.
+  - **Contributed** (a player's own computer at home, behind a router
+    the server cannot dial through): this is 916o's companion program.
+    It wraps `llama-server`, holds one **outgoing** connection to a
+    small job broker beside the worldserver, and comes and goes as the
+    player pleases. Untrusted, so it gets **chat requests only**, and
+    only after 916o's prompt scrubber has removed names, account data and
+    whisper text.
 
 ### Placement 3 — in-client
 
@@ -151,13 +160,20 @@ The server still decides everything; the client only lends its GPU:
   pieces through ALE's addon-message hook (server event 30,
   `ADDON_EVENT_ON_MESSAGE`), joins them by request number, and hands the
   text to the worker as its result.
-- The answer is untrusted text from a player's machine. It goes through
-  the same checks as any answer (916i's closed list of real strategy
-  names, 916l's text filter) and can never do more than a model answer
-  from the server could.
-- Only a player on the W client can be asked. A player on the stock
-  client has no place to run it, so their bots use one of the other two
-  placements.
+- A player's client is a contributed place, under the same rules as
+  916o's companion program: **chat requests only**, never guidance (which
+  decides bot strategy); every prompt passes 916o's scrubber first; the
+  answer is untrusted text that goes through the same checks as any
+  answer (916i's shape check, 916l's text filter) and can never do more
+  than a model answer from the server could; a client whose answers keep
+  failing is quarantined (916f).
+- This is 916o's idea with the separate program folded into the client.
+  916o chose a companion program because the stock 3.3.5a client is
+  closed and its addons cannot run a model; the W client is ours, so it
+  can. 916o's gizmo (the in-game window of dials, gauges and the text
+  as it streams) becomes part of the W client too.
+- A player on the stock client can still contribute through 916o's
+  companion program, a contributed "beside" place.
 
 ## Implementation Steps
 
@@ -170,9 +186,33 @@ The server still decides everything; the client only lends its GPU:
    milliseconds). A non-200 status returns the status and the body's
    `error.message`.
 3. `in-server`: the `ffi.cdef` of the handful of `llama.h` functions
-   used (load model, new context, tokenize, batch decode, sampler chain
-   with temperature and grammar, token to text, free), copied from the
-   `include/llama.h` of the pinned build so they match exactly.
+   used, copied from the `include/llama.h` of the pinned build so they
+   match exactly. In the order one generation uses them:
+
+   | Step | Function | What it does |
+   |------|----------|--------------|
+   | once per process | `llama_backend_init` | starts the math library (and the GPU backend if built with one) |
+   | once per process | `llama_model_load_from_file` | reads the `.gguf` into memory; returns the shared, read-only model |
+   | once per process | `llama_model_get_vocab` | the model's token table, needed to tokenize and to make a grammar |
+   | once per worker | `llama_init_from_model` | makes this worker's own context (its key/value cache) |
+   | per request | `llama_memory_clear` | empties the context so the last conversation is forgotten |
+   | per request | `llama_tokenize` | prompt text → array of 32-bit token numbers |
+   | per request | `llama_sampler_chain_init`, `llama_sampler_chain_add` with `llama_sampler_init_grammar` (vocab, grammar text, root rule name), `llama_sampler_init_temp`, `llama_sampler_init_dist` (random pick by probability, from a seed) | the rules for choosing each next token: grammar first, then temperature, then the pick |
+   | per token | `llama_batch_get_one` + `llama_decode` | feeds tokens in (the whole prompt the first time, one token after) |
+   | per token | `llama_sampler_sample` | picks the next token |
+   | per token | `llama_vocab_is_eog` | is it an end token? then stop |
+   | per token | `llama_token_to_piece` | token → its bytes of text |
+   | per request | `llama_sampler_free` | frees the rules |
+   | at shutdown | `llama_free`, `llama_model_free`, `llama_backend_free` | in that order |
+
+   Checked 2026-10-17 against the header of the build in
+   neocities-modernization's `libs/llama.cpp/` (llama.cpp commit
+   `9881906`, version `0.6.0-dev`). llama.cpp renames functions between
+   releases (the model loader was `llama_load_model_from_file` before
+   it), which is why the tag is pinned and the `cdef` is copied, not
+   written from memory. The libraries to `ffi.load` are `libllama.so`
+   and, beside it, `libggml.so`, `libggml-base.so`, `libggml-cpu.so` and
+   (in a GPU build) `libggml-cuda.so`.
 4. `in-client`: the piece-splitting and joining, keyed by request
    number, with a timeout that reports how many pieces arrived.
 5. Each error says which placement, which `where`, and how far the
@@ -197,14 +237,21 @@ The server still decides everything; the client only lends its GPU:
   "beside" the natural first one, and it keeps a library crash out of
   the worldserver. "in-server" removes the network but puts the model's
   memory and any crash inside the world. Undecided.
-- **A player's computer as "beside".** If the program runs on a
-  player's home computer, should it dial out to the server (a
-  persistent connection the server answers on) rather than wait to be
-  dialed? Or is a player's computer always "in-client" instead?
+- **in-client and the job broker: one route or two?** 916o's companion
+  program reaches the server through its job broker (an outgoing
+  connection of its own); this issue's in-client place goes through
+  addon messages on the game connection the client already has. Addon
+  messages need nothing new but cost about 250 bytes a packet and travel
+  with the game's own traffic. Should the W client use the broker's
+  connection too, so all contributed places look alike to the server?
 - **in-server binding: `ffi` or the C++ shim?** `ffi` needs no C++ and
   hot-reloads with ALE; the 916a/916b shim could own the model instead
   and expose one Lua function, which keeps raw addresses out of Lua.
-  Leaning `ffi`.
+  Leaning `ffi`. Evidence so far: `scripts/check-llama-grammar` already
+  loads `libllama.so` through `ffi` from plain `luajit`, reads a model's
+  word list and builds grammar samplers, with about 40 lines of copied
+  declarations. Not yet tried: inside ALE's Lua state in the worldserver,
+  and from inside an effil thread.
 - **Model file.** Ollama tags (`llama3.2:1b`, `qwen2.5:1.5b`) become
   GGUF files (for example a 1B instruct model at `Q4_K_M`, four-bit
   weights, roughly 0.8 GB). Which one is still the benchmark's job
@@ -222,6 +269,10 @@ The server still decides everything; the client only lends its GPU:
   module from inside worker threads, one context or one slot per worker
 - [916f - Health rotation](916f-cluster-health-rotation.md) — `/health`
   for "beside", context failures for "in-server", silence for "in-client"
+- [916o - Player-contributed LLM compute](916o-player-contributed-llm-compute.md)
+  — the trust rules (chat only, scrubbed prompts, quarantine), the job
+  broker and companion program for contributed "beside" places, and the
+  gizmo; placement 3 is its idea inside the W client
 - W client issue 907 (the model in the client) — the client half of
   placement 3
 - llama.cpp: <https://github.com/ggml-org/llama.cpp> — `include/llama.h`
