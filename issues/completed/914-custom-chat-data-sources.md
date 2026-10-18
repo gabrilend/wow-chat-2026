@@ -188,3 +188,37 @@ The goal is to make bot chat feel natural and varied without being annoying. Key
 - Personality creates memorable characters
 - Cooldowns prevent spam
 - Silent type exists for those who prefer quiet bots
+
+## Since then (checked 2026-10-17)
+
+**The same wish, tried three ways.** Bots that talk like someone, not
+like playerbots' stock random lines, has been designed three times,
+each answering what the one before left open:
+
+| Try | Issue | Where the words come from | What it left open |
+|---|---|---|---|
+| 1 | 914 (this) | authored lines in JSON, picked by weight and personality | every line written by hand; bots repeat themselves |
+| 2 | 915 | the same lines, plus a model writing 1 reply in 10 | two systems to keep in step; how to call a model without stalling the server ("ALE HTTP or external curl", unsolved there) |
+| 3 | 916 | a model writes every line, through worker threads, and the same module also sets bots' tactics | not built yet (no `mod-soren-chat` module exists); which model, and where it runs |
+
+What this issue gave the third try is listed above ("What carries
+forward"); the archetype as a prompt input, the per-bot cooldown and
+the trigger list are all in 916's chat sub-issues (916k, 916l).
+
+**One thing that changed direction.** "The fallback behavior on
+failure (Ollama unreachable → quiet bot)" was carried forward as a
+quiet, silent degradation. The project's rule since then prefers a
+reported error to a quiet fallback, and the later chat design follows
+it: on branch `llama-cpp-study` (2026-10-17, not yet merged), 916 runs
+its model with llama.cpp instead of Ollama, every reply is shaped by a
+grammar, and a reply the grammar should have made impossible is logged
+as an error (916i, 916l), not hidden. A bot whose model is down is
+still quiet, but the operator sees why (916n).
+
+**Paths named above, now.** Playerbots' text manager moved to
+`modules/mod-playerbots/src/Mgr/Text/PlayerbotTextMgr.cpp` and its say
+action to `src/Ai/Base/Actions/SayAction.cpp` (in the build's source
+tree, which git ignores; `PlayerbotAI.cpp` is where it was). The three
+Lua and config files under Implementation were never made: this issue
+was closed as superseded before anything was built. "Issue 331" is 915
+(`issues/MIGRATION_MAP.md`).

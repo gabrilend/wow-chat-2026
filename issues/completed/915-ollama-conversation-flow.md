@@ -343,3 +343,32 @@ This is experimental. The goal is occasional "magic moments" where a bot says so
 - Ollama downtime is invisible to players
 
 Start with a small, fast model (llama3.2:3b or similar). Quality matters less than speed and staying in character. A mediocre response delivered quickly beats a perfect response that arrives too late.
+
+## Since then (checked 2026-10-17)
+
+The middle of three tries at bots that talk like someone (the table is
+in 914's "Since then"). Its two open problems were how to call a model
+without stalling the game, and running two sources of lines side by
+side. 916 answered both: every line comes from the model, and the calls
+run in worker threads off the game's clock (916e), so nothing waits.
+
+**The model itself moved on.** This issue planned a single Ollama
+server on the same machine (`localhost:11434`); 916 planned three on
+the LAN. On 2026-10-17 (branch `llama-cpp-study`, not yet merged) 916
+dropped Ollama for llama.cpp used as a library, run in any of three
+places: inside the game server, as a small program on another computer
+(the LAN boxes), or inside a player's own custom client (916d). This
+file keeps its Ollama wording as the record of what was planned then.
+
+**What its numbers became.** The "10% of conversations" overlay has no
+successor: 916 has no authored lines to fall back to. The "graceful
+degradation" (Ollama down → use the JSON lines, log a warning once)
+became, by the project's later rule against quiet fallbacks, a reply
+that is checked and an error that is reported (916i, 916l, 916n). The
+response clean-up it designed (strip quotes and line breaks, cut to
+length) survives in 916l's filter, and since 2026-10-17 most of it is
+done before the words are written, by a grammar that allows one plain
+sentence only.
+
+Nothing in this file was ever built; the code above is the design as it
+stood in April.
