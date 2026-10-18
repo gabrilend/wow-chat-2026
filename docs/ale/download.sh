@@ -9,7 +9,7 @@
 # preserving only this script and the local .gitignore. Run it any time
 # you want fresh upstream docs.
 
-DIR="${DIR:-/mnt/mtwo/games/azeroth-core/wow-chat-2026/docs/ale}"
+DIR="${DIR:-/mnt/kaun/wow-chat-2026/docs/ale}"
 
 set -e
 

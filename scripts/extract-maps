@@ -4,7 +4,7 @@
 # Extracts game data from WoW 3.3.5a client using profile-specific tools.
 # Outputs to data-files/ directory for use by the server.
 
-DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
+DIR="/mnt/kaun/wow-chat-2026"
 CLIENT_DIR="/mnt/dile/ritz/games/wotlk"
 
 # Load the active profile. Reads .profile — the same file every other

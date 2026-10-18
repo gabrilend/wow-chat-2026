@@ -25,7 +25,7 @@
 -- Exit status 0 if every case behaves as expected.
 
 -- {{{ settings
-local DIR       = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR       = arg[1] or "/mnt/kaun/wow-chat-2026"
 local LLAMA_DIR = arg[2] or "/home/ritz/programming/ai-stuff/neocities-modernization/libs/llama.cpp"
 local MODEL     = arg[3] or "/home/ritz/programming/ai-stuff/neocities-modernization/assets/models/nomic-embed-text-v1.5.Q8_0.gguf"
 -- }}}

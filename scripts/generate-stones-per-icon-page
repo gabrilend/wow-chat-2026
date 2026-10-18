@@ -23,7 +23,7 @@
 import sys, os, io, json, base64, struct, subprocess
 
 # {{{ DIR configuration
-DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+DIR = "/mnt/kaun/wow-chat-2026"
 if len(sys.argv) > 1 and sys.argv[1].startswith("--dir="):
     DIR = sys.argv.pop(1)[len("--dir="):]
 DBC      = DIR + "/data-files/dbc/"

@@ -29,7 +29,7 @@
 set -uo pipefail
 
 # {{{ configuration
-DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+DIR="/mnt/kaun/wow-chat-2026"
 [[ -n "${1:-}" ]] && DIR="$1"
 PER_MAP="${2:-600}"
 

@@ -148,7 +148,7 @@ front on it. One runs on each machine that lends its processor:
 ### Placement 3 — in-client
 
 The W custom client links `libllama` itself (that project's issue 907,
-`/home/ritz/games/azeroth-core/custom-client/issues/907-the-model-in-the-client.md`).
+`/mnt/kaun/custom-client/issues/907-the-model-in-the-client.md`).
 The server still decides everything; the client only lends its GPU:
 
 - The worker sends the request to that player as an addon message

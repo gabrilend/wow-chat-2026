@@ -45,7 +45,7 @@
 local ffi = require("ffi")
 local bit = require("bit")
 
-local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = "/mnt/kaun/wow-chat-2026"
 local WORKER_MAP
 local MAPS = {}
 if arg[1] == "--worker" then

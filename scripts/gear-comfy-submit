@@ -50,7 +50,7 @@
 --         file appended to assets/gear-designs/generated.tsv
 
 -- {{{ arguments
-local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = "/mnt/kaun/wow-chat-2026"
 local opt = { workflow = "concept", server = "http://127.0.0.1:8188",
               libs = "/home/ritz/programming/ai-stuff/libs/lua", ["sd-dir"] = "/mnt/kaun/stable-diffusion" }
 do

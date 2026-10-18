@@ -4,7 +4,7 @@
 // JavaScript implementation's answer, one line each, for the Lua half
 // (lua-side.lua) to answer again and compare. Usage: gjs js-side.js DIR
 const GLib = imports.gi.GLib;
-const DIR = ARGV[0] || "/mnt/mtwo/games/azeroth-core/wow-chat-2026";
+const DIR = ARGV[0] || "/mnt/kaun/wow-chat-2026";
 const src = new TextDecoder().decode(GLib.file_get_contents(DIR + "/docs/HTML/buddy-roaming/roam-pattern.js")[1]);
 (new Function(src))();
 const RP = globalThis.RoamPattern;

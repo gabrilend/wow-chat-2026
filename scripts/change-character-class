@@ -35,7 +35,7 @@
 set -euo pipefail
 
 # {{{ configuration
-DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+DIR="/mnt/kaun/wow-chat-2026"
 if [[ "${1:-}" == "--dir" ]]; then DIR="$2"; shift 2; fi
 DRY=0
 if [[ "${1:-}" == "--dry-run" ]]; then DRY=1; shift; fi

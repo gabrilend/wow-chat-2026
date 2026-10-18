@@ -20,7 +20,7 @@
 
 set -o pipefail
 
-DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+DIR="/mnt/kaun/wow-chat-2026"
 KEEP=false
 for a in "$@"; do
     case "${a}" in

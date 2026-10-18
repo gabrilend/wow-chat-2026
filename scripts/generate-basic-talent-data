@@ -17,7 +17,7 @@
 --   Reads   data-files/dbc/{Talent,TalentTab,Spell}.dbc
 --   Writes  src/lua-basic/data/buddy-talent-data.lua (whole file, generated)
 
-local DIR = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = arg[1] or "/mnt/kaun/wow-chat-2026"
 local DBC = DIR .. "/data-files/dbc/"
 local OUT = DIR .. "/src/lua-basic/data/buddy-talent-data.lua"
 

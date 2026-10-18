@@ -17,13 +17,13 @@ its compiled-in default.
 Verification:
 ```
 $ strings installed-files-release/bin/authserver | grep installed-files
-/home/ritz/games/azeroth-core/wow-chat-2026/installed-files-shadow/lib
-/home/ritz/games/azeroth-core/wow-chat-2026/installed-files-shadow/etc
+/mnt/kaun/wow-chat-2026/installed-files-shadow/lib
+/mnt/kaun/wow-chat-2026/installed-files-shadow/etc
 ```
 
 Authserver log confirms:
 ```
-> Using configuration file  /home/ritz/games/azeroth-core/wow-chat-2026/installed-files-shadow/etc/authserver.conf
+> Using configuration file  /mnt/kaun/wow-chat-2026/installed-files-shadow/etc/authserver.conf
 ```
 
 ## Intended Behavior
@@ -63,12 +63,12 @@ binary; the embedded path still points at the right etc directory.
 After applying:
 ```
 $ strings installed-files-release/bin/authserver | grep installed-files-
-/home/ritz/games/azeroth-core/wow-chat-2026/installed-files-release/etc
+/mnt/kaun/wow-chat-2026/installed-files-release/etc
 ```
 
 Authserver log should show:
 ```
-> Using configuration file  /home/ritz/games/azeroth-core/wow-chat-2026/installed-files-release/etc/authserver.conf
+> Using configuration file  /mnt/kaun/wow-chat-2026/installed-files-release/etc/authserver.conf
 ```
 
 ## Edge Case (Resolved)

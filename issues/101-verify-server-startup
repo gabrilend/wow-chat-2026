@@ -55,7 +55,7 @@ This is the foundation—without a running server, there's no game.
 All configuration updated from global paths to project-local:
 
 **scripts/azerothcore:**
-- `DIR` → `/home/ritz/games/azeroth-core/wow-chat-2026`
+- `DIR` → `/mnt/kaun/wow-chat-2026`
 - `MYSQL_DIR` → `${DIR}/mysql/installed-files`
 - Database port → 3307 (project-local MySQL)
 - Lua scripts symlinked from `${DIR}/src/lua`

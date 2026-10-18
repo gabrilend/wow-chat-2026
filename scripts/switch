@@ -2,7 +2,7 @@
 # scripts/switch - Switch to a different profile
 # Changes the active profile without recompiling
 
-DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
+DIR="/mnt/kaun/wow-chat-2026"
 
 # =============================================================================
 # Profile Definitions

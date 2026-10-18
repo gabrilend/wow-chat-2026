@@ -12,7 +12,7 @@
 #
 # Usage: scripts/test-roam-pattern [PROJECT_DIR]
 #   Needs gjs (JavaScript) and luajit. Light: a few seconds of one core.
-DIR="${1:-/mnt/mtwo/games/azeroth-core/wow-chat-2026}"
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
 TMPD="${DIR}/tmp/shared-memory"
 mkdir -p "${TMPD}"
 JSOUT="${TMPD}/roam-pattern-js.txt"

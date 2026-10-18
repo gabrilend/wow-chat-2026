@@ -18,7 +18,7 @@
 -- Usage: scripts/test-world-boss-countdown [PROJECT_DIR]
 -- Exit status: 0 when every check passes, 1 otherwise.
 
-local DIR = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = arg[1] or "/mnt/kaun/wow-chat-2026"
 local LIB = DIR .. "/src/lua-basic/lib/world-boss-countdown.lua"
 local SCRIPT = DIR .. "/src/lua-basic/world-boss-respawn.lua"
 

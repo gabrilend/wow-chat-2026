@@ -13,14 +13,14 @@
 -- changes. Issue 173t.
 --
 -- Usage: scripts/generate-custom-client-creatures [PROJECT_DIR] [--db NAME] [--map ID] [--out DIR]
---   PROJECT_DIR  default /mnt/mtwo/games/azeroth-core/wow-chat-2026
+--   PROJECT_DIR  default /mnt/kaun/wow-chat-2026
 --   --db NAME    the world database (default: the active profile's, from
 --                .profile, named as patches/E-patches.sh's _profile_db_name
 --                names it: release and beta acore_world, the others
 --                acore_world_<profile>)
 --   --map ID     the map (default 1, Kalimdor)
 --   --out DIR    where the list goes (default: the W client's assets/world,
---                /mnt/mtwo/games/azeroth-core/custom-client/assets/world,
+--                /mnt/kaun/custom-client/assets/world,
 --                where the client moved on 2026-10-07, issue 173v)
 --   writes OUT/creatures-<map>.tsv
 --   (git-ignored: each server's world differs)
@@ -32,9 +32,9 @@
 -- spawn's guid as the dice, so the same spawn always gets the same one.
 -- MySQL must be running (scripts/start-mysql).
 
-local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = "/mnt/kaun/wow-chat-2026"
 local db, map = nil, 1
-local out_dir = "/mnt/mtwo/games/azeroth-core/custom-client/assets/world"
+local out_dir = "/mnt/kaun/custom-client/assets/world"
 local i = 1
 if arg[1] and not arg[1]:match("^%-%-") then DIR = arg[1]; i = 2 end
 while arg[i] do

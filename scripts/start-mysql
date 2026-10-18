@@ -18,7 +18,7 @@
 # stop waiting early if the new mysqld process exits (startup failed).
 
 # {{{ set_dir
-DIR="/home/ritz/games/azeroth-core/wow-chat-2026"
+DIR="/mnt/kaun/wow-chat-2026"
 if [[ -n "$1" ]]; then
     DIR="$1"
 fi
