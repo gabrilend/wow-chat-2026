@@ -57,6 +57,34 @@ Original design was over-engineered. Simplified approach:
 Custom class players can learn spells from multiple base classes. When the travel system would spawn a trainer, custom class players receive a trainer for one of their learnable classes instead of their base class trainer.
 
 ## Current Behavior
+
+As of 2026-10-17 (branch beta-homework, to be merged):
+- Travellers run on beta again (`src/lua-beta/travel.lua`, on its own
+  clock: a minute after login, then every 130 s, not while dead, swimming
+  or sitting; real players only). Among them, one class trainer of the
+  player's class whose slice holds the player's level.
+- The trainer table lives in `src/lua-beta/data/travel-trainers.lua`
+  (129 rows: every class, levels 1-20, both factions; death knight
+  trainers for either). Three slips were corrected there against the
+  world database: a priest trainer that did not exist (4906, now 4606),
+  a warrior trainer filed as a druid trainer (3043, now 3034), and druids
+  numbered -10 where the game numbers them 11 (no druid met a trainer).
+- "Each trainer has a level range they teach" is now true in the game:
+  install step E014 gives each of these trainers its own copy of its
+  class's lessons, cut at the top of its slice
+  (`scripts/generate-beta-trainer-tiers-sql`, from the same data file).
+  Until then E014 wrote `npc_trainer`, which the server no longer reads,
+  so every trainer taught its whole class list.
+- `scripts/test-travel` checks every class at every level 1-20 for both
+  factions meets exactly one trainer of its class whose slice holds its
+  level; `scripts/test-beta-sql-in-ram` checks the cut copies on a stock
+  world database, and that their undo leaves it exactly as it was.
+- The custom-class redirection below (a custom class meets base-class
+  trainers of its eligible classes) is dormant: the custom-class
+  framework is off. Issue 721 replaces it for beta: a custom class meets
+  trainers of its own class only.
+
+Originally:
 - Travel system spawns trainers from a pool (travel.lua trainers table)
 - Each trainer has a level range they teach
 - Custom class players would receive their base class trainer

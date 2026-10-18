@@ -54,21 +54,26 @@ it; `scripts/test-beta-lua-load` lists it):
   drifting clock, with wow-chat-1's holds restored 2026-10-17), the death
   knights' Ebon Hold exits and auto-completed starting quests, the group
   hearthstone, the Knight's class definition (loaded, but nothing offers
-  it), and the extensions (per-object data, bag slots, stack traces).
+  it), the extensions (per-object data, bag slots, stack traces), and
+  (branch beta-homework, 2026-10-17, to be merged) the travellers, on
+  their own clock, bringing vendors, innkeepers and a class trainer of the
+  player's level (`scripts/test-travel`).
 - **Switched off** (`*.lua.disabled`, or a folder with a leading dot):
-  the periodic-events scheduler, treasure chests, travellers (who carry
-  the trainers and merchants), ability tomes, death durability, chest
-  vulnerability, the custom-class framework, levelling (talent cap), and
-  the eleven bot behaviors.
+  the periodic-events scheduler (its traveller part now lives in
+  travel.lua; its bot part waits for step 7), treasure chests and chest
+  vulnerability (open question 3), ability tomes, death durability, the
+  custom-class framework, levelling (talent cap), and the eleven bot
+  behaviors.
 - **The world** after beta's install: creature spawns cleared except
-  critters and spirit healers (E012). Trainer spells reworked for 1–20
-  (E013, E014), class-selector NPCs and empty loot chests created (E015,
-  E016), but nothing places or uses them while travellers, treasure and
-  the class framework are off. A new character can't learn a spell.
-  Worse, E011, E013 and E014 write their trainer data to `npc_trainer`, a
-  table the current server no longer reads (it reads `trainer` and
-  `trainer_spell`), so they would do nothing even with trainers present
-  (found 2026-10-17; 206's note, 721's first step).
+  critters and spirit healers (E012). On branch beta-homework, the trainer
+  steps write the current tables (E011 the death knight kit, E013 quest
+  spells, E014 each travelling trainer's slice), so travelling trainers
+  teach; until then they wrote `npc_trainer`, which the server no longer
+  reads. E005 (death knight stats into an equally unread table) left the
+  list. All beta world steps apply, re-apply and undo exactly on a stock
+  world database (`scripts/test-beta-sql-in-ram`). Class-selector NPCs and
+  empty loot chests (E015, E016) are made but unused while the class
+  framework and treasure are off.
 - **The build:** the installed server is from 9 April 2026, older than
   the current upstream pin and the June folder rename; its script link
   points at a folder that no longer exists, so it would boot with no
@@ -138,6 +143,12 @@ Still open:
    knight is still stock. With a cap of 20, only game masters can make
    one. Lower it for beta? (And 718's Chromie proposal asks which profile
    the death knight story belongs to.)
+3. Treasure: a chest shows its first opener (the "holder") nothing, and
+   gives its loot to whoever opens it second (the "searcher"; issues 407
+   and 408, `chest-vulnerability.lua.disabled`). A player alone, or with
+   bots who never open chests, gets nothing from their own chests. Should
+   a lone player be able to loot their own chest (and if so, what does the
+   holder and searcher design keep)?
 
 ## Related
 

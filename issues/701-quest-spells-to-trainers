@@ -6,6 +6,20 @@
 - Priority: Medium
 
 ## Current Behavior
+
+As of 2026-10-17 (branch beta-homework, to be merged): beta's install
+step E013 (`sql/beta/db_world.src/13-quest-spells-to-trainers.apply.sql`)
+adds the 21 quest-taught lessons below to every class trainer list of
+their class, on the current trainer tables (`trainer`, `trainer_spell`).
+Until then it wrote `npc_trainer` under the old reference numbers
+200001-200020, which the server no longer reads, so none of these
+lessons was ever offered on the current server, and its undo deleted the
+game's own reference rows in that range. The undo now removes exactly
+the lessons the step added (recorded in `wow_chat_e013_added`).
+Travelling trainers teach them through their level-cut copies (503,
+E014). Checked on a stock world database by `scripts/test-beta-sql-in-ram`.
+
+Before any of this:
 - Many class abilities are learned through quests in vanilla WoW
 - Our server has no quest NPCs, so these abilities are inaccessible
 - Players miss core class abilities that define their playstyle
