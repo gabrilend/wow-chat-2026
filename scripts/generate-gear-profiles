@@ -19,7 +19,7 @@
 -- Defaults: 24 profiles; the seed is the round number, so a round made again
 -- from the same votes comes out the same.
 
-local DIR, COUNT, SEED, VOTES = "/mnt/mtwo/games/azeroth-core/wow-chat-2026", 24, nil, nil
+local DIR, COUNT, SEED, VOTES = "/mnt/kaun/wow-chat-2026", 24, nil, nil
 do
     local i = 1
     while i <= #arg do

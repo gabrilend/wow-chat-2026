@@ -8,7 +8,7 @@
 -- - Phase progress tracking
 
 -- {{{ DIR Configuration
-local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = "/mnt/kaun/wow-chat-2026"
 
 if arg[1] and arg[1]:match("^%-%-dir=") then
     DIR = arg[1]:gsub("^%-%-dir=", "")

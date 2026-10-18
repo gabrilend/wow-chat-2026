@@ -29,7 +29,7 @@ version's work, paced by the players who vote and the money that comes in.
   (`/home/ritz/programming/ai-stuff/world-edit-to-execute/`): the WC3
   engine; its phase W holds the readers, the capture rig and the asset
   forge.
-- **The custom client** (`/mnt/mtwo/games/azeroth-core/custom-client/`):
+- **The custom client** (`/mnt/kaun/custom-client/`):
   a third project, separate from both, that plays the assets and gameplay
   of both. The other two do most of the work on it.
 

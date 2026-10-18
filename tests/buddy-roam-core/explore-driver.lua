@@ -20,7 +20,7 @@
 --   (mode: least | rooms | disc)
 --------------------------------------------------------------------------------
 
-local DIR  = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR  = arg[1] or "/mnt/kaun/wow-chat-2026"
 local MODE = arg[2]
 local Roam = dofile(DIR .. "/src/lua-basic/lib/buddy-roam.lua")
 

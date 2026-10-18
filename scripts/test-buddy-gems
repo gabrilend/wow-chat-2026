@@ -20,7 +20,7 @@
 
 set -uo pipefail
 
-DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+DIR="/mnt/kaun/wow-chat-2026"
 [[ $# -gt 0 ]] && DIR="$1"
 MYSQL="${DIR}/mysql/installed-files/bin/mysql"
 WORLD="acore_world_basic"

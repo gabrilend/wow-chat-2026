@@ -24,7 +24,7 @@
 -- Usage: scripts/generate-vanilla-starting-equipment-sql [PROJECT_DIR] [--stdout]
 
 -- {{{ configuration
-local DIR, STDOUT = "/mnt/mtwo/games/azeroth-core/wow-chat-2026", false
+local DIR, STDOUT = "/mnt/kaun/wow-chat-2026", false
 for _, a in ipairs(arg) do
     if a == "--stdout" then STDOUT = true elseif a ~= "" then DIR = a end
 end

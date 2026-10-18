@@ -32,7 +32,7 @@
 --   be built from.
 --------------------------------------------------------------------------------
 
-local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = "/mnt/kaun/wow-chat-2026"
 if arg[1] and arg[1] ~= "" then DIR = arg[1] end
 local PROFILE = arg[2] or "basic"
 local SRC = (arg[3] and arg[3] ~= "") and arg[3] or (DIR .. "/source-beta")

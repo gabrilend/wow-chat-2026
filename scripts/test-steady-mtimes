@@ -20,7 +20,7 @@
 # Usage: scripts/test-steady-mtimes [PROJECT_DIR] [COMPILE_SCRIPT]
 #   COMPILE_SCRIPT defaults to PROJECT_DIR/scripts/compile.
 
-DIR="/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+DIR="/mnt/kaun/wow-chat-2026"
 [[ -n "${1:-}" ]] && DIR="$1"
 COMPILE="${2:-${DIR}/scripts/compile}"
 

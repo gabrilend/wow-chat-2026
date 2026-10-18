@@ -1,6 +1,6 @@
 # 173 - The Custom Client
 
-*Continues in the W client (`/mnt/mtwo/games/azeroth-core/custom-client/`), since the move on 2026-10-07 (173v): the whole client: its roadmap (docs/009) and crosswalk. This issue stays as the record of how the client began; its paths are as they were then.*
+*Continues in the W client (`/mnt/kaun/custom-client/`), since the move on 2026-10-07 (173v): the whole client: its roadmap (docs/009) and crosswalk. This issue stays as the record of how the client began; its paths are as they were then.*
 
 ## Status
 - Created: 2026-10-04
@@ -143,5 +143,5 @@ interface, 617s7's box select, 719's tooltips.
 
 1. (Answered 2026-10-07) Where does the client live? "it will become it's
    own project. See ../custom-client for details." The sibling project
-   `/mnt/mtwo/games/azeroth-core/custom-client` (the W client) holds the
+   `/mnt/kaun/custom-client` (the W client) holds the
    design. The move is 173v, which has its own open questions.

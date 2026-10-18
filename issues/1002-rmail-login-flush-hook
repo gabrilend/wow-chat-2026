@@ -33,7 +33,7 @@ This "primes the pump" for queued message delivery.
 -- Master flush hook - runs on player login
 -- Triggers all rmail service flush scripts
 
-local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = "/mnt/kaun/wow-chat-2026"
 
 local FLUSH_SCRIPTS = {
     DIR .. "/game-mail/mail/scripts/mail-onlogin.lua",
@@ -63,7 +63,7 @@ Instead of multiple scripts, one script that handles all services:
 -- {{{ rmail-flush-all.lua
 -- Flush all rmail service queues
 
-local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR = "/mnt/kaun/wow-chat-2026"
 
 -- {{{ Service definitions
 local services = {
@@ -117,7 +117,7 @@ end
 ```lua
 -- {{{ OnPlayerLogin (ALE)
 local function OnPlayerLogin(event, player)
-    os.execute("lua /mnt/mtwo/games/azeroth-core/wow-chat-2026/scripts/rmail-flush-all.lua &")
+    os.execute("lua /mnt/kaun/wow-chat-2026/scripts/rmail-flush-all.lua &")
 end
 RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, OnPlayerLogin)
 -- }}}

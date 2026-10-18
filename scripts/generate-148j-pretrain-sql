@@ -24,7 +24,7 @@
 set -euo pipefail
 
 # Project root — overridable for portability per CLAUDE.md convention.
-DIR="${1:-/home/ritz/games/azeroth-core/wow-chat-2026}"
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
 
 MYSQL_BIN="${DIR}/mysql/installed-files/bin/mysql"
 MYSQL_SOCKET="${DIR}/mysql/databases/mysql.sock"

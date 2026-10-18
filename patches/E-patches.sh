@@ -8,7 +8,7 @@
 # E006: Initialize config files
 
 # Get DIR from parent script
-DIR="${DIR:-/home/ritz/games/azeroth-core/wow-chat-2026}"
+DIR="${DIR:-/mnt/kaun/wow-chat-2026}"
 
 # The staging folders the install steps registered this run, for
 # _mirror_staged_sql (issue 183): real path -> database. Global (-g): the

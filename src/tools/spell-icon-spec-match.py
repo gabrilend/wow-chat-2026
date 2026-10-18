@@ -68,7 +68,7 @@ import sys, os, struct, colorsys, io
 # Hard-coded project root, overridable as the first argument so the script runs
 # from anywhere. Everything below is relative to it except the client, which
 # lives beside the project rather than inside it.
-DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+DIR = "/mnt/kaun/wow-chat-2026"
 if len(sys.argv) > 1 and sys.argv[1].startswith("--dir="):
     DIR = sys.argv.pop(1)[len("--dir="):]
 

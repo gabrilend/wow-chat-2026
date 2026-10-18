@@ -123,7 +123,7 @@ most of what the routes above need:
 - **W01** (`issues/W01-read-the-wow-client-archives.md`): readers for the
   client's archives (MPQ), tables (DBC: `ItemDisplayInfo`, `CharSections`),
   textures (BLP) and models (M2). They are built once, in C, in the
-  separate W client (`/mnt/mtwo/games/azeroth-core/custom-client/`, its
+  separate W client (`/mnt/kaun/custom-client/`, its
   issues 105–107 and 401), and shared as `libwreaders.so`. Route 3 reads
   through these.
 

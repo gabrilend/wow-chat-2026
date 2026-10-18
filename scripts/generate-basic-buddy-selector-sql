@@ -16,7 +16,7 @@
 --           who arrive in Acherus, left out)
 --   Writes  sql/basic/db_world.src/26-buddy-selector.apply.sql (GENERATED block)
 
-local DIR   = arg[1] or "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+local DIR   = arg[1] or "/mnt/kaun/wow-chat-2026"
 local DB    = arg[2] or "acore_world_release"
 local OUT   = DIR .. "/sql/basic/db_world.src/26-buddy-selector.apply.sql"
 local MYSQL = DIR .. "/mysql/installed-files/bin/mysql -h127.0.0.1 -P3307 -uritz -pmenardi -N --batch " .. DB

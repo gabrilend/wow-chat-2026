@@ -26,7 +26,7 @@ private servers", kept separate from this project's server profiles.
 ## Current Behavior
 
 **Moved 2026-10-07.** The client lives in the W client,
-`/mnt/mtwo/games/azeroth-core/custom-client/`, and is built, run and
+`/mnt/kaun/custom-client/`, and is built, run and
 tested there (its CLAUDE.md, `scripts/build --test`, `scripts/run`).
 What was done, in 173v's step order:
 
