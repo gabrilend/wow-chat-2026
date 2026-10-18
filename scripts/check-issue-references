@@ -165,7 +165,22 @@ for p in pairs(exists) do
     local b = p:match("^patches/(B%d%d%d%a?)%-[^/]+$")
     if b then patchState[b] = p:find("retired", 1, true) and "retired" or "live" end
     local c = p:match("^config/patches/(C%d%d%d%a?)[%-%._]")
-    if c then patchState[c] = "live" end
+    if c then
+        patchState[c] = "live"
+        -- "C006" names the family (C006a-d: one per profile's level cap)
+        patchState[c:match("^(C%d%d%d)")] = "live"
+    end
+end
+-- When and why a gone patch step left: the commit that deleted its file
+-- (most source patches went on 2026-10-09, when the pins moved to an
+-- upstream that already carried their fixes). Looked up once per step.
+local leftCache = {}
+local function when_left(id)
+    if leftCache[id] ~= nil then return leftCache[id] end
+    local glob = id:sub(1, 1) == "B" and ("patches/" .. id .. "-*") or ("config/patches/" .. id .. "*")
+    local l = lines_of("git -C '" .. DIR .. "' log --diff-filter=D --format='%ad %h %s' --date=short -1 -- '" .. glob .. "'")[1]
+    leftCache[id] = l and (l:sub(1, 120)) or false
+    return leftCache[id]
 end
 do
     local f = io.open(DIR .. "/patches/E-patches.sh")
@@ -369,8 +384,10 @@ for _, file in ipairs(files) do
             local st = patchState[r.id]
             if st ~= "live" then
                 totals.badPatches = totals.badPatches + 1
-                report[#report + 1] = string.format("    patch   line %-4d %s %s", r.line, r.id,
-                    st == "retired" and "has been retired" or "is not in the project")
+                local left = st ~= "retired" and when_left(r.id)
+                report[#report + 1] = string.format("    patch   line %-4d %s %s%s", r.line, r.id,
+                    st == "retired" and "has been retired" or "is not in the project",
+                    left and ("  ->  removed " .. left) or "")
             end
         end
         for _, r in ipairs(issues) do

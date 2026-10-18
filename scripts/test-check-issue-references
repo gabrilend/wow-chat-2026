@@ -35,7 +35,8 @@ Every source patch is `patches/B*.sh` (a wildcard: skipped).
 See issue 329 (renumbered, split in two) and issue 210 (exists).
 Issue 334 (now 127) was the patch-system issue before April.
 The wildcard is patch B003 (live); patch B998 never existed; install step
-E008 is written only as its functions.
+E008 is written only as its functions. The level caps are C006 (a family:
+C006a to C006d).
 The old helper was `src/lua/never-was.lua` (gone; explained below).
 
 ## Since then (checked 2026-10-17)
@@ -73,6 +74,7 @@ refuse "an old number annotated (now N) is explained"  "334 does not exist"
 expect "a patch step that never existed is reported"   "patch .* B998 is not in the project"
 refuse "a live source patch is not a problem"          "patch .* B003"
 refuse "an install step written only as functions is live" "patch .* E008"
+refuse "a config step family (C006 for C006a-d) is live" "patch .* C006 "
 expect "a gone path named under Since then is explained" "999-pretend-issue.md: .*[1-9] explained"
 refuse "an explained path is not counted missing"      "missing .*never-was.lua"
 
