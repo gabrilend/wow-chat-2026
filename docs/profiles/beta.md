@@ -23,9 +23,11 @@ bringing the rest of its game back: [beta-roadmap.md](beta-roadmap.md).*
 - **Death knights from level 1,** leaving Ebon Hold at once (their
   starting quests are completed on first login; three exits teleport
   them out).
-- **A group hearthstone:** when someone in a group hearths, the others
-  are pulled to them (sit down to decline; issue 211 replaces this with a
-  pop-up).
+- **A group hearthstone by invitation** (issue 211, 2026-10-17): when
+  someone in a group starts a hearthstone, the others are asked in a
+  window whether to come along (bots always come); those who say yes
+  travel when the cast finishes and stand in a circle round where the
+  hearther lands. A cancelled hearth moves nobody.
 - **Travellers** (branch beta-homework, 2026-10-17): a minute after
   login and then every 130 seconds, a vendor, innkeeper or class trainer
   of your level appears 30-45 yards away and walks past; it sits when you

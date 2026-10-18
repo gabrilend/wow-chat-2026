@@ -366,6 +366,61 @@ Toy.new_gameobject, Toy.new_item = new_gameobject, new_item
 Toy.give, Toy.sell, Toy.buy_back = give, sell, buy_back
 -- }}}
 
+-- {{{ extra pieces the group hearthstone uses (added 2026-10-17, issue 211)
+-- Groups (Toy.group(list of players) puts them in one), the gossip window a
+-- player can be sent (what it shows is kept in p.window: { items = list of
+-- { text, sender, intid, popup }, menu = number } or nil once closed), a
+-- bind point (p.home = { mapId, x, y, z }), teleports (p.teleports lists
+-- { map, x, y, z, o }), and the item and player-gossip event registers.
+Toy.itemHandlers, Toy.gossipHandlers = {}, {}
+function RegisterItemEvent(entry, event, fn)
+    Toy.itemHandlers[entry] = Toy.itemHandlers[entry] or {}
+    Toy.itemHandlers[entry][event] = fn
+end
+function RegisterPlayerGossipEvent(menu, event, fn)
+    Toy.gossipHandlers[menu] = Toy.gossipHandlers[menu] or {}
+    Toy.gossipHandlers[menu][event] = fn
+end
+local base_player_h = new_player
+new_player = function(name, guidLow)
+    local p = base_player_h(name, guidLow)
+    p.home, p.teleports, p.group = { mapId = 1, x = 0, y = 0, z = 0 }, {}, nil
+    function p:IsInGroup() return self.group ~= nil end
+    function p:GetGroup() return self.group end
+    function p:GetHomebind() return self.home end
+    function p:Teleport(map, x, y, z, o) self.teleports[#self.teleports + 1] = { map = map, x = x, y = y, z = z, o = o } end
+    function p:GossipClearMenu() self.building = { items = {} } end
+    function p:GossipMenuAddItem(icon, text, sender, intid, code, popup)
+        self.building = self.building or { items = {} }
+        table.insert(self.building.items, { text = text, sender = sender, intid = intid, popup = popup })
+    end
+    function p:GossipSendMenu(npcText, sender, menu) self.building.menu = menu; self.window = self.building; self.building = nil end
+    function p:GossipComplete() self.window = nil end
+    return p
+end
+function Toy.group(players)
+    local g = { members = players }
+    function g:GetMembers() return self.members end
+    function g:GetMembersCount() return #self.members end
+    for _, p in ipairs(players) do p.group = g end
+    return g
+end
+-- the player picks an answer in their open window (by its intid)
+function Toy.answer(p, intid)
+    local w = p.window
+    if not w then return false end
+    for _, it in ipairs(w.items) do
+        if it.intid == intid then
+            Toy.gossipHandlers[w.menu][2](2, p, p, it.sender, it.intid, nil, w.menu)
+            return true
+        end
+    end
+    return false
+end
+-- a spell object as the spell-cast event passes it
+function Toy.spell(entry) return { GetEntry = function() return entry end } end
+-- }}}
+
 Toy.World, Toy.handlers = World, handlers
 Toy.schedule, Toy.advance, Toy.pending = schedule, advance, pending
 Toy.new_map, Toy.FLAT = new_map, FLAT

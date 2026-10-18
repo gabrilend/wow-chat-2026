@@ -1,0 +1,151 @@
+#!/usr/bin/env luajit
+-- test-hearthstone - runs beta's group hearthstone (src/lua-beta/hearthstone.lua)
+-- in the pretend world and checks what it does, without a game server.
+--
+-- For a general audience: when someone in a group starts their
+-- hearthstone, the others are asked in a small window whether to come
+-- along; those who say yes travel when the cast finishes and stand in a
+-- circle round where the hearther lands, each at their number's place.
+-- This plays it: a group of four (two players, a bot, the hearther), one
+-- player says yes and one says no; the cast completes, or it is cancelled;
+-- a member logs out in between; the circle's geometry for every group
+-- size. Each scene checks what issue 211 promises.
+--
+-- Usage: scripts/test-hearthstone [PROJECT_DIR]
+-- Exit status: 0 when every check passes, 1 otherwise.
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+
+local fails, checks = 0, 0
+local function check(ok, what)
+    checks = checks + 1
+    if not ok then fails = fails + 1; print("  FAIL: " .. what) end
+end
+
+local here = (arg[0]:match("^(.*[/\\])") or "./")
+local Toy = dofile(here .. "lib/toy-world.lua")
+local World, advance = Toy.World, Toy.advance
+
+local quiet = print
+print = function() end
+dofile(DIR .. "/src/lua-beta/hearthstone.lua")
+print = quiet
+local GH = GroupHearth
+local USE = Toy.itemHandlers[6948][2]
+local CAST = Toy.handlers[5][#Toy.handlers[5]]
+
+local function dist(a, b) return math.sqrt((a.x - b.x) ^ 2 + (a.y - b.y) ^ 2) end
+
+-- {{{ the circle: every size from 2 to 40, places apart, nobody on the centre
+do
+    for n = 2, 40 do
+        local spots = GH.circle(100, 200, n)
+        local closest, centreGap = math.huge, math.huge
+        for i = 1, n do
+            centreGap = math.min(centreGap, dist(spots[i], { x = 100, y = 200 }))
+            for j = i + 1, n do closest = math.min(closest, dist(spots[i], spots[j])) end
+        end
+        check(#spots == n, "a group of " .. n .. " should get " .. n .. " places")
+        check(centreGap >= 2.999, "nobody should stand on the hearther's spot (group of " .. n .. ")")
+        check(n < 3 or closest >= 2.4, "places should be at least 2.5 yards apart in a group of " .. n .. ", closest " .. closest)
+    end
+end
+-- }}}
+
+-- {{{ local function party
+-- The hearther (Ann), two players (Bea, Cid) and a bot (Dot), in a group,
+-- logged in, Ann bound at map 1 (500, 600, 10).
+local function party()
+    World.events = {}
+    local ann, bea, cid, dot = Toy.new_player("Ann", 401), Toy.new_player("Bea", 402),
+                               Toy.new_player("Cid", 403), Toy.new_player("Dot", 404)
+    dot.bot = true
+    ann.home = { mapId = 1, x = 500, y = 600, z = 10 }
+    for _, p in ipairs({ ann, bea, cid, dot }) do Toy.login(p) end
+    Toy.group({ ann, bea, cid, dot })
+    return ann, bea, cid, dot
+end
+-- }}}
+
+-- {{{ the invitation, answered, and the cast completing
+do
+    local ann, bea, cid, dot = party()
+    local ok, err = pcall(USE, 2, ann, nil, nil)
+    check(ok, "starting a hearth should not raise an error (" .. tostring(err) .. ")")
+    check(bea.window ~= nil and cid.window ~= nil, "each other player should be asked in a window")
+    check(ann.window == nil, "the hearther should not be asked")
+    check(dot.window == nil, "a bot should not be shown a window")
+    local hasPopup = false
+    for _, it in ipairs(bea.window and bea.window.items or {}) do if it.popup then hasPopup = true end end
+    check(hasPopup, "'come along' should carry a confirm box (the okay/cancel)")
+    Toy.answer(bea, 1)                                -- Bea: come along
+    Toy.answer(cid, 2)                                -- Cid: stay
+    check(bea.window == nil and cid.window == nil, "an answer should close the window")
+    CAST(5, ann, Toy.spell(8690))
+    check(#bea.teleports == 0, "nobody should move before the hearther has arrived")
+    advance(1600)
+    check(#bea.teleports == 1, "Bea, who said yes, should travel when the cast completes")
+    check(#cid.teleports == 0, "Cid, who said no, should stay")
+    check(#dot.teleports == 1, "the bot should always come")
+    check(#ann.teleports == 0, "the hearther travels by their own hearthstone, not by this")
+    local spots = GH.circle(500, 600, 4)
+    local t = bea.teleports[1]
+    check(t and t.map == 1 and math.abs(t.x - spots[2].x) < 1e-6 and math.abs(t.y - spots[2].y) < 1e-6,
+          "Bea (second in the group) should stand at the second place round the hearther's bind point")
+    check(dot.teleports[1] and math.abs(dot.teleports[1].x - spots[4].x) < 1e-6, "the bot (fourth) should stand at the fourth place")
+    check(next(GH.pending) == nil, "the hearth should be forgotten once done")
+    for _, p in ipairs({ ann, bea, cid, dot }) do Toy.logout(p) end
+end
+-- }}}
+
+-- {{{ a cancelled hearth: windows withdrawn, nobody moved
+do
+    local ann, bea, cid, dot = party()
+    USE(2, ann, nil, nil)
+    Toy.answer(bea, 1)
+    advance(13000)                                    -- the cast never completed
+    check(cid.window == nil, "a cancelled hearth should close the windows still open")
+    check(#bea.teleports == 0 and #dot.teleports == 0, "a cancelled hearth should move nobody, even those who said yes")
+    check(next(GH.pending) == nil, "a cancelled hearth should be forgotten")
+    CAST(5, ann, Toy.spell(8690))                     -- a late completion changes nothing
+    advance(2000)
+    check(#bea.teleports == 0, "a completion after the hearth was called off should move nobody")
+    for _, p in ipairs({ ann, bea, cid, dot }) do Toy.logout(p) end
+end
+-- }}}
+
+-- {{{ a member who logged out in between is skipped, without an error
+do
+    local ann, bea, cid, dot = party()
+    USE(2, ann, nil, nil)
+    Toy.answer(bea, 1)
+    Toy.logout(bea)
+    CAST(5, ann, Toy.spell(8690))
+    local ok, err = pcall(advance, 1600)
+    check(ok, "a member logging out before the move should not raise an error (" .. tostring(err) .. ")")
+    check(#bea.teleports == 0, "a member who logged out should not be moved")
+    check(#dot.teleports == 1, "the others should still come")
+    for _, p in ipairs({ ann, cid, dot }) do Toy.logout(p) end
+end
+-- }}}
+
+-- {{{ alone, or another spell: nothing happens
+do
+    World.events = {}
+    local solo = Toy.new_player("Solo", 410)
+    Toy.login(solo)
+    local ok = pcall(USE, 2, solo, nil, nil)
+    check(ok and next(GH.pending) == nil, "a hearthstone used alone should open no group hearth")
+    Toy.logout(solo)
+    local ann, bea = party()
+    USE(2, ann, nil, nil)
+    Toy.answer(bea, 1)
+    CAST(5, ann, Toy.spell(133))                      -- a Fireball, not a hearthstone
+    advance(1600)
+    check(#bea.teleports == 0, "another spell completing should not move the group")
+end
+-- }}}
+
+print(string.format("%d checks, %d failed", checks, fails))
+os.exit(fails == 0 and 0 or 1)

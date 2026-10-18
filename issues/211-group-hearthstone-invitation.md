@@ -33,6 +33,20 @@ when the hearth was cancelled. Shown how the buddies' version works
 
 ## Current Behavior
 
+**Built on branch beta-homework (2026-10-17)** as described in Intended
+Behavior, with the open questions answered by default for now (each
+marked in the script's header): bots in the group always come; a second
+hearther is asked like anyone else and, if they accept, travels with the
+first; the window is the clan-name kind (accept now, move at completion).
+`src/lua-beta/hearthstone.lua` (summary beside it); checked offline by
+`scripts/test-hearthstone` (140 checks: the circle for groups of 2 to
+40, a group of four answering yes and no, a cancelled hearth, a member
+logging out in between, a lone player, another spell), which runs before
+every build. Not yet seen in game.
+
+What it replaced (wow-chat-1's, kept here as the record):
+
+
 `src/lua-beta/hearthstone.lua`, on the Hearthstone item's use (item 6948,
 the moment the cast begins):
 
