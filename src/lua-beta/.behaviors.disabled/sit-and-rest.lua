@@ -85,6 +85,13 @@ function SitAndRest.findConsumable(bot, searchType)
     -- food itemClass = 0, subclass = 0 (consumable, food)
     -- drink itemClass = 0, subclass = 3 (consumable, potion/elixir)
 
+    -- [FIXME]: (2026-10-17, Claude, while fixing useConsumable below) this
+    -- search finds nothing. Bags are not numbered 0-4 to the engine: the
+    -- backpack is bag 255, slots 23-38, and worn bags are bags 19-22, slots
+    -- from 0 (player:GetItemByPos's own notes, PlayerMethods.h). And in
+    -- 3.3.5 food and drink are consumable subclass 5 ("Food & Drink"); 0 is
+    -- the generic consumable and 3 is a flask. Left for whoever brings this
+    -- behavior back (beta roadmap step 7), since it changes what bots eat.
     for bag = 0, 4 do
         for slot = 0, 35 do
             local item = bot:GetItemByPos(bag, slot)
@@ -116,8 +123,17 @@ end -- }}}
 function SitAndRest.useConsumable(bot, item)
     if not item then return false end
 
-    -- use item - API depends on mod-ale
-    bot:UseItem(item)
+    -- The engine has no "use this item" for scripts (this called a UseItem it
+    -- does not have; found 2026-10-17 by scripts/test-ale-method-names). So
+    -- do what using it does: cast the item's on-use spell (spell slot 0,
+    -- trigger 0 = "on use") on the bot, and take one of the item away, since
+    -- a spell cast this way does not use up the item by itself.
+    local spellId = item:GetSpellId(0)
+    if spellId == 0 or item:GetSpellTrigger(0) ~= 0 then
+        return false  -- not an item you use: nothing to cast
+    end
+    bot:CastSpell(bot, spellId, false)
+    bot:RemoveItem(item, 1)
     return true
 end -- }}}
 

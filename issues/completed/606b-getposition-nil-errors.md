@@ -349,6 +349,27 @@ was a mistake of the test's: beta's patch B007 adds it, writing the
 registration as `\&` inside its sed command, which the test did not read
 until the beta session pointed it out the same day.
 
+**The five were then fixed, still switched off** (2026-10-17, the beta
+session agreeing): `MovementExpired` became `MoveExpire`, the engine's
+own name for it; the `SetTarget` line went (`Attack` sets the target);
+`GetPhase` became `GetPhaseMask`, and that line's height lookup, which
+passed the phase first as the C++ one takes it, now passes (x, y, phase)
+as the engine's does and stops if there is no ground; `GetUnitsInRange`
+became `GetPlayersInRange` (the loop after it wants players); and
+`UseItem` became the item's on-use spell cast on the bot plus one item
+taken away. The food search in sit-and-rest carries a signed FIXME for
+two faults outside that change (wrong bag numbers, wrong food category).
+
+**Bare calls are checked too.** A call like `GetCreatureByGUID(guid)`
+fails the same way when the engine has no such function. The test now
+checks CapitalCase bare calls (how the engine's functions are written)
+against the engine's list and every function or table the scripts
+define. Loaded scripts: none unknown. Switched off: `GetCreatureByGUID`,
+15 calls in convoy and gestures. The engine finds a creature by GUID
+through its map (`map:GetWorldObject(guid)`, then `ToCreature()`), so
+those behaviors need their creature lookups reworked before they come
+back; left to step 7, with the beta session told.
+
 **The scripts it names have moved.** `src/lua/behaviors/` became
 `src/lua-beta/behaviors/` with the per-profile folders (2026-06-04),
 then `src/lua-beta/.behaviors.disabled/` (2026-10-17): the engine skips

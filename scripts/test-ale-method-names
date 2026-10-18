@@ -1,6 +1,7 @@
 #!/usr/bin/env luajit
 -- test-ale-method-names - checks that every method the server-side Lua
--- scripts call on a game object is one the Lua engine really has.
+-- scripts call on a game object, and every engine function they call by
+-- name, is one the Lua engine really has.
 --
 -- For a general audience: the game server runs our Lua scripts through
 -- its Lua engine (ALE), which offers a fixed list of things a script can
@@ -12,7 +13,10 @@
 -- engine's own list of names from its source, adds the names our scripts
 -- and the engine's Lua extensions define themselves and Lua's own string
 -- and file methods, then reads every script and reports each method call
--- whose name is in none of them. Scripts switched off (".disabled", or a
+-- whose name is in none of them; and the same for calls of the engine's
+-- functions by name ("GetCreatureByGUID(...)", CapitalCase as the engine
+-- writes them), against its list and what the scripts define. Scripts
+-- switched off (".disabled", or a
 -- folder starting with a dot) are checked too and reported apart, so a
 -- problem is found before something is switched back on.
 --
@@ -99,8 +103,24 @@ end
 --    (.ext) also attaches methods by assignment to each object kind in a
 --    loop ("_G[k].SetData = SetData", ObjectVariables.ext), so in those
 --    files any "x.Name =" counts.
+-- Bare calls ("GetCreatureByGUID(guid)") are checked too, for names in
+-- CapitalCase, which is how the engine's globals are written (Lua's own
+-- are lower case). A script's own functions and tables count as known,
+-- global or local: "function Name(", "local function Name(", "Name =",
+-- "local Name =" anywhere in the scanned scripts.
+local globalsDefined = {}
+local function learn_globals(src)
+    for name in src:gmatch("function%s+([%a_][%w_]*)%s*%(") do globalsDefined[name] = true end
+    for name in src:gmatch("local%s+([%a_][%w_]*)%s*=") do globalsDefined[name] = true end
+    for name in ("\n" .. src):gmatch("\n%s*([%a_][%w_]*)%s*=[^=]") do globalsDefined[name] = true end
+    for names in src:gmatch("local%s+([%w_,%s]+)=") do
+        for name in names:gmatch("[%a_][%w_]*") do globalsDefined[name] = true end
+    end
+end
+
 local function learn_from(path, label)
     local src = strip(read(path) or "")
+    learn_globals(src)
     for name in src:gmatch("function%s+[%w_%.]+:([%a_][%w_]*)%s*%(") do know(name, label) end
     for name in src:gmatch("[%w_]+%.([%a_][%w_]*)%s*=%s*function") do know(name, label) end
     if path:match("%.ext$") then
@@ -163,6 +183,19 @@ for _, path in ipairs(scripts) do
             if not known[name] and not patched[name] then
                 local list = off and offUnknown or unknown
                 list[#list + 1] = string.format("  %s:%d  :%s(", rel, n, name)
+            end
+        end
+        -- bare calls of CapitalCase names: not after ".", ":" or a word
+        -- character (a method, a field, part of a longer name), and not the
+        -- name being defined ("function Name(")
+        for before, name in (" " .. line):gmatch("([^%w_%.:])([A-Z][%w_]*)%s*%(") do
+            local defining = line:match("function%s+" .. name .. "%s*%(") ~= nil
+            if not defining then
+                calls = calls + 1
+                if not known[name] and not patched[name] and not globalsDefined[name] then
+                    local list = off and offUnknown or unknown
+                    list[#list + 1] = string.format("  %s:%d  %s(", rel, n, name)
+                end
             end
         end
     end

@@ -157,7 +157,10 @@ end -- }}}
 -- {{{ OrbitPlayer.avoidClumping
 -- Adjust position to avoid other nearby bots
 function OrbitPlayer.avoidClumping(bot, tx, ty)
-    local bots = bot:GetUnitsInRange(CLUMP_AVOID_RADIUS * 3, 0)  -- get nearby units
+    -- nearby living players (bots are players): range, hostile 0 = either,
+    -- dead 1 = alive only. This called a GetUnitsInRange the engine does not
+    -- have; the loop below wants players (IsBot) (scripts/test-ale-method-names)
+    local bots = bot:GetPlayersInRange(CLUMP_AVOID_RADIUS * 3, 0, 1)
 
     if not bots then return tx, ty end
 

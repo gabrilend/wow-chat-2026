@@ -172,7 +172,7 @@ function Gestures.removeFromConvoy(player, npc)
     for i, guid in ipairs(player_convoys[player_guid]) do
         if guid == npc_guid then
             table.remove(player_convoys[player_guid], i)
-            npc:MovementExpired()
+            npc:MoveExpire()  -- ALE's name for the C++ MovementExpired (606b's check)
             print("[Gestures] " .. npc:GetName() .. " leaves convoy")
             return
         end
@@ -248,7 +248,7 @@ function Gestures.onPlayerSit(player)
 
     for _, npc in ipairs(convoy) do
         -- Stop following
-        npc:MovementExpired()
+        npc:MoveExpire()
 
         -- Move to player's position
         npc:MoveTo(0, px, py, pz, true)
@@ -279,7 +279,12 @@ function Gestures.onPlayerKneel(player)
     -- Calculate target position in facing direction
     local target_x = px + math.cos(facing) * KNEEL_DIRECTION_DIST
     local target_y = py + math.sin(facing) * KNEEL_DIRECTION_DIST
-    local target_z = player:GetMap():GetHeight(player:GetPhase(), target_x, target_y, pz)
+    -- ALE's map height takes (x, y, phase mask) and answers nil where there
+    -- is no ground. This called a GetPhase the engine does not have, with
+    -- the phase first as the C++ GetHeight takes it (found 2026-10-17 by
+    -- scripts/test-ale-method-names)
+    local target_z = player:GetMap():GetHeight(target_x, target_y, player:GetPhaseMask())
+    if not target_z then return end  -- nowhere to stand that way: the convoy stays put
 
     -- Store active direction for updates
     kneel_directions[player_guid] = {
@@ -289,7 +294,7 @@ function Gestures.onPlayerKneel(player)
 
     -- Direct convoy to target
     for _, npc in ipairs(convoy) do
-        npc:MovementExpired()
+        npc:MoveExpire()
         npc:MoveTo(0, target_x, target_y, target_z, true)
         npc:SetStandState(0)  -- Stand up to move
     end
