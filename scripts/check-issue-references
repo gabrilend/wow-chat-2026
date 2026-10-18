@@ -37,11 +37,27 @@
 --                    numbers before the renumbering (often harmless: the
 --                    2026-04-29 sweep rewrote most of them)
 --   --strict         exit 1 if anything is missing
+--   --threads        also list, for each issue checked, the later issues
+--                    that name it and whether it names them back (a thread
+--                    tied at both ends); a mention whose words fit another
+--                    issue's name is a reused number, not this issue
 --   ISSUE_FILE ...   check just these files
+--
+-- Also checked (added 2026-10-17 from scripts/trace-completed-issues, the
+-- fronts-homework branch's version of this audit, now retired):
+--   patches   patch steps an issue names (B023, C006b, E042) that no
+--             longer exist, or were retired
+--   explained a path that is gone but that the issue's own "## Since then"
+--             section names (the path, its file name, or a folder it was
+--             in) is counted as explained, not as moved or missing: the
+--             issue already tells its reader; an old issue number written
+--             as "334 (now 127)" with 127 existing is explained the same way
+--   misfiled  with no files named, issues still in issues/ whose status
+--             says completed are listed at the end
 
 local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
 local args, files = {}, {}
-local opt = { all = false, summary = false, strict = false, source = nil, suspect = false }
+local opt = { all = false, summary = false, strict = false, source = nil, suspect = false, threads = false }
 local i = 1
 while i <= #arg do
     local a = arg[i]
@@ -49,6 +65,7 @@ while i <= #arg do
     elseif a == "--summary" then opt.summary = true
     elseif a == "--strict" then opt.strict = true
     elseif a == "--suspect" then opt.suspect = true
+    elseif a == "--threads" then opt.threads = true
     elseif a == "--source" then i = i + 1; opt.source = arg[i]
     elseif a:match("^/") and not a:match("%.md$") and not a:find("/issues/") then DIR = a
     else files[#files + 1] = a end
@@ -138,6 +155,26 @@ do
         f:close()
     end
 end
+-- Patch steps that exist: B in patches/ (".retired" in the name: retired),
+-- C in config/patches/, E in patches/E-patches.sh, where a step is written
+-- either as a "# E004:" header or only as its functions ("patch_E008_...";
+-- read from headers alone, E008 was reported gone while it ran on two
+-- profiles).
+local patchState = {}
+for p in pairs(exists) do
+    local b = p:match("^patches/(B%d%d%d%a?)%-[^/]+$")
+    if b then patchState[b] = p:find("retired", 1, true) and "retired" or "live" end
+    local c = p:match("^config/patches/(C%d%d%d%a?)[%-%._]")
+    if c then patchState[c] = "live" end
+end
+do
+    local f = io.open(DIR .. "/patches/E-patches.sh")
+    local src = f and f:read("*a") or ""
+    if f then f:close() end
+    for e in src:gmatch("\n# (E%d%d%d%a?):") do patchState[e] = "live" end
+    for e in src:gmatch("\npatch_(E%d%d%d%a?)_[%w_]*%(%)") do patchState[e] = "live" end
+end
+
 local function candidates(old)
     local out = {}
     for _, m in ipairs(migrated[old] or {}) do out[#out + 1] = m.new .. " (" .. m.slug .. ")" end
@@ -194,7 +231,7 @@ end
 -- A path: a known top folder followed by name characters, trailing
 -- punctuation and ":line" removed; wildcards and placeholders skipped.
 local function refs_in(text)
-    local paths, issues, seenP, seenI = {}, {}, {}, {}
+    local paths, issues, seenP, seenI, patches, seenX = {}, {}, {}, {}, {}, {}
     local n = 0
     for line in (text .. "\n"):gmatch("([^\n]*)\n") do
         n = n + 1
@@ -219,15 +256,24 @@ local function refs_in(text)
         for id in line:gmatch("[Ii]ssues?%s+(%d%d%d+%a*%d*)") do
             if not seenI[id] then seenI[id] = true; issues[#issues + 1] = { id = id, line = n } end
         end
+        -- an old number annotated in place with its new one: "334 (now 127)"
+        for id, now in line:gmatch("(%d%d%d+%a*%d*)%s*%(now%s+(%d%d%d+%a*%d*)") do
+            for _, r in ipairs(issues) do if r.id == id then r.now = now end end
+            if not seenI[id] then seenI[id] = true; issues[#issues + 1] = { id = id, line = n, now = now } end
+        end
+        for x in line:gmatch("%f[%w]([BCE]%d%d%d%a?)%f[%W]") do
+            if not seenX[x] then seenX[x] = true; patches[#patches + 1] = { id = x, line = n } end
+        end
         for id in line:gmatch("issues/(%d%d%d+%a*%d*)%-") do
             if not seenI[id] then seenI[id] = true; issues[#issues + 1] = { id = id, line = n } end
         end
     end
-    return paths, issues
+    return paths, issues, patches
 end
 -- }}}
 
 -- {{{ which issues to read
+explicitFiles = #files > 0
 if #files == 0 then
     local where = opt.all and ("'" .. DIR .. "/issues' -maxdepth 2") or ("'" .. DIR .. "/issues/completed' -maxdepth 1")
     for _, p in ipairs(lines_of("find " .. where .. " -type f \\( -name '[0-9]*' \\) | sort")) do
@@ -236,24 +282,102 @@ if #files == 0 then
 end
 -- }}}
 
-local totals = { ok = 0, moved = 0, missing = 0, issues = 0, badIssues = 0, renumbered = 0, threaded = 0 }
+local totals = { ok = 0, moved = 0, missing = 0, explained = 0, issues = 0, badIssues = 0, renumbered = 0, threaded = 0, badPatches = 0 }
+
+-- {{{ every issue file's text, for --threads and the misfiled list
+local allIssues = {}
+for _, p in ipairs(lines_of("find '" .. DIR .. "/issues' -maxdepth 2 -type f -name '[0-9]*' | sort")) do
+    if not p:find("/archived/") then
+        local name = p:match("([^/]+)$")
+        local fh = io.open(p)
+        allIssues[#allIssues + 1] = { path = p, name = name, id = name:match("^(%d+%a*%d*)"),
+                                      completed = p:find("/issues/completed/", 1, true) ~= nil,
+                                      open = p:match("/issues/[^/]+$") ~= nil,
+                                      text = fh and fh:read("*a") or "" }
+        if fh then fh:close() end
+    end
+end
+-- }}}
+
+-- {{{ local function thread_of
+-- The later issues that name issue `id` (file name `name`, text `text`).
+-- Numbers were reused (the April renumbering, and numbers handed out
+-- twice: 141, 142), so a mention counts as this issue only when the line
+-- it is on, or the next, shares a word of five letters or more with this
+-- issue's name; one that shares none but is followed by a name of its own
+-- ("307: narrator-audience-facing") is a reused number; neither is
+-- unconfirmed. Returns lists: confirmed, not named back, reused, unsure.
+local function names_id(text, id)
+    return text:find("[Ii]ssues?%s+" .. id .. "%f[%W]") or text:find("issues/" .. id .. "%-") or
+           text:find("%*%*" .. id .. "%*%*") or text:find("%(" .. id .. "[%),]") or text:find("%f[%w]" .. id .. "%-%l")
+end
+local function thread_of(id, name, text)
+    local words = {}
+    for w in name:gsub("%.md$", ""):gmatch("%a+") do if #w >= 5 then words[w:lower()] = true end end
+    local yes, unanswered, reused, unsure = {}, {}, {}, {}
+    for _, g in ipairs(allIssues) do
+        if g.id ~= id and names_id(g.text, id) then
+            local lines, verdict = {}, "unsure"
+            for l in (g.text .. "\n"):gmatch("([^\n]*)\n") do lines[#lines + 1] = l end
+            for k, l in ipairs(lines) do
+                if verdict ~= "this" and l:find("%f[%w]" .. id .. "%f[%W]") then
+                    local near = (l .. " " .. (lines[k + 1] or "")):lower():gsub("%-", " ")
+                    for w in pairs(words) do if near:find(w, 1, true) then verdict = "this" end end
+                    if verdict ~= "this" and near:find(id .. "[%s:%-%(]+%a%a%a%a%a") then verdict = "reused" end
+                end
+            end
+            if verdict == "this" then
+                yes[#yes + 1] = g.id
+                if not names_id(text, g.id) then unanswered[#unanswered + 1] = g.id end
+            elseif verdict == "reused" then reused[#reused + 1] = g.id
+            else unsure[#unsure + 1] = g.id end
+        end
+    end
+    return yes, unanswered, reused, unsure
+end
+-- }}}
 for _, file in ipairs(files) do
     local f = io.open(file)
     if not f then print("  cannot read " .. file) else
         local text = f:read("*a"); f:close()
-        local paths, issues = refs_in(text)
-        local report, c = {}, { ok = 0, moved = 0, missing = 0 }
+        -- the issue's own account of what became of it: a gone path it names
+        -- there (or its file name, or a folder it was in) is explained
+        local since = text:match("\n## Since then(.*)$") or text:match("\n## What Came After(.*)$") or ""
+        local body  = text:match("^(.-)\n## Since then") or text:match("^(.-)\n## What Came After") or text
+        local function told(p)
+            if since == "" then return false end
+            if since:find(p, 1, true) or since:find(p:match("[^/]+$"), 1, true) then return true end
+            local d = p:match("^(.*)/[^/]+$")
+            while d and d:find("/", 1, true) do
+                if since:find(d .. "/", 1, true) then return true end
+                d = d:match("^(.*)/[^/]+$")
+            end
+            return false
+        end
+        local paths, issues, patches = refs_in(body)
+        local report, c = {}, { ok = 0, moved = 0, missing = 0, explained = 0 }
         for _, r in ipairs(paths) do
             local kind, hint = classify_path(r.path)
+            if kind ~= "ok" and told(r.path) then kind, hint = "explained", "named in the issue's Since then section" end
             c[kind] = c[kind] + 1
             if kind ~= "ok" then
                 report[#report + 1] = string.format("    %-7s line %-4d %s%s", kind, r.line, r.path, hint and ("  ->  " .. hint) or "")
             end
         end
         local own = file:match("([^/]+)$"):match("^(%d+%a*%d*)")
+        for _, r in ipairs(patches) do
+            local st = patchState[r.id]
+            if st ~= "live" then
+                totals.badPatches = totals.badPatches + 1
+                report[#report + 1] = string.format("    patch   line %-4d %s %s", r.line, r.id,
+                    st == "retired" and "has been retired" or "is not in the project")
+            end
+        end
         for _, r in ipairs(issues) do
             if r.id ~= own then
-                if not issueIds[r.id] then
+                if r.now and issueIds[r.now] and not issueIds[r.id] then
+                    -- annotated in place with its new number: explained
+                elseif not issueIds[r.id] then
                     totals.badIssues = totals.badIssues + 1
                     report[#report + 1] = string.format("    issue   line %-4d %s does not exist%s", r.line, r.id,
                         migrated[r.id] and ("  ->  renumbered to " .. candidates(r.id)) or "")
@@ -264,18 +388,46 @@ for _, file in ipairs(files) do
                 end
             end
         end
+        if opt.threads then
+            local yes, unanswered, reused, unsure = thread_of(own, file:match("([^/]+)$"), text)
+            if #yes + #reused + #unsure > 0 then
+                report[#report + 1] = string.format("    after   named by later issues: %s%s%s%s",
+                    #yes > 0 and table.concat(yes, ", ") or "none",
+                    #unanswered > 0 and ("; not named back: " .. table.concat(unanswered, ", ")) or "",
+                    #reused > 0 and ("; the same number meaning another issue in: " .. table.concat(reused, ", ")) or "",
+                    #unsure > 0 and ("; the number without a name (unconfirmed) in: " .. table.concat(unsure, ", ")) or "")
+            end
+        end
         totals.ok, totals.moved, totals.missing = totals.ok + c.ok, totals.moved + c.moved, totals.missing + c.missing
+        totals.explained = totals.explained + c.explained
         totals.issues = totals.issues + 1
         local name = file:sub(#DIR + 2)
         -- A "Since then" section is where an old issue says what became of
         -- it; an issue with one has had its stale references explained.
         local threaded = text:find("\n## Since then", 1, false) ~= nil
         if threaded then totals.threaded = totals.threaded + 1 end
-        print(string.format("%s: %d paths ok, %d moved, %d missing%s", name, c.ok, c.moved, c.missing,
+        print(string.format("%s: %d paths ok, %d moved, %d missing%s%s", name, c.ok, c.moved, c.missing,
+            c.explained > 0 and string.format(", %d explained", c.explained) or "",
             threaded and "  [has a Since then thread]" or ((c.moved + c.missing > 0) and "  [no Since then thread yet]" or "")))
         if not opt.summary then for _, l in ipairs(report) do print(l) end end
     end
 end
-print(string.format("%d issue file(s), %d with a Since then thread: %d paths ok, %d moved, %d missing; %d issue numbers that do not exist, %d that may mean a renumbered issue",
-    totals.issues, totals.threaded, totals.ok, totals.moved, totals.missing, totals.badIssues, totals.renumbered))
+-- {{{ finished, but filed as open
+-- Only when the whole set is checked: an issue in issues/ itself whose
+-- status says completed was finished and never moved (found 2026-10-17:
+-- the full 307 sat in issues/ while completed/ held its old copy).
+if not explicitFiles then
+    for _, g in ipairs(allIssues) do
+        if g.open then
+            local head = g.text:sub(1, 1500)
+            if head:match("[Ss]tatus:?%**:?%s*[Cc]ompleted") or head:match("[Ss]tatus%*%*:?%s*[Cc]ompleted") then
+                totals.misfiled = (totals.misfiled or 0) + 1
+                print("issues/" .. g.name .. ": marked completed, but still filed among the open issues")
+            end
+        end
+    end
+end
+-- }}}
+print(string.format("%d issue file(s), %d with a Since then thread: %d paths ok, %d moved, %d missing, %d explained; %d issue numbers that do not exist, %d that may mean a renumbered issue; %d patch steps gone or retired",
+    totals.issues, totals.threaded, totals.ok, totals.moved, totals.missing, totals.explained, totals.badIssues, totals.renumbered, totals.badPatches))
 os.exit((opt.strict and totals.missing > 0) and 1 or 0)

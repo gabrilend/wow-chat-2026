@@ -13,15 +13,13 @@ script per command), patches are retired, and later issues rework what an
 earlier one made. A reader who opens an old issue sees the design as it
 was, with nothing to say what became of it.
 
-## The convention: "What Came After"
+## The convention: "Since then"
 
 Completed issues may be added to, never cut. When a completed issue has
 fallen behind, it gains a section at its end:
 
 ```
-## What Came After
-
-Added <date> (the text above is left as it was written).
+## Since then (checked <date>)
 
 - what moved or was renamed, and where it is now
 - which later issues built on it, by number and name
@@ -32,9 +30,12 @@ Added <date> (the text above is left as it was written).
 The text above the section stays as history. The section is where a
 reader learns what happened next, and it names the later issues by
 number, so the thread is tied at both ends: the later issue names this
-one, and this one names it back. First written into
-`completed/142-split-azerothcore-script.md` and
-`completed/307-ale-gameobject-wildcard.md`.
+one, and this one names it back. Old issue numbers in the text above are
+annotated in place rather than rewritten: "Issue 334 (now 127)".
+
+Two sessions wrote these notes in parallel on 2026-10-17, one under the
+heading "What Came After", one under "Since then"; the second was kept
+for every issue, and the checker still reads both.
 
 ## The trap: reused numbers
 
@@ -56,35 +57,47 @@ reused number. And do not mass-rewrite a number across the project
 breaks the references that were right. Change each by hand, reading the
 words around it.
 
-## The tool
+## The tools
 
-`scripts/trace-completed-issues [PROJECT_DIR] [--file ISSUE_PATH]` reads
-every completed issue and reports, without changing anything:
+`scripts/check-issue-references [PROJECT_DIR] [--summary] [--threads] [--all] [ISSUE_FILE ...]`
+reads the completed issues (or all, or the files named) and reports,
+without changing anything:
 
-- **paths** it names that are no longer in the project, with a likely new
-  home when a file of the same name exists elsewhere; paths that its
-  "What Came After" section explains are listed as explained, not stale
+- **paths** it names: there, moved (and where: a known rename such as the
+  per-profile Lua folders, a file switched off or on, the same name
+  elsewhere, or a project it moved out to), or missing; a gone path that
+  the issue's own "Since then" section names is counted as explained
 - **patch steps** (B, C, E) that are gone or retired
-- **issues** it names that have no file, with the new number when the
-  April map moved it
-- **later issues that name it**, told apart from mentions of another
-  issue with the same number by the words around the mention (a word of
-  its name nearby confirms it; another issue's name marks a reused
-  number; neither leaves it unconfirmed), and which of those it does not
-  name back
-- **issues marked completed but still filed as open**
+- **issues** it names that have no file, with the new number from the
+  April map; one annotated "(now N)" is explained
+- with `--threads`, **later issues that name it**, told apart from
+  mentions of another issue with the same number by the words around the
+  mention (a word of its name nearby confirms it; another issue's name
+  marks a reused number; neither leaves it unconfirmed), and which of
+  those it does not name back
+- **issues marked completed but still filed as open** (when no files are
+  named)
 
-It prints one line per issue and writes the full report to
-`tmp/shared-memory/trace-completed-issues.md`. Run it for current
-numbers; any figure copied into a document goes stale.
+`scripts/test-check-issue-references` checks every verdict against a
+made-up issue and a pretend project. `scripts/issue-lineage ISSUE`
+gathers, for one issue, the later issues and commits that name it and the
+history of each file it names: the raw material for a "Since then" note.
+Run the tools for current numbers; any figure copied into a document goes
+stale.
+
+The fronts-homework branch first built this audit as a separate script,
+`scripts/trace-completed-issues`; its checks were folded into
+`check-issue-references` the same day so there is one tool, and it was
+retired (kept once as `scripts/trace-completed-issues-done`).
 
 ## Working through the report
 
-1. Pick an issue with stale paths or unanswered later issues.
+1. Pick an issue with unexplained paths or unanswered later issues.
 2. Check each finding by hand (the tool reads text, and text can fool it).
 3. Find out why it changed: `git log --follow` on the moved file, the
    later issue's own text, `issues/MIGRATION_MAP.md`.
-4. Add the "What Came After" section; fix stale numbers in *open* issues
-   in place, by hand.
-5. Run the tool again on that issue (`--file`): it should show no dead
-   paths and no unanswered later issues.
+4. Add the "Since then" section; fix stale numbers in *open* issues in
+   place, by hand, reading the words around each.
+5. Run the checker again on that issue (`check-issue-references --threads
+   ISSUE_FILE`): it should show no moved or missing paths that the note
+   doesn't explain, and no later issues left unnamed.

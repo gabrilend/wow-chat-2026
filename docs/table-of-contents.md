@@ -42,7 +42,7 @@ wow-chat-2026/
 │   ├── concept-catalog.md         Concepts 001-800
 │   ├── concept-catalog-2.md       Concepts 801-1600
 │   ├── concept-issue-map.md       Cross-reference: concepts to issues
-│   ├── completed-issue-threads.md How finished issues stay true: "What Came After", reused numbers, scripts/trace-completed-issues
+│   ├── completed-issue-threads.md How finished issues stay true: "Since then" notes, reused numbers, scripts/check-issue-references
 │   ├── delta-guide.md             -> (symlink) Monorepo methodology
 │   │
 │   ├── addons/                    Client addon documentation
@@ -162,7 +162,9 @@ wow-chat-2026/
 │   ├── export-html                Render docs as HTML
 │   ├── find-issue-refs            Find cross-references to issue numbers
 │   ├── update-issue-refs          Rewrite issue-number references after a migration (blind to reused numbers: docs/completed-issue-threads.md)
-│   ├── trace-completed-issues     Check completed issues against today's project and the issues after them
+│   ├── check-issue-references     Audit issues: paths, patch steps and issues they name; --threads: later issues, reused numbers
+│   ├── test-check-issue-references  Checks every verdict of the audit on a made-up issue and a pretend project
+│   ├── issue-lineage              For one issue: later issues and commits that name it, each named file's history
 │   └── update-realmlist-ip        Update C011's realm address
 │
 ├── source-{profile}/              AzerothCore source per profile

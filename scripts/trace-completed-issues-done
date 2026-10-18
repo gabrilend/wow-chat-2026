@@ -1,4 +1,8 @@
 #!/usr/bin/env luajit
+-- RETIRED 2026-10-17: folded into scripts/check-issue-references (its
+-- patch-step, explained-path, "(now N)", --threads and misfiled checks).
+-- Kept for one commit as a record, then to be removed (house rule for
+-- deprecated scripts); nothing calls it.
 --------------------------------------------------------------------------------
 -- trace-completed-issues - does each finished issue still describe the
 -- project, and what came after it?

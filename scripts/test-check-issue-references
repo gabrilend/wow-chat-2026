@@ -7,8 +7,13 @@
 # exists, moved (and where), or is gone. This writes a small pretend issue
 # into RAM naming one path of each kind (one that exists, one renamed by the
 # per-profile split, one switched off, one gone for good, a wildcard that
-# must be skipped, a renumbered issue split in two, an issue that exists),
-# runs the checker on it, and compares each verdict with the expected one.
+# must be skipped, a renumbered issue split in two, an issue that exists,
+# an old number annotated with its new one, patch steps live and gone, and a
+# gone path that the issue's own "Since then" section explains), runs the
+# checker on it, and compares each verdict with the expected one. Then it
+# builds a tiny pretend project (a git index and a few issue files) to check
+# the two whole-project checks: the thread to later issues, with a reused
+# number told apart by its words, and an issue finished but filed as open.
 #
 # Usage: scripts/test-check-issue-references [PROJECT_DIR]
 # Exit status: 0 when every verdict matches.
@@ -28,6 +33,14 @@ The ambush lives in `src/lua-beta/ambush.lua` (exists) and once lived in
 was to be `src/lua-beta/bounty-board-never-built.lua` (never existed).
 Every source patch is `patches/B*.sh` (a wildcard: skipped).
 See issue 329 (renumbered, split in two) and issue 210 (exists).
+Issue 334 (now 127) was the patch-system issue before April.
+The wildcard is patch B003 (live); patch B998 never existed; install step
+E008 is written only as its functions.
+The old helper was `src/lua/never-was.lua` (gone; explained below).
+
+## Since then (checked 2026-10-17)
+
+- The helper `never-was.lua` was folded into the ambush and removed.
 EOF
 
 OUT="$("${DIR}/scripts/check-issue-references" "${DIR}" "${ISSUE}" 2>&1)"
@@ -56,6 +69,30 @@ expect "a file that never existed is missing"          "missing .*bounty-board-n
 refuse "a wildcard path is skipped"                    "patches/B"
 expect "a renumbered, split issue lists both successors" "329 does not exist +->  renumbered to 125 .* or 612b"
 refuse "an existing issue number is not a problem"     "issue .* 210 "
+refuse "an old number annotated (now N) is explained"  "334 does not exist"
+expect "a patch step that never existed is reported"   "patch .* B998 is not in the project"
+refuse "a live source patch is not a problem"          "patch .* B003"
+refuse "an install step written only as functions is live" "patch .* E008"
+expect "a gone path named under Since then is explained" "999-pretend-issue.md: .*[1-9] explained"
+refuse "an explained path is not counted missing"      "missing .*never-was.lua"
+
+# {{{ the whole-project checks, on a pretend project
+FAKE="${SCRATCH}/pretend-project"
+rm -rf "${FAKE}"
+mkdir -p "${FAKE}/issues/completed" "${FAKE}/patches"
+printf '# E-patches\n' > "${FAKE}/patches/E-patches.sh"
+printf '# 998 - Old Split Script\n\nSplit the old script.\n' > "${FAKE}/issues/completed/998-old-split-script.md"
+printf '# 997 - Later User\n\nBuilds on issue 998 (the old split script).\n' > "${FAKE}/issues/997-later-user.md"
+printf '# 996 - Other\n\n- Issue 998: narrator-audience-facing (a reused number)\n' > "${FAKE}/issues/996-other.md"
+printf '# 995 - Finished But Open\n\n## Status\n- Status: Completed\n' > "${FAKE}/issues/995-finished-but-open.md"
+git -C "${FAKE}" init -q && git -C "${FAKE}" add -A
+OUT="$("${DIR}/scripts/check-issue-references" "${FAKE}" --threads 2>&1)"
+expect "a later issue naming it by its words is in the thread" "after .*named by later issues: 997"
+expect "a later issue not named back is listed"          "not named back: 997"
+expect "the same number with another name is a reused number" "meaning another issue in: 996"
+expect "an issue finished but filed as open is listed"   "995-finished-but-open.md: marked completed"
+rm -rf "${FAKE}"
+# }}}
 
 echo "${OUT}" > "${SCRATCH}/checker-output.txt"
 if [[ "${FAILS}" -eq 0 ]]; then
