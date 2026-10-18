@@ -92,9 +92,60 @@ mod-eluna scripts. E001 symlinks the profile-matching dir into
 
 ## Database
 
-- MySQL runs on port 3307 (project-local installation)
+- MySQL runs on port 3307 (project-local installation, MySQL 9.6, settings
+  in `mysql/conf/my.cnf`)
 - Credentials: ritz / menardi
-- Databases: acore_auth, acore_characters, acore_world, acore_playerbots
+- Databases: `acore_auth` (shared by every realm), and per profile
+  `acore_world_<profile>`, `acore_characters_<profile>`,
+  `acore_playerbots_<profile>` (the names come from `_profile_db_name` in
+  `patches/E-patches.sh`; issue 136b). Sizes: `du -sh mysql/databases/*`.
+
+### Data on more than one disk, and reading in parallel (2026-10-18)
+
+The owner asked how MySQL handles data on different disks, and whether
+reading from them in parallel is easier. How it works, and what it means here:
+
+- **Where the data lives.** Everything MySQL keeps is under one folder,
+  `datadir` (`mysql/databases/`): one folder per database, one file per
+  table (`<database>/<table>.ibd`, InnoDB's file-per-table, on by default),
+  plus the redo log (`#innodb_redo/`), the undo logs (`undo_*`) and the
+  binary log (`binlog.*`). Since the move (issue 188) all of it is on
+  /mnt/kaun.
+- **Putting parts on another disk.** MySQL's supported ways: a table can
+  be created with `DATA DIRECTORY = '<folder on the other disk>'` (that
+  folder must be listed in `innodb_directories`, which MySQL scans at
+  start); the redo log and undo logs can be moved by their own settings
+  (`innodb_log_group_home_dir`, `innodb_undo_directory`); or a second
+  MySQL server can run with its own `datadir` on the other disk and its own
+  port. Do not move a database folder and leave a symbolic link in its
+  place: MySQL supports that only for its old MyISAM tables, not InnoDB.
+- **What "parallel" means in MySQL.** Each connection runs on its own
+  thread, so queries from different connections run at the same time, and
+  InnoDB reads ahead through background threads (`innodb_read_io_threads`,
+  4 by default). One query, though, mostly runs on one thread. So a second
+  disk only helps when two things wait on disk at the same moment: two
+  realms loading their worlds at once, or a write burst (redo and binary
+  log flushes) competing with reads.
+- **Here.** A worldserver opens one worker and one synchronous connection
+  per database (`WorldDatabase.WorkerThreads` and `SynchThreads` = 1 in
+  `worldserver.conf`). It loads its world tables mostly one after another
+  at start, then keeps them in its own memory, so in play it reads MySQL
+  rarely (characters at login, saves now and then). One realm's start is
+  one stream of reads; a second disk does little for it.
+- **What helps more, in order:**
+  1. Memory before disks. `innodb_buffer_pool_size` is 256M, smaller than
+     one world database (`du -sh mysql/databases/acore_world_*`). With
+     several realms running at once (issue 136b), most of their reads go
+     to disk. A larger buffer pool turns them into memory reads.
+  2. The binary log is on (MySQL's default) and nothing replicates from it
+     here. Every change is written a second time. `disable_log_bin` in
+     `my.cnf` would stop that, and old `binlog.*` files could then be
+     removed.
+  3. A second disk, for the case where several realms start at the same
+     time: a second MySQL server on its own `datadir`, or the redo log on
+     its own disk.
+  None of these is applied; each is the owner's call (MySQL settings
+  change with `mysql/conf/my.cnf` and a MySQL restart).
 
 ## Modules Installed
 

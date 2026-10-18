@@ -1,6 +1,6 @@
 # Conversation Summary: 9611fd64-2739-4282-8913-4ea703371d8e
 
-Generated on: 2026-10-18 16:24:42
+Generated on: 2026-10-18 16:49:10
 Models: claude-opus-5-5
 
 ## Contents
@@ -25,6 +25,11 @@ Models: claude-opus-5-5
    my beta branch and the fronts branch ready to merge, and only one easy
    conflict is left. Next, you decide whether to run that merge yourself or have
    me do it, and how.
+6. 2026-10-18 16:30, after Request 18 - Goal: keep improving beta on my own
+   branch, with no merging; I just added and committed a check that each Lua
+   file's summary lists its real functions, filling 18 gaps. Next: your answers
+   to my four open questions, starting with whether druids should meet
+   innkeepers.
 
 --------------------------------------------------------------------------------
 
@@ -2693,6 +2698,228 @@ prints its own count.
 4. **The old stock settings files:** two leftover folders of them still sit in
    my checkout and nothing reads them now. Should I delete them, or leave them
    for you?
+
+--------------------------------------------------------------------------------
+
+### User Request 19
+
+<pasted_content id="ea90">
+> 1. Druids never meet innkeepers. Writing out the travel table showed it: every
+> other
+>      class has innkeepers among its travellers, but druids don't, and the source gives no
+>      reason. (Mages meeting no food sellers makes sense, since they conjure their own.) Is
+>      the druid gap meant, or a slip carried over from the original design?
+</pasted_content id="ea90">
+
+
+yess they're supposed to start with teleport moonglade, and that's their
+hearthstone. But casting it while in Moonglade will teleport them back to where
+they were before they teleported to moonglade.
+
+
+
+<pasted_content id="ea90">
+> 2. The buddy roaming library has 9 gaps of its own, and one is a real slip:
+> the function
+>      paint_wall_cells is global by accident, so every other script can see it. That library
+>      belongs to the session that works on the buddy companions. Should I tell that
+>      session, or leave it to you?
+</pasted_content id="ea90">
+
+
+coordinate as you please.
+
+
+
+<pasted_content id="ea90">
+> 3. The build's quick tests: I haven't added the new check to them. Added now,
+> it would
+>      fail every build until the buddy library's summary is fixed. Should it go in once
+>      that's done?
+</pasted_content id="ea90">
+
+
+more tests is good.
+
+> 4. The old stock settings files: two leftover folders of them still sit in my
+> checkout
+>      and nothing reads them now. Should I delete them, or leave them for you?
+
+housekeep as you please.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 19
+
+> No existing work on druids and Moonglade. Two sessions are running: the fronts
+> session and the one that ran the move. Neither is known to own the buddy
+> library, so I'll ask both.
+
+> The roaming summary also says outside code calls only its six planner
+> functions, which is no longer true. I'm adding the painting and party
+> functions:
+
+> The summaries now all agree with their code: 0 disagreements. Next is the
+> fronts session's idea, a check that a library adds no globals. I'm trying it
+> on every `lib/` folder under `src/` first:
+
+> Every use comes after its definition in the same file, so making them local is
+> safe. Checking that no test reads them as globals:
+
+> I'm writing the globals check now. I've already made the engine event numbers
+> local in the three beta scripts, so they stop sharing globals.
+
+> It catches the shared names on main, where they're still globals, and passes
+> on my branch. Now rerunning the beta tests to make sure making them local
+> broke nothing:
+
+> The script-load test counts 11 beta files, but my globals check reads only 7.
+> Finding which 4 it misses:
+
+> Both new checks now pass on my branch, so I'm adding them to the build's quick
+> tests. They only take effect when my branch is merged, and the fixes they need
+> arrive in the same merge.
+
+> Committed. Next, housekeeping: deleting the two stale folders of stock
+> settings files from my checkout. Checking first that they hold only copies of
+> those files:
+
+> Every file has an identical copy in the main folder, so nothing is lost.
+> Deleting the two folders:
+
+> Those files were tracked in git, so the deletion shows as a change on my
+> branch. Finding who committed them and why before deciding whether the
+> deletion should stand:
+
+> I was wrong: these aren't my scratch copies. They're stock settings files the
+> project has tracked since April, on main too, and I created none of them.
+> Restoring them from the branch tip:
+
+> I'm writing the druids' Moonglade return. The issue file is written and passes
+> the issue checker. Before building, I'm checking my claim about the spell's
+> cooldown against the game's own spell data:
+
+> Confirmed: the spell has no cooldown. Next I'm checking which of the calls the
+> script needs the test world already has:
+
+> The project has a library that reads the game's own map files, so I may be
+> able to check the draw rules against real ground offline. Reading its summary:
+
+> It reads heights but not areas. Heights are enough to check how often a random
+> draw in the box lands on the valley floor:
+
+> In the valley box, 1 draw in 5 passes both the height and steepness rules.
+> Forty draws all failing is about a 1-in-7,000 chance before the lake is
+> excluded. Recording the measured box in the issue:
+
+> Now the table's install files:
+
+> The `.gitignore` covers beta's world staging folder but not a characters one,
+> since beta had no characters tables until now. Checking the rules:
+
+> All 22 checks pass. Now I'll undo each safeguard in a copy of the script and
+> confirm the test catches it:
+
+> Each of the seven undone safeguards makes the test fail. (The eighth line was
+> a placeholder that changed nothing, as it shows.) Now the script's summary and
+> the test world's additions:
+
+> Now the wiring: the build's quick tests, the test world guide, and the related
+> summaries and issues.
+
+> The summary check counted only 18 pairs. It finds files through git, and the
+> new script isn't committed yet. Checking it by name:
+
+> Both pass, and the script writes one global, its own table. Updating beta's
+> profile page, which lists its install steps:
+
+> Beta's page doesn't list yesterday's death knight outfit step either, so I'm
+> adding it alongside the new one:
+
+> Last check before committing: whether the RAM database test, which applies,
+> re-applies and undoes beta's SQL, can take the new characters table too.
+
+Druids now hearth by Moonglade, with random arrival spots in the glade as you
+asked. It's built and tested offline on my branch (`beta-homework`), but not yet
+tried in game, and its database table hasn't been installed anywhere yet.
+
+**What druids get:**
+- Every druid knows Teleport: Moonglade from level 1. It's taught at login, so
+  existing druids get it too.
+- **Going out:** the server remembers where the druid stood. After the spell
+  lands them in Nighthaven, it moves them to a random spot on open ground in the
+  glade. The spot is drawn from the valley floor and kept only if it's flat
+  enough, near the valley's height, and not in the lake or the underground
+  barrow dens.
+- **Coming back:** cast inside Moonglade, it sends them back to that spot and
+  forgets it. With no spot remembered, they stay in Nighthaven and are told
+  there's nowhere to return to.
+- The spot is kept in the characters database, so it survives logouts and server
+  restarts.
+
+I measured the random-spot rules against the game's real map files: about 1
+random spot in 5 passes them. With 40 tries per arrival, failing all 40 is about
+a 1-in-7,000 chance. If it happens, the druid stays in Nighthaven and the server
+log says so. The new test has 22 checks and runs before every build. Breaking
+any one of the script's seven safeguards in a copy makes it fail.
+
+**Coordination:**
+- **The boot problem from the move is fixed.** The database still recorded five
+  SQL folders under the old `/mnt/mtwo` path. After the next install at the new
+  place, the server would have found every SQL file twice and refused to start.
+  I told the session that ran the move. It corrected those five records, and its
+  move tool now handles this.
+- **The buddy roaming library had no leak after all.** `paint_wall_cells` was
+  declared local earlier in the file, so it never became global. My check was
+  wrong and is fixed. Nobody owns that library, so I completed its summary on my
+  branch.
+- **New test for globals,** from the fronts session's idea: it flags any global
+  that two scripts both write, and any global a library writes at all. That
+  check found the ambush, travel and death knight scripts each restating the
+  same engine event numbers as globals. The values agreed, so nothing had
+  broken; they're local now.
+- The summary check and the globals check are now in the build's quick tests
+  too. They only take effect once my branch is merged.
+
+**A mistake I made and undid:** I deleted the two folders of old stock settings
+files from my checkout, thinking they were my own leftovers. They're actually
+files the project has tracked since April, so I restored them straight away and
+nothing was lost. They're out of date and nothing reads them now. Should they
+stay?
+
+**Open questions about the druid's Moonglade trip:**
+1. When a druid in a group casts Teleport: Moonglade, should the rest of the
+   group get the "come along?" pop-up, like a Hearthstone? For now it's the
+   druid's alone.
+2. If a druid casts it from inside a dungeon, battleground or arena, should
+   their earlier open-world spot be kept, or forgotten as it is now?
+3. Should the spell get a cooldown, such as the Hearthstone's 30 minutes? The
+   stock spell has none; I checked the game's spell data.
+
+--------------------------------------------------------------------------------
+
+### User Request 20
+
+<bash-input>pwd</bash-input>
+
+--------------------------------------------------------------------------------
+
+### User Request 21
+
+<bash-stdout>/home/ritz/games/azeroth-core/wow-chat-2026</bash-stdout><bash-stderr>
+Shell cwd was reset to /mnt/kaun/wow-chat-2026</bash-stderr>
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 21
+
+The shell now starts in `/mnt/kaun/wow-chat-2026`, the new main folder. The
+`/home/ritz/games/...` path `pwd` printed is the old name, which now points to
+the same place, so there's nothing to fix.
+
+Everything I wrote this round went to `/mnt/kaun/wow-chat-beta-homework` and is
+committed. That checkout is clean apart from the demo's leftover `output/`
+folder.
 
 --------------------------------------------------------------------------------
 
