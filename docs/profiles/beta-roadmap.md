@@ -140,8 +140,8 @@ work needs, and treasure is fed by the selling that merchants allow.
   (find-monsters), `GetPhase` (gestures; the engine has `GetPhaseMask`),
   `GetUnitsInRange` (orbit-player; it has `GetFriendlyUnitsInRange` and
   `GetUnfriendlyUnitsInRange`), `UseItem` (sit-and-rest). Fix each before
-  its behavior is switched on. (`IsHostileTo` and `IsFriendlyTo`, which
-  the behaviors also call, come from source patch B007 on beta.)
+  its behavior is switched on. (`IsHostileTo`, which the behaviors also
+  call, comes from source patch B007 on beta.)
 - The bot behaviors, one at a time, out of `.behaviors.disabled/`, each
   with its own check: **601** find monsters, **603** avoid monsters,
   **604** sit and rest, **606** orbit the player, **609** gestures and
