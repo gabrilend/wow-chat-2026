@@ -51,6 +51,8 @@ wow-chat-2026/
 │   │   ├── migration-guide.md     Release-to-beta transition process
 │   │   └── profile-transition-flow.md  Profile system rollout plan
 │   ├── datapaths/                 How each major feature's data moves, in order, and how it came to be
+│   │   ├── ambush.md              Beta's monsters: clock, holds, queues, spawn, chase, rest; the two lines of April (210, 302-305)
+│   │   ├── travellers-and-trainers.md Travellers on their clock, and where a trainer's lessons come from (503, 701, 206)
 │   │   └── treasure.md            Beta's items: sold or left in chests, through the pool, into another player's chest (402, 404)
 │   ├── patches/                   C++ patch documentation
 │   │   ├── patch-registry.md      Build patch system (BEGIN/END/CONFIG phases)
