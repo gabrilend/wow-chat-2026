@@ -64,7 +64,7 @@ Travellers walk, bots should run.
 ## Implementation Steps
 
 ### Step 1: Create BotWander behavior
-New file: `src/lua/behaviors/bot-wander.lua`
+New file: `src/lua-beta/.behaviors.disabled/bot-wander.lua`
 - Store persistent theta on bot via `bot:SetData("theta", value)`
 - Track wall-hit count via `bot:SetData("wall_hits", count)`
 - Main function: `BotWander.update(bot)` called by periodic_events.lua

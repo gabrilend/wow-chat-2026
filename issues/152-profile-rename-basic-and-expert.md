@@ -254,7 +254,7 @@ the tree is consistent before anything selects the new name.
 - `issues/136-canonical-profile-definitions.md` — the canonical
   profile spec. After this rename lands, 136's definitions get the
   new names and a note that the old ones are historical.
-- `issues/133-profile-transition-system.md` — the switching machinery.
+- `issues/completed/133-profile-transition-system.md` — the switching machinery.
 - `issues/148-vanilla-profile-default-wotlk-playerbots.md` — the
   profile being renamed; keeps its filename.
 - `docs/profiles/index.md` — the user-facing profile overview, which

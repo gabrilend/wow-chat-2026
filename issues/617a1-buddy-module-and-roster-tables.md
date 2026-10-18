@@ -14,8 +14,8 @@ server start** (the only thing left: the startup line "roster tables
 present; buddies are ON" in the worldserver log).
 
 - `modules/mod-buddies/` (new; the project had no `modules/` folder):
-  `src/buddies_loader.cpp` (the module's entry point) and
-  `src/buddies_roster.cpp` (at startup, checks both tables exist; if
+  `modules/mod-buddies/src/buddies_loader.cpp` (the module's entry point) and
+  `modules/mod-buddies/src/buddies_roster.cpp` (at startup, checks both tables exist; if
   either is missing it logs an error naming install step E042 and keeps
   buddies off). `README.md` beside them.
 - `patches/B036-mod-buddies.sh`: copies the module into

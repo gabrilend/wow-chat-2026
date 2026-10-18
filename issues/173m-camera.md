@@ -26,7 +26,7 @@ Verbatim, 2026-10-06:
 ## Current Behavior
 
 **The drags and the following styles are built (2026-10-06)**, in C,
-in `src/custom-client-c/camera.h` and `camera.c`, with 21 checks in
+in `src/custom-client-c/camera.h` and `camera.c` (now `src/031-camera.h` and `031-camera.c` in the W client project, `../custom-client/`), with 21 checks in
 `tests/test_client.c` (75 in the program, all passing).
 - **The camera is its own module.** `main.c` hands it this frame's mouse
   (buttons and movement), how far the keys turned her, whether she moved

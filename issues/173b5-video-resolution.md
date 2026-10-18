@@ -37,7 +37,7 @@ they want. Or there's a drop-down with common increments."
   default, so comments in a hand-edited file are not kept. Not yet tried
   by a real quit: no window-automation tool is installed here, so this
   needs one quit by hand (resize the window, press Escape, look at
-  `src/custom-client-c/settings/Config.wtf`).
+  `src/custom-client-c/settings/Config.wtf`; now the game's `WTF/Config.wtf`, written by `src/014-settings.c` in the W client project, `../custom-client/`).
 - **Tests:** the new settings' defaults and which need a restart.
 
 **Not built:**

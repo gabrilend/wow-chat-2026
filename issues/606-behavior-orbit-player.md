@@ -14,7 +14,7 @@
 - Social opportunities emerge from positioning
 
 ## Suggested Implementation Steps
-1. Create src/lua/behaviors/orbit-player.lua
+1. Create src/lua-beta/.behaviors.disabled/orbit-player.lua
 2. Use Movement.getOrbitPosition for positioning
 3. Calculate orbit slot based on party position
 4. Adjust radius based on combat state
@@ -42,8 +42,8 @@
 - Respects sit-and-rest state (doesn't move resting bots)
 
 ## Related Files
-- src/lua/behaviors/orbit-player.lua
-- src/lua/behaviors/avoid-monsters.lua
-- src/lua/behaviors/sit-and-rest.lua
+- src/lua-beta/.behaviors.disabled/orbit-player.lua
+- src/lua-beta/.behaviors.disabled/avoid-monsters.lua
+- src/lua-beta/.behaviors.disabled/sit-and-rest.lua
 - src/lua-beta/movement.lua (getOrbitPosition already exists)
 - docs/playerbots/

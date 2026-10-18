@@ -17,7 +17,7 @@ See 173 (the owner's words, 2026-10-04).
 
 **Built 2026-10-05, first light** (`src/custom-client/`, a LÖVE program:
 Lua on LuaJIT, 3D with a depth buffer and a small shader; run with
-`scripts/custom-client`, checked with `scripts/custom-client --shot`, which
+`scripts/custom-client` (now `scripts/run` in the W client project, `../custom-client/`), checked with `scripts/custom-client --shot`, which
 saves a picture and quits). It opens on Ashenvale's ground round
 Astranaar, the 3 x 3 tiles round her loaded and drawn as she walks
 (`lib/maps.lua` reads the server's map files; `lib/ground-mesh.lua` makes

@@ -59,7 +59,7 @@ Consolidate all features onto the alpha branch (experimental/cutting edge):
 - Release preserved as tag for history (June 2023 known good)
 - Beta branch deleted after merge
 
-This aligns with the profile system in scripts/azerothcore:
+This aligns with the profile system (then in scripts/azerothcore; now `scripts/profiles` and each script's own table):
 - alpha = cutting edge, experimental
 - beta = current testing (will become alpha after merge)
 - release = stable baseline

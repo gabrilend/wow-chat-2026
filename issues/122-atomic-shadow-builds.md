@@ -7,7 +7,7 @@
 
 ## Current Behavior
 
-The `scripts/azerothcore` build system:
+The build system (then `scripts/azerothcore`; now `scripts/compile`, `scripts/validate` and `scripts/promote`):
 
 1. Compiles directly into `build-{profile}/`
 2. Installs directly into `installed-files-{profile}/`

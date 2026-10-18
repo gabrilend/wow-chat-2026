@@ -18,7 +18,7 @@ Release profile build completed successfully but worldserver failed to start:
 
 #### 1. CMAKE_INSTALL_PREFIX Mismatch
 
-**Location:** scripts/azerothcore:1450
+**Location:** the cmake configure step, then at scripts/azerothcore:1450, now in `scripts/compile`
 
 CMake was configured to install to `installed-files-release`:
 ```bash
@@ -231,7 +231,7 @@ ls /mnt/mtwo/games/azeroth-core/wow-chat-2026/installed-files-beta/bin/lua_scrip
 - `scripts/azerothcore` - Build orchestration (CMAKE_INSTALL_PREFIX fix, apply_patches_end call)
 - `patches/patches.sh` - Profile-aware patch lists and orchestration
 - `issues/127-patch-system-improvements.md` - Phase D: Profile-Specific Patch Lists (was 334)
-- `issues/133-profile-transition-system.md` - Profile system design (was 405; superseded by 136)
+- `issues/completed/133-profile-transition-system.md` - Profile system design (was 405; superseded by 136)
 
 ## Implementation Notes
 

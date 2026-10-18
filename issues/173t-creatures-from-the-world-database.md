@@ -24,7 +24,7 @@ populated." ("yep")
 - **The list** (`scripts/generate-custom-client-creatures`, LuaJIT): one
   map's spawns from a world database (default: the active profile's,
   named by the project's rule; `--db`, `--map`), through
-  `scripts/mysql-client`, into `src/custom-client-c/world/creatures-<map>.tsv`
+  `scripts/mysql-client`, into `src/custom-client-c/world/creatures-<map>.tsv` (the reader is now `src/035-creatures.c` in the W client project, `../custom-client/`)
   (git-ignored). Left out: holiday spawns (`game_event_creature`, a
   positive event), triggers (`flags_extra` & 128), spirit healers and
   guides (`npcflag` & 0xC000), creatures with no model. The display is
@@ -49,7 +49,7 @@ populated." ("yep")
 - **In the world** (`main.c`): spawns in loaded tiles are built as
   figures when they come within 110 yards, nearest first, at most 4 ms
   of building a frame, and freed beyond 130 or when their tile is
-  dropped (`--world DIR`, passed by `scripts/custom-client`; 173u). Each stands where the list says, facing its
+  dropped (`--world DIR`, passed by `scripts/custom-client`, now `scripts/run` in the W client project, `../custom-client/`; 173u). Each stands where the list says, facing its
   way, playing its standing animation from its own moment, with a ground
   shadow.
 - **Seen within 100 yards** (`CREATURE_SEEN_REACH`): the server tells a

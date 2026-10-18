@@ -25,13 +25,13 @@ it is and a `.c` ported line for line from its Lua twin) and `main.c`
 (Raylib window, camera, controls, ground meshes, her model in pieces with
 their textures, two GLSL 330 shaders, the `--shot`, `--zoom`, `--front`
 picture options). Raylib 5.1-dev from `/usr/local` (installed static),
-zlib from the system. `scripts/build-custom-client [--test]` builds both
+zlib from the system. `scripts/build-custom-client [--test]` (now `scripts/build` in the W client project, `../custom-client/`) builds both
 programs into `tmp/tmp/custom-client-c/` with `-Wall -Wextra -Werror`.
 `tests/test_client.c` holds the C to the Lua tests' facts on the same
 files: 43 checks, every number equal to the Lua's (Astranaar 106.71,
 8.4 yards a second, the 60-degree rule, her 2.29 yards and 5148
 triangles, 393 face samples changed). Pictures from both versions match.
-`scripts/custom-client` now runs the C version (rebuilt when its sources
+`scripts/custom-client` (now `scripts/run` in the W client project, `../custom-client/`) now runs the C version (rebuilt when its sources
 are newer), `--lua` the original.
 
 Differences from the Lua: the mover keeps doubles as LuaJIT does; the
@@ -52,7 +52,7 @@ camera have no Lua twins. The Lua version stays runnable (`--lua`) as it
 stood on 2026-10-06, and is removed once the C engine is fully built.
 Before removing it, two things that depend on it must move:
 - `scripts/generate-stock-options-catalog` reads the client's archives
-  with the Lua archive reader (`src/custom-client/lib/mpq.lua`). Either
+  with the Lua archive reader (`src/custom-client/lib/mpq.lua`; the Lua version was removed when the client moved, and its C counterpart is `src/015-mpq.c` in the W client project, `../custom-client/`). Either
   that reader is kept as a tool library, or the generator is rewritten to
   use the C reader.
 - `scripts/test-custom-client` (the Lua tests). Its facts are already held

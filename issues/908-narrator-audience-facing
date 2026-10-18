@@ -134,7 +134,7 @@ NARRATOR_FACING_THRESHOLD   = 0.52   -- radians (~30°) change needed to update
 ## Related Files
 
 - src/lua-beta/travel.lua - Traveller/narrator NPC system
-- src/lua/behaviors/orbit-player.lua - Similar facing/positioning patterns
+- src/lua-beta/.behaviors.disabled/orbit-player.lua - Similar facing/positioning patterns
 
 ## Related Issues
 

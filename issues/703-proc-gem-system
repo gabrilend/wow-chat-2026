@@ -247,7 +247,7 @@ CREATE TABLE custom_gem_procs (
 - 141 - Talent tier limit (affects which gems are appropriate)
 
 ## Related Documents
-- docs/phase-3-custom-spells.md (shared vision)
+- notes/phase-3-custom-spells.md (shared vision)
 
 ## Notes
 - Proc gems use existing gem colors - no DBC editing needed

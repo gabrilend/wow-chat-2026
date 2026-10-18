@@ -60,8 +60,8 @@ optional layer that the core doesn't depend on.
 
 **In progress (2026-10-06): a world to walk in, no network yet.** The
 client is in C on Raylib (`src/custom-client-c/`, 173k; the Lua first
-version is deprecated). Run it with `scripts/custom-client`; build and test
-it with `scripts/build-custom-client --test`. Players still use the stock
+version is deprecated). Run it with `scripts/custom-client` (now `scripts/run` in the W client project, `../custom-client/`); build and test
+it with `scripts/build-custom-client --test` (now `scripts/build --test` there). Players still use the stock
 3.3.5a client to play. Everything below is read from the original
 client's own files, nothing hand-placed:
 - **The world:**

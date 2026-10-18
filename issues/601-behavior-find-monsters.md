@@ -15,7 +15,7 @@
 - Configuration via constants at top of script
 
 ## Suggested Implementation Steps
-1. Create src/lua/behaviors/find-monsters.lua
+1. Create src/lua-beta/.behaviors.disabled/find-monsters.lua
 2. Implement getNearbyCreatures using GetCreaturesInRange
 3. Add isLevelAppropriate check with configurable bounds
 4. Implement selectTarget with LoS checking
@@ -33,6 +33,6 @@
 - Uses Movement.squaredDistance from movement.lua for efficiency
 
 ## Related Files
-- src/lua/behaviors/find-monsters.lua
+- src/lua-beta/.behaviors.disabled/find-monsters.lua
 - src/lua-beta/movement.lua
 - issues/116-behavior-avoid-monsters.md

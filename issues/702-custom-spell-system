@@ -34,7 +34,7 @@
 
 ## Technical Design
 
-See: `docs/phase-3-custom-spells.md` for full architecture
+See: `notes/phase-3-custom-spells.md` for full architecture
 
 ### Core Components
 1. **Spell Definition System** - Lua tables defining all spell properties
@@ -63,7 +63,7 @@ See: `docs/phase-3-custom-spells.md` for full architecture
 - [ ] Implement movement/ESC cancel detection
 - [ ] Test with "Meditate" ability (channel, restore health)
 
-### Phase 3b-3g: See docs/phase-3-custom-spells.md
+### Phase 3b-3g: See notes/phase-3-custom-spells.md
 
 ## Dependencies
 - AIO addon framework (already installed)
@@ -80,7 +80,7 @@ See: `docs/phase-3-custom-spells.md` for full architecture
 - 142g - Class ability migration
 
 ## Related Documents
-- docs/phase-3-custom-spells.md - Full technical design
+- notes/phase-3-custom-spells.md - Full technical design
 - docs/ale/ - ALE API documentation
 - docs/playerbots/ - Bot integration considerations
 

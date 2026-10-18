@@ -14,7 +14,7 @@
 - Creates natural pacing in gameplay
 
 ## Suggested Implementation Steps
-1. Create src/lua/behaviors/sit-and-rest.lua
+1. Create src/lua-beta/.behaviors.disabled/sit-and-rest.lua
 2. Check health/mana thresholds
 3. Check for out of combat state
 4. Set sit state via SetStandState
@@ -42,7 +42,7 @@
 - Registers periodic check on bot login
 
 ## Related Files
-- src/lua/behaviors/sit-and-rest.lua
-- src/lua/behaviors/avoid-monsters.lua
+- src/lua-beta/.behaviors.disabled/sit-and-rest.lua
+- src/lua-beta/.behaviors.disabled/avoid-monsters.lua
 - src/lua-beta/movement.lua
 - docs/ale/ (for stand state constants)

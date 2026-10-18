@@ -48,7 +48,7 @@ After build:   git checkout -- . (revert patches)
 Alternative: Use `git diff` to generate patches, apply with `git apply`, revert with `git checkout`.
 
 ### 2. All Documented Patches Implemented
-Every patch in `docs/patches/` should have a corresponding function in `scripts/azerothcore`.
+Every patch in `docs/patches/` should have a corresponding patch script (`patches/B*.sh`, listed in `patches/patches.sh`; when this was written, a function in `scripts/azerothcore`).
 
 ### 3. Patch Status Command
 ```bash

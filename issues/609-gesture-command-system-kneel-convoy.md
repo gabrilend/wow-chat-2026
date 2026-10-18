@@ -912,8 +912,8 @@ Until the player's gone.
 
 ## Files to Create
 
-- `src/lua/gestures.lua` - Emote detection and response
-- `src/lua/convoy.lua` - Convoy formation and reformation
+- `src/lua/gestures.lua` - Emote detection and response (built as `src/lua-beta/.behaviors.disabled/gestures.lua`)
+- `src/lua/convoy.lua` - Convoy formation and reformation (built as `src/lua-beta/.behaviors.disabled/convoy.lua`)
 - `src/lua/ouroboros.lua` - Recursive chain management
 - `src/lua/behaviors/kneel-reverence.lua` - NPC kneeling behavior
 

@@ -7,7 +7,7 @@
 - Phase: 2
 - Priority: Medium
 
-**Note (2026-04-09):** Patch added to `scripts/azerothcore` as B005.
+**Note (2026-04-09):** Patch added to `scripts/azerothcore` as B005 (now its own file, `patches/B005-accuracy-level-cap.sh`).
 - `patch_B005_accuracy_level_cap()` adds ACCURACY_LEVEL_CAP defines and caps level diff in combat
 - `unpatch_B005_accuracy_level_cap()` removes the caps after build
 - Source is now patched during build and reverted after (Issue 334)

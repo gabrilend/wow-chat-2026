@@ -59,7 +59,7 @@ source-alpha/
 
 ## Profile Configuration
 
-Located in: `scripts/azerothcore` line 30-89
+Located in: `scripts/profiles`, and a copy in each script that needs it (`scripts/test-profile-tables-agree` keeps the copies equal); when this was written, `scripts/azerothcore` lines 30-89
 
 ```bash
 PROFILE_REPO["alpha"]="https://github.com/azerothcore/azerothcore-wotlk.git"
@@ -116,8 +116,8 @@ If alpha breaks, stop everything and fix it immediately.
 ## Related Files
 
 - `scripts/azerothcore` - Profile routing logic
-- `docs/profile-transition-flow.md` - Profile system design
-- `issues/133-profile-transition-system.md` - Implementation plan (was 405; superseded by 136)
+- `docs/archive/profile-transition-flow.md` - Profile system design
+- `issues/completed/133-profile-transition-system.md` - Implementation plan (was 405; superseded by 136)
 
 ## Completion Notes
 

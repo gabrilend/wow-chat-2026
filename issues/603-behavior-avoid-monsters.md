@@ -15,7 +15,7 @@
 - Used by travel.lua wanderers to avoid combat areas
 
 ## Suggested Implementation Steps
-1. Create src/lua/behaviors/avoid-monsters.lua
+1. Create src/lua-beta/.behaviors.disabled/avoid-monsters.lua
 2. Implement getDangerLevel scoring system
 3. Track nearby combat via GetUnitsInCombatWith or similar
 4. Calculate escape vector (opposite direction of threats)
@@ -44,7 +44,7 @@
 - Configuration at top with vertical alignment
 
 ## Related Files
-- src/lua/behaviors/find-monsters.lua
-- src/lua/behaviors/avoid-monsters.lua
+- src/lua-beta/.behaviors.disabled/find-monsters.lua
+- src/lua-beta/.behaviors.disabled/avoid-monsters.lua
 - src/lua-beta/travel.lua
 - src/lua-beta/movement.lua

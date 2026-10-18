@@ -120,7 +120,7 @@ declare -A PROFILE_MODULES=(
 
 ## Related Documents
 
-- scripts/azerothcore (main script to modify)
+- scripts/install and scripts/redownload-source (which clone the source; then scripts/azerothcore, the main script to modify)
 - libs/wow-chat-1/ (June 2023 Lua scripts)
 - docs/configuration.md (will need profile-specific sections)
 

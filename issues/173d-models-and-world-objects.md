@@ -17,7 +17,7 @@ See 173 (the owner's words, 2026-10-04).
 
 **Her own model, 2026-10-05.** The stand-in box is gone: the night elf is
 the game's own model, read in place from the original 3.3.5a client's
-archives (`scripts/custom-client` passes its Data folder; `CLIENT=` sets
+archives (`scripts/custom-client`, now `scripts/run` in the W client project, `../custom-client/`, passes its Data folder; `CLIENT=` sets
 another). Pure LuaJIT, each piece testable without a window:
 
 - `lib/mpq.lua`: the archives. Opens the client's 13 archives in the

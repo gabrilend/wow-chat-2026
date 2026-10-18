@@ -23,7 +23,7 @@
 
 ### Basic Structure
 ```lua
--- src/custom-classes/knight.lua
+-- src/lua-beta/custom-classes/knight.lua
 knight = {}
 
 -- === METADATA ===
@@ -933,7 +933,7 @@ A level-12 character learning Renew gets "Renew (Level 12)" automatically.
 ### New Files
 - `scripts/validate-custom-class.lua` - rmail on_receive hook (standard Lua)
 - `src/custom-class-snapshots/` - Directory for character-pinned versions
-- `src/custom-classes/knight.lua` - Built-in example class
+- `src/lua-beta/custom-classes/knight.lua` - Built-in example class (built there; planned as `src/custom-classes/`)
 - `src/custom-classes/README.md` - Format documentation for authors
 - `scripts/start-rmail` - Start rmail daemon for game server
 - `config/custom-classes.conf` - Path configuration (optional)
@@ -947,7 +947,7 @@ A level-12 character learning Renew gets "Renew (Level 12)" automatically.
 
 ### Overview
 
-Integrate rmail installation into the existing `scripts/azerothcore` build system.
+Integrate rmail installation into the existing build system (`scripts/install`, the first-time setup; when this was written, `scripts/azerothcore`).
 rmail will be cloned to `libs/r-mail/` and a game-server mailbox created at `game-mail/`.
 
 ### Directory Layout (after integration)

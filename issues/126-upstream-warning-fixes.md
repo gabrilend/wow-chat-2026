@@ -91,7 +91,7 @@ See `docs/patches/upstream-warning-fixes.md` for:
 
 ## Integration
 
-Add to `scripts/azerothcore` as a new patch phase or integrate into existing phases.
+Add as a source patch (now `patches/B004-upstream-warning-fixes.sh`, applied by `patches/patches.sh` before compiling; when this was written, a phase of `scripts/azerothcore`).
 Patch should be applied during PHASE_BEGIN before compilation.
 
 ## Verification

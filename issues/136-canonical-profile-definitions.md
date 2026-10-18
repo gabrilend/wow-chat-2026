@@ -178,9 +178,9 @@ Required:
 - `beta`: same source as release, modules=release + custom-feature modules
 
 ### Issues to mark superseded (point at this issue as canonical)
-- `issues/TONIGHT.md` (says release=wow-chat-1 vanilla)
-- `issues/129-release-to-beta-transition.md` (was 400; says release=wow-chat-1)
-- `issues/133-profile-transition-system.md` (was 405; says release=vanilla)
+- `issues/completed/TONIGHT.md` (says release=wow-chat-1 vanilla)
+- `issues/completed/129-release-to-beta-transition.md` (was 400; says release=wow-chat-1)
+- `issues/completed/133-profile-transition-system.md` (was 405; says release=vanilla)
 - `issues/140-branch-based-azerothcore-versioning.md` (was 201; alpha modules wrong)
 
 ### Source-dir mapping (`scripts/authserver`, `scripts/worldserver`, `scripts/compile`)
