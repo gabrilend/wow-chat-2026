@@ -1,0 +1,102 @@
+#!/usr/bin/env luajit
+-- test-movement - checks beta's shared geometry helpers
+-- (src/lua-beta/movement.lua) without a game server.
+--
+-- For a general audience: the beta scripts place monsters, travellers and
+-- chests round a player with a handful of small arithmetic helpers: a spot
+-- on a circle, in a box, on a plus sign, in an arc ahead of a moving
+-- player; the point between two others; the nearest point on a circle.
+-- This loads those helpers alone and checks each answer against what the
+-- helper's comment promises: distances inside the asked range, midpoints in
+-- the middle, and so on. It also watches for any helper writing into the
+-- shared global space, which they did until 2026-10-17 (globals named x, y
+-- and randInt), and for helpers that stop with an error.
+--
+-- Usage: scripts/test-movement [PROJECT_DIR]
+-- Exit status: 0 when every check passes, 1 otherwise.
+
+local DIR = "/mnt/mtwo/games/azeroth-core/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+
+local fails, checks = 0, 0
+-- {{{ local function check
+local function check(ok, what)
+    checks = checks + 1
+    if not ok then fails = fails + 1; print("  FAIL: " .. what) end
+end
+-- }}}
+
+-- Load the helpers, then watch the global space: any new global written
+-- after loading is a helper leaking a value.
+dofile(DIR .. "/src/lua-beta/movement.lua")
+local M = Movement
+local leaked = {}
+setmetatable(_G, { __newindex = function(t, k, v) leaked[#leaked + 1] = k; rawset(t, k, v) end })
+
+local function dist(x1, y1, x2, y2) return math.sqrt((x1 - x2) ^ 2 + (y1 - y2) ^ 2) end
+
+-- {{{ spots round an origin stay inside the asked distances
+local ox, oy = 1000, -500
+for _ = 1, 2000 do
+    local x, y = M.getCircleSpawnPosition(ox, oy, 120, 160)
+    local d = dist(ox, oy, x, y)
+    if d < 119.999 or d > 160.001 then check(false, "circle spot at " .. d .. " yards, asked 120-160"); break end
+end
+check(true, "circle")
+for _ = 1, 2000 do
+    -- the plus shape: one axis between min and max, the other within min
+    local x, y = M.getPlusSpawnPosition(ox, oy, 120, 160)
+    local ax, ay = math.abs(x - ox), math.abs(y - oy)
+    local onArm = (ax >= 120 and ax <= 160 and ay <= 120) or (ay >= 120 and ay <= 160 and ax <= 120)
+    if not onArm then check(false, "plus spot off its arms: " .. ax .. ", " .. ay); break end
+end
+for _ = 1, 2000 do
+    local x, y = M.getBoxSpawnPosition(ox, oy, 120, 160)
+    local ax, ay = math.abs(x - ox), math.abs(y - oy)
+    local inRing = math.max(ax, ay) >= 120 and math.max(ax, ay) <= 160
+    if not inRing then check(false, "box spot outside the square ring: " .. ax .. ", " .. ay); break end
+end
+for _ = 1, 2000 do
+    -- the arc: ahead of the facing, within 45 degrees, at 120-160 yards
+    local facing = 1.0
+    local x, y = M.getArcSpawnPosition(ox, oy, 120, 160, facing)
+    local d = dist(ox, oy, x, y)
+    local a = math.atan2(y - oy, x - ox)
+    local off = math.abs((a - facing + math.pi) % (2 * math.pi) - math.pi)
+    if d < 119.999 or d > 160.001 or off > 0.786 then check(false, "arc spot at " .. d .. " yards, " .. off .. " rad off the facing"); break end
+end
+-- }}}
+
+-- {{{ points between and beyond
+local mx, my = M.getMidpoint(0, 0, 10, -4)
+check(mx == 5 and my == -2, "the midpoint of (0,0) and (10,-4) should be (5,-2)")
+local px, py = M.getPositionOppositePoint(0, 0, 3, 4)
+check(px == 6 and py == 8, "the point opposite (0,0) through (3,4) should be (6,8)")
+local fx, fy = M.getPositionInFrontOfPoint(0, 0, 0, 10)
+check(math.abs(fx - 10) < 1e-9 and math.abs(fy) < 1e-9, "10 yards ahead of facing 0 should be (10,0)")
+-- }}}
+
+-- {{{ distances and the circle's nearest point
+check(M.squaredDistance(0, 0, 3, 4) == 25, "squared distance (0,0)-(3,4) should be 25")
+check(M.isCloseEnough(0, 0, 3, 4, 5) and not M.isCloseEnough(0, 0, 3, 4, 4.9), "5 yards apart is close enough at 5, not at 4.9")
+local lazy = M.getLazyDistance(0, 0, 3, 4)
+check(lazy == 7, "the lazy (city-block) distance (0,0)-(3,4) should be 7")
+local ok, nx, ny = pcall(M.nearestPointOnCircle, 0, 0, 5, 10, 0)
+check(ok, "nearestPointOnCircle should not stop with an error (" .. tostring(nx) .. ")")
+if ok then check(math.abs(nx - 5) < 1e-9 and math.abs(ny) < 1e-9, "the nearest point of a radius-5 circle to (10,0) should be (5,0)") end
+local ux, uy = M.normalize(3, 4)
+check(math.abs(ux - 0.6) < 1e-9 and math.abs(uy - 0.8) < 1e-9, "normalize(3,4) should be (0.6,0.8)")
+-- }}}
+
+-- {{{ angles
+check(math.abs(M.normalizeAngle(-1) - (6.28 - 1)) < 1e-9, "normalizeAngle(-1) should be 6.28 - 1")
+check(math.abs(M.normalizeAngle(7) - (7 - 6.28)) < 1e-9, "normalizeAngle(7) should be 7 - 6.28")
+local ox2, oy2 = M.getOrbitPosition(0, 0, 10, 1, 0, 0, 1)
+check(math.abs(ox2 - 10) < 1e-9 and math.abs(oy2) < 1e-9, "no time passed: the orbit stays at its starting angle")
+-- }}}
+
+setmetatable(_G, nil)
+check(#leaked == 0, "helpers wrote into the global space: " .. table.concat(leaked, ", "))
+
+print(string.format("%d checks, %d failed", checks, fails))
+os.exit(fails == 0 and 0 or 1)
