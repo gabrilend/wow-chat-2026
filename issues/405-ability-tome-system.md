@@ -301,6 +301,26 @@ Requires Issue 307 (ale-gameobject-wildcard) for entry 0 registration.
 - C++: Requires Issue 403 (ale-sell-item-hook) for vendor sales
 - C++: Requires Issue 307 (ale-gameobject-wildcard) for chest events
 
+### State as of 2026-10-17
+
+- The script is `src/lua-beta/ability-tomes.lua.disabled` (switched off
+  with every custom script on 2026-04-10; per-profile folder since
+  2026-06-04). Both engine changes it waits for are built and in beta's
+  patch list: B006 (the sell hook, 403) and B003 (the game-object wildcard,
+  307).
+- **Its sell handler is still unhooked, and would duplicate when hooked.**
+  `AbilityTomes.onPlayerSellItem` (about line 206) has its registration
+  commented out "until the patch is applied", which has been true since
+  April. As written, it sends a sold tome to the tome pool at once, but the
+  game keeps a sold item in the player's 12-slot buyback tab (same item,
+  same identity) until a 13th sale or logout, so buying it back would leave
+  the tome in both places. And a tome of uncommon quality or better that
+  does not stack would also be picked up by treasure's own sell handler:
+  one sale, two pools. Treasure's answer (`Treasure.settleCounter` on the
+  treasure-pool branch: count the sale, release it only once the item is
+  surely gone) is the shape to reuse. Found by the treasure session,
+  2026-10-17 (also recorded in 404's open question 3).
+
 ### SQL Requirements
 
 **1. Remove Glyphs**

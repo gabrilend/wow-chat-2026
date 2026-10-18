@@ -30,7 +30,9 @@
 --   --all            every issue, open and completed (default: completed/)
 --   --source TREE    where "source-beta/..." paths are looked for (default
 --                    PROJECT_DIR/source-beta; a separate checkout has none)
---   --summary        one line per issue, no detail
+--   --summary        one line per issue, no detail; each line also says
+--                    whether the issue has a "## Since then" section (where
+--                    an old issue explains what became of it)
 --   --suspect        also list issue numbers that exist now but were old
 --                    numbers before the renumbering (often harmless: the
 --                    2026-04-29 sweep rewrote most of them)
@@ -157,8 +159,11 @@ local function classify_path(p)
             if exists[np] or exists[np .. ".disabled"] then return "moved", np .. (exists[np] and "" or ".disabled") .. "  (" .. r[3] .. ")" end
         end
     end
-    -- switched off or on since
+    -- switched off or on since, or retired with a "deprecated" ending
     if exists[p .. ".disabled"] then return "moved", p .. ".disabled  (switched off)" end
+    for _, ending in ipairs({ ".deprecated", "-deprecated", "-done" }) do
+        if exists[p .. ending] then return "moved", p .. ending .. "  (retired, kept for the record)" end
+    end
     local undis = p:gsub("%.disabled$", "")
     if undis ~= p and exists[undis] then return "moved", undis .. "  (switched on again)" end
     -- a file of the same name elsewhere
@@ -220,7 +225,7 @@ if #files == 0 then
 end
 -- }}}
 
-local totals = { ok = 0, moved = 0, missing = 0, issues = 0, badIssues = 0, renumbered = 0 }
+local totals = { ok = 0, moved = 0, missing = 0, issues = 0, badIssues = 0, renumbered = 0, threaded = 0 }
 for _, file in ipairs(files) do
     local f = io.open(file)
     if not f then print("  cannot read " .. file) else
@@ -251,10 +256,15 @@ for _, file in ipairs(files) do
         totals.ok, totals.moved, totals.missing = totals.ok + c.ok, totals.moved + c.moved, totals.missing + c.missing
         totals.issues = totals.issues + 1
         local name = file:sub(#DIR + 2)
-        print(string.format("%s: %d paths ok, %d moved, %d missing", name, c.ok, c.moved, c.missing))
+        -- A "Since then" section is where an old issue says what became of
+        -- it; an issue with one has had its stale references explained.
+        local threaded = text:find("\n## Since then", 1, false) ~= nil
+        if threaded then totals.threaded = totals.threaded + 1 end
+        print(string.format("%s: %d paths ok, %d moved, %d missing%s", name, c.ok, c.moved, c.missing,
+            threaded and "  [has a Since then thread]" or ((c.moved + c.missing > 0) and "  [no Since then thread yet]" or "")))
         if not opt.summary then for _, l in ipairs(report) do print(l) end end
     end
 end
-print(string.format("%d issue file(s): %d paths ok, %d moved, %d missing; %d issue numbers that do not exist, %d that may mean a renumbered issue",
-    totals.issues, totals.ok, totals.moved, totals.missing, totals.badIssues, totals.renumbered))
+print(string.format("%d issue file(s), %d with a Since then thread: %d paths ok, %d moved, %d missing; %d issue numbers that do not exist, %d that may mean a renumbered issue",
+    totals.issues, totals.threaded, totals.ok, totals.moved, totals.missing, totals.badIssues, totals.renumbered))
 os.exit((opt.strict and totals.missing > 0) and 1 or 0)

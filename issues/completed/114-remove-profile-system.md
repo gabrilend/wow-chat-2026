@@ -181,3 +181,21 @@ Understanding *why not* is as valuable as understanding *why*. Future developers
 4. What problem profiles actually solve
 
 Documentation of declined proposals prevents re-proposing the same idea and re-learning the same lessons.
+
+## Since then (checked 2026-10-17)
+
+The profile system was kept, as decided here, and grew: six profiles
+today (basic, cc-test, vanilla, beta, release, alpha; `docs/profiles/`).
+Part of what this proposal wanted came anyway, by another road:
+- **One source tree for most profiles.** basic, cc-test, vanilla, beta
+  and release all build from `source-beta/` (alpha alone has
+  `source-alpha/`). The difference between them is not a branch but a
+  list: each profile names its source patches, install steps and settings
+  patches (`patches/patches.sh`, `config/patches/C*.sh`), applied before a
+  build and taken off after, so the tree always returns to upstream.
+- **Separate install trees stayed** (`installed-files-<profile>/`), as did
+  separate databases, so switching profile is choosing which installed
+  server to start, not a rebuild.
+Branch-based versioning is still an open idea in issue 140; the decision
+here and 133's single-tree plan are its background. 136 holds the
+canonical profile definitions.

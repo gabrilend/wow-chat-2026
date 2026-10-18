@@ -498,3 +498,23 @@ esac
 - `scripts/compile` - AC_CODE_DIR
 - `scripts/redownload-source` - AC_CODE_DIR
 - `scripts/install` - AC_CODE_DIR, target_dir (modules symlink)
+
+## Since then (checked 2026-10-17)
+
+- **The live design**: 39 settings patches in `config/patches/` today,
+  each one function with its profile tags (`CONFIG_PROFILES`) and a
+  description, run by `apply_config_values` in `patches/E-patches.sh`.
+  The single registry file this issue first described is retired as
+  `config/config-registry.sh.deprecated`; the per-file layout in "the
+  new structure" above is what stayed.
+- **Order is by file name**: until 2026-09-29 the runner went in
+  alphabetical function-name order, which ran C017 (the level-correlated
+  caps) before the level-cap patches it reads, so it read the stock 80;
+  it now sources the files in file-name order (C017's header has the
+  story), and the test below calls the real runner, so the order tested is
+  the order installed.
+- **Tested**: `scripts/test-profile-config-gates` runs every patch on
+  scratch copies of the stock files and checks each value against the
+  profile's table (basic, cc-test, beta), and reports any key a patch
+  edits that no stock file contains.
+- Small value changes are logged in `docs/balance-updates.md`.
