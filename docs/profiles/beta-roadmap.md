@@ -131,6 +131,17 @@ work needs, and treasure is fed by the selling that merchants allow.
 
 ### 7. Companions
 
+- **First, the calls the behaviors make that the engine lacks.** Found
+  2026-10-17 by the treasure session's method-name check
+  (`scripts/test-ale-method-names`, branch completed-threads): calls in
+  `.behaviors.disabled/` to methods the Lua engine does not have, each a
+  failure waiting at the first run, the kind issue 606b met with
+  `GetPosition`. `MovementExpired` (convoy, gestures), `SetTarget`
+  (find-monsters), `GetPhase` (gestures; the engine has `GetPhaseMask`),
+  `GetUnitsInRange` (orbit-player; it has `GetFriendlyUnitsInRange` and
+  `GetUnfriendlyUnitsInRange`), `UseItem` (sit-and-rest). (`IsHostileTo`,
+  also listed, is added on beta by source patch B007.) Fix each before
+  its behavior is switched on.
 - The bot behaviors, one at a time, out of `.behaviors.disabled/`, each
   with its own check: **601** find monsters, **603** avoid monsters,
   **604** sit and rest, **606** orbit the player, **609** gestures and

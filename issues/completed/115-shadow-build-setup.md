@@ -55,7 +55,7 @@ Beta branch had accumulated many patches. When builds failed, it was unclear whi
 
 ### Atomic Shadow Builds Already Exist
 
-Issue 327 implemented a simpler solution using shadow *directories* (not worktrees):
+Issue 327 (now 122, atomic shadow builds) implemented a simpler solution using shadow *directories* (not worktrees):
 
 ```
 wow-chat-2026/
@@ -100,8 +100,8 @@ No worktree needed. Profiles already provide the isolation.
 ### The Real Problem Was Patch Tracking
 
 The original complaint was "patches interact in complex ways." The solution isn't more build isolation - it's better patch documentation:
-- Issue 334: Patch system improvements
-- Issue 326: Patch staleness detection
+- Issue 334 (now 127): Patch system improvements
+- Issue 326 (now 112): Patch staleness detection
 - `docs/patches/patch-registry.md`: Tracks all patches
 
 With proper patch documentation, we know what's applied and can debug systematically.

@@ -240,7 +240,7 @@ Organize configs into groups for clarity:
 
 ## Notes
 
-This parallels the patch orchestrator design (issue 334). Just as patches are applied based on profile, config values should be too. The key insight: configuration is code, and should be treated with the same rigor as patches.
+This parallels the patch orchestrator design (issue 334, now 127). Just as patches are applied based on profile, config values should be too. The key insight: configuration is code, and should be treated with the same rigor as patches.
 
 ## Implementation Summary (2026-04-11)
 

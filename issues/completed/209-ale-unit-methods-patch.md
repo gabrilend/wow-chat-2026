@@ -6,12 +6,12 @@
 - **PATCH RE-IMPLEMENTED** (2026-04-09)
 - Phase: 2
 - Priority: High
-- Related: Issue 328 (GetPosition nil errors)
+- Related: Issue 328 (now 606b) (GetPosition nil errors)
 
 **Note (2026-04-09):** Patch added to `scripts/azerothcore` as B007.
 - `patch_B007_ale_unit_methods()` adds SetWalk, IsWalking, IsHostileTo, IsFriendlyTo to ALE
 - `unpatch_B007_ale_unit_methods()` removes the methods after build
-- Source is now patched during build and reverted after (Issue 334)
+- Source is now patched during build and reverted after (Issue 334, now 127)
 
 ## Current Behavior (Before Fix)
 
