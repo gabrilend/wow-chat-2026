@@ -32,7 +32,8 @@
 -- other row used). Both look like slips of two digits. And the druid rows
 -- read -10, but the game numbers druids 11 (10 is unused), so travel.lua's
 -- "is this the player's class" never matched a druid: no druid ever met a
--- trainer. They read -11 now.
+-- trainer. They read -11 now. All three slips go back to wow-chat-1's own
+-- table (libs/wow-chat-1/travel.lua, where the bands spanned 1-80).
 -- scripts/generate-beta-trainer-tiers-sql checks the class of every row.
 --------------------------------------------------------------------------------
 

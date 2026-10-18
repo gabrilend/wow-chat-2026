@@ -374,3 +374,28 @@ The empty world is populated by systems (ambush, travel, treasure). Players inte
 - Immediate customization (level 1)
 
 This creates the progression backbone for the roguelike survival experience.
+
+## Since then (checked 2026-10-17)
+
+**Not running anywhere today.** Both halves left beta's build:
+- `levelling.lua` (the Lua half) was switched off with every custom script
+  on 2026-04-10 (`src/lua-beta/levelling.lua.disabled`).
+- `mod-talent-bonus` (the C++ half) was set aside the same day
+  (`modules/mod-talent-bonus.disabled/`) and removed from the folder on
+  2026-04-11 (afc93e5). Its patch, B008, stayed in beta's list and made
+  every beta build stop ("module folder missing") until it was retired on
+  2026-10-09 (2e06087). The module's source is in git at commit e42b59e,
+  path `modules/mod-talent-bonus.disabled/`, so this issue can be rebuilt.
+
+So beta characters earn the stock talent points (one a level from 10, 11
+by level 20). Later designs for talent pacing, each a variation on this one:
+- **714, chunked talent points (open, v1.0):** large chunks at set levels
+  instead of three a level.
+- **802, talent tier limit (open):** caps which tiers can be reached.
+- **155g on basic (built, B030):** basic's compiled rules cap talents the
+  vanilla way; built as a source patch of the core instead of a module,
+  which the project's patch system keeps reversible.
+Before bringing 205 back, decide which of these beta wants; the
+hook it relies on (`OnPlayerCalculateTalentsPoints`) is still in the
+core, but its arguments changed (it no longer passes the level, only the
+player and the points), so the module needs that edit to compile again.

@@ -198,3 +198,44 @@ ALE might load from its source directory during certain operations.
 4. **No event registration in .ext files** - Extensions load before main Lua files. Event registration in this early phase can corrupt ALE's registry. Use .ext files only for method definitions and global setup.
 
 5. **Check ALL extension locations** - ALE has extensions in multiple places: the runtime lua_scripts directory AND the module source directory. Both must be kept in sync or issues will occur.
+
+## Since then (checked 2026-10-17)
+
+Four parts of this issue have gone four different ways.
+
+- **The unit methods (B007): still needed, still applied.** The engine now
+  has a `SetWalk` of its own, but on creatures only; B007 still adds
+  `SetWalk`, `IsWalking`, `IsHostileTo` and `IsFriendlyTo` to every unit.
+  B007 is in beta's patch list (`patches/patches.sh`); it moved from
+  `scripts/azerothcore` into `patches/B007-ale-unit-methods.sh` when the
+  build script was split (issue 142), and on 2026-09-23 its undo was
+  rewritten to remove marked blocks instead of re-matching text (the old
+  undo missed its first method). `scripts/test-source-patches <dir> beta`
+  applies and reverts it on a copy of the source.
+- **The ObjectVariables memory cleanup ("Tertiary Fix"): replaced without
+  a word.** The 2026-06-04 per-profile split (b55a774) replaced the
+  project's 250-line extension, the one this issue wrote, with the
+  engine's own stock copy (`src/lua-beta/extensions/ObjectVariables.ext`
+  is byte-identical to `mod-ale/src/LuaEngine/extensions/ObjectVariables.ext`).
+  So the cleanup functions are gone (callers guard against that, e.g.
+  `Travel.despawn`), and the four event registrations this issue removed
+  are back.
+- **Those events do exist now.** In today's engine (`Hooks.h`), 17 and 18
+  are map create and destroy, 31 and 32 are creature and game-object
+  delete, exactly what the stock extension asks for. Either this issue's
+  "only 1-7 exist" was wrong for the engine of April, or the engine has
+  grown since; the registry crash it was chasing is still open as issue
+  208, never reproduced since beta stopped running in April. When beta
+  runs again, 208's crash message ("registered value is table ... not a
+  function") is the thing to watch for; if it comes back, this issue's
+  version of the extension is in git at commit 40e05ca.
+- **StackTracePlus ("Quaternary Fix"): half undone.** This issue renamed
+  it to `StackTracePlus.disabled/`, but a live copy stayed beside it, and
+  `_Misc.ext` asks for it, so it has been running all along, with the
+  disabled copy refused as a duplicate at every boot. On 2026-10-17 the
+  disabled copy was hidden with a leading dot (`.StackTracePlus.disabled/`);
+  whether the live one should run is an open question for the owner
+  (issue 200, open question 1).
+- **Lesson 4 ("No event registration in .ext files")** is broken by the
+  stock extension itself. It has not been tested either way since April.
+- Paths: `src/lua/...` is `src/lua-beta/...` since 2026-06-04.

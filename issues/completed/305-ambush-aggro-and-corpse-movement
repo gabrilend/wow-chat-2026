@@ -358,3 +358,32 @@ Phase 3 is about danger being REAL. Real danger requires:
 - Believable consequences
 
 Two one-line fixes. Massive impact on combat feel.
+
+## Since then (checked 2026-10-17)
+
+**This fix was lost for six months, and is back.** It was made on
+2026-04-05 in the ambush script of the time. On 2026-04-10 every custom
+script was switched off for the profile baseline, and that file became
+`src/lua-beta/ambush.lua.disabled` (it still holds this fix). The ambush
+that runs today came back by a different road: a merge from the alpha
+branch restored the 2026-03-31 stash's ambush (the random walk of 303 and
+the self-winding clock of 302), from before this fix. So from April to
+October the live ambush had neither these fixes nor 304's cleanup. Found by reading the two copies
+side by side on 2026-10-17, and ported as `Ambush.layToRest`
+(`src/lua-beta/ambush.lua`), which every place a death is seen now calls.
+`scripts/test-ambush` checks it ("issues 304 and 305" scene), and fails
+if any part of it is taken out.
+
+What differs from the text above, and why:
+- Death is seen in three places, not one: the chase step and the fight
+  check notice a dead monster too, because `onCreatureDeath` is the
+  player-kill event and never fires for a monster killed by a pet or a
+  guard. All three lay the monster to rest; the count comes off once
+  (`Ambush.release`, with its "ambush-counted" mark).
+- Corpses do despawn: normal ambushers 6 minutes after death (summon kind
+  6, "corpse timed"), rares never until a restart (kind 8, "manual").
+  "Corpses persist" above describes rares.
+- `src/lua/ambush.lua` is now `src/lua-beta/ambush.lua` (the per-profile
+  folders of 2026-06-04).
+
+Data path: `docs/datapaths/ambush.md`.

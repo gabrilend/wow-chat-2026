@@ -299,3 +299,27 @@ This issue enables **Phase 2: Empty World** by ensuring:
 > "The Lua engine brings life to the emptiness"
 
 The empty world is Phase 2. But Phase 2 also requires the **systems that populate it**. Those systems are Lua. This fix makes Phase 2 possible.
+
+## Since then (checked 2026-10-17)
+
+- **The fix is not applied, and is not needed in today's build.** Today's
+  Lua engine (`source-beta/modules/mod-ale/src/ALE_SC.cpp`) starts the way
+  this issue found broken: `ALE::Initialize` in `OnBeforeConfigLoad`, the
+  scripts run in `OnBeforeWorldInitialized`. It works: basic's and
+  cc-test's scripts (the buddies, Sargobras, the arena trial) run on every
+  boot. So the hook that "never fired" in March fires in the builds made
+  since; the likeliest reasons are this issue's own hypotheses 2 and 3 (a
+  build or module-order quirk of that tree), which the later re-clones and
+  pin moves left behind. Nothing records which.
+- **Its patch was never kept.** `docs/patches/ale-initialization-fix.md`
+  was never committed (git has no trace of it), and no source patch
+  (`patches/B*.sh`) carries it. If a boot ever shows no "Initialize ALE Lua
+  Engine..." line again, the "After" code above is the whole fix, and the
+  project's way to carry it is a B-patch (`upstream-patch-system` skill).
+- **"Secondary Issue: Subdirectory Loading"**: the engine reads every
+  subfolder, skipping only names that start with a dot. Found on
+  2026-10-17 that a folder named `something.disabled` is therefore still
+  loaded; beta's switched-off folders now start with a dot, and
+  `scripts/test-lua-unique-names` fails on any loaded file in a folder
+  named as disabled. `scripts/test-beta-lua-load` loads beta's scripts the
+  way the engine does, without a server.

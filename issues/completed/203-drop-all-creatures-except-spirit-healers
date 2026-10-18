@@ -319,3 +319,25 @@ With this deletion:
 - Every chest spawned just for you (treasure system)
 
 The systems become visible and meaningful. The empty world is the stage for their performance.
+
+## Since then (checked 2026-10-17)
+
+- **Still built, now as install step E012**, with its SQL at
+  `sql/beta/db_world.src/12-drop-creatures-keep-essential.apply.sql` (it
+  was `source-beta/data/sql/custom/db_world/drop-creatures-keep-essential.sql`;
+  issue 167 recreated the SQL files and the per-profile split of 2026-06-04
+  moved them).
+- **It can be undone now.** Since 2026-09-23 the apply first saves the whole
+  `creature` table into `wow_chat_e012_snapshot_creature`, and the undo
+  (written by E012's revert in `patches/E-patches.sh`) restores it and drops
+  the copy. `scripts/test-beta-sql-in-ram` applies, re-applies and undoes it
+  on a stock world database and checks the tables come back exactly.
+- **Still beta only, but shared until issue 136b:** beta and release use one
+  world database, so installing beta empties release's world too.
+- **What fills the emptied world** is no longer only the ambush: travellers
+  (vendors, innkeepers, class trainers of the player's level) came back on
+  2026-10-17. The trainers they carry used to stand in towns; with no town
+  NPCs left, they are how a beta character learns
+  (`docs/datapaths/travellers-and-trainers.md`). Basic and vanilla went the
+  other way, keeping the populated world (155), which is why 153b ("world
+  emptied to critters", the explore profile) is a separate, later design.

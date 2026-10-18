@@ -16,6 +16,18 @@ ASSERTION FAILED: ExecuteCall, Condition: false
 
 Crash occurs after several successful callback executions. A TABLE is stored in the Lua registry where a FUNCTION should be.
 
+State as of 2026-10-17: not seen since beta last ran (April 2026), and
+not looked for: no beta server has run since. Two things changed under it.
+The project's own ObjectVariables extension (issue 209's, which removed
+the extension's event registrations as the suspected cause) was replaced
+on 2026-06-04 by the engine's stock copy, which registers those events
+again; in today's engine they exist (17/18 map create and destroy, 31/32
+creature and game-object delete). And the ambush, the travellers and the
+bot scripts that were registering events at the time have been rewritten
+or switched off. So the next beta run is the test: watch the log for the
+message above. 209's "Since then" has the details and the commit holding
+its version of the extension (40e05ca).
+
 ## Investigation Summary
 
 ### What We Tried
