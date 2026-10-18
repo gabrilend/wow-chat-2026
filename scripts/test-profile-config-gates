@@ -11,22 +11,38 @@
 # and compares it with the value the profile's issue file promises. It
 # never starts a server and never touches a database.
 #
-# Usage: scripts/test-profile-config-gates [PROJECT_DIR] [PROFILE]
+# Usage: scripts/test-profile-config-gates [PROJECT_DIR] [PROFILE] [--source TREE]
 #   PROJECT_DIR defaults to the hard-coded path below.
+#   --source: the AzerothCore source tree whose stock config files are
+#   patched (default PROJECT_DIR/source-beta). A separate checkout of the
+#   project has no source tree of its own; name the main project's.
 #   PROFILE: check that one profile. Without it, every profile with an
 #   expectation table below is checked in turn (basic, cc-test, beta), so
 #   the build's quick tests, which pass only the project folder, check
 #   them all. (Until 2026-10-17 it defaulted to basic alone, and beta's
 #   table, added that day, was never checked by a build.)
 #
-# Input: the stock .conf.dist files from any installed tree (they are
-# identical across profiles built from source-beta).
+# Input: the stock .conf.dist files in the source tree, the ones the next
+# build installs. Until 2026-10-18 they were taken from the first installed
+# tree found (vanilla, beta, release), on the belief that every installed
+# tree holds the same files. They do not: each holds the files of the build
+# that made it, and beta's (April) and release's (May) still name the
+# playerbots setting EquipmentPersistence, which upstream has since renamed
+# EquipAndSpecPersistence. Wherever vanilla's newer tree was missing, the
+# test failed on a patch that was right.
 # Exit status: 0 if every expectation holds, 1 otherwise.
 
 set -o pipefail
 
 DIR="/mnt/kaun/wow-chat-2026"
+SOURCE=""
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+    if [[ "$1" == "--source" ]]; then SOURCE="$2"; shift 2; else POSITIONAL+=("$1"); shift; fi
+done
+set -- "${POSITIONAL[@]}"
 [[ -n "${1:-}" ]] && DIR="$1"
+[[ -n "${SOURCE}" ]] || SOURCE="${DIR}/source-beta"
 
 # {{{ every profile with a table, when none is named
 #   a profile named: check it below
@@ -36,7 +52,7 @@ if [[ -z "${2:-}" ]]; then
     overall=0
     for each in basic cc-test beta; do
         echo "=== ${each}"
-        "$0" "${DIR}" "${each}" || overall=1
+        "$0" "${DIR}" "${each}" --source "${SOURCE}" || overall=1
     done
     exit "${overall}"
 fi
@@ -148,21 +164,29 @@ SCRATCH="${SCRATCH_ROOT}/test-config-gates-${PROFILE}"
 rm -rf "${SCRATCH}"
 mkdir -p "${SCRATCH}/etc/modules"
 
-DIST_SRC=""
-for candidate in "${DIR}"/installed-files-{vanilla,beta,release}/etc; do
-    if [[ -f "${candidate}/worldserver.conf.dist" && -f "${candidate}/modules/playerbots.conf.dist" ]]; then
-        DIST_SRC="${candidate}"
-        break
+# The stock files are gathered from the source tree into the layout an
+# install gives them (etc/, etc/modules/), so everything below reads them
+# as before: the server's two from their apps' folders, every module's
+# from its conf/ folder.
+DIST_SRC="${SCRATCH}/stock"
+mkdir -p "${DIST_SRC}/modules"
+WORLD_DIST="${SOURCE}/src/server/apps/worldserver/worldserver.conf.dist"
+AUTH_DIST="${SOURCE}/src/server/apps/authserver/authserver.conf.dist"
+BOTS_DIST="${SOURCE}/modules/mod-playerbots/conf/playerbots.conf.dist"
+for f in "${WORLD_DIST}" "${AUTH_DIST}" "${BOTS_DIST}"; do
+    if [[ ! -f "${f}" ]]; then
+        echo "ERROR: no stock config at ${f}"
+        echo "       to debug: is ${SOURCE} a cloned source tree with mod-playerbots in modules/?"
+        echo "       From a separate checkout, name the main project's: --source <main project>/source-beta"
+        exit 1
     fi
 done
-if [[ -z "${DIST_SRC}" ]]; then
-    echo "ERROR: no installed tree with worldserver.conf.dist + playerbots.conf.dist found"
-    exit 1
-fi
+cp "${WORLD_DIST}" "${AUTH_DIST}" "${DIST_SRC}/"
+cp "${SOURCE}"/modules/*/conf/*.conf.dist "${DIST_SRC}/modules/"
 cp "${DIST_SRC}/worldserver.conf.dist"         "${SCRATCH}/etc/worldserver.conf"
 cp "${DIST_SRC}/authserver.conf.dist"          "${SCRATCH}/etc/authserver.conf"
 cp "${DIST_SRC}/modules/playerbots.conf.dist"  "${SCRATCH}/etc/modules/playerbots.conf"
-echo "Stock configs from: ${DIST_SRC#${DIR}/}"
+echo "Stock configs from: ${SOURCE}"
 echo "Scratch:            ${SCRATCH}"
 # }}}
 
