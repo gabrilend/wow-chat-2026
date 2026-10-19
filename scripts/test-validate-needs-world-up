@@ -1,0 +1,78 @@
+#!/bin/bash
+# test-validate-needs-world-up - checks that a build is only called good when
+# its worldserver has really finished starting.
+#
+# For a general audience: after a compile, scripts/validate starts the new
+# worldserver once and promotes the build only if the server comes up.
+# Until 2026-10-18 it also accepted five quiet seconds as "up", and the
+# server is quiet for longer than that while it updates its databases, so a
+# build was promoted after 6 seconds, its world never loaded. This runs the
+# real checking part of scripts/validate against small pretend servers that
+# behave in the ways that matter: one that starts slowly with long silences
+# and then says "World initialized", one that goes quiet and never finishes,
+# one that crashes, one that prints a fatal error. Only the first may pass.
+#
+# Usage: scripts/test-validate-needs-world-up [PROJECT_DIR]
+#   VALIDATE_UNDER_TEST=<file> checks another copy of scripts/validate (an
+#   older one, to see that this test would have caught its fault)
+# Exit status: 0 when every case behaves as expected, 1 otherwise.
+
+DIR="/mnt/kaun/wow-chat-2026"
+if [[ -n "$1" ]]; then
+    DIR="$1"
+fi
+
+# {{{ setup
+# The pretend servers are executables, so they live in the exec tier
+# (tmp/tmp/), rebuilt first after a reboot by the house helper.
+source /home/ritz/programming/ai-stuff/scripts/libs/ensure-ram-tiers
+ensure_ram_tiers "${DIR}" || exit 1
+WORK="$(mktemp -d "${DIR}/tmp/tmp/validate-test.XXXXXX")"
+trap 'rm -rf "${WORK}"' EXIT
+
+# the function under test, lifted out of scripts/validate as it is
+FUNCTION="$(sed -n '/^validate_shadow_worldserver() {/,/^}/p' "${VALIDATE_UNDER_TEST:-${DIR}/scripts/validate}")"
+[[ -n "${FUNCTION}" ]] || { echo "FAIL: validate_shadow_worldserver not found in scripts/validate"; exit 1; }
+eval "${FUNCTION}"
+export VALIDATE_MAX_TIMEOUT=15
+# }}}
+
+FAILS=0
+CHECKS=0
+# {{{ run_case
+# run_case NAME WANT BODY: a pretend worldserver whose behaviour is BODY (a
+# few lines of bash); WANT is "pass" or "fail", what validation must say.
+run_case() {
+    local name=$1 want=$2 body=$3
+    local case_dir="${WORK}/${name}"
+    mkdir -p "${case_dir}/bin" "${case_dir}/etc" "${case_dir}/tmp"
+    touch "${case_dir}/etc/worldserver.conf"
+    printf '#!/bin/bash\n%s\n' "${body}" > "${case_dir}/bin/worldserver"
+    chmod +x "${case_dir}/bin/worldserver"
+
+    local got
+    ( DIR="${case_dir}" PROFILE=test INSTALL_DIR_SHADOW="${case_dir}" MYSQL_DIR="${case_dir}"
+      validate_shadow_worldserver ) > "${case_dir}/out.txt" 2>&1 && got=pass || got=fail
+    CHECKS=$((CHECKS + 1))
+    if [[ "${got}" == "${want}" ]]; then
+        echo "  ok    ${name}: ${got}"
+    else
+        FAILS=$((FAILS + 1))
+        echo "  FAIL  ${name}: validation said ${got}, should say ${want}"
+        sed 's/^/          /' "${case_dir}/out.txt"
+    fi
+}
+# }}}
+
+echo "test-validate-needs-world-up"
+run_case "slow-start-then-up" pass \
+    'echo "Updating World database..."; sleep 8; echo ">> up-to-date"; sleep 3; echo "World initialized in 11 sec"; sleep 60'
+run_case "quiet-and-never-up" fail \
+    'echo "Updating Character database..."; echo ">> Character database is up-to-date!"; sleep 60'
+run_case "crashes" fail \
+    'echo "Loading..."; exit 1'
+run_case "fatal-error" fail \
+    'echo "Loading..."; echo "FATAL: database missing"; sleep 60'
+
+echo "${CHECKS} cases, ${FAILS} failed"
+exit $(( FAILS > 0 ))
