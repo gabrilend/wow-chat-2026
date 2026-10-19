@@ -14,7 +14,19 @@ need to be able to whisper to them."
 
 ## Current Behavior
 
-Not built. A whisper to a narrator bot goes to the bot module, which may
+**Telling and passing on built 2026-10-18 (homework branch); tested without
+a server, not tried in game.** In `src/lua-beta/narrators.lua`: a real
+player's whisper to a narrator is kept as a rumour with its keywords (words
+of five letters or more, common ones left out), answered in a whisper ("I'll
+remember that, and pass it on."), and stopped there, so the bot module does
+not also answer; one a second from one player; twenty kept, the oldest
+dropped. A real player saying one of a kept rumour's keywords in /say within
+hearing makes the narrator tell it ("Windmill, you say? I heard someone say:
+...") and forget it. `scripts/test-narrators`: 10 new checks (23 in all).
+
+Not built: rumours travelling between narrators (question 1).
+
+Before this, a whisper to a narrator bot went to the bot module, which might
 answer it by its own rules.
 
 ## Intended Behavior

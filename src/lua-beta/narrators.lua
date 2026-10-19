@@ -31,11 +31,15 @@ local LISTEN_SECONDS  = 20      -- quiet after a real player speaks nearby
 local PAUSE_MS        = 3000    -- the pause after any line (at 1500 a short line came every tick, too fast to follow)
 local PAUSE_PER_CHAR  = 60      -- ...plus this much per character (about reading speed)
 local CHAT_LINE_BYTES = 255     -- the most one say line holds
+local RUMOURS_KEPT    = 20      -- a narrator keeps this many rumours, the oldest dropped
+local WHISPER_EVERY_MS = 1000   -- one whisper a second from one player (910's rate limit)
+local KEYWORD_LETTERS = 5       -- words this long or longer are a rumour's keywords
 -- }}}
 
 -- {{{ engine numbers
 local PLAYER_EVENT_ON_LOGOUT = 4
 local PLAYER_EVENT_ON_CHAT   = 18
+local PLAYER_EVENT_ON_WHISPER = 19
 local CHAT_MSG_SAY           = 1
 local LANG_UNIVERSAL         = 0
 -- }}}
@@ -50,7 +54,8 @@ local Sentences = dofile(here() .. "lib/gutenberg-sentences.lua")
 
 -- Narrator state, by character number: { parts = lines left of the sentence
 -- being read, next_at = tick time it may speak again, quiet_until = tick
--- time it listens until, started = true once its reader exists }
+-- time it listens until, started = true once its reader exists, rumours =
+-- list of { text, from (a name), keywords = set of words } (910b) }
 Narrators.state  = {}
 Narrators.now    = 0          -- ms of ticks so far
 Narrators.broken = nil        -- the reason, once the library could not start
@@ -91,6 +96,19 @@ local function next_line(guid, s)
 end
 -- }}}
 
+-- {{{ local function state_of
+local function state_of(p)
+    local guid = p:GetGUIDLow()
+    local s = Narrators.state[guid]
+    if not s then
+        s = { parts = {}, next_at = 0, quiet_until = 0, rumours = {} }
+        Narrators.state[guid] = s
+    end
+    s.rumours = s.rumours or {}
+    return s
+end
+-- }}}
+
 -- {{{ function Narrators.tick
 -- One look at every online narrator: one that someone hears, that is not
 -- listening and whose pause is over says its next line.
@@ -101,11 +119,7 @@ function Narrators.tick()
     for _, p in ipairs(players) do
         if Narrators.is_narrator(p) then
             local guid = p:GetGUIDLow()
-            local s = Narrators.state[guid]
-            if not s then
-                s = { parts = {}, next_at = 0, quiet_until = 0 }
-                Narrators.state[guid] = s
-            end
+            local s = state_of(p)
             -- heard by nobody, listening, or still pausing: silent this tick
             if anyone_listening(p, players) and Narrators.now >= s.quiet_until and Narrators.now >= s.next_at then
                 if not s.started then
@@ -128,17 +142,67 @@ function Narrators.tick()
 end
 -- }}}
 
+
+-- {{{ function Narrators.keywords
+-- A rumour's keywords: its words of KEYWORD_LETTERS letters or more, lower
+-- case, without the common ones that would match any talk.
+local COMMON = {}
+local COMMON_WORDS = "about after again before being could every first found heard house "
+                  .. "never other place right since still their there these thing think "
+                  .. "those three under where which while would yours"
+for w in COMMON_WORDS:gmatch("%a+") do COMMON[w] = true end
+function Narrators.keywords(text)
+    local set = {}
+    for w in text:lower():gmatch("%a+") do
+        if #w >= KEYWORD_LETTERS and not COMMON[w] then set[w] = true end
+    end
+    return set
+end
+-- }}}
+
 -- {{{ function Narrators.on_chat
 -- A real player speaking in /say quiets the narrators who hear them for
--- LISTEN_SECONDS; they go on from the same place afterwards.
-function Narrators.on_chat(_event, player, _msg, msg_type, _lang)
+-- LISTEN_SECONDS; they go on from the same place afterwards. And a narrator
+-- who hears a word of a rumour it keeps tells that rumour, once (910b): "<the
+-- word>, you say? I heard ..." -- and forgets it.
+function Narrators.on_chat(_event, player, msg, msg_type, _lang)
     if msg_type ~= CHAT_MSG_SAY or player:IsBot() then return end
+    local said = Narrators.keywords(msg)
     for _, p in ipairs(GetPlayersInWorld() or {}) do
         if Narrators.is_narrator(p) and hears(player, p) then
-            local s = Narrators.state[p:GetGUIDLow()]
-            if s then s.quiet_until = Narrators.now + LISTEN_SECONDS * 1000 end
+            local s = state_of(p)
+            s.quiet_until = Narrators.now + LISTEN_SECONDS * 1000
+            for k, r in ipairs(s.rumours) do
+                local word
+                for w in pairs(said) do if r.keywords[w] then word = w break end end
+                if word then
+                    table.remove(s.rumours, k)
+                    p:Say(word:sub(1, 1):upper() .. word:sub(2) .. ", you say? I heard someone say: \"" .. r.text .. "\"", LANG_UNIVERSAL)
+                    break
+                end
+            end
         end
     end
+end
+-- }}}
+
+-- {{{ function Narrators.on_whisper
+-- A player whispering a narrator tells it a rumour (910b): kept, with its
+-- keywords, and answered in a whisper. One a second from one player. The
+-- whisper goes no further (false): the bot module does not also answer it.
+-- Whispers between other players, and from bots, are left alone.
+Narrators.last_whisper = {}
+function Narrators.on_whisper(_event, player, msg, _type, _lang, receiver)
+    if not receiver or not Narrators.is_narrator(receiver) or player:IsBot() then return end
+    local who = player:GetGUIDLow()
+    local last = Narrators.last_whisper[who]
+    Narrators.last_whisper[who] = Narrators.now
+    if last and Narrators.now - last < WHISPER_EVERY_MS then return false end
+    local s = state_of(receiver)
+    table.insert(s.rumours, { text = msg, from = player:GetName(), keywords = Narrators.keywords(msg) })
+    if #s.rumours > RUMOURS_KEPT then table.remove(s.rumours, 1) end
+    receiver:Whisper("I'll remember that, and pass it on.", LANG_UNIVERSAL, player)
+    return false
 end
 -- }}}
 
@@ -156,3 +220,4 @@ end
 CreateLuaEvent(Narrators.tick, TICK_MS, 0)
 RegisterPlayerEvent(PLAYER_EVENT_ON_CHAT, Narrators.on_chat)
 RegisterPlayerEvent(PLAYER_EVENT_ON_LOGOUT, Narrators.on_logout)
+RegisterPlayerEvent(PLAYER_EVENT_ON_WHISPER, Narrators.on_whisper)

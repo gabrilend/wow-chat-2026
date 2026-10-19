@@ -25,10 +25,11 @@ local function check(ok, what)
 end
 
 -- {{{ the engine's functions, stood in
-local timer, chat_handlers, logout_handlers, world = nil, {}, {}, {}
+local timer, chat_handlers, logout_handlers, whisper_handlers, world = nil, {}, {}, {}, {}
 function CreateLuaEvent(fn, _ms, _repeats) timer = fn end
 function RegisterPlayerEvent(event, fn)
-    if event == 18 then table.insert(chat_handlers, fn) elseif event == 4 then table.insert(logout_handlers, fn) end
+    if event == 18 then table.insert(chat_handlers, fn) elseif event == 4 then table.insert(logout_handlers, fn)
+    elseif event == 19 then table.insert(whisper_handlers, fn) end
 end
 function GetPlayersInWorld() return world end
 
@@ -39,6 +40,9 @@ local function new_player(name, guid, bot, x, y, map)
     function p:GetMapId() return self.map end
     function p:GetDistance(o) return math.sqrt((self.x - o.x) ^ 2 + (self.y - o.y) ^ 2) end
     function p:Say(text, _lang) table.insert(self.said, text) end
+    function p:GetName() return self.name end
+    p.whispered = {}
+    function p:Whisper(text, _lang, to) table.insert(self.whispered, { text = text, to = to }) end
     table.insert(world, p)
     return p
 end
@@ -48,6 +52,13 @@ local function logout(p)
     for k, q in ipairs(world) do if q == p then table.remove(world, k) break end end
 end
 local function ticks(n) for _ = 1, n do timer() end end
+-- a whisper from one player to another; what the handlers answered (the
+-- engine stops the whisper on false)
+local function whisper(from, to, msg)
+    local answer
+    for _, fn in ipairs(whisper_handlers) do local r = fn(19, from, msg, 7, 0, to); if r ~= nil then answer = r end end
+    return answer
+end
 -- }}}
 
 -- {{{ a two-book test shelf
@@ -106,6 +117,29 @@ local bot_before = #narrator.said
 chat(bot, "beep")
 ticks(5)
 check(#narrator.said > bot_before, "a bot speaking does not quiet it")
+
+print("whispered rumours (910b)")
+local answered = whisper(real, narrator, "The old windmill near Goldshire is haunted at night")
+check(answered == false, "a whisper to a narrator goes no further (the bot module does not also answer)")
+check(#narrator.whispered == 1 and narrator.whispered[1].to == real, "the narrator whispers back that it will remember")
+local kw = Narrators.keywords("The old windmill near Goldshire is haunted at night")
+check(kw.windmill and kw.goldshire and kw.haunted and kw.night and not kw.the and not kw.old and not kw.near, "a rumour's keywords are its words of five letters or more; short ones (the, old, near) are left out")
+check(whisper(real, narrator, "and another thing") == false and #Narrators.state[40].rumours == 1, "a second whisper within a second is not kept")
+ticks(1)
+check(whisper(real, bot, "hello bot") == nil, "a whisper to a bot that is not a narrator is left alone")
+check(whisper(bot, narrator, "beep boop windmill") == nil, "a whisper from a bot is left alone")
+local said_before = #narrator.said
+chat(real, "there is never anything about here")
+check(#narrator.said == said_before, "talk without a rumour's word tells nothing (common words do not count)")
+chat(real, "Has anyone seen the windmill lately?")
+local told = narrator.said[#narrator.said] or ""
+check(told:find("Windmill, you say?", 1, true) and told:find("haunted at night", 1, true), "a rumour's word in nearby talk: the narrator tells it (" .. told:sub(1, 60) .. "...)")
+local told_count = #narrator.said
+chat(real, "the windmill again")
+check(#narrator.said == told_count, "a rumour is told once, then forgotten")
+ticks(1)
+for k = 1, 25 do ticks(1); whisper(real, narrator, "rumour number " .. k .. " about the lighthouse") end
+check(#Narrators.state[40].rumours == 20, "a narrator keeps twenty rumours, the oldest dropped (" .. #Narrators.state[40].rumours .. ")")
 
 print("logging out")
 logout(narrator)
