@@ -31,8 +31,11 @@ bringing the rest of its game back: [beta-roadmap.md](beta-roadmap.md).*
 - **Druids hearth by Moonglade** (issue 211a, 2026-10-18): every druid
   knows Teleport: Moonglade from level 1 (they meet no innkeepers, so this
   is their way home). Cast in the world, it lands them on a random spot of
-  the glade's open ground and remembers where they were; cast in the glade,
-  it sends them back there. The spot is kept in the characters database.
+  the glade's open ground and remembers where they were (from a dungeon,
+  battleground or arena: where they entered it); cast in the glade, it
+  sends them back there. The spot is kept in the characters database. The
+  group is invited along as visitors, placed round the druid, and sent
+  back to where each came from as soon as the druid leaves the glade.
 - **Travellers** (branch beta-homework, 2026-10-17): a minute after
   login and then every 130 seconds, a vendor, innkeeper or class trainer
   of your level appears 30-45 yards away and walks past; it sits when you

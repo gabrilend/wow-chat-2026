@@ -440,6 +440,18 @@ function Toy.spell(entry) return { GetEntry = function() return entry end } end
 -- memory (Moonglade.spots) and logging the player in again.
 Toy.chardb = { moonglade = {} }
 function FLAT:GetAreaId() return 0 end
+-- The per-spell events (cast begins 1, completes 2, cancelled 3), kept in
+-- Toy.spellHandlers[spell][event] as lists; Toy.spellEvent(event, p, spell)
+-- runs them as the engine would (event, caster, spell object[, extra]).
+Toy.spellHandlers = {}
+function RegisterSpellEvent(spell, event, fn)
+    Toy.spellHandlers[spell] = Toy.spellHandlers[spell] or {}
+    Toy.spellHandlers[spell][event] = Toy.spellHandlers[spell][event] or {}
+    table.insert(Toy.spellHandlers[spell][event], fn)
+end
+function Toy.spellEvent(event, p, entry, extra)
+    for _, fn in ipairs((Toy.spellHandlers[entry] or {})[event] or {}) do fn(event, p, Toy.spell(entry), extra) end
+end
 local base_map_m = new_map
 new_map = function(id, height, water, area)
     local m = base_map_m(id, height, water)
@@ -451,6 +463,7 @@ local base_player_m = new_player
 new_player = function(name, guidLow)
     local p = base_player_m(name, guidLow)
     p.spells, p.zone, p.messages, p.class = {}, 0, {}, p.class or 1
+    function p:IsPlayer() return true end
     function p:HasSpell(id) return self.spells[id] == true end
     function p:LearnSpell(id) self.spells[id] = true end
     function p:GetZoneId() return self.zone end

@@ -83,7 +83,9 @@ work needs, and treasure is fed by the selling that merchants allow.
   circle by group number round the first hearther's arrival.
 - **211a** druids hearth by Teleport: Moonglade (new, built offline):
   known from level 1; out to a random spot of the glade's open ground, and
-  back to where they cast it.
+  back to where they cast it (or entered their instance); the group comes
+  as visitors and leaves with the druid. Also made 211's invitation follow
+  the spell (cast begins, cancelled), so Astral Recall invites too.
 
 ### 3. The scheduler
 
@@ -201,8 +203,8 @@ Kept in the issue they belong to, asked one at a time:
   of 20.
 - 211: random bots and the hearth pop-up; two hearthers at once; Sargobras's
   pop-up or the game's summon dialog.
-- 211a: whether the group comes along on a druid's Moonglade trip; what a
-  cast from an instance does to the remembered spot; a cooldown or none.
+- 211a: visitors' ways back through a server restart; a visitor who is
+  dead when the druid leaves.
 - 617e: the buddies' new hearthstone rule and what it replaces.
 - 718: which profile Chromie's death knight story belongs to.
 - 721: 502's new name; borrowed spells' cost; talents without AIO.

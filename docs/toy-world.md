@@ -78,7 +78,7 @@ What the world keeps, and a test reads or sets:
 | `scripts/test-travel` | travellers and trainers, every class at every level 1-20 |
 | `scripts/test-treasure` | the treasure pool and chests, selling and buying back |
 | `scripts/test-hearthstone` | the group hearthstone by invitation |
-| `scripts/test-druid-moonglade` | druids' Teleport: Moonglade, out to a random spot in the glade and back |
+| `scripts/test-druid-moonglade` | druids' Teleport: Moonglade, out to a random spot in the glade and back, with visitors |
 | `scripts/demo-beta-toy-session` | all of beta at once, as a session, with a report |
 
 Each test prints how many checks it ran and how many passed; run it for

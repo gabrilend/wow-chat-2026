@@ -58,6 +58,7 @@ dofile(DIR .. "/src/lua-beta/movement.lua")
 dofile(DIR .. "/src/lua-beta/ambush.lua")
 dofile(DIR .. "/src/lua-beta/travel.lua")
 dofile(DIR .. "/src/lua-beta/treasure.lua.disabled")
+dofile(DIR .. "/src/lua-beta/druid-moonglade.lua")
 dofile(DIR .. "/src/lua-beta/hearthstone.lua")
 
 -- {{{ the database's answer: a small list of real creatures, by rank
@@ -104,8 +105,8 @@ if #players >= 2 then Toy.group(players) end
 
 -- {{{ the world turning, second by second
 local HEARTH_AT = math.floor(opt.minutes * 60 * 0.7)        -- 70% of the way through
-local USE  = Toy.itemHandlers[6948][2]
-local CAST = Toy.handlers[5][#Toy.handlers[5]]
+local function BEGIN(p) Toy.spellEvent(1, p, 8690) end   -- the hearthstone's cast begins
+local CAST = GroupHearth.onCast
 local KILL = Toy.handlers[7] or {}
 local sitting = {}
 for second = 1, opt.minutes * 60 do
@@ -134,7 +135,7 @@ for second = 1, opt.minutes * 60 do
         if second % 100 == 0 and p.standing then pcall(Treasure.spawnTreasure, p) end
     end
     if second == HEARTH_AT and #players >= 2 then
-        USE(2, players[1], nil, nil)
+        BEGIN(players[1])
         for k = 2, #players do if players[k].window then Toy.answer(players[k], k % 2 == 0 and 1 or 2) end end
     end
     if second == HEARTH_AT + 10 and #players >= 2 then CAST(5, players[1], Toy.spell(8690)) end

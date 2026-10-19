@@ -25,6 +25,10 @@ It checks a script's own decisions, not how the game would carry them out.
 - `RegisterItemEvent(entry, event, fn)`: kept in `Toy.itemHandlers[entry][event]`.
 - `RegisterPlayerGossipEvent(menu, event, fn)`: kept in
   `Toy.gossipHandlers[menu][event]`.
+- `RegisterSpellEvent(spell, event, fn)`: per-spell events (1 the cast
+  begins, 2 completes, 3 is cancelled), kept in
+  `Toy.spellHandlers[spell][event]`; a test runs them with
+  `Toy.spellEvent(event, p, spell[, extra])`.
 - `CharDBExecute(sql)`, `CharDBQuery(sql)`: the characters database, for
   the one table the druids' Moonglade return keeps (`Toy.chardb.moonglade`,
   rows by guid). Any other statement is an error: teach the stand-in first.

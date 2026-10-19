@@ -19,6 +19,15 @@
 -- you know they're hearthing?", and: "They should spawn in a circle around
 -- the first hearther's hearth position." Rewritten the same day.
 --
+-- 2026-10-18: the invitation follows the spell, not the Hearthstone item.
+-- The first version opened it on the item's use and guessed a cancel from a
+-- timer, so Astral Recall (a spell with no item) never invited anyone. Now
+-- the engine's per-spell events open it as the cast begins and withdraw it
+-- the moment the cast is cancelled; a hearther logging out withdraws it too.
+-- Other scripts open the same invitation for their own spells and place the
+-- travellers themselves (GroupHearth.open / GroupHearth.take): the druids'
+-- Moonglade trip (druid-moonglade.lua, issue 211a).
+--
 -- Choices made without the owner yet (issue 211's open questions):
 --   bots in the group always come (wow-chat-1 pulled everyone);
 --   a second hearther in the same group while one is under way is asked
@@ -30,9 +39,6 @@
 -- {{{ Configuration
 local HEARTH_SPELLS     = { [8690] = true,     -- Hearthstone
                             [556]  = true }    -- Astral Recall (shaman)
-local HEARTH_ITEM       = 6948                 -- the Hearthstone item
-local CAST_MS           = 10000                -- the hearthstone's cast
-local CANCEL_AFTER_MS   = CAST_MS + 2500       -- no completion by then: it was cancelled
 local FOLLOW_MS         = 1500                 -- after completion: the hearther has arrived
 local RING_SPACING      = 2.5                  -- yards between neighbours on the circle
 local RING_MIN_RADIUS   = 3                    -- yards
@@ -41,15 +47,24 @@ local INTID_COME, INTID_STAY = 1, 2
 local NPC_TEXT          = 100                  -- the game's plain header text
 local GOSSIP_ICON_TAXI  = 2
 local GOSSIP_ICON_CHAT  = 0
-local PLAYER_EVENT_ON_SPELL_CAST = 5
-local ITEM_EVENT_ON_USE          = 2
+local PLAYER_EVENT_ON_LOGOUT     = 4
+local PLAYER_EVENT_ON_SPELL_CAST = 5    -- fires as a cast completes, before its effect
+local SPELL_EVENT_ON_PREPARE     = 1    -- a cast begins (Spell::prepare)
+local SPELL_EVENT_ON_CAST_CANCEL = 3    -- a cast is cancelled or interrupted (Spell::cancel)
 local GOSSIP_EVENT_ON_SELECT     = 2
+
+-- what the window says, for a Hearthstone or Astral Recall; another
+-- script's kind brings its own (GroupHearth.open)
+local HEARTH_KIND = { question = "%s is hearthing home. Come along?",
+                      confirm  = "Travel with %s when their hearthstone finishes?" }
 -- }}}
 
+-- made here only; druid-moonglade.lua uses it when a spell is cast
 GroupHearth = {}
 
 -- One hearth under way per hearther, keyed by the hearther's guid:
 -- { id = number (this hearth's own), hearther = guid, name = string,
+--   kind = { question, confirm } (strings with one %s for the name),
 --   members = list of guids (group order, the hearther included),
 --   accepted = { [guid] = true }, asked = { [guid] = true }, done = boolean }
 -- Players are kept by guid, never as objects: an object kept across a
@@ -87,24 +102,28 @@ end
 -- along" carries a confirm box, the okay/cancel the owner asked for.
 local function ask(member, hearth)
     member:GossipClearMenu()
-    member:GossipMenuAddItem(GOSSIP_ICON_TAXI, hearth.name .. " is hearthing home. Come along?", hearth.id, INTID_COME,
-                             false, "Travel with " .. hearth.name .. " when their hearthstone finishes?")
+    member:GossipMenuAddItem(GOSSIP_ICON_TAXI, string.format(hearth.kind.question, hearth.name), hearth.id, INTID_COME,
+                             false, string.format(hearth.kind.confirm, hearth.name))
     member:GossipMenuAddItem(GOSSIP_ICON_CHAT, "Stay here.", hearth.id, INTID_STAY)
     member:GossipSendMenu(NPC_TEXT, member, MENU_ID)
 end
 -- }}}
 
--- {{{ GroupHearth.onUse
--- The hearthstone is used (the cast begins). Bots are counted in at once;
--- players are asked. The hearth is forgotten if no completion comes in
--- time (a cancel, an interrupt, a death).
---   not grouped, or alone: nothing to do
---   grouped: open the hearth, ask, and set the cancel timer
-function GroupHearth.onUse(event, player, item, target)
+-- {{{ GroupHearth.open
+-- A cast begins that the group may follow: bots are counted in at once,
+-- players are asked. Returns the hearth, or nil.
+--   not grouped, or alone: nothing to do (nil)
+--   grouped: open the hearth and ask
+-- kind: { question, confirm }, each a string with one %s for the
+-- hearther's name (HEARTH_KIND for a Hearthstone).
+function GroupHearth.open(player, kind)
     local members = members_of(player)
-    if not members or #members < 2 then return end
+    if not members or #members < 2 then return nil end
+    -- a cast begun again before the first one ended replaces it: the new
+    -- window replaces the old on each member's screen, and an answer to the
+    -- old one is ignored (onAnswer matches the hearth's own number)
     nextHearth = nextHearth + 1
-    local hearth = { id = nextHearth, hearther = player:GetGUID(), name = player:GetName(),
+    local hearth = { id = nextHearth, hearther = player:GetGUID(), name = player:GetName(), kind = kind,
                      members = members, accepted = {}, asked = {}, done = false }
     GroupHearth.pending[hearth.hearther] = hearth
     for _, guid in ipairs(members) do
@@ -120,11 +139,52 @@ function GroupHearth.onUse(event, player, item, target)
             end
         end
     end
-    local id = hearth.id
-    player:RegisterEvent(function(_, _, _, p)
-        local h = GroupHearth.pending[p:GetGUID()]
-        if h and h.id == id and not h.done then GroupHearth.withdraw(h, "the hearthstone was not finished") end
-    end, CANCEL_AFTER_MS, 1)
+    return hearth
+end -- }}}
+
+-- {{{ GroupHearth.onPrepare
+-- A Hearthstone or Astral Recall cast begins (the engine's per-spell event:
+-- caster may be any unit; only players hearth with a group).
+function GroupHearth.onPrepare(event, caster, spell)
+    if not caster:IsPlayer() then return end
+    GroupHearth.open(caster, HEARTH_KIND)
+end -- }}}
+
+-- {{{ GroupHearth.onCancel
+-- The cast was cancelled or interrupted: its hearth is withdrawn.
+function GroupHearth.onCancel(event, caster, spell, bySelf)
+    if not caster:IsPlayer() then return end
+    local h = GroupHearth.pending[caster:GetGUID()]
+    if h and not h.done then GroupHearth.withdraw(h) end
+end -- }}}
+
+-- {{{ GroupHearth.onLogout
+-- A hearther who logs out mid-cast: their hearth is withdrawn.
+function GroupHearth.onLogout(event, player)
+    local h = GroupHearth.pending[player:GetGUID()]
+    if h then GroupHearth.withdraw(h) end
+end -- }}}
+
+-- {{{ GroupHearth.take
+-- For a script placing the travellers itself, as its spell completes: the
+-- members who said yes and are still in the world and alive, as a list of
+-- { guid, place = their number in the group }, with the group's size; the
+-- hearth is closed. No hearth open: an empty list.
+function GroupHearth.take(guid)
+    local h = GroupHearth.pending[guid]
+    if not h or h.done then return {}, 0 end
+    GroupHearth.pending[guid] = nil
+    local out = {}
+    for k, g in ipairs(h.members) do
+        if g ~= h.hearther and h.accepted[g] then
+            local m = GetPlayerByGUID(g)
+            if m and not m:IsDead() then
+                m:GossipComplete()
+                out[#out + 1] = { guid = g, place = k }
+            end
+        end
+    end
+    return out, #h.members
 end -- }}}
 
 -- {{{ GroupHearth.onAnswer
@@ -146,7 +206,7 @@ end -- }}}
 
 -- {{{ GroupHearth.withdraw
 -- The hearth did not happen: close the windows still open and forget it.
-function GroupHearth.withdraw(h, why)
+function GroupHearth.withdraw(h)
     for guid in pairs(h.asked) do
         local m = GetPlayerByGUID(guid)
         if m then
@@ -183,6 +243,10 @@ function GroupHearth.onCast(event, player, spell)
     end, FOLLOW_MS, 1)
 end -- }}}
 
-RegisterItemEvent(HEARTH_ITEM, ITEM_EVENT_ON_USE, GroupHearth.onUse)
+for spell in pairs(HEARTH_SPELLS) do
+    RegisterSpellEvent(spell, SPELL_EVENT_ON_PREPARE,     GroupHearth.onPrepare)
+    RegisterSpellEvent(spell, SPELL_EVENT_ON_CAST_CANCEL, GroupHearth.onCancel)
+end
 RegisterPlayerEvent(PLAYER_EVENT_ON_SPELL_CAST, GroupHearth.onCast)
+RegisterPlayerEvent(PLAYER_EVENT_ON_LOGOUT,     GroupHearth.onLogout)
 RegisterPlayerGossipEvent(MENU_ID, GOSSIP_EVENT_ON_SELECT, GroupHearth.onAnswer)

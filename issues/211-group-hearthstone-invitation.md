@@ -35,16 +35,33 @@ when the hearth was cancelled. Shown how the buddies' version works
 
 ## Current Behavior
 
-**Built on branch beta-homework (2026-10-17)** as described in Intended
-Behavior, with the open questions answered by default for now (each
-marked in the script's header): bots in the group always come; a second
-hearther is asked like anyone else and, if they accept, travels with the
-first; the window is the clan-name kind (accept now, move at completion).
-`src/lua-beta/hearthstone.lua` (summary beside it); checked offline by
-`scripts/test-hearthstone` (140 checks: the circle for groups of 2 to
-40, a group of four answering yes and no, a cancelled hearth, a member
-logging out in between, a lone player, another spell), which runs before
-every build. Not yet seen in game.
+**Built on branch beta-homework (2026-10-17, reworked 2026-10-18)** as
+described in Intended Behavior, with the open questions answered by
+default for now (each marked in the script's header): bots in the group
+always come; a second hearther is asked like anyone else and, if they
+accept, travels with the first; the window is the clan-name kind (accept
+now, move at completion). `src/lua-beta/hearthstone.lua` (summary beside
+it); checked offline by `scripts/test-hearthstone` (the circle for groups
+of 2 to 40, a group of four answering yes and no, a cancelled hearth, a
+hearther logging out mid-cast, a member logging out in between, Astral
+Recall, a lone player, another spell), which runs before every build. Not
+yet seen in game.
+
+The 2026-10-17 build opened the invitation when the Hearthstone *item*
+was used and guessed a cancel from a timer (no completion 12.5 seconds
+later). Astral Recall is a spell with no item, so it never opened one,
+though the script named it. Since 2026-10-18 the invitation follows the
+spell itself: the engine's per-spell events for a cast beginning
+(`SPELL_EVENT_ON_PREPARE`, from `Spell::prepare`) and being cancelled
+(`SPELL_EVENT_ON_CAST_CANCEL`, from `Spell::cancel`), registered with
+`RegisterSpellEvent` for each hearth spell; the completion is still the
+player's spell-cast event. The timer is gone; a hearther logging out
+withdraws their hearth.
+
+Other scripts open the same invitation for their own spells
+(`GroupHearth.open`) and take its answers when their spell completes
+(`GroupHearth.take`), placing the travellers themselves: the druids'
+Moonglade trip (211a) does so.
 
 What it replaced (wow-chat-1's, kept here as the record):
 
@@ -84,11 +101,11 @@ the moment the cast begins):
 ## Suggested Implementation Steps
 
 1. Detect the start, completion and cancellation of the cast: the start
-   from the item use (as now) or the spell-cast event, the completion from
-   the cast-complete event (the buddies' script uses
-   `PLAYER_EVENT_ON_SPELL_CAST`, which fires as a cast completes), and the
-   cancellation as "start seen, no completion within the cast time plus a
-   margin, or a new cast began".
+   and the cancellation from the engine's per-spell events
+   (`RegisterSpellEvent(spell, 1 cast begins / 3 cast cancelled, fn)`),
+   the completion from the player's spell-cast event
+   (`PLAYER_EVENT_ON_SPELL_CAST`, which fires as a cast completes, before
+   its effect). Not the item's use: Astral Recall has no item.
 2. The pop-up: a player-sent gossip menu (`player:GossipMenuAddItem` with
    the confirm-box arguments, `player:GossipSendMenu` with the player as
    sender, `RegisterPlayerGossipEvent` for the answer), modelled on
