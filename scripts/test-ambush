@@ -153,6 +153,31 @@ do
 end
 -- }}}
 
+-- {{{ an answer whose rows all miss the player's level asks the next rank down
+-- (found by scripts/demo-beta-toy-session: such a queue stayed empty and
+-- asked the same rank every tick)
+do
+    World.answer = { [0] = { { 500, 1, 60 } } }
+    local p = new_player("Missed", 105)
+    p.level = 5
+    silently(login, p)
+    World.events = {}
+    local asked = {}
+    local real = WorldDBQueryAsync
+    WorldDBQueryAsync = function(sql, cb) asked[#asked + 1] = tonumber(sql:match("`rank` = (%d+)")); real(sql, cb) end
+    local i = 0
+    local q = {}
+    function q:GetUInt32(col) local r = { 9999, 19, 20, 4 }; return r[col + 1] end   -- a level 19-20 rare
+    function q:NextRow() i = i + 1; return false end
+    silently(Ambush.pushToAmbushQueue, p, q, 4)
+    WorldDBQueryAsync = real
+    check(asked[1] == 0, "rows that miss the player's level should send the question down to normals")
+    check(#p:GetData("queue") > 0, "and the normal queue should then be filled")
+    silently(logout, p)
+    World.events = {}
+end
+-- }}}
+
 -- shared setup for the spawning scenes: one normal creature, one rare
 World.answer = { [0] = { { 500, 1, 60 } }, [4] = { { 900, 1, 60 } } }
 

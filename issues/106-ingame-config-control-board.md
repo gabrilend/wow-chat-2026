@@ -11,9 +11,9 @@ This issue has been split into three sub-issues for incremental implementation:
 
 | Sub-Issue | Description | Status |
 |-----------|-------------|--------|
-| [106a](106a-read-only-config-dashboard) | Read-only dashboard (list/show commands, NPC gossip) | Open |
-| [106b](106b-runtime-config-modifications) | Runtime modification support for hot-reloadable settings | Open |
-| [106c](106c-config-persistence-layer) | Persistence layer (save to files, backup/restore) | Open |
+| [106a](106a-read-only-config-dashboard.md) | Read-only dashboard (list/show commands, NPC gossip) | Open |
+| [106b](106b-runtime-config-modifications.md) | Runtime modification support for hot-reloadable settings | Open |
+| [106c](106c-config-persistence-layer.md) | Persistence layer (save to files, backup/restore) | Open |
 
 Complete sub-issues in order: 106a -> 106b -> 106c
 

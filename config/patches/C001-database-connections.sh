@@ -14,7 +14,9 @@ config_database_connections() {
     #       list shows one row per profile; flag column gates which is "online".
     #       World / characters / playerbots STAY per-profile so the actual
     #       game data never crosses profiles:
-    #         release/beta : acore_world / acore_characters / acore_playerbots
+    #         release      : acore_world / acore_characters / acore_playerbots
+    #         beta         : acore_world_beta / acore_characters_beta /
+    #                        acore_playerbots_beta (its own since 2026-10-17, 136b)
     #         vanilla      : acore_world_vanilla / acore_characters_vanilla /
     #                        acore_playerbots_vanilla
     #   - Alpha is wholly isolated (different source, different schema, different era):
@@ -22,8 +24,9 @@ config_database_connections() {
     #
     # The rationale: release is the most up-to-date public target, alpha is the holiday
     # relic running an old AzerothCore. Their schemas are incompatible. Sharing a port
-    # or any database between them risks cross-version contamination. Beta sits inside
-    # release's snowglobe because it shares source-beta — same schema, safe to share.
+    # or any database between them risks cross-version contamination. Beta shares
+    # release's source (source-beta) and so its schema, but since 2026-10-17 not its
+    # data: sharing let beta's install steps change release's world (issue 136b).
     #
     # IMPLEMENTATION NOTE: Alpha on port 3308 requires either (a) a second MySQL instance
     # bound to 3308, or (b) the project-local MySQL configured to listen on both 3307
@@ -36,12 +39,26 @@ config_database_connections() {
     local DB_CHARS
     local DB_PLAYERBOTS
     case "${PROFILE}" in
-        release|beta)
+        release)
             DB_PORT="3307"
             DB_AUTH="acore_auth"
             DB_WORLD="acore_world"
             DB_CHARS="acore_characters"
             DB_PLAYERBOTS="acore_playerbots"
+            ;;
+        beta)
+            # beta (136b, 2026-10-17): its own world, characters and
+            # playerbots. Until then beta shared release's, so beta's
+            # destructive install steps (E012 clears creatures) emptied
+            # release's world, and characters crossed between the two.
+            # Must match _profile_db_name in patches/E-patches.sh, which
+            # the install uses to create and seed them;
+            # scripts/test-profile-config-gates checks the two agree.
+            DB_PORT="3307"
+            DB_AUTH="acore_auth"
+            DB_WORLD="acore_world_beta"
+            DB_CHARS="acore_characters_beta"
+            DB_PLAYERBOTS="acore_playerbots_beta"
             ;;
         vanilla)
             DB_PORT="3307"

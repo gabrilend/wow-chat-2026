@@ -104,8 +104,8 @@ player types:  "have everyone repair and meet me at the bridge"
 - [607 - Player bot behavior commands](607-player-bot-behavior-commands.md)
   — the in-game command vocabulary; this should not become a second
   unrelated way to tell a bot what to do.
-- [910 - Wandering narrator system](910-wandering-narrator-system) and
-  [908 - Narrator audience facing](908-narrator-audience-facing) — the
+- [910 - Wandering narrator system](910-wandering-narrator-system.md) and
+  [908 - Narrator audience facing](908-narrator-audience-facing.md) — the
   project's actual narrators.
 - `docs/playerbots/Playerbot-Commands.md` — the command surface being
   written to.

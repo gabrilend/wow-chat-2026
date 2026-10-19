@@ -79,7 +79,7 @@ completed, and 913c–913h are unblocked.
    measured as its own role here?
 
 ## Related
-- Parent: `issues/913-clustered-worldserver`
+- Parent: `issues/913-clustered-worldserver.md`
 - `issues/157-three-machine-deployment.md`: the cheaper fix that is
   measured first
 - `issues/913a-client-redirect-handoff.md`: the research spike; not gated

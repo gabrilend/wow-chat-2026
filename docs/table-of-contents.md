@@ -26,6 +26,7 @@ wow-chat-2026/
 │   ├── connection-guide.md        Player connection guide (client)
 │   ├── rmail-integration.md       rmail setup for server services
 │   ├── scripting.md               ALE Lua scripting reference
+│   ├── toy-world.md               The pretend world: testing game scripts without a server (the tests and demo built on it)
 │   ├── roadmap.md                 Development phases and milestones
 │   ├── road-to-release.md         Milestones from today to the public release of basic, then the custom client and 3D models
 │   ├── road-to-1.0.md             From the public release to 1.0 (our client, their art, our generators) and the sold full version (all our own assets)
@@ -58,6 +59,7 @@ wow-chat-2026/
 │   ├── patches/                   C++ patch documentation
 │   │   ├── patch-registry.md      Build patch system (BEGIN/END/CONFIG phases)
 │   │   ├── accuracy-level-cap.md  Monster hit chance level cap
+│   │   ├── ale-player-entry-point.md  B055 (retired): Lua reading a battleground join spot; why the saved one serves instead (211a)
 │   │   ├── crushing-blows-late.md  B031: crushing blows start 8 levels up, full strength at 12
 │   │   ├── no-buff-level-restriction.md  B032: buffs castable on targets of any level
 │   │   ├── white-gear-never-repaired.md  B033: white gear is never repaired (basic)

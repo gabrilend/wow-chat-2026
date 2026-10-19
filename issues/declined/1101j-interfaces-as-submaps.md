@@ -165,7 +165,7 @@ what debugging wants.
   sets the cancellation requirement
 - [1101l - Guidance capture](1101l-guidance-capture-and-standing-orders.md)
   — consumes the `guidance` port
-- [1004 - rmail in-game bridge](1004-rmail-ingame-bridge) — the rmail
+- [1004 - rmail in-game bridge](../1004-rmail-ingame-bridge.md) — the rmail
   interface should be a client of this, not a parallel implementation
 - SoraMech `docs/002-map-model.md`, the encapsulation section
 </content>

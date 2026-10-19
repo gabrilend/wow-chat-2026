@@ -66,6 +66,18 @@ revert would use to put the creatures back.
 (`installed-files-<profile>/`, `logs-<profile>`), so two servers don't
 write into each other's files.
 
+**Done on branch beta-homework (2026-10-17): beta's own databases.**
+Beta's world, characters and playerbots are `acore_world_beta`,
+`acore_characters_beta` and `acore_playerbots_beta`, in both copies of the
+naming rule (`_profile_db_name` in `patches/E-patches.sh`, which the
+install uses to create and seed them and the install steps to write; C001,
+which tells the servers), and in the two generators that name a profile's
+world. `scripts/test-profile-config-gates` now checks that C001 and the
+install name the same databases for every profile. The next beta install
+builds the new databases from the stock ones. Release keeps `acore_*`,
+still holding beta's emptied world and the owner's two characters until
+open questions 2 and 4 are answered. Ports are unchanged (question 3).
+
 ## Intended Behavior
 
 - Every profile has its own world, characters and playerbots databases.

@@ -131,6 +131,6 @@ sentences. Names first. Ordinary words.
   what this prompt asks for
 - [1101l - Guidance capture](1101l-guidance-capture-and-standing-orders.md)
   — supplies the standing order this frames against
-- [910 - Wandering narrator system](910-wandering-narrator-system) — the
+- [910 - Wandering narrator system](../910-wandering-narrator-system.md) — the
   in-world narrator; different audience, same craft problem
 </content>

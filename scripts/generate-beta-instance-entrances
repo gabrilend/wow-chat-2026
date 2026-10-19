@@ -1,0 +1,168 @@
+#!/usr/bin/env luajit
+-- generate-beta-instance-entrances - writes, for every dungeon and raid,
+-- the spot outside its entrance, as a Lua table beta's scripts can read.
+--
+-- For a general audience: when a druid casts Teleport: Moonglade inside a
+-- dungeon, they should come back to where they went in (issue 211a). The
+-- game knows where that is: each dungeon has a trigger inside it that
+-- sends a player out to its parent world map, and where it sends them is
+-- just outside the entrance (the core's ObjectMgr::GetGoBackTrigger uses
+-- it the same way). This reads those triggers from beta's world database
+-- and where each sits from the game's trigger data (AreaTrigger.dbc), and
+-- writes one spot per dungeon to src/lua-beta/data/instance-entrances.lua.
+-- A dungeon with two ways out (the Deadmines' front door and its ship)
+-- gets the one landing nearest the entrance portal, the trigger that sends
+-- players in: the core picks among them in no fixed order, and the front
+-- door is where a player went in. Battlegrounds and arenas have no such
+-- trigger (players join them from anywhere), so they get no row.
+--
+-- Usage: scripts/generate-beta-instance-entrances [PROJECT_DIR] [--main MAIN_DIR]
+--   PROJECT_DIR: where the data file is written (default below)
+--   --main: the project folder holding MySQL and data-files/ (default:
+--   PROJECT_DIR; a separate checkout names the main project's)
+-- Needs MySQL running (scripts/start-mysql); reads acore_world_beta only.
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+local MAIN
+do
+    local i = 1
+    while i <= #arg do
+        if arg[i] == "--main" then MAIN = arg[i + 1]; i = i + 1 else DIR = arg[i] end
+        i = i + 1
+    end
+end
+MAIN = MAIN or DIR
+local OUT   = DIR .. "/src/lua-beta/data/instance-entrances.lua"
+local MYSQL = MAIN .. "/mysql/installed-files/bin/mysql"
+local DBC   = MAIN .. "/data-files/dbc/AreaTrigger.dbc"
+local MAPS  = MAIN .. "/data-files/dbc/Map.dbc"
+
+local function q(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
+
+-- {{{ local function rows_of
+-- A query's rows from beta's world database, each a list of strings.
+local function rows_of(sql)
+    local h = io.popen(q(MYSQL) .. " -h127.0.0.1 -P3307 -uritz -pmenardi -N -B acore_world_beta -e " .. q(sql) .. " 2>&1")
+    local out = {}
+    for l in h:lines() do
+        if not l:match("Using a password") then
+            if l:match("^ERROR") then error("the database did not answer: " .. l .. "\n  to debug: is MySQL up (scripts/start-mysql)? is beta installed (acore_world_beta)?") end
+            local row = {}
+            for v in (l .. "\t"):gmatch("([^\t]*)\t") do row[#row + 1] = v end
+            out[#out + 1] = row
+        end
+    end
+    h:close()
+    return out
+end
+-- }}}
+
+-- {{{ local function read_dbc
+-- A DBC file's records: calls each(record base offset, u32, f32) for every
+-- record. Header: "WDBC", record count, field count, record size, string
+-- block size; all 4-byte little-endian, floats IEEE-754.
+local function read_dbc(path, each)
+    local f = assert(io.open(path, "rb"), "no game data at " .. path)
+    local d = f:read("*a"); f:close()
+    local function u32(o) local a, b, c, e = d:byte(o + 1, o + 4); return a + b * 256 + c * 65536 + e * 16777216 end
+    local function f32(o)
+        local v = u32(o)
+        local sign = v >= 2 ^ 31 and -1 or 1
+        local exp = math.floor(v / 2 ^ 23) % 256
+        if exp == 0 then return 0 end
+        return sign * (1 + (v % 2 ^ 23) / 2 ^ 23) * 2 ^ (exp - 127)
+    end
+    assert(d:sub(1, 4) == "WDBC", path .. " is not a DBC file")
+    local n, size = u32(4), u32(12)
+    for r = 0, n - 1 do each(20 + r * size, u32, f32) end
+end
+-- }}}
+
+-- {{{ the triggers' own places (AreaTrigger.dbc: id, map, x, y, z, ...)
+local triggers = {}
+read_dbc(DBC, function(b, u32, f32)
+    triggers[u32(b)] = { map = u32(b + 4), x = f32(b + 8), y = f32(b + 12), z = f32(b + 16) }
+end)
+-- }}}
+
+-- {{{ which maps are dungeons and raids (Map.dbc: id, internal name, kind, ...)
+-- kind: 0 the open world, 1 a dungeon, 2 a raid, 3 a battleground, 4 an
+-- arena. Battlegrounds have exit triggers too (Alterac Valley has one per
+-- faction), but a battleground's way back belongs to each player, not to
+-- the map, so only kinds 1 and 2 get a row.
+local kind = {}
+read_dbc(MAPS, function(b, u32) kind[u32(b)] = u32(b + 8) end)
+local DUNGEON_KINDS = { [1] = true, [2] = true }
+-- }}}
+
+-- {{{ the dungeons and their triggers, from the database
+local parent = {}
+for _, r in ipairs(rows_of("SELECT map, parent FROM instance_template")) do parent[tonumber(r[1])] = tonumber(r[2]) end
+local teleports = {}
+for _, r in ipairs(rows_of("SELECT ID, Name, target_map, target_position_x, target_position_y, target_position_z, target_orientation FROM areatrigger_teleport")) do
+    teleports[#teleports + 1] = { id = tonumber(r[1]), name = r[2], to = tonumber(r[3]),
+                                  x = tonumber(r[4]), y = tonumber(r[5]), z = tonumber(r[6]), o = tonumber(r[7]) }
+end
+table.sort(teleports, function(a, b) return a.id < b.id end)
+-- }}}
+
+-- {{{ one way out per dungeon
+local entrances, maps = {}, {}
+for map, par in pairs(parent) do
+  -- a battleground or arena (or a map the game data does not know): no row
+  if DUNGEON_KINDS[kind[map]] then
+    -- the portal in: a trigger on the parent map that sends players into this one
+    local portal
+    for _, t in ipairs(teleports) do
+        local at = triggers[t.id]
+        if t.to == map and at and at.map == par then portal = at; break end
+    end
+    -- the ways out: triggers inside this map that send players to the parent
+    local best, bestd
+    for _, t in ipairs(teleports) do
+        local at = triggers[t.id]
+        if at and at.map == map and t.to == par then
+            local d = portal and math.sqrt((t.x - portal.x) ^ 2 + (t.y - portal.y) ^ 2) or 0
+            if not best or d < bestd then best, bestd = t, d end
+        end
+    end
+    if best then entrances[map] = best; maps[#maps + 1] = map end
+  end
+end
+table.sort(maps)
+
+-- a way out into another dungeon (Blackwing Lair opens into Blackrock
+-- Spire): follow that one's way out, until the spot is in the open world,
+-- so a druid never comes back into an instance they are no longer in
+local OPEN_WORLD = { [0] = true, [1] = true, [530] = true, [571] = true }
+for _, m in ipairs(maps) do
+    local e, seen = entrances[m], { [m] = true }
+    while not OPEN_WORLD[e.to] do
+        local next_e = entrances[e.to]
+        assert(next_e and not seen[e.to], "map " .. m .. ": its way out leads into map " .. e.to .. ", which has no way out to the open world")
+        seen[e.to] = true
+        e = { to = next_e.to, x = next_e.x, y = next_e.y, z = next_e.z, o = next_e.o, id = next_e.id,
+              name = e.name .. ", then " .. next_e.name }
+    end
+    entrances[m] = e
+end
+-- }}}
+
+-- {{{ writing the file
+local w = assert(io.open(OUT, "w"))
+w:write("-- GENERATED by scripts/generate-beta-instance-entrances from acore_world_beta (instance_template,\n")
+w:write("-- areatrigger_teleport) and AreaTrigger.dbc; don't edit by hand (run the script again).\n")
+w:write("-- Why: a druid casting Teleport: Moonglade in a dungeon comes back to where they went in\n")
+w:write("-- (issue 211a); this is each dungeon's way out, the spot just outside its entrance.\n")
+w:write("-- [dungeon map] = { map, x, y, z, o }: the parent world map and the spot, as the trigger sends\n")
+w:write("-- players there. Battlegrounds and arenas have no entrance trigger and no row.\n")
+w:write("return {\n")
+for _, m in ipairs(maps) do
+    local e = entrances[m]
+    w:write(string.format("    [%3d] = { map = %3d, x = %10.3f, y = %10.3f, z = %8.3f, o = %6.3f },   -- %s (trigger %d)\n",
+        m, e.to, e.x, e.y, e.z, e.o, e.name, e.id))
+end
+w:write("}\n")
+w:close()
+print(string.format("%d dungeons and raids with a way out, of %d instances -> %s", #maps, (function() local n = 0; for _ in pairs(parent) do n = n + 1 end; return n end)(), OUT))
+-- }}}

@@ -44,4 +44,4 @@ drift apart. This issue gives each of those one owner.
    is per-map and stays with the map?
 
 ## Related
-- `issues/913-clustered-worldserver`: "Global Services"
+- `issues/913-clustered-worldserver.md`: "Global Services"

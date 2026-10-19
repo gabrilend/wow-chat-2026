@@ -306,7 +306,7 @@ it stops.
   have surfaced this.
 - `issues/148v-cloned-kit-items-render-invisible.md` — the other
   defect from the same session, on the same character.
-- `issues/701-quest-spells-to-trainers` — the adjacent question of
+- `issues/701-quest-spells-to-trainers.md` — the adjacent question of
   which abilities normally come from quests rather than trainers.
   148j deliberately leaves quest-only spells out of scope, so any
   spell missing from a mage should be checked against that boundary

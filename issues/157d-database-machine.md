@@ -48,6 +48,6 @@ after the copy matches.
 2. Backups: how often, and kept on which machine?
 
 ## Related
-- `issues/completed/105-project-local-database`
-- `issues/107-credential-manager-script`
+- `issues/completed/105-project-local-database.md`
+- `issues/107-credential-manager-script.md`
 - `mysql/conf/my.cnf`

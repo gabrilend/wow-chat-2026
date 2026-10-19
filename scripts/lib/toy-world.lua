@@ -167,7 +167,14 @@ end
 World.answer = {}
 function WorldDBQueryAsync(sql, callback)
     local rank = tonumber(sql:match("`rank` = (%d+)"))
-    local rows = World.answer[rank]
+    -- the level filter the real query has ("minlevel <= L AND maxlevel >= L");
+    -- until 2026-10-17 the toy answered every row whatever the level
+    local lo = tonumber(sql:match("minlevel <= (%d+)"))
+    local hi = tonumber(sql:match("maxlevel >= (%d+)"))
+    local rows = {}
+    for _, r in ipairs(World.answer[rank] or {}) do
+        if (not lo or r[2] <= lo) and (not hi or r[3] >= hi) then rows[#rows + 1] = r end
+    end
     if not rows or #rows == 0 then callback(nil) return end
     local i = 1
     local q = {}
@@ -364,6 +371,204 @@ logout = function(p)
 end
 Toy.new_gameobject, Toy.new_item = new_gameobject, new_item
 Toy.give, Toy.sell, Toy.buy_back = give, sell, buy_back
+-- }}}
+
+-- {{{ extra pieces the group hearthstone uses (added 2026-10-17, issue 211)
+-- Groups (Toy.group(list of players) puts them in one), the gossip window a
+-- player can be sent (what it shows is kept in p.window: { items = list of
+-- { text, sender, intid, popup }, menu = number } or nil once closed), a
+-- bind point (p.home = { mapId, x, y, z }), teleports (p.teleports lists
+-- { map, x, y, z, o }), and the item and player-gossip event registers.
+Toy.itemHandlers, Toy.gossipHandlers = {}, {}
+function RegisterItemEvent(entry, event, fn)
+    Toy.itemHandlers[entry] = Toy.itemHandlers[entry] or {}
+    Toy.itemHandlers[entry][event] = fn
+end
+function RegisterPlayerGossipEvent(menu, event, fn)
+    Toy.gossipHandlers[menu] = Toy.gossipHandlers[menu] or {}
+    Toy.gossipHandlers[menu][event] = fn
+end
+local base_player_h = new_player
+new_player = function(name, guidLow)
+    local p = base_player_h(name, guidLow)
+    p.home, p.teleports, p.group = { mapId = 1, x = 0, y = 0, z = 0 }, {}, nil
+    function p:IsInGroup() return self.group ~= nil end
+    function p:GetGroup() return self.group end
+    -- in a battleground or arena: the player's own party, kept aside while
+    -- the match's raid is their group (p.originalGroup, set by a test)
+    function p:GetOriginalGroup() return self.originalGroup end
+    function p:GetHomebind() return self.home end
+    function p:Teleport(map, x, y, z, o) self.teleports[#self.teleports + 1] = { map = map, x = x, y = y, z = z, o = o } end
+    function p:GossipClearMenu() self.building = { items = {} } end
+    function p:GossipMenuAddItem(icon, text, sender, intid, code, popup)
+        self.building = self.building or { items = {} }
+        table.insert(self.building.items, { text = text, sender = sender, intid = intid, popup = popup })
+    end
+    function p:GossipSendMenu(npcText, sender, menu) self.building.menu = menu; self.window = self.building; self.building = nil end
+    function p:GossipComplete() self.window = nil end
+    return p
+end
+function Toy.group(players)
+    local g = { members = players }
+    function g:GetMembers() return self.members end
+    function g:GetMembersCount() return #self.members end
+    for _, p in ipairs(players) do p.group = g end
+    return g
+end
+-- the player picks an answer in their open window (by its intid)
+function Toy.answer(p, intid)
+    local w = p.window
+    if not w then return false end
+    for _, it in ipairs(w.items) do
+        if it.intid == intid then
+            Toy.gossipHandlers[w.menu][2](2, p, p, it.sender, it.intid, nil, w.menu)
+            return true
+        end
+    end
+    return false
+end
+-- a spell object as the spell-cast event passes it
+function Toy.spell(entry) return { GetEntry = function() return entry end } end
+-- }}}
+
+-- {{{ extra pieces the druids' Moonglade return uses (added 2026-10-18, issue 211a)
+-- A player's known spells (p.spells, a set of spell numbers) and zone
+-- (p.zone, a number); the messages they are sent (p.messages, a list of
+-- strings); a map's areas (new_map's fourth argument, area(x, y, z) ->
+-- area number; 0 without one); and the characters database for the one
+-- table this script keeps (Toy.chardb.moonglade, rows by guid). Any other
+-- statement is an error, not an empty answer: a test that meets one needs
+-- this stand-in taught it first. A database row survives a logout, as in
+-- the game; a test plays a server restart by emptying the script's own
+-- memory (Moonglade.spots) and logging the player in again.
+Toy.chardb = { moonglade = {}, visitors = {}, homebind = {}, entry = {} }
+-- zone and area names, as the game's area data gives them (GetAreaName);
+-- a test adds what it needs; an unknown number is an error, as in the game
+Toy.areaNames = { [12] = "Elwynn Forest", [493] = "Moonglade", [3430] = "Eversong Woods", [14] = "Durotar" }
+function GetAreaName(id)
+    local n = Toy.areaNames[id]
+    if not n then error("toy GetAreaName: no area " .. tostring(id) .. " (bad argument #1: valid Area or Zone ID expected)", 2) end
+    return n
+end
+function FLAT:GetAreaId() return 0 end
+function FLAT:IsBattleground() return false end
+function FLAT:IsArena() return false end
+-- the engine's guid from a guid's low part, as GetPlayerByGUID takes it
+function GetPlayerGUID(low) return "player-" .. low end
+-- The per-spell events (cast begins 1, completes 2, cancelled 3), kept in
+-- Toy.spellHandlers[spell][event] as lists; Toy.spellEvent(event, p, spell)
+-- runs them as the engine would (event, caster, spell object[, extra]).
+Toy.spellHandlers = {}
+function RegisterSpellEvent(spell, event, fn)
+    Toy.spellHandlers[spell] = Toy.spellHandlers[spell] or {}
+    Toy.spellHandlers[spell][event] = Toy.spellHandlers[spell][event] or {}
+    table.insert(Toy.spellHandlers[spell][event], fn)
+end
+function Toy.spellEvent(event, p, entry, extra)
+    for _, fn in ipairs((Toy.spellHandlers[entry] or {})[event] or {}) do fn(event, p, Toy.spell(entry), extra) end
+end
+local base_map_m = new_map
+new_map = function(id, height, water, area)
+    local m = base_map_m(id, height, water)
+    m.area = area
+    function m:GetAreaId(x, y, z) return self.area and self.area(x, y, z) or 0 end
+    -- what kind of map (m.kind, set by a test): "battleground", "arena", or
+    -- nil for the open world and dungeons
+    function m:IsBattleground() return self.kind == "battleground" end
+    function m:IsArena() return self.kind == "arena" end
+    return m
+end
+local base_player_m = new_player
+new_player = function(name, guidLow)
+    local p = base_player_m(name, guidLow)
+    p.spells, p.zone, p.messages, p.class = {}, 0, {}, p.class or 1
+    function p:IsPlayer() return true end
+    function p:HasSpell(id) return self.spells[id] == true end
+    function p:LearnSpell(id) self.spells[id] = true end
+    function p:GetZoneId() return self.zone end
+    function p:SendBroadcastMessage(text) self.messages[#self.messages + 1] = text end
+    function p:ResurrectPlayer(percent, sickness) self.dead = false; self.raised = (self.raised or 0) + 1 end
+    -- a save of the character: as the game's, it writes where they joined a
+    -- battleground or arena (p.entryPoint, set by a test: { mapId, x, y, z,
+    -- o }) to character_entry_point (Toy.chardb.entry); with none kept, no row
+    function p:SaveToDB()
+        self.saves = (self.saves or 0) + 1
+        local e = self.entryPoint
+        Toy.chardb.entry[self.low] = e and { e.mapId, e.x, e.y, e.z, e.o } or nil
+    end
+    return p
+end
+-- The two tables the druids' script keeps (sql/beta/db_characters.src/
+-- 01-moonglade-return.apply.sql), by guid:
+--   Toy.chardb.moonglade[guid] = { map, x, y, z, o }
+--   Toy.chardb.visitors[guid]  = { druid, map, x, y, z, o, came_dead, left_glade }
+-- and the game's own bind-point table, which a test fills:
+--   Toy.chardb.homebind[guid]  = zone number
+local N = "([%d.-]+)"
+local EXECUTE = {
+    { "^REPLACE INTO beta_211a_moonglade_return %(guid, map, x, y, z, o%) VALUES %(" .. table.concat({ N, N, N, N, N, N }, ", ") .. "%)$",
+      function(g, ...) Toy.chardb.moonglade[tonumber(g)] = { ... } end },
+    { "^DELETE FROM beta_211a_moonglade_return WHERE guid = (%d+)$",
+      function(g) Toy.chardb.moonglade[tonumber(g)] = nil end },
+    { "^REPLACE INTO beta_211a_moonglade_visitors %(guid, druid, map, x, y, z, o, came_dead, left_glade%) VALUES %(" .. table.concat({ N, N, N, N, N, N, N, N, N }, ", ") .. "%)$",
+      function(g, ...) Toy.chardb.visitors[tonumber(g)] = { ... } end },
+    { "^DELETE FROM beta_211a_moonglade_visitors WHERE guid = (%d+)$",
+      function(g) Toy.chardb.visitors[tonumber(g)] = nil end },
+    { "^UPDATE beta_211a_moonglade_visitors SET left_glade = 1 WHERE guid = (%d+)$",
+      function(g) local r = Toy.chardb.visitors[tonumber(g)]; if r then r[8] = 1 end end },
+}
+function CharDBExecute(sql)
+    for _, e in ipairs(EXECUTE) do
+        local caps = { sql:match(e[1]) }
+        if #caps > 0 then
+            for i = 1, #caps do caps[i] = tonumber(caps[i]) or caps[i] end
+            e[2](unpack(caps)); return
+        end
+    end
+    error("toy CharDBExecute does not know this statement: " .. sql, 2)
+end
+-- {{{ local function new_query
+-- An answer as CharDBQuery gives it: rows of columns from 0, starting on
+-- the first row; NextRow moves on and says whether there was one. No rows:
+-- nil, as the engine gives.
+local function new_query(rows)
+    if #rows == 0 then return nil end
+    local i = 1
+    return { GetUInt32 = function(_, c) return math.floor(tonumber(rows[i][c + 1])) end,
+             GetFloat  = function(_, c) return tonumber(rows[i][c + 1]) end,
+             NextRow   = function() i = i + 1; return rows[i] ~= nil end }
+end
+-- }}}
+local QUERY = {
+    { "^SELECT map, x, y, z, o FROM beta_211a_moonglade_return WHERE guid = (%d+)$",
+      function(g) local r = Toy.chardb.moonglade[tonumber(g)]; return r and { r } or {} end },
+    { "^SELECT druid, map, x, y, z, o, left_glade, came_dead FROM beta_211a_moonglade_visitors WHERE guid = (%d+)$",
+      function(g) local r = Toy.chardb.visitors[tonumber(g)]; return r and { { r[1], r[2], r[3], r[4], r[5], r[6], r[8], r[7] } } or {} end },
+    { "^SELECT zoneId FROM character_homebind WHERE guid = (%d+)$",
+      function(g) local z = Toy.chardb.homebind[tonumber(g)]; return z and { { z } } or {} end },
+    { "^SELECT joinMapId, joinX, joinY, joinZ, joinO FROM character_entry_point WHERE guid = (%d+)$",
+      function(g) local r = Toy.chardb.entry[tonumber(g)]; return r and { r } or {} end },
+    { "^SELECT guid, map, x, y, z, o, came_dead FROM beta_211a_moonglade_visitors WHERE druid = (%d+)$",
+      function(d)
+          local out, keys = {}, {}
+          for g in pairs(Toy.chardb.visitors) do keys[#keys + 1] = g end
+          table.sort(keys)
+          for _, g in ipairs(keys) do
+              local r = Toy.chardb.visitors[g]
+              if r[1] == tonumber(d) then out[#out + 1] = { g, r[2], r[3], r[4], r[5], r[6], r[7] } end
+          end
+          return out
+      end },
+    { "^SELECT COUNT%(%*%) FROM beta_211a_moonglade_visitors WHERE druid = (%d+)$",
+      function(d) local n = 0; for _, r in pairs(Toy.chardb.visitors) do if r[1] == tonumber(d) then n = n + 1 end end; return { { n } } end },
+}
+function CharDBQuery(sql)
+    for _, q in ipairs(QUERY) do
+        local cap = sql:match(q[1])
+        if cap then return new_query(q[2](cap)) end
+    end
+    error("toy CharDBQuery does not know this question: " .. sql, 2)
+end
 -- }}}
 
 Toy.World, Toy.handlers = World, handlers

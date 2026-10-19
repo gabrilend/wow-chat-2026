@@ -79,7 +79,7 @@ local HOOK_COMMANDS = {
 
 local LEVEL_NAME = { [0] = "player", [1] = "moderator", [2] = "gm", [3] = "admin", [4] = "console" }
 local DATABASE   = { basic = "acore_world_basic", ["cc-test"] = "acore_world_cc_test", vanilla = "acore_world_vanilla",
-                     release = "acore_world", beta = "acore_world", alpha = "acore_world_alpha" }
+                     release = "acore_world", beta = "acore_world_beta", alpha = "acore_world_alpha" }
 
 local problems = {}
 local function problem(text) problems[#problems + 1] = text end

@@ -81,6 +81,11 @@ work needs, and treasure is fed by the selling that merchants allow.
 - **211** group hearthstone by invitation (new): a pop-up to each member
   when someone hearths, moved when the cast completes, standing in a
   circle by group number round the first hearther's arrival.
+- **211a** druids hearth by Teleport: Moonglade (new, built offline):
+  known from level 1; out to a random spot of the glade's open ground, and
+  back to where they cast it (or entered their instance); the group comes
+  as visitors and leaves with the druid. Also made 211's invitation follow
+  the spell (cast begins, cancelled), so Astral Recall invites too.
 
 ### 3. The scheduler
 
@@ -131,6 +136,17 @@ work needs, and treasure is fed by the selling that merchants allow.
 
 ### 7. Companions
 
+- **First, the calls the behaviors make that the engine lacks.** Found
+  2026-10-17 by the treasure session's method-name check
+  (`scripts/test-ale-method-names`, branch completed-threads): calls in
+  `.behaviors.disabled/` to methods the Lua engine does not have, each a
+  failure waiting at the first run, the kind issue 606b met with
+  `GetPosition`. `MovementExpired` (convoy, gestures), `SetTarget`
+  (find-monsters), `GetPhase` (gestures; the engine has `GetPhaseMask`),
+  `GetUnitsInRange` (orbit-player; it has `GetFriendlyUnitsInRange` and
+  `GetUnfriendlyUnitsInRange`), `UseItem` (sit-and-rest). Fix each before
+  its behavior is switched on. (`IsHostileTo`, which the behaviors also
+  call, comes from source patch B007 on beta.)
 - The bot behaviors, one at a time, out of `.behaviors.disabled/`, each
   with its own check: **601** find monsters, **603** avoid monsters,
   **604** sit and rest, **606** orbit the player, **609** gestures and
@@ -187,6 +203,8 @@ Kept in the issue they belong to, asked one at a time:
   of 20.
 - 211: random bots and the hearth pop-up; two hearthers at once; Sargobras's
   pop-up or the game's summon dialog.
+- 211a: visitors' ways back through a server restart; a visitor who is
+  dead when the druid leaves.
 - 617e: the buddies' new hearthstone rule and what it replaces.
 - 718: which profile Chromie's death knight story belongs to.
 - 721: 502's new name; borrowed spells' cost; talents without AIO.

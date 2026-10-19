@@ -383,13 +383,25 @@ function Ambush.pushToAmbushQueue(player, query, rank) -- {{{
     end
 
     local tempTable = player:GetData(queueType)
+    local added = 0
     for _, creature in ipairs(creatures) do
         if playerLevel >= creature.minLevel - LEVEL_MIN and
            playerLevel <= creature.maxLevel + LEVEL_MAX then
             table.insert(tempTable, creature.id)
+            added = added + 1
         end
     end
     player:SetData(queueType, tempTable)
+
+    -- Rows came back but none fits this player's level (the question asks
+    -- for the player's level, but LEVEL_MIN/LEVEL_MAX above can narrow it,
+    -- and the player may have levelled while the answer was on its way):
+    -- treated as "nothing found", so the next rank down is asked, as above.
+    -- Found 2026-10-17 by scripts/demo-beta-toy-session: a queue that
+    -- stayed empty this way asked for the same rank every tick, forever.
+    if added == 0 and Ambush.NEXT_RANK_WHEN_NONE[rank] then
+        Ambush.setupAmbushQueue(player, Ambush.NEXT_RANK_WHEN_NONE[rank])
+    end
 end -- }}}
 
 -- Puts one creature entry back into a player's queue (used when a chase
@@ -822,9 +834,13 @@ function Ambush.onPlayerLogout(event, player)
     print("[Ambush] Logout time saved for: " .. player:GetName())
 end -- }}}
 
-PLAYER_EVENT_ON_LOGIN         = 3
-PLAYER_EVENT_ON_LOGOUT        = 4
-PLAYER_EVENT_ON_KILL_CREATURE = 7
+-- the engine's event numbers, local: every beta script shares one Lua
+-- state, so a global restated here would quietly overwrite (or be
+-- overwritten by) another file's copy; travel.lua and death-knights.lua
+-- name the same events (scripts/test-lua-globals)
+local PLAYER_EVENT_ON_LOGIN         = 3
+local PLAYER_EVENT_ON_LOGOUT        = 4
+local PLAYER_EVENT_ON_KILL_CREATURE = 7
 
 RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN,         Ambush.setupPlayer)
 RegisterPlayerEvent(PLAYER_EVENT_ON_LOGOUT,        Ambush.onPlayerLogout)

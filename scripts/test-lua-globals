@@ -1,0 +1,107 @@
+#!/usr/bin/env luajit
+-- test-lua-globals - checks that the game's Lua scripts do not step on each
+-- other's global names.
+--
+-- For a general audience: the game server's Lua engine loads every script
+-- of a profile into one shared space. A name a script makes "global" (not
+-- local to the file) is seen by all the others, and when two scripts make
+-- the same global, the one loaded later quietly replaces the other's: no
+-- error, just one of them working with the wrong value or the wrong
+-- function. This reads each script the way LuaJIT compiles it and lists
+-- every global name it writes, anywhere in the file (inside functions too,
+-- which loading the file alone would never run), then checks two rules:
+--   1. a library (a file in a lib/ folder, loaded by other scripts for its
+--      functions) writes no global at all: everything it offers goes out
+--      through the table it returns;
+--   2. within one profile's scripts, no global is written by two files.
+-- It never runs the scripts. It reads the project's own scripts only, not
+-- the Lua engine's extension files (.ext, in mod-ale's source), which
+-- scripts/test-beta-lua-load loads beside them.
+--
+-- Usage: scripts/test-lua-globals [PROJECT_DIR]
+-- Exit status: 0 if both rules hold, 1 otherwise; each break is named with
+-- the files involved.
+--
+-- Born 2026-10-18 from a suggestion by the fronts session: the ambush,
+-- travel and death knight scripts each restated the engine's event numbers
+-- as globals (the same values, so nothing broke yet); they are local now.
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+
+local function lines_of(cmd)
+    local out, h = {}, io.popen(cmd)
+    for l in h:lines() do out[#out + 1] = l end
+    h:close()
+    return out
+end
+local function q(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
+
+-- {{{ local function globals_written
+-- Every global name a file writes, as a sorted list, from LuaJIT's listing
+-- of the file's bytecode: each write to a global is a GSET instruction
+-- naming it ("GSET 0 1 ; "Ambush""). A file LuaJIT cannot compile is an
+-- error, reported with the compiler's words, not skipped.
+local function globals_written(path)
+    local names, seen, compiled = {}, {}, false
+    for _, l in ipairs(lines_of("luajit -bl " .. q(path) .. " 2>&1")) do
+        if l:match("^%-%- BYTECODE") then compiled = true end
+        local name = l:match("GSET%s.-;%s*\"(.-)\"")
+        if name and not seen[name] then seen[name] = true; names[#names + 1] = name end
+        if not compiled and l:match("^luajit:") then return nil, l end
+    end
+    if not compiled then return nil, "no bytecode listed" end
+    table.sort(names)
+    return names
+end
+-- }}}
+
+-- {{{ the scripts, by profile folder
+-- What the engine loads: every .lua under the profile's folder, minus any
+-- path with a part starting with "." (ALE skips those, as in
+-- .behaviors.disabled/). Files ending .lua.disabled are not .lua files.
+local profiles, order = {}, {}
+for _, f in ipairs(lines_of("git -C " .. q(DIR) .. " ls-files 'src/lua-*/*.lua' 'src/lua-*/**/*.lua'")) do
+    local folder = f:match("^src/(lua%-[^/]+)/")
+    if folder and not f:match("/%.") then
+        if not profiles[folder] then profiles[folder] = {}; order[#order + 1] = folder end
+        table.insert(profiles[folder], f)
+    end
+end
+table.sort(order)
+-- }}}
+
+local breaks, files_read = 0, 0
+for _, folder in ipairs(order) do
+    local writers = {}                 -- global name -> list of files
+    for _, f in ipairs(profiles[folder]) do
+        local names, err = globals_written(DIR .. "/" .. f)
+        files_read = files_read + 1
+        if not names then
+            print("  FAIL " .. f .. ": could not be compiled to read its globals: " .. err)
+            breaks = breaks + 1
+        else
+            -- rule 1: a library writes none
+            if f:match("/lib/") and #names > 0 then
+                print("  FAIL " .. f .. " is a library but writes globals: " .. table.concat(names, " "))
+                breaks = breaks + 1
+            end
+            for _, n in ipairs(names) do
+                writers[n] = writers[n] or {}
+                table.insert(writers[n], f)
+            end
+        end
+    end
+    -- rule 2: no global written by two files of one profile
+    local shared = {}
+    for n, list in pairs(writers) do if #list > 1 then shared[#shared + 1] = n end end
+    table.sort(shared)
+    for _, n in ipairs(shared) do
+        print("  FAIL " .. folder .. ": global " .. n .. " is written by " .. table.concat(writers[n], ", "))
+        breaks = breaks + 1
+    end
+    if #shared == 0 then print(string.format("  ok   %s: %d scripts, no global written twice", folder, #profiles[folder])) end
+end
+
+print(string.format("%d script(s) read; %d break(s)", files_read, breaks))
+os.exit(breaks == 0 and 0 or 1)

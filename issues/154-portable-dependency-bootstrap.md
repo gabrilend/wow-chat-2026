@@ -321,11 +321,11 @@ names the file to create.
 
 - issues/149-project-local-ccache-build-from-source.md — why ccache is
   built from source into the project at all
-- issues/121-mysql-script-naming-aliases — the start-script name the
+- issues/121-mysql-script-naming-aliases.md — the start-script name the
   closing message assumes
-- issues/completed/105-project-local-database — the original local MySQL
+- issues/completed/105-project-local-database.md — the original local MySQL
   design
-- issues/107-credential-manager-script — the credential store the
+- issues/107-credential-manager-script.md — the credential store the
   application user's password comes from
 - scripts/install — owns per-profile database creation and the
   application user; this issue deliberately does not duplicate that

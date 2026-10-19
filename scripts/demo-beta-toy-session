@@ -1,0 +1,182 @@
+#!/usr/bin/env luajit
+-- demo-beta-toy-session - plays a stretch of beta's game in the pretend
+-- world, with beta's real scripts, and reports what happened.
+--
+-- For a general audience: beta's game is several scripts working at once:
+-- monsters sent at each player on a drifting clock (the ambush), people
+-- who wander by (travellers, among them the player's class trainers),
+-- treasure chests, and a group hearthstone. Each has its own test; this
+-- runs them together, as a session: a few players of random classes and
+-- levels walk about, sit down now and then, fight what comes, and one of
+-- them hearths the group home. It runs on the pretend world of
+-- scripts/lib/toy-world.lua, so no server is needed, and the numbers it
+-- prints are what the scripts decided: how many monsters came and why some
+-- did not, which travellers each player met, how many chests appeared, who
+-- came along on the hearth. It is the framework's example of a whole beta
+-- loop, and a quick way to see a change's effect on all of it at once.
+--
+-- The world is a toy: ground is flat, fights end at random (a monster in a
+-- fight falls with a 1-in-8 chance each second), the database answers from
+-- a small built-in list of creatures. Treasure has no clock of its own yet
+-- (it waits on the owner's question in issue 200), so the demo opens a
+-- chest for each player every 100 seconds, the old scheduler's interval.
+--
+-- Usage: scripts/demo-beta-toy-session [PROJECT_DIR] [--minutes N] [--players N] [--seed N]
+--   defaults: 15 minutes, 3 players, seed from the clock (printed, so a run
+--   can be repeated exactly)
+-- Writes the report to stdout, a log to tmp/shared-memory/demo-beta-toy-session.log,
+-- and, last, the run's receipt to output/goodbye (the house rule: present
+-- and fresh means the run ended cleanly).
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+local opt = { minutes = 15, players = 3, seed = os.time() }
+local i = 1
+while i <= #arg do
+    local a = arg[i]
+    if a == "--minutes" then i = i + 1; opt.minutes = tonumber(arg[i])
+    elseif a == "--players" then i = i + 1; opt.players = tonumber(arg[i])
+    elseif a == "--seed" then i = i + 1; opt.seed = tonumber(arg[i])
+    else DIR = a end
+    i = i + 1
+end
+math.randomseed(opt.seed)
+
+local here = (arg[0]:match("^(.*[/\\])") or "./")
+local Toy = dofile(here .. "lib/toy-world.lua")
+local World, advance = Toy.World, Toy.advance
+
+-- the scripts, as the engine would load them (their chatter goes to the log)
+os.execute("mkdir -p '" .. DIR .. "/tmp/shared-memory' '" .. DIR .. "/output'")
+local log = assert(io.open(DIR .. "/tmp/shared-memory/demo-beta-toy-session.log", "w"))
+local realprint = print
+print = function(...)
+    local parts = {}
+    for k = 1, select("#", ...) do parts[#parts + 1] = tostring((select(k, ...))) end
+    log:write(string.format("[%7.1fs] %s\n", World.now / 1000, table.concat(parts, " ")))
+end
+dofile(DIR .. "/src/lua-beta/movement.lua")
+dofile(DIR .. "/src/lua-beta/ambush.lua")
+dofile(DIR .. "/src/lua-beta/travel.lua")
+dofile(DIR .. "/src/lua-beta/treasure.lua.disabled")
+dofile(DIR .. "/src/lua-beta/druid-moonglade.lua")
+dofile(DIR .. "/src/lua-beta/hearthstone.lua")
+
+-- {{{ the database's answer: a small list of real creatures, by rank
+-- { entry, min level, max level } (from the stock world: the ambush's
+-- types at levels 1-20).
+World.answer = {
+    [0] = { { 1, 1, 60 } },                      -- filled below by level band
+    [4] = { { 1531, 6, 7 }, { 1533, 8, 9 }, { 10356, 10, 10 }, { 16854, 11, 11 }, { 10358, 12, 12 },
+            { 3535, 13, 13 }, { 2191, 14, 14 }, { 3470, 15, 15 }, { 2184, 17, 17 }, { 22062, 18, 18 },
+            { 3295, 19, 19 }, { 573, 20, 20 } },
+    [2] = { { 5912, 19, 19 }, { 3398, 20, 20 } },
+}
+local normals = {}
+for lvl = 1, 20 do normals[#normals + 1] = { 30000 + lvl, lvl, lvl + 1 } end
+World.answer[0] = normals
+-- }}}
+
+-- {{{ counting what the scripts decide
+local stats = { holds = {}, kills = 0, hearthMoves = 0 }
+for _, h in ipairs(Ambush.HOLDS) do
+    local f = h.holds
+    h.holds = function(p) local r = f(p); if r then stats.holds[h.why] = (stats.holds[h.why] or 0) + 1 end; return r end
+end
+-- }}}
+
+-- {{{ the players
+local CLASS = { [1] = "warrior", [2] = "paladin", [3] = "hunter", [4] = "rogue", [5] = "priest", [6] = "death knight",
+                [7] = "shaman", [8] = "mage", [9] = "warlock", [11] = "druid" }
+local CLASSES = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 11 }
+local NAMES = { "Ann", "Bea", "Cid", "Dot", "Eli", "Fay", "Gus", "Hal" }
+local players = {}
+for k = 1, opt.players do
+    local p = Toy.new_player(NAMES[k] or ("P" .. k), 500 + k)
+    p.class = CLASSES[math.random(#CLASSES)]
+    p.level = math.random(1, 20)
+    p.horde = math.random() < 0.5
+    p.x, p.y = 1000 + k * 20, 1000
+    p.home = { mapId = 1, x = 4000, y = 4000, z = 0 }
+    Toy.chardb.homebind[500 + k] = 14                       -- bound in Durotar (the hearth's window names it)
+    players[k] = p
+end
+for _, p in ipairs(players) do Toy.login(p) end
+if #players >= 2 then Toy.group(players) end
+-- }}}
+
+-- {{{ the world turning, second by second
+local HEARTH_AT = math.floor(opt.minutes * 60 * 0.7)        -- 70% of the way through
+local function BEGIN(p) Toy.spellEvent(1, p, 8690) end   -- the hearthstone's cast begins
+local CAST = GroupHearth.onCast
+local KILL = Toy.handlers[7] or {}
+local sitting = {}
+for second = 1, opt.minutes * 60 do
+    for _, p in ipairs(players) do
+        -- walking: a few yards every few seconds; now and then a rest
+        if sitting[p] then
+            sitting[p] = sitting[p] - 1
+            if sitting[p] <= 0 then sitting[p] = nil; p.standing = true end
+        elseif math.random() < 0.01 then
+            sitting[p] = 20; p.standing = false
+        elseif second % 3 == 0 then
+            local a = math.random() * 2 * math.pi
+            p.x, p.y, p.moving = p.x + math.cos(a) * 6, p.y + math.sin(a) * 6, true
+        else
+            p.moving = false
+        end
+        -- fights end at random; a fallen monster is the player's kill
+        for _, c in ipairs(p.spawned) do
+            if c.combat and not c.dead and not c.gone and math.random() < 0.125 then
+                c.dead, c.combat = true, false
+                stats.kills = stats.kills + 1
+                for _, fn in ipairs(KILL) do fn(7, p, c) end
+            end
+        end
+        -- treasure, by the demo's clock
+        if second % 100 == 0 and p.standing then pcall(Treasure.spawnTreasure, p) end
+    end
+    if second == HEARTH_AT and #players >= 2 then
+        BEGIN(players[1])
+        for k = 2, #players do if players[k].window then Toy.answer(players[k], k % 2 == 0 and 1 or 2) end end
+    end
+    if second == HEARTH_AT + 10 and #players >= 2 then CAST(5, players[1], Toy.spell(8690)) end
+    advance(1000)
+end
+-- }}}
+
+-- {{{ the report
+print = realprint
+log:close()
+local function count(list, f) local n = 0; for _, v in ipairs(list) do if f(v) then n = n + 1 end end; return n end
+local totals = { monsters = 0, rares = 0, travellers = 0, trainers = 0, chests = 0 }
+print(string.format("Beta, %d minutes in the pretend world, %d player(s), seed %d", opt.minutes, #players, opt.seed))
+print("")
+for _, p in ipairs(players) do
+    local monsters = count(p.spawned, function(c) return c.summonKind == 6 end)
+    local rares    = count(p.spawned, function(c) return c.summonKind == 8 end)
+    local trav     = count(p.spawned, function(c) return c.summonKind == 1 end)
+    local trainers = count(p.spawned, function(c) return c.summonKind == 1 and Travel.isTrainer(c.entry) end)
+    local chests   = #(p.objects or {})
+    totals.monsters, totals.rares, totals.travellers = totals.monsters + monsters, totals.rares + rares, totals.travellers + trav
+    totals.trainers, totals.chests = totals.trainers + trainers, totals.chests + chests
+    stats.hearthMoves = stats.hearthMoves + #p.teleports
+    print(string.format("  %-4s %-12s level %2d %-8s  monsters %3d (rares %d)  travellers %2d (trainers %d)  chests %d  hearthed along: %s",
+        p.name, CLASS[p.class], p.level, p.horde and "horde" or "alliance", monsters, rares, trav, trainers, chests,
+        #p.teleports > 0 and "yes" or "no"))
+end
+print("")
+print(string.format("  monsters killed: %d; the ambush's clock: %d tick(s) held back:", stats.kills,
+    (function() local n = 0; for _, v in pairs(stats.holds) do n = n + v end; return n end)()))
+for why, n in pairs(stats.holds) do print(string.format("    %-24s %d", why, n)) end
+print(string.format("  the group hearth moved %d member(s); the script log is tmp/shared-memory/demo-beta-toy-session.log", stats.hearthMoves))
+-- }}}
+
+-- {{{ the goodbye receipt, last
+local g = assert(io.open(DIR .. "/output/goodbye", "w"))
+g:write(string.format("goodbye from scripts/demo-beta-toy-session\nended: %s\nseed: %d\nminutes: %d\nplayers: %d\n" ..
+    "seconds run: %d\nmonsters sent: %d\nrares sent: %d\nmonsters killed: %d\ntravellers: %d\ntrainers among them: %d\n" ..
+    "chests: %d\nhearth moves: %d\n",
+    os.date("%Y-%m-%d %H:%M:%S"), opt.seed, opt.minutes, #players, opt.minutes * 60, totals.monsters, totals.rares,
+    stats.kills, totals.travellers, totals.trainers, totals.chests, stats.hearthMoves))
+g:close()
+-- }}}

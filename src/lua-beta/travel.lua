@@ -341,7 +341,8 @@ function Travel.getTravelerTypeMask(class)
     if class == 9 then -- 9 = warlock
         return 0 + 2 + 4 + 8 + 0  + 32 + 64 + 0   + 256 + 512
     end
-    if class == 11 then -- 11 = druid
+    if class == 11 then -- 11 = druid: no innkeepers (2), on purpose: their hearthstone is
+                        -- Teleport: Moonglade (the owner, 2026-10-18; druid-moonglade.lua, issue 211a)
         return 0 + 0 + 4 + 8 + 0  + 32 + 64 + 0   + 256 + 512
     end
 end
@@ -631,7 +632,8 @@ function Travel.onLogin(_event, player)
     player:RegisterEvent(Travel.tick, TRAVEL_FIRST_INTERVAL, 1)
 end -- }}}
 
-PLAYER_EVENT_ON_LOGIN = 3
-PLAYER_EVENT_ON_CHAT  = 18
+-- local, as in ambush.lua: the beta scripts share one Lua state
+local PLAYER_EVENT_ON_LOGIN = 3
+local PLAYER_EVENT_ON_CHAT  = 18
 RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, Travel.onLogin)
 RegisterPlayerEvent(PLAYER_EVENT_ON_CHAT,  Travel.handleChat)

@@ -504,21 +504,21 @@ sub-issue that depends on it can be called done.
   at the bots. Substantial reuse, and one point of overlap worth
   resolving: 916f's bespoke host rotation versus SoraMech's
   `distributor` routing kind.
-- [911 - Shepherd and Flock System](911-shepherd-flock-system) — the
+- [911 - Shepherd and Flock System](../911-shepherd-flock-system.md) — the
   older sibling in spirit. A shepherd who wanders with a flock, and a
   player who can permanently become one of the flock and watch the world
   through its eyes with no input accepted. Bellwether is the inverse:
   all input, no eyes.
-- [908 - Narrator Audience Facing](908-narrator-audience-facing) and
-  [910 - Wandering Narrator System](910-wandering-narrator-system) —
+- [908 - Narrator Audience Facing](../908-narrator-audience-facing.md) and
+  [910 - Wandering Narrator System](../910-wandering-narrator-system.md) —
   in-world narration to players who are present. Bellwether narrates to
   a player who is absent.
-- [912 - Automated Lore Generation](912-automated-lore-generation) —
+- [912 - Automated Lore Generation](../912-automated-lore-generation.md) —
   the other generative pipeline; shares the cluster.
 - [616 - Public Healer Frames Addon](616-public-healer-frames-addon.md)
   — the existing AIO addon precedent, including the SecureActionButton
   and combat-lockdown research that 1101k will need.
-- [1004 - rmail In-game Bridge](1004-rmail-ingame-bridge) — one of the
+- [1004 - rmail In-game Bridge](../1004-rmail-ingame-bridge.md) — one of the
   interface sub-maps in 1101j is an rmail transport, and it should reuse
   this rather than invent a second mail path.
 - `notes/wow-chat-secretary` and `notes/wow-chat-secretary-2` — the
