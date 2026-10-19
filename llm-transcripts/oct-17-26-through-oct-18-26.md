@@ -1,6 +1,6 @@
 # Conversation Summary: 90bf80e4-2922-4058-918c-551568e85c2a
 
-Generated on: 2026-10-18 16:52:28
+Generated on: 2026-10-18 16:54:44
 Models: claude-opus-5-5
 
 ## Contents
@@ -8012,6 +8012,36 @@ commands as well as mine.
 
 The "Shell cwd was reset" line after each command is cosmetic now: the reset
 target and the name shown are the same.
+
+--------------------------------------------------------------------------------
+
+### User Request 51
+
+please continue
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 51
+
+> Next, bringing issue 041 up to date: your answers settle three of its five
+> open questions. Recording them:
+
+*[commit] 80d2b5d89 in ai-stuff - The folder gate issue records the owner's answers*
+
+I've recorded your answers to the folder-gate issue and committed it. That
+leaves one question there, and the issue stays open until it's answered.
+
+The old copies are still in `moved-to-kaun-2026-10-18/`, with 114 MB free on
+that disk. I'm still checking every 30 seconds, and when you delete that folder
+I'll make the git-history copies right after.
+
+The open question: the ten-minute expiry currently covers only the folder gate's
+permission file. Should the other two gates' permissions expire after ten
+minutes as well? That's the one for history-changing git commands that count
+backwards, and the one for plain `git commit`.
+- **For:** a forgotten permission can't wait around for an unrelated command.
+- **Against:** I've only seen the folder gate leave a permission armed, because
+  only `cd` commands get silently dropped before reaching a gate.
 
 --------------------------------------------------------------------------------
 

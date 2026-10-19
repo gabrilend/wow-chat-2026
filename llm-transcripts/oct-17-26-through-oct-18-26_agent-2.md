@@ -1,6 +1,6 @@
 # Conversation Summary: 9611fd64-2739-4282-8913-4ea703371d8e
 
-Generated on: 2026-10-18 16:49:10
+Generated on: 2026-10-18 17:05:05
 Models: claude-opus-5-5
 
 ## Contents
@@ -2920,6 +2920,182 @@ the same place, so there's nothing to fix.
 Everything I wrote this round went to `/mnt/kaun/wow-chat-beta-homework` and is
 committed. That checkout is clean apart from the demo's leftover `output/`
 folder.
+
+--------------------------------------------------------------------------------
+
+### User Request 22
+
+great let's keep working.
+
+
+
+<pasted_content id="ea90">
+> - The boot problem from the move is fixed. The database still recorded five
+> SQL folders
+>     under the old /mnt/mtwo path. After the next install at the new place, the server would
+>     have found every SQL file twice and refused to start. I told the session that ran the
+>     move. It corrected those five records, and its move tool now handles this.
+</pasted_content id="ea90">
+
+
+how does sql handle having datasets on different disks? Is it easier to read
+them in parallel? if so, be sure to write it into the claude.md file.
+
+> 1. When a druid in a group casts Teleport: Moonglade, should the rest of the
+> group get
+>      the "come along?" pop-up, like a Hearthstone? For now it's the druid's alone.
+
+yes. they can be visitors. but if the druid is no longer in moonglade, then they
+are teleported out as well, to the place they teleported in from.
+
+> 2. If a druid casts it from inside a dungeon, battleground or arena, should
+> their earlier
+>      open-world spot be kept, or forgotten as it is now?
+
+yes, the spot where they entered the dungeon or battleground or arena.
+
+> 3. Should the spell get a cooldown, such as the Hearthstone's 30 minutes? The
+> stock spell
+>      has none; I checked the game's spell data.
+
+I don't think a cooldown is necessary.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 22
+
+> Three tasks: the question about databases on different disks, the group coming
+> along to Moonglade, and remembering where a druid entered an instance. No
+> cooldown, as you said. Starting with the database question, from this
+> project's own MySQL build and settings rather than memory:
+
+> The project file is clean. Its database section still lists the old shared
+> database names, so I'll correct that while adding the disk notes:
+
+> Committed in the main project. Now the druid answers. The first question is
+> how to know where a druid entered a dungeon, battleground or arena. Looking at
+> what the Lua engine exposes:
+
+> The engine does have a cast-begins event, registered per spell. Reading the
+> rest of that list:
+
+> Next, the plan in the issue files. In issue 211, the invitation opens when any
+> hearth spell begins casting and closes the moment it's cancelled, which fixes
+> Astral Recall.
+
+> Now issue 211a, rewritten with your three answers and the visitor design:
+
+> The issue files are written. Now the group hearthstone rework. It opens on
+> cast-begin and withdraws on cancel, and it gains `open` and `take` so the
+> druid script can use the same invitation.
+
+> Hearthstone script done. Now the test world: per-spell events, and `IsPlayer`
+> on players.
+
+> Updating the hearthstone test to the new events, with scenes for Astral
+> Recall, a hearther logging out mid-cast, and a cast begun twice:
+
+> The hearthstone test passes with all 151 checks. Next, the druid script: the
+> open-world position note, the instance entry point, and visitors.
+
+> I'm rewriting the druid script whole. The drawing and remembering parts stay
+> as they were; the rest gains entry points and visitors.
+
+> Fixing a fold label that doesn't match its function's name:
+
+> I'm rewriting the test whole too. It now loads both scripts, as the engine
+> would, and adds scenes for entry points and visitors.
+
+> Now the visitor scenes:
+
+> All 42 checks pass. Two script log lines leak into the test's output, so I'm
+> sending the scripts' log lines to a list and printing only the test's own
+> results:
+
+> All seven undone safeguards are caught. Checking the hearthstone side the same
+> way, by taking out the Astral Recall start and the logout withdrawal:
+
+> The demo still starts its hearth with the old item event. Switching it to the
+> cast-begin event, and loading the druid script, which beta now loads:
+
+> The demo runs and the hearth brought one member along. Updating the summaries
+> next:
+
+> Now the checks across everything touched:
+
+> All pass. Updating the remaining docs to match:
+
+All three of your answers are built on my branch and tested offline in the
+pretend world; none of it has been tried in game yet.
+
+**Databases on different disks.** I added this to the project's `CLAUDE.md`,
+under Database:
+- **Where the data lives:** MySQL keeps everything under one folder,
+  `mysql/databases/`: a folder per database, a file per table, plus its logs.
+  Since the move, all of it is on `/mnt/kaun`.
+- **Putting parts on another disk:** MySQL supports three ways. A table can be
+  created with its file on another disk. The redo and undo logs have their own
+  location settings. Or a second MySQL server can run with its own data folder
+  on that disk. Replacing a database folder with a link to another disk doesn't
+  work for the kind of tables this project uses.
+- **Parallel reads:** easier only when two things wait on the disk at the same
+  moment. Each connection to MySQL runs on its own thread, but a single query
+  mostly uses one. A game server loads its world once at startup, mostly one
+  table after another, then keeps it in its own memory. So a second disk helps
+  mainly when several realms start at the same time.
+- **What helps more, in order:**
+  1. More memory for MySQL. It keeps 256 MB of data in memory, while one world
+     database is about 0.8–1 GB.
+  2. Turning off the binary log. It records every change a second time, and
+     nothing here uses it.
+  3. A second disk, for several realms starting at once.
+
+  I haven't changed any of these settings; that's your call.
+
+**Visitors.** When a druid starts casting Teleport: Moonglade outside the glade,
+the group gets the hearthstone's "come along?" window, worded for Moonglade.
+Bots always come.
+- Those who say yes stand round the druid's random spot, by group number.
+- As soon as the druid is no longer in the glade, each visitor is sent back to
+  where they came from. That covers casting the way back, leaving another way,
+  changing map, or logging out.
+- A visitor who was offline at that moment goes back at their next login. One
+  who walked out on their own stops being a visitor.
+
+**Casting from a dungeon, battleground or arena** now goes back to where the
+caster entered it. The game only records an entry point for battlegrounds and
+the dungeon finder, and the Lua engine can't read it. So the script notes every
+player's position every 5 seconds while they're outside, and the last note
+before they went in is the entry point.
+
+**No cooldown**, as you said.
+
+**A bug fixed in my own group hearthstone:** the "come along?" window only
+opened when someone used the Hearthstone item. A shaman's Astral Recall has no
+item, so it never invited anyone. The window now opens when any hearth spell
+starts casting and closes the moment it's cancelled. The druid's trip uses the
+same window.
+
+**Tests:** the druid test now has 43 checks and the hearthstone test 151; both
+pass. Breaking any one of the new safeguards in a copy of the scripts makes a
+test fail. One safeguard I'd added made no difference, because a new window
+replaces the old one anyway, so I removed it. The new globals check also caught
+a mistake of mine: both scripts were creating the same shared table. Only the
+hearthstone script creates it now.
+
+**Your working directory:** the shell is already in `/mnt/kaun/wow-chat-2026`,
+but it's still called by its old name, which now points there. To change the
+name too, type `! echo /mnt/kaun/wow-chat-2026 > /tmp/claude-allow-cwd-change`,
+and I'll then run `cd /mnt/kaun/wow-chat-2026` on its own.
+
+**Two new questions about visitors:**
+1. Each visitor's way back is kept only in the game server's memory, not in the
+   database. If the server restarts while visitors are in Moonglade, they stay
+   there and would have to use their own hearthstone. Should their way back be
+   saved in the database, as the druid's is?
+2. If a visitor is dead when the druid leaves, they're sent back as a ghost to
+   where they came from. Should they instead be left to release their spirit and
+   run back as usual?
 
 --------------------------------------------------------------------------------
 
