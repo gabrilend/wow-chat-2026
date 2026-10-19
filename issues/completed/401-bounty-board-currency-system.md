@@ -316,3 +316,63 @@ This issue defines **Phase 4: Economy - Currency & Rewards** by establishing:
 > **Championing progression** (titles, rewards, recognition)
 
 The bounty board aesthetic transforms WoW's quest grind into a living economy that responds to player actions and world events. Players become champions through contributions, not just quest completions.
+
+## Since then (checked 2026-10-17)
+
+**It was never built, and nobody is recorded deciding not to build it.**
+The four files under Implementation above (`src/lua/bounty.lua`,
+`championing.lua`, the two SQL files) never existed; they were the plan.
+The issue began as **121**, phase 2, priority High, created from the
+owner's words on 31 March 2026 (`llm-transcripts/mar-27-26-through-apr-1-26.md`,
+line 3273):
+
+> also can we make an issue file to make all the increments of copper and silver
+> be increments of 10? no randomization of them please, they're bounty boards that
+> you can spend back at home. And they dynamically update depending on which herd
+> of creatures wandered in and started eating all the granary. you don't have to
+> get quests for it you just get it automatically, just bring back proof of your
+> deed (animal) or useful or rare materials (elemental) or other similar. if it's
+> something that doesn't drop something we'll just trust you. we know about how
+> rare each type of trophy is so, yeah sure we'll take that pelt of yours, you are
+> a brave warrior.
+>
+> (suddenly no pelts. not very strategic.)
+
+On 1 April it was still open (121, `llm-transcripts/apr-1-26.md`). The
+"Will Not Implement (out of scope - may revisit later)" status, the new
+number 401 and its place in `completed/` all arrived together in the
+corpus migration of 29 April (commits da9b3b2 and add2c16, which
+rewrote every issue into phase-aligned narrative form). Neither commit
+message mentions the bounty board, and no transcript searched (for
+"bounty", "121", "401" with "scope", "not implement") holds the owner
+saying to drop it. Whether it was meant to be declined is an open
+question for the owner, below.
+
+**Where its ideas went instead.** Nothing else pays for trophies. The
+nearest relatives are the treasure pool (402, 404), which also turns
+what players bring back into something for others, and the open
+question 404 raised on 2026-10-17: vendor gold from recycled sales is
+money made from nothing each turn, which a fixed, 10-step bounty price
+list (this issue's "known, predictable, and fair") is one way to
+replace.
+
+**Stale references, mended on 2026-10-17.** Issues 501 (custom
+merchants), 801 (proportional damage rewards) and 100 (route to v1)
+named it by its old number, 121; they now say 401 and that it is not
+implemented. `issues/phase-4-progress.md` listed it as "Completed:
+Foundation for non-gold rewards"; it now says it was declined and
+never built.
+
+**Should it be in `completed/`?** The project has `issues/declined/`
+for designs not taken (1101 and its sub-issues are there). This issue
+was put in `completed/` by the migration. Left where it is until the
+owner answers the question below; moving it changes nothing else (it is
+named by number only).
+
+## Open Questions (2026-10-17)
+
+1. Was the bounty board meant to be dropped? It was High priority when
+   it was written, and the only "will not implement" for it came from
+   the April migration, not from the owner. If it is still wanted, it
+   reopens as a new issue in phase 4 beside treasure, with this file as
+   its design; if not, it moves to `issues/declined/`.

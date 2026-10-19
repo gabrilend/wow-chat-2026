@@ -68,7 +68,7 @@ function Convoy.destroy(convoy_id)
         npc_convoy_map[npc_guid] = nil
         local npc = GetCreatureByGUID(npc_guid)
         if npc then
-            npc:MovementExpired()
+            npc:MoveExpire()  -- ALE's name for MotionMaster::MovementExpired (606b's check)
             npc:MoveRandom(30)
         end
     end
@@ -127,8 +127,9 @@ function Convoy.removeMember(convoy_id, npc)
     -- Clear mapping
     npc_convoy_map[npc_guid] = nil
 
-    -- Stop movement
-    npc:MovementExpired()
+    -- Stop movement (MoveExpire: ALE's name for the C++ MovementExpired,
+    -- which is what this called and the engine does not have)
+    npc:MoveExpire()
 
     -- Rebuild chain if members remain
     if #convoy.members > 0 then

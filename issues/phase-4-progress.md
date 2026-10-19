@@ -22,7 +22,7 @@ pipeline → multiplayer access → death stakes → exploit hardening.
 ### Currency substrate
 | Issue | Title | Status | Notes |
 |-------|-------|--------|-------|
-| 401 | bounty-board-currency-system | Completed | Alternative currency. Foundation for non-gold rewards. |
+| 401 | bounty-board-currency-system | Declined, never built | Marked "will not implement" in the April migration; whether the owner meant that is open (its "Since then"). |
 
 ### Chest substrate (the container)
 | Issue | Title | Status | Notes |

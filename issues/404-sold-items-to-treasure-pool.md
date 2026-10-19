@@ -293,6 +293,16 @@ engine (a B-patch beside B006).
    above: such an item is counted as gone and also enters the pool, a
    second copy. Close it with a buyback event in the engine (a B-patch
    beside B006, the owner's build), or accept the gap?
+3. **One sale, two pools: ability tomes (405).** `ability-tomes.lua.disabled`
+   has its own sell handler (`AbilityTomes.onPlayerSellItem`, its
+   registration still commented out) that returns a sold tome to the
+   tome pool at once. Switched on beside treasure, a tome that is
+   uncommon or better and does not stack would be recycled by both, and
+   a buyback would duplicate it in the tome pool. Which system owns a
+   sold tome? Proposed: the tome pool, through the same counter (it
+   would then call `Treasure.settleCounter`'s release with a tome pool
+   instead), and treasure skips any item `AbilityTomes.getSpellForTomeItem`
+   knows. Found 2026-10-17 while writing 403's "Since then".
 
 ## Suggested Implementation Steps (remaining)
 

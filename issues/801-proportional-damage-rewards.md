@@ -143,7 +143,7 @@ After loot awarded to B:
 - All items freely tradeable (soulbound removal in separate issue)
 
 ## Related Issues
-- 121 - bounty board currency system
+- 401 (was 121) - bounty board currency system (never built: see its "Since then")
 - (soulbound removal issue - find number)
 - 142 - symmetric aggro radius (the bystander-aggro scenario uses
   this system as the reward-routing layer; see 142 for the full

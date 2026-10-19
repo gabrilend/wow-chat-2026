@@ -583,6 +583,7 @@ QUICK_TESTS=(
     test-sargobras-follow test-sql-mirror test-steady-mtimes test-valley-deal test-world-boss-countdown
     test-treasure test-info-files-match-source test-lua-globals test-druid-moonglade
     test-validate-needs-world-up test-watch-compile test-forget-unprefixed-updates
+    test-ale-method-names
 )
 run_quick_tests() {
     local out="${DIR}/tmp/shared-memory/compile-tests"

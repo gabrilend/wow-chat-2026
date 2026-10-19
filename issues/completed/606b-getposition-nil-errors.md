@@ -318,3 +318,75 @@ With ~100 bots and 2-second wander tick: 3000 errors/minute = 15,000+ in 5 minut
 **Design principle applied:** "Adding guard rails implies there's a chance you can fall down. Not ideal - build the system to proceed with grace."
 
 The architectural fix (Option A or B) ensures bots never receive behavior events until they're ready. The dangerous state becomes impossible, not just guarded against.
+
+## Since then (checked 2026-10-17)
+
+**The lesson is now a test.** The fault here was a call to a method the
+Lua engine does not have, found only by its 17,188 failures in a running
+server. `scripts/test-ale-method-names` now looks for that before any
+server runs: it reads the engine's own list of method names from its
+source (`modules/mod-ale/src/LuaEngine/LuaFunctions.cpp`, 1,555 names),
+adds the names our B-patches give each profile (from
+`patches/patches.sh`'s lists, so a basic script may use B041's methods
+and a beta script may not), the names our scripts and the engine's
+extensions define (`ObjectVariables.ext` attaches `GetData` and
+`SetData` to every object kind), and Lua's own string and file
+methods; then it reports every `x:Name(` call whose name is in none of
+them. `GetPosition` appears nowhere today.
+
+**Its first runs found five more of the same kind**, all in the bot
+behaviors that have been switched off since April
+(`src/lua-beta/.behaviors.disabled/`): `MovementExpired` (convoy,
+gestures), `SetTarget` (find-monsters), `GetPhase` (gestures; the engine
+has `GetPhaseMask`),
+`GetUnitsInRange` (orbit-player; the engine has `GetFriendlyUnitsInRange`
+and `GetUnfriendlyUnitsInRange`) and `UseItem` (sit-and-rest). Each would
+fail the way `GetPosition` did the first time its line ran. They are
+reported by the test (switched-off scripts do not fail it) and passed
+to the beta session, whose roadmap brings those behaviors back one at a
+time (`docs/profiles/beta-roadmap.md`, step 7). A sixth, `IsHostileTo`,
+was a mistake of the test's: beta's patch B007 adds it, writing the
+registration as `\&` inside its sed command, which the test did not read
+until the beta session pointed it out the same day.
+
+**The five were then fixed, still switched off** (2026-10-17, the beta
+session agreeing): `MovementExpired` became `MoveExpire`, the engine's
+own name for it; the `SetTarget` line went (`Attack` sets the target);
+`GetPhase` became `GetPhaseMask`, and that line's height lookup, which
+passed the phase first as the C++ one takes it, now passes (x, y, phase)
+as the engine's does and stops if there is no ground; `GetUnitsInRange`
+became `GetPlayersInRange` (the loop after it wants players); and
+`UseItem` became the item's on-use spell cast on the bot plus one item
+taken away. The food search in sit-and-rest carries a signed FIXME for
+two faults outside that change (wrong bag numbers, wrong food category).
+
+**Bare calls are checked too.** A call like `GetCreatureByGUID(guid)`
+fails the same way when the engine has no such function. The test now
+checks CapitalCase bare calls (how the engine's functions are written)
+against the engine's list and every function or table the scripts
+define. Loaded scripts: none unknown. Switched off: `GetCreatureByGUID`,
+15 calls in convoy and gestures. The engine finds a creature by GUID
+through its map (`map:GetWorldObject(guid)`, then `ToCreature()`), so
+those behaviors need their creature lookups reworked before they come
+back; left to step 7, with the beta session told.
+
+**The scripts it names have moved.** `src/lua/behaviors/` became
+`src/lua-beta/behaviors/` with the per-profile folders (2026-06-04),
+then `src/lua-beta/.behaviors.disabled/` (2026-10-17): the engine skips
+only names starting with a dot, so the folder had been read since April
+although meant to be off. `src/lua/periodic_events.lua` is
+`src/lua-beta/periodic_events.lua.disabled`. The playerbots source files
+under Key Files exist in the build's source tree
+(`source-beta/modules/mod-playerbots/...`), which git ignores.
+
+**Issue numbers.** "Issue 329" (Option B, the centralized WorldTick) is
+now 125, the algorism priority scheduler, as this file's own Related
+line says. The old 329 was split in two in April (`issues/MIGRATION_MAP.md`:
+125 and 612b); here it means 125.
+
+**Run with every build.** It is one of the compile's quick tests
+(`scripts/compile`, QUICK_TESTS). It reads the engine's source, which
+`scripts/install` or `scripts/update` fetch before any compile can run,
+so the source is there when the quick tests are. From a git worktree,
+which has no source tree, run it with
+`--source /mnt/kaun/wow-chat-2026/source-beta`.

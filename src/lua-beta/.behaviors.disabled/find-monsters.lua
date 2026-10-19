@@ -118,7 +118,8 @@ end -- }}}
 -- {{{ FindMonsters.engageTarget
 -- Set target and begin attack
 function FindMonsters.engageTarget(bot, target)
-    bot:SetTarget(target)
+    -- Attack sets the target itself. This first called a SetTarget the
+    -- engine does not have (found 2026-10-17 by scripts/test-ale-method-names)
     bot:Attack(target)
 
     -- notify (debug)

@@ -108,6 +108,7 @@ wow-chat-2026/
 │   ├── phase-2-progress.md        Phase 2: Behaviors and Systems
 │   ├── phase-3-progress.md        Phase 3: World Immersion
 │   ├── phase-7-progress.md        Phase 7: ...
+│   ├── phase-12-progress.md       Phase 12: Example products, the framework outside World of Warcraft (1201 robot search party for Left 4 Dead 2, 1202 robot stage show for children)
 │   ├── 1xx-*.md                   Phase 1 issues
 │   ├── 2xx-*.md                   Phase 2 issues
 │   ├── 3xx-*.md                   Phase 3 issues
@@ -162,6 +163,8 @@ wow-chat-2026/
 │   ├── redownload-source          Re-clone source-{profile}/
 │   ├── keira                      Keira3 database editor
 │   ├── export-html                Render docs as HTML
+│   ├── check-issue-tests          Which issues a test checks, which have none; --run shows pass/fail beside each
+│   ├── test-ale-method-names      Every method and engine function a server script calls exists in the Lua engine (606b's lesson; a quick test)
 │   ├── find-issue-refs            Find cross-references to issue numbers
 │   ├── update-issue-refs          Rewrite issue-number references after a migration (blind to reused numbers: docs/completed-issue-threads.md)
 │   ├── check-issue-references     Audit issues: paths, patch steps and issues they name; --threads: later issues, reused numbers
