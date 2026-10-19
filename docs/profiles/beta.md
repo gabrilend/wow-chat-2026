@@ -24,8 +24,9 @@ bringing the rest of its game back: [beta-roadmap.md](beta-roadmap.md).*
   starting quests are completed on first login; three exits teleport
   them out).
 - **A group hearthstone by invitation** (issue 211, 2026-10-17): when
-  someone in a group starts a hearthstone, the others are asked in a
-  window whether to come along (bots always come); those who say yes
+  someone in a group starts a hearthstone or Astral Recall, the others are
+  asked in a window whether to come along, naming the zone they are
+  hearthing to (bots always come); those who say yes
   travel when the cast finishes and stand in a circle round where the
   hearther lands. A cancelled hearth moves nobody.
 - **Druids hearth by Moonglade** (issue 211a, 2026-10-18): every druid
@@ -34,8 +35,11 @@ bringing the rest of its game back: [beta-roadmap.md](beta-roadmap.md).*
   the glade's open ground and remembers where they were (from a dungeon,
   battleground or arena: where they entered it); cast in the glade, it
   sends them back there. The spot is kept in the characters database. The
-  group is invited along as visitors, placed round the druid, and sent
-  back to where each came from as soon as the druid leaves the glade.
+  group is invited along as visitors, the dead too ("<druid> is going to
+  Moonglade. Visit with them?"), placed round the druid and raised if dead,
+  and sent back to where each came from as soon as the druid leaves the
+  glade (raised first if they died there, unless they came dead). A
+  battleground's or arena's join spot is read through patch B055.
 - **Travellers** (branch beta-homework, 2026-10-17): a minute after
   login and then every 130 seconds, a vendor, innkeeper or class trainer
   of your level appears 30-45 yards away and walks past; it sits when you

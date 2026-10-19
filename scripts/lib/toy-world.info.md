@@ -31,10 +31,13 @@ It checks a script's own decisions, not how the game would carry them out.
   `Toy.spellEvent(event, p, spell[, extra])`.
 - `CharDBExecute(sql)`, `CharDBQuery(sql)`: the characters database, for
   the two tables the druids' Moonglade return keeps
-  (`Toy.chardb.moonglade`, `Toy.chardb.visitors`, rows by guid). Any other
-  statement is an error: teach the stand-in first.
+  (`Toy.chardb.moonglade`, `Toy.chardb.visitors`, rows by guid) and the
+  game's bind-point zone (`Toy.chardb.homebind[guid] = zone`, which a test
+  fills). Any other statement is an error: teach the stand-in first.
 - `GetPlayerGUID(low) -> guid`: a guid from its low part, as
   `GetPlayerByGUID` takes it.
+- `GetAreaName(id) -> string`: from `Toy.areaNames` (a few zones; a test
+  adds what it needs); an unknown number is an error, as in the game.
 
 ## The table it returns (`Toy`)
 
@@ -46,7 +49,8 @@ It checks a script's own decisions, not how the game would carry them out.
   count`
 - `new_map(id, height(x, y) -> number or nil, water(x, y) -> boolean,
   area(x, y, z) -> area number)`, `FLAT` (ground 0 everywhere, area 0),
-  `maps` (by map number)
+  `maps` (by map number); a map's `kind` ("battleground", "arena", or nil)
+  answers `IsBattleground` and `IsArena`
 - `new_creature(entry, map, x, y, z)`, `new_player(name, guidLow)`: plain
   tables with the methods the scripts call. Fields a test sets or reads
   directly: `x, y, z, standing, dead, wet, moving, level, class, horde,
@@ -56,7 +60,9 @@ It checks a script's own decisions, not how the game would carry them out.
   window: `{ menu, items = list of { text, sender, intid, popup } }`),
   `spells` (set of known spell numbers), `zone` (number), `messages`
   (what they were sent, a list of strings), `raised` (how many times
-  they were resurrected; raising also clears `dead`).
+  they were resurrected; raising also clears `dead`), `entryPoint` (where
+  they joined a battleground or arena, `{ mapId, x, y, z, o }`, as patch
+  B055's `GetEntryPoint` gives it).
 - `login(p)`, `logout(p)`: run the registered handlers. Logout wipes the
   player's data (as the object-variables extension does), removes their
   chests and empties the buyback tab (as the game does).

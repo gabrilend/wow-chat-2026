@@ -63,6 +63,16 @@ Other scripts open the same invitation for their own spells
 (`GroupHearth.take`), placing the travellers themselves: the druids'
 Moonglade trip (211a) does so.
 
+The window names the place (the owner, 2026-10-18: "make it say where the
+person is hearthing to, like 'moonglade' or 'eversong woods' or similar.
+For both."): "<name> is hearthing to <zone>. Come along?", the zone of the
+hearther's bind point, which the game writes to `character_homebind` when
+a player binds (`GroupHearth.homeName`; a character with no bind row gets
+no invitation and an error line in the log). Asked whether the game's own
+summon window ("like a dungeon or warlock summon") should replace it, the
+owner kept this window, shown while the 10-second cast runs; that answers
+open question 3.
+
 What it replaced (wow-chat-1's, kept here as the record):
 
 
@@ -136,4 +146,8 @@ the moment the cast begins):
    uses Sargobras's kind of pop-up (accept now, move at completion). Or
    should the game's own summon dialog appear at the moment the hearth
    completes, from the arrival spot (accept moves you; the circle placing
-   happens after)?
+   happens after)? **Answered 2026-10-18:** this window, during the cast,
+   naming the place ("oh no I like this idea better"). Also found: the
+   game's summon cannot be accepted by a ghost or in combat
+   (`WorldSession::HandleSummonResponseOpcode`), and the bots have no code
+   that answers one.

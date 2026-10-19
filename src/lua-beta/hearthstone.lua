@@ -53,10 +53,13 @@ local SPELL_EVENT_ON_PREPARE     = 1    -- a cast begins (Spell::prepare)
 local SPELL_EVENT_ON_CAST_CANCEL = 3    -- a cast is cancelled or interrupted (Spell::cancel)
 local GOSSIP_EVENT_ON_SELECT     = 2
 
--- what the window says, for a Hearthstone or Astral Recall; another
--- script's kind brings its own (GroupHearth.open)
-local HEARTH_KIND = { question = "%s is hearthing home. Come along?",
-                      confirm  = "Travel with %s when their hearthstone finishes?" }
+-- what the window says, for a Hearthstone or Astral Recall, with the
+-- hearther's name and where they are going (the owner, 2026-10-18: "make
+-- it say where the person is hearthing to, like 'moonglade' or 'eversong
+-- woods' or similar. For both."); another script's kind brings its own
+-- (GroupHearth.open)
+local HEARTH_KIND = { question = "%s is hearthing to %s. Come along?",
+                      confirm  = "Travel with %s to %s when their hearthstone finishes?" }
 -- }}}
 
 -- made here only; druid-moonglade.lua uses it when a spell is cast
@@ -102,8 +105,8 @@ end
 -- along" carries a confirm box, the okay/cancel the owner asked for.
 local function ask(member, hearth)
     member:GossipClearMenu()
-    member:GossipMenuAddItem(GOSSIP_ICON_TAXI, string.format(hearth.kind.question, hearth.name), hearth.id, INTID_COME,
-                             false, string.format(hearth.kind.confirm, hearth.name))
+    member:GossipMenuAddItem(GOSSIP_ICON_TAXI, string.format(hearth.kind.question, hearth.name, hearth.place), hearth.id, INTID_COME,
+                             false, string.format(hearth.kind.confirm, hearth.name, hearth.place))
     member:GossipMenuAddItem(GOSSIP_ICON_CHAT, "Stay here.", hearth.id, INTID_STAY)
     member:GossipSendMenu(NPC_TEXT, member, MENU_ID)
 end
@@ -114,17 +117,18 @@ end
 -- players are asked. Returns the hearth, or nil.
 --   not grouped, or alone: nothing to do (nil)
 --   grouped: open the hearth and ask
--- kind: { question, confirm }, each a string with one %s for the
--- hearther's name (HEARTH_KIND for a Hearthstone), and withDead = true to
--- ask the dead too (the druids' glade raises them; a Hearthstone does not).
-function GroupHearth.open(player, kind)
+-- kind: { question, confirm }, each a string with two %s, the hearther's
+-- name and then the place (HEARTH_KIND for a Hearthstone), and withDead =
+-- true to ask the dead too (the druids' glade raises them; a Hearthstone
+-- does not). place: where they are going, a name (string).
+function GroupHearth.open(player, kind, place)
     local members = members_of(player)
     if not members or #members < 2 then return nil end
     -- a cast begun again before the first one ended replaces it: the new
     -- window replaces the old on each member's screen, and an answer to the
     -- old one is ignored (onAnswer matches the hearth's own number)
     nextHearth = nextHearth + 1
-    local hearth = { id = nextHearth, hearther = player:GetGUID(), name = player:GetName(), kind = kind,
+    local hearth = { id = nextHearth, hearther = player:GetGUID(), name = player:GetName(), kind = kind, place = place,
                      members = members, accepted = {}, asked = {}, done = false }
     GroupHearth.pending[hearth.hearther] = hearth
     for _, guid in ipairs(members) do
@@ -144,12 +148,31 @@ function GroupHearth.open(player, kind)
     return hearth
 end -- }}}
 
+-- {{{ GroupHearth.homeName
+-- The name of the zone a player is bound in: the zone the game writes into
+-- character_homebind when they bind (Player::SetHomebind, at once), named
+-- by the game's area data. Nil, with a line in the server log, when the
+-- character has no bind row (the game gives every character one when it is
+-- made, so none is a fault to look into, not a case to word around).
+function GroupHearth.homeName(player)
+    local q = CharDBQuery("SELECT zoneId FROM character_homebind WHERE guid = " .. player:GetGUIDLow())
+    if not q then
+        print("[GroupHearth] ERROR: " .. player:GetName() .. " has no character_homebind row; no invitation sent")
+        return nil
+    end
+    return GetAreaName(q:GetUInt32(0))
+end -- }}}
+
 -- {{{ GroupHearth.onPrepare
 -- A Hearthstone or Astral Recall cast begins (the engine's per-spell event:
--- caster may be any unit; only players hearth with a group).
+-- caster may be any unit; only players hearth with a group). The window
+-- names the zone of the hearther's bind point.
+--   the bind point's zone known: the group is invited
+--   not known (no bind row): nobody is, and the log says why
 function GroupHearth.onPrepare(event, caster, spell)
-    if not caster:IsPlayer() then return end
-    GroupHearth.open(caster, HEARTH_KIND)
+    if not caster:IsPlayer() or not caster:IsInGroup() then return end   -- nobody to invite
+    local place = GroupHearth.homeName(caster)
+    if place then GroupHearth.open(caster, HEARTH_KIND, place) end
 end -- }}}
 
 -- {{{ GroupHearth.onCancel

@@ -438,8 +438,18 @@ function Toy.spell(entry) return { GetEntry = function() return entry end } end
 -- this stand-in taught it first. A database row survives a logout, as in
 -- the game; a test plays a server restart by emptying the script's own
 -- memory (Moonglade.spots) and logging the player in again.
-Toy.chardb = { moonglade = {}, visitors = {} }
+Toy.chardb = { moonglade = {}, visitors = {}, homebind = {} }
+-- zone and area names, as the game's area data gives them (GetAreaName);
+-- a test adds what it needs; an unknown number is an error, as in the game
+Toy.areaNames = { [12] = "Elwynn Forest", [493] = "Moonglade", [3430] = "Eversong Woods", [14] = "Durotar" }
+function GetAreaName(id)
+    local n = Toy.areaNames[id]
+    if not n then error("toy GetAreaName: no area " .. tostring(id) .. " (bad argument #1: valid Area or Zone ID expected)", 2) end
+    return n
+end
 function FLAT:GetAreaId() return 0 end
+function FLAT:IsBattleground() return false end
+function FLAT:IsArena() return false end
 -- the engine's guid from a guid's low part, as GetPlayerByGUID takes it
 function GetPlayerGUID(low) return "player-" .. low end
 -- The per-spell events (cast begins 1, completes 2, cancelled 3), kept in
@@ -459,6 +469,10 @@ new_map = function(id, height, water, area)
     local m = base_map_m(id, height, water)
     m.area = area
     function m:GetAreaId(x, y, z) return self.area and self.area(x, y, z) or 0 end
+    -- what kind of map (m.kind, set by a test): "battleground", "arena", or
+    -- nil for the open world and dungeons
+    function m:IsBattleground() return self.kind == "battleground" end
+    function m:IsArena() return self.kind == "arena" end
     return m
 end
 local base_player_m = new_player
@@ -471,24 +485,29 @@ new_player = function(name, guidLow)
     function p:GetZoneId() return self.zone end
     function p:SendBroadcastMessage(text) self.messages[#self.messages + 1] = text end
     function p:ResurrectPlayer(percent, sickness) self.dead = false; self.raised = (self.raised or 0) + 1 end
+    -- where they joined a battleground or arena (p.entryPoint, set by a
+    -- test: { mapId, x, y, z, o }), as patch B055's call gives it
+    function p:GetEntryPoint() return self.entryPoint end
     return p
 end
 -- The two tables the druids' script keeps (sql/beta/db_characters.src/
 -- 01-moonglade-return.apply.sql), by guid:
 --   Toy.chardb.moonglade[guid] = { map, x, y, z, o }
---   Toy.chardb.visitors[guid]  = { druid, map, x, y, z, o, left_glade }
+--   Toy.chardb.visitors[guid]  = { druid, map, x, y, z, o, came_dead, left_glade }
+-- and the game's own bind-point table, which a test fills:
+--   Toy.chardb.homebind[guid]  = zone number
 local N = "([%d.-]+)"
 local EXECUTE = {
     { "^REPLACE INTO beta_211a_moonglade_return %(guid, map, x, y, z, o%) VALUES %(" .. table.concat({ N, N, N, N, N, N }, ", ") .. "%)$",
       function(g, ...) Toy.chardb.moonglade[tonumber(g)] = { ... } end },
     { "^DELETE FROM beta_211a_moonglade_return WHERE guid = (%d+)$",
       function(g) Toy.chardb.moonglade[tonumber(g)] = nil end },
-    { "^REPLACE INTO beta_211a_moonglade_visitors %(guid, druid, map, x, y, z, o, left_glade%) VALUES %(" .. table.concat({ N, N, N, N, N, N, N, N }, ", ") .. "%)$",
+    { "^REPLACE INTO beta_211a_moonglade_visitors %(guid, druid, map, x, y, z, o, came_dead, left_glade%) VALUES %(" .. table.concat({ N, N, N, N, N, N, N, N, N }, ", ") .. "%)$",
       function(g, ...) Toy.chardb.visitors[tonumber(g)] = { ... } end },
     { "^DELETE FROM beta_211a_moonglade_visitors WHERE guid = (%d+)$",
       function(g) Toy.chardb.visitors[tonumber(g)] = nil end },
     { "^UPDATE beta_211a_moonglade_visitors SET left_glade = 1 WHERE guid = (%d+)$",
-      function(g) local r = Toy.chardb.visitors[tonumber(g)]; if r then r[7] = 1 end end },
+      function(g) local r = Toy.chardb.visitors[tonumber(g)]; if r then r[8] = 1 end end },
 }
 function CharDBExecute(sql)
     for _, e in ipairs(EXECUTE) do
@@ -515,16 +534,18 @@ end
 local QUERY = {
     { "^SELECT map, x, y, z, o FROM beta_211a_moonglade_return WHERE guid = (%d+)$",
       function(g) local r = Toy.chardb.moonglade[tonumber(g)]; return r and { r } or {} end },
-    { "^SELECT druid, map, x, y, z, o, left_glade FROM beta_211a_moonglade_visitors WHERE guid = (%d+)$",
-      function(g) local r = Toy.chardb.visitors[tonumber(g)]; return r and { r } or {} end },
-    { "^SELECT guid, map, x, y, z, o FROM beta_211a_moonglade_visitors WHERE druid = (%d+)$",
+    { "^SELECT druid, map, x, y, z, o, left_glade, came_dead FROM beta_211a_moonglade_visitors WHERE guid = (%d+)$",
+      function(g) local r = Toy.chardb.visitors[tonumber(g)]; return r and { { r[1], r[2], r[3], r[4], r[5], r[6], r[8], r[7] } } or {} end },
+    { "^SELECT zoneId FROM character_homebind WHERE guid = (%d+)$",
+      function(g) local z = Toy.chardb.homebind[tonumber(g)]; return z and { { z } } or {} end },
+    { "^SELECT guid, map, x, y, z, o, came_dead FROM beta_211a_moonglade_visitors WHERE druid = (%d+)$",
       function(d)
           local out, keys = {}, {}
           for g in pairs(Toy.chardb.visitors) do keys[#keys + 1] = g end
           table.sort(keys)
           for _, g in ipairs(keys) do
               local r = Toy.chardb.visitors[g]
-              if r[1] == tonumber(d) then out[#out + 1] = { g, r[2], r[3], r[4], r[5], r[6] } end
+              if r[1] == tonumber(d) then out[#out + 1] = { g, r[2], r[3], r[4], r[5], r[6], r[7] } end
           end
           return out
       end },

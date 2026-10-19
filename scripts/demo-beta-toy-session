@@ -97,6 +97,7 @@ for k = 1, opt.players do
     p.horde = math.random() < 0.5
     p.x, p.y = 1000 + k * 20, 1000
     p.home = { mapId = 1, x = 4000, y = 4000, z = 0 }
+    Toy.chardb.homebind[500 + k] = 14                       -- bound in Durotar (the hearth's window names it)
     players[k] = p
 end
 for _, p in ipairs(players) do Toy.login(p) end

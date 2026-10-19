@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS `beta_211a_moonglade_return` (
 --   guid        the visitor (characters.guid)
 --   druid       the druid who brought them (characters.guid)
 --   map, x, y, z, o   where the visitor goes back to
+--   came_dead   1 when they arrived dead (raised on arrival): a second
+--               death in the glade is not undone when they go back
 --   left_glade  1 once the druid has left while the visitor was offline:
 --               they go back at their next login
 CREATE TABLE IF NOT EXISTS `beta_211a_moonglade_visitors` (
@@ -45,6 +47,7 @@ CREATE TABLE IF NOT EXISTS `beta_211a_moonglade_visitors` (
   `y`          float             NOT NULL,
   `z`          float             NOT NULL,
   `o`          float             NOT NULL DEFAULT 0,
+  `came_dead`  tinyint unsigned  NOT NULL DEFAULT 0,
   `left_glade` tinyint unsigned  NOT NULL DEFAULT 0,
   PRIMARY KEY (`guid`),
   KEY `druid` (`druid`)

@@ -45,8 +45,9 @@
 -- from the game's own triggers (scripts/generate-beta-instance-entrances):
 -- worked out once, read at the cast. A battleground or arena has no
 -- entrance of its own (players join from anywhere); the game keeps each
--- player's join spot (Player::SetEntryPoint) but the Lua engine cannot read
--- it, so a cast there has no known way back yet (issue 211a's open question).
+-- player's join spot (Player::SetEntryPoint), which patch B055 lets Lua
+-- read (player:GetEntryPoint). A visitor who dies in the glade is raised
+-- before going back, unless they came dead.
 --------------------------------------------------------------------------------
 
 Moonglade = Moonglade or {}
@@ -82,9 +83,10 @@ Moonglade.ENTRANCES = dofile(script_dir() .. "data/instance-entrances.lua")
 
 -- the window's words for this trip (211's window, GroupHearth.open); the
 -- dead are asked too, since the glade raises them
-local VISIT_KIND = { question = "%s is going to Moonglade. Visit with them?",
-                     confirm  = "Visit Moonglade with %s? You will come back when they leave.",
+local VISIT_KIND = { question = "%s is going to %s. Visit with them?",
+                     confirm  = "Visit with %s in %s? You will come back when they leave.",
                      withDead = true }
+local GLADE_NAME = "Moonglade"
 
 -- {{{ Moonglade.GLADE
 -- Where a druid may arrive: drawn in the valley floor's box, kept when the
@@ -158,13 +160,23 @@ end
 -- {{{ Moonglade.wayBack
 -- Where a player goes back to from the glade, worked out at the cast:
 --   the open world: where they stand
---   a dungeon or raid: its entrance (Moonglade.ENTRANCES)
---   a battleground, an arena, or a dungeon with no entrance found: nil
+--   a battleground or an arena: where they joined it, as the game keeps it
+--     (player:GetEntryPoint, added to the Lua engine by patch B055); nil
+--     when the game kept none
+--   a dungeon or raid: its entrance (Moonglade.ENTRANCES); nil for one
+--     with no entrance found (all above beta's level cap)
+-- A Lua engine built without B055 has no GetEntryPoint: the cast fails
+-- loudly in the server log rather than quietly losing the way back.
 function Moonglade.wayBack(player)
     local map = player:GetMapId()
     if OPEN_WORLD[map] then
         local x, y, z, o = player:GetLocation()
         return { map = map, x = x, y = y, z = z, o = o }
+    end
+    local m = player:GetMap()
+    if m:IsBattleground() or m:IsArena() then
+        local at = player:GetEntryPoint()
+        return at and { map = at.mapId, x = at.x, y = at.y, z = at.z, o = at.o } or nil
     end
     local e = Moonglade.ENTRANCES[map]
     return e and { map = e.map, x = e.x, y = e.y, z = e.z, o = e.o } or nil
@@ -188,13 +200,15 @@ end
 -- }}}
 
 -- {{{ local function keep_visitor / forget_visitor
--- A visitor, in memory and in the database; and gone from both.
-local function keep_visitor(low, druidLow, back)
-    Moonglade.visiting[low] = { druid = druidLow, back = back }
+-- A visitor, in memory and in the database; and gone from both. cameDead:
+-- they arrived dead (and were raised on arrival), so a second death in the
+-- glade is not undone when they go back.
+local function keep_visitor(low, druidLow, back, cameDead)
+    Moonglade.visiting[low] = { druid = druidLow, back = back, cameDead = cameDead }
     Moonglade.hosting[druidLow] = true
     CharDBExecute(string.format(
-        "REPLACE INTO beta_211a_moonglade_visitors (guid, druid, map, x, y, z, o, left_glade) VALUES (%d, %d, %d, %.3f, %.3f, %.3f, %.4f, 0)",
-        low, druidLow, back.map, back.x, back.y, back.z, back.o))
+        "REPLACE INTO beta_211a_moonglade_visitors (guid, druid, map, x, y, z, o, came_dead, left_glade) VALUES (%d, %d, %d, %.3f, %.3f, %.3f, %.4f, %d, 0)",
+        low, druidLow, back.map, back.x, back.y, back.z, back.o, cameDead and 1 or 0))
 end
 local function forget_visitor(low)
     Moonglade.visiting[low] = nil
@@ -204,10 +218,13 @@ end
 
 -- {{{ local function send_home
 -- A visitor goes back and stops being a visitor.
---   in the glade: moved to their way back
+--   in the glade: moved to their way back, raised first if dead, unless
+--     they came dead (the owner: "unless they were a ghost when they came,
+--     then we leave them as a ghost if they died in moonglade")
 --   left it some other way meanwhile: only forgotten
-local function send_home(visitor, back)
+local function send_home(visitor, back, cameDead)
     if in_glade(visitor) then
+        if visitor:IsDead() and not cameDead then visitor:ResurrectPlayer(100, false) end
         visitor:SendBroadcastMessage("Your host has left Moonglade; you return to where you came from.")
         visitor:Teleport(back.map, back.x, back.y, back.z, back.o)
     end
@@ -222,7 +239,7 @@ end
 function Moonglade.druidLeft(druidLow)
     if not Moonglade.hosting[druidLow] then return end
     Moonglade.hosting[druidLow] = nil
-    local q = CharDBQuery("SELECT guid, map, x, y, z, o FROM beta_211a_moonglade_visitors WHERE druid = " .. druidLow)
+    local q = CharDBQuery("SELECT guid, map, x, y, z, o, came_dead FROM beta_211a_moonglade_visitors WHERE druid = " .. druidLow)
     if not q then return end
     repeat
         local low = q:GetUInt32(0)
@@ -230,7 +247,7 @@ function Moonglade.druidLeft(druidLow)
         local visitor = player_by_low(low)
         -- online: back now; offline: at their next login
         if visitor then
-            send_home(visitor, back)
+            send_home(visitor, back, q:GetUInt32(6) == 1)
         else
             CharDBExecute("UPDATE beta_211a_moonglade_visitors SET left_glade = 1 WHERE guid = " .. low)
         end
@@ -245,16 +262,17 @@ end
 -- but are not in the glade, has left it.
 function Moonglade.onLogin(event, player)
     local low = player:GetGUIDLow()
-    local v = CharDBQuery("SELECT druid, map, x, y, z, o, left_glade FROM beta_211a_moonglade_visitors WHERE guid = " .. low)
+    local v = CharDBQuery("SELECT druid, map, x, y, z, o, left_glade, came_dead FROM beta_211a_moonglade_visitors WHERE guid = " .. low)
     if v then
         local druidLow = v:GetUInt32(0)
         local back = { map = v:GetUInt32(1), x = v:GetFloat(2), y = v:GetFloat(3), z = v:GetFloat(4), o = v:GetFloat(5) }
+        local cameDead = v:GetUInt32(7) == 1
         local druid = player_by_low(druidLow)
         -- the druid left, is offline, or is elsewhere: back; hosting in the glade: stays
         if v:GetUInt32(6) == 1 or not druid or not in_glade(druid) then
-            send_home(player, back)
+            send_home(player, back, cameDead)
         else
-            Moonglade.visiting[low] = { druid = druidLow, back = back }
+            Moonglade.visiting[low] = { druid = druidLow, back = back, cameDead = cameDead }
         end
     end
     if player:GetClass() ~= CLASS_DRUID then return end
@@ -331,8 +349,9 @@ function Moonglade.arrive(eventId, delay, repeats, player, tries)
         if visitor then
             local spot = ring[t.place]
             local vz = map:GetHeight(spot.x, spot.y) or z
-            if visitor:IsDead() then visitor:ResurrectPlayer(100, false) end
-            keep_visitor(t.low, low, t.back)
+            local cameDead = visitor:IsDead()
+            if cameDead then visitor:ResurrectPlayer(100, false) end
+            keep_visitor(t.low, low, t.back, cameDead)
             visitor:Teleport(MAP_KALIMDOR, spot.x, spot.y, vz, math.random() * 2 * math.pi)
         end
     end
@@ -356,7 +375,7 @@ end
 function Moonglade.onPrepare(event, caster, spell)
     if not caster:IsPlayer() then return end
     if in_glade(caster) then return end
-    GroupHearth.open(caster, VISIT_KIND)
+    GroupHearth.open(caster, VISIT_KIND, GLADE_NAME)
 end
 -- }}}
 

@@ -73,7 +73,12 @@ their hearthstone's bind point from where they started.
      with two, the one nearest the entrance portal; a way out into another
      dungeon followed to the open world). 67 dungeons and raids have one;
      the ones without are all above beta's level cap;
-   - from a battleground or arena: not yet (open question 1); nothing is
+   - from a battleground or arena: where they joined it, the spot the game
+     keeps for each player (`Player::GetEntryPoint`), read through a source
+     patch to the Lua engine (step 7). An engine built without the patch
+     has no such call, and the cast fails loudly in the server log (no
+     quiet fallback); beta's patch list carries the patch, so a beta build
+     always has it. If the game kept no join spot (none valid), nothing is
      remembered and the druid is told so.
    (A first version noted every player's position every 5 seconds to know
    where they entered; the owner: "every 5 seconds is an absurd amount of
@@ -101,7 +106,8 @@ their hearthstone's bind point from where they started.
    cancelled; bots always come); the dead are asked too. When the druid
    arrives, everyone who said yes is moved round the druid's spot, on
    211's circle by group number, and the dead among them are raised
-   ("Nature's magic and all that"). Each visitor's way back is worked out
+   ("Nature's magic and all that"). The window says where: "<druid> is
+   going to Moonglade. Visit with them?". Each visitor's way back is worked out
    at the cast by the same rule as the druid's; one whose way back is not
    known stays, and is told why.
 6. **Visitors leave with the druid.** As soon as the druid is no longer in
@@ -109,7 +115,9 @@ their hearthstone's bind point from where they started.
    or log out), every visitor still in Moonglade is sent back to their own
    way back. A visitor who leaves on their own stops being a visitor. A
    visitor who was offline when the druid left is sent back when they log
-   in. Casting the way back from the glade invites no one: the visitors
+   in. A visitor who is dead when sent back is raised first, unless they
+   came dead (raised on arrival, then died again in the glade): they go
+   back as a ghost. Casting the way back from the glade invites no one: the visitors
    follow by this rule instead. Visitors are kept in the characters
    database, so a restart while they are in the glade still sends them
    back: a visitor logging in whose druid is not hosting them in the glade
@@ -178,21 +186,31 @@ their hearthstone's bind point from where they started.
 
 ## Open Questions
 
-1. **The invitation as a summon** (the owner, 2026-10-18, mid-build: "the
-   partymembers might not want to go to moonglade, so they get invited
-   anytime the druid is attending, but it's like a dungeon summon - they
-   can cancel it. The hearthstone, same thing, I think."). The engine can
-   send the game's own summon window (`player:SummonPlayer(summoner)`:
-   accept or decline, the game's two-minute timer, accepting moves the
-   player to the summoner). Asked: is "anytime the druid is attending"
-   every moment the druid is in the glade (a member who logs in or joins
-   the group later is offered it too), and does the summon replace 211's
-   window at the cast for both spells? Built as 211's window until then.
-2. **A way back from a battleground or arena.** The game keeps each
-   player's join spot there (`Player::SetEntryPoint`, read by
-   `GetEntryPoint`), but the Lua engine has no call for it. A small source
-   patch to the engine (a B-patch adding `player:GetEntryPoint()`) would
-   give it; the owner builds it. Until then, nothing is remembered there.
-3. **A visitor who dies in the glade** and is dead when the druid leaves:
-   sent back as a ghost to their way back (built so), or raised first, as
-   on arrival?
+None open. Answered 2026-10-18:
+
+1. **The invitation: 211's window, during the cast, naming the place.**
+   Asked whether it should be the game's summon window instead, the owner
+   first said "it should just be like a dungeon or warlock summon", then,
+   shown how 211's window works: "oh no I like this idea better - while
+   the druid is casting the teleport spell (10 seconds right?) have the
+   'come along?' message display, as with the hearthstones. But let's make
+   it say where the person is hearthing to, like 'moonglade' or 'eversong
+   woods' or similar. For both." So the window stays, shown while the
+   10-second cast runs (`SpellCastTimes.dbc` index 7, read 2026-10-18),
+   and says where: "Moonglade" for the druid; for a Hearthstone or Astral
+   Recall, the zone of the bind point (`character_homebind.zoneId`, which
+   the game writes when a player binds, named by `GetAreaName`).
+   (Found while looking: the game's summon cannot be accepted by a ghost
+   or in combat, `WorldSession::HandleSummonResponseOpcode`, and the bots
+   have no code that answers one.)
+2. **A way back from a battleground or arena:** "sure. Make it a patch,
+   remember!" The game keeps each player's join spot there
+   (`Player::SetEntryPoint`, read by `GetEntryPoint`); a source patch to
+   the Lua engine (a B-patch adding `player:GetEntryPoint()`, with its
+   patch document in `docs/patches/`) gives it to the script. The owner
+   builds it.
+3. **A visitor who dies in the glade:** "yes we can resurrect them, unless
+   they were a ghost when they came, then we leave them as a ghost if they
+   died in moonglade." Raised before being sent back, unless they arrived
+   dead (and were raised on arrival): then they go back as they are. The
+   visitors' table keeps `came_dead` for this.

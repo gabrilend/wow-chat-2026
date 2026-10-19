@@ -63,6 +63,7 @@ local function party()
                                Toy.new_player("Cid", 403), Toy.new_player("Dot", 404)
     dot.bot = true
     ann.home = { mapId = 1, x = 500, y = 600, z = 10 }
+    Toy.chardb.homebind[401] = 14                     -- Ann is bound in Durotar
     for _, p in ipairs({ ann, bea, cid, dot }) do Toy.login(p) end
     Toy.group({ ann, bea, cid, dot })
     return ann, bea, cid, dot
@@ -80,6 +81,8 @@ do
     local hasPopup = false
     for _, it in ipairs(bea.window and bea.window.items or {}) do if it.popup then hasPopup = true end end
     check(hasPopup, "'come along' should carry a confirm box (the okay/cancel)")
+    local text = bea.window and bea.window.items[1].text or ""
+    check(text == "Ann is hearthing to Durotar. Come along?", "the window should say where the hearther is going (got: " .. text .. ")")
     Toy.answer(bea, 1)                                -- Bea: come along
     Toy.answer(cid, 2)                                -- Cid: stay
     check(bea.window == nil and cid.window == nil, "an answer should close the window")
@@ -187,8 +190,8 @@ end
 -- {{{ another script's trip: open with its own words, take the answers
 do
     local ann, bea, cid, dot = party()
-    local h = GH.open(ann, { question = "%s goes to the glade. Visit?", confirm = "Visit with %s?" })
-    check(h ~= nil and bea.window.items[1].text == "Ann goes to the glade. Visit?", "another script's kind should bring its own words")
+    local h = GH.open(ann, { question = "%s goes to %s. Visit?", confirm = "Visit with %s in %s?" }, "the glade")
+    check(h ~= nil and bea.window.items[1].text == "Ann goes to the glade. Visit?", "another script's kind should bring its own words and place")
     Toy.answer(bea, 1)
     Toy.answer(cid, 2)
     local taken, size = GH.take(ann:GetGUID())
@@ -197,6 +200,21 @@ do
     check(next(GH.pending) == nil, "take should close the hearth")
     local again = GH.take(ann:GetGUID())
     check(#again == 0, "taking again should give nobody")
+    for _, p in ipairs({ ann, bea, cid, dot }) do Toy.logout(p) end
+end
+-- }}}
+
+-- {{{ a hearther with no bind row: nobody invited, and the log says why
+do
+    local ann, bea, cid, dot = party()
+    Toy.chardb.homebind[401] = nil
+    local said = {}
+    local real = print
+    print = function(...) said[#said + 1] = table.concat({ ... }, " ") end
+    START(ann)
+    print = real
+    check(bea.window == nil and next(GH.pending) == nil, "with no bind row, nobody should be invited")
+    check(said[1] and said[1]:match("no character_homebind row"), "and the server log should say why")
     for _, p in ipairs({ ann, bea, cid, dot }) do Toy.logout(p) end
 end
 -- }}}
