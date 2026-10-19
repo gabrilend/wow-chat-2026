@@ -45,8 +45,8 @@
 -- from the game's own triggers (scripts/generate-beta-instance-entrances):
 -- worked out once, read at the cast. A battleground or arena has no
 -- entrance of its own (players join from anywhere); the game keeps each
--- player's join spot (Player::SetEntryPoint), which patch B055 lets Lua
--- read (player:GetEntryPoint). A visitor who dies in the glade is raised
+-- player's join spot and saves it with the character (character_entry_point),
+-- read after a save asked for at the cast. A visitor who dies in the glade is raised
 -- before going back, unless they came dead.
 --------------------------------------------------------------------------------
 
@@ -160,13 +160,20 @@ end
 -- {{{ Moonglade.wayBack
 -- Where a player goes back to from the glade, worked out at the cast:
 --   the open world: where they stand
---   a battleground or an arena: where they joined it, as the game keeps it
---     (player:GetEntryPoint, added to the Lua engine by patch B055); nil
---     when the game kept none
+--   a battleground or an arena: where they joined it, as the game keeps it.
+--     The game writes that spot to character_entry_point with every save
+--     of the character (Player::_SaveEntryPoint, part of SaveToDB: at
+--     logout and every PlayerSaveInterval, 15 minutes by default), which is
+--     how it sends back someone who logged out in a match. Right after
+--     joining, the row can be a previous match's, so the character is
+--     saved now and the row read once the spell has landed
+--     (Moonglade.resolveWayBack): this returns { entryOf = guid low part },
+--     a way back still to be read.
 --   a dungeon or raid: its entrance (Moonglade.ENTRANCES); nil for one
 --     with no entrance found (all above beta's level cap)
--- A Lua engine built without B055 has no GetEntryPoint: the cast fails
--- loudly in the server log rather than quietly losing the way back.
+-- (First built with a source patch, B055, giving Lua the game's in-memory
+-- copy; the owner asked why the saved one would not do. It does: retired
+-- 2026-10-19 before any build.)
 function Moonglade.wayBack(player)
     local map = player:GetMapId()
     if OPEN_WORLD[map] then
@@ -175,11 +182,24 @@ function Moonglade.wayBack(player)
     end
     local m = player:GetMap()
     if m:IsBattleground() or m:IsArena() then
-        local at = player:GetEntryPoint()
-        return at and { map = at.mapId, x = at.x, y = at.y, z = at.z, o = at.o } or nil
+        player:SaveToDB()
+        return { entryOf = player:GetGUIDLow() }
     end
     local e = Moonglade.ENTRANCES[map]
     return e and { map = e.map, x = e.x, y = e.y, z = e.z, o = e.o } or nil
+end
+-- }}}
+
+-- {{{ Moonglade.resolveWayBack
+-- A way back from wayBack, made final: a spot as it is; a battleground's
+-- or arena's ({ entryOf }) read from the saved join spot, nil when the game
+-- saved none. Called once the spell has landed (FOLLOW_MS after the cast),
+-- by which time the save asked for at the cast has been written.
+function Moonglade.resolveWayBack(back)
+    if not back or not back.entryOf then return back end
+    local q = CharDBQuery("SELECT joinMapId, joinX, joinY, joinZ, joinO FROM character_entry_point WHERE guid = " .. back.entryOf)
+    if not q then return nil end
+    return { map = q:GetUInt32(0), x = q:GetFloat(1), y = q:GetFloat(2), z = q:GetFloat(3), o = q:GetFloat(4) }
 end
 -- }}}
 
@@ -342,17 +362,24 @@ function Moonglade.arrive(eventId, delay, repeats, player, tries)
     local trip = Moonglade.trips[low]
     Moonglade.trips[low] = nil
     if not trip then return end
+    -- a battleground's way back, saved at the cast, is read now
+    if trip.back and trip.back.entryOf then Moonglade.keepWayBack(player, trip.back) end
     local ring = GroupHearth.circle(x, y, trip.size)
     for _, t in ipairs(trip.list) do
         local visitor = player_by_low(t.low)
-        -- still in the world: brought (raised if dead), and a visitor; gone meanwhile: skipped
-        if visitor then
+        local back = visitor and Moonglade.resolveWayBack(t.back)
+        -- still in the world, with a way back: brought (raised if dead), and a visitor
+        -- still in the world, no way back after all (a match saved none): stays, told why
+        -- gone meanwhile: skipped
+        if back then
             local spot = ring[t.place]
             local vz = map:GetHeight(spot.x, spot.y) or z
             local cameDead = visitor:IsDead()
             if cameDead then visitor:ResurrectPlayer(100, false) end
-            keep_visitor(t.low, low, t.back, cameDead)
+            keep_visitor(t.low, low, back, cameDead)
             visitor:Teleport(MAP_KALIMDOR, spot.x, spot.y, vz, math.random() * 2 * math.pi)
+        elseif visitor then
+            visitor:SendBroadcastMessage("The way back from where you are is not known, so you stay rather than visit the glade.")
         end
     end
 end
@@ -397,12 +424,10 @@ function Moonglade.onCast(event, player, spell)
         return
     end
 
-    -- outside it: the druid's way back (known: kept; not known: forgotten, with a word)
+    -- outside it: the druid's way back; one still to be read (a
+    -- battleground's) is kept when the druid arrives, the rest now
     local back = Moonglade.wayBack(player)
-    Moonglade.remember(low, back)
-    if not back then
-        player:SendBroadcastMessage("The way back from this place is not known; the glade will have no way back for you.")
-    end
+    if not (back and back.entryOf) then Moonglade.keepWayBack(player, back) end
 
     -- the visitors who said yes, each with their way back; one whose way
     -- back is not known stays, so nobody is left in the glade with none
@@ -417,8 +442,20 @@ function Moonglade.onCast(event, player, spell)
             visitor:SendBroadcastMessage("The way back from where you are is not known, so you stay rather than visit the glade.")
         end
     end
-    Moonglade.trips[low] = { list = list, size = size }
+    Moonglade.trips[low] = { list = list, size = size, back = back }
     player:RegisterEvent(Moonglade.arrive, FOLLOW_MS, 1)
+end
+-- }}}
+
+-- {{{ Moonglade.keepWayBack
+-- The druid's way back made final and kept (known: in the database; not
+-- known: forgotten, with a word to the druid).
+function Moonglade.keepWayBack(player, back)
+    back = Moonglade.resolveWayBack(back)
+    Moonglade.remember(player:GetGUIDLow(), back)
+    if not back then
+        player:SendBroadcastMessage("The way back from this place is not known; the glade will have no way back for you.")
+    end
 end
 -- }}}
 

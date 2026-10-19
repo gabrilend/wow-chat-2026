@@ -97,7 +97,7 @@ These fix compatibility issues in upstream code.
 | B022 | runtime-conf-dir-override               | core                                                    | Runtime `--conf-dir` override (avoids cmake-baked path) |
 | B023 | ale-formatquery-lifetime                | mod-ale                                                 | **Retired 2026-10-09** (pin move): fixed upstream in mod-ale bd74eae. Was: Fix variadic format-arg lifetime in FormatQuery |
 | B024 | symmetric-aggro-radius                  | core                                                    | Make `Creature::GetAttackDistance` symmetric |
-| B055 | ale-player-entry-point                  | mod-ale/*/PlayerMethods.h, LuaFunctions.cpp             | Add `player:GetEntryPoint()`, where a player joined a battleground or arena (issue 211a; `ale-player-entry-point.md`) |
+| B055 | ale-player-entry-point                  | mod-ale/*/PlayerMethods.h, LuaFunctions.cpp             | **Retired 2026-10-19, before any build**: the game already saves the join spot to `character_entry_point`, which the script reads after asking for a save. Was: add `player:GetEntryPoint()` (issue 211a; `ale-player-entry-point.md`) |
 
 (B025 to B054 are not listed in this table yet: each script's header in
 `patches/` describes it, and `patches/patches.sh` says which profiles use

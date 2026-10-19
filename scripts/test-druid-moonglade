@@ -154,16 +154,22 @@ local d = Toy.chardb.moonglade[505] or {}
 check(d[1] == 0 and math.abs((d[2] or 0) - -11208.3) < 0.01 and math.abs((d[3] or 0) - 1672.52) < 0.01,
       "a cast from the Deadmines remembers its entrance, from the generated table (map 0, -11208.3, 1672.52)")
 check(Moonglade.ENTRANCES[36] and Moonglade.ENTRANCES[489] == nil, "the table has the Deadmines and no battleground (Warsong Gulch)")
--- a battleground: where the druid joined it, as the game kept it (patch B055)
+-- a battleground: where the druid joined it, as the game saved it
+-- (character_entry_point, written by the save asked for at the cast)
 local WARSONG = Toy.new_map(489, function() return 0 end)
 WARSONG.kind = "battleground"
 Toy.maps[489] = WARSONG
 local hob = druid("Hob", 509, WARSONG, 0, 0, 3277)
 hob.entryPoint = { mapId = 1, x = 1628, y = -4419, z = 16, o = 2 }   -- joined in Orgrimmar
+Toy.chardb.entry[509] = { 0, -8900, 500, 90, 0 }                     -- a previous match's row, before any save
 Toy.login(hob)
 CAST(5, hob, Toy.spell(18960))
+check(hob.saves == 1, "a cast from a battleground saves the character, so its join spot is written")
+check(Toy.chardb.moonglade[509] == nil, "the way back is not kept until the spell has landed")
+land_in_nighthaven(hob)
+Toy.advance(1500)
 local hr = Toy.chardb.moonglade[509] or {}
-check(hr[1] == 1 and math.abs((hr[2] or 0) - 1628) < 0.01, "a cast from a battleground remembers where the druid joined it (Orgrimmar)")
+check(hr[1] == 1 and math.abs((hr[2] or 0) - 1628) < 0.01, "then it is where the druid joined this match (Orgrimmar), not the previous one's")
 local NAGRAND = Toy.new_map(559, function() return 0 end)
 NAGRAND.kind = "arena"
 Toy.maps[559] = NAGRAND
@@ -171,14 +177,17 @@ local ida = druid("Ida", 511, NAGRAND, 0, 0, 3698)
 ida.entryPoint = { mapId = 530, x = -1800, y = 5300, z = -12, o = 0 }   -- joined in Shattrath
 Toy.login(ida)
 CAST(5, ida, Toy.spell(18960))
+land_in_nighthaven(ida)
+Toy.advance(1500)
 check((Toy.chardb.moonglade[511] or {})[1] == 530, "and from an arena, where she joined it")
--- a battleground where the game kept no join spot: nothing remembered
+-- a battleground where the game saved no join spot: nothing remembered
 local gus = druid("Gus", 508, WARSONG, 0, 0, 3277)
 Toy.login(gus)
 CAST(5, gus, Toy.spell(18960))
-check(Toy.chardb.moonglade[508] == nil and Moonglade.spots[508] == false, "with no join spot kept, nothing is remembered")
+land_in_nighthaven(gus)
+Toy.advance(1500)
+check(Toy.chardb.moonglade[508] == nil and Moonglade.spots[508] == false, "with no join spot saved, nothing is remembered")
 check(gus.messages[#gus.messages] and gus.messages[#gus.messages]:match("not known"), "and the druid is told so")
-Toy.advance(1500)                                          -- (Gus's booked arrival: he never reached the glade)
 Toy.advance(3000)
 -- }}}
 
@@ -412,10 +421,10 @@ check(Toy.chardb.moonglade[507] == nil and #fay.teleports == 0, "another spell i
 -- }}}
 
 -- the arrival that could not happen said so in the log
--- (Dot, Hob, Ida and Gus cast from instances and never reached the glade)
+-- (Dot cast from the Deadmines and never reached the glade)
 local gave_up = {}
 for _, l in ipairs(logged) do local who = l:match("^%[Moonglade%] (%a+) was not in Moonglade"); if who then gave_up[who] = true end end
-check(gave_up.Dot and gave_up.Hob and gave_up.Ida and gave_up.Gus, "an arrival that never reaches the glade says so in the server log")
+check(gave_up.Dot, "an arrival that never reaches the glade says so in the server log")
 
 quiet(string.format("%d checks, %d failed", checks, fails))
 os.exit(fails == 0 and 0 or 1)

@@ -60,8 +60,19 @@ offline, marked to be sent back at login.
 
 ### `Moonglade.wayBack(player) -> { map, x, y, z, o } or nil`
 Where a player returns to: where they stand in the open world; the
-entrance of the dungeon or raid they are in; nil in a battleground, an
-arena, or a dungeon with no entrance in the table.
+entrance of the dungeon or raid they are in; nil for a dungeon with no
+entrance in the table. In a battleground or arena it asks the game to
+save the character and returns `{ entryOf = guid low part }`, a way back
+still to be read.
+
+### `Moonglade.resolveWayBack(back) -> { map, x, y, z, o } or nil`
+Makes a way back final: a spot as it is; `{ entryOf }` read from the join
+spot the game saved (`character_entry_point`), nil when it saved none.
+Called once the spell has landed, after the save.
+
+### `Moonglade.keepWayBack(player, back)`
+Resolves the druid's way back and keeps it (`Moonglade.remember`); none
+known, tells the druid.
 
 ### `Moonglade.remember(guidLow, spot)`
 Keeps a druid's way back, `{ map, x, y, z, o }`, or forgets it (`nil`), in

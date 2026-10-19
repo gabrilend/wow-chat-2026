@@ -61,8 +61,9 @@ It checks a script's own decisions, not how the game would carry them out.
   `spells` (set of known spell numbers), `zone` (number), `messages`
   (what they were sent, a list of strings), `raised` (how many times
   they were resurrected; raising also clears `dead`), `entryPoint` (where
-  they joined a battleground or arena, `{ mapId, x, y, z, o }`, as patch
-  B055's `GetEntryPoint` gives it).
+  they joined a battleground or arena, `{ mapId, x, y, z, o }`: a save,
+  `p:SaveToDB()`, writes it to `Toy.chardb.entry` as the game writes
+  `character_entry_point`), `saves` (how many times they were saved).
 - `login(p)`, `logout(p)`: run the registered handlers. Logout wipes the
   player's data (as the object-variables extension does), removes their
   chests and empties the buyback tab (as the game does).

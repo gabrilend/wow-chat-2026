@@ -39,7 +39,9 @@ bringing the rest of its game back: [beta-roadmap.md](beta-roadmap.md).*
   Moonglade. Visit with them?"), placed round the druid and raised if dead,
   and sent back to where each came from as soon as the druid leaves the
   glade (raised first if they died there, unless they came dead). A
-  battleground's or arena's join spot is read through patch B055.
+  battleground's or arena's join spot is the one the game saves with the
+  character (`character_entry_point`), read after a save asked for at the
+  cast.
 - **Travellers** (branch beta-homework, 2026-10-17): a minute after
   login and then every 130 seconds, a vendor, innkeeper or class trainer
   of your level appears 30-45 yards away and walks past; it sits when you

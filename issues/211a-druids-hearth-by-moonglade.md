@@ -73,13 +73,19 @@ their hearthstone's bind point from where they started.
      with two, the one nearest the entrance portal; a way out into another
      dungeon followed to the open world). 67 dungeons and raids have one;
      the ones without are all above beta's level cap;
-   - from a battleground or arena: where they joined it, the spot the game
-     keeps for each player (`Player::GetEntryPoint`), read through a source
-     patch to the Lua engine (step 7). An engine built without the patch
-     has no such call, and the cast fails loudly in the server log (no
-     quiet fallback); beta's patch list carries the patch, so a beta build
-     always has it. If the game kept no join spot (none valid), nothing is
-     remembered and the druid is told so.
+   - from a battleground or arena: where they joined it. The game keeps
+     that spot for each player (`Player::SetEntryPoint`) and saves it with
+     the character (`character_entry_point`, written by
+     `Player::_SaveEntryPoint` at every save: logout and every
+     `PlayerSaveInterval`, 15 minutes by default), which is how it sends
+     back someone who logged out during a match. Right after joining, the
+     row can still be a previous match's, so at the cast the script asks
+     for a save (`player:SaveToDB()`) and reads the row once the spell has
+     landed, 1.5 seconds later. No saved join spot: nothing is remembered,
+     and the druid is told so. (First built as a source patch, B055,
+     reading the game's in-memory copy; the owner asked why the saved one
+     would not do, and it does: retired 2026-10-19 before any build,
+     `patches/B055-ale-player-entry-point.retired.sh-retired`.)
    (A first version noted every player's position every 5 seconds to know
    where they entered; the owner: "every 5 seconds is an absurd amount of
    time. We need to hook it to the spellcast". It was replaced the same day
@@ -204,11 +210,11 @@ None open. Answered 2026-10-18:
    or in combat, `WorldSession::HandleSummonResponseOpcode`, and the bots
    have no code that answers one.)
 2. **A way back from a battleground or arena:** "sure. Make it a patch,
-   remember!" The game keeps each player's join spot there
-   (`Player::SetEntryPoint`, read by `GetEntryPoint`); a source patch to
-   the Lua engine (a B-patch adding `player:GetEntryPoint()`, with its
-   patch document in `docs/patches/`) gives it to the script. The owner
-   builds it.
+   remember!", then, the next day: "I'm curious why we need a
+   source-patch for that. How does the game know where to put players
+   when they log out during a battleground? ... Why don't we just use that
+   location instead?" The saved join spot (`character_entry_point`) serves,
+   after a save asked for at the cast; the patch was retired unbuilt.
 3. **A visitor who dies in the glade:** "yes we can resurrect them, unless
    they were a ghost when they came, then we leave them as a ghost if they
    died in moonglade." Raised before being sent back, unless they arrived

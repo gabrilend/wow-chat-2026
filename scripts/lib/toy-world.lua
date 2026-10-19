@@ -438,7 +438,7 @@ function Toy.spell(entry) return { GetEntry = function() return entry end } end
 -- this stand-in taught it first. A database row survives a logout, as in
 -- the game; a test plays a server restart by emptying the script's own
 -- memory (Moonglade.spots) and logging the player in again.
-Toy.chardb = { moonglade = {}, visitors = {}, homebind = {} }
+Toy.chardb = { moonglade = {}, visitors = {}, homebind = {}, entry = {} }
 -- zone and area names, as the game's area data gives them (GetAreaName);
 -- a test adds what it needs; an unknown number is an error, as in the game
 Toy.areaNames = { [12] = "Elwynn Forest", [493] = "Moonglade", [3430] = "Eversong Woods", [14] = "Durotar" }
@@ -485,9 +485,14 @@ new_player = function(name, guidLow)
     function p:GetZoneId() return self.zone end
     function p:SendBroadcastMessage(text) self.messages[#self.messages + 1] = text end
     function p:ResurrectPlayer(percent, sickness) self.dead = false; self.raised = (self.raised or 0) + 1 end
-    -- where they joined a battleground or arena (p.entryPoint, set by a
-    -- test: { mapId, x, y, z, o }), as patch B055's call gives it
-    function p:GetEntryPoint() return self.entryPoint end
+    -- a save of the character: as the game's, it writes where they joined a
+    -- battleground or arena (p.entryPoint, set by a test: { mapId, x, y, z,
+    -- o }) to character_entry_point (Toy.chardb.entry); with none kept, no row
+    function p:SaveToDB()
+        self.saves = (self.saves or 0) + 1
+        local e = self.entryPoint
+        Toy.chardb.entry[self.low] = e and { e.mapId, e.x, e.y, e.z, e.o } or nil
+    end
     return p
 end
 -- The two tables the druids' script keeps (sql/beta/db_characters.src/
@@ -538,6 +543,8 @@ local QUERY = {
       function(g) local r = Toy.chardb.visitors[tonumber(g)]; return r and { { r[1], r[2], r[3], r[4], r[5], r[6], r[8], r[7] } } or {} end },
     { "^SELECT zoneId FROM character_homebind WHERE guid = (%d+)$",
       function(g) local z = Toy.chardb.homebind[tonumber(g)]; return z and { { z } } or {} end },
+    { "^SELECT joinMapId, joinX, joinY, joinZ, joinO FROM character_entry_point WHERE guid = (%d+)$",
+      function(g) local r = Toy.chardb.entry[tonumber(g)]; return r and { r } or {} end },
     { "^SELECT guid, map, x, y, z, o, came_dead FROM beta_211a_moonglade_visitors WHERE druid = (%d+)$",
       function(d)
           local out, keys = {}, {}

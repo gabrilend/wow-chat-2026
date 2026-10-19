@@ -58,7 +58,7 @@ wow-chat-2026/
 │   ├── patches/                   C++ patch documentation
 │   │   ├── patch-registry.md      Build patch system (BEGIN/END/CONFIG phases)
 │   │   ├── accuracy-level-cap.md  Monster hit chance level cap
-│   │   ├── ale-player-entry-point.md  B055: Lua reads where a player joined a battleground or arena (211a)
+│   │   ├── ale-player-entry-point.md  B055 (retired): Lua reading a battleground join spot; why the saved one serves instead (211a)
 │   │   ├── crushing-blows-late.md  B031: crushing blows start 8 levels up, full strength at 12
 │   │   ├── no-buff-level-restriction.md  B032: buffs castable on targets of any level
 │   │   ├── white-gear-never-repaired.md  B033: white gear is never repaired (basic)

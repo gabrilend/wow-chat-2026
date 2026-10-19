@@ -1,5 +1,16 @@
 # Player Entry Point Patch (B055)
 
+**Retired 2026-10-19, before any build.** The game already saves each
+player's join spot with the character, to `character_entry_point`
+(`Player::_SaveEntryPoint`, part of every save), which is how it sends
+back someone who logged out during a match. The owner asked why that
+would not do; it does. `src/lua-beta/druid-moonglade.lua` asks for a save
+at the cast (`player:SaveToDB()`) and reads the row once the spell has
+landed. The patch script is kept as
+`patches/B055-ale-player-entry-point.retired.sh-retired`, off every
+profile's list, as the project keeps retired patches. What it did, for
+the record:
+
 ## Overview
 
 Adds one Lua call to the Lua engine (mod-ale): `player:GetEntryPoint()`,
