@@ -394,6 +394,9 @@ new_player = function(name, guidLow)
     p.home, p.teleports, p.group = { mapId = 1, x = 0, y = 0, z = 0 }, {}, nil
     function p:IsInGroup() return self.group ~= nil end
     function p:GetGroup() return self.group end
+    -- in a battleground or arena: the player's own party, kept aside while
+    -- the match's raid is their group (p.originalGroup, set by a test)
+    function p:GetOriginalGroup() return self.originalGroup end
     function p:GetHomebind() return self.home end
     function p:Teleport(map, x, y, z, o) self.teleports[#self.teleports + 1] = { map = map, x = x, y = y, z = z, o = o } end
     function p:GossipClearMenu() self.building = { items = {} } end

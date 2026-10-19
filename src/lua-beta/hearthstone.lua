@@ -92,10 +92,20 @@ end -- }}}
 
 -- {{{ local function members_of
 -- The group's members as guids, in group order, or nil when not grouped.
+-- In a battleground or arena the game puts a player in the match's raid
+-- group and keeps their own party aside as the "original group"; the trip
+-- is for their own party (the owner, 2026-10-18: "their own party, of
+-- course"), so that one is used when it exists.
+--   in a match: their own party, or nil without one (never the match's raid)
+--   anywhere else: their group, or nil
 local function members_of(player)
-    if not player:IsInGroup() then return nil end
+    local map = player:GetMap()
+    local group
+    if map:IsBattleground() or map:IsArena() then group = player:GetOriginalGroup()
+                                            else group = player:GetGroup() end
+    if not group then return nil end
     local list = {}
-    for _, m in ipairs(player:GetGroup():GetMembers()) do list[#list + 1] = m:GetGUID() end
+    for _, m in ipairs(group:GetMembers()) do list[#list + 1] = m:GetGUID() end
     return list
 end
 -- }}}
@@ -170,7 +180,7 @@ end -- }}}
 --   the bind point's zone known: the group is invited
 --   not known (no bind row): nobody is, and the log says why
 function GroupHearth.onPrepare(event, caster, spell)
-    if not caster:IsPlayer() or not caster:IsInGroup() then return end   -- nobody to invite
+    if not caster:IsPlayer() or not members_of(caster) then return end   -- nobody to invite
     local place = GroupHearth.homeName(caster)
     if place then GroupHearth.open(caster, HEARTH_KIND, place) end
 end -- }}}

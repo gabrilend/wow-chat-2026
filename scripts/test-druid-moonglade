@@ -327,6 +327,37 @@ do
 end
 -- }}}
 
+-- a druid in a battleground: their own party is invited, never the match's raid
+-- (the owner: "their own party, of course")
+do
+    World = Toy.World
+    local WSG = Toy.maps[489]
+    local hal = druid("Hal", 690, WSG, 0, 0, 3277)
+    hal.entryPoint = { mapId = 0, x = -8800, y = 600, z = 95, o = 0 }      -- joined in Stormwind
+    local mate = Toy.new_player("Mat", 691)                               -- a teammate in the match
+    mate.map, mate.zone = WSG, 3277
+    local pal = Toy.new_player("Pal", 692)                                -- Hal's own party, out in Elwynn
+    pal.map, pal.x, pal.y, pal.z, pal.zone = EK, 520, 500, 40, 12
+    for _, p in ipairs({ hal, mate, pal }) do Toy.login(p) end
+    Toy.group({ hal, mate })                                              -- the match's raid
+    local party = Toy.group({ hal, pal })                                 -- Hal's own party...
+    hal.group, pal.group = hal.raid or nil, party
+    hal.group = { members = { hal, mate } }
+    function hal.group:GetMembers() return self.members end
+    hal.originalGroup = party                                             -- ...kept aside in the match
+    BEGIN(hal)
+    check(pal.window ~= nil, "a druid in a battleground invites their own party")
+    check(mate.window == nil, "and not their teammates in the match")
+    Toy.answer(pal, 1)
+    go_out(hal)
+    check(#pal.teleports == 1 and #mate.teleports == 0, "the party member comes; the teammate stays")
+    -- in a match with no party of their own: nobody is invited
+    hal.originalGroup = nil
+    BEGIN(hal)
+    check(mate.window == nil and next(GroupHearth.pending) == nil, "with no party of their own, nobody in the match is invited")
+    for _, p in ipairs({ hal, mate, pal }) do Toy.logout(p) end
+end
+
 -- {{{ 9. the dead visit too, raised by the glade; a restart keeps the visitors
 do
     local hal, ivy, jon, kit = visit_party(640)
