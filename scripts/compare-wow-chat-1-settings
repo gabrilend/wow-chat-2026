@@ -1,0 +1,128 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- compare-wow-chat-1-settings - wow-chat-1's server settings beside today's
+--
+-- For a general audience: before this project, wow-chat-1 ran on an older
+-- copy of the game server whose settings file (worldserver.conf) had about a
+-- hundred values tuned by hand: repair costs, corpse times, talent points,
+-- both factions grouping, and so on. That file lives only in the old server
+-- folder. This reads it, finds every setting whose value differs from that
+-- server's own stock file, and prints a table: the old value, the stock
+-- value then, the stock value in today's server, the value each of today's
+-- profiles is installed with, which of the project's settings patches name
+-- the setting, and the stock file's one-line description. Nothing is
+-- changed anywhere; it only reads.
+--
+-- Usage: scripts/compare-wow-chat-1-settings [PROJECT_DIR] [OLD_SERVER_DIR]
+--   PROJECT_DIR     this project (default below)
+--   OLD_SERVER_DIR  the wow-chat-1 server checkout, holding etc/worldserver.conf
+--                   and etc/worldserver.conf.dist (default below)
+-- Output: a Markdown table on standard output, one row per tuned setting.
+--------------------------------------------------------------------------------
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+local OLD = "/home/ritz/games/azeroth-core/azerothcore"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+if arg[2] and arg[2] ~= "" then OLD = arg[2] end
+
+-- the profiles with an installed settings file are compared; a profile not
+-- installed (no etc/worldserver.conf) is named in the header instead
+local PROFILES = { "basic", "vanilla", "release", "beta", "alpha", "cc-test" }
+
+-- {{{ local function read_settings
+-- A settings file as { [key] = value (text, as written) }, plus the keys in
+-- file order. A missing file is an error naming it.
+local function read_settings(path)
+    local f = io.open(path, "r")
+    if not f then error("compare-wow-chat-1-settings: cannot read " .. path) end
+    local values, order = {}, {}
+    for line in f:lines() do
+        local k, v = line:match("^%s*([%w%._]+)%s*=%s*(.-)%s*$")
+        if k and not line:match("^%s*#") then
+            if values[k] == nil then order[#order + 1] = k end
+            values[k] = v
+        end
+    end
+    f:close()
+    return values, order
+end
+-- }}}
+
+-- {{{ local function read_descriptions
+-- The stock file's "Description:" line for each key: AzerothCore's .dist
+-- writes "#    Key" then "#        Description: ..." in the block above it.
+local function read_descriptions(path)
+    local f = io.open(path, "r")
+    if not f then error("compare-wow-chat-1-settings: cannot read " .. path) end
+    local desc, current = {}, nil
+    for line in f:lines() do
+        local key = line:match("^#%s%s%s%s([%w%._]+)%s*$")
+        if key then current = key end
+        local d = line:match("^#%s+Description:%s*(.-)%s*$")
+        if d and current and not desc[current] then desc[current] = d end
+    end
+    f:close()
+    return desc
+end
+-- }}}
+
+-- {{{ local function patches_naming
+-- The project's settings patches (config/patches/C*.sh) whose text names
+-- the key, as their short names (C003, ...).
+local function patches_naming(key)
+    local list = {}
+    local h = io.popen("grep -lF -- '" .. key .. "' '" .. DIR .. "'/config/patches/C*.sh 2>/dev/null")
+    for path in h:lines() do list[#list + 1] = path:match("(C%d+%w*)%-") or path end
+    h:close()
+    return list
+end
+-- }}}
+
+local old, order  = read_settings(OLD .. "/etc/worldserver.conf")
+local old_stock   = read_settings(OLD .. "/etc/worldserver.conf.dist")
+local now_stock   = read_settings(DIR .. "/source-beta/src/server/apps/worldserver/worldserver.conf.dist")
+local desc        = read_descriptions(DIR .. "/source-beta/src/server/apps/worldserver/worldserver.conf.dist")
+local old_desc    = read_descriptions(OLD .. "/etc/worldserver.conf.dist")
+
+-- which profiles have an installed settings file to compare
+local installed, missing = {}, {}
+for _, p in ipairs(PROFILES) do
+    local path = DIR .. "/installed-files-" .. p .. "/etc/worldserver.conf"
+    local f = io.open(path, "r")
+    if f then f:close(); installed[#installed + 1] = { name = p, values = (read_settings(path)) }
+    else missing[#missing + 1] = p end
+end
+
+-- the rows: every key whose old value differs from the old stock value
+-- (machine-specific ones, the database logins and the data folder, left out:
+-- they say where things were on the old computer, not how the game played)
+local SKIP = { LoginDatabaseInfo = true, WorldDatabaseInfo = true, CharacterDatabaseInfo = true,
+               DataDir = true, BirthdayTime = true }
+local header = { "#", "setting", "wow-chat-1", "stock then", "stock now" }
+for _, p in ipairs(installed) do header[#header + 1] = p.name end
+header[#header + 1] = "patches"
+header[#header + 1] = "what it does (stock description)"
+
+print("<!-- generated by scripts/compare-wow-chat-1-settings from " .. OLD .. "/etc/worldserver.conf;")
+print("     rerun it rather than editing this table -->")
+print("Profiles compared (installed settings files): " .. table.concat((function()
+    local t = {} for _, p in ipairs(installed) do t[#t + 1] = p.name end return t end)(), ", ") ..
+    ". Not installed now, so not compared: " .. (#missing > 0 and table.concat(missing, ", ") or "none") .. ".")
+print("")
+print("| " .. table.concat(header, " | ") .. " |")
+local sep = {} for i = 1, #header do sep[i] = "---" end
+print("|" .. table.concat(sep, "|") .. "|")
+local n = 0
+for _, k in ipairs(order) do
+    if not SKIP[k] and old[k] ~= old_stock[k] then
+        n = n + 1
+        local row = { tostring(n), "`" .. k .. "`", old[k], old_stock[k] or "(not in it)",
+                      now_stock[k] or "(gone)" }
+        for _, p in ipairs(installed) do row[#row + 1] = p.values[k] or "(not set)" end
+        local pl = patches_naming(k)
+        row[#row + 1] = #pl > 0 and table.concat(pl, " ") or ""
+        row[#row + 1] = ((desc[k] or old_desc[k] or ""):gsub("|", "/"))
+        print("| " .. table.concat(row, " | ") .. " |")
+    end
+end
+io.stderr:write(n .. " tuned settings\n")

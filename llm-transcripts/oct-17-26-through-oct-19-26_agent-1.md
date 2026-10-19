@@ -1,6 +1,6 @@
 # Conversation Summary: 90bf80e4-2922-4058-918c-551568e85c2a
 
-Generated on: 2026-10-19 13:59:48
+Generated on: 2026-10-19 14:10:57
 Models: claude-opus-5-5
 
 ## Contents
@@ -9085,6 +9085,160 @@ Left over:
 - The hearthstone rule's issue and its summary file don't yet describe the party
   change.
 - Beta's next install, which you start, runs the four new install steps.
+
+--------------------------------------------------------------------------------
+
+### User Request 62
+
+okay what's up with the .githistory directories?
+
+> - The merge plan document (notes/merge-to-main-2026-10-19.md) isn't needed any
+> more and isn't
+>     committed. Keep it as a record, or delete it?
+
+commit it, then delete it.
+
+> - backups/pre-merge-2026-10-19/ holds the ten old drafts of the battleground
+> and baked-buddy
+>     issues, each with a diff against the committed version, plus beta's receipt file.
+
+do we really need those? I don't think so...!
+
+> - The hearthstone rule's issue and its summary file don't yet describe the
+> party change.
+
+fix it please.
+
+
+
+<pasted_content id="ee2b">
+> The old copies on /mnt/mtwo were already removed today at 12:59, and a
+>      copy of their full history was kept beside the links (wow-chat-2026.git-history,
+>      custom-client.git-history).
+</pasted_content id="ee2b">
+
+
+if the history is identical to the one on kaun, then we can delete them, to save
+space.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 62
+
+> I'll start with the hearthstone documents, then the plan document, the
+> backups, and the history copies.
+
+> Updating the summary file first:
+
+> Now issue 211, which owns the rule:
+
+> The hearthstone documents are fixed. Committing them; the staged transcripts
+> ride along, as your rule says:
+
+*[commit] d3f89e46e in wow-chat-2026 - The hearthstone notes say who is invited from inside a battleground*
+
+> Committed, with the transcripts. Next, the plan document: it holds the other
+> two sessions' lines too, so I take them over first (both sessions have
+> stopped), then commit it and remove it.
+
+*[commit] d3096a8ee in wow-chat-2026 - The plan three sessions wrote for merging every branch into main*
+
+*[commit] 79d236790 in wow-chat-2026 - The merge plan is removed now that the merge is done*
+
+> Committed, then removed. Now the history copies. Checking whether every commit
+> in each copy is also in the live repository:
+
+> Every commit in both copies is also in the live repositories, which have 13
+> newer commits on top. Deleting the two copies, after checking that each is a
+> real folder and not a link to anything live:
+
+> Both deleted (about 138 MB). Now the `backup` and `azerothcore` folders in
+> `/home/ritz/games/azeroth-core/`:
+
+> The edits are minor: database user `ritz`/`menardi` in `backup`, and one
+> build-path line in `azerothcore`. Now the untracked and ignored parts, where
+> custom modules and scripts would sit:
+
+> That's the original wow-chat Lua code (ambush, travel, treasure, hearthstone,
+> death knights), in its own small git repository. Checking whether it exists
+> anywhere else, or only here:
+
+> Every one of those files, including the uncommitted ones, is byte-for-byte in
+> wow-chat-2026's history (in `src/lua/` from the first import). Last, the
+> server settings files in both checkouts:
+
+> The settings files are the one thing not saved anywhere else. Seeing what was
+> actually changed in them, by comparing each with the stock version beside it:
+
+> The `azerothcore` worldserver settings hold about 100 tunings from the
+> wow-chat-1 era. Checking whether wow-chat-2026's settings patches already
+> carry them:
+
+> None found is suspicious: `Rate.MoveSpeed 0.85` is a known project setting.
+> The patches may write the dots escaped. Checking:
+
+I've finished the cleanup you asked for, and looked through the two old folders;
+nothing in either has been touched yet.
+
+**What the `.git-history` folders were:** on 2026-10-17 you asked "can we leave
+a copy of the git history behind?" when the projects moved to /mnt/kaun. Someone
+made those two copies today, just before the old folders were removed. Every
+commit in both copies is also in the live repositories, which have 13 newer ones
+on top, so I deleted both copies. That freed about 138 MB.
+
+**Done:**
+- **Merge plan:** committed once, so it stays in the history, then deleted. The
+  other two sessions' lines are in it as well.
+- **Pre-merge backups:** deleted. The rest of `backups/` (`class-changes`,
+  `lessons`) was there before and I left it alone.
+- **Hearthstone documents:** fixed and committed. The group-hearthstone issue,
+  the druids' Moonglade issue and the script's summary now say that inside a
+  battleground or arena the invitation goes to your own party, never the match's
+  raid. Both hearthstone tests still pass.
+- **Transcripts:** the three staged ones went in with that commit.
+
+**`backup` (5.5 GB):** a stock AzerothCore checkout from June 2023 that was
+never worked on further.
+- Its only edits: the database user changed to `ritz`/`menardi`, and two module
+  help files re-wrapped.
+- The `wow-chat` module inside it is AzerothCore's unedited example module. All
+  it does is say "Hello World from Skeleton-Module!" at login.
+- Everything else can be rebuilt: the server programs it built, the map data
+  extracted from the game client (in `env/dist`), and logs.
+- **Nothing in it is worth keeping.**
+
+**`azerothcore` (2.4 GB):** the server checkout behind wow-chat-1, last worked
+on in 2025.
+- **Its code:** stock upstream, plus one build-path line in `CMakeLists.txt` and
+  the transmog and Lua engine modules downloaded unchanged.
+- **The Lua scripts in `bin/lua_scripts/custom`:** these are the original
+  wow-chat game code (ambush, travel, treasure, hearthstone, death knights,
+  tempo). It's a git repository whose commits are all on GitHub
+  (gabrilend/wow-chat). On top of those commits it has uncommitted changes and
+  never-committed files (`levelling`, `merchants`, `waves.lua`). I checked every
+  file: each one is byte-for-byte in wow-chat-2026's history already. **Nothing
+  is lost if this goes.**
+- **`etc/worldserver.conf`: the one thing that exists only here.** It holds 97
+  settings you tuned away from stock in the wow-chat-1 days. Some examples:
+  - repair cost 25×, item sell values 2× to 10×, corpses lasting 10 hours;
+  - three times the talent points and kill experience;
+  - no durability loss on death;
+  - both factions allowed to group, trade and chat;
+  - dungeons ignoring level and raid rules;
+  - battleground respawn and announcer changes.
+- Of those 97, the project's settings patches cover 4, and
+  `docs/configuration.md` records 45 more with the same values. **The other 48
+  are recorded nowhere else.**
+
+Before you delete these two folders, I suggest saving that settings list into
+the project. It's one small text file listing each setting, its value and the
+stock value, kept for reference only and changing nothing in the build. After
+that, nothing in either folder is needed, and deleting them frees about 7.9 GB
+on /mnt/mtwo.
+
+Should I save the list and then delete both folders? And is there anything from
+wow-chat-1's settings you know you want back in today's game, or is it only a
+reference?
 
 --------------------------------------------------------------------------------
 
