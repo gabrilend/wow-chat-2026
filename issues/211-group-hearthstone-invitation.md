@@ -58,6 +58,12 @@ spell itself: the engine's per-spell events for a cast beginning
 player's spell-cast event. The timer is gone; a hearther logging out
 withdraws their hearth.
 
+Since 2026-10-19, "the group" inside a battleground or arena is the
+player's own party (`player:GetOriginalGroup()`), never the match's raid,
+and the check before a cast looks for members rather than for being in a
+group (a lone player in a match is in the match's raid); Intended
+Behavior 5. `scripts/test-druid-moonglade` checks it in a match.
+
 Other scripts open the same invitation for their own spells
 (`GroupHearth.open`) and take its answers when their spell completes
 (`GroupHearth.take`), placing the travellers themselves: the druids'
@@ -107,6 +113,11 @@ the moment the cast begins):
    else came. Facing: any direction.
 4. **A second hearther** in the same group while the first is under way
    joins the same circle (open question 2).
+5. **In a battleground or arena, their own party.** There the game puts
+   every player in the match's raid and keeps each one's own party aside
+   (the "original group"). The invitation goes to that own party, never
+   to the match's raid; a player who joined the match alone invites
+   nobody. The owner, 2026-10-19: "their own party, of course".
 
 ## Suggested Implementation Steps
 

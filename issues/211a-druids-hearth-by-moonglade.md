@@ -108,7 +108,9 @@ their hearthstone's bind point from where they started.
    out. If no draw is kept, the druid stays where the spell put them, and
    the server log says so.
 5. **Visitors.** Going out, the druid's group is invited as for a
-   Hearthstone (211's window, as the cast begins; withdrawn if the cast is
+   Hearthstone (in a battleground or arena, the druid's own party, never
+   the match's raid: 211's Intended Behavior 5, the owner 2026-10-19:
+   "their own party, of course"), with 211's window, as the cast begins; withdrawn if the cast is
    cancelled; bots always come); the dead are asked too. When the druid
    arrives, everyone who said yes is moved round the druid's spot, on
    211's circle by group number, and the dead among them are raised

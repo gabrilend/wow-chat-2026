@@ -9,13 +9,21 @@ at the place of their number in the group. A cancelled or interrupted
 cast, or the hearther logging out, calls it off. Other scripts open the
 same invitation for their own spells and place the travellers themselves
 (the druids' Moonglade trip, `druid-moonglade.lua`, issue 211a). Checked
-offline by `scripts/test-hearthstone`.
+offline by `scripts/test-hearthstone` and `scripts/test-druid-moonglade`.
+
+Who is "the group": anywhere but a battleground or arena, the player's
+group. Inside a battleground or arena the game puts everyone in the
+match's raid and keeps each player's own party aside (`GetOriginalGroup`);
+there the invitation goes to that own party only, never to the match's
+raid, and a player who came in without a party invites nobody (the owner,
+2026-10-19: "their own party, of course").
 
 ## Functions
 
 - `GroupHearth.onPrepare(event, caster, spell)`: a Hearthstone or Astral
-  Recall cast begins (the engine's per-spell event); for a grouped caster,
-  opens the hearth, naming the bind point's zone.
+  Recall cast begins (the engine's per-spell event); for a caster with a
+  group (their own party, in a match), opens the hearth, naming the bind
+  point's zone.
 - `GroupHearth.homeName(player) -> string or nil`: the name of the zone a
   player is bound in (`character_homebind.zoneId`, named by `GetAreaName`);
   nil, with an error line in the server log, when there is no bind row.
@@ -27,7 +35,8 @@ offline by `scripts/test-hearthstone`.
   for any spell: asks each player, counts in bots. `kind` is `{ question,
   confirm, withDead }`: two strings each with two `%s`, the hearther's name
   and then `place` (a name, string), and `withDead` (boolean) to ask the
-  dead too. Nil when not grouped.
+  dead too. Nil when not grouped (in a match: without a party of their
+  own).
 - `GroupHearth.take(guid) -> list of { guid, place }, group size`: for a
   script placing the travellers itself, at its spell's completion: those
   who said yes, still online (and alive, unless the kind takes the dead),
