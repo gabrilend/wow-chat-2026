@@ -1,11 +1,11 @@
 # lib/narrator-library.lua
 
 Which sentence each narrator says next (issue 909, for the narrators of
-issue 910). Defines the global `Library`. Reads the shelf
+issue 910). Returns its table (`local Library = dofile(...)`); sets no global. Reads the shelf
 (`data/gutenberg-books.lua`) and the built books (`data/texts/`) beside
 this tree, lazily. Tested by `scripts/test-gutenberg-library`.
 
-Each narrator is keyed by an instance id: the spawned creature's GUID in
+Each narrator is keyed by an instance id: the narrator bot's character number in
 game (any value usable as a table key). State lives in memory only and is
 forgotten on `clearInstance`; nothing goes to the database.
 

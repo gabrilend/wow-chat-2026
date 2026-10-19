@@ -2,8 +2,8 @@
 
 Some of beta's playerbots read books aloud (issue 910a). Defines the global
 `Narrators`; registers a timer (every `TICK_MS`), the chat event and the
-logout event. Reads its books through the narrators' library
-(`lib/narrator-library.lua`, the global `Library`) and cuts long sentences
+logout event. Reads its books through its own copy of the narrators' library
+(`lib/narrator-library.lua`, kept as `Narrators.library`) and cuts long sentences
 with `lib/gutenberg-sentences.lua`. Tested by `scripts/test-narrators`.
 
 | Function | Takes | Gives |

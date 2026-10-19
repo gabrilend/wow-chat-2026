@@ -50,6 +50,7 @@ local function here()
     return (src:sub(1, 1) == "@" and src:sub(2) or src):match("^(.*[/\\])") or "./"
 end
 local Sentences = dofile(here() .. "lib/gutenberg-sentences.lua")
+local Library   = dofile(here() .. "lib/narrator-library.lua")
 -- }}}
 
 -- Narrator state, by character number: { parts = lines left of the sentence
@@ -59,6 +60,7 @@ local Sentences = dofile(here() .. "lib/gutenberg-sentences.lua")
 Narrators.state  = {}
 Narrators.now    = 0          -- ms of ticks so far
 Narrators.broken = nil        -- the reason, once the library could not start
+Narrators.library = Library   -- this script's own copy of the library (a test points it at a test shelf)
 
 -- {{{ function Narrators.is_narrator
 -- A bot whose character number is a multiple of NARRATOR_EVERY. Real

@@ -98,7 +98,7 @@ write(T .. "gutenberg-books.lua", [[return {
 }]])
 write(T .. "texts/1-one/sentences.txt", "One a.\nOne b.\nOne c.\n")
 write(T .. "texts/2-two/sentences.txt", "Two a.\nTwo b.\n")
-dofile(LIB .. "narrator-library.lua")
+local Library = dofile(LIB .. "narrator-library.lua")
 Library.DATA_DIR = T
 local seq, k = { 1, 2, 1, 2, 2, 1 }, 0
 Library.random = function(n) k = k + 1; return ((seq[(k - 1) % #seq + 1] - 1) % n) + 1 end
@@ -130,7 +130,7 @@ check(Library.getNextSentence("B") == "One b.", "the other narrator is untouched
 check(not pcall(Library.clearInstance, "never"), "clearing one never started is an error")
 
 print("the real shelf")
-dofile(LIB .. "narrator-library.lua")
+Library = dofile(LIB .. "narrator-library.lua")
 Library.DATA_DIR = DIR .. "/src/lua-beta/data/"
 local okb, b2, s2 = pcall(Library.availableBooks)
 if not okb then

@@ -72,10 +72,9 @@ local long = "And then, " .. string.rep("on and on the road went ", 14) .. "unti
 write(T .. "texts/1-one/sentences.txt", "One a.\n" .. long .. "\nOne c.\n")
 -- }}}
 
-dofile(SRC .. "lib/narrator-library.lua")
-Library.DATA_DIR = T
-Library.random = function(_n) return 1 end
 dofile(SRC .. "narrators.lua")
+Narrators.library.DATA_DIR = T
+Narrators.library.random = function(_n) return 1 end
 check(type(timer) == "function", "the script sets its timer")
 
 print("who narrates")
@@ -144,15 +143,14 @@ check(#Narrators.state[40].rumours == 20, "a narrator keeps twenty rumours, the 
 print("logging out")
 logout(narrator)
 check(Narrators.state[40] == nil, "a narrator that logs out is forgotten")
-check(not pcall(Library.getNextSentence, 40), "and its reader in the library is gone")
+check(not pcall(Narrators.library.getNextSentence, 40), "and its reader in the library is gone")
 
 print("no library")
-dofile(SRC .. "lib/narrator-library.lua")
-Library.DATA_DIR = T .. "nowhere/"
 local printed = {}
 local real_print = print
 print = function(s) table.insert(printed, s) end
 dofile(SRC .. "narrators.lua")
+Narrators.library.DATA_DIR = T .. "nowhere/"
 new_player("Reader2", 60, true, 10, 0)
 ticks(5)
 print = real_print

@@ -16,13 +16,15 @@
 -- sentences are read from disk the first time any narrator opens it,
 -- then kept in memory for the server's life.
 --
--- In game: ALE loads this file with the rest of the beta tree, so it
--- defines the global `Library` and reads nothing until a narrator starts.
--- Off the server: scripts/test-gutenberg-library loads it with dofile and
--- points Library.DATA_DIR at a small test shelf.
+-- It returns its table rather than setting a global (a lib/ file writes no
+-- globals: beta's scripts/test-lua-globals). narrators.lua loads its own copy
+-- with dofile; ALE also loads this file with the rest of the beta tree, which
+-- builds a table nobody uses and reads nothing. Off the server,
+-- scripts/test-gutenberg-library loads it the same way and points DATA_DIR at
+-- a small test shelf.
 --------------------------------------------------------------------------------
 
-Library = {}
+local Library = {}
 
 Library.STORY  = "story"
 Library.RUMORS = "rumors"
@@ -182,3 +184,5 @@ function Library.availableBooks()
     return #available, #shelf
 end
 -- }}}
+
+return Library
