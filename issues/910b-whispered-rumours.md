@@ -40,7 +40,7 @@ east, ... chosen at random among the rumour's words that have one).
 an error until a model runner exists (916d).
 
 Rumours live in memory: a narrator's logout, or a restart, forgets the ones
-it held (question 2).
+it held, as the owner chose (question 2).
 
 `scripts/test-narrators` checks keeping, telling, the rate limit, and the
 travelling in both retelling ways: overheard one hop on, not told back to
@@ -92,6 +92,9 @@ answer it by its own rules.
    any narrator; both ways, by a setting (above).
 2. Should a narrator's rumours be saved like its place in the book, so a
    logout or a restart does not forget what players told it? Today they
-   live in memory only.
+   live in memory only. **Answered** 2026-10-19: "no it shouldn't."
+   Rumours are memory only, by design: a logout or restart is a natural
+   forgetting.
 3. Which way of retelling should beta start with, word for word or
-   changed? It starts word for word.
+   changed? **Answered** 2026-10-19: "word for word for now."
+   `RUMOUR_RETELLING` stays `"verbatim"`.
