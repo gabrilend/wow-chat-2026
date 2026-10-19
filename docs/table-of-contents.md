@@ -121,7 +121,9 @@ wow-chat-2026/
 │
 ├── strategems/                    Data flow patterns proven across the project
 │   ├── precompute-derivable-data.md       Compute static data once; look it up at runtime
-│   └── other-peoples-software-as-a-rubric.md  Read neighbours' code for its rules; write our own answer
+│   ├── other-peoples-software-as-a-rubric.md  Read neighbours' code for its rules; write our own answer
+│   ├── intuition-copy.md                  A comment-free copy of the project, worked beside this one (190)
+│   └── intuition-copy-CLAUDE.md           The default instructions every intuition copy gets
 │
 ├── assets/gear-designs/           the gear designs (506): design-questions.lua, profiles/round-NNN.lua, votes.tsv, generated.tsv, camera-plan.lua (506e), comfyui/ workflows
 │   └── comfyui/README.md          The ComfyUI workflows (concept art, image to 3D) and their placeholders

@@ -1,0 +1,391 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- make-intuition-copy - the project without its comments or explanations
+--
+-- For a general audience: this makes a second copy of the project that
+-- holds only what the machine runs (issue 190, strategems/intuition-copy.md).
+-- It takes the project as last committed, leaves out every explanation
+-- (documents, issues, notes, conversation transcripts, the summaries beside
+-- each source file, the project's own instructions), removes the comments
+-- from the source code by each language's own rules so the code still runs,
+-- puts a short default instruction file at the root, and writes a receipt
+-- saying which commit it came from and what it did. An agent working in the
+-- copy learns the project from what the code does, beside another agent
+-- working in the commented original.
+--
+-- Usage: scripts/make-intuition-copy [PROJECT_DIR] [OUT_DIR] [INSTRUCTIONS]
+--   PROJECT_DIR  the project, a git checkout (default below)
+--   OUT_DIR      where the copy goes (default: PROJECT_DIR's name plus
+--                "-intuition", beside it). An existing OUT_DIR is replaced
+--                only if it holds this tool's receipt; anything else there
+--                is an error, so a wrong path never deletes a folder.
+--   INSTRUCTIONS the default CLAUDE.md to put at the copy's root (default:
+--                PROJECT_DIR/strategems/intuition-copy-CLAUDE.md)
+--------------------------------------------------------------------------------
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+DIR = DIR:gsub("/+$", "")
+local OUT = arg[2] and arg[2] ~= "" and arg[2]:gsub("/+$", "") or (DIR .. "-intuition")
+local RECEIPT  = ".intuition-copy"
+-- the default instructions: the project's own, or a file named as the third
+-- argument (a project without the strategems folder, such as a copy itself)
+local TEMPLATE = arg[3] and arg[3] ~= "" and arg[3] or (DIR .. "/strategems/intuition-copy-CLAUDE.md")
+
+-- {{{ what is left out
+-- Folders of explanation, left out whole; and file names that explain.
+local SKIP_DIRS = { "docs/", "issues/", "notes/", "tissues/", "strategems/",
+                    "llm-transcripts/", "art-prompts/" }
+local function explanatory(path)
+    for _, d in ipairs(SKIP_DIRS) do if path:sub(1, #d) == d then return true end end
+    local name = path:match("[^/]+$")
+    if name:match("%.md$") or name:match("%.info$") then return true end   -- README, CLAUDE.md, *.info.md
+    if name:lower():match("^readme") then return true end
+    return false
+end
+-- }}}
+
+-- {{{ local function sh
+-- Runs a command, returns its output; a failure is an error naming it.
+local function sh(cmd)
+    local h = io.popen(cmd .. " 2>&1; echo \"__exit:$?\"")
+    local out = h:read("*a")
+    h:close()
+    local body, code = out:match("^(.-)__exit:(%d+)%s*$")
+    if code ~= "0" then error("make-intuition-copy: `" .. cmd .. "` failed (" .. tostring(code) .. "):\n" .. body) end
+    return body
+end
+local function q(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
+-- }}}
+
+-- {{{ line keeping
+-- Each stripper fills lines through this: a line where a comment was taken
+-- out and nothing else is left is dropped whole; a line that kept code
+-- loses only the trailing spaces the comment left.
+local function new_lines()
+    local self = { out = {}, cur = {}, had_comment = false, has_code = false, dropped = 0 }
+    function self.put(s) self.cur[#self.cur + 1] = s; if s:match("%S") then self.has_code = true end end
+    function self.comment() self.had_comment = true end
+    function self.newline()
+        local line = table.concat(self.cur)
+        if self.had_comment and not self.has_code then self.dropped = self.dropped + 1
+        else
+            if self.had_comment then line = line:gsub("%s+$", "") end
+            self.out[#self.out + 1] = line .. "\n"
+        end
+        self.cur, self.had_comment, self.has_code = {}, false, false
+    end
+    function self.finish()
+        if #self.cur > 0 then
+            local line = table.concat(self.cur)
+            if not (self.had_comment and not self.has_code) then
+                if self.had_comment then line = line:gsub("%s+$", "") end
+                self.out[#self.out + 1] = line
+            else self.dropped = self.dropped + 1 end
+        end
+        return table.concat(self.out), self.dropped
+    end
+    return self
+end
+-- }}}
+
+-- {{{ local function strip_lua
+-- Read as Lua reads it: strings ('..', "..", [[..]], [==[..]==]) are copied
+-- whole, so a "--" inside one stays; "--[[ ]]" (any level) and "--" to the
+-- end of the line are comments. A first line starting "#!" is kept.
+local function strip_lua(src)
+    local L, i, n = new_lines(), 1, #src
+    if src:sub(1, 2) == "#!" then
+        local e = src:find("\n", 1, true) or n
+        L.put(src:sub(1, e - 1)); L.newline(); i = e + 1
+    end
+    -- copies text that may hold newlines, splitting it into lines
+    local function put_multi(s)
+        local start = 1
+        while true do
+            local nl = s:find("\n", start, true)
+            if not nl then L.put(s:sub(start)); return end
+            L.put(s:sub(start, nl - 1)); L.newline(); start = nl + 1
+        end
+    end
+    while i <= n do
+        local c = src:sub(i, i)
+        if c == "-" and src:sub(i + 1, i + 1) == "-" then
+            L.comment()
+            local eq = src:match("^%[(=*)%[", i + 2)
+            if eq then
+                -- a long comment: everything to its closing bracket, newlines and all
+                local close = src:find("]" .. eq .. "]", i + 4 + #eq, true)
+                if not close then error("unclosed long comment") end
+                local body = src:sub(i, close + #eq + 1)
+                for _ in body:gmatch("\n") do L.newline(); L.comment() end
+                i = close + #eq + 2
+            else
+                local nl = src:find("\n", i, true) or (n + 1)
+                i = nl
+            end
+        elseif c == "\n" then L.newline(); i = i + 1
+        elseif c == "'" or c == '"' then
+            local j = i + 1
+            while j <= n do
+                local d = src:sub(j, j)
+                if d == "\\" then j = j + 2
+                elseif d == c or d == "\n" then break
+                else j = j + 1 end
+            end
+            L.put(src:sub(i, j)); i = j + 1
+        elseif c == "[" and src:match("^%[=*%[", i) then
+            local eq = src:match("^%[(=*)%[", i)
+            local close = src:find("]" .. eq .. "]", i + 2 + #eq, true)
+            if not close then error("unclosed long string") end
+            put_multi(src:sub(i, close + #eq + 1)); i = close + #eq + 2
+        else
+            -- plain code up to the next character that could start something
+            local j = src:find("[%-\n'\"%[]", i + 1) or (n + 1)
+            L.put(src:sub(i, j - 1)); i = j
+        end
+    end
+    return L.finish()
+end
+-- }}}
+
+-- {{{ local function strip_c
+-- Read as a C, C++ or JavaScript compiler reads it: strings and character
+-- constants copied whole (raw strings R"x( )x" too); "//" to the end of the
+-- line and "/* */" are comments. Preprocessor lines (#include) are code.
+local function strip_c(src)
+    local L, i, n = new_lines(), 1, #src
+    while i <= n do
+        local c, c2 = src:sub(i, i), src:sub(i + 1, i + 1)
+        if c == "/" and c2 == "/" then
+            L.comment(); i = src:find("\n", i, true) or (n + 1)
+        elseif c == "/" and c2 == "*" then
+            L.comment()
+            local close = src:find("*/", i + 2, true)
+            if not close then error("unclosed /* comment") end
+            for _ in src:sub(i, close):gmatch("\n") do L.newline(); L.comment() end
+            i = close + 2
+        elseif c == "\n" then L.newline(); i = i + 1
+        elseif c == "R" and c2 == '"' and src:match('^R"([^%s()\\]*)%(', i) then
+            local delim = src:match('^R"([^%s()\\]*)%(', i)
+            local close = src:find(")" .. delim .. '"', i, true)
+            if not close then error("unclosed raw string") end
+            local s, start = src:sub(i, close + #delim + 1), 1
+            while true do
+                local nl = s:find("\n", start, true)
+                if not nl then L.put(s:sub(start)); break end
+                L.put(s:sub(start, nl - 1)); L.newline(); start = nl + 1
+            end
+            i = close + #delim + 2
+        elseif c == '"' or c == "'" or c == "`" then
+            local j = i + 1
+            while j <= n do
+                local d = src:sub(j, j)
+                if d == "\\" then j = j + 2
+                elseif d == c or (d == "\n" and c ~= "`") then break
+                else j = j + 1 end
+            end
+            local s, start = src:sub(i, j), 1
+            while true do
+                local nl = s:find("\n", start, true)
+                if not nl then L.put(s:sub(start)); break end
+                L.put(s:sub(start, nl - 1)); L.newline(); start = nl + 1
+            end
+            i = j + 1
+        else
+            local j = src:find("[/\n\"'`R]", i + 1) or (n + 1)
+            L.put(src:sub(i, j - 1)); i = j
+        end
+    end
+    return L.finish()
+end
+-- }}}
+
+-- {{{ local function strip_whole_lines
+-- For shell, SQL and settings files: only whole comment lines go, and only
+-- where the language would read them as comments.
+--   shell: a line whose first character is "#", outside a here-document
+--          and outside a quoted string still open from an earlier line;
+--          the first line's "#!" stays
+--   sql:   a line starting "--", outside an open string, except the
+--          install steps' "-- MARKER_" lines, which patches/E-patches.sh reads
+--   hash:  a line starting "#" (settings files, Python)
+local function open_quote_after(line, quote, kind)
+    -- which quote is still open at the end of the line (nil: none)
+    local i, n = 1, #line
+    while i <= n do
+        local c = line:sub(i, i)
+        if quote then
+            if c == "\\" and (quote == '"' or kind == "sql") then i = i + 1
+            elseif c == quote then
+                if kind == "sql" and line:sub(i + 1, i + 1) == quote then i = i + 1 else quote = nil end
+            end
+        else
+            if c == "\\" and kind == "shell" then i = i + 1
+            elseif c == "'" or c == '"' then quote = c
+            elseif kind == "shell" and c == "#" and (i == 1 or line:sub(i - 1, i - 1):match("[%s;|&(]")) then
+                return nil   -- the rest of the line is a comment
+            elseif kind == "sql" and line:sub(i, i + 2):match("^%-%-[%s]") then
+                return nil
+            end
+        end
+        i = i + 1
+    end
+    return quote
+end
+
+local function strip_whole_lines(src, kind)
+    local out, dropped, quote, heredoc, first = {}, 0, nil, nil, true
+    for line, nl in src:gmatch("([^\n]*)(\n?)") do
+        if line == "" and nl == "" then break end
+        local keep = true
+        if heredoc then
+            local body = heredoc.tabs and line:gsub("^\t+", "") or line
+            if body == heredoc.word then heredoc = nil end
+        elseif quote then
+            quote = open_quote_after(line, quote, kind)
+        else
+            local trimmed = line:match("^%s*(.*)$")
+            local is_comment =
+                (kind == "shell" and trimmed:sub(1, 1) == "#" and not (first and trimmed:sub(1, 2) == "#!")) or
+                (kind == "hash"  and trimmed:sub(1, 1) == "#") or
+                (kind == "sql"   and trimmed:match("^%-%-") and not trimmed:match("^%-%- MARKER_"))
+            if is_comment then keep = false
+            else
+                if kind == "shell" then
+                    -- a here-document starts after this line: its body is data
+                    local tabs, word = line:match("<<(%-?)%s*['\"]?([%w_]+)['\"]?")
+                    if word and not line:match("<<<") then heredoc = { word = word, tabs = tabs == "-" } end
+                end
+                if kind ~= "hash" and not heredoc then quote = open_quote_after(line, nil, kind) end
+            end
+        end
+        if keep then out[#out + 1] = line .. nl else dropped = dropped + 1 end
+        first = false
+    end
+    return table.concat(out), dropped
+end
+-- }}}
+
+-- {{{ local function kind_of
+-- Which rules a file is read by: by its name, then by its first line.
+--   lua, c, shell, sql, hash: stripped by those rules
+--   copy:                     copied as it is (data, pictures, JSON, ...)
+local function kind_of(path, first_line)
+    local name = path:match("[^/]+$")
+    if name:match("%.lua$") or name:match("%.lua%.") or name:match("%.ext$") then return "lua" end
+    if name:match("%.cpp$") or name:match("%.h$") or name:match("%.c$") or name:match("%.hpp$")
+       or name:match("%.js$") then return "c" end
+    if name:match("%.sh$") then return "shell" end
+    if name:match("%.sql$") then return "sql" end
+    if name:match("%.conf$") or name:match("%.dist$") or name:match("%.py$") then return "hash" end
+    if first_line:match("^#!.*luajit") or first_line:match("^#!.*[/ ]lua%d*%s*$") then return "lua" end
+    if first_line:match("^#!.*bash") or first_line:match("^#!.*/sh%s*$") then return "shell" end
+    if first_line:match("^#!.*python") then return "hash" end
+    return "copy"
+end
+-- }}}
+
+local STRIP = { lua = strip_lua, c = strip_c,
+                shell = function(s) return strip_whole_lines(s, "shell") end,
+                sql   = function(s) return strip_whole_lines(s, "sql") end,
+                hash  = function(s) return strip_whole_lines(s, "hash") end }
+
+-- {{{ the old copy, checked before anything is written
+-- os.execute gives 0 under Lua 5.1's rules and true under 5.2's; LuaJIT
+-- can be built either way
+local function exists(p) local r = os.execute("test -e " .. q(p)); return r == 0 or r == true end
+if exists(OUT) and not exists(OUT .. "/" .. RECEIPT) then
+    error("make-intuition-copy: " .. OUT .. " exists and holds no " .. RECEIPT ..
+          "; it is not a copy this tool made, so it is left alone. Pass another OUT_DIR.")
+end
+-- }}}
+
+-- the committed state, unpacked into a fresh folder beside the copy
+local commit = sh("git -C " .. q(DIR) .. " rev-parse HEAD"):gsub("%s+$", "")
+local BUILD  = OUT .. ".building"
+if exists(BUILD) then
+    if not exists(BUILD .. "/" .. RECEIPT .. ".building") then
+        error("make-intuition-copy: " .. BUILD .. " exists and is not an unfinished copy of this tool's; left alone")
+    end
+    sh("rm -rf " .. q(BUILD))
+end
+sh("mkdir -p " .. q(BUILD))
+sh("touch " .. q(BUILD .. "/" .. RECEIPT .. ".building"))
+sh("git -C " .. q(DIR) .. " archive --format=tar HEAD | tar -x -C " .. q(BUILD))
+
+-- {{{ each file: left out, stripped or copied
+local counts = { files = 0, left_out = 0, copied = 0, stripped = 0, lines_removed = 0,
+                 bytes_before = 0, bytes_after = 0 }
+local by_kind = {}
+-- each line: "<mode> <type> <hash>\t<path>". Mode 120000 is a symbolic
+-- link and 160000 another repository: those are never opened, since
+-- writing a stripped file through a link would change the file it points
+-- at, which may be anywhere (the original project included).
+--   explanatory:     removed from the copy
+--   a link:          left as the link it is
+--   a file:          stripped or copied
+local listing = sh("git -C " .. q(DIR) .. " -c core.quotepath=off ls-tree -r HEAD")
+for mode, path in listing:gmatch("(%d+) %a+ %x+\t([^\n]+)") do
+    counts.files = counts.files + 1
+    local full = BUILD .. "/" .. path
+    if explanatory(path) then
+        os.remove(full)
+        counts.left_out = counts.left_out + 1
+    elseif mode == "120000" or mode == "160000" then
+        counts.copied = counts.copied + 1
+    else
+        local f = io.open(full, "rb")
+        if not f then error("make-intuition-copy: " .. path .. " is in the commit but was not unpacked") end
+        do
+            local src = f:read("*a"); f:close()
+            local kind = kind_of(path, src:match("^[^\n]*") or "")
+            by_kind[kind] = (by_kind[kind] or 0) + 1
+            counts.bytes_before = counts.bytes_before + #src
+            if STRIP[kind] then
+                local ok, out, dropped = pcall(STRIP[kind], src)
+                if not ok then error("make-intuition-copy: " .. path .. " (" .. kind .. "): " .. tostring(out)) end
+                local w = assert(io.open(full, "wb")); w:write(out); w:close()
+                counts.stripped, counts.lines_removed = counts.stripped + 1, counts.lines_removed + dropped
+                counts.bytes_after = counts.bytes_after + #out
+            else
+                counts.copied = counts.copied + 1
+                counts.bytes_after = counts.bytes_after + #src
+            end
+        end
+    end
+end
+-- folders the leaving-out emptied go too
+sh("find " .. q(BUILD) .. " -mindepth 1 -type d -empty -delete")
+-- }}}
+
+-- the default instructions, then the receipt
+local t = io.open(TEMPLATE, "rb")
+if not t then error("make-intuition-copy: the default instructions " .. TEMPLATE .. " are missing") end
+local template = t:read("*a"); t:close()
+local w = assert(io.open(BUILD .. "/CLAUDE.md", "wb")); w:write(template); w:close()
+
+local kinds = {}
+for k, v in pairs(by_kind) do kinds[#kinds + 1] = k .. " " .. v end
+table.sort(kinds)
+local receipt = table.concat({
+    "made by:        scripts/make-intuition-copy (issue 190)",
+    "source:         " .. DIR,
+    "source commit:  " .. commit,
+    "made at:        " .. os.date("%Y-%m-%d %H:%M:%S"),
+    string.format("files:          %6d in the commit", counts.files),
+    string.format("left out:       %6d (explanations)", counts.left_out),
+    string.format("stripped:       %6d (comments removed)", counts.stripped),
+    string.format("copied as is:   %6d", counts.copied),
+    string.format("lines removed:  %6d", counts.lines_removed),
+    string.format("bytes:          %6d KB before, %6d KB after", math.floor(counts.bytes_before / 1024), math.floor(counts.bytes_after / 1024)),
+    "by kind:        " .. table.concat(kinds, ", "),
+}, "\n") .. "\n"
+w = assert(io.open(BUILD .. "/" .. RECEIPT, "wb")); w:write(receipt); w:close()
+os.remove(BUILD .. "/" .. RECEIPT .. ".building")
+
+-- swap in: the old copy (it holds the receipt, checked above) goes only now
+if exists(OUT) then sh("rm -rf " .. q(OUT)) end
+sh("mv " .. q(BUILD) .. " " .. q(OUT))
+io.write(receipt)
+print("copy:           " .. OUT)

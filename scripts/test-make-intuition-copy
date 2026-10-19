@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+# test-make-intuition-copy - checks the comment-free copy's maker (issue 190)
+#
+# For a general audience: scripts/make-intuition-copy makes a copy of the
+# project with the comments taken out, and that copy has to still work. This
+# first makes a tiny project by hand with the tricky cases in it (a "--"
+# inside a Lua string, comments spanning lines, C++ code inside a shell
+# here-document, an install marker in SQL, a link pointing outside the
+# project) and checks each comes out right. Then it copies this project and
+# checks the whole copy: every Lua file still compiles, every shell script
+# still parses, every install marker is still there, no explanation got in,
+# and stripping the copy a second time changes nothing.
+#
+# Usage: scripts/test-make-intuition-copy [PROJECT_DIR]
+
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+MAKE="${DIR}/scripts/make-intuition-copy"
+WORK="${DIR}/tmp/test-make-intuition-copy"
+SHM="${DIR}/tmp/shared-memory/test-make-intuition-copy"
+
+fails=0
+checks=0
+check() {
+    checks=$((checks + 1))
+    if eval "$1"; then echo "  ok:   $2"; else echo "  FAIL: $2"; fails=$((fails + 1)); fi
+}
+
+rm -rf "${WORK}" "${SHM}"
+mkdir -p "${WORK}/src/strategems" "${WORK}/src/docs" "${SHM}"
+
+# {{{ a tiny project with the tricky cases
+P="${WORK}/src"
+cat > "${P}/a.lua" <<'EOF'
+#!/usr/bin/env luajit
+local s = "a -- not a comment" -- a comment
+--[[ a block
+     comment ]]
+local t = [[ long -- kept ]]
+--[==[ a level-two
+comment ]==]
+local u = 'it\'s' .. "q\"--x" -- after an escaped quote
+return s, t, u
+EOF
+cat > "${P}/run.sh" <<'EOF'
+#!/usr/bin/env bash
+# a whole-line comment
+echo "one"   # an inline comment stays (issue 190 question 3)
+cat > out.cpp <<'CPP'
+#include <stdio.h>
+// C++ inside a here-document is data
+CPP
+msg="first line
+# inside a string, not a comment"
+echo "${#msg}"
+EOF
+cat > "${P}/b.cpp" <<'EOF'
+// a line comment
+int x = 1; /* a block */ int y = 2;
+const char* s = "// kept /* kept */";
+#include <z>
+/* spans
+   lines */
+int z = 3;
+EOF
+cat > "${P}/c.sql" <<'EOF'
+-- MARKER_E099_APPLY test
+-- a comment line
+SELECT '--not a comment' AS a;
+/*!40101 SET x = 1 */;
+EOF
+echo "# explains" > "${P}/docs/x.md"
+echo "readme" > "${P}/README.md"
+echo "summary" > "${P}/a.info.md"
+echo "DEFAULT INSTRUCTIONS" > "${P}/strategems/intuition-copy-CLAUDE.md"
+printf -- '-- outside comment\nreturn 1\n' > "${WORK}/outside.lua"
+ln -s "${WORK}/outside.lua" "${P}/link.lua"
+git -C "${P}" init -q -b main
+git -C "${P}" add -A
+git -C "${P}" -c user.name=test -c user.email=test@test commit -q -m "test project"
+# }}}
+
+echo "the tricky cases"
+"${MAKE}" "${P}" "${WORK}/copy" > "${WORK}/make.log" 2>&1
+rc=$?
+check '[[ ${rc} -eq 0 && -f "${WORK}/copy/.intuition-copy" ]]' "the maker ran and wrote its receipt"
+[[ ${rc} -ne 0 ]] && sed 's/^/    /' "${WORK}/make.log"
+C="${WORK}/copy"
+check 'grep -qF "\"a -- not a comment\"" "${C}/a.lua"'          "Lua: a -- inside a string stays"
+check '! grep -q "[-][-] a comment\|a block\|level-two\|comment \]\|after an escaped" "${C}/a.lua"' "Lua: line, block and level-two comments are gone"
+check 'grep -qF "[[ long -- kept ]]" "${C}/a.lua"'              "Lua: a long string with -- in it stays"
+check 'grep -qF "\"q\\\"--x\"" "${C}/a.lua"'                    "Lua: a string with an escaped quote stays whole"
+check 'head -1 "${C}/a.lua" | grep -q "^#!"'                    "Lua: the first #! line stays"
+check 'luajit -bl "${C}/a.lua" > /dev/null'                     "Lua: the stripped file still compiles"
+check '! grep -q "a whole-line comment" "${C}/run.sh"'          "shell: a whole-line comment is gone"
+check 'grep -q "^#include <stdio.h>" "${C}/run.sh" && grep -q "^// C++ inside" "${C}/run.sh"' "shell: a here-document's lines stay"
+check 'grep -q "^# inside a string" "${C}/run.sh"'              "shell: a # line inside an open string stays"
+check 'bash -n "${C}/run.sh"'                                   "shell: the stripped script still parses"
+check '! grep -q "a line comment\|a block\|spans" "${C}/b.cpp"' "C++: line and block comments are gone"
+check 'grep -qF "\"// kept /* kept */\"" "${C}/b.cpp" && grep -q "^#include <z>" "${C}/b.cpp"' "C++: strings and #include stay"
+check 'grep -q "int x = 1;  int y = 2;" "${C}/b.cpp"'           "C++: code around a block comment stays"
+check 'grep -q "^-- MARKER_E099_APPLY" "${C}/c.sql" && ! grep -q "a comment line" "${C}/c.sql"' "SQL: the marker stays, a comment line goes"
+check 'grep -qF "'"'"'--not a comment'"'"'" "${C}/c.sql" && grep -qF "/*!40101" "${C}/c.sql"' "SQL: a string with -- and a /*! hint stay"
+check '[[ ! -e "${C}/docs" && ! -e "${C}/README.md" && ! -e "${C}/a.info.md" && ! -e "${C}/strategems" ]]' "explanations are left out"
+check 'grep -q "DEFAULT INSTRUCTIONS" "${C}/CLAUDE.md"'         "the default CLAUDE.md is put at the root"
+check '[[ -L "${C}/link.lua" ]] && grep -q "outside comment" "${WORK}/outside.lua"' "a link stays a link, and the file it points at is untouched"
+
+echo "a folder it did not make"
+mkdir -p "${WORK}/not-a-copy"; echo keep > "${WORK}/not-a-copy/keep"
+"${MAKE}" "${P}" "${WORK}/not-a-copy" > /dev/null 2>&1
+rc=$?
+check '[[ ${rc} -ne 0 && -f "${WORK}/not-a-copy/keep" ]]' "an existing folder without the receipt is refused and left alone"
+"${MAKE}" "${P}" "${C}" > /dev/null 2>&1
+check '[[ -f "${C}/.intuition-copy" && -f "${C}/a.lua" ]]' "an existing copy with the receipt is remade"
+
+echo "this project"
+R="${SHM}/copy"
+"${MAKE}" "${DIR}" "${R}" > "${SHM}/make.log" 2>&1
+check '[[ -f "${R}/.intuition-copy" ]]' "the whole project is copied ($(grep -o "stripped: *[0-9]*" "${SHM}/make.log" | tr -s " "))"
+bad_lua=0
+while IFS= read -r f; do luajit -bl "$f" > /dev/null 2>&1 || { echo "    does not compile: ${f#${R}/}"; bad_lua=$((bad_lua + 1)); }; done \
+    < <(find "${R}" -type f \( -name "*.lua" -o -name "*.ext" \) -not -path "*/source-*")
+check '[[ ${bad_lua} -eq 0 ]]' "every Lua file in the copy compiles"
+bad_sh=0
+while IFS= read -r f; do
+    if head -1 "$f" | grep -q "^#!.*\(bash\|/sh\)"; then bash -n "$f" 2>/dev/null || { echo "    does not parse: ${f#${R}/}"; bad_sh=$((bad_sh + 1)); }; fi
+done < <(find "${R}/scripts" "${R}/patches" "${R}/config" -type f 2>/dev/null)
+check '[[ ${bad_sh} -eq 0 ]]' "every shell script in the copy parses"
+src_markers=$(git -C "${DIR}" grep -h "^-- MARKER_" HEAD -- '*.sql' | wc -l)
+copy_markers=$(grep -rh "^-- MARKER_" "${R}" --include="*.sql" | wc -l)
+check '[[ ${src_markers} -eq ${copy_markers} ]]' "every install marker is still there (${copy_markers} of ${src_markers})"
+check '[[ -z "$(find "${R}" -name "*.md" -not -path "${R}/CLAUDE.md" | head -1)" ]]' "no .md file but the default CLAUDE.md"
+# the copy, made into a project of its own, copied again: a second pass
+# that removes anything means the first pass missed a comment
+git -C "${R}" init -q -b main
+git -C "${R}" add -A
+git -C "${R}" -c user.name=test -c user.email=test@test commit -q -m copy
+"${MAKE}" "${R}" "${R}-again" "${DIR}/strategems/intuition-copy-CLAUDE.md" > "${SHM}/again.log" 2>&1
+again=$(grep -o "lines removed: *[0-9]*" "${SHM}/again.log" | grep -o "[0-9]*$")
+check '[[ "${again}" == "0" ]]' "stripping the copy again removes nothing more (${again:-no receipt} lines)"
+
+rm -rf "${WORK}" "${SHM}"
+echo "${checks} checks, ${fails} failed"
+[[ ${fails} -eq 0 ]]
