@@ -77,11 +77,23 @@ two quick tests that were behind the 2026-10-15 gear and command changes,
 both brought up to date, and a compile fault that hid which tests failed,
 fixed.) Steps 12 and 13 are done.
 
-Left, the owner's: step 15, now only this: delete `moved-to-kaun-2026-10-18/` when the new
-copies are trusted (frees about 36 GB on /mnt/mtwo), keeping first a
-bare clone of each repository's history beside the links, as the owner
-asked (`git clone --bare` of `moved-to-kaun-2026-10-18/wow-chat-2026`
-and `.../custom-client`; about 110 MB and 15 MB).
+**2026-10-19, step 15 (the owner: "we need to move forward with this"):**
+before deleting, every difference between the archive and /mnt/kaun was
+explained: every branch tip in the archive's repository is in the new one
+(its 405 extra git objects are unreferenced, left by read-only merge
+simulations); the beta worktree's 69 files are in the new copy renamed to
+`.md`; 7 MySQL files are spare redo-log files the server pre-creates;
+the rest are links the move re-made. The archive was deleted; /mnt/mtwo
+went from 104 MB to 37 GB free. The git history left at the old place is
+taken from the new repositories (the archive's would not have fitted
+first, and the new ones hold all of it and every commit since):
+`/mnt/mtwo/games/azeroth-core/wow-chat-2026.git-history` (132 MB, every
+branch, neuron's included) and `custom-client.git-history` (6 MB), bare
+clones beside the links.
+
+**The move is complete.** A heads-up to wow-chat-2026-32 about the
+deletion was refused by the permission checks while the deletion, sent
+alongside it, had already run; recorded here so it is known.
 
 ## Origin
 
