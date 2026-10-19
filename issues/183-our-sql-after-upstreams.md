@@ -24,8 +24,23 @@ resolved this by putting our SQL updates after the upstream's?" and:
 ## Current Behavior
 
 In progress (2026-10-09): built and checked without a server
-(`scripts/test-sql-mirror`, 8 checks, in the compile's quick tests); not
-yet run through an install and a boot. Its one question is answered.
+(`scripts/test-sql-mirror`, 8 checks, in the compile's quick tests).
+**Run through an install and a boot on 2026-10-18** (basic, at
+/mnt/kaun): the world came up. Its one question is answered.
+
+The boot showed one thing the design had not covered: the database still
+remembered our files under their names from before the mirror
+(`04-buddy-roster.sql` beside the mirror's `z_04-buddy-roster.sql`), and
+the server warned at every start that each was "applied to the database,
+but is missing in your update directory now": 35 warnings on basic. The
+mirror now also forgets, in each folder's database, the old name of each
+of that folder's files whose `z_` record is there (`_forget_unprefixed_updates`,
+run per folder at the end of `_mirror_staged_sql`): the file stays
+recorded as applied, under the name the updater uses, so nothing runs
+again, and upstream's records are never named. Run once by hand on basic
+(30 world, 5 character records); every later install does it. Checked by
+`scripts/test-forget-unprefixed-updates` (a scratch table in
+`_smoke_test`; in the compile's quick tests).
 
 - `patches/E-patches.sh`: `_register_with_updatefetcher` remembers each
   staging folder (`STAGED_SQL_DIRS`), registers its twin

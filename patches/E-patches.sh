@@ -157,8 +157,44 @@ _mirror_staged_sql() {
             rm "${f}"
             removed=$((removed + 1))
         done
+        _forget_unprefixed_updates "${staging}" "${STAGED_SQL_DIRS[${staging}]}"
     done
     echo "  SQL for the updater (issue 183): ${wrote} written, ${kept} unchanged, ${removed} removed, in ${#STAGED_SQL_DIRS[@]} folders"
+}
+# -- }}}
+
+# -- {{{ _forget_unprefixed_updates
+# Before issue 183 the updater read the staging folders themselves, so the
+# database recorded each file by its own name (04-buddy-roster.sql); since,
+# it reads the twin and records z_04-buddy-roster.sql. The old record stays,
+# and at every start the server warns that the file "was applied to the
+# database, but is missing in your update directory now" (35 such warnings
+# on basic, 2026-10-18; a warning is an error by the house rules). This
+# removes, from the folder's database, the record of each of THIS folder's
+# files under its old name, and only where its z_ record is there too: the
+# file is still recorded as applied, once, under the name the updater now
+# uses, so nothing runs again. Upstream's records are never named here.
+#   staging  path    a staging folder (its *.sql are the names to forget)
+#   db       string  the database its updater rows live in
+_forget_unprefixed_updates() {
+    local staging=$1 db=$2
+    local MYSQL_DIR="${DIR}/mysql/installed-files"
+    local MYSQL_SOCKET="${DIR}/mysql/databases/mysql.sock"
+    local names="" f
+    for f in "${staging}"/*.sql; do
+        [[ -f "${f}" ]] || continue
+        names+="${names:+,}'$(basename "${f}")'"
+    done
+    [[ -n "${names}" ]] || return 0
+    if [[ ! -S "${MYSQL_SOCKET}" ]]; then
+        echo "    NOTICE: MySQL not running: old update names in ${db} not tidied (the next install will)"
+        return 0
+    fi
+    local gone
+    gone="$("${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" -u ritz -pmenardi -N "${db}" -e \
+        "DELETE o FROM updates o JOIN updates z ON z.name = CONCAT('z_', o.name) WHERE o.name IN (${names}); SELECT ROW_COUNT();" 2>/dev/null)" ||
+        { echo "    ERROR: could not tidy the old update names in ${db} (${staging#${DIR}/})"; return 1; }
+    [[ "${gone}" == "0" ]] || echo "    ${db}: ${gone} old update name(s) forgotten (their z_ records stay)"
 }
 # -- }}}
 

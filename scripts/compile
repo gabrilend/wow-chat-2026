@@ -582,6 +582,7 @@ QUICK_TESTS=(
     test-line-edits test-lua-unique-names test-movement test-navmesh-caves test-profile-config-gates test-profile-tables-agree test-redirect-listener test-roam-pattern
     test-sargobras-follow test-sql-mirror test-steady-mtimes test-valley-deal test-world-boss-countdown
     test-treasure test-info-files-match-source test-lua-globals test-druid-moonglade
+    test-validate-needs-world-up test-watch-compile test-forget-unprefixed-updates
 )
 run_quick_tests() {
     local out="${DIR}/tmp/shared-memory/compile-tests"
@@ -600,8 +601,12 @@ run_quick_tests() {
     for t in "${QUICK_TESTS[@]}"; do
         [[ -x "${DIR}/scripts/${t}" ]] || { echo "ERROR: scripts/${t} is missing or not executable (the compile's test list names it)"; exit 1; }
     done
+    # xargs exits 123 when any test fails; under set -e that ended the run
+    # right here, before the report below could say which tests failed
+    # (2026-10-18: "COMPILE FAILED (exit status 123)" naming only this line).
+    # The .ok files are the verdict, so the exit status is not needed.
     printf '%s\n' "${QUICK_TESTS[@]}" | xargs -P "$(nproc)" -I{} bash -c \
-        'timeout 600 "$1/scripts/$2" "$1" > "$3/$2.log" 2>&1 && touch "$3/$2.ok"' _ "${DIR}" {} "${out}"
+        'timeout 600 "$1/scripts/$2" "$1" > "$3/$2.log" 2>&1 && touch "$3/$2.ok"' _ "${DIR}" {} "${out}" || true
 
     local failed=()
     for t in "${QUICK_TESTS[@]}"; do
@@ -879,6 +884,7 @@ do_build() {
 # A successful run never comes here; it prints COMPILE SUCCEEDED itself.
 report_how_compile_ended() {
     local status=$1
+    write_compile_goodbye "${status}"
     [[ ${status} -ne 0 ]] || return 0
     echo ""
     echo "==============================================================================="
@@ -897,6 +903,38 @@ report_how_compile_ended() {
 }
 # }}}
 
+# {{{ write_compile_goodbye
+# The run's receipt, written straight to tmp/shared-memory/compile-<profile>.goodbye
+# (not through the run log, so it is whole even if the log's last lines are
+# still on their way): when it ended, how it ended, how far it got, how long
+# it took. Its fresh time says the run is over; its words say how. A watcher
+# that cannot see the owner's terminal reads this (2026-10-18: one waited on
+# a log that never came, because the compile logged only from the build on).
+#   status   number   the exit status, or "validating" when the compile
+#                     hands over to scripts/validate
+write_compile_goodbye() {
+    local status=$1
+    [[ -n "${COMPILE_GOODBYE:-}" ]] || return 0   # before the profile is known: nowhere to write
+    local verdict
+    case "${status}" in
+        0)          verdict="succeeded" ;;
+        validating) verdict="compiled; validation and promotion follow (scripts/validate, in this run's log)" ;;
+        *)          verdict="FAILED (exit status ${status})" ;;
+    esac
+    {
+        echo "ended:       $(date '+%Y-%m-%d %H:%M:%S')"
+        echo "profile:     ${PROFILE}"
+        echo "build type:  $([[ "${DEBUG_BUILD:-false}" == "true" ]] && echo Debug || echo RelWithDebInfo)"
+        echo "verdict:     ${verdict}"
+        echo "reached:     ${COMPILE_STAGE:-starting}"
+        echo "minutes:     $(( (SECONDS - ${COMPILE_STARTED_AT:-0}) / 60 ))"
+        [[ "${status}" == "0" || "${status}" == "validating" || -z "${STOPPED_AT:-}" ]] ||
+            echo "stopped at:  ${STOPPED_AT#${DIR}/} (${STOPPED_COMMAND})"
+        echo "log:         ${COMPILE_RUN_LOG#${DIR}/}"
+    } > "${COMPILE_GOODBYE}"
+}
+# }}}
+
 # =============================================================================
 # Main
 # =============================================================================
@@ -907,6 +945,22 @@ trap 'report_how_compile_ended $?' EXIT
 
 parse_args "$@"
 get_profile_paths
+
+# The whole run, first line to verdict, is copied to
+# tmp/shared-memory/compile-<profile>.log as it goes, and still shown here.
+# Before 2026-10-18 the only log began at the build stage (tmp/build-<profile>.log,
+# still written), so a run that stopped in its quick tests or patches left
+# nothing on disk, and none of them left the verdict. The RAM folder is
+# rebuilt first, as the house rule asks of anything writing there.
+source /home/ritz/programming/ai-stuff/scripts/libs/ensure-ram-tiers
+ensure_ram_tiers "${DIR}" || exit 1
+COMPILE_RUN_LOG="${DIR}/tmp/shared-memory/compile-${PROFILE}.log"
+COMPILE_GOODBYE="${DIR}/tmp/shared-memory/compile-${PROFILE}.goodbye"
+COMPILE_STARTED_AT=${SECONDS}
+COMPILE_STAGE="starting"
+rm -f "${COMPILE_GOODBYE}"
+exec > >(tee "${COMPILE_RUN_LOG}") 2>&1
+echo "Run log: ${COMPILE_RUN_LOG#${DIR}/}; receipt at the end: ${COMPILE_GOODBYE#${DIR}/}"
 
 echo "Compiling profile: ${PROFILE}"
 echo "  (skipping git checks)"
@@ -945,6 +999,7 @@ fi
 source "${DIR}/patches/patches.sh"
 
 # The quick tests, before anything is touched (run_quick_tests)
+COMPILE_STAGE="the quick tests"
 [[ "${RUN_TESTS}" == "true" ]] && run_quick_tests
 
 # Check if any modules were added since last cmake configure
@@ -953,6 +1008,7 @@ check_modules_configured
 # Hard-reset source-beta and every module to HEAD before re-applying
 # patches. Source trees are build artifacts (issue 136); anything in the
 # working tree is discardable. See patches.sh:reset_source_trees.
+COMPILE_STAGE="resetting the source trees"
 reset_source_trees
 
 # The source tree must be at the profile's pinned commit: the patches are
@@ -1013,9 +1069,11 @@ generate_buddy_gear() {
     echo "  gear gallery: ${DIR}/docs/HTML/buddy-gear-gallery.html"
 }
 # }}}
+COMPILE_STAGE="generating the buddy gear"
 generate_buddy_gear
 
 # Apply pre-compile patches (idempotent)
+COMPILE_STAGE="applying the source patches"
 apply_patches_begin
 
 # Patched and copied files whose content is what the last build here
@@ -1023,6 +1081,7 @@ apply_patches_begin
 steady_patched_mtimes
 
 # Build
+COMPILE_STAGE="building and installing (cmake, make, install)"
 do_build
 
 # Clear trap and revert patches after successful build; then the trees are
@@ -1035,6 +1094,7 @@ do_build
 # the run here, failed; the trap still resets the trees to their commits
 # first, then gives the verdict.
 trap 'compile_status=$?; leave_source_trees_clean; report_how_compile_ended ${compile_status}' EXIT
+COMPILE_STAGE="reverting the source patches"
 unapply_patches_begin
 leave_source_trees_clean
 
@@ -1048,9 +1108,12 @@ echo "==========================================================================
 if [[ "${AUTO_VALIDATE}" == "true" ]]; then
     echo ""
     echo "Starting validation..."
+    COMPILE_STAGE="compiled"
+    write_compile_goodbye validating   # exec replaces this script: the EXIT trap will not run
     exec "${DIR}/scripts/validate" --profile "${PROFILE}"
 else
     echo ""
     echo "Auto-validation disabled. To validate and promote manually:"
     echo "  ./scripts/validate --profile ${PROFILE}"
+    COMPILE_STAGE="compiled"
 fi

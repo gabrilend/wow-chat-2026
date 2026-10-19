@@ -1,0 +1,69 @@
+#!/bin/bash
+# test-watch-compile - checks scripts/watch-compile's verdicts on made-up
+# compile runs, today's false success first.
+#
+# For a general audience: scripts/watch-compile reads the files a compile
+# leaves and says whether it worked. This gives it pretend runs and checks
+# its answer: a build promoted although its trial server never said "World
+# initialized" (what happened on 2026-10-18) must be FAILED; one whose trial
+# server came up must be SUCCEEDED, with its warnings listed; a compile that
+# failed must be FAILED.
+#
+# Usage: scripts/test-watch-compile [PROJECT_DIR]
+# Exit status: 0 when every case behaves as expected, 1 otherwise.
+
+DIR="/mnt/kaun/wow-chat-2026"
+if [[ -n "$1" ]]; then
+    DIR="$1"
+fi
+
+source /home/ritz/programming/ai-stuff/scripts/libs/ensure-ram-tiers
+ensure_ram_tiers "${DIR}" || exit 1
+WORK="$(mktemp -d "${DIR}/tmp/tmp/watch-compile-test.XXXXXX")"
+trap 'rm -rf "${WORK}"' EXIT
+
+FAILS=0
+CHECKS=0
+# {{{ run_case
+# run_case NAME WANT_EXIT WANT_TEXT RECEIPT_VERDICT RUN_LOG_TAIL TRIAL_LOG
+run_case() {
+    local name=$1 want=$2 text=$3 receipt=$4 runlog=$5 trial=$6
+    local d="${WORK}/${name}"
+    mkdir -p "${d}/tmp/shared-memory"
+    echo "test" > "${d}/.profile"
+    printf 'ended:       now\nprofile:     test\nverdict:     %s\n' "${receipt}" > "${d}/tmp/shared-memory/compile-test.goodbye"
+    printf 'Compiling profile: test\n%s\n' "${runlog}" > "${d}/tmp/shared-memory/compile-test.log"
+    printf '%b\n' "${trial}" > "${d}/tmp/shadow-validation-test.log"
+    local out code
+    out="$("${DIR}/scripts/watch-compile" "${d}" --after 0 --max 1)"; code=$?
+    CHECKS=$((CHECKS + 1))
+    if [[ ${code} -eq ${want} ]] && grep -q "${text}" <<< "${out}"; then
+        echo "  ok    ${name}: exit ${code}"
+    else
+        FAILS=$((FAILS + 1))
+        echo "  FAIL  ${name}: exit ${code} (wanted ${want}, and \"${text}\" in its words)"
+        echo "${out}" | sed 's/^/          /'
+    fi
+}
+# }}}
+
+echo "test-watch-compile"
+run_case "promoted-but-world-never-up" 1 "never said \"World initialized\"" \
+    "compiled; validation and promotion follow" \
+    "Validation successful (6s, 55 lines)\nPromotion complete" \
+    "Updating Character database...\n\e[33m>> The file '04-buddy-roster.sql' was applied to the database, but is missing in your update directory now!\e[0m"
+run_case "up-and-promoted" 0 "SUCCEEDED" \
+    "compiled; validation and promotion follow" \
+    "Promotion complete" \
+    "Updating World database...\nWorld initialized in 40 sec"
+run_case "warnings-are-listed" 0 "missing in your update directory" \
+    "compiled; validation and promotion follow" \
+    "Promotion complete" \
+    "\e[33m>> The file 'x.sql' was applied to the database, but is missing in your update directory now!\e[0m\nWorld initialized in 40 sec"
+run_case "compile-failed" 1 "the compile itself failed" \
+    "FAILED (exit status 1)" \
+    "COMPILE FAILED" \
+    ""
+
+echo "${CHECKS} cases, ${FAILS} failed"
+exit $(( FAILS > 0 ))
