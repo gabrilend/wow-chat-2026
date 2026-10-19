@@ -137,15 +137,20 @@ reading from them in parallel is easier. How it works, and what it means here:
      one world database (`du -sh mysql/databases/acore_world_*`). With
      several realms running at once (issue 136b), most of their reads go
      to disk. A larger buffer pool turns them into memory reads.
-  2. The binary log is on (MySQL's default) and nothing replicates from it
-     here. Every change is written a second time. `disable_log_bin` in
-     `my.cnf` would stop that, and old `binlog.*` files could then be
-     removed.
+  2. The binary log was on (MySQL's default) and nothing replicates from
+     it here: every change was written a second time. **Decided
+     2026-10-18 (owner: "sounds good"):** `disable_log_bin` is in
+     `my.cnf`. It takes effect at the next MySQL start; the old
+     `binlog.*` files and `binlog.index` can then be deleted while MySQL is
+     stopped.
   3. A second disk, for the case where several realms start at the same
      time: a second MySQL server on its own `datadir`, or the redo log on
      its own disk.
-  None of these is applied; each is the owner's call (MySQL settings
-  change with `mysql/conf/my.cnf` and a MySQL restart).
+  1 and 3 are not applied; each is the owner's call (MySQL settings change
+  with `mysql/conf/my.cnf` and a MySQL restart).
+- **One disk is enough.** Nothing requires splitting: one disk holding
+  all of `datadir` is MySQL's ordinary case and the simplest, and it is
+  what this project has. A second disk is an option for speed, not a need.
 
 ## Modules Installed
 

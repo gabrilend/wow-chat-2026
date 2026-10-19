@@ -1,6 +1,6 @@
 # Conversation Summary: 1ca38611-9673-4322-8dc2-8d10922c6746
 
-Generated on: 2026-10-18 16:53:00
+Generated on: 2026-10-18 17:12:40
 Models: claude-opus-5-5
 
 ## Contents
@@ -25,6 +25,9 @@ Models: claude-opus-5-5
    your basic compile is building there with a watcher reporting when it ends.
    Next, once it finishes, I'll apply and commit the change that makes the
    compile log its whole run and verdict.
+6. 2026-10-18 16:56, after Request 38 - We moved the project to /mnt/kaun and
+   your basic compile is running there. Next, once it finishes, I'll report the
+   result and add the compile's whole-run log and goodbye receipt.
 
 --------------------------------------------------------------------------------
 
@@ -2405,6 +2408,57 @@ name too; I linked it there during the move.
 
 Nothing else is waiting on me. The watcher reports when your compile ends; after
 that I apply the compile-logging change.
+
+--------------------------------------------------------------------------------
+
+*[background task] Background command "K=/mnt/kaun/wow-chat-2026;
+LOG=$K/tmp/build-basic.log; before=$(cat
+/dev/shm/move-to-kaun/basic-manifest-before.txt); end=$((SECONDS+18000)); while
+[ ! -s $LOG ] &amp;&amp; [ $SECONDS -lt $end ]; do sleep 30; done; [ -s $LOG ]
+|| { echo "NO BUILD LOG in 5 hours: the run never reached the build stage
+($LOG)"; exit 2; }; echo "build log appeared $(date +%T)"; last=0; quiet=0;
+while [ $SECONDS -lt $end ]; do after=$(readlink
+$K/build-manifests/basic-latest.txt); if [ "$after" != "$before" ]; then echo
+"VERDICT $(date +%T): SUCCEEDED, validated and promoted (manifest $before -&gt;
+$after)"; tail -5 $LOG; exit 0; fi; s=$(stat -c %s $LOG); if [ $s -eq $last ];
+then quiet=$((quiet+1)); else quiet=0; last=$s; fi; if [ $quiet -ge 30 ]; then
+echo "STOPPED $(date +%T): build log quiet 15 minutes, no new manifest"; echo
+"--- last 30 lines:"; tail -30 $LOG; echo "--- errors:"; grep -n -i -E
+"error:|FAILED" $LOG | tail -10; exit 1; fi; sleep 30; done; echo "TIMEOUT after
+5 hours"; tail -20 $LOG" completed (exit code 0)*
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 38 (continued)
+
+> One record per update folder, each naming `/mnt/kaun`: the duplicate the beta
+> session warned about didn't happen. The logging change is applied and
+> syntax-checked. Committing it:
+
+*[commit] 5c84c14db - The compile keeps a log of its whole run and leaves a receipt saying how it ended*
+
+> Recording the build in the move plan, since it was the last check before
+> removing the old copies:
+
+*[commit] 8247730ec - The move's record: basic builds, validates and is promoted at the new place*
+
+Your compile succeeded: basic built at the new place, passed validation and was
+promoted at 17:11, about 40 minutes after it began building. That was the last
+check before the old copies can go.
+
+- **No duplicate update folders:** basic's install step found its update folders
+  already recorded at `/mnt/kaun`, and added no second records.
+- **The compile-logging change is applied and committed.** From the next run on,
+  the whole run is logged to `tmp/shared-memory/compile-<profile>.log`, and a
+  `compile-<profile>.goodbye` receipt says how it ended.
+- **The move plan (issue 188) records the build.** Steps 12 and 13 are done.
+
+**What's left, when you're ready:** delete
+`/mnt/mtwo/games/azeroth-core/moved-to-kaun-2026-10-18/`, which frees about 36
+GB on the full disk. Before that, a bare copy of each repository's history goes
+beside the links, as you asked: about 110 MB for wow-chat-2026 and 15 MB for the
+client. Say the word and I'll make those copies; the deletion itself is yours to
+run or approve.
 
 --------------------------------------------------------------------------------
 

@@ -1,6 +1,6 @@
 # Conversation Summary: 90bf80e4-2922-4058-918c-551568e85c2a
 
-Generated on: 2026-10-18 16:54:44
+Generated on: 2026-10-18 17:13:43
 Models: claude-opus-5-5
 
 ## Contents
@@ -25,6 +25,10 @@ Models: claude-opus-5-5
    which now lives at /mnt/kaun, while watching every 30 seconds for the old
    folders' removal. Next, you build one profile at the new place, then approve
    removing the old folders so I can leave links and history copies.
+6. 2026-10-18 16:57, after Request 51 - We moved the project to /mnt/kaun, and
+   this session now uses the new folder name. Next: decide whether the other two
+   command gates' permissions should also expire after ten minutes, as the
+   folder gate's now does.
 
 --------------------------------------------------------------------------------
 
@@ -8042,6 +8046,23 @@ backwards, and the one for plain `git commit`.
 - **For:** a forgotten permission can't wait around for an unrelated command.
 - **Against:** I've only seen the folder gate leave a permission armed, because
   only `cd` commands get silently dropped before reaching a gate.
+
+--------------------------------------------------------------------------------
+
+*[background task] Background command "Re-arm the 30-second watch on the old
+copies and the plan" completed (exit code 0)*
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 51 (continued)
+
+The watch is re-armed. Every 30 seconds it checks whether the old copies have
+been deleted, which is when I'll make the git-history copies, and whether the
+plan has changed.
+
+One question is still open on the folder gate: should the other two gates'
+permissions also expire after ten minutes? Those are the gate for git history
+commands that count backwards, and the one for plain `git commit`.
 
 --------------------------------------------------------------------------------
 
