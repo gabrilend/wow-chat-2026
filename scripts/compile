@@ -581,7 +581,7 @@ QUICK_TESTS=(
     test-dk-soul-trade test-gear-designs test-gearsets test-gm-command-reference
     test-line-edits test-lua-unique-names test-navmesh-caves test-profile-config-gates test-redirect-listener test-roam-pattern
     test-sargobras-follow test-sql-mirror test-steady-mtimes test-valley-deal test-world-boss-countdown
-    test-validate-needs-world-up test-watch-compile
+    test-validate-needs-world-up test-watch-compile test-forget-unprefixed-updates
 )
 run_quick_tests() {
     local out="${DIR}/tmp/shared-memory/compile-tests"
