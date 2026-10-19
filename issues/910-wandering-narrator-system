@@ -6,7 +6,26 @@ share rumors, and create emergent social gameplay through the telephone game.
 ## Current Behavior
 
 No narrator NPCs exist. Travelers wander but don't interact socially beyond
-basic movement behaviors.
+basic movement behaviors. The book source is built (909: the library, the
+books cut at install time by E059); nothing in game reads from it yet.
+
+Narrators are playerbots, as written (the owner, 2026-10-18: "as written.
+players need to be able to whisper to them."). Beta's Lua engine sees a
+playerbot as a player (`IsBot`, `Say`, the whisper event, the bot's own
+`GetBotAI`), so the reading and the whispers are beta Lua, needing no
+compile; only what the bot module itself must do (stopping its wandering
+for a seated listener) may need its C++.
+
+### Sub-issues
+
+| ID | Name | Dependencies | Description |
+|---|---|---|---|
+| 910a | narrators-read-aloud | 909 | Some random playerbots are narrators; near a real player they read their book in /say, a sentence at a time, and fall quiet while people nearby talk |
+| 910b | whispered-rumours | 910a | Whispered to, a narrator keeps what it was told and passes it on, once, when someone nearby speaks of the same thing (steps 5-8) |
+| 910c | stopping-for-listeners | 910a | A narrator stops wandering while someone sits near it (steps 2, 4, 11; with 908) |
+| 910d | speech-by-mail | 910a, 1004 | What a player heard a narrator say in person, forwarded to their rmail; spoken audio later (step 12; also 909's question 4) |
+
+Order: 910a (foundation) → 910b and 910c (side by side) → 910d.
 
 ## Intended Behavior
 

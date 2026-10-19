@@ -1,0 +1,128 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- test-narrators - the reading narrators (issue 910a), checked without a server
+--
+-- For a general audience: a few of beta's bots read books aloud when a real
+-- player is near (src/lua-beta/narrators.lua). This loads that script with
+-- small stand-ins for the game's functions -- players and bots with
+-- positions, chat, logging out, and the script's timer run by hand -- and a
+-- two-book test shelf, and checks what the narrators say and when: only
+-- when a real player is near; a long sentence in parts, in order; quiet
+-- while someone nearby talks, then on from the same place; forgotten on
+-- logout; a missing library said once.
+--
+-- Usage: scripts/test-narrators [PROJECT_DIR]
+--------------------------------------------------------------------------------
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local SRC = DIR .. "/src/lua-beta/"
+
+local fails, checks = 0, 0
+local function check(ok, what)
+    checks = checks + 1
+    if ok then print("  ok:   " .. what) else print("  FAIL: " .. what); fails = fails + 1 end
+end
+
+-- {{{ the engine's functions, stood in
+local timer, chat_handlers, logout_handlers, world = nil, {}, {}, {}
+function CreateLuaEvent(fn, _ms, _repeats) timer = fn end
+function RegisterPlayerEvent(event, fn)
+    if event == 18 then table.insert(chat_handlers, fn) elseif event == 4 then table.insert(logout_handlers, fn) end
+end
+function GetPlayersInWorld() return world end
+
+local function new_player(name, guid, bot, x, y, map)
+    local p = { name = name, guid = guid, bot = bot, x = x, y = y, map = map or 0, said = {} }
+    function p:IsBot() return self.bot end
+    function p:GetGUIDLow() return self.guid end
+    function p:GetMapId() return self.map end
+    function p:GetDistance(o) return math.sqrt((self.x - o.x) ^ 2 + (self.y - o.y) ^ 2) end
+    function p:Say(text, _lang) table.insert(self.said, text) end
+    table.insert(world, p)
+    return p
+end
+local function chat(p, msg) for _, fn in ipairs(chat_handlers) do fn(18, p, msg, 1, 0) end end
+local function logout(p)
+    for _, fn in ipairs(logout_handlers) do fn(4, p) end
+    for k, q in ipairs(world) do if q == p then table.remove(world, k) break end end
+end
+local function ticks(n) for _ = 1, n do timer() end end
+-- }}}
+
+-- {{{ a two-book test shelf
+local T = DIR .. "/tmp/shared-memory/test-narrators/"
+os.execute("mkdir -p '" .. T .. "texts/1-one'")
+local function write(path, s) local f = assert(io.open(path, "w")); f:write(s); f:close() end
+write(T .. "gutenberg-books.lua", [[return {
+  { id = 1, slug = "one", title = "One", author = "a", genre = "g", match = "one" },
+}]])
+local long = "And then, " .. string.rep("on and on the road went ", 14) .. "until it ended at the sea."
+write(T .. "texts/1-one/sentences.txt", "One a.\n" .. long .. "\nOne c.\n")
+-- }}}
+
+dofile(SRC .. "lib/narrator-library.lua")
+Library.DATA_DIR = T
+Library.random = function(_n) return 1 end
+dofile(SRC .. "narrators.lua")
+check(type(timer) == "function", "the script sets its timer")
+
+print("who narrates")
+local narrator = new_player("Reader", 40, true, 0, 0)      -- 40: a multiple of 20
+local bot      = new_player("Other", 41, true, 3, 0)       -- a bot, not a narrator
+local real     = new_player("Anna", 7, false, 500, 0)      -- a real player, far away
+check(Narrators.is_narrator(narrator) and not Narrators.is_narrator(bot) and not Narrators.is_narrator(real),
+      "a bot numbered a multiple of twenty narrates; another bot and a real player do not")
+
+print("reading only when a real player hears")
+ticks(10)
+check(#narrator.said == 0, "with only a bot near and the player far off, the narrator says nothing")
+real.x = 10
+ticks(1)
+check(narrator.said[1] == "One a.", "a real player within hearing: it reads its first sentence (" .. tostring(narrator.said[1]) .. ")")
+ticks(1)
+check(#narrator.said == 1, "then it pauses before the next line")
+
+print("a long sentence in parts")
+ticks(30)
+local parts_ok = #narrator.said >= 3
+for k = 2, #narrator.said - 1 do if #narrator.said[k] > 255 then parts_ok = false end end
+check(parts_ok, "the long sentence came as " .. (#narrator.said - 1) .. " or more lines, none past 255 bytes")
+local rebuilt = {}
+for k = 2, #narrator.said do
+    if narrator.said[k] == "One c." then break end
+    rebuilt[#rebuilt + 1] = narrator.said[k]
+end
+check(table.concat(rebuilt, " ") == long, "the parts in order are the sentence")
+
+print("falling quiet while someone talks")
+local before = #narrator.said
+chat(real, "hello there")
+ticks(9)                                  -- 18 seconds of a 20-second hush
+check(#narrator.said == before, "after a nearby player speaks, it says nothing for the hush")
+ticks(10)
+check(#narrator.said > before, "after the hush it reads on")
+local bot_before = #narrator.said
+chat(bot, "beep")
+ticks(5)
+check(#narrator.said > bot_before, "a bot speaking does not quiet it")
+
+print("logging out")
+logout(narrator)
+check(Narrators.state[40] == nil, "a narrator that logs out is forgotten")
+check(not pcall(Library.getNextSentence, 40), "and its reader in the library is gone")
+
+print("no library")
+dofile(SRC .. "lib/narrator-library.lua")
+Library.DATA_DIR = T .. "nowhere/"
+local printed = {}
+local real_print = print
+print = function(s) table.insert(printed, s) end
+dofile(SRC .. "narrators.lua")
+new_player("Reader2", 60, true, 10, 0)
+ticks(5)
+print = real_print
+check(#printed == 1 and printed[1]:find("E059", 1, true) ~= nil, "a missing library is said once, naming the install step (" .. #printed .. " lines)")
+
+print(string.format("%d checks, %d failed", checks, fails))
+os.exit(fails == 0 and 0 or 1)
