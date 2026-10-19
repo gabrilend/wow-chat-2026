@@ -1,6 +1,6 @@
 # Conversation Summary: 1ca38611-9673-4322-8dc2-8d10922c6746
 
-Generated on: 2026-10-18 18:15:19
+Generated on: 2026-10-18 21:12:47
 Models: claude-opus-5-5
 
 ## Contents
@@ -36,6 +36,10 @@ Models: claude-opus-5-5
    basic compiled there, but nothing has yet shown its server actually starts.
    Next, run ./scripts/validate --profile basic from /mnt/kaun/wow-chat-2026 to
    confirm it.
+9. 2026-10-18 19:02, after Request 41 - The project now lives in /mnt/kaun, and
+   basic builds, starts and promotes there, with the startup warnings fixed.
+   Next, when you're ready: delete the old archive on /mnt/mtwo to free 36 GB,
+   after I save copies of its git history.
 
 --------------------------------------------------------------------------------
 
@@ -2614,6 +2618,90 @@ your rules count warnings as errors.
 The fix is to remove the 35 old-name records, but only where a `z_` record for
 the same file exists. That makes it a pure tidy-up: nothing is applied again and
 nothing is lost. Should I do it?
+
+--------------------------------------------------------------------------------
+
+### User Request 41
+
+anything you'd like! Just be sure to write a patch for it if you want it to be
+permanently convenient.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 41
+
+> I'll make it permanent inside the install steps. The rows come from the 13
+> October `z_` renaming, which the install step that mirrors update files into
+> their `.updater` folders does (issue 183). So that step should also remove the
+> old-name records it leaves behind. Reading it:
+
+> All 35 are removed, and a second run finds nothing to do. Checking whether
+> other profiles' databases have the same leftovers, which their next install
+> will now tidy:
+
+> Only basic had them, and it's clean now. Next, a test for the new step, as
+> your rules ask for every fix. It uses a scratch `updates` table in the
+> project's `_smoke_test` database:
+
+> All 3 checks pass, and the scratch table is gone. Adding the test to the quick
+> tests, and noting the change in issue 183, the issue that built the renaming:
+
+*[commit] fe1ddfd79 - The install tidies update records left under their names from before the mirror*
+
+The 35 warnings are fixed for good. I made the fix part of the install, as you
+suggested, rather than a one-off.
+
+- **Why they appeared:** since issue 183, our update files are applied under a
+  `z_` name so they run after upstream's, but the database also still remembered
+  each one under its old name. So every start warned that a file it had applied
+  was missing.
+- **The permanent fix:** the install step that mirrors those files now also
+  removes, in each folder's database, the old-name record of each of that
+  folder's files, but only where the `z_` record exists. Each file stays
+  recorded as applied, so nothing runs again, and upstream's own records are
+  never touched.
+- **Applied now:** I ran it once on basic, removing 30 records in the world
+  database and 5 in the characters database. A second run finds nothing to
+  remove. Only basic had these leftovers. The 35 records are saved in
+  `/dev/shm/move-to-kaun/old-update-names-backup.sql` (in RAM, so until a
+  reboot).
+- **Tested:** a new quick test, `test-forget-unprefixed-updates`, checks the
+  step on a scratch table. The leftover goes, while a file not yet applied under
+  its new name, another folder's records, and upstream's records all stay. A
+  second run does nothing.
+- **Recorded:** issue 183 now notes the change, and that its design has now been
+  through a real install and boot.
+
+The next start of basic should print no warnings at all. Everything is
+committed.
+
+--------------------------------------------------------------------------------
+
+*[background task] Background command "K=/mnt/kaun/wow-chat-2026;
+LOG=$K/tmp/shared-memory/compile-basic.log; before=$(cat
+/dev/shm/move-to-kaun/basic-manifest-before.txt); end=$((SECONDS+18000)); while
+[ ! -s $LOG ] &amp;&amp; [ $SECONDS -lt $end ]; do sleep 30; done; [ -s $LOG ]
+|| { echo "NO LOG: nothing appeared at $LOG in 5 hours"; exit 2; }; echo "log
+appeared $(date +%T)"; idle=0; while [ $SECONDS -lt $end ]; do if pgrep -f
+"scripts/(compile|validate|promote)( |$)" &gt; /dev/null; then idle=0; else
+idle=$((idle+1)); fi; [ $idle -ge 2 ] &amp;&amp; break; sleep 30; done;
+after=$(readlink $K/build-manifests/basic-latest.txt); echo "ended $(date +%T)";
+if [ "$after" != "$before" ]; then echo "VERDICT: SUCCEEDED and promoted
+(manifest $before -&gt; $after)"; elif grep -q "COMPILE FAILED" $LOG; then echo
+"VERDICT: COMPILE FAILED"; elif grep -q "COMPILE SUCCEEDED" $LOG; then echo
+"VERDICT: compiled, but validation or promotion did not finish"; else echo
+"VERDICT: ended with no verdict line"; fi; echo "--- last 25 lines of $LOG:";
+tail -25 $LOG" failed with exit code 2 (failed)*
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 41 (continued)
+
+That notice is from my first, superseded watcher, the one I couldn't stop
+earlier. It gave up after five hours because the log it waited for was never
+created; you compiled without `tee`, and the compile didn't write one then. Its
+replacement already reported the build, and `scripts/watch-compile` handles
+future compiles, so there's nothing to act on.
 
 --------------------------------------------------------------------------------
 

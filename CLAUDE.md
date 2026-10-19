@@ -137,14 +137,15 @@ reading from them in parallel is easier. How it works, and what it means here:
      one world database (`du -sh mysql/databases/acore_world_*`). **Decided
      2026-10-18 (owner: one realm at a time on this computer):** 1G, which
      holds one profile's world, characters and accounts. Several realms at
-     once (issue 136b) would want more. Takes effect at the next MySQL
-     start.
+     once (issue 136b) would want more. In effect since MySQL's restart on
+     2026-10-19 (`SELECT @@innodb_buffer_pool_size` gives 1152 MB: MySQL
+     rounds the setting up to whole allocation chunks).
   2. The binary log was on (MySQL's default) and nothing replicates from
      it here: every change was written a second time. **Decided
      2026-10-18 (owner: "sounds good"):** `disable_log_bin` is in
-     `my.cnf`. It takes effect at the next MySQL start; the old
-     `binlog.*` files and `binlog.index` can then be deleted while MySQL is
-     stopped.
+     `my.cnf`. In effect since the 2026-10-19 restart (`SELECT @@log_bin`
+     gives 0); the old `binlog.*` files and `binlog.index` (453 MB) were
+     deleted while MySQL was stopped.
   3. A second disk, for the case where several realms start at the same
      time: a second MySQL server on its own `datadir`, or the redo log on
      its own disk.
