@@ -18,7 +18,7 @@
 - Playerbots RPG defers to Lua for idle movement
 - Player commands disabled except: party join, gesture-based directions
 - Bots disperse naturally, moving toward players if none within 200 yards
-- Variety in chatter (eventual ollama integration)
+- Variety in chatter (eventual llama.cpp integration, through 916's model runner)
 
 ## Investigation Findings
 

@@ -1,6 +1,7 @@
 # 912 - Automated Lore Generation
 
-Design a story/lore generation system using Ollama that produces usable content
+Design a story/lore generation system using llama.cpp (through 916d's model
+runner, in whichever of its three places fits) that produces usable content
 without requiring human curation passes.
 
 ## Current Behavior
@@ -46,7 +47,7 @@ A generation pipeline that:
 ### Content Safety
 
 - How do we prevent inappropriate content generation?
-- Ollama models vary in their safety training
+- Open models (as GGUF files for llama.cpp) vary in their safety training
   - Which models are appropriate?
   - Do we need content filtering?
 - Should generated content be scanned for:
@@ -101,15 +102,18 @@ A generation pipeline that:
   - If a shepherd tells their story, is it gone forever?
   - Or can it cycle back after enough time?
 
-### Ollama Integration
+### llama.cpp Integration
 
 - Which model works best for fantasy lore?
-  - llama3? mistral? mixtral?
+  - Llama 3? Mistral? Mixtral? (each as a GGUF file)
   - Smaller = faster, larger = better quality?
 - What's the performance impact of generation?
   - Generate async in background?
   - Pre-generate pools during low activity?
-- How do we handle Ollama being unavailable?
+- How do we handle no model place being available?
+  - Lore is generated ahead of time into a pool, not live, so this is the
+    place where running in-server (no network) or overnight on the LAN
+    boxes matters least and quality matters most
   - Fallback to static content?
   - Skip generation, use existing pool?
 
@@ -164,7 +168,7 @@ A generation pipeline that:
 [World Context] + [Shepherd Identity] + [Theme Requirements]
                            |
                            v
-                   [Ollama Generation]
+                  [llama.cpp Generation]
                            |
                            v
                  [Validation Checks]
@@ -219,7 +223,7 @@ Then reject anything below 7? Below 5? Unknown.
 
 ## Suggested Implementation Steps
 
-1. **Research Ollama models**
+1. **Research models (GGUF files for llama.cpp)**
    - Test different models for fantasy generation quality
    - Benchmark generation speed vs quality tradeoff
    - Document findings
@@ -231,7 +235,7 @@ Then reject anything below 7? Below 5? Unknown.
    - Output format specification
 
 3. **Implement basic generation**
-   - Ollama API integration
+   - Through 916d's model runner (no second client)
    - Single story generation
    - Raw output capture
 
@@ -270,8 +274,8 @@ Then reject anything below 7? Below 5? Unknown.
 
 ```lua
 -- Generation
-OLLAMA_MODEL            = "llama3"
-OLLAMA_ENDPOINT         = "http://localhost:11434"
+MODEL_PLACE             = "beside"   -- 916d: "in-server" | "beside" | "in-client"
+MODEL_WHERE             = "http://192.168.1.11:10101"  -- llama-server, or a .gguf path for in-server
 GENERATION_TIMEOUT      = 30000  -- ms
 MAX_RETRIES             = 3
 
@@ -299,5 +303,5 @@ GENERATION_BATCH_SIZE   = 5     -- stories per generation run
 - **Phase:** 3
 - **Priority:** High (blocks 311)
 - **Complexity:** Unknown (research required)
-- **Dependencies:** Ollama installation, model selection
+- **Dependencies:** 916c (llama.cpp built), 916d (the model runner), model selection
 

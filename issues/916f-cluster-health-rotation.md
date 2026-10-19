@@ -29,9 +29,18 @@ After this sub-issue lands:
 - Each worker tracks consecutive failure count and recent error rate
 - After N consecutive failures (default 3), the worker enters a
   "quarantined" state and stops accepting new requests
-- A background re-probe runs every M seconds (default 60) calling the
-  Ollama `/api/tags` endpoint with a short timeout; success demotes
-  the worker back to "healthy"
+- A background re-probe runs every M seconds (default 60) and returns
+  the worker to "healthy" on success. What a probe is depends on the
+  place (916d):
+  - **beside:** `GET /health` on that `llama-server` with a short
+    timeout. 200 = healthy; 503 = still loading its model (not healthy,
+    not a failure count either — log it once).
+  - **in-server:** a one-token generation on the worker's own context.
+    A context that failed to allocate, or a decode call that returned an
+    error, is the failure.
+  - **in-client:** none. A W client that stops answering has its worker
+    retired, not quarantined; it rejoins only by offering again
+    (custom-client issue 907).
 - The submit() API skips quarantined workers when dispatching
 - When all workers are quarantined, submit() returns nil + "no healthy
   workers" so the caller can fall back to default playerbots behavior
@@ -52,13 +61,13 @@ After this sub-issue lands:
    quarantined (via shared state or by emitting a health event). Stay
    alive but only accept re-probe requests.
 5. Background re-probe: a separate small effil thread (or piggy-back on
-   one of the worker threads) that wakes every 60s, sends a `/api/tags`
-   GET to each quarantined host, marks healthy on 200.
+   one of the worker threads) that wakes every 60s and probes each
+   quarantined place as above.
 6. Smoke test:
-   - Kill ollama on box2 mid-run, verify next request routes to box1 or
-     box3
+   - Stop `llama-server` on box2 mid-run, verify next request routes to
+     box1 or box3
    - Confirm "quarantined" log line appears
-   - Restart ollama on box2, wait 60-120s, verify it rejoins
+   - Restart `llama-server` on box2, wait 60-120s, verify it rejoins
    - Confirm "healthy" log line appears
 7. Pathological test: kill all three boxes, verify submit() returns nil
    + error, verify caller falls back gracefully
@@ -94,10 +103,11 @@ M.health_log_state_changes   = true    -- log healthy↔quarantined transitions
   worker inboxes. Decide during implementation.
 - Should the failure threshold be consecutive failures or a sliding-
   window error rate? Consecutive is simpler and adequate for the
-  failure modes we expect (network partition, ollama daemon crash).
+  failure modes we expect (network partition, `llama-server` crash).
 - What counts as a "failure"? Timeout, non-200 HTTP, JSON parse error,
-  ollama-reported model error. Probably all of them — the worker
-  doesn't get a useful response either way.
+  an `error` object in `llama-server`'s reply, a llama.cpp decode error
+  in-server. Probably all of them — the worker doesn't get a useful
+  response either way.
 
 ## Related
 

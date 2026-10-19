@@ -1,0 +1,165 @@
+#!/usr/bin/env luajit
+-- check-llama-grammar - ask the real llama.cpp library whether it can read
+-- the bots' grammars: the guidance one (issue 916h, step 6), the chat
+-- line (issue 916l) and the command list (issue 917c). It checks that each
+-- is read, not how replies come out.
+--
+-- For a general audience: the bots' tactical planner hands the language
+-- model a "grammar", a set of rules for what its reply may look like, so it
+-- cannot write a broken or invented answer. A grammar with a mistake in it
+-- is refused by the library, and every planning request would then fail.
+-- This check loads llama.cpp, gives it the planner's grammar (filled with
+-- sample bot and strategy names) and two grammars broken on purpose, and
+-- reports whether each was accepted as expected. The broken ones prove the
+-- check can say no. It loads only a model's word list, not its weights, so
+-- it runs in a moment.
+--
+-- It is also the first working piece of issue 916d's "in-server" plan:
+-- LuaJIT calling llama.cpp directly through ffi, with no C++ written.
+--
+-- Usage: scripts/check-llama-grammar [PROJECT_DIR] [LLAMA_DIR] [MODEL]
+--   LLAMA_DIR  a llama.cpp install (lib/ and include/). Default: the copy
+--              built by neocities-modernization, until issue 916c builds
+--              this project's own into PROJECT_DIR/libs/llama.cpp
+--   MODEL      any .gguf; only its word list is read
+-- Exit status 0 if every case behaves as expected.
+
+-- {{{ settings
+local DIR       = arg[1] or "/mnt/kaun/wow-chat-2026"
+local LLAMA_DIR = arg[2] or "/home/ritz/programming/ai-stuff/neocities-modernization/libs/llama.cpp"
+local MODEL     = arg[3] or "/home/ritz/programming/ai-stuff/neocities-modernization/assets/models/nomic-embed-text-v1.5.Q8_0.gguf"
+-- }}}
+
+local ffi = require("ffi")
+
+-- Copied from LLAMA_DIR/include/llama.h (llama.cpp commit 9881906). Enums
+-- are int-sized, so they are written as int32_t. The struct's field order
+-- must match the header exactly: one field out of place and every field
+-- after it is read from the wrong bytes, with no error to say so. When the
+-- pinned llama.cpp moves, re-copy these from the new header.
+ffi.cdef[[
+typedef struct llama_model   llama_model;
+typedef struct llama_vocab   llama_vocab;
+typedef struct llama_sampler llama_sampler;
+typedef bool (*llama_progress_callback)(float progress, void * user_data);
+struct llama_model_params {
+    void *        devices;
+    const void *  tensor_buft_overrides;
+    int32_t       n_gpu_layers;
+    int32_t       split_mode;
+    int32_t       load_mode;
+    int32_t       lazy_mode;
+    int32_t       main_gpu;
+    const float * tensor_split;
+    llama_progress_callback progress_callback;
+    void *        progress_callback_user_data;
+    const void *  kv_overrides;
+    bool vocab_only;
+    bool check_tensors;
+    bool use_extra_bufts;
+    bool no_host;
+    bool no_alloc;
+    bool load_mtp;
+};
+void                      llama_backend_init(void);
+void                      llama_backend_free(void);
+struct llama_model_params llama_model_default_params(void);
+llama_model *             llama_model_load_from_file(const char * path, struct llama_model_params params);
+void                      llama_model_free(llama_model * model);
+const llama_vocab *       llama_model_get_vocab(const llama_model * model);
+llama_sampler *           llama_sampler_init_grammar(const llama_vocab * vocab, const char * grammar_str, const char * grammar_root);
+void                      llama_sampler_free(llama_sampler * smpl);
+]]
+
+-- {{{ the grammars
+-- each name becomes a quoted JSON string literal: "\"Tankzilla\""
+local function quoted_alternatives(names)
+    local parts = {}
+    for i, name in ipairs(names) do parts[i] = '"\\"' .. name .. '\\""' end
+    return table.concat(parts, " | ")
+end
+
+-- 916h step 6's fixed part, with sample lists where the real builder
+-- substitutes the registry's and this party's names. Rule names use dashes,
+-- never underscores: GBNF refuses an underscore in a rule name (the third
+-- case below). Underscores inside quoted literals, like "party_intent", are
+-- only text and are fine.
+local GUIDANCE = [[
+root       ::= "{" ws "\"party_intent\":" ws sentence "," ws "\"directives\":" ws "[" ws ( directive ( "," ws directive )* )? "]" ws "}"
+directive  ::= "{" ws "\"bot\":" ws bot "," ws "\"strategies_add\":" ws strategies "," ws "\"strategies_remove\":" ws strategies "," ws "\"multiplier_overrides\":" ws overrides "," ws "\"focus\":" ws ( target | "null" ) "," ws "\"stance\":" ws stance ws "}" ws
+strategies ::= "[" ws ( strategy ( "," ws strategy )* )? "]" ws
+overrides  ::= "{" ws ( override ( "," ws override )* )? "}" ws
+override   ::= action ":" ws multiplier ws
+multiplier ::= [01] "." [0-9] | "2.0"
+sentence   ::= "\"" [^"\\\n]{1,120} "\""
+stance     ::= "\"front_line\"" | "\"back_line\"" | "\"flanking\"" | "\"follow_tank\""
+strategy   ::= ]] .. quoted_alternatives({ "tank", "heal", "dps", "dps aoe", "cc" }) .. "\n" .. [[
+action     ::= ]] .. quoted_alternatives({ "melee", "heal party member", "taunt" }) .. "\n" .. [[
+bot        ::= ]] .. quoted_alternatives({ "Tankzilla", "Lumen", "Brisk" }) .. "\n" .. [[
+target     ::= ]] .. quoted_alternatives({ "Tankzilla", "Lumen", "Brisk", "Gnoll Brute" }) .. "\n" .. [[
+ws         ::= [ \t\n]{0,4}
+]]
+
+-- 916l's one-line chat reply: a capital, up to 180 characters with no line
+-- break, double quote, sentence end or bracket, then one sentence end
+local CHAT = 'root ::= [A-Z] [^\\n".!?\\[\\]()<>]{0,180} [.!?]\n'
+
+-- 917c's command reply: up to six lines of party or whisper commands, from
+-- a curated list, to this player's own bots. Unlike the guidance grammar,
+-- these names are bare text, not quoted JSON strings
+local function bare_alternatives(names)
+    local parts = {}
+    for i, name in ipairs(names) do parts[i] = '"' .. name .. '"' end
+    return table.concat(parts, " | ")
+end
+local COMMANDS = 'root    ::= line ( "\\n" line ){0,5}\n' ..
+                 'line    ::= "/p " command | "/w " bot " " command\n' ..
+                 'command ::= ' .. bare_alternatives({ "maintenance", "follow", "stay", "attack", "co +dps aoe" }) .. '\n' ..
+                 'bot     ::= ' .. bare_alternatives({ "Tankzilla", "Lumen", "Brisk" }) .. '\n'
+
+local CASES = {
+    -- name                          grammar                                 should parse
+    { "guidance (916h step 6)",      GUIDANCE,                               true  },
+    { "chat line (916l)",            CHAT,                                   true  },
+    { "bot commands (917c)",         COMMANDS,                               true  },
+    { "undefined rule",              'root ::= "{" missing-rule "}"\n',      false },
+    { "underscore in a rule name",   'root ::= a_b\na_b ::= "x"\n',          false },
+}
+-- }}}
+
+-- {{{ run
+local lib = ffi.load(LLAMA_DIR .. "/lib/libllama.so")
+lib.llama_backend_init()
+
+local params      = lib.llama_model_default_params()
+params.vocab_only = true                      -- the word list only: no weights read
+local model       = lib.llama_model_load_from_file(MODEL, params)
+if model == nil then
+    io.stderr:write("check-llama-grammar: the library loaded from " .. LLAMA_DIR ..
+        "/lib, but it could not read the model's word list from " .. MODEL ..
+        " (does the file exist and is it a .gguf?). No grammar was checked.\n")
+    os.exit(1)
+end
+local vocab = lib.llama_model_get_vocab(model)
+
+local lines, failures = {}, 0
+for _, case in ipairs(CASES) do
+    local name, text, want = case[1], case[2], case[3]
+    local sampler = lib.llama_sampler_init_grammar(vocab, text, "root")
+    local got     = sampler ~= nil
+    if got then lib.llama_sampler_free(sampler) end
+    if got ~= want then failures = failures + 1 end
+    lines[#lines + 1] = string.format("  %-28s parsed=%-5s expected=%-5s %s",
+        name, tostring(got), tostring(want), got == want and "ok" or "FAIL")
+end
+
+lib.llama_model_free(model)
+lib.llama_backend_free()
+
+-- the library prints its own loading and parse messages to stderr above;
+-- the verdict is printed last so it is the thing on screen when it ends
+print("check-llama-grammar (" .. DIR .. ")")
+print(table.concat(lines, "\n"))
+print(string.format("%d of %d cases as expected", #CASES - failures, #CASES))
+os.exit(failures == 0 and 0 or 1)
+-- }}}

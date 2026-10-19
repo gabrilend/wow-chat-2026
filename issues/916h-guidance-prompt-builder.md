@@ -64,7 +64,7 @@ local prompt = builder.build({
     enemy_summary = "3 Defias Pillagers, level 18-20, ranged-and-melee mix",
     party_recent_events = { "took 30% damage in 5 seconds", "interrupted a spell cast" },
 })
--- returns a string ready to send to Ollama
+-- returns the prompt string and its grammar, ready for the model runner (916d)
 ```
 
 ## Directive Vocabulary
@@ -137,19 +137,80 @@ The user prompt is the party state, formatted as a compact text block.
    substitute it into the system prompt for the LLM to see.
 4. Write a smoke test that builds a prompt for a 3-bot party and dumps
    to stdout for human inspection. Iterate on the wording.
-5. Send the smoke-test prompt to one of the boxes manually and inspect
-   the LLM's output for vocabulary fit and JSON validity. Iterate on
-   prompt phrasing until small models (llama3.2:1b) produce valid JSON
-   reliably (target: >95% of attempts).
+5. Send the smoke-test prompt to one of the places manually and inspect
+   the LLM's output for vocabulary fit. Iterate on prompt phrasing until
+   small models (a 1B model) name real strategies reliably (target: >95%
+   of attempts). JSON validity is not the target any more: the grammar
+   guarantees it.
+6. Write the guidance **grammar** beside the prompt: a GBNF text (the
+   rule notation llama.cpp reads: `name ::= ...`, quoted literals, `|`
+   for "or", `*` for "any number of") describing exactly the Directive
+   Vocabulary above. It is built **per request**, because some of its
+   lists belong to this party:
+
+   | Rule | Alternatives | Source | Built |
+   |------|--------------|--------|-------|
+   | `strategy` | every strategy name | mod-playerbots' registry (step 2) | once at load |
+   | `action` | every action name | the action registry | once at load |
+   | `stance` | the four stances | this issue | fixed |
+   | `bot` | this party's bot names | the party-state struct | per request |
+   | `target` | party members and enemies in sight | the party-state struct | per request |
+
+   The fixed part, as a draft (`<...>` marks where a list is
+   substituted, each name written as a quoted JSON string):
+
+   ```
+   root       ::= "{" ws "\"party_intent\":" ws sentence "," ws
+                  "\"directives\":" ws "[" ws ( directive ( "," ws directive )* )? "]" ws "}"
+   directive  ::= "{" ws "\"bot\":" ws bot "," ws
+                  "\"strategies_add\":" ws strategies "," ws
+                  "\"strategies_remove\":" ws strategies "," ws
+                  "\"multiplier_overrides\":" ws overrides "," ws
+                  "\"focus\":" ws ( target | "null" ) "," ws
+                  "\"stance\":" ws stance ws "}" ws
+   strategies ::= "[" ws ( strategy ( "," ws strategy )* )? "]" ws
+   overrides  ::= "{" ws ( override ( "," ws override )* )? "}" ws
+   override   ::= action ":" ws multiplier ws
+   multiplier ::= [01] "." [0-9] | "2.0"
+   sentence   ::= "\"" [^"\\\n]{1,120} "\""
+   stance     ::= "\"front_line\"" | "\"back_line\"" | "\"flanking\"" | "\"follow_tank\""
+   strategy   ::= <strategy names>
+   action     ::= <action names>
+   bot        ::= <this party's bot names>
+   target     ::= <party members and enemies in sight>
+   ws         ::= [ \t\n]{0,4}
+   ```
+
+   With this the model cannot spell a strategy, bot or stance that does
+   not exist, nor a multiplier outside 0.0–2.0 (916i lists what that
+   leaves for its own checks). `ws` is capped at four characters so a
+   small model cannot spend its token budget on blank space. The builder
+   returns `prompt, grammar` together.
+
+   **Checked 2026-10-17:** `scripts/check-llama-grammar` gives this draft
+   (with sample names) to the real llama.cpp library, which accepts its
+   syntax, bounded repeats (`{1,120}`, `{0,4}`) included. That replies
+   under it come out as intended is checked only once a text-writing
+   model generates with it (916i's hundred-reply test). The same check found
+   one rule the builder must keep: **GBNF rule names may hold letters,
+   digits and dashes, never underscores** (`a_b ::= ...` is refused).
+   Underscores inside quoted text (`"\"party_intent\""`) are fine. So if
+   the builder ever makes a rule per strategy or per bot, it names them
+   with dashes. Run the check again whenever the grammar's fixed part
+   changes; when the builder exists, the check should take the builder's
+   real output instead of its own copy.
 
 ## Notes on Small-Model Behavior
 
-llama3.2:1b and qwen2.5:1.5b are not naturally reliable at structured
+Llama 3.2 1B and Qwen 2.5 1.5B are not naturally reliable at structured
 output. Mitigations stacked together:
 
-- Use Ollama's `format: "json"` option in the request (916d's call site)
-  to force JSON output via grammar constraints. This is the single
-  biggest reliability improvement.
+- Pass the grammar from step 6 with the request (916d's call site).
+  llama.cpp then only lets the model pick tokens the grammar allows, in
+  every placement (in-server, beside, in-client), so the reply always
+  parses. This is the single biggest reliability improvement; it
+  replaces Ollama's `format: "json"`, which only promised "some JSON",
+  not this schema.
 - Keep the schema small and use short field names (no nested objects
   more than two levels deep)
 - Provide one or two few-shot examples in the system prompt showing a

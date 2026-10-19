@@ -25,9 +25,10 @@ combat. A profile with nothing hostile in it uses approximately none of that.
 
 **There is a chat layer, and it is not this.** The 916 family
 (`mod-soren-chat`) gives bots LLM-driven speech in two dimensions — a social
-chat layer and a gameplay guidance layer — running on an Ollama cluster of
-three LAN machines through effil worker threads so the worldserver tick never
-blocks. Its chat layer speaks about race, class, spec and surroundings. It does
+chat layer and a gameplay guidance layer — running on llama.cpp (in the
+worldserver, on the LAN machines, or in the W client) through effil worker
+threads so the worldserver tick never blocks. Its chat layer speaks about
+race, class, spec and surroundings. It does
 not know what a plant is.
 
 ## Intended Behavior

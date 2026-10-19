@@ -334,7 +334,7 @@ Dungeons have meaningful room structures. Language barriers create social puzzle
 - Embedding-based creature selection for thematic consistency
 - Language barriers require learned languages for communication
 - Shepherds wander with critter flocks (immortality lore)
-- Automated lore generation via Ollama integration
+- Automated lore generation via llama.cpp (916's model runner)
 
 ---
 

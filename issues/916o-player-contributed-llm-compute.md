@@ -39,11 +39,16 @@ personality system."
 ## Current Behavior
 
 Nothing of this exists. Inference for bot chat and bot guidance is designed
-(916) to run on three mini-computers on the LAN, reached from the
-worldserver through a pool of worker threads (916e) that takes a dead box
-out of rotation and re-probes it (916f). Every worker is a fixed, trusted
-host named in configuration. Personas (916k) are generated on the server
-and stored per bot; no player has any say in them.
+(916) to run with llama.cpp in fixed, trusted places named in
+configuration — the three mini-computers on the LAN running `llama-server`,
+or the worldserver itself loading the library (916d) — reached through a
+pool of worker threads (916e) that takes a dead place out of rotation and
+re-probes it (916f). Since 2026-10-17 the plans also name players'
+machines as places: this issue's companion program, and the W custom
+client running the model itself (916d's "in-client", custom-client issue
+907); the pool splits chat and guidance requests into separate inboxes so
+only chat ever reaches them (916e). Personas (916k) are generated on the
+server and stored per bot; no player has any say in them.
 
 ## Intended Behavior
 
@@ -57,6 +62,13 @@ access, no threads and no file writes outside saved variables, so an addon
 cannot run a model. The inference therefore lives in a separate program
 (llama.cpp's server, or similar) shipped in the same download as the client
 and launched by the same launcher. The in-game part is only the display.
+
+That reasoning is about the stock client. The W custom client is ours, so
+it can load llama.cpp itself and needs no companion program (916d's
+"in-client", custom-client issue 907); the gizmo there is part of the
+client rather than an addon. Both routes are kept, because players on the
+stock client can only contribute through the companion program. The same
+trust rules below apply to both.
 
 **Data path, end to end:**
 

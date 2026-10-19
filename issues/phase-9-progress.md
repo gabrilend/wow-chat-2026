@@ -42,7 +42,7 @@ systems → cross-cutting infrastructure.
 | 910 | wandering-narrator-system | Open | Core storytelling NPCs. Depends on 909, Phase 5 traveler pattern. |
 | 908 | narrator-audience-facing | Open | Sit with seated audience. Social-mirroring extension of 504. |
 | 911 | shepherd-flock-system | Open | Immortality-lore NPCs (shepherds with critter flocks). |
-| 912 | automated-lore-generation | Open | LLM-generated stories. Depends on 915 Ollama integration. |
+| 912 | automated-lore-generation | Open | LLM-generated stories. Depends on 916's model runner (llama.cpp; 915's Ollama design was superseded). |
 | 914 | custom-chat-data-sources | Open | Where narrators draw their content. Blocks 910 enrichment. (was 330) |
 | 915 | ollama-conversation-flow | Open (Experimental) | LLM conversation flow for 912. (was 331) |
 
@@ -62,15 +62,19 @@ systems → cross-cutting infrastructure.
 |-------|-------|--------|-------|
 | 913 | clustered-worldserver | Open | Horizontal scaling. Spans phases. |
 
-### LLM companions (the three-box Ollama cluster)
+### LLM companions (llama.cpp: the three-box cluster, the worldserver, the W client)
 All three share one cluster of three mini-PCs on the LAN, and all
 three want it at once. 916 bursts on events, 917 bursts on player
 requests, 918 saturates it permanently. That contention is the open
 design question across the whole group, not a detail inside any one.
+Since 2026-10-17 the model runs in llama.cpp, which can also run inside
+the worldserver or inside a player's W client (916d), so the three boxes
+are no longer the only places; whether that relieves the contention or
+just moves it is part of the same question.
 
 | Issue | Title | Status | Notes |
 |-------|-------|--------|-------|
-| 916 | mod-soren-chat | Open | Parent. LLM-driven bot chat + gameplay guidance. Supersedes 914/915. Fourteen sub-issues, 916a–916n. |
+| 916 | mod-soren-chat | Open | Parent. LLM-driven bot chat + gameplay guidance. Supersedes 914/915. Fifteen sub-issues, 916a–916o (916o: players lend their machines). The model runs in llama.cpp (916d). |
 | 917 | ask-the-bots-in-plain-text | Open | Player states intent in ordinary language; the layer writes the bot commands. Four sub-issues, 917a–917d. |
 | 918 | fg-sora-cluster-mirror-companions | Open | Three bots, one per box, all built to look and talk like the player, cross-feeding thoughts. "Two truths and a lie" is the acceptance test. |
 
@@ -92,7 +96,7 @@ design question across the whole group, not a detail inside any one.
 - [ ] Narrators stop and sit when players sit nearby
 - [ ] Rumors propagate through narrator network (telephone game)
 - [ ] Shepherds wander with critter flocks
-- [ ] Automated lore generation via Ollama
+- [ ] Automated lore generation via llama.cpp
 
 ### Social Systems
 - [ ] Language barriers require learned languages

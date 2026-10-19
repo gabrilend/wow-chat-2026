@@ -96,8 +96,9 @@ expensive versions of the same feature.
 - **The bot population governor** from issue 151, which already holds a bot
   fleet between a floor and a ceiling. "Rarely" is a number in that governor,
   not a new system.
-- **The Ollama cluster and effil worker pool** from the 916 family, which
-  already run inference off the worldserver tick across three LAN machines.
+- **The model runner (llama.cpp) and effil worker pool** from the 916 family, which
+  already run inference off the worldserver tick — in the worldserver, on the
+  LAN machines, or in the W client.
   153g is a new kind of request into an existing pipe.
 
 ## Related Issues

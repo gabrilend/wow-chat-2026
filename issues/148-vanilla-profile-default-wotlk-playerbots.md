@@ -62,8 +62,8 @@ package with a more traditional WotLK feel.
   ticket. The sixth, `mod-soren-chat`, was added 2026-06-03 per
   issue 916 to provide LLM-driven gameplay guidance (party-level
   strategy assignment) and bot chat (race/class/spec-shaped
-  dialogue). It uses the three Ollama mini-PCs on the LAN as its
-  inference backend and runs entirely in-process via effil-jit
+  dialogue). It runs its model with llama.cpp (the three LAN mini-PCs, the
+  worldserver itself, or the W client; 916d) and waits on it via effil-jit
   worker threads, never blocking the worldserver tick.
 - **Patches:** the minimum set needed to compile the fork (e.g.
   compile-fix patches like B009/B010 if still necessary). No project
@@ -254,7 +254,7 @@ issue 916.
   decoration, included because it's cheap and pleasant.
 - **mod-soren-chat** — LLM-driven bot intelligence layer with two
   responsibilities: (1) gameplay guidance — when a party comes within
-  100 yards of a player, an Ollama-cluster consultation sets per-bot
+  100 yards of a player, a model consultation (llama.cpp) sets per-bot
   policy flags (which strategies to activate, what target priorities
   to apply, what positional stance to take) which mod-playerbots then
   executes via its existing strategy/trigger/action engine; (2) chat
@@ -264,8 +264,9 @@ issue 916.
   content (no ambush, no custom classes, no scripted talents), it
   makes the existing companion AI smarter. Smart companions is what
   vanilla is already about; this just turns the dial up. The
-  three-box Ollama cluster (192.168.1.11-13) is external
-  infrastructure; the module's worldserver-side code uses effil-jit
+  model runs in llama.cpp — on the three LAN mini-PCs (192.168.1.11-13,
+  external infrastructure), in the worldserver, or in the W client;
+  the module's worldserver-side code uses effil-jit
   worker threads so the main tick never blocks on inference. See
   issue 916 for the full design and 916a-n for the implementation
   sub-issues.
@@ -568,7 +569,7 @@ passed over, so future sessions don't re-propose them by reflex.
 - **916 — mod-soren-chat** (LLM-driven companion intelligence layer:
   gameplay guidance + chat). The sixth vanilla module. Lands as the
   bot intelligence layer on top of mod-playerbots' tactical engine,
-  using the three-box Ollama cluster on the LAN. Added 2026-06-03;
+  running its model with llama.cpp (916d). Added 2026-06-03;
   see also the implementation sub-issues 916a-n. mod-soren-chat may
   later land on release/beta as well but vanilla is the first
   consumer per the user's design direction.

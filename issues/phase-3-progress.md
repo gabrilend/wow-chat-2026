@@ -295,7 +295,7 @@ Phase 9 introduces embedding-based creature selection:
 - Creates thematically consistent encounters
 
 This connects to rmail through automated lore generation (312):
-- Ollama generates creature backstories
+- llama.cpp generates creature backstories
 - Backstories inform embedding vectors
 - The danger becomes narratively coherent
 

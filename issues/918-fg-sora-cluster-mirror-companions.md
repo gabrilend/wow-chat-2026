@@ -4,7 +4,7 @@
 - Created: 2026-08-07
 - Phase: 9 (Storytelling & Immersion — sibling of 916 and 917, shares
   their cluster and bindings)
-- Depends on: 916 family (Ollama client, effil worker pool, ALE
+- Depends on: 916 family (model runner, effil worker pool, ALE
   bindings for playerbots)
 - Priority: Low — this is a want, not a gap. Nothing waits on it.
 
@@ -20,14 +20,23 @@
 
 ## What It Is
 
-Three playerbots, one bound to each machine in the Ollama cluster.
-Each is built to look like the player's own character and speak in
-the player's own voice. They walk beside her. Not behind, not as
-pets — beside.
+Three playerbots, one bound to each machine in the cluster (each running
+llama.cpp's `llama-server`, a "beside" place in 916d's terms). Each is
+built to look like the player's own character and speak in the player's
+own voice. They walk beside her. Not behind, not as pets — beside.
 
 Each bot generates thoughts **continuously** rather than in response
 to events. There is no trigger. The bot is always thinking, and the
 box it owns is always working on the next thought.
+
+llama.cpp suits continuous thought in one concrete way: a context keeps
+its key/value cache (the model's memory of every token already read)
+between generations, so each next thought only pays for the new tokens —
+the other two bots' latest thoughts — not for re-reading the whole
+history. `llama-server` does this per slot with `cache_prompt`; the
+in-server and in-client placements do it by keeping the context alive.
+The in-client placement also opens a fourth seat: the player's own GPU
+could carry one of the mirrors (W custom client, its issue 907).
 
 The three are not independent. Each one's generated thought is fed
 into the other two's contexts, and each applies a slightly different
@@ -133,7 +142,7 @@ possible, and identical gear may or may not be wanted.
 
 ## Suggested Implementation Steps
 
-1. Land enough of the 916 foundation to have a working Ollama client
+1. Land enough of the 916 foundation to have a working model runner
    and worker pool (916a–916f). This rides on that infrastructure and
    should not build a second copy of it.
 2. Decide the resource question — whether 918 and 916 coexist, and if

@@ -25,10 +25,20 @@ dimensions:
   mod-playerbots' existing C++ engine executes from there. Tactical
   decisions stay where they're fast; strategic decisions get smart.
 
-Both layers run on the same Ollama cluster (three mini-computers on the LAN)
-through the same in-process Lua bridge inside the worldserver. Inference is
-done in effil-jit worker threads so the worldserver tick never blocks on
-network or model inference.
+Both layers run on the same model runner (916d): **llama.cpp**, a C library
+bundled with the project, running in one of three places — inside the
+worldserver itself ("in-server"), in a separate small program on another
+computer such as the three LAN mini-PCs ("beside"), or inside the W custom
+client on the player's own GPU ("in-client"). Requests go through the same
+in-process Lua bridge inside the worldserver whichever place answers them.
+Waiting on the model is done in effil-jit worker threads so the worldserver
+tick never blocks on network or model inference.
+
+llama.cpp replaced Ollama on 2026-10-17 (owner: "replace it with llama.cpp.
+It should be bundled using a library running either on the server, on a
+separate program running on the user's computer, or in the custom-client").
+Ollama was a daemon wrapped around the same kind of engine; using the library
+directly removes that daemon and lets the model live where it is most useful.
 
 This is on the vanilla profile. Per the vanilla design philosophy in issue
 148, the goal is "default WotLK + playerbots, no wow-chat design layer" —
@@ -44,8 +54,8 @@ Earlier drafts considered splitting chat and guidance into separate
 services (one being mod-llm-chatter, the other a custom guidance bridge).
 The split was abandoned because:
 
-- Both layers share the same Ollama cluster
-- Both layers share the same network routing logic across three hosts
+- Both layers share the same model runner and its places
+- Both layers share the same routing logic across those places
 - Both layers share the same JSON parsing, retry, and timeout machinery
 - Both layers share the same effil-jit worker pool
 - Operational surface (one service start, one log, one config) is half
@@ -72,17 +82,21 @@ Worldserver main thread (ALE Lua hooks):
          apply guidance directives via playerbots ChangeStrategy
          emit chat lines via bot->Say()
 
-Effil-jit worker threads (3 workers, one per Ollama box):
+Effil-jit worker threads (one per place-and-slot):
   loop forever:
     pop request from channel (blocking)
-    socket.http POST to assigned Ollama box (synchronous, in worker thread)
-    dkjson parse response
+    model runner (916d), synchronous, in worker thread:
+      in-server → llama.cpp calls through ffi on this worker's own context
+      beside    → HTTP POST /completion to that machine's llama-server
+      in-client → addon messages to that player's W client, wait for reply
     validate against expected schema
     push validated result onto response channel
 
-Three Ollama boxes on LAN (192.168.1.11-13):
-  Ollama daemon with OLLAMA_NUM_PARALLEL=3
-  llama3.2:1b or qwen2.5:1.5b loaded (model TBD via benchmark)
+The places (any mix, set in 01-config.lua):
+  in-server: libllama loaded once in the worldserver; one context per worker
+  beside:    llama-server on each LAN mini-PC (192.168.1.11-13), -np 3 slots
+  in-client: W clients that have offered their GPU (custom-client issue 907)
+  model: one GGUF file per place (TBD via benchmark)
   Independent of each other; module round-robins requests
 ```
 
@@ -128,7 +142,7 @@ modules/mod-soren-chat/
 │   └── (small, ~200 lines total)
 └── lua/                        ← ALE-loaded scripts (numbered for read order)
     ├── 01-config.lua           ← hosts, models, thresholds, cadences
-    ├── 02-ollama-client.lua    ← luasocket HTTP wrapper + dkjson parse
+    ├── 02-model-runner.lua     ← llama.cpp in one of three places (916d)
     ├── 03-effil-workers.lua    ← spin up worker pool on startup
     ├── 04-prompt-chat.lua      ← chat prompt builder (port mod-llm-chatter)
     ├── 05-prompt-guidance.lua  ← guidance prompt builder (our design)
@@ -147,7 +161,8 @@ prompt domains, then parsing/validation, then the in-game hooks.
 
 All from `/home/ritz/programming/ai-stuff/libs/lua/`:
 
-- **luasocket** — TCP + HTTP. `socket.http.request` is enough for Ollama.
+- **luasocket** — TCP + HTTP. `socket.http.request` is enough for
+  `llama-server`.
 - **dkjson** — pure-Lua JSON parser. Slower than lua-cjson but no C deps,
   always works with LuaJIT.
 - **effil-jit** — OS thread library with shared channels. Critical for
@@ -156,22 +171,49 @@ All from `/home/ritz/programming/ai-stuff/libs/lua/`:
 CMakeLists copies these into the runtime location during install. No
 package manager involvement.
 
-## Three-Box Cluster Configuration
+And one C library, not from that directory:
 
-Per design discussion, three mini-PCs running Ollama on:
+- **llama.cpp** — `libllama.so` (the model engine) and `llama-server`
+  (the same engine with an HTTP front). Cloned at a pinned tag and built
+  by a bash script into the install tree (916c), the way the sibling
+  project neocities-modernization already does it (its
+  `scripts/build-deps.sh`). The owner runs that build.
 
-- **box1**: 192.168.1.11:10101
-- **box2**: 192.168.1.12:20202
-- **box3**: 192.168.1.13:30303
+## Where the Model Runs
 
-Each runs Ollama with `OLLAMA_NUM_PARALLEL=3` (subject to benchmark
-tuning per the ratchet table in 148-adjacent notes). The Lua bridge
-maintains one effil worker per box; each worker owns its box's HTTP
-connection and round-robins requests via simple counter.
+Three places, any mix of them at once (916d has the detail):
 
-Health is tracked per-worker; a box that fails health checks is removed
-from rotation until it recovers. The cluster degrades gracefully — losing
-one box drops to 2/3 throughput, not 0.
+- **in-server.** The worldserver loads `libllama.so` through LuaJIT's
+  `ffi` and the model file once; each effil worker owns its own context
+  (its own key/value cache). No network. A library crash is a
+  worldserver crash.
+- **beside.** `llama-server` on another computer. Today that is the
+  three LAN mini-PCs:
+  - **box1**: 192.168.1.11:10101
+  - **box2**: 192.168.1.12:20202
+  - **box3**: 192.168.1.13:30303
+
+  Each starts `llama-server` with its model file and `-np 3` slots (one
+  model in memory, three conversations interleaved; subject to benchmark
+  tuning per the ratchet table in 148-adjacent notes). It could equally
+  be the owner's desktop. A player's own computer joins as 916o's
+  companion program instead, which dials out to a job broker because the
+  server cannot dial through a home router.
+- **in-client.** A player on the W custom client lends their GPU: the
+  server sends the prompt to their client as addon messages and gets the
+  text back the same way (custom-client issue 907). The answer is
+  checked like any other; the client never decides anything.
+
+Fixed places (in-server, the LAN boxes) are trusted and take any request.
+Places on players' machines (916o's companion program, in-client) are
+contributed and untrusted: **chat requests only**, never guidance, with
+every prompt scrubbed of names, account data and whisper text first
+(916o).
+
+The Lua bridge keeps one effil worker per place-and-slot; workers take
+requests round-robin. Health is tracked per worker; a place that stops
+answering is removed from rotation until it recovers. Losing one of three
+places drops to 2/3 throughput, not 0.
 
 ## Connection to mod-playerbots Strategy System
 
@@ -189,7 +231,7 @@ re-uses what mod-playerbots already has.
 
 ## Sub-Issues
 
-Twelve sub-issues, organized in implementation order. Each is small enough
+Fifteen sub-issues, organized in implementation order. Each is small enough
 to land in one or two sessions.
 
 ### Foundation (no LLM yet)
@@ -204,26 +246,29 @@ to land in one or two sessions.
   via ALE. Smoke test: write a one-line Lua script that toggles a bot's
   strategy from the console.
 
-- **916c — Lua library vendoring.** CMakeLists.txt rule that copies
+- **916c — Library vendoring.** CMakeLists.txt rule that copies
   luasocket, dkjson, and effil-jit from `/home/ritz/programming/ai-stuff/
-  libs/lua/` into the install location. No LuaRocks.
+  libs/lua/` into the install location, and the bash build of llama.cpp
+  at a pinned tag into the install tree. No LuaRocks.
 
 ### Plumbing (no game integration yet)
 
-- **916d — Ollama HTTP client.** `02-ollama-client.lua`: synchronous
-  POST to a single Ollama box, parse JSON response, return Lua table.
-  Tested standalone via `lua5.1 -l ollama-client -e 'print(ask("hello"))'`.
+- **916d — The model runner.** `02-model-runner.lua`: one synchronous
+  call, prompt in, text out, with llama.cpp in one of three places
+  (in-server through `ffi`, beside through `llama-server`'s HTTP,
+  in-client through addon messages). Tested standalone with `luajit`
+  against in-server and beside.
 
-- **916e — effil worker pool.** `03-effil-workers.lua`: spin up 3
-  workers on startup, each pinned to a Ollama host. Channel-based
-  dispatch. Workers handle their own HTTP retries. Smoke test: queue 10
-  requests, verify all complete and balance across workers.
+- **916e — effil worker pool.** `03-effil-workers.lua`: spin up one
+  worker per place-and-slot on startup. Channel-based dispatch. Workers
+  handle their own retries. Smoke test: queue 10 requests, verify all
+  complete and balance across workers.
 
 - **916f — Health tracking and rotation.** Extend the worker pool with
-  per-host health state. Failed HTTP calls increment a counter; over
-  threshold the host drops out of rotation, with periodic re-check. Smoke
-  test: kill ollama on box2, verify requests route around it; restart
-  box2, verify it rejoins.
+  per-place health state. Failed calls increment a counter; over
+  threshold the place drops out of rotation, with periodic re-check.
+  Smoke test: stop `llama-server` on box2, verify requests route around
+  it; restart it, verify it rejoins.
 
 ### Guidance layer (the gameplay-relevant half)
 
@@ -263,7 +308,8 @@ to land in one or two sessions.
   awareness, response triggers). Each bot gets a permanent persona seed
   stored in a new `soren_chat_persona` table (acore_characters_vanilla).
   Triggers: nearby player chat, level-up, zone-entry, periodic ambient.
-  Output schema: simple, just `{text: string}`.
+  Output: one sentence of plain text, shaped by 916l's chat grammar
+  (was `{text: string}` before llama.cpp grammars).
 
 - **916l — Chat emission and rate limiting.** `09-chat-emit.lua`: bot
   speaks via the appropriate channel (`/say` for nearby, `/whisper` for
@@ -274,21 +320,33 @@ to land in one or two sessions.
 ### Operations
 
 - **916m — Bash health check in scripts/worldserver.** Pre-flight check
-  in the existing worldserver startup script that curls all three
-  Ollama boxes' `/api/tags` endpoint. Warns (doesn't block) on failures.
+  in the existing worldserver startup script that curls each "beside"
+  place's `llama-server` `/health` endpoint and checks the in-server
+  model file and library exist. Warns (doesn't block) on failures.
   Config sourced from the same env or file the Lua side reads.
 
 - **916n — Debug commands and observability.** `99-debug.lua`: adds
   `.soren status`, `.soren queue`, `.soren reload`, `.soren benchmark`
   console commands for the GM operator. Periodic stats logged
-  (requests/sec per host, p50/p99 latency, error rate, current queue
-  depth). Operator can see at a glance if the cluster is healthy.
+  (requests/sec per place, p50/p99 latency, tokens/s, error rate,
+  grammar bugs, queue depth per inbox). Operator can see at a glance if
+  the places are healthy.
 
-That's fourteen sub-issues total. The first six (916a-f) are foundation
+### Contributed compute (added 2026-10-04)
+
+- **916o — Player-contributed LLM compute.** Players who opt in lend
+  their machines to the chat layer: a companion program wrapping
+  `llama-server` that dials out to a job broker (any client), or the W
+  custom client running llama.cpp itself (916d's in-client). Chat
+  requests only, prompts scrubbed, untrusted answers checked like any
+  other; an in-game gizmo shows the player what their machine is doing;
+  player-written "nature prompts" shape how characters are performed.
+
+That's fifteen sub-issues total. The first six (916a-f) are foundation
 work that produces nothing user-visible. The middle four (916g-j) are
 the guidance layer — first user-visible value, bots adapt their
 strategies to situations. The next two (916k-l) are the social layer.
-The last two (916m-n) are operations.
+Then two of operations (916m-n), and contributed compute (916o).
 
 ## Implementation Order
 
@@ -303,8 +361,9 @@ sequence is:
 6. 916h (guidance prompt) + 916i (response/apply) — together; depends on 916b, 916e, 916g
 7. 916j (SorenDirected strategy) — depends on a working mod-playerbots build with the B-patch system; can land any time after 916a
 8. 916k + 916l (chat layer) — depends on 916e; lower priority than guidance
-9. 916m (bash health check) — depends on cluster being real; can land any time
+9. 916m (bash health check) — depends on a "beside" place being real; can land any time
 10. 916n (debug commands) — depends on most of the rest existing to be debuggable
+11. 916o (contributed compute) — depends on 916e's two inboxes, 916f and the chat layer; the W client's half also waits on its own networking and chat (custom-client 907)
 
 Realistic ordering for a single-developer session timeline: aim to land
 916a-f in one sprint (foundation week), then 916g-i + 916j in a second
@@ -322,17 +381,22 @@ SorenChat.Enable = 1
 SorenChat.GuidanceEnabled = 1
 SorenChat.ChatEnabled = 1
 SorenChat.LuaConfigPath = "lua_scripts/custom/01-config.lua"
-SorenChat.OllamaHealthCheckOnStart = 1
+SorenChat.ModelHealthCheckOnStart = 1
 ```
 
 `lua/01-config.lua`:
 
 ```lua
-M.ollama_hosts = {
-    { name = "box1", url = "http://192.168.1.11:10101", model = "llama3.2:1b" },
-    { name = "box2", url = "http://192.168.1.12:20202", model = "llama3.2:1b" },
-    { name = "box3", url = "http://192.168.1.13:30303", model = "llama3.2:1b" },
+-- each place: placement (string: "in-server" | "beside" | "in-client"),
+-- name (string), where (string: URL, or the model file for in-server),
+-- slots (integer: workers this place gets)
+M.model_places = {
+    { placement = "beside",    name = "box1", where = "http://192.168.1.11:10101", slots = 3 },
+    { placement = "beside",    name = "box2", where = "http://192.168.1.12:20202", slots = 3 },
+    { placement = "beside",    name = "box3", where = "http://192.168.1.13:30303", slots = 3 },
+    -- { placement = "in-server", name = "local", where = "models/<file>.gguf", slots = 2 },
 }
+M.in_client_enabled         = false   -- ask W clients that offered their GPU (custom-client 907)
 M.request_timeout_ms        = 30000
 M.proximity_yards           = 100
 M.proximity_hysteresis      = 30
@@ -370,10 +434,17 @@ despawn — which is fine, the next planning cycle re-populates it).
 
 ## Open Questions
 
-- **Model choice.** llama3.2:1b vs qwen2.5:1.5b vs gemma2:2b — pick after
-  cluster benchmark. Constraints: must fit in 8GB with OS+Ollama+N
-  parallel slots, must do passable structured output. Lean toward the
-  smallest model that produces valid JSON >95% of the time.
+- **Model choice.** Llama 3.2 1B vs Qwen 2.5 1.5B vs Gemma 2 2B, as GGUF
+  files at four-bit (`Q4_K_M`) — pick after cluster benchmark.
+  Constraints: must fit in 8GB with OS + `llama-server` + N slots, and
+  in the worldserver's memory for in-server, and in a player's GPU for
+  in-client. Valid JSON is guaranteed by the grammar now (916h), so the
+  measure becomes "names real strategies >95% of the time."
+
+- **Which placement first, and is there a default?** beside (the LAN
+  mini-PCs, the existing hardware), in-server (no network, but the
+  model and any crash live inside the world), or in-client (the
+  player's GPU, W client only). See 916d.
 
 - **Guidance cadence in combat.** 5 seconds is a starting point. May be
   too aggressive for what's actually a strategic decision. Could go to
@@ -405,12 +476,14 @@ despawn — which is fine, the next planning cycle re-populates it).
   Flow.** Superseded by 916. Both designed a JSON-with-Ollama-overlay
   approach to chat; 916 replaces that with LLM-native chat that
   shares infrastructure with the guidance layer. Both tickets should
-  be marked superseded (not deleted) with a pointer to 916.
+  be marked superseded (not deleted) with a pointer to 916. (Their
+  Ollama is replaced here by llama.cpp; their bodies keep the word as
+  history.)
 - **913 — Clustered Worldserver.** Spiritual sibling — both are
   cross-machine infrastructure. 913 is about scaling the worldserver;
   916 is about offloading LLM work.
 - **917 — Ask the Bots in Plain Text.** Sibling. Rides this module's
-  Ollama client, worker pool, and ALE bindings to turn plain-language
+  model runner, worker pool, and ALE bindings to turn plain-language
   player requests into playerbot commands.
 - **918 — fg-sora-cluster.** Sibling, and the one that conflicts.
   918 wants three bots that generate thoughts *continuously*, one
