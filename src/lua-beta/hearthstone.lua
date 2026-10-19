@@ -115,7 +115,8 @@ end
 --   not grouped, or alone: nothing to do (nil)
 --   grouped: open the hearth and ask
 -- kind: { question, confirm }, each a string with one %s for the
--- hearther's name (HEARTH_KIND for a Hearthstone).
+-- hearther's name (HEARTH_KIND for a Hearthstone), and withDead = true to
+-- ask the dead too (the druids' glade raises them; a Hearthstone does not).
 function GroupHearth.open(player, kind)
     local members = members_of(player)
     if not members or #members < 2 then return nil end
@@ -129,7 +130,8 @@ function GroupHearth.open(player, kind)
     for _, guid in ipairs(members) do
         if guid ~= hearth.hearther then
             local m = GetPlayerByGUID(guid)
-            if m and not m:IsDead() then
+            -- offline: not asked; dead: not asked, unless the kind takes the dead
+            if m and (kind.withDead or not m:IsDead()) then
                 if m:IsBot() then
                     hearth.accepted[guid] = true
                 else
@@ -167,9 +169,11 @@ end -- }}}
 
 -- {{{ GroupHearth.take
 -- For a script placing the travellers itself, as its spell completes: the
--- members who said yes and are still in the world and alive, as a list of
+-- members who said yes and are still in the world, as a list of
 -- { guid, place = their number in the group }, with the group's size; the
--- hearth is closed. No hearth open: an empty list.
+-- hearth is closed. No hearth open: an empty list. The dead are left out
+-- unless the hearth's kind says withDead (the druids' glade raises them on
+-- arrival).
 function GroupHearth.take(guid)
     local h = GroupHearth.pending[guid]
     if not h or h.done then return {}, 0 end
@@ -178,7 +182,8 @@ function GroupHearth.take(guid)
     for k, g in ipairs(h.members) do
         if g ~= h.hearther and h.accepted[g] then
             local m = GetPlayerByGUID(g)
-            if m and not m:IsDead() then
+            -- offline: left out; dead: left out, unless the kind takes the dead
+            if m and (h.kind.withDead or not m:IsDead()) then
                 m:GossipComplete()
                 out[#out + 1] = { guid = g, place = k }
             end

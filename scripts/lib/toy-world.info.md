@@ -30,8 +30,11 @@ It checks a script's own decisions, not how the game would carry them out.
   `Toy.spellHandlers[spell][event]`; a test runs them with
   `Toy.spellEvent(event, p, spell[, extra])`.
 - `CharDBExecute(sql)`, `CharDBQuery(sql)`: the characters database, for
-  the one table the druids' Moonglade return keeps (`Toy.chardb.moonglade`,
-  rows by guid). Any other statement is an error: teach the stand-in first.
+  the two tables the druids' Moonglade return keeps
+  (`Toy.chardb.moonglade`, `Toy.chardb.visitors`, rows by guid). Any other
+  statement is an error: teach the stand-in first.
+- `GetPlayerGUID(low) -> guid`: a guid from its low part, as
+  `GetPlayerByGUID` takes it.
 
 ## The table it returns (`Toy`)
 
@@ -52,7 +55,8 @@ It checks a script's own decisions, not how the game would carry them out.
   `teleports` (list of `{ map, x, y, z, o }`), `window` (the open gossip
   window: `{ menu, items = list of { text, sender, intid, popup } }`),
   `spells` (set of known spell numbers), `zone` (number), `messages`
-  (what they were sent, a list of strings).
+  (what they were sent, a list of strings), `raised` (how many times
+  they were resurrected; raising also clears `dead`).
 - `login(p)`, `logout(p)`: run the registered handlers. Logout wipes the
   player's data (as the object-variables extension does), removes their
   chests and empties the buyback tab (as the game does).

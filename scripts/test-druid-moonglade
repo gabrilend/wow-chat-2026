@@ -147,21 +147,20 @@ check(#cid.messages == 1 and cid.messages[1]:match("nowhere to return"), "and is
 -- }}}
 
 -- {{{ 4. a cast from a dungeon goes back to where they entered it
-local dot = druid("Dot", 505, EK, 100, 100, 12)
+local dot = druid("Dot", 505, DUNGEON, -16, -383, 1581)  -- deep inside the Deadmines
 Toy.login(dot)
-dot.x, dot.y = -11208, 1672                                -- walking up to the Deadmines' door
-Toy.advance(5000)                                          -- the open-world note is taken
-dot.map, dot.x, dot.y, dot.zone = DUNGEON, -16, -383, 1581 -- inside the Deadmines
-Toy.advance(5000)                                          -- a note in the dungeon changes nothing
 CAST(5, dot, Toy.spell(18960))
 local d = Toy.chardb.moonglade[505] or {}
-check(d[1] == 0 and math.abs((d[2] or 0) - -11208) < 0.01 and math.abs((d[3] or 0) - 1672) < 0.01,
-      "a cast from a dungeon remembers where the druid entered it (map 0, -11208, 1672)")
--- after a restart, logged in inside the dungeon: no note, so no way back
-local gus = druid("Gus", 508, DUNGEON, 0, 0, 1581)
+check(d[1] == 0 and math.abs((d[2] or 0) - -11208.3) < 0.01 and math.abs((d[3] or 0) - 1672.52) < 0.01,
+      "a cast from the Deadmines remembers its entrance, from the generated table (map 0, -11208.3, 1672.52)")
+check(Moonglade.ENTRANCES[36] and Moonglade.ENTRANCES[489] == nil, "the table has the Deadmines and no battleground (Warsong Gulch)")
+-- a battleground: no entrance of its own, so no way back yet
+local WARSONG = Toy.new_map(489, function() return 0 end)
+Toy.maps[489] = WARSONG
+local gus = druid("Gus", 508, WARSONG, 0, 0, 3277)
 Toy.login(gus)
 CAST(5, gus, Toy.spell(18960))
-check(Toy.chardb.moonglade[508] == nil and Moonglade.spots[508] == false, "with no note of where they entered, nothing is remembered")
+check(Toy.chardb.moonglade[508] == nil and Moonglade.spots[508] == false, "from a battleground, nothing is remembered yet")
 check(gus.messages[#gus.messages] and gus.messages[#gus.messages]:match("not known"), "and the druid is told so")
 Toy.advance(1500)                                          -- (Gus's booked arrival: he never reached the glade)
 Toy.advance(3000)
@@ -240,7 +239,7 @@ do
     check(spot and near(ivy.teleports[1], spot.x, spot.y, 6) and near(kit.teleports[1], spot.x, spot.y, 6), "the visitors stand round the druid's spot")
     check(spot and ivy.teleports[1].map == 1, "in Kalimdor")
     arrive_as_moved(hal, 12); arrive_as_moved(ivy, 12); arrive_as_moved(kit, 12)
-    check(Moonglade.visiting[ivy:GetGUID()] ~= nil, "Ivy is a visitor while in the glade")
+    check(Moonglade.visiting[ivy:GetGUIDLow()] ~= nil, "Ivy is a visitor while in the glade")
     -- Hal goes back: Ivy and the bot are sent to where they came from
     CAST(5, hal, Toy.spell(18960))
     land_in_nighthaven(hal)
@@ -249,7 +248,7 @@ do
     local ib = ivy.teleports[2]
     check(ib and ib.map == 0 and math.abs(ib.x - 510) < 0.01 and math.abs(ib.y - 500) < 0.01, "when the druid leaves, Ivy goes back to where she came from (map 0, 510, 500)")
     check(kit.teleports[2] and math.abs(kit.teleports[2].x - 530) < 0.01, "and so does the bot, to its own spot")
-    check(Moonglade.visiting[ivy:GetGUID()] == nil, "and she is a visitor no more")
+    check(Moonglade.visiting[ivy:GetGUIDLow()] == nil, "and she is a visitor no more")
     for _, p in ipairs({ hal, ivy, jon, kit }) do Toy.logout(p) end
 end
 
@@ -263,7 +262,7 @@ do
     ivy.teleports = {}
     ivy.map, ivy.x, ivy.y, ivy.zone = KALIMDOR, 6800, -4500, 361 -- Ivy walks out to Felwood on her own
     Moonglade.onZone(27, ivy, 361, 0)
-    check(Moonglade.visiting[ivy:GetGUID()] == nil, "a visitor who leaves the glade on her own is a visitor no more")
+    check(Moonglade.visiting[ivy:GetGUIDLow()] == nil, "a visitor who leaves the glade on her own is a visitor no more")
     Toy.logout(hal)                                        -- the druid logs out: no longer in the glade
     check(#kit.teleports == 2, "the druid logging out sends the visitors back")
     check(#ivy.teleports == 0, "but not one who had already left")
@@ -286,14 +285,11 @@ do
     for _, p in ipairs({ hal, ivy, jon, kit }) do Toy.logout(p) end
 end
 
--- a visitor in a dungeon comes back to its entrance; one with no note stays
+-- a visitor in a dungeon comes back to its entrance; one in a battleground stays
 do
     local hal, ivy, jon, kit = visit_party(630)
-    ivy.x, ivy.y = -11208, 1672
-    Toy.advance(5000)                                      -- Ivy's note at the Deadmines' door
-    ivy.map, ivy.zone = DUNGEON, 1581
-    jon.map, jon.zone = DUNGEON, 1581
-    Moonglade.notes[jon:GetGUID()] = nil                   -- Jon logged in inside it after a restart
+    ivy.map, ivy.x, ivy.y, ivy.zone = DUNGEON, -16, -383, 1581   -- in the Deadmines
+    jon.map, jon.zone = Toy.maps[489], 3277                      -- in Warsong Gulch
     BEGIN(hal); Toy.answer(ivy, 1); Toy.answer(jon, 1)
     go_out(hal)
     check(#ivy.teleports == 1 and #jon.teleports == 0, "a visitor whose entrance is known comes; one whose is not stays")
@@ -301,8 +297,78 @@ do
     arrive_as_moved(hal, 12); arrive_as_moved(ivy, 12)
     Toy.logout(hal)
     local ib = ivy.teleports[2]
-    check(ib and ib.map == 0 and math.abs(ib.x - -11208) < 0.01, "Ivy goes back to the dungeon's entrance, where she went in")
+    check(ib and ib.map == 0 and math.abs(ib.x - -11208.3) < 0.01, "Ivy goes back to the dungeon's entrance, where she went in")
     for _, p in ipairs({ ivy, jon, kit }) do Toy.logout(p) end
+end
+-- }}}
+
+-- {{{ 9. the dead visit too, raised by the glade; a restart keeps the visitors
+do
+    local hal, ivy, jon, kit = visit_party(640)
+    ivy.dead, kit.dead = true, true
+    BEGIN(hal)
+    check(ivy.window ~= nil, "a dead group member is asked too")
+    Toy.answer(ivy, 1)
+    go_out(hal)
+    check(#ivy.teleports == 1 and #kit.teleports == 1, "the dead who said yes (and the dead bot) come")
+    check(not ivy.dead and ivy.raised == 1 and not kit.dead, "and are raised on arriving in the glade")
+    for _, p in ipairs({ hal, ivy, jon, kit }) do Toy.logout(p) end
+end
+
+local function restart()
+    Moonglade.spots, Moonglade.visiting, Moonglade.hosting, Moonglade.trips = {}, {}, {}, {}
+end
+
+-- the visitor logs in first, the druid not yet back: she goes back
+do
+    local hal, ivy, jon, kit = visit_party(650)
+    BEGIN(hal); Toy.answer(ivy, 1)
+    go_out(hal)
+    arrive_as_moved(hal, 12); arrive_as_moved(ivy, 12)
+    check(Toy.chardb.visitors[651] and Toy.chardb.visitors[651][1] == 650, "the visitor is kept in the database, with her druid")
+    -- the server goes down: nobody logs out cleanly, the script's memory is gone
+    for _, p in ipairs({ hal, ivy, jon, kit }) do p.gone = true end
+    restart()
+    ivy.teleports = {}
+    Toy.login(ivy)
+    check(#ivy.teleports == 1 and ivy.teleports[1].map == 0 and math.abs(ivy.teleports[1].x - 510) < 0.01,
+          "after a restart, a visitor whose druid is not back goes back at login")
+    check(Toy.chardb.visitors[651] == nil, "and is no longer kept")
+    Toy.logout(ivy)
+end
+
+-- the druid logs in first, outside the glade: the visitor, offline, goes back at her login
+do
+    local hal, ivy, jon, kit = visit_party(660)
+    BEGIN(hal); Toy.answer(ivy, 1)
+    go_out(hal)
+    arrive_as_moved(hal, 12); arrive_as_moved(ivy, 12)
+    for _, p in ipairs({ hal, ivy, jon, kit }) do p.gone = true end
+    restart()
+    hal.map, hal.x, hal.y, hal.zone = EK, 500, 500, 12   -- the druid comes back in Elwynn
+    Toy.login(hal)
+    check(Toy.chardb.visitors[661] and Toy.chardb.visitors[661][7] == 1, "a druid logging in outside the glade marks their offline visitors as left")
+    ivy.teleports = {}
+    Toy.login(ivy)
+    check(#ivy.teleports == 1 and ivy.teleports[1].map == 0, "and the visitor goes back at her login")
+    for _, p in ipairs({ hal, ivy }) do Toy.logout(p) end
+end
+
+-- the druid logs in first, still in the glade: the visitor stays a visitor
+do
+    local hal, ivy, jon, kit = visit_party(670)
+    BEGIN(hal); Toy.answer(ivy, 1)
+    go_out(hal)
+    arrive_as_moved(hal, 12); arrive_as_moved(ivy, 12)
+    for _, p in ipairs({ hal, ivy, jon, kit }) do p.gone = true end
+    restart()
+    Toy.login(hal)
+    ivy.teleports = {}
+    Toy.login(ivy)
+    check(#ivy.teleports == 0 and Moonglade.visiting[671] ~= nil, "a visitor whose druid is back in the glade stays")
+    Toy.logout(hal)
+    check(#ivy.teleports == 1, "and goes back when the druid leaves")
+    Toy.logout(ivy)
 end
 -- }}}
 

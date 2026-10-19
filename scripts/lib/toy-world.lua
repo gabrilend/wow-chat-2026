@@ -438,8 +438,10 @@ function Toy.spell(entry) return { GetEntry = function() return entry end } end
 -- this stand-in taught it first. A database row survives a logout, as in
 -- the game; a test plays a server restart by emptying the script's own
 -- memory (Moonglade.spots) and logging the player in again.
-Toy.chardb = { moonglade = {} }
+Toy.chardb = { moonglade = {}, visitors = {} }
 function FLAT:GetAreaId() return 0 end
+-- the engine's guid from a guid's low part, as GetPlayerByGUID takes it
+function GetPlayerGUID(low) return "player-" .. low end
 -- The per-spell events (cast begins 1, completes 2, cancelled 3), kept in
 -- Toy.spellHandlers[spell][event] as lists; Toy.spellEvent(event, p, spell)
 -- runs them as the engine would (event, caster, spell object[, extra]).
@@ -468,32 +470,73 @@ new_player = function(name, guidLow)
     function p:LearnSpell(id) self.spells[id] = true end
     function p:GetZoneId() return self.zone end
     function p:SendBroadcastMessage(text) self.messages[#self.messages + 1] = text end
+    function p:ResurrectPlayer(percent, sickness) self.dead = false; self.raised = (self.raised or 0) + 1 end
     return p
 end
-local function moonglade_row(sql)
-    local g, m, x, y, z, o = sql:match("^REPLACE INTO beta_211a_moonglade_return %(guid, map, x, y, z, o%) VALUES %((%d+), (%d+), ([%d.-]+), ([%d.-]+), ([%d.-]+), ([%d.-]+)%)$")
-    if g then Toy.chardb.moonglade[tonumber(g)] = { tonumber(m), tonumber(x), tonumber(y), tonumber(z), tonumber(o) }; return true end
-    g = sql:match("^DELETE FROM beta_211a_moonglade_return WHERE guid = (%d+)$")
-    if g then Toy.chardb.moonglade[tonumber(g)] = nil; return true end
-    return false
-end
+-- The two tables the druids' script keeps (sql/beta/db_characters.src/
+-- 01-moonglade-return.apply.sql), by guid:
+--   Toy.chardb.moonglade[guid] = { map, x, y, z, o }
+--   Toy.chardb.visitors[guid]  = { druid, map, x, y, z, o, left_glade }
+local N = "([%d.-]+)"
+local EXECUTE = {
+    { "^REPLACE INTO beta_211a_moonglade_return %(guid, map, x, y, z, o%) VALUES %(" .. table.concat({ N, N, N, N, N, N }, ", ") .. "%)$",
+      function(g, ...) Toy.chardb.moonglade[tonumber(g)] = { ... } end },
+    { "^DELETE FROM beta_211a_moonglade_return WHERE guid = (%d+)$",
+      function(g) Toy.chardb.moonglade[tonumber(g)] = nil end },
+    { "^REPLACE INTO beta_211a_moonglade_visitors %(guid, druid, map, x, y, z, o, left_glade%) VALUES %(" .. table.concat({ N, N, N, N, N, N, N, N }, ", ") .. "%)$",
+      function(g, ...) Toy.chardb.visitors[tonumber(g)] = { ... } end },
+    { "^DELETE FROM beta_211a_moonglade_visitors WHERE guid = (%d+)$",
+      function(g) Toy.chardb.visitors[tonumber(g)] = nil end },
+    { "^UPDATE beta_211a_moonglade_visitors SET left_glade = 1 WHERE guid = (%d+)$",
+      function(g) local r = Toy.chardb.visitors[tonumber(g)]; if r then r[7] = 1 end end },
+}
 function CharDBExecute(sql)
-    if not moonglade_row(sql) then error("toy CharDBExecute does not know this statement: " .. sql, 2) end
+    for _, e in ipairs(EXECUTE) do
+        local caps = { sql:match(e[1]) }
+        if #caps > 0 then
+            for i = 1, #caps do caps[i] = tonumber(caps[i]) or caps[i] end
+            e[2](unpack(caps)); return
+        end
+    end
+    error("toy CharDBExecute does not know this statement: " .. sql, 2)
 end
 -- {{{ local function new_query
--- An answer as CharDBQuery gives it: columns from 0, one row (this table
--- has one per guid).
-local function new_query(row)
-    return { GetUInt32 = function(_, c) return math.floor(row[c + 1]) end,
-             GetFloat  = function(_, c) return row[c + 1] end,
-             NextRow   = function() return false end }
+-- An answer as CharDBQuery gives it: rows of columns from 0, starting on
+-- the first row; NextRow moves on and says whether there was one. No rows:
+-- nil, as the engine gives.
+local function new_query(rows)
+    if #rows == 0 then return nil end
+    local i = 1
+    return { GetUInt32 = function(_, c) return math.floor(tonumber(rows[i][c + 1])) end,
+             GetFloat  = function(_, c) return tonumber(rows[i][c + 1]) end,
+             NextRow   = function() i = i + 1; return rows[i] ~= nil end }
 end
 -- }}}
+local QUERY = {
+    { "^SELECT map, x, y, z, o FROM beta_211a_moonglade_return WHERE guid = (%d+)$",
+      function(g) local r = Toy.chardb.moonglade[tonumber(g)]; return r and { r } or {} end },
+    { "^SELECT druid, map, x, y, z, o, left_glade FROM beta_211a_moonglade_visitors WHERE guid = (%d+)$",
+      function(g) local r = Toy.chardb.visitors[tonumber(g)]; return r and { r } or {} end },
+    { "^SELECT guid, map, x, y, z, o FROM beta_211a_moonglade_visitors WHERE druid = (%d+)$",
+      function(d)
+          local out, keys = {}, {}
+          for g in pairs(Toy.chardb.visitors) do keys[#keys + 1] = g end
+          table.sort(keys)
+          for _, g in ipairs(keys) do
+              local r = Toy.chardb.visitors[g]
+              if r[1] == tonumber(d) then out[#out + 1] = { g, r[2], r[3], r[4], r[5], r[6] } end
+          end
+          return out
+      end },
+    { "^SELECT COUNT%(%*%) FROM beta_211a_moonglade_visitors WHERE druid = (%d+)$",
+      function(d) local n = 0; for _, r in pairs(Toy.chardb.visitors) do if r[1] == tonumber(d) then n = n + 1 end end; return { { n } } end },
+}
 function CharDBQuery(sql)
-    local g = sql:match("^SELECT map, x, y, z, o FROM beta_211a_moonglade_return WHERE guid = (%d+)$")
-    if not g then error("toy CharDBQuery does not know this question: " .. sql, 2) end
-    local row = Toy.chardb.moonglade[tonumber(g)]
-    return row and new_query(row) or nil
+    for _, q in ipairs(QUERY) do
+        local cap = sql:match(q[1])
+        if cap then return new_query(q[2](cap)) end
+    end
+    error("toy CharDBQuery does not know this question: " .. sql, 2)
 end
 -- }}}
 

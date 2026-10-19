@@ -66,13 +66,19 @@ their hearthstone's bind point from where they started.
    remembered (map, position, facing), kept in the characters database so
    it survives logouts and server restarts:
    - from the open world: where they stood when the cast completed;
-   - from a dungeon, raid, battleground or arena: where they entered it,
-     the last open-world spot noted before they changed to that map
-     (every player's open-world position is noted every 5 seconds; the
-     game keeps an entry point only for battlegrounds and the dungeon
-     finder, and the Lua engine cannot read it). With no note (they logged
-     in inside it after a restart), nothing is remembered and they are
-     told so.
+   - from a dungeon or raid: its entrance, looked up at the cast in
+     `src/lua-beta/data/instance-entrances.lua`, which is generated from the
+     game's own triggers (`scripts/generate-beta-instance-entrances`: each
+     dungeon's way-out trigger, as `ObjectMgr::GetGoBackTrigger` uses it;
+     with two, the one nearest the entrance portal; a way out into another
+     dungeon followed to the open world). 67 dungeons and raids have one;
+     the ones without are all above beta's level cap;
+   - from a battleground or arena: not yet (open question 1); nothing is
+     remembered and the druid is told so.
+   (A first version noted every player's position every 5 seconds to know
+   where they entered; the owner: "every 5 seconds is an absurd amount of
+   time. We need to hook it to the spellcast". It was replaced the same day
+   by the table above, read only at the cast.)
 3. **Coming back.** Cast inside Moonglade (zone 493) with a remembered
    spot, the druid is sent back to it once the spell's own move to
    Nighthaven is done, and the spot is forgotten. With nothing remembered
@@ -92,17 +98,22 @@ their hearthstone's bind point from where they started.
    the server log says so.
 5. **Visitors.** Going out, the druid's group is invited as for a
    Hearthstone (211's window, as the cast begins; withdrawn if the cast is
-   cancelled; bots always come). When the druid arrives, everyone who said
-   yes is moved round the druid's spot, on 211's circle by group number.
-   Each visitor's way back is remembered, by the same rule as the druid's
-   (where they stood, or where they entered their instance).
+   cancelled; bots always come); the dead are asked too. When the druid
+   arrives, everyone who said yes is moved round the druid's spot, on
+   211's circle by group number, and the dead among them are raised
+   ("Nature's magic and all that"). Each visitor's way back is worked out
+   at the cast by the same rule as the druid's; one whose way back is not
+   known stays, and is told why.
 6. **Visitors leave with the druid.** As soon as the druid is no longer in
    Moonglade (they cast their way back, take another way out, change map,
    or log out), every visitor still in Moonglade is sent back to their own
    way back. A visitor who leaves on their own stops being a visitor. A
    visitor who was offline when the druid left is sent back when they log
    in. Casting the way back from the glade invites no one: the visitors
-   follow by this rule instead.
+   follow by this rule instead. Visitors are kept in the characters
+   database, so a restart while they are in the glade still sends them
+   back: a visitor logging in whose druid is not hosting them in the glade
+   goes back, and a druid logging in outside the glade has left it.
 
 ## Suggested Implementation Steps
 
@@ -110,30 +121,35 @@ their hearthstone's bind point from where they started.
    (character guid, map, x, y, z, facing), created by install step E060
    (`sql/beta/db_characters.src/01-moonglade-return.apply.sql`, with its
    revert), in the shape and naming of basic's death-knight-souls table
-   (`basic_718_souls`, E041). Druids' spots only; visitors' are kept in
-   memory (open question 1).
-2. 211's invitation, opened by another script: `GroupHearth.open(player,
+   (`basic_718_souls`, E041). Beside it, `beta_211a_moonglade_visitors`
+   (visitor guid, druid guid, way back, and `left_glade`, set when the
+   druid left while the visitor was offline). Checked in a throwaway
+   database: applies twice, takes rows, reverts to nothing.
+2. The entrances: `scripts/generate-beta-instance-entrances` writes
+   `src/lua-beta/data/instance-entrances.lua` (dungeons and raids only, by
+   `Map.dbc`'s map kind; battlegrounds have exit triggers too, one per
+   faction in Alterac Valley, which is why they are left out).
+3. 211's invitation, opened by another script: `GroupHearth.open(player,
    kind)` when the cast begins (`RegisterSpellEvent(18960, 1, ...)`),
    withdrawn on cancel (`RegisterSpellEvent(18960, 3, ...)`), and
-   `GroupHearth.take(guid)` at completion for the members who said yes.
-   `GroupHearth` is made by whichever of the two files loads first
-   (`GroupHearth = GroupHearth or {}`) and used only when a spell is cast.
-3. The script `src/lua-beta/druid-moonglade.lua`:
-   - at login: a druid without spell 18960 learns it; the druid's
-     remembered spot is read once into a table by guid; every player's
-     open-world note starts (rebooked every 5 seconds; while on another
-     map it is left as it was);
+   `GroupHearth.take(guid)` at completion for the members who said yes;
+   the kind's `withDead` asks and takes the dead too. `GroupHearth` is made
+   by hearthstone.lua only; this script uses it when a spell is cast.
+4. The script `src/lua-beta/druid-moonglade.lua`:
+   - at login: a druid without spell 18960 learns it; the druid's way back
+     is read once; a visitor whose druid is not hosting them goes back; a
+     druid with visitors who is not in the glade has left it;
    - on the spell-cast event (fires as the cast completes, before the
      teleport is carried out: `Spell::_cast`, `OnPlayerSpellCast`): for
-     18960 outside zone 493, remember the way back, take the visitors with
-     their ways back, and book the move to a random spot in the glade
-     1.5 seconds later, after the spell's own move; inside zone 493 with a
-     spot, book the return the same way, and forget the spot;
-   - the arrival moves the druid, then the visitors round them;
+     18960 outside zone 493, work out every way back, take the visitors,
+     and book the move to a random spot in the glade 1.5 seconds later,
+     after the spell's own move; inside zone 493 with a way back, book the
+     return the same way, and forget it;
+   - the arrival moves the druid, then the visitors round them, raising
+     the dead (`ResurrectPlayer`), and keeps each visitor in the database;
    - the zone-change event (`PLAYER_EVENT_ON_UPDATE_ZONE`) and logout:
-     a druid leaving zone 493 sends their visitors back; a visitor leaving
-     it stops being one; login: a visitor whose druid is not in Moonglade
-     is sent back;
+     a druid leaving zone 493 sends their visitors back (read from the
+     database); a visitor leaving it stops being one;
    - the glade's draw box: x 7400 to 8300, y -2950 to -1850, the valley
      floor round Nighthaven and the Shrine, checked with the map's ground
      height and area at each draw, and a steepness rule (the ground 3
@@ -144,27 +160,39 @@ their hearthstone's bind point from where they started.
      x 7066.7 to 8633.3, y -3200 to -1600) pass 1 in 10, a quarter of
      them outside the valley, which is why the box is the valley's;
    - keep guids, not player objects, across a delay (issue 210's lesson).
-4. Tests, offline in the toy world (`scripts/lib/toy-world.lua`, with the
+5. Tests, offline in the toy world (`scripts/lib/toy-world.lua`, with the
    characters-database calls, the per-spell events and the few player
    methods this needs): a new druid learns it, a druid who has it is not
    taught again, other classes are not; out and back; back with nothing
-   remembered; a cast from a dungeon remembers its entrance; no note
-   after a restart; the spot survives a logout and a restart; the arrivals
-   spread over the glade and never in the lake, on a mountain or a cliff;
-   visitors invited, placed round the druid, sent back when the druid
-   leaves, when the druid logs out, and at their own login; a visitor
-   leaving on their own; a cancelled cast moves no visitor; another spell
-   does nothing.
-5. In game: a level-1 druid on beta casts it in a starting zone, then in
+   remembered; a cast from a dungeon remembers its entrance, one from a
+   battleground nothing; the spot survives a logout and a restart; the
+   arrivals spread over the glade and never in the lake, on a mountain or
+   a cliff; visitors invited, placed round the druid, sent back when the
+   druid leaves, when the druid logs out, and at their own login; a
+   visitor leaving on their own; a cancelled cast moves no visitor; the
+   dead asked, brought and raised; a restart with visitors in the glade,
+   in each order of logging in; another spell does nothing.
+6. In game: a level-1 druid on beta casts it in a starting zone, then in
    Moonglade, and lands where they cast it; then with a second player in
    the group.
 
 ## Open Questions
 
-1. **Visitors and a server restart.** Visitors' ways back are kept in
-   memory only: a restart while they are in Moonglade leaves them there
-   (they can still use their own Hearthstone). Keep them in the database
-   too?
-2. **A dead visitor.** A visitor who is dead when the druid leaves is sent
-   back like the others (as a ghost, at their way back). Or should they be
-   left to release and run as usual?
+1. **The invitation as a summon** (the owner, 2026-10-18, mid-build: "the
+   partymembers might not want to go to moonglade, so they get invited
+   anytime the druid is attending, but it's like a dungeon summon - they
+   can cancel it. The hearthstone, same thing, I think."). The engine can
+   send the game's own summon window (`player:SummonPlayer(summoner)`:
+   accept or decline, the game's two-minute timer, accepting moves the
+   player to the summoner). Asked: is "anytime the druid is attending"
+   every moment the druid is in the glade (a member who logs in or joins
+   the group later is offered it too), and does the summon replace 211's
+   window at the cast for both spells? Built as 211's window until then.
+2. **A way back from a battleground or arena.** The game keeps each
+   player's join spot there (`Player::SetEntryPoint`, read by
+   `GetEntryPoint`), but the Lua engine has no call for it. A small source
+   patch to the engine (a B-patch adding `player:GetEntryPoint()`) would
+   give it; the owner builds it. Until then, nothing is remembered there.
+3. **A visitor who dies in the glade** and is dead when the druid leaves:
+   sent back as a ghost to their way back (built so), or raised first, as
+   on arrival?

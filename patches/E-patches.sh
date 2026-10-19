@@ -1461,10 +1461,11 @@ unpatch_E058_beta_dk_outfit_for_level_1() {
 # -- }}}
 
 # -- {{{ patch_E060_beta_moonglade_return
-# Where each druid last cast Teleport: Moonglade from (issue 211a), so a
-# cast inside Moonglade sends them back. Characters database, because it is
-# per-realm runtime state (as basic's E041). The revert drops the table; the
-# druids keep the spell. Beta's first characters-database step: its folder
+# Each druid's way back from Moonglade, and the visitors they brought there
+# with theirs (issue 211a), so a cast inside Moonglade sends them back and a
+# restart loses no visitor. Characters database, because it is per-realm
+# runtime state (as basic's E041). The revert drops both tables; the druids
+# keep the spell. Beta's first characters-database step: its folder
 # is registered with the updater here. Same cp-apply / cp-revert idiom as
 # E058. Added 2026-10-18.
 patch_E060_beta_moonglade_return() {
