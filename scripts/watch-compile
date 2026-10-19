@@ -1,0 +1,113 @@
+#!/bin/bash
+# watch-compile - waits for a compile to end and says, from its files alone,
+# whether it really worked, with every warning the new server printed.
+#
+# For a general audience: a compile runs in the owner's terminal, which
+# nobody else can see. It leaves files behind: a log of its whole run and a
+# short receipt saying how it ended (scripts/compile), and, when it built,
+# the log of the one trial start of the new server (scripts/validate). This
+# watches those files and gives the verdict a person reading the screen
+# would give:
+#   SUCCEEDED  compiled, the trial server said "World initialized", and the
+#              build was promoted;
+#   FAILED     any of those did not happen, saying which, with the end of
+#              the log;
+# and lists the warnings the trial server printed either way (a warning is
+# an error not yet reported, by the house rules). Written 2026-10-18, after
+# a watcher that trusted the promotion alone reported a success whose trial
+# server never finished starting (owner: "you should have caught this").
+#
+# Usage: scripts/watch-compile [PROJECT_DIR] [--profile P] [--after SECONDS_SINCE_EPOCH] [--max MINUTES]
+#   --profile  default: the project's .profile
+#   --after    only a receipt written after this time counts (default: now,
+#              so start this before or just after starting the compile)
+#   --max      give up after this many minutes (default 300)
+# Exit status: 0 SUCCEEDED, 1 FAILED, 2 gave up waiting.
+
+DIR="/mnt/kaun/wow-chat-2026"
+PROFILE=""
+AFTER=$(date +%s)
+MAX_MINUTES=300
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --profile) PROFILE="$2"; shift 2 ;;
+        --after)   AFTER="$2"; shift 2 ;;
+        --max)     MAX_MINUTES="$2"; shift 2 ;;
+        -*)        echo "watch-compile: unknown option $1" >&2; exit 2 ;;
+        *)         DIR="$1"; shift ;;
+    esac
+done
+[[ -n "${PROFILE}" ]] || PROFILE="$(cat "${DIR}/.profile")"
+
+RECEIPT="${DIR}/tmp/shared-memory/compile-${PROFILE}.goodbye"
+RUN_LOG="${DIR}/tmp/shared-memory/compile-${PROFILE}.log"
+TRIAL_LOG="${DIR}/tmp/shadow-validation-${PROFILE}.log"
+DEADLINE=$(( $(date +%s) + MAX_MINUTES * 60 ))
+
+# {{{ wait_for
+# Polls every 30 seconds until the given command succeeds; returns 1 at the
+# deadline.
+wait_for() {
+    while ! eval "$1"; do
+        [[ $(date +%s) -lt ${DEADLINE} ]] || return 1
+        sleep 30
+    done
+}
+# }}}
+
+# {{{ warnings
+# The trial server's warnings: its yellow lines (the core colours warnings
+# so), and any line naming an error, without the colour codes.
+warnings() {
+    [[ -f "${TRIAL_LOG}" ]] || return 0
+    sed 's/\x1b\[[0-9;]*m//g' "${TRIAL_LOG}" | grep -n -i -E "missing in your update directory|warn|error|could not|failed" |
+        grep -v -i "Can't set process priority" | head -40
+}
+# }}}
+
+# {{{ verdict
+verdict() {
+    local word=$1 why=$2
+    echo "${word}: ${why}"
+    echo "--- receipt (${RECEIPT#${DIR}/}):"
+    sed 's/^/  /' "${RECEIPT}" 2>/dev/null
+    local w; w="$(warnings)"
+    if [[ -n "${w}" ]]; then
+        echo "--- the trial server's warnings (${TRIAL_LOG#${DIR}/}):"
+        echo "${w}" | sed 's/^/  /'
+    else
+        echo "--- the trial server printed no warnings"
+    fi
+    if [[ "${word}" != "SUCCEEDED" ]]; then
+        echo "--- the run log's last 25 lines (${RUN_LOG#${DIR}/}):"
+        sed 's/\x1b\[[0-9;]*m//g' "${RUN_LOG}" 2>/dev/null | tail -25 | sed 's/^/  /'
+    fi
+}
+# }}}
+
+echo "watch-compile: ${PROFILE}, waiting for a receipt after $(date -d @"${AFTER}" '+%H:%M:%S') (${RECEIPT#${DIR}/})"
+wait_for '[[ -f "${RECEIPT}" && $(stat -c %Y "${RECEIPT}") -ge ${AFTER} ]]' ||
+    { echo "GAVE UP: no receipt within ${MAX_MINUTES} minutes"; exit 2; }
+
+if ! grep -q "^verdict: *compiled\|^verdict: *succeeded" "${RECEIPT}"; then
+    verdict FAILED "the compile itself failed"
+    exit 1
+fi
+
+if grep -q "^verdict: *compiled" "${RECEIPT}"; then
+    # it handed over to scripts/validate, whose output goes on in the run log
+    wait_for 'grep -q -E "Promotion complete|ERROR:|Validation timeout" "${RUN_LOG}"' ||
+        { verdict FAILED "validation or promotion did not finish within ${MAX_MINUTES} minutes"; exit 2; }
+    sleep 5   # the run log is written through a pipe; let its last lines arrive
+fi
+
+if ! grep -q "World initialized in" "${TRIAL_LOG}" 2>/dev/null; then
+    verdict FAILED "the trial server never said \"World initialized\""
+    exit 1
+fi
+if ! grep -q "Promotion complete" "${RUN_LOG}" 2>/dev/null; then
+    verdict FAILED "the build was not promoted"
+    exit 1
+fi
+verdict SUCCEEDED "compiled, the trial server started (\"World initialized\"), and the build was promoted"
+exit 0
