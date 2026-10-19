@@ -1,6 +1,6 @@
 # Conversation Summary: 1ca38611-9673-4322-8dc2-8d10922c6746
 
-Generated on: 2026-10-18 17:12:40
+Generated on: 2026-10-18 18:15:19
 Models: claude-opus-5-5
 
 ## Contents
@@ -28,6 +28,14 @@ Models: claude-opus-5-5
 6. 2026-10-18 16:56, after Request 38 - We moved the project to /mnt/kaun and
    your basic compile is running there. Next, once it finishes, I'll report the
    result and add the compile's whole-run log and goodbye receipt.
+7. 2026-10-18 17:15, after Request 38 - The projects now live in /mnt/kaun, and
+   basic just compiled, validated and was promoted there. Next: say the word and
+   I'll save the git-history copies, then you can delete the old archive to free
+   36 GB.
+8. 2026-10-18 18:07, after Request 39 - We're finishing the move to /mnt/kaun:
+   basic compiled there, but nothing has yet shown its server actually starts.
+   Next, run ./scripts/validate --profile basic from /mnt/kaun/wow-chat-2026 to
+   confirm it.
 
 --------------------------------------------------------------------------------
 
@@ -2459,6 +2467,153 @@ GB on the full disk. Before that, a bare copy of each repository's history goes
 beside the links, as you asked: about 110 MB for wow-chat-2026 and 15 MB for the
 client. Say the word and I'll make those copies; the deletion itself is yours to
 run or approve.
+
+--------------------------------------------------------------------------------
+
+### User Request 39
+
+<pasted_content id="28c4">
+===============================================================================
+COMPILE SUCCEEDED (RelWithDebInfo build). The new build is in the
+shadow install, not yet promoted.
+===============================================================================
+
+Starting validation...
+
+Validating shadow worldserver...
+  Shadow: /mnt/kaun/wow-chat-2026/installed-files-shadow/bin/worldserver
+  Starting worldserver from shadow (validation run)...
+  Worldserver started (PID 24027)
+  Detecting stability (silence=5s, repeat=3x, max=300s)...
+  Stable: No output for 5 seconds
+  Stopping validation worldserver...
+  Validation successful (6s, 55 lines)
+
+Validation passed, promoting to main installation...
+
+Promoting shadow to main installation...
+  From: /mnt/kaun/wow-chat-2026/installed-files-shadow
+  To:   /mnt/kaun/wow-chat-2026/installed-files-basic
+  Preserved 0 existing files
+
+  Promotion complete
+  Manifest: /mnt/kaun/wow-chat-2026/build-manifests/basic-20261018-171129.txt
+</pasted_content id="28c4">
+
+
+you should have caught this, please fix your tracker
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 39
+
+> The watcher did report success, but only by noticing the new manifest. It
+> never read the validation step, and that output has a warning sign: the
+> validation world server ran for 6 seconds and printed 55 lines. A real start
+> loads the whole database and prints far more, so the check may have passed on
+> a server that never finished starting. I should have caught that. Finding what
+> those 55 lines said:
+
+> Updating the description at the top of that function to match, and dropping
+> the thresholds that no longer decide anything:
+
+> Validation runs a real world server, so the test will lift just the waiting
+> function out of `scripts/validate` and run it against small fake servers.
+> First, letting a test shorten the 5-minute limit:
+
+> The new watcher must give FAILED for today's exact situation. A small test
+> with made-up run files covers that and the other two outcomes:
+
+> All four cases give the right verdict, including FAILED for today's situation.
+> Adding this test to the quick tests too, then committing:
+
+*[commit] 2ac419f4e - A build is only called good once its trial server has really started*
+
+You're right, I should have caught it. My watcher saw the new manifest and
+reported success, but the trial server it was based on never finished starting.
+That's fixed at both ends, and both changes are committed.
+
+**The cause, in the project's `scripts/validate`:** it accepted 5 seconds of
+silence as "the server is up". The server is quiet for longer than that while it
+updates its databases, so it passed after 6 seconds and 55 lines, with the world
+never loaded. Now only the server's own "World initialized" counts. A crash, a
+fatal error, or no such line within 5 minutes fails it, saying how long the
+server had been quiet and what it last printed.
+
+**The new watcher, `scripts/watch-compile`,** replaces my one-off. It calls a
+run a success only if it compiled, the trial server said "World initialized",
+and the build was promoted. Otherwise it says which step failed and shows the
+end of the log. Either way, it lists the warnings the server printed.
+
+**Two new quick tests** cover both, and they now run with every compile:
+- `test-validate-needs-world-up` runs the real checking code against fake
+  servers, and fails against the old rule, as it should.
+- `test-watch-compile` checks the watcher's verdicts, starting with today's
+  false success.
+
+**What this means for today's build:** basic was promoted, but nothing has shown
+it actually starts. To check it with the fixed validation, run
+`./scripts/validate --profile basic` from `/mnt/kaun/wow-chat-2026`. It starts
+the trial server for up to 5 minutes; you run that one. For the next compile,
+I'll start `scripts/watch-compile` alongside it.
+
+**The warnings it printed:** five old update files (`04-buddy-roster.sql`,
+`01-no-intro-cinematic.sql`, `03-death-knight-souls.sql`,
+`05-world-boss-timers.sql`, `02-starting-valley-rotation.sql`) are still
+recorded under their names from before the 13 October rename. Each now exists
+with a `z_` prefix, so every start warns that the originals are missing. This
+predates the move. Removing those five old records from the characters database
+would silence the warnings; should I do that?
+
+--------------------------------------------------------------------------------
+
+### User Request 40
+
+<pasted_content id="28c4">
+$ ./scripts/validate --profile basic
+
+Validating shadow worldserver...
+  Shadow: /mnt/kaun/wow-chat-2026/installed-files-shadow/bin/worldserver
+  Starting worldserver from shadow (validation run)...
+  Worldserver started (PID 17045)
+  Waiting for "World initialized" (up to 300s)...
+  Stable: World initialized successfully
+  Stopping validation worldserver...
+  Validation successful (155s, 866 lines)
+
+Validation passed, promoting to main installation...
+
+Promoting shadow to main installation...
+  From: /mnt/kaun/wow-chat-2026/installed-files-shadow
+  To:   /mnt/kaun/wow-chat-2026/installed-files-basic
+  Preserved 0 existing files
+
+  Promotion complete
+  Manifest: /mnt/kaun/wow-chat-2026/build-manifests/basic-20261018-180759.txt
+</pasted_content id="28c4">
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 40
+
+> This time it's real: the trial server reached "World initialized" after 155
+> seconds and 866 lines, and the build was promoted again. Basic is now proven
+> to start at the new place. Checking what the full start printed by way of
+> warnings:
+
+Basic is now proven: the world server starts fully at the new place, and the
+build is promoted (`basic-20261018-180759.txt`).
+
+The start printed no errors and only one kind of warning, 35 times: "the file
+was applied to the database, but is missing in your update directory now". They
+span the world and characters databases, and all look like the same leftover
+from the 13 October rename. Each update file was renamed with a `z_` prefix,
+while the database still records the old name too. They don't stop anything, but
+your rules count warnings as errors.
+
+The fix is to remove the 35 old-name records, but only where a `z_` record for
+the same file exists. That makes it a pure tidy-up: nothing is applied again and
+nothing is lost. Should I do it?
 
 --------------------------------------------------------------------------------
 

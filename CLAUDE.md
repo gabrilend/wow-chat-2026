@@ -133,10 +133,12 @@ reading from them in parallel is easier. How it works, and what it means here:
   rarely (characters at login, saves now and then). One realm's start is
   one stream of reads; a second disk does little for it.
 - **What helps more, in order:**
-  1. Memory before disks. `innodb_buffer_pool_size` is 256M, smaller than
-     one world database (`du -sh mysql/databases/acore_world_*`). With
-     several realms running at once (issue 136b), most of their reads go
-     to disk. A larger buffer pool turns them into memory reads.
+  1. Memory before disks. `innodb_buffer_pool_size` was 256M, smaller than
+     one world database (`du -sh mysql/databases/acore_world_*`). **Decided
+     2026-10-18 (owner: one realm at a time on this computer):** 1G, which
+     holds one profile's world, characters and accounts. Several realms at
+     once (issue 136b) would want more. Takes effect at the next MySQL
+     start.
   2. The binary log was on (MySQL's default) and nothing replicates from
      it here: every change was written a second time. **Decided
      2026-10-18 (owner: "sounds good"):** `disable_log_bin` is in
@@ -146,7 +148,7 @@ reading from them in parallel is easier. How it works, and what it means here:
   3. A second disk, for the case where several realms start at the same
      time: a second MySQL server on its own `datadir`, or the redo log on
      its own disk.
-  1 and 3 are not applied; each is the owner's call (MySQL settings change
+  3 is not applied; it is the owner's call (MySQL settings change
   with `mysql/conf/my.cnf` and a MySQL restart).
 - **One disk is enough.** Nothing requires splitting: one disk holding
   all of `datadir` is MySQL's ordinary case and the simplest, and it is
