@@ -66,9 +66,18 @@ later move: tested on a scratch table in `_smoke_test`, it moved old rows,
 removed one whose new twin already existed, and left a look-alike folder
 and the updater's own relative rows alone.
 
-Left, the owner's: build one profile at the new place (`scripts/compile`
-from `/mnt/kaun/wow-chat-2026`; the build folders configure afresh). Then
-step 15, now only this: delete `moved-to-kaun-2026-10-18/` when the new
+**2026-10-18 17:11, the first build at the new place:** the owner compiled
+basic from `/mnt/kaun/wow-chat-2026` (`--threads 5`): all 32 quick tests
+passed, the build configured afresh and finished in about 40 minutes, and
+validation promoted it (manifest `basic-20261018-171129.txt`). Its install
+step found basic's update folders already recorded at the new place and
+added no second rows. (Two earlier tries stopped before building: one run
+from the old folder pinged the old copy's stopped database; one stopped in
+two quick tests that were behind the 2026-10-15 gear and command changes,
+both brought up to date, and a compile fault that hid which tests failed,
+fixed.) Steps 12 and 13 are done.
+
+Left, the owner's: step 15, now only this: delete `moved-to-kaun-2026-10-18/` when the new
 copies are trusted (frees about 36 GB on /mnt/mtwo), keeping first a
 bare clone of each repository's history beside the links, as the owner
 asked (`git clone --bare` of `moved-to-kaun-2026-10-18/wow-chat-2026`
