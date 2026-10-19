@@ -5,11 +5,14 @@
 -- For a general audience: a few of beta's bots read books aloud when a real
 -- player is near (src/lua-beta/narrators.lua). This loads that script with
 -- small stand-ins for the game's functions -- players and bots with
--- positions, chat, logging out, and the script's timer run by hand -- and a
--- two-book test shelf, and checks what the narrators say and when: only
--- when a real player is near; a long sentence in parts, in order; quiet
--- while someone nearby talks, then on from the same place; forgotten on
--- logout; a missing library said once.
+-- positions, chat, whispers, logging out, the script's timer run by hand,
+-- and a small pretend database -- and a one-book test shelf, and checks
+-- what the narrators say and when: only when a real player is near; a long
+-- sentence in parts, in order; quiet while someone nearby talks, then on
+-- from the same place; whispered rumours kept and told; told rumours
+-- overheard by narrators nearby, word for word and changed; the place in
+-- the book kept across a logout; a missing library or reading table said
+-- once.
 --
 -- Usage: scripts/test-narrators [PROJECT_DIR]
 --------------------------------------------------------------------------------
@@ -32,6 +35,25 @@ function RegisterPlayerEvent(event, fn)
     elseif event == 19 then table.insert(whisper_handlers, fn) end
 end
 function GetPlayersInWorld() return world end
+
+-- the characters database, as far as the narrators use it: does the reading
+-- table exist (db.exists, boolean), and its rows (db.rows[guid] = { book,
+-- position }, integers). Only the three statements narrators.lua sends are
+-- understood; anything else is an error, so a new query is noticed here.
+local db = { exists = true, rows = {} }
+function CharDBQuery(sql)
+    if sql:find("^SHOW TABLES") then return db.exists and {} or nil end
+    local guid = sql:match("^SELECT book, position FROM %S+ WHERE guid = (%d+)$")
+    if not guid then error("test-narrators: a query the stand-in does not know: " .. sql) end
+    local row = db.rows[tonumber(guid)]
+    if not row then return nil end
+    return { GetUInt32 = function(_, i) return i == 0 and row.book or row.position end }
+end
+function CharDBExecute(sql)
+    local g, b, p = sql:match("^REPLACE INTO %S+ %(guid, book, position%) VALUES %((%d+), (%d+), (%d+)%)$")
+    if not g then error("test-narrators: a statement the stand-in does not know: " .. sql) end
+    db.rows[tonumber(g)] = { book = tonumber(b), position = tonumber(p) }
+end
 
 local function new_player(name, guid, bot, x, y, map)
     local p = { name = name, guid = guid, bot = bot, x = x, y = y, map = map or 0, said = {} }
@@ -90,6 +112,8 @@ check(#narrator.said == 0, "with only a bot near and the player far off, the nar
 real.x = 10
 ticks(1)
 check(narrator.said[1] == "One a.", "a real player within hearing: it reads its first sentence (" .. tostring(narrator.said[1]) .. ")")
+check(db.rows[40] and db.rows[40].book == 1 and db.rows[40].position == 1,
+      "its place is saved as it reads: book 1, one sentence in")
 ticks(1)
 check(#narrator.said == 1, "then it pauses before the next line")
 
@@ -140,10 +164,62 @@ ticks(1)
 for k = 1, 25 do ticks(1); whisper(real, narrator, "rumour number " .. k .. " about the lighthouse") end
 check(#Narrators.state[40].rumours == 20, "a narrator keeps twenty rumours, the oldest dropped (" .. #Narrators.state[40].rumours .. ")")
 
-print("logging out")
+print("rumours travel between narrators")
+Narrators.state[40].rumours = {}
+local second = new_player("Teller", 60, true, 12, 0)       -- 12 yards from the first narrator
+local far    = new_player("Faraway", 80, true, 200, 0)     -- a narrator out of earshot
+-- each retelling way, in turn: what the second narrator should come to hold
+local ways = {
+    { name = "verbatim", rumour = "The old windmill near Goldshire is haunted at night",
+      held = "The old windmill near Goldshire is haunted at night" },
+    -- random 1 picks the first word with a near word: "old" -> "ancient"
+    { name = "changed",  rumour = "The old lighthouse by Westfall is haunted",
+      held = "The ancient lighthouse by Westfall is haunted" },
+}
+for _, way in ipairs(ways) do
+    Narrators.retelling = way.name
+    Narrators.random    = function(_n) return 1 end
+    ticks(1)
+    whisper(real, narrator, way.rumour)
+    local word = way.name == "verbatim" and "windmill" or "lighthouse"
+    second.said = {}
+    chat(real, "what about the " .. word .. "?")
+    local h = Narrators.state[60].rumours[#Narrators.state[60].rumours]
+    check(h and h.text == way.held and h.hops == 1 and h.from == "Anna",
+          way.name .. ": a narrator nearby overhears the telling and keeps it as \"" .. tostring(h and h.text) .. "\" (one hop on, from Anna)")
+    check(#second.said == 0, way.name .. ": it does not tell it back to the same talk")
+    check(#Narrators.state[80].rumours == 0, way.name .. ": a narrator out of earshot learns nothing")
+    ticks(11)                                              -- past the hush
+    chat(real, "the " .. word .. " again")
+    local said = second.said[#second.said] or ""
+    check(said:find(way.held, 1, true) ~= nil, way.name .. ": later it tells it on itself (" .. said:sub(1, 50) .. "...)")
+    check(#Narrators.state[40].rumours == 0, way.name .. ": the first narrator, who told it, does not learn it back")
+end
+Narrators.retelling = "verbatim"
+check(not pcall(function() Narrators.retelling = "llm"; Narrators.retell("x") end),
+      "a way of retelling that does not exist (llm, until a model runner) is an error, not word for word")
+Narrators.retelling = "verbatim"
+logout(second)
+logout(far)
+
+print("logging out keeps the place")
 logout(narrator)
-check(Narrators.state[40] == nil, "a narrator that logs out is forgotten")
+check(Narrators.state[40] == nil, "a narrator that logs out is let go from memory")
 check(not pcall(Narrators.library.getNextSentence, 40), "and its reader in the library is gone")
+check(db.rows[40] ~= nil, "but its saved place stays")
+-- three relogins: a saved place, one past the book's end, a book not built
+local relogins = {
+    { row = { book = 1, position = 2 },   first = "One c.", what = "back two sentences in: it reads the third" },
+    { row = { book = 1, position = 99 },  first = "One a.", what = "saved past the book's end (cut differently since): from the start" },
+    { row = { book = 777, position = 1 }, first = "One a.", what = "saved in a book no longer built: the book it was given, from the start" },
+}
+for _, r in ipairs(relogins) do
+    db.rows[40] = r.row
+    local back = new_player("Reader", 40, true, 0, 0)
+    ticks(1)
+    check(back.said[1] == r.first, r.what .. " (" .. tostring(back.said[1]) .. ")")
+    logout(back)
+end
 
 print("no library")
 local printed = {}
@@ -155,6 +231,17 @@ new_player("Reader2", 60, true, 10, 0)
 ticks(5)
 print = real_print
 check(#printed == 1 and printed[1]:find("E059", 1, true) ~= nil, "a missing library is said once, naming the install step (" .. #printed .. " lines)")
+
+print("no reading table")
+printed = {}
+print = function(s) table.insert(printed, s) end
+dofile(SRC .. "narrators.lua")
+Narrators.library.DATA_DIR = T
+db.exists = false
+ticks(5)
+print = real_print
+check(#printed == 1 and printed[1]:find("E061", 1, true) ~= nil and printed[1]:find("missing", 1, true) ~= nil,
+      "a missing reading table is said once, naming its install step (" .. #printed .. " lines)")
 
 print(string.format("%d checks, %d failed", checks, fails))
 os.exit(fails == 0 and 0 or 1)

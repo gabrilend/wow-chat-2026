@@ -140,4 +140,9 @@ The Ollama `/api/generate` endpoint:
   luasocket and dkjson
 - [916e - Effil worker pool](916e-effil-worker-pool.md) — calls this
   module from inside worker threads
+- [910b - Whispered rumours](910b-whispered-rumours.md) — waits on this:
+  beta's narrators retell rumours word for word or with one fixed-rule
+  change, and a third way, a model retelling the rumour in its own words,
+  is named in `src/lua-beta/narrators.lua` (`RUMOUR_RETELLING = "llm"`) and
+  stops the script with an error until this client exists
 - Ollama API docs: <https://github.com/ollama/ollama/blob/main/docs/api.md>

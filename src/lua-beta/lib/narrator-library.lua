@@ -7,9 +7,10 @@
 -- of those is its own reader: its own book, its own place in it, and its
 -- own mode (telling the story, or passing on rumours). This file keeps
 -- those, keyed by the spawned creature's id. A narrator that finishes its
--- book takes another at random. Nothing is kept past a narrator's
--- despawn, and nothing is saved to the database: meeting one again is
--- meeting a new reader.
+-- book takes another at random. This file keeps nothing past a
+-- narrator's clearInstance and writes no database: saving a place across
+-- logouts is narrators.lua's work (it reads getCurrentBook and
+-- getPosition, and puts a place back with setBook and setPosition).
 --
 -- The books are the folders scripts/gutenberg-scraper writes under
 -- data/texts/ beside this tree's data/gutenberg-books.lua. A book's
