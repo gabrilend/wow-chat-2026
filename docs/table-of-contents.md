@@ -78,14 +78,14 @@ wow-chat-2026/
 │   ├── playerbots/                Playerbot module documentation
 │   ├── profiles/                  Per-profile reference pages (user-facing)
 │   │   ├── index.md               Overview of the profiles + how to switch
-│   │   ├── basic.md               Level 1-60 development baseline (155)
+│   │   ├── basic.md               Levels 1-60 (155)
 │   │   ├── cc-test.md             The custom client's test server: stock + playerbots + ALE + buddies (176)
 │   │   ├── socket-bonus-catalog.md Generated: every enchantment usable as a socket bonus, by kind and size; low-level cut gems (155p)
 │   │   ├── vanilla.md             Default WotLK + playerbots, light ruleset (148)
 │   │   ├── release.md             Wow-chat custom design, proven-working tier
 │   │   ├── beta.md                The wow-chat survival game, levels 1-20 (its own realm)
 │   │   ├── beta-roadmap.md        Bringing beta's whole game back, step by step (200)
-│   │   └── alpha.md               Holiday relic — wow-chat-1 + mod-eluna snapshot
+│   │   └── alpha.md               Pinned-old AzerothCore + mod-eluna + wow-chat-1's Lua
 │   └── wiki/                      AzerothCore wiki mirror
 │
 ├── notes/
@@ -222,11 +222,11 @@ The project supports multiple version profiles. The active profile lives in
 `.profile` at the project root. See
 `issues/136-canonical-profile-definitions.md` for the canonical model:
 
-- **alpha** — Legacy holiday relic; pinned old AzerothCore + wow-chat-1
-  customs + mod-eluna. No playerbots, no ALE.
-- **release** — Current AzerothCore + mod-ale + mod-playerbots. Public
-  release target.
-- **beta** — Release baseline + in-development custom features.
+- **alpha** — pinned old AzerothCore + wow-chat-1's Lua + mod-eluna. No
+  playerbots, no ALE.
+- **release** — current AzerothCore + mod-ale + mod-playerbots.
+- **beta**, **basic**, **vanilla**, **cc-test** — current AzerothCore,
+  each with its own patches; see `docs/profiles/`.
 
 Each profile has isolated directories:
 - `source-{profile}/` - AzerothCore source code

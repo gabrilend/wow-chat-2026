@@ -19,18 +19,21 @@ installed tree (`installed-files-<profile>/`), database set, and config-patch
 tuning. The active profile lives in `.profile`; scripts read it to select the
 matching source tree, install dir, and databases.
 
-- **basic** — levels 1–60, stock game + playerbots + QoL; the development
-  baseline (issue 155, `docs/profiles/basic.md`). **expert** (61–80, start
-  at 60) is planned, not built (issue 156).
+- **basic** — levels 1–60 (issue 155, `docs/profiles/basic.md`).
+  **expert** (61–80, start at 60) is planned, not built (issue 156).
 - **cc-test** — the custom client's test server: stock AzerothCore +
   playerbots + ALE + the buddy module, no random bots; test scenes run here
   (issue 176, `docs/profiles/cc-test.md`). Being registered 2026-10-08,
   not yet built.
-- **vanilla** — start 20, level cap 40 (constrained demo)
-- **beta** — level cap 20 (the original wow-chat roguelike design)
+- **vanilla** — start 20, level cap 40 (`docs/profiles/vanilla.md`)
+- **beta** — level cap 20 (`docs/profiles/beta.md`)
 - **release** — level cap 20 today (C006b is gated `beta release`), though
   older notes describe it as 80; which is intended is an open question
-- **alpha** — level cap 80, the wow-chat-1 relic
+- **alpha** — level cap 80 (`docs/profiles/alpha.md`)
+
+Each profile's own page says what it is; these lines give only the facts
+the scripts depend on. (The owner, 2026-10-19, on one-phrase summaries of
+the profiles: "It's reductionist and unfair to the source-code.")
 
 release/beta/vanilla/basic/cc-test share `source-beta`; alpha uses `source-alpha`. Per-profile
 differences are applied at install time by `config/patches/C*.sh`, gated on the
@@ -186,6 +189,15 @@ This is singing.
 ### Vertical Alignment
 Connect things at the same X value in the page to signify meaning.
 Account for all characters preceding - alignment creates relationship.
+
+Columns of numbers, in code and in tables (Markdown included, in the raw
+text and not only once rendered), line up by place value: the ones digits
+in one column, the decimal points in one column, whole parts padded on the
+left and fractions on the right. The owner, 2026-10-19: "we need to keep
+all the digits in the same "position" in terms of their X coordinate, to
+provide some structure the data is oriented around." A table a tool
+generates is padded by the tool (`scripts/compare-wow-chat-1-settings` does
+it).
 
 ```lua
 -- values of connecting relevance align vertically

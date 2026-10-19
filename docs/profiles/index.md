@@ -6,12 +6,12 @@ infrastructure. Pick whichever fits your mood:
 
 | Profile | One-liner | Detailed page |
 |---------|-----------|---------------|
-| **basic** | The level 1–60 development baseline — stock game + playerbots + QoL, rotating faction starting valleys, Outland open at the cap, level-64 early Outland dungeons | [basic.md](basic.md) |
+| **basic** | Levels 1–60: rotating faction starting valleys, Outland open at the cap, level-64 early Outland dungeons | [basic.md](basic.md) |
 | **cc-test** | The custom client's test server — stock AzerothCore + playerbots + ALE + the buddy module, no random bots, Warden failures logged, for test scenes (176) | [cc-test.md](cc-test.md) |
 | **vanilla** | Default WotLK 3.3.5a + AI companion playerbots, light ruleset (level 40 cap, start at 20, no flight paths, full level-20 starter kit) | [vanilla.md](vanilla.md) |
 | **release** | The wow-chat custom design at its proven-working tier — modern AzerothCore + playerbots + ALE Lua, only features that have graduated from beta | [release.md](release.md) |
 | **beta** | The wow-chat survival game, levels 1–20: an empty world that fills in with ambushes, treasure and travellers (being brought back: [beta-roadmap.md](beta-roadmap.md)) | [beta.md](beta.md) |
-| **alpha** | Holiday relic — pinned-old AzerothCore + mod-eluna, the original wow-chat-1 corpus, ~1 week per year | [alpha.md](alpha.md) |
+| **alpha** | Pinned-old AzerothCore + mod-eluna, the original wow-chat-1 Lua, ~1 week per year | [alpha.md](alpha.md) |
 
 ## How profiles work
 

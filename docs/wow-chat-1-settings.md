@@ -40,13 +40,13 @@ them; their settings patches are named in the table's "patches" column.
 
 ## The question under every theme
 
-The project's profiles split the work: **basic** is the stock game with
-bots and comforts (CLAUDE.md: "stock game + playerbots + QoL"), and
-**beta** is "the original wow-chat roguelike design". wow-chat-1's settings
-are that design's settings. So the natural home for most of them is
-**beta**, not basic. (Alpha is called "the wow-chat-1 relic" in CLAUDE.md,
-so it is the other candidate.) Each theme below says what the settings did,
-what the project does in the same area today, and a suggestion, most
+Which profile, if any, each setting goes to. Beta carries wow-chat-1's
+Lua game (the ambush, travellers, treasure and hearthstone scripts came
+from it, issue 104) and runs on today's server; alpha runs wow-chat-1's
+own older server and engine (`docs/profiles/alpha.md`). The suggestions
+below name beta, since its scripts are the ones these settings were tuned
+beside; alpha is the other candidate. Each theme says what the settings
+did, what the project does in the same area today, and a suggestion, most
 likely first.
 
 ## Already handled
@@ -228,7 +228,7 @@ a middle value first; the rest stays stock; (b) reference only;
 
 One answer per theme is enough: (a), (b) or (c), or another. And one
 question across all of them: is beta the right home for wow-chat-1's
-settings, or alpha ("the wow-chat-1 relic")?
+settings, or alpha (wow-chat-1's own older server)?
 
 Once decided, the chosen settings become settings patches (`config/patches/C*.sh`,
 gated by profile), and the two old folders can be deleted (about 7.9 GB on
@@ -245,102 +245,102 @@ settings patches whose text names it; the stock file's description.
      rerun it rather than editing this table -->
 Profiles compared (installed settings files): basic, vanilla, release. Not installed now, so not compared: beta, alpha, cc-test.
 
-| # | setting | wow-chat-1 | stock then | stock now | basic | vanilla | release | patches | what it does (stock description) |
-|---|---|---|---|---|---|---|---|---|---|
-| 1 | `PlayerLimit` | 100 | 1000 | 1000 | 1000 | 1000 | 1000 |  | Maximum number of players in the world. Excluding Mods, GMs and Admins. |
-| 2 | `CloseIdleConnections` | 0 | 1 | (gone) | (not set) | 1 | 1 |  | Automatically close idle connections. |
-| 3 | `PreventAFKLogout` | 1 | 0 | 0 | 0 | 0 | 0 |  | Prevent players AFK from being logged out |
-| 4 | `Warden.Enabled` | 0 | 1 | 1 | 1 | 1 | 1 |  | Enable Warden anti-cheat system. |
-| 5 | `Visibility.GroupMode` | 0 | 1 | 1 | 1 | 1 | 1 |  | Group visibility modes. Defines which groups can aways detect invisible |
-| 6 | `Visibility.Distance.Continents` | 333 | 90 | 100 | 100 | 100 | 100 |  |  |
-| 7 | `Visibility.ObjectSparkles` | 0 | 1 | 1 | 1 | 1 | 1 |  | Whether or not to display sparkles on gameobjects related to active quests. |
-| 8 | `Visibility.ObjectQuestMarkers` | 0 | 1 | 1 | 1 | 1 | 1 |  | Show quest icons above game objects in the same way as creature quest givers. |
-| 9 | `vmap.BlizzlikePvPLOS` | 0 | 1 | 1 | 1 | 1 | 1 |  | Check line of sight for battleground and arena gameobjects and other doodads (such as WSG treestumps). |
-| 10 | `GM.AllowInvite` | 1 | 0 | 0 | 0 | 0 | 0 |  | Allow players to invite GM characters. |
-| 11 | `GM.AllowFriend` | 1 | 0 | 0 | 0 | 0 | 0 |  | Allow players to add GM characters to their friends list. |
-| 12 | `GM.TicketSystem.ChanceOfGMSurvey` | 0 | 50 | 50 | 50 | 50 | 50 |  | Chance of sending a GM survey after ticket completion. |
-| 13 | `StrictNames.Reserved` | 0 | 1 | 1 | 1 | 1 | 1 |  | Use the Reserved Filter from DBC. |
-| 14 | `StrictNames.Profanity` | 0 | 1 | 1 | 1 | 1 | 1 |  | Use the Profanity Filter from DBC. |
-| 15 | `StrictPlayerNames` | 1 | 0 | 0 | 0 | 0 | 0 |  | Limit player name to language specific symbol set. Prevents character |
-| 16 | `StrictPetNames` | 1 | 0 | 0 | 0 | 0 | 0 |  | Limit pet names to language specific symbol set. |
-| 17 | `WaterBreath.Timer` | 18000 | 180000 | 180000 | 180000 | 180000 | 180000 |  | The timer for player's breath underwater in milliseconds |
-| 18 | `EnableLowLevelRegenBoost` | 0 | 1 | 1 | 0 | 1 | 1 | C034 | Greatly increase Health and Mana regen rates for players under level 15 (Added in patch 3.3) |
-| 19 | `Rate.MoveSpeed` | 0.85 | 1 | (gone) | (not set) | (not set) | (not set) | C003 | Movement speed rate. |
-| 20 | `Rate.Damage.Fall` | 8 | 1 | 1 | 10.0 | 10.0 | 10.0 | C004 | Damage after fall rate. |
-| 21 | `Rate.Talent` | 3 | 1 | 1 | 1 | 1 | 1 |  | Talent point rate. |
-| 22 | `Rate.Talent.Pet` | 3 | 1 | 1 | 1 | 1 | 1 |  | Pet Talent point rate. |
-| 23 | `Rate.Rest.InGame` | 10 | 1 | 1 | 1 | 1 | 1 |  |  |
-| 24 | `Rate.Rest.Offline.InTavernOrCity` | 5 | 1 | 1 | 1 | 1 | 1 |  |  |
-| 25 | `Rate.MissChanceMultiplier.TargetCreature` | 0 | 11 | 11 | 11 | 11 | 11 |  |  |
-| 26 | `Rate.MissChanceMultiplier.TargetPlayer` | 0 | 7 | 7 | 7 | 7 | 7 |  |  |
-| 27 | `MaxPrimaryTradeSkill` | 5 | 2 | 2 | 2 | 2 | 2 |  | Maximum number of primary professions a character can learn. |
-| 28 | `SkillChance.Prospecting` | 1 | 0 | 0 | 0 | 0 | 0 |  | Allow skill increase from prospecting. |
-| 29 | `SkillChance.Milling` | 1 | 0 | 0 | 0 | 0 | 0 |  | Allow skill increase from milling. |
-| 30 | `MaxGroupXPDistance` | 148 | 74 | 74 | 74 | 74 | 74 |  | Max distance to creature for group member to get experience at creature |
-| 31 | `Rate.XP.Kill` | 3 | 1 | 1 | 1 | 1 | 2.0 | C005 |  |
-| 32 | `Rate.XP.Explore` | 10 | 1 | 1 | 1 | 1 | 1 |  |  |
-| 33 | `HonorPointsAfterDuel` | 10 | 0 | 0 | 0 | 0 | 0 |  | Amount of honor points the duel winner will get after a duel. |
-| 34 | `DurabilityLoss.OnDeath` | 0 | 10 | 10 | 10 | 10 | 10 |  | Durability loss percentage on death. |
-| 35 | `DurabilityLossChance.Damage` | 3 | 0.5 | 0.5 | 0.5 | 0.5 | 0.5 |  | Chance to lose durability on one equipped item from damage. |
-| 36 | `DurabilityLossChance.Absorb` | 5 | 0.5 | 0.5 | 0.5 | 0.5 | 0.5 |  | Chance to lose durability on one equipped armor item when absorbing damage. |
-| 37 | `DurabilityLossChance.Parry` | 0.5 | 0.05 | 0.05 | 0.05 | 0.05 | 0.05 |  | Chance to lose durability on main weapon when parrying attacks. |
-| 38 | `DurabilityLossChance.Block` | 0.5 | 0.05 | 0.05 | 0.05 | 0.05 | 0.05 |  | Chance to lose durability on shield when blocking attacks. |
-| 39 | `Death.SicknessLevel` | 255 | 11 | 11 | 11 | 11 | 11 |  | Starting level for resurrection sickness. |
-| 40 | `DBC.EnforceItemAttributes` | 0 | 1 | 1 | 1 | 1 | 1 |  | Disallow overriding item attributes stored in DBC files with values from the database |
-| 41 | `QuestPOI.Enabled` | 0 | 1 | 1 | 1 | 1 | 1 |  | Show points of interest on the map |
-| 42 | `Quests.IgnoreRaid` | 1 | 0 | 0 | 0 | 0 | 0 |  | Allow non-raid quests to be completed while in a raid group. |
-| 43 | `CreatureFamilyFleeAssistanceRadius` | 60 | 30 | 30 | 30 | 30 | 30 |  | Distance for fleeing creatures seeking assistance from other creatures. |
-| 44 | `CreatureFamilyAssistanceRadius` | 30 | 10 | 10 | 10 | 10 | 10 |  | Distance for creatures calling for assistance from other creatures without |
-| 45 | `Corpse.Decay.NORMAL` | 36000 | 60 | 60 | 60 | 60 | 60 |  |  |
-| 46 | `Corpse.Decay.RARE` | 36000 | 300 | 300 | 300 | 300 | 300 |  |  |
-| 47 | `Corpse.Decay.ELITE` | 36000 | 300 | 300 | 300 | 300 | 300 |  |  |
-| 48 | `Corpse.Decay.RAREELITE` | 36000 | 300 | 300 | 300 | 300 | 300 |  |  |
-| 49 | `Corpse.Decay.WORLDBOSS` | 36000 | 3600 | 3600 | 3600 | 3600 | 3600 |  | Time (in seconds) until creature corpse will decay if not looted or skinned. |
-| 50 | `Rate.Corpse.Decay.Looted` | 1 | 0.5 | 0.5 | 0.5 | 0.5 | 0.5 |  | Multiplier for Corpse.Decay.* to configure how long creature corpses stay |
-| 51 | `Rate.SellValue.Item.Normal` | 2 | 1 | 1 | 1 | 1 | 1 |  |  |
-| 52 | `Rate.SellValue.Item.Uncommon` | 3 | 1 | 1 | 1 | 1 | 1 |  |  |
-| 53 | `Rate.SellValue.Item.Rare` | 4 | 1 | 1 | 1 | 1 | 1 |  |  |
-| 54 | `Rate.SellValue.Item.Epic` | 5 | 1 | 1 | 1 | 1 | 1 |  |  |
-| 55 | `Rate.SellValue.Item.Legendary` | 10 | 1 | 1 | 1 | 1 | 1 |  |  |
-| 56 | `Rate.RepairCost` | 25 | 1 | 1 | 1 | 1 | 1 |  | Repair cost rate. |
-| 57 | `LeaveGroupOnLogout.Enabled` | 0 | 1 | 0 | 0 | 0 | 0 |  | Should the player leave their group when they log out? |
-| 58 | `Group.Raid.LevelRestriction` | 1 | 10 | 10 | 10 | 10 | 10 |  | The Group members need to the same, or higher level than the specified value. |
-| 59 | `Instance.IgnoreLevel` | 1 | 0 | 0 | 0 | 0 | 0 |  | Ignore level requirement when entering instances. |
-| 60 | `Instance.IgnoreRaid` | 1 | 0 | 0 | 0 | 0 | 0 |  | Ignore raid group requirement when entering instances. |
-| 61 | `DungeonAccessRequirements.PrintMode` | 2 | 1 | 1 | 1 | 1 | 1 |  | Select the preferred format to display information to the player who cannot enter a portal dungeon because when has not met the access requirements: |
-| 62 | `DungeonFinder.OptionsMask` | 0 | 5 | 5 | 5 | 5 | 5 |  | Dungeon and raid finder system. |
-| 63 | `LFG.MaxKickCount` | 0 | 2 | 2 | 2 | 2 | 2 |  | Specify the maximum number of kicks allowed in LFG groups (max 3 kicks) |
-| 64 | `StrictCharterNames` | 1 | 0 | 0 | 0 | 0 | 0 |  | Limit guild/arena team charter names to language specific symbol set. |
-| 65 | `Guild.CharterCost` | 100000000 | 1000 | 1000 | 1000 | 1000 | 1000 |  | Amount of money (in Copper) the petitions costs. |
-| 66 | `Guild.AllowMultipleGuildMaster` | 1 | 0 | 0 | 0 | 0 | 0 |  | Allow more than one guild master. Additional Guild Masters must be set using |
-| 67 | `Guild.BankInitialTabs` | 1 | 0 | 0 | 0 | 0 | 0 |  | Changes the amounts of available tabs of the guild bank on guild creation |
-| 68 | `Wintergrasp.Enable` | 2 | 1 | 1 | 1 | 1 | 1 |  | Enable the Wintergrasp battlefield. |
-| 69 | `Battleground.CastDeserter` | 0 | 1 | 1 | 1 | 1 | 1 |  | Cast Deserter spell at players who leave battlegrounds in progress. |
-| 70 | `Battleground.QueueAnnouncer.Enable` | 1 | 0 | 0 | 0 | 0 | 0 |  | Announce battleground queue status to chat. |
-| 71 | `Battleground.QueueAnnouncer.Limit.MinLevel` | 1 | 0 | 0 | 0 | 0 | 0 |  | Limit the QueueAnnouncer starting from a certain level. |
-| 72 | `Battleground.QueueAnnouncer.PlayerOnly` | 1 | 0 | 0 | 0 | 0 | 0 |  | Battleground queue announcement type. |
-| 73 | `Battleground.QueueAnnouncer.Timed` | 1 | 0 | 0 | 0 | 0 | 0 |  | Enabled battleground queue announcements based on timer |
-| 74 | `Battleground.QueueAnnouncer.Timer` | 15000 | 30000 | 30000 | 30000 | 30000 | 30000 |  | Set timer for queue announcements |
-| 75 | `Battleground.PrematureFinishTimer` | 0 | 300000 | 300000 | 300000 | 300000 | 300000 |  | Time (in milliseconds) before battleground will end prematurely if there are |
-| 76 | `Battleground.GiveXPForKills` | 1 | 0 | 0 | 0 | 0 | 0 |  | Give experience for honorable kills in battlegrounds. |
-| 77 | `Battleground.InvitationType` | 2 | 0 | 0 | 0 | 0 | 0 |  | Set Battleground invitation type. |
-| 78 | `Battleground.PlayerRespawn` | 60 | 30 | 30 | 30 | 30 | 30 |  | Battleground player resurrection interval (in seconds). |
-| 79 | `Battleground.RestorationBuffRespawn` | 10 | 20 | 20 | 20 | 20 | 20 |  | Battleground restoration buff respawn time (in seconds). |
-| 80 | `Battleground.BerserkingBuffRespawn` | 10 | 120 | 120 | 120 | 120 | 120 |  | Battleground berserking buff respawn time (in seconds). |
-| 81 | `Battleground.SpeedBuffRespawn` | 10 | 150 | 150 | 150 | 150 | 150 |  | Battleground speed buff respawn time (in seconds). |
-| 82 | `StrictChannelNames` | 1 | 0 | 0 | 0 | 0 | 0 |  | Limit channel names to language specific symbol set. |
-| 83 | `ChatFakeMessagePreventing` | 0 | 1 | 1 | 1 | 1 | 1 |  | Additional protection from creating fake chat messages using spaces. |
-| 84 | `ChatStrictLinkChecking.Severity` | -1 | 0 | 0 | 0 | 0 | 0 |  | Check chat messages for in-game links to spells, items, quests, etc. |
-| 85 | `Channel.SilentlyGMJoin` | 1 | 0 | 0 | 0 | 0 | 0 |  | Silently join GM characters to channels. If set to 1, channel kick and ban |
-| 86 | `AllowTwoSide.Interaction.Calendar` | 1 | 0 | 0 | 0 | 0 | 0 |  | Allow calendar invites between factions. |
-| 87 | `AllowTwoSide.Interaction.Chat` | 1 | 0 | 0 | 0 | 0 | 0 |  | Allow say chat between factions. |
-| 88 | `AllowTwoSide.Interaction.Emote` | 1 | 0 | (gone) | (not set) | (not set) | 0 |  | Allow emote messages between factions (e.g. "/e looks into the sky") |
-| 89 | `AllowTwoSide.Interaction.Channel` | 1 | 0 | 0 | 0 | 0 | 0 |  | Allow channel chat between factions. |
-| 90 | `AllowTwoSide.Interaction.Group` | 1 | 0 | 0 | 0 | 0 | 0 |  | Allow group joining between factions. |
-| 91 | `AllowTwoSide.Interaction.Guild` | 1 | 0 | 0 | 0 | 0 | 0 |  | Allow guild joining between factions. |
-| 92 | `AllowTwoSide.Interaction.Arena` | 1 | 0 | 0 | 0 | 0 | 0 |  | Allow joining arena teams between factions. |
-| 93 | `AllowTwoSide.Interaction.Auction` | 1 | 0 | 0 | 0 | 0 | 0 |  | Allow auctions between factions. This flags all auction houses as Neutral, |
-| 94 | `AllowTwoSide.Interaction.Mail` | 1 | 0 | (gone) | (not set) | (not set) | 0 |  | Allow sending mails between factions. |
-| 95 | `AllowTwoSide.WhoList` | 1 | 0 | (gone) | (not set) | (not set) | 0 |  | Show characters from both factions in the /who list. |
-| 96 | `AllowTwoSide.AddFriend` | 1 | 0 | (gone) | (not set) | (not set) | 0 |  | Allow adding friends from other faction the friends list. |
-| 97 | `AllowTwoSide.Trade` | 1 | 0 | (gone) | (not set) | (not set) | 0 |  | Allow trading between factions. |
+| #  | setting                                      | wow-chat-1   | stock then | stock now | basic     | vanilla   | release   | patches | what it does (stock description)                                                                                                                     |
+| -- | -------------------------------------------- | ------------ | ---------- | --------- | --------- | --------- | --------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+|  1 | `PlayerLimit`                                |       100    |   1000     |   1000    |   1000    |   1000    |   1000    |         | Maximum number of players in the world. Excluding Mods, GMs and Admins.                                                                              |
+|  2 | `CloseIdleConnections`                       |         0    |      1     | (gone)    | (not set) |      1    |      1    |         | Automatically close idle connections.                                                                                                                |
+|  3 | `PreventAFKLogout`                           |         1    |      0     |      0    |      0    |      0    |      0    |         | Prevent players AFK from being logged out                                                                                                            |
+|  4 | `Warden.Enabled`                             |         0    |      1     |      1    |      1    |      1    |      1    |         | Enable Warden anti-cheat system.                                                                                                                     |
+|  5 | `Visibility.GroupMode`                       |         0    |      1     |      1    |      1    |      1    |      1    |         | Group visibility modes. Defines which groups can aways detect invisible                                                                              |
+|  6 | `Visibility.Distance.Continents`             |       333    |     90     |    100    |    100    |    100    |    100    |         |                                                                                                                                                      |
+|  7 | `Visibility.ObjectSparkles`                  |         0    |      1     |      1    |      1    |      1    |      1    |         | Whether or not to display sparkles on gameobjects related to active quests.                                                                          |
+|  8 | `Visibility.ObjectQuestMarkers`              |         0    |      1     |      1    |      1    |      1    |      1    |         | Show quest icons above game objects in the same way as creature quest givers.                                                                        |
+|  9 | `vmap.BlizzlikePvPLOS`                       |         0    |      1     |      1    |      1    |      1    |      1    |         | Check line of sight for battleground and arena gameobjects and other doodads (such as WSG treestumps).                                               |
+| 10 | `GM.AllowInvite`                             |         1    |      0     |      0    |      0    |      0    |      0    |         | Allow players to invite GM characters.                                                                                                               |
+| 11 | `GM.AllowFriend`                             |         1    |      0     |      0    |      0    |      0    |      0    |         | Allow players to add GM characters to their friends list.                                                                                            |
+| 12 | `GM.TicketSystem.ChanceOfGMSurvey`           |         0    |     50     |     50    |     50    |     50    |     50    |         | Chance of sending a GM survey after ticket completion.                                                                                               |
+| 13 | `StrictNames.Reserved`                       |         0    |      1     |      1    |      1    |      1    |      1    |         | Use the Reserved Filter from DBC.                                                                                                                    |
+| 14 | `StrictNames.Profanity`                      |         0    |      1     |      1    |      1    |      1    |      1    |         | Use the Profanity Filter from DBC.                                                                                                                   |
+| 15 | `StrictPlayerNames`                          |         1    |      0     |      0    |      0    |      0    |      0    |         | Limit player name to language specific symbol set. Prevents character                                                                                |
+| 16 | `StrictPetNames`                             |         1    |      0     |      0    |      0    |      0    |      0    |         | Limit pet names to language specific symbol set.                                                                                                     |
+| 17 | `WaterBreath.Timer`                          |     18000    | 180000     | 180000    | 180000    | 180000    | 180000    |         | The timer for player's breath underwater in milliseconds                                                                                             |
+| 18 | `EnableLowLevelRegenBoost`                   |         0    |      1     |      1    |      0    |      1    |      1    | C034    | Greatly increase Health and Mana regen rates for players under level 15 (Added in patch 3.3)                                                         |
+| 19 | `Rate.MoveSpeed`                             |         0.85 |      1     | (gone)    | (not set) | (not set) | (not set) | C003    | Movement speed rate.                                                                                                                                 |
+| 20 | `Rate.Damage.Fall`                           |         8    |      1     |      1    |     10.0  |     10.0  |     10.0  | C004    | Damage after fall rate.                                                                                                                              |
+| 21 | `Rate.Talent`                                |         3    |      1     |      1    |      1    |      1    |      1    |         | Talent point rate.                                                                                                                                   |
+| 22 | `Rate.Talent.Pet`                            |         3    |      1     |      1    |      1    |      1    |      1    |         | Pet Talent point rate.                                                                                                                               |
+| 23 | `Rate.Rest.InGame`                           |        10    |      1     |      1    |      1    |      1    |      1    |         |                                                                                                                                                      |
+| 24 | `Rate.Rest.Offline.InTavernOrCity`           |         5    |      1     |      1    |      1    |      1    |      1    |         |                                                                                                                                                      |
+| 25 | `Rate.MissChanceMultiplier.TargetCreature`   |         0    |     11     |     11    |     11    |     11    |     11    |         |                                                                                                                                                      |
+| 26 | `Rate.MissChanceMultiplier.TargetPlayer`     |         0    |      7     |      7    |      7    |      7    |      7    |         |                                                                                                                                                      |
+| 27 | `MaxPrimaryTradeSkill`                       |         5    |      2     |      2    |      2    |      2    |      2    |         | Maximum number of primary professions a character can learn.                                                                                         |
+| 28 | `SkillChance.Prospecting`                    |         1    |      0     |      0    |      0    |      0    |      0    |         | Allow skill increase from prospecting.                                                                                                               |
+| 29 | `SkillChance.Milling`                        |         1    |      0     |      0    |      0    |      0    |      0    |         | Allow skill increase from milling.                                                                                                                   |
+| 30 | `MaxGroupXPDistance`                         |       148    |     74     |     74    |     74    |     74    |     74    |         | Max distance to creature for group member to get experience at creature                                                                              |
+| 31 | `Rate.XP.Kill`                               |         3    |      1     |      1    |      1    |      1    |      2.0  | C005    |                                                                                                                                                      |
+| 32 | `Rate.XP.Explore`                            |        10    |      1     |      1    |      1    |      1    |      1    |         |                                                                                                                                                      |
+| 33 | `HonorPointsAfterDuel`                       |        10    |      0     |      0    |      0    |      0    |      0    |         | Amount of honor points the duel winner will get after a duel.                                                                                        |
+| 34 | `DurabilityLoss.OnDeath`                     |         0    |     10     |     10    |     10    |     10    |     10    |         | Durability loss percentage on death.                                                                                                                 |
+| 35 | `DurabilityLossChance.Damage`                |         3    |      0.5   |      0.5  |      0.5  |      0.5  |      0.5  |         | Chance to lose durability on one equipped item from damage.                                                                                          |
+| 36 | `DurabilityLossChance.Absorb`                |         5    |      0.5   |      0.5  |      0.5  |      0.5  |      0.5  |         | Chance to lose durability on one equipped armor item when absorbing damage.                                                                          |
+| 37 | `DurabilityLossChance.Parry`                 |         0.5  |      0.05  |      0.05 |      0.05 |      0.05 |      0.05 |         | Chance to lose durability on main weapon when parrying attacks.                                                                                      |
+| 38 | `DurabilityLossChance.Block`                 |         0.5  |      0.05  |      0.05 |      0.05 |      0.05 |      0.05 |         | Chance to lose durability on shield when blocking attacks.                                                                                           |
+| 39 | `Death.SicknessLevel`                        |       255    |     11     |     11    |     11    |     11    |     11    |         | Starting level for resurrection sickness.                                                                                                            |
+| 40 | `DBC.EnforceItemAttributes`                  |         0    |      1     |      1    |      1    |      1    |      1    |         | Disallow overriding item attributes stored in DBC files with values from the database                                                                |
+| 41 | `QuestPOI.Enabled`                           |         0    |      1     |      1    |      1    |      1    |      1    |         | Show points of interest on the map                                                                                                                   |
+| 42 | `Quests.IgnoreRaid`                          |         1    |      0     |      0    |      0    |      0    |      0    |         | Allow non-raid quests to be completed while in a raid group.                                                                                         |
+| 43 | `CreatureFamilyFleeAssistanceRadius`         |        60    |     30     |     30    |     30    |     30    |     30    |         | Distance for fleeing creatures seeking assistance from other creatures.                                                                              |
+| 44 | `CreatureFamilyAssistanceRadius`             |        30    |     10     |     10    |     10    |     10    |     10    |         | Distance for creatures calling for assistance from other creatures without                                                                           |
+| 45 | `Corpse.Decay.NORMAL`                        |     36000    |     60     |     60    |     60    |     60    |     60    |         |                                                                                                                                                      |
+| 46 | `Corpse.Decay.RARE`                          |     36000    |    300     |    300    |    300    |    300    |    300    |         |                                                                                                                                                      |
+| 47 | `Corpse.Decay.ELITE`                         |     36000    |    300     |    300    |    300    |    300    |    300    |         |                                                                                                                                                      |
+| 48 | `Corpse.Decay.RAREELITE`                     |     36000    |    300     |    300    |    300    |    300    |    300    |         |                                                                                                                                                      |
+| 49 | `Corpse.Decay.WORLDBOSS`                     |     36000    |   3600     |   3600    |   3600    |   3600    |   3600    |         | Time (in seconds) until creature corpse will decay if not looted or skinned.                                                                         |
+| 50 | `Rate.Corpse.Decay.Looted`                   |         1    |      0.5   |      0.5  |      0.5  |      0.5  |      0.5  |         | Multiplier for Corpse.Decay.* to configure how long creature corpses stay                                                                            |
+| 51 | `Rate.SellValue.Item.Normal`                 |         2    |      1     |      1    |      1    |      1    |      1    |         |                                                                                                                                                      |
+| 52 | `Rate.SellValue.Item.Uncommon`               |         3    |      1     |      1    |      1    |      1    |      1    |         |                                                                                                                                                      |
+| 53 | `Rate.SellValue.Item.Rare`                   |         4    |      1     |      1    |      1    |      1    |      1    |         |                                                                                                                                                      |
+| 54 | `Rate.SellValue.Item.Epic`                   |         5    |      1     |      1    |      1    |      1    |      1    |         |                                                                                                                                                      |
+| 55 | `Rate.SellValue.Item.Legendary`              |        10    |      1     |      1    |      1    |      1    |      1    |         |                                                                                                                                                      |
+| 56 | `Rate.RepairCost`                            |        25    |      1     |      1    |      1    |      1    |      1    |         | Repair cost rate.                                                                                                                                    |
+| 57 | `LeaveGroupOnLogout.Enabled`                 |         0    |      1     |      0    |      0    |      0    |      0    |         | Should the player leave their group when they log out?                                                                                               |
+| 58 | `Group.Raid.LevelRestriction`                |         1    |     10     |     10    |     10    |     10    |     10    |         | The Group members need to the same, or higher level than the specified value.                                                                        |
+| 59 | `Instance.IgnoreLevel`                       |         1    |      0     |      0    |      0    |      0    |      0    |         | Ignore level requirement when entering instances.                                                                                                    |
+| 60 | `Instance.IgnoreRaid`                        |         1    |      0     |      0    |      0    |      0    |      0    |         | Ignore raid group requirement when entering instances.                                                                                               |
+| 61 | `DungeonAccessRequirements.PrintMode`        |         2    |      1     |      1    |      1    |      1    |      1    |         | Select the preferred format to display information to the player who cannot enter a portal dungeon because when has not met the access requirements: |
+| 62 | `DungeonFinder.OptionsMask`                  |         0    |      5     |      5    |      5    |      5    |      5    |         | Dungeon and raid finder system.                                                                                                                      |
+| 63 | `LFG.MaxKickCount`                           |         0    |      2     |      2    |      2    |      2    |      2    |         | Specify the maximum number of kicks allowed in LFG groups (max 3 kicks)                                                                              |
+| 64 | `StrictCharterNames`                         |         1    |      0     |      0    |      0    |      0    |      0    |         | Limit guild/arena team charter names to language specific symbol set.                                                                                |
+| 65 | `Guild.CharterCost`                          | 100000000    |   1000     |   1000    |   1000    |   1000    |   1000    |         | Amount of money (in Copper) the petitions costs.                                                                                                     |
+| 66 | `Guild.AllowMultipleGuildMaster`             |         1    |      0     |      0    |      0    |      0    |      0    |         | Allow more than one guild master. Additional Guild Masters must be set using                                                                         |
+| 67 | `Guild.BankInitialTabs`                      |         1    |      0     |      0    |      0    |      0    |      0    |         | Changes the amounts of available tabs of the guild bank on guild creation                                                                            |
+| 68 | `Wintergrasp.Enable`                         |         2    |      1     |      1    |      1    |      1    |      1    |         | Enable the Wintergrasp battlefield.                                                                                                                  |
+| 69 | `Battleground.CastDeserter`                  |         0    |      1     |      1    |      1    |      1    |      1    |         | Cast Deserter spell at players who leave battlegrounds in progress.                                                                                  |
+| 70 | `Battleground.QueueAnnouncer.Enable`         |         1    |      0     |      0    |      0    |      0    |      0    |         | Announce battleground queue status to chat.                                                                                                          |
+| 71 | `Battleground.QueueAnnouncer.Limit.MinLevel` |         1    |      0     |      0    |      0    |      0    |      0    |         | Limit the QueueAnnouncer starting from a certain level.                                                                                              |
+| 72 | `Battleground.QueueAnnouncer.PlayerOnly`     |         1    |      0     |      0    |      0    |      0    |      0    |         | Battleground queue announcement type.                                                                                                                |
+| 73 | `Battleground.QueueAnnouncer.Timed`          |         1    |      0     |      0    |      0    |      0    |      0    |         | Enabled battleground queue announcements based on timer                                                                                              |
+| 74 | `Battleground.QueueAnnouncer.Timer`          |     15000    |  30000     |  30000    |  30000    |  30000    |  30000    |         | Set timer for queue announcements                                                                                                                    |
+| 75 | `Battleground.PrematureFinishTimer`          |         0    | 300000     | 300000    | 300000    | 300000    | 300000    |         | Time (in milliseconds) before battleground will end prematurely if there are                                                                         |
+| 76 | `Battleground.GiveXPForKills`                |         1    |      0     |      0    |      0    |      0    |      0    |         | Give experience for honorable kills in battlegrounds.                                                                                                |
+| 77 | `Battleground.InvitationType`                |         2    |      0     |      0    |      0    |      0    |      0    |         | Set Battleground invitation type.                                                                                                                    |
+| 78 | `Battleground.PlayerRespawn`                 |        60    |     30     |     30    |     30    |     30    |     30    |         | Battleground player resurrection interval (in seconds).                                                                                              |
+| 79 | `Battleground.RestorationBuffRespawn`        |        10    |     20     |     20    |     20    |     20    |     20    |         | Battleground restoration buff respawn time (in seconds).                                                                                             |
+| 80 | `Battleground.BerserkingBuffRespawn`         |        10    |    120     |    120    |    120    |    120    |    120    |         | Battleground berserking buff respawn time (in seconds).                                                                                              |
+| 81 | `Battleground.SpeedBuffRespawn`              |        10    |    150     |    150    |    150    |    150    |    150    |         | Battleground speed buff respawn time (in seconds).                                                                                                   |
+| 82 | `StrictChannelNames`                         |         1    |      0     |      0    |      0    |      0    |      0    |         | Limit channel names to language specific symbol set.                                                                                                 |
+| 83 | `ChatFakeMessagePreventing`                  |         0    |      1     |      1    |      1    |      1    |      1    |         | Additional protection from creating fake chat messages using spaces.                                                                                 |
+| 84 | `ChatStrictLinkChecking.Severity`            |        -1    |      0     |      0    |      0    |      0    |      0    |         | Check chat messages for in-game links to spells, items, quests, etc.                                                                                 |
+| 85 | `Channel.SilentlyGMJoin`                     |         1    |      0     |      0    |      0    |      0    |      0    |         | Silently join GM characters to channels. If set to 1, channel kick and ban                                                                           |
+| 86 | `AllowTwoSide.Interaction.Calendar`          |         1    |      0     |      0    |      0    |      0    |      0    |         | Allow calendar invites between factions.                                                                                                             |
+| 87 | `AllowTwoSide.Interaction.Chat`              |         1    |      0     |      0    |      0    |      0    |      0    |         | Allow say chat between factions.                                                                                                                     |
+| 88 | `AllowTwoSide.Interaction.Emote`             |         1    |      0     | (gone)    | (not set) | (not set) |      0    |         | Allow emote messages between factions (e.g. "/e looks into the sky")                                                                                 |
+| 89 | `AllowTwoSide.Interaction.Channel`           |         1    |      0     |      0    |      0    |      0    |      0    |         | Allow channel chat between factions.                                                                                                                 |
+| 90 | `AllowTwoSide.Interaction.Group`             |         1    |      0     |      0    |      0    |      0    |      0    |         | Allow group joining between factions.                                                                                                                |
+| 91 | `AllowTwoSide.Interaction.Guild`             |         1    |      0     |      0    |      0    |      0    |      0    |         | Allow guild joining between factions.                                                                                                                |
+| 92 | `AllowTwoSide.Interaction.Arena`             |         1    |      0     |      0    |      0    |      0    |      0    |         | Allow joining arena teams between factions.                                                                                                          |
+| 93 | `AllowTwoSide.Interaction.Auction`           |         1    |      0     |      0    |      0    |      0    |      0    |         | Allow auctions between factions. This flags all auction houses as Neutral,                                                                           |
+| 94 | `AllowTwoSide.Interaction.Mail`              |         1    |      0     | (gone)    | (not set) | (not set) |      0    |         | Allow sending mails between factions.                                                                                                                |
+| 95 | `AllowTwoSide.WhoList`                       |         1    |      0     | (gone)    | (not set) | (not set) |      0    |         | Show characters from both factions in the /who list.                                                                                                 |
+| 96 | `AllowTwoSide.AddFriend`                     |         1    |      0     | (gone)    | (not set) | (not set) |      0    |         | Allow adding friends from other faction the friends list.                                                                                            |
+| 97 | `AllowTwoSide.Trade`                         |         1    |      0     | (gone)    | (not set) | (not set) |      0    |         | Allow trading between factions.                                                                                                                      |

@@ -1,8 +1,7 @@
 # Alpha Profile
 
-**One-line summary:** Holiday relic — pinned-old AzerothCore + the
-original mod-eluna scripting engine + the wow-chat-1 Lua corpus,
-preserved as a frozen snapshot of the early project state.
+Pinned-old AzerothCore + the original mod-eluna scripting engine + the
+wow-chat-1 Lua, kept as they were in the early project.
 
 ## What you get
 

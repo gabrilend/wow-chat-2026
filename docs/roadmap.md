@@ -46,8 +46,6 @@ Everland Ghostsong is a WoW 3.3.5a private server with roguelike survival mechan
 - [x] Lua scripts loading and executing
 - [x] Profile system — canonical definitions in
       `issues/136-canonical-profile-definitions.md`
-      (alpha = legacy holiday relic, release = current public target,
-       beta = release + in-dev features)
 
 ---
 

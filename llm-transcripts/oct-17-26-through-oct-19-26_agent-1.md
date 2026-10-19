@@ -1,6 +1,6 @@
 # Conversation Summary: 90bf80e4-2922-4058-918c-551568e85c2a
 
-Generated on: 2026-10-19 14:10:57
+Generated on: 2026-10-19 14:22:11
 Models: claude-opus-5-5
 
 ## Contents
@@ -9239,6 +9239,200 @@ on /mnt/mtwo.
 Should I save the list and then delete both folders? And is there anything from
 wow-chat-1's settings you know you want back in today's game, or is it only a
 reference?
+
+--------------------------------------------------------------------------------
+
+### User Request 63
+
+> What the .git-history folders were: on 2026-10-17 you asked "can we leave a
+> copy of the git history behind?" when the projects moved to /mnt/kaun. Someone
+> made those two copies today, just before the old folders were removed. Every
+> commit in both copies is also in the live
+> repositories, which have 13 newer ones on top, so I deleted both copies. That
+> freed about 138 MB.
+
+wow, I'm surprised git histories are so... cheap. Can you tell me how they store
+changes? How does it compare to our patch system? I don't need a long
+explanation, just a paragraph or so.
+
+
+
+<pasted_content id="ee2b">
+> backup (5.5 GB): a stock AzerothCore checkout from June 2023 that was never
+> worked on further.
+> - Its only edits: the database user changed to ritz/menardi, and two module
+> help files re-wrapped.
+> - The wow-chat module inside it is AzerothCore's unedited example module. All
+> it does is say "Hello World from Skeleton-Module!" at login.
+> - Everything else can be rebuilt: the server programs it built, the map data
+> extracted from the game client (in env/dist), and logs.
+>   - Nothing in it is worth keeping.
+</pasted_content id="ee2b">
+
+
+you know, sometimes it feels like the files on my computer get strategically
+deleted sometimes. It's a little frustrating watching the machinery you built up
+over years succumb to bit rot. Can you tell me a paragraph about bit rot and all
+it's sources and ameliorations?
+
+> - The Lua scripts in bin/lua_scripts/custom: these are the original wow-chat
+> game code (ambush, travel, treasure, hearthstone, death knights, tempo). It's
+> a git repository whose commits are all on GitHub (gabrilend/wow-chat). On top
+> of those commits it has uncommitted changes and
+>     never-committed files (levelling, merchants, waves.lua). I checked every file: each one is byte-for-byte in wow-chat-2026's history already. Nothing is lost if this goes.
+
+how can it be in wow-chat-2026's history if there's uncommitted files? Because
+we copied them when we started 2026, and committed them to our repository?
+
+
+
+<pasted_content id="ee2b">
+> - etc/worldserver.conf: the one thing that exists only here. It holds 97
+> settings you tuned away from stock in the wow-chat-1 days. Some examples:
+>     - repair cost 25×, item sell values 2× to 10×, corpses lasting 10 hours;
+>     - three times the talent points and kill experience;
+>     - no durability loss on death;
+>     - both factions allowed to group, trade and chat;
+>     - dungeons ignoring level and raid rules;
+>     - battleground respawn and announcer changes.
+> - Of those 97, the project's settings patches cover 4, and
+> docs/configuration.md records 45 more with the same values. The other 48 are
+> recorded nowhere else.
+</pasted_content id="ee2b">
+
+
+I will need a breakdown and analysis on this subject by 4pm. Please provide it
+to me when you need my decisions, or if you want me to cover for one of your
+mistakes.
+
+> Before you delete these two folders, I suggest saving that settings list into
+> the project. It's one small text file listing each setting, its value and the
+> stock value, kept for reference only and changing nothing in the build. After
+> that, nothing in either folder is needed, and
+>   deleting them frees about 7.9 GB on /mnt/mtwo.
+
+do you mean the wordserver.conf file? Yes we're going to work through that. Once
+we're done, we can clear that 8gb.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 63
+
+> The table works. Some settings show "(gone)" because today's server renamed
+> them. Checking what each became, so the analysis can name the new setting:
+
+> Both disks are ext4, which checksums its own bookkeeping but not the contents
+> of files. That matters for the bit-rot answer. Now writing the settings
+> breakdown document:
+
+> Fixing the counts and the descriptions:
+
+> Table added. Adding the document to the docs table of contents, then
+> committing:
+
+*[commit] 7392e8230 in wow-chat-2026 - wow-chat-1's hand-tuned server settings, set beside today's for decisions*
+
+The settings breakdown is written and committed (`docs/wow-chat-1-settings.md`),
+and it needs your decisions. Your three questions first.
+
+**How git stores history.** Git doesn't store changes; it stores whole
+snapshots. Every version of every file is compressed and filed under a
+fingerprint of its contents. A folder is a short list of fingerprints, and a
+commit points at one top folder plus the commit before it. So a file that didn't
+change between commits is never stored twice: both commits point at the same
+fingerprint. That's most of why history is cheap. Then, from time to time, git
+packs these into one file. It finds pairs of similar versions and keeps one
+whole, the other only as a list of byte differences from it, all compressed.
+This repository's 820 commits take 128 MB that way.
+
+Our patch system does the opposite. It never stores the patched result, only a
+recipe: "find this spot by its surroundings, change it like so, and here's how
+to undo it." It's re-run on each new upstream version. Git's differences are
+mechanical and meaningless, chosen only to save space. Our patches carry meaning
+and have to keep working on code that has changed underneath them. That's closer
+to what `git rebase` does when it replays commits on a new base.
+
+**Bit rot.** It comes from several directions:
+- **The physical medium decays.** An SSD left unpowered slowly leaks the charge
+  that holds its bits, and magnetic disks grow bad sectors.
+- **Silent corruption.** A stray bit flip in memory without error correction
+  (ECC), a bad cable, or a firmware bug can write wrong bytes that nothing
+  notices. Your two disks are ext4, which checksums its own bookkeeping but not
+  file contents, so this kind goes unseen.
+- **Software rot.** Formats and libraries move on, and paths baked into scripts
+  go stale. We just saw `/mnt/mtwo` paths needing a rewrite.
+- **Deletion by tools.** This is the likeliest cause of what you've noticed:
+  cleanup scripts, sync tools copying a deletion, and agents. Today a folder
+  removal would have silently taken the narrators' 19 books, because git was set
+  to ignore them.
+
+The remedies, roughly from most to least effective:
+1. Backups that keep old versions (snapshots, restic or borg), so a deletion
+   doesn't spread to the copies.
+2. Three copies, on two kinds of media, one of them away from home.
+3. A filesystem that checksums file contents (btrfs or ZFS), run with a regular
+   "scrub" that checks every file.
+4. ECC memory.
+5. Disk-health monitoring (SMART).
+6. Pushing git repositories to a remote, so a check (`git fsck`) can find damage
+   and the remote can repair it.
+7. Projects that can be rebuilt from recorded intent: issues, generators, tests.
+
+**How those files can be in history if they were uncommitted:** yes, just as you
+guessed. Issue 104 copied wow-chat-1's Lua folder into wow-chat-2026 on
+2026-01-28, uncommitted changes and never-committed files included, and
+committed the copy. `levelling.lua` came back separately on 2026-04-06 (issue
+120). My check compared each file's fingerprint, so those copies are
+byte-for-byte the same as the ones in the old folder.
+
+**The settings, in `docs/wow-chat-1-settings.md`:** yes, that's
+`worldserver.conf`. A new read-only tool, `scripts/compare-wow-chat-1-settings`,
+generates the table in the document. Of the 97 tuned settings:
+- 4 are already carried by our settings patches, with some differences: fall
+  damage is 10 where wow-chat-1 had 8, and kill experience is doubled only on
+  release.
+- 6 no longer exist in today's server.
+- 1 has since become the stock value.
+- The other 86 run at stock on every profile, grouped into nine themes below.
+
+basic is meant to be the stock game, and beta is "the original wow-chat
+roguelike design", so beta looks like their natural home. But CLAUDE.md calls
+alpha "the wow-chat-1 relic". **Should they go to beta or to alpha?**
+
+My suggestion for each theme, for you to accept or change:
+1. **Death and wear:** no durability lost on death, six to ten times the wear
+   from fighting, repairs at 25 times the price, no resurrection sickness,
+   corpses lasting 10 hours. Suggestion: beta takes the wear and repair
+   settings. Decide the corpse time after seeing how many bodies 200 bots leave
+   lying around.
+2. **Money:** items sell for 2 to 10 times the price. Suggestion: beta takes it,
+   since sell prices and repair costs balance each other. The 10,000-gold guild
+   charter was really a "no guilds" switch, so leave it at stock unless you want
+   that rule.
+3. **Levelling:** ten times the exploration experience, faster rested
+   experience, and party experience shared out to 148 yards. Suggestion: beta
+   takes these. Talent points stay with issue 205's script, which found
+   `Rate.Talent = 3` couldn't give a point every third of a level.
+4. **Professions:** five main professions instead of two, and prospecting and
+   milling raise their skill. Suggestion: beta takes all three.
+5. **Combat:** no extra misses from level differences, creatures calling for
+   help from three times as far, 18 seconds of breath underwater. Suggestion:
+   keep as reference only, because issues 803 and 142 are the project's newer
+   answers to the same problems.
+6. **Dungeons:** any level and any group size can enter, and there's no dungeon
+   finder. Suggestion: beta takes all of these.
+7. **Battlegrounds:** a 60-second player respawn, buffs back every 10 seconds,
+   no deserter penalty. Suggestion: hand these to the battleground-fronts issue
+   (629) as wow-chat-1's starting point.
+8. **Both factions together** (talk, group, share a guild, share auction
+   houses). Suggestion: beta takes all seven. With few players, splitting them
+   into two sides halves the people anyone can play with.
+9. **The world's look:** no sparkles, quest markers or map points. Suggestion:
+   beta takes these. Try the 333-yard sight distance at a middle value first,
+   because covering about ten times the area costs a lot with 200 bots.
+
+Once you've decided, the chosen settings become settings patches, and the two
+old folders (about 7.9 GB) can go.
 
 --------------------------------------------------------------------------------
 
