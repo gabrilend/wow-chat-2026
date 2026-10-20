@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+COPY="${2:-${DIR}-intuition}"
+MARK="# installed by install-intuition-push-hook"
+
+hooks="$(git -C "${DIR}" rev-parse --git-common-dir)/hooks"
+[[ "${hooks}" == /* ]] || hooks="${DIR}/${hooks}"
+hook="${hooks}/pre-push"
+before="${hooks}/pre-push.before-intuition"
+
+if [[ -f "${hook}" ]] && ! grep -qF "${MARK}" "${hook}"; then
+    if [[ -e "${before}" ]]; then
+        echo "ERROR: ${hook} is not ours and ${before} already exists; not overwriting either."
+        echo "       to debug: compare the two and keep the one in use as ${before}"
+        exit 1
+    fi
+    mv "${hook}" "${before}"
+    echo "kept the hook that was there: ${before} (run first)"
+fi
+
+cat > "${hook}" <<EOF
+#!/usr/bin/env bash
+${MARK} (issue 190)
+# Before a push: any hook that was here before (pre-push.before-intuition)
+# runs first with the same input; then, for a push of main to origin, the
+# comment-free copy is updated from the commit being pushed, committed and
+# pushed to its own repository. Remade by scripts/install-intuition-push-hook.
+input="\$(cat)"
+if [[ -x "${before}" ]]; then
+    printf '%s\n' "\${input}" | "${before}" "\$@" || exit \$?
+fi
+[[ "\$1" == "origin" ]] || exit 0
+while read -r local_ref local_sha remote_ref remote_sha; do
+    [[ "\${local_ref}" == "refs/heads/main" ]] || continue
+    [[ "\${local_sha}" =~ ^0+\$ ]] && continue          # a deletion of main: nothing to copy
+    echo "intuition copy: updating ${COPY} from \${local_sha:0:9}"
+    if ! "${DIR}/scripts/make-intuition-copy" "${DIR}" "${COPY}" --rev "\${local_sha}" --push --branch intuition; then
+        echo "ERROR: the comment-free copy was not updated, so the push is stopped."
+        echo "       to debug: run ${DIR}/scripts/make-intuition-copy ${DIR} ${COPY} --rev \${local_sha} --push --branch intuition"
+        echo "       to push without it this once: git push --no-verify"
+        exit 1
+    fi
+done <<< "\${input}"
+exit 0
+EOF
+chmod +x "${hook}"
+echo "installed: ${hook}"

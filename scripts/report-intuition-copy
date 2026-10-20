@@ -1,0 +1,184 @@
+#!/usr/bin/env luajit
+
+local DIR  = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+DIR = DIR:gsub("/+$", "")
+local COPY = arg[2] and arg[2] ~= "" and arg[2]:gsub("/+$", "") or (DIR .. "-intuition")
+local HERE  = debug.getinfo(1, "S").source:match("^@(.*/)") or "./"
+local Table = dofile(HERE .. "lib/aligned-table.lua")
+
+local function sh(cmd)
+    local h = io.popen("{ " .. cmd .. "; } 2>&1; echo \"__exit:$?\"")
+    local out = h:read("*a"); h:close()
+    local body, code = out:match("^(.-)__exit:(%d+)%s*$")
+    if code ~= "0" then error("report-intuition-copy: `" .. cmd .. "` failed (" .. tostring(code) .. "):\n" .. body) end
+    return body
+end
+local function q(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
+local function slurp(p) local f = io.open(p, "rb"); if not f then return nil end local s = f:read("*a"); f:close(); return s end
+local function lines_of(s) if s == "" then return 0 end local n = select(2, s:gsub("\n", "")); if s:sub(-1) ~= "\n" then n = n + 1 end return n end
+
+local receipt = slurp(COPY .. "/.intuition-copy")
+if not receipt then error("report-intuition-copy: " .. COPY .. " has no .intuition-copy receipt; is it a copy made by scripts/make-intuition-copy?") end
+local commit = receipt:match("source commit:%s*(%x+)")
+local SRC = DIR .. "/tmp/shared-memory/report-intuition-copy"
+sh("rm -rf " .. q(SRC))
+sh("mkdir -p " .. q(SRC))
+sh("git -C " .. q(DIR) .. " archive --format=tar " .. q(commit) .. " | tar -x -C " .. q(SRC))
+
+local function kind_of(path, first)
+    local name = path:match("[^/]+$")
+    if name:match("%.lua$") or name:match("%.lua%.") or name:match("%.ext$") or first:match("^#!.*luajit") then return "Lua" end
+    if name:match("%.cpp$") or name:match("%.h$") or name:match("%.c$") or name:match("%.hpp$") or name:match("%.js$") then return "C, C++, JavaScript" end
+    if name:match("%.sh$") or first:match("^#!.*bash") or first:match("^#!.*/sh%s*$") then return "shell" end
+    if name:match("%.sql$") then return "SQL" end
+    if name:match("%.conf$") or name:match("%.dist$") or name:match("%.py$") then return "settings, Python" end
+    return "other (data, pictures, the rest)"
+end
+local function group_of(path)
+    local top, second = path:match("^([^/]+)/([^/]+)/")
+    if top == "src" or top == "sql" then return top .. "/" .. second end
+    return path:match("^([^/]+)/") or "(top level)"
+end
+
+local shared, only_original, by_kind, by_group, left_out = {}, {}, {}, {}, {}
+local totals = { files = 0, identical = 0, stripped = 0, links = 0 }
+local listing = sh("git -C " .. q(DIR) .. " -c core.quotepath=off ls-tree -r " .. q(commit))
+for mode, path in listing:gmatch("(%d+) %a+ %x+\t([^\n]+)") do
+    totals.files = totals.files + 1
+    local copy_path = COPY .. "/" .. path
+    local is_link = mode == "120000" or mode == "160000"
+    local in_copy = is_link and (os.execute("test -L " .. q(copy_path)) == 0 or os.execute("test -L " .. q(copy_path)) == true)
+                    or (not is_link and slurp(copy_path) ~= nil)
+    if not in_copy then
+        local src = is_link and "" or (slurp(SRC .. "/" .. path) or "")
+        local name = path:match("[^/]+$")
+        local where = path:match("^(docs)/") or path:match("^(issues)/") or path:match("^(notes)/") or path:match("^(tissues)/")
+                      or path:match("^(strategems)/") or path:match("^(llm%-transcripts)/") or path:match("^(art%-prompts)/")
+        where = where and (where .. "/") or (name:match("%.info%.md$") and "*.info.md beside source files")
+                or (name == "CLAUDE.md" and "CLAUDE.md") or (name:lower():match("^readme") and "README files")
+                or "other *.md and *.info files"
+        local g = left_out[where] or { files = 0, lines = 0, bytes = 0 }
+        g.files, g.lines, g.bytes = g.files + 1, g.lines + lines_of(src), g.bytes + #src
+        left_out[where] = g
+    elseif is_link then
+        totals.links = totals.links + 1
+    else
+        local a, b = slurp(SRC .. "/" .. path), slurp(copy_path)
+        local kind = kind_of(path, a:match("^[^\n]*") or "")
+        local la, lb = lines_of(a), lines_of(b)
+        if a == b then totals.identical = totals.identical + 1 else totals.stripped = totals.stripped + 1 end
+        for _, t in ipairs({ { by_kind, kind }, { by_group, group_of(path) } }) do
+            local m, key = t[1], t[2]
+            local g = m[key] or { files = 0, changed = 0, la = 0, lb = 0, ba = 0, bb = 0 }
+            g.files, g.la, g.lb, g.ba, g.bb = g.files + 1, g.la + la, g.lb + lb, g.ba + #a, g.bb + #b
+            if a ~= b then g.changed = g.changed + 1 end
+            m[key] = g
+        end
+    end
+end
+sh("rm -rf " .. q(SRC))
+
+local function kb(n) return math.floor(n / 1024 + 0.5) end
+local function pct(part, whole) return whole > 0 and string.format("%.1f", 100 * part / whole) or "0.0" end
+local function sorted_keys(m, by) local k = {} for key in pairs(m) do k[#k + 1] = key end
+    table.sort(k, function(x, y) return m[x][by] > m[y][by] end) return k end
+local function emit(t) for _, l in ipairs(t) do print(l) end end
+
+local in_both = totals.identical + totals.stripped + totals.links
+local copy_commits = sh("git -C " .. q(COPY) .. " rev-list --count HEAD 2>/dev/null || echo 0"):gsub("%s+$", "")
+local in_commit = {}
+for path in listing:gmatch("%d+ %a+ %x+\t([^\n]+)") do in_commit[path] = true end
+local only_copy = {}
+for path in sh("cd " .. q(COPY) .. " && find . -path ./.git -prune -o \\( -type f -o -type l \\) -print"):gmatch("%./([^\n]+)") do
+    if not in_commit[path] then only_copy[#only_copy + 1] = path end
+end
+table.sort(only_copy)
+local where = sh("git -C " .. q(COPY) .. " remote get-url origin 2>/dev/null || true"):gsub("%s+$", "")
+local lo_files, lo_lines, lo_bytes = 0, 0, 0
+for _, g in pairs(left_out) do lo_files, lo_lines, lo_bytes = lo_files + g.files, lo_lines + g.lines, lo_bytes + g.bytes end
+
+print("<!-- generated by scripts/report-intuition-copy; rerun it rather than editing -->")
+print("# The Comment-Free Copy and the Original: What They Share, How They Differ")
+print("")
+print("Original: `" .. DIR .. "`. Copy: `" .. COPY .. "`" ..
+      (where ~= "" and (" (pushed to `" .. where .. "`, branch `intuition`).") or "."))
+print("Both compared at commit `" .. commit:sub(1, 9) .. "`, the one the copy was last made from")
+print("(" .. (receipt:match("made at:%s*([^\n]+)") or "?") .. "). Issue 190 says why the copy exists; `strategems/intuition-copy.md` describes the pattern.")
+print("")
+print("## In one table")
+print("")
+emit(Table.lines({ "", "files", "lines", "KB" }, {
+    { "in the commit",                         totals.files, "", "" },
+    { "in both, byte for byte the same",       totals.identical + totals.links, "", "" },
+    { "in both, comments taken out of the copy's", totals.stripped, "", "" },
+    { "only in the original (explanations)",   lo_files, lo_lines, kb(lo_bytes) },
+    { "only in the copy",                      #only_copy, "", "" },
+}))
+print("")
+print("## What they share")
+print("")
+print(string.format("- **The same files at the same paths**: %d of the commit's %d files are in both, under the same", in_both, totals.files))
+print("  names in the same folders, so a path found in one is found in the other.")
+print(string.format("- **The same code**: in the %d files that differ, only comments were taken out; every", totals.stripped))
+print("  statement, string and setting is as in the original, so both run the same way")
+print("  (`scripts/test-make-intuition-copy` checks every Lua file compiles, every shell")
+print("  script parses, and every install marker the installer reads is still there).")
+print(string.format("- **Byte for byte the same**: %d files (data, pictures, JSON, files with no comments,", totals.identical + totals.links))
+print(string.format("  and %d symbolic links).", totals.links))
+print("- **The same history point**: the copy's receipt names the original's commit, and each of")
+print(string.format("  the copy's own commits (%s so far) is named after the commit it came from.", copy_commits))
+print("")
+print("## What only the original has")
+print("")
+print("Left out of the copy whole, as explanation rather than mechanism:")
+print("")
+local rows = {}
+for _, k in ipairs(sorted_keys(left_out, "bytes")) do local g = left_out[k]; rows[#rows + 1] = { k, g.files, g.lines, kb(g.bytes) } end
+rows[#rows + 1] = { "all of it", lo_files, lo_lines, kb(lo_bytes) }
+emit(Table.lines({ "what", "files", "lines", "KB" }, rows))
+print("")
+print("And the comments inside the files both have, by kind of file:")
+print("")
+rows = {}
+local sum = { files = 0, changed = 0, la = 0, lb = 0, ba = 0, bb = 0 }
+for _, k in ipairs(sorted_keys(by_kind, "la")) do
+    local g = by_kind[k]
+    rows[#rows + 1] = { k, g.files, g.changed, g.la, g.lb, g.la - g.lb, pct(g.la - g.lb, g.la), kb(g.ba), kb(g.bb) }
+    for f in pairs(sum) do sum[f] = sum[f] + g[f] end
+end
+rows[#rows + 1] = { "all", sum.files, sum.changed, sum.la, sum.lb, sum.la - sum.lb, pct(sum.la - sum.lb, sum.la), kb(sum.ba), kb(sum.bb) }
+emit(Table.lines({ "kind", "files", "with comments", "lines (original)", "lines (copy)", "lines removed", "% comment", "KB (original)", "KB (copy)" }, rows))
+print("")
+print("By where they sit (the twelve largest; `% comment` is the share of the original's lines that were comment):")
+print("")
+rows = {}
+for i, k in ipairs(sorted_keys(by_group, "la")) do
+    if i > 12 then break end
+    local g = by_group[k]
+    rows[#rows + 1] = { k, g.files, g.la, g.lb, pct(g.la - g.lb, g.la) }
+end
+emit(Table.lines({ "folder", "files", "lines (original)", "lines (copy)", "% comment" }, rows))
+print("")
+print("## What only the copy has")
+print("")
+print("- `CLAUDE.md`: not the project's instructions but the same short default every intuition copy")
+print("  gets (`strategems/intuition-copy-CLAUDE.md`): look in the scripts folder for common actions,")
+print("  and learn the project in the order the build takes in its sources.")
+print("- `.intuition-copy`: the receipt, naming the source commit and what was done.")
+print("- `.intuition-report.md`: this report, rewritten with every update of the copy.")
+print("- Its own git history, pushed as the `intuition` branch of the original's repository; it is")
+print("  updated before each push of the original's main branch (`scripts/install-intuition-push-hook`),")
+print("  with only the files that changed.")
+print("")
+print("All the files only in the copy, counted: " .. (#only_copy > 0 and ("`" .. table.concat(only_copy, "`, `") .. "`") or "none") .. ".")
+print("")
+print("## What this means for an agent in each")
+print("")
+print("- In the original, an agent reads why things are as they are: the issues, the owner's words,")
+print("  the summaries beside each file, the comments. It learns the project's own names and")
+print("  framing, its mistakes included.")
+print("- In the copy, the same code with none of that: an agent learns from what runs, in the")
+print("  order the build runs it. Where the two agents agree, the understanding is confirmed from")
+print("  two directions; where they differ, a comment has gone stale, or the reasoning in the")
+print("  record went somewhere the code does not.")

@@ -8,6 +8,12 @@ C037_SETTINGS=(
     "DurabilityLossChance.Block|0.5"
     "Death.SicknessLevel|255"
     "Rate.RepairCost|25"
+    "Corpse.Decay.NORMAL|36000"
+    "Corpse.Decay.RARE|36000"
+    "Corpse.Decay.ELITE|36000"
+    "Corpse.Decay.RAREELITE|36000"
+    "Corpse.Decay.WORLDBOSS|36000"
+    "Rate.Corpse.Decay.Looted|1"
     "Rate.SellValue.Item.Normal|2"
     "Rate.SellValue.Item.Uncommon|3"
     "Rate.SellValue.Item.Rare|4"
@@ -68,9 +74,6 @@ C037_SETTINGS=(
     "ChatFakeMessagePreventing|0"
     "ChatStrictLinkChecking.Severity|-1"
     "Visibility.GroupMode|0"
-    "Visibility.ObjectSparkles|0"
-    "Visibility.ObjectQuestMarkers|0"
-    "QuestPOI.Enabled|0"
 )
 
 config_beta_wow_chat_1_survival_settings() {

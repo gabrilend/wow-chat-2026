@@ -2314,3 +2314,35 @@ unpatch_E061_beta_narrator_reading() {
     echo "  [E061] Copying revert-form source → ${SQL_FILE}"
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
+
+_beta_two_side_step() {
+    local step="$1" stem="$2" form="$3"
+    local MARK; MARK=$(echo "${form}" | tr '[:lower:]' '[:upper:]')
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_auth/${stem}.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_auth.src/${stem}.${form}.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [${step}] ${form} source missing: ${SRC_FILE} (scripts/generate-beta-two-side-sql writes it)"; return 1; }
+    mkdir -p "${DIR}/sql/${PROFILE}/db_auth"
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_auth" "acore_auth" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_${step}_${MARK}" "${SQL_FILE}"; then
+        echo "  [${step}] Active file already holds ${form}-form content"
+        return 0
+    fi
+
+    echo "  [${step}] Copying ${form}-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E062_beta_two_side_trade()   { _beta_two_side_step E062 01-two-side-trade apply; }
+unpatch_E062_beta_two_side_trade() { _beta_two_side_step E062 01-two-side-trade revert; }
+
+patch_E063_beta_two_side_mail()   { _beta_two_side_step E063 02-two-side-mail apply; }
+unpatch_E063_beta_two_side_mail() { _beta_two_side_step E063 02-two-side-mail revert; }
+
+patch_E064_beta_two_side_who()   { _beta_two_side_step E064 03-two-side-who apply; }
+unpatch_E064_beta_two_side_who() { _beta_two_side_step E064 03-two-side-who revert; }
+
+patch_E065_beta_two_side_friends()   { _beta_two_side_step E065 04-two-side-friends apply; }
+unpatch_E065_beta_two_side_friends() { _beta_two_side_step E065 04-two-side-friends revert; }

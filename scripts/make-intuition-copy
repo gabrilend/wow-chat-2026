@@ -1,7 +1,7 @@
 #!/usr/bin/env luajit
 
 local DIR, OUT, TEMPLATE = "/mnt/kaun/wow-chat-2026", nil, nil
-local REV, FULL, COMMIT, PUSH = "HEAD", false, false, false
+local REV, FULL, COMMIT, PUSH, BRANCH = "HEAD", false, false, false, "main"
 do
     local pos, i = {}, 1
     while i <= #arg do
@@ -10,6 +10,7 @@ do
         elseif a == "--full"   then FULL = true
         elseif a == "--commit" then COMMIT = true
         elseif a == "--push"   then COMMIT, PUSH = true, true
+        elseif a == "--branch" then i = i + 1; BRANCH = arg[i]
         else pos[#pos + 1] = a end
         i = i + 1
     end
@@ -377,6 +378,12 @@ end
 if receipt then io.write(receipt) end
 print("copy:           " .. OUT)
 
+if receipt then
+    local here = (debug.getinfo(1, "S").source:match("^@(.*/)") or "./")
+    sh(q(here .. "report-intuition-copy") .. " " .. q(DIR) .. " " .. q(OUT) .. " > " .. q(OUT .. "/.intuition-report.md"))
+    print("report:         " .. OUT .. "/.intuition-report.md")
+end
+
 if COMMIT then
     if not exists(OUT .. "/.git") then sh("git -C " .. q(OUT) .. " init -q -b main") end
     sh("git -C " .. q(OUT) .. " add -A")
@@ -397,6 +404,6 @@ if PUSH then
         error("make-intuition-copy: " .. OUT .. " has no remote \"origin\" to push to;" ..
               " add one with: git -C " .. OUT .. " remote add origin <url>")
     end
-    sh("git -C " .. q(OUT) .. " push -q origin main")
-    print("pushed:         " .. sh("git -C " .. q(OUT) .. " remote get-url origin"):gsub("%s+$", ""))
+    sh("git -C " .. q(OUT) .. " push -q origin " .. q("main:refs/heads/" .. BRANCH))
+    print("pushed:         " .. sh("git -C " .. q(OUT) .. " remote get-url origin"):gsub("%s+$", "") .. ", branch " .. BRANCH)
 end
