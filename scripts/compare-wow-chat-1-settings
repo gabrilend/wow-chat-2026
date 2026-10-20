@@ -124,56 +124,7 @@ for _, k in ipairs(order) do
     end
 end
 
--- {{{ column layout
--- Numbers line up by place value (the owner, 2026-10-19: "we need to keep
--- all the digits in the same "position" in terms of their X coordinate"):
--- in each column the whole-number parts are right-aligned to one width and
--- the decimal points sit in one place, fractions padded after them; text
--- cells are left-aligned and padded to the column's width. The table reads
--- in columns in the raw file too, not only once rendered.
---   a number:  whole part padded on the left, fraction padded on the right
---   text:      padded on the right
-local function split_number(s)
-    local sign, whole, frac = s:match("^(%-?)(%d+)%.?(%d*)$")
-    if not whole then return nil end
-    return sign .. whole, frac, s:find("%.") ~= nil
-end
-local cols = #header
-local whole_w, frac_w, has_dot, width = {}, {}, {}, {}
-for c = 1, cols do whole_w[c], frac_w[c], has_dot[c], width[c] = 0, 0, false, #header[c] end
-for _, row in ipairs(rows) do
-    for c = 1, cols do
-        local w, f, dot = split_number(row[c])
-        if w then
-            whole_w[c] = math.max(whole_w[c], #w)
-            frac_w[c]  = math.max(frac_w[c], #f)
-            has_dot[c] = has_dot[c] or dot
-        end
-    end
-end
-local function number_cell(c, s)
-    local w, f, dot = split_number(s)
-    local out = string.rep(" ", whole_w[c] - #w) .. w
-    if has_dot[c] then out = out .. (dot and "." or " ") .. f .. string.rep(" ", frac_w[c] - #f) end
-    return out
-end
-local cells = {}
-for r, row in ipairs(rows) do
-    cells[r] = {}
-    for c = 1, cols do
-        cells[r][c] = split_number(row[c]) and number_cell(c, row[c]) or row[c]
-        width[c] = math.max(width[c], #cells[r][c])
-    end
-end
-local function line(list)
-    local t = {}
-    for c = 1, cols do t[c] = list[c] .. string.rep(" ", width[c] - #list[c]) end
-    return "| " .. table.concat(t, " | ") .. " |"
-end
--- }}}
-
-print(line(header))
-local sep = {} for c = 1, cols do sep[c] = string.rep("-", width[c]) end
-print(line(sep))
-for r = 1, #rows do print(line(cells[r])) end
+-- the table, its numbers lined up by place value (scripts/lib/aligned-table.lua)
+local Table = dofile(DIR .. "/scripts/lib/aligned-table.lua")
+for _, l in ipairs(Table.lines(header, rows)) do print(l) end
 io.stderr:write(#rows .. " tuned settings\n")

@@ -6,8 +6,8 @@
 - Related: `strategems/intuition-copy.md` (the pattern this builds, for any
   project), 104 (the migration that kept wow-chat-1's code by copying it)
 - Priority: Medium
-- State: in progress; the copy's maker is built and tested, the update on
-  every push and where the copy lives wait on open questions
+- State: in progress; built, tested and live on GitHub; open questions 3
+  and 4 remain
 
 ## Origin
 
@@ -37,8 +37,20 @@ project, as committed at HEAD: the explanation folders and files are left
 out, comments are removed from the source by kind of file, and the default
 `CLAUDE.md` from `strategems/intuition-copy-CLAUDE.md` is put at its root.
 It writes a receipt (`.intuition-copy`) naming the source commit and the
-counts. `scripts/test-make-intuition-copy` checks it on this project. Not
-yet: updating it on every push, and a remote for it (open questions).
+counts. When the copy was made from an earlier commit of the same history
+it is updated, not remade: only the paths changed since are rewritten
+(added and changed ones stripped again, deleted ones removed); `--full`
+remakes it all and keeps the copy's own history. With `--commit` the copy
+commits itself (a repository of its own), each commit named after its
+source commit; `--push` pushes it to `gabrilend/wow-chat-2026-intuition`
+(public, like the original; made 2026-10-20 with the owner's "sure we can
+do a github repository"). `scripts/install-intuition-push-hook` writes the
+pre-push hook that does this for every push of main to origin, from the
+commit being pushed; it keeps a hook already there and runs it first.
+`scripts/test-make-intuition-copy` checks the tricky cases, an update
+against a full remake, the hook in a throwaway repository, and a full copy
+of this project (39 checks). `scripts/report-intuition-copy` writes
+`docs/intuition-copy-report.md`: what the two share and how they differ.
 
 Before this, there was one copy of the project, its comments and documents
 read by every agent.
@@ -106,13 +118,22 @@ read by every agent.
    push"?** A folder on this computer, remade by a pre-push hook? Its own
    git repository, committed on each push? A GitHub repository of its own
    (making one publishes the code without comments; it is the owner's to
-   create)?
+   create)? **Answered** 2026-10-20: "sure we can do a github repository.
+   Also it should only remake what has changed, of course." Built as above.
 2. **Two agents at once.** Earlier the same day the owner said: "I am never
    ever using more than one LLM agent at a time." This design has two
    running together. Is the second agent for later, or do the two take
-   turns (one problem, worked in one copy and then the other)? And how do
-   changes made in the comment-free copy come back to this one: copied by
-   hand, as patches, or does that copy's agent only read and suggest?
+   turns (one problem, worked in one copy and then the other)? **Partly
+   answered** 2026-10-20: "I regret the experiment, I learned that my
+   parallelization scheme was short sighted. I think from now on we should
+   have a rule that if multiple agents are working on the same tasks, they
+   must claim files for themselves and only complete the parts of issue
+   files that don't require touching shared files." The rule is in
+   CLAUDE.md ("When more than one agent works here"). Still open: how do
+   changes made in the comment-free copy come back to this one (copied by
+   hand, as patches, or does that copy's agent only read and suggest)? The
+   copy is remade from this one on every push, so anything committed only
+   there is overwritten.
 3. **Inline shell comments.** `do_thing # because` keeps its comment for
    now. Worth a full shell reader to remove those too?
 4. **This project only, or every project?** The pattern is written for any

@@ -397,6 +397,16 @@ See `issues/117-visual-powerline-mapping-tool.md` for full specification.
   lives under `.git/` and is not itself version-controlled, so **after a fresh
   clone, re-create it** (or the transcripts stop getting bundled). User
   directive, 2026-07-16.
+- **Each push of main to GitHub also updates the comment-free copy**
+  (issue 190): `.git/hooks/pre-push`, written by
+  `scripts/install-intuition-push-hook`, updates
+  `/mnt/kaun/wow-chat-2026-intuition` from the commit being pushed (only
+  the files that changed), commits it and pushes it to
+  `gabrilend/wow-chat-2026-intuition`. A failure stops the push and says
+  why (`git push --no-verify` skips it once). The hook that was there
+  before (the conversation pages' rebuild) is kept as
+  `pre-push.before-intuition` and runs first. Like the commit hook, it is
+  not version-controlled: after a fresh clone, run the installer again.
 
 ## Patch System
 
