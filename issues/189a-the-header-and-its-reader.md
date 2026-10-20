@@ -5,13 +5,29 @@
 - Phase: 1 (Foundation & Tooling)
 - Parent: 189
 - Blocks: 189b
-- State: in progress
+- State: built 2026-10-20; completed when 189b puts headers on the
+  patches and the checker finds them all whole
 
 ## Current Behavior
 
-No patch, setting, install step or test says anything about itself in a
-form a program reads; what each is, which profiles take it and in what
-order live in lists elsewhere (`patches/patches.sh`, `scripts/compile`).
+Built 2026-10-20: `scripts/lib/patch-header.lua` (summary beside it)
+reads a file's header and footer and says whole, broken (every fault
+named) or absent; `scripts/check-patch-headers` reads every file in
+`patches/`, `config/patches/`, `sql/*/*.src/` and `scripts/test-*` (316
+files, in under a tenth of a second), lists the whole ones with their
+priority, kind and profiles, names each fault of a broken one and fails,
+lists the skipped ones, and with `--fix-lines` mends a footer count that
+is the only fault; `scripts/test-patch-headers` (21 checks, a quick test)
+covers each case. No file has a header yet (189b), so all 316 are listed
+as skipped.
+
+Found while building: a pattern anchored at a file's end re-scanned from
+every position and took minutes on SQL files with megabyte-long lines; the
+reader walks from newline to newline instead.
+
+Before this, no patch said anything about itself in a form a program
+reads; what each is, which profiles take it and in what order lived in
+lists elsewhere (`patches/patches.sh`, `scripts/compile`).
 
 ## Intended Behavior
 
