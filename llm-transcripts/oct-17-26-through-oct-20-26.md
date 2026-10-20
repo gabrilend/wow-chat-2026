@@ -1,6 +1,6 @@
 # Conversation Summary: 90bf80e4-2922-4058-918c-551568e85c2a
 
-Generated on: 2026-10-20 13:09:29
+Generated on: 2026-10-20 13:22:49
 Models: claude-opus-5-5
 
 ## Contents
@@ -10920,6 +10920,129 @@ more.
 
 Next is 189b, headers on every patch. I'm still holding the shared files for it,
 and the other session (econ, issue 192) is waiting on that work.
+
+--------------------------------------------------------------------------------
+
+### User Request 71
+
+Well let's work on 189 then.
+
+  - The server's maximum is 250 yards. It clamps anything larger and logs an
+    error at every start, so wow-chat-1's 333 was really 250. Beta's continents
+    now say 250.
+
+sounds like we need a source-patch.
+
+> - Battlegrounds and instances are 250 for everyone, on every profile built
+> from today's server: basic, vanilla, release, beta and cc-test. That's the
+> stock 170 raised in dungeons
+>     and raids, and the already-stock 250 in battlegrounds, now written down.
+
+except buddy-bots right? and stand-ins? and player-bots?
+
+> - Bots, buddies and stand-ins are capped on every map at the bot module's own
+> largest distance, 200 yards with stock settings. To the server, all three are
+> bots.
+
+oh good.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 71
+
+> On your question: yes, they're excepted. In battlegrounds and instances,
+> players get the full 250, and every bot (playerbots, buddies and stand-ins
+> alike) stays at its own 200, because B056's cap applies on every map.
+>
+> Seeing past 250 needs a source patch, which I'll write up as its own issue,
+> then 189. Checking where the 250 limit is used, so the plan names the right
+> risks:
+
+*[commit] ad85abf3b in wow-chat-2026 - A plan for seeing past the server's 250-yard limit*
+
+> Now 189b. Reading every profile's lists exactly as the runner holds them, so
+> the header writer starts from the real data:
+
+> Now the groups file, holding the one group the econ session suggested:
+
+> The safety check is right that `rm -f $out/*` would be dangerous if the
+> variable were empty. Using a fresh folder instead, so nothing needs removing:
+
+> All 15 pass, so the headers say exactly what the lists say, for every profile.
+> Adding the test to the quick tests and rerunning the writer, which gives the
+> test its own header:
+
+> Finishing the records for 189b, then committing:
+
+> 199 files, all from this work (the econ session's issue 192 and the gallery
+> page are left out). Committing:
+
+*[commit] 0d60ea3ab in wow-chat-2026 - Every patch and quick test says what it is in its own header*
+
+> The commit warns about the two issue moves, the same `git mv` staging I hit
+> before. Checking that the issues really left their old place in the commit,
+> and clearing the stale staging:
+
+> The commit is right: both are in `completed/` only. What remains is the stale
+> entries in the shared staging area from my `git mv`. Clearing them, after
+> checking the files on disk match the commit:
+
+Done and committed: headers on every patch (189b). Before that, the header
+reader (189a), and a written-up plan for seeing past 250 yards (issue 195).
+Nothing is compiled or installed yet.
+
+**Bots in battlegrounds and instances:** yes, they're excepted. Playerbots,
+buddies and stand-ins stay at 200 yards on every map, even where players get the
+full 250.
+
+**Seeing past 250 (issue 195).** The 250 limit is used in three places:
+- the server clamps the settings to it at every start;
+- it decides how much of the map is loaded around each player. The map is kept
+  in 533-yard squares, so 250 touches up to 4 squares around a player, and 533
+  up to 9;
+- some instances force their own shorter distances (150 to 200 in several of the
+  later raids and dungeons). One, Ahn'Qiraj's temple, already sets 300, despite
+  the code's own comment saying it can't exceed 250.
+
+Bots would stay at their 200 whatever the new limit is. Two questions are open
+there:
+1. How far: wow-chat-1's 333, or as far as the game client itself draws?
+2. Should those raids and dungeons keep their shorter distances (the server's
+   writers probably set them for crowded fights), or see the full distance like
+   everywhere else?
+
+**Issue 189, two parts done.**
+- **189a, the header and its reader:** it tells a whole header from a broken
+  one, naming each fault in plain words, or from none at all, and lists every
+  file it skips.
+- **189b, headers on every patch:** a tool wrote a header and footer into 189
+  files: 41 source patches, 55 install steps, 41 settings patches and every
+  quick test. Each says its profiles and priority; written a second time,
+  nothing changes.
+- **Today's order, kept exactly:**
+  - quick tests at 10, all together;
+  - source patches from 100 to 660, below the compile's gate at 1000;
+  - the setup steps (Lua links, logs, config files) at 1010, 1040, 1060;
+  - settings patches from 1100;
+  - the other install steps from 1300 to 1950, below the next gate at 2000.
+- **Groups:** the buddy patches basic and cc-test share now say `buddy-set`, so
+  the econ profile joins them with one line in `patches/groups`.
+- **The headers and the lists can't drift apart:** until the runner switches
+  over, a new quick test checks that, for every profile, the headers sorted by
+  priority give exactly its lists (15 checks).
+- **Checks after the change:** all 49 quick tests pass, and the source patches
+  round-trip on basic, beta and vanilla.
+
+**One new habit:** every edit to a patch changes its line count, which is how a
+file cut short gets caught. After editing a patch, run
+`scripts/check-patch-headers --fix-lines`, or the compile's quick tests fail
+until you do. This is in CLAUDE.md.
+
+**Next is 189c, the runner by gates.** It will read the headers instead of the
+lists, run patches by priority through the gates, and add the same-file layering
+check. The lists go away then. It changes how your compile runs, so it gets
+tested on pretend patches first. You'll compile once to confirm the build
+reports the same patches as before. I'm still holding the shared files for it.
 
 --------------------------------------------------------------------------------
 
