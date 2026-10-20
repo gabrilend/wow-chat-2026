@@ -110,8 +110,29 @@ mkdir -p "${WORK}/not-a-copy"; echo keep > "${WORK}/not-a-copy/keep"
 "${MAKE}" "${P}" "${WORK}/not-a-copy" > /dev/null 2>&1
 rc=$?
 check '[[ ${rc} -ne 0 && -f "${WORK}/not-a-copy/keep" ]]' "an existing folder without the receipt is refused and left alone"
-"${MAKE}" "${P}" "${C}" > /dev/null 2>&1
-check '[[ -f "${C}/.intuition-copy" && -f "${C}/a.lua" ]]' "an existing copy with the receipt is remade"
+"${MAKE}" "${P}" "${C}" > "${WORK}/same.log" 2>&1
+check 'grep -q "nothing changed" "${WORK}/same.log" && [[ -f "${C}/a.lua" ]]' "a copy already of this commit is left as it is"
+
+echo "updating only what changed"
+"${MAKE}" "${P}" "${C}" --commit > /dev/null 2>&1
+check '[[ -d "${C}/.git" ]] && [[ "$(git -C "${C}" rev-list --count HEAD)" == "1" ]]' "--commit makes the copy a repository with its first commit"
+echo 'local a = 2 -- changed' > "${P}/d.lua"
+printf -- '-- new comment\nlocal changed = true\n' >> "${P}/a.lua"
+git -C "${P}" rm -q c.sql
+git -C "${P}" mv b.cpp e.cpp
+echo "# more explaining" > "${P}/docs/y.md"
+git -C "${P}" add -A
+git -C "${P}" -c user.name=test -c user.email=test@test commit -q -m "second"
+"${MAKE}" "${P}" "${C}" --commit > "${WORK}/update.log" 2>&1
+check 'grep -q "as an update from" "${C}/.intuition-copy"' "an earlier copy is updated, not remade"
+check 'grep -q "files changed: *6" "${C}/.intuition-copy"' "only the six changed paths are touched ($(grep -o "files changed: *[0-9]*" "${C}/.intuition-copy" | tr -s " "))"
+check '[[ ! -e "${C}/c.sql" && ! -e "${C}/b.cpp" && -f "${C}/e.cpp" && ! -e "${C}/docs" ]]' "a deleted file goes, a renamed one moves, a new explanation stays out"
+check 'grep -q "local changed = true" "${C}/a.lua" && ! grep -q "new comment" "${C}/a.lua" && ! grep -q "changed$" "${C}/d.lua"' "changed and new files are stripped"
+check '[[ "$(git -C "${C}" rev-list --count HEAD)" == "2" ]] && git -C "${C}" log -1 --format=%s | grep -q "^From [0-9a-f]*: second$"' "the update is committed in the copy, named after the source commit"
+"${MAKE}" "${P}" "${WORK}/fresh" > /dev/null 2>&1
+check 'diff -r -x .git -x .intuition-copy "${C}" "${WORK}/fresh" > /dev/null' "the updated copy is the same, file for file, as a full remake"
+"${MAKE}" "${P}" "${C}" --full --commit > /dev/null 2>&1
+check '[[ -d "${C}/.git" ]] && [[ "$(git -C "${C}" rev-list --count HEAD)" -ge 2 ]]' "a full remake keeps the copy's own history"
 
 echo "this project"
 R="${SHM}/copy"

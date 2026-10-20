@@ -14,23 +14,47 @@
 -- working in the commented original.
 --
 -- Usage: scripts/make-intuition-copy [PROJECT_DIR] [OUT_DIR] [INSTRUCTIONS]
+--                                    [--rev REV] [--full] [--commit] [--push]
 --   PROJECT_DIR  the project, a git checkout (default below)
 --   OUT_DIR      where the copy goes (default: PROJECT_DIR's name plus
 --                "-intuition", beside it). An existing OUT_DIR is replaced
---                only if it holds this tool's receipt; anything else there
---                is an error, so a wrong path never deletes a folder.
+--                or updated only if it holds this tool's receipt; anything
+--                else there is an error, so a wrong path never deletes a
+--                folder.
 --   INSTRUCTIONS the default CLAUDE.md to put at the copy's root (default:
 --                PROJECT_DIR/strategems/intuition-copy-CLAUDE.md)
+--   --rev REV    the commit to copy (default HEAD; the push hook names the
+--                one being pushed)
+--   --full       remake every file; without it, a copy whose receipt names
+--                an earlier commit of the same history is updated with only
+--                the files that changed since (the owner, 2026-10-20: "it
+--                should only remake what has changed, of course")
+--   --commit     commit the result inside the copy (a git repository of its
+--                own, made on first use), named after the source commit
+--   --push       push that commit to the copy's remote "origin"
 --------------------------------------------------------------------------------
 
-local DIR = "/mnt/kaun/wow-chat-2026"
-if arg[1] and arg[1] ~= "" then DIR = arg[1] end
-DIR = DIR:gsub("/+$", "")
-local OUT = arg[2] and arg[2] ~= "" and arg[2]:gsub("/+$", "") or (DIR .. "-intuition")
+local DIR, OUT, TEMPLATE = "/mnt/kaun/wow-chat-2026", nil, nil
+local REV, FULL, COMMIT, PUSH = "HEAD", false, false, false
+do
+    local pos, i = {}, 1
+    while i <= #arg do
+        local a = arg[i]
+        if     a == "--rev"    then i = i + 1; REV = arg[i]
+        elseif a == "--full"   then FULL = true
+        elseif a == "--commit" then COMMIT = true
+        elseif a == "--push"   then COMMIT, PUSH = true, true
+        else pos[#pos + 1] = a end
+        i = i + 1
+    end
+    if pos[1] and pos[1] ~= "" then DIR = pos[1] end
+    DIR = DIR:gsub("/+$", "")
+    OUT = pos[2] and pos[2] ~= "" and pos[2]:gsub("/+$", "") or (DIR .. "-intuition")
+    -- the default instructions: the project's own, or a named file (a
+    -- project without the strategems folder, such as a copy itself)
+    TEMPLATE = pos[3] and pos[3] ~= "" and pos[3] or (DIR .. "/strategems/intuition-copy-CLAUDE.md")
+end
 local RECEIPT  = ".intuition-copy"
--- the default instructions: the project's own, or a file named as the third
--- argument (a project without the strategems folder, such as a copy itself)
-local TEMPLATE = arg[3] and arg[3] ~= "" and arg[3] or (DIR .. "/strategems/intuition-copy-CLAUDE.md")
 
 -- {{{ what is left out
 -- Folders of explanation, left out whole; and file names that explain.
@@ -47,8 +71,10 @@ end
 
 -- {{{ local function sh
 -- Runs a command, returns its output; a failure is an error naming it.
+-- The command sits in braces so its own redirection ("> file") keeps its
+-- error messages out of that file: they come back here instead.
 local function sh(cmd)
-    local h = io.popen(cmd .. " 2>&1; echo \"__exit:$?\"")
+    local h = io.popen("{ " .. cmd .. "; } 2>&1; echo \"__exit:$?\"")
     local out = h:read("*a")
     h:close()
     local body, code = out:match("^(.-)__exit:(%d+)%s*$")
@@ -301,91 +327,194 @@ if exists(OUT) and not exists(OUT .. "/" .. RECEIPT) then
 end
 -- }}}
 
--- the committed state, unpacked into a fresh folder beside the copy
-local commit = sh("git -C " .. q(DIR) .. " rev-parse HEAD"):gsub("%s+$", "")
-local BUILD  = OUT .. ".building"
-if exists(BUILD) then
-    if not exists(BUILD .. "/" .. RECEIPT .. ".building") then
-        error("make-intuition-copy: " .. BUILD .. " exists and is not an unfinished copy of this tool's; left alone")
-    end
-    sh("rm -rf " .. q(BUILD))
+-- {{{ the commits: what to copy, and what the copy was made from
+local function ok(cmd) local r = os.execute(cmd); return r == 0 or r == true end
+local commit = sh("git -C " .. q(DIR) .. " rev-parse --verify " .. q(REV .. "^{commit}")):gsub("%s+$", "")
+local subject = sh("git -C " .. q(DIR) .. " log -1 --format=%s " .. q(commit)):gsub("%s+$", "")
+local old_commit
+if exists(OUT .. "/" .. RECEIPT) then
+    local r = io.open(OUT .. "/" .. RECEIPT, "r")
+    old_commit = r:read("*a"):match("source commit:%s*(%x+)")
+    r:close()
 end
-sh("mkdir -p " .. q(BUILD))
-sh("touch " .. q(BUILD .. "/" .. RECEIPT .. ".building"))
-sh("git -C " .. q(DIR) .. " archive --format=tar HEAD | tar -x -C " .. q(BUILD))
+-- an update is possible when the copy was made from an earlier commit of
+-- this same history; otherwise (or with --full) every file is remade
+--   same commit:        nothing to do
+--   an earlier commit:  only the files changed since
+--   anything else:      a full remake
+local mode
+if FULL or not old_commit then mode = "full"
+elseif old_commit == commit then mode = "same"
+elseif ok("git -C " .. q(DIR) .. " merge-base --is-ancestor " .. q(old_commit) .. " " .. q(commit)) then mode = "update"
+else mode = "full" end
+-- }}}
 
--- {{{ each file: left out, stripped or copied
 local counts = { files = 0, left_out = 0, copied = 0, stripped = 0, lines_removed = 0,
-                 bytes_before = 0, bytes_after = 0 }
+                 deleted = 0, bytes_before = 0, bytes_after = 0 }
 local by_kind = {}
--- each line: "<mode> <type> <hash>\t<path>". Mode 120000 is a symbolic
--- link and 160000 another repository: those are never opened, since
--- writing a stripped file through a link would change the file it points
--- at, which may be anywhere (the original project included).
---   explanatory:     removed from the copy
---   a link:          left as the link it is
---   a file:          stripped or copied
-local listing = sh("git -C " .. q(DIR) .. " -c core.quotepath=off ls-tree -r HEAD")
-for mode, path in listing:gmatch("(%d+) %a+ %x+\t([^\n]+)") do
+
+-- {{{ local function treat
+-- One file of the commit, already written at root/path: left out, stripped
+-- or copied. Mode 120000 is a symbolic link and 160000 another repository:
+-- those are never opened, since writing a stripped file through a link
+-- would change the file it points at, which may be anywhere (the original
+-- project included).
+--   explanatory:  removed from the copy
+--   a link:       left as the link it is
+--   a file:       stripped or copied as it is
+local function treat(root, path, fmode)
     counts.files = counts.files + 1
-    local full = BUILD .. "/" .. path
+    local full = root .. "/" .. path
     if explanatory(path) then
         os.remove(full)
         counts.left_out = counts.left_out + 1
-    elseif mode == "120000" or mode == "160000" then
-        counts.copied = counts.copied + 1
+        return
+    end
+    if fmode == "120000" or fmode == "160000" then counts.copied = counts.copied + 1 return end
+    local f = io.open(full, "rb")
+    if not f then error("make-intuition-copy: " .. path .. " is in the commit but was not written to " .. root) end
+    local src = f:read("*a"); f:close()
+    local kind = kind_of(path, src:match("^[^\n]*") or "")
+    by_kind[kind] = (by_kind[kind] or 0) + 1
+    counts.bytes_before = counts.bytes_before + #src
+    if STRIP[kind] then
+        local fine, out, dropped = pcall(STRIP[kind], src)
+        if not fine then error("make-intuition-copy: " .. path .. " (" .. kind .. "): " .. tostring(out)) end
+        local w = assert(io.open(full, "wb")); w:write(out); w:close()
+        counts.stripped, counts.lines_removed = counts.stripped + 1, counts.lines_removed + dropped
+        counts.bytes_after = counts.bytes_after + #out
     else
-        local f = io.open(full, "rb")
-        if not f then error("make-intuition-copy: " .. path .. " is in the commit but was not unpacked") end
-        do
-            local src = f:read("*a"); f:close()
-            local kind = kind_of(path, src:match("^[^\n]*") or "")
-            by_kind[kind] = (by_kind[kind] or 0) + 1
-            counts.bytes_before = counts.bytes_before + #src
-            if STRIP[kind] then
-                local ok, out, dropped = pcall(STRIP[kind], src)
-                if not ok then error("make-intuition-copy: " .. path .. " (" .. kind .. "): " .. tostring(out)) end
-                local w = assert(io.open(full, "wb")); w:write(out); w:close()
-                counts.stripped, counts.lines_removed = counts.stripped + 1, counts.lines_removed + dropped
-                counts.bytes_after = counts.bytes_after + #out
-            else
-                counts.copied = counts.copied + 1
-                counts.bytes_after = counts.bytes_after + #src
-            end
-        end
+        counts.copied = counts.copied + 1
+        counts.bytes_after = counts.bytes_after + #src
     end
 end
--- folders the leaving-out emptied go too
-sh("find " .. q(BUILD) .. " -mindepth 1 -type d -empty -delete")
 -- }}}
 
--- the default instructions, then the receipt
-local t = io.open(TEMPLATE, "rb")
-if not t then error("make-intuition-copy: the default instructions " .. TEMPLATE .. " are missing") end
-local template = t:read("*a"); t:close()
-local w = assert(io.open(BUILD .. "/CLAUDE.md", "wb")); w:write(template); w:close()
+-- {{{ local function finish_tree
+-- The default instructions at the root, emptied folders gone (the copy's
+-- own .git kept), and the receipt written.
+local function finish_tree(root, lines)
+    local t = io.open(TEMPLATE, "rb")
+    if not t then error("make-intuition-copy: the default instructions " .. TEMPLATE .. " are missing") end
+    local template = t:read("*a"); t:close()
+    local w = assert(io.open(root .. "/CLAUDE.md", "wb")); w:write(template); w:close()
+    sh("find " .. q(root) .. " -mindepth 1 -type d -empty -not -path " .. q(root .. "/.git") ..
+       " -not -path " .. q(root .. "/.git/*") .. " -delete")
+    local kinds = {}
+    for k, v in pairs(by_kind) do kinds[#kinds + 1] = k .. " " .. v end
+    table.sort(kinds)
+    local receipt = table.concat({
+        "made by:        scripts/make-intuition-copy (issue 190)",
+        "source:         " .. DIR,
+        "source commit:  " .. commit,
+        "made at:        " .. os.date("%Y-%m-%d %H:%M:%S"),
+        table.concat(lines, "\n"),
+        string.format("lines removed:  %6d", counts.lines_removed),
+        string.format("bytes:          %6d KB before, %6d KB after", math.floor(counts.bytes_before / 1024), math.floor(counts.bytes_after / 1024)),
+        "by kind:        " .. table.concat(kinds, ", "),
+    }, "\n") .. "\n"
+    w = assert(io.open(root .. "/" .. RECEIPT, "wb")); w:write(receipt); w:close()
+    return receipt
+end
+-- }}}
 
-local kinds = {}
-for k, v in pairs(by_kind) do kinds[#kinds + 1] = k .. " " .. v end
-table.sort(kinds)
-local receipt = table.concat({
-    "made by:        scripts/make-intuition-copy (issue 190)",
-    "source:         " .. DIR,
-    "source commit:  " .. commit,
-    "made at:        " .. os.date("%Y-%m-%d %H:%M:%S"),
-    string.format("files:          %6d in the commit", counts.files),
-    string.format("left out:       %6d (explanations)", counts.left_out),
-    string.format("stripped:       %6d (comments removed)", counts.stripped),
-    string.format("copied as is:   %6d", counts.copied),
-    string.format("lines removed:  %6d", counts.lines_removed),
-    string.format("bytes:          %6d KB before, %6d KB after", math.floor(counts.bytes_before / 1024), math.floor(counts.bytes_after / 1024)),
-    "by kind:        " .. table.concat(kinds, ", "),
-}, "\n") .. "\n"
-w = assert(io.open(BUILD .. "/" .. RECEIPT, "wb")); w:write(receipt); w:close()
-os.remove(BUILD .. "/" .. RECEIPT .. ".building")
-
--- swap in: the old copy (it holds the receipt, checked above) goes only now
-if exists(OUT) then sh("rm -rf " .. q(OUT)) end
-sh("mv " .. q(BUILD) .. " " .. q(OUT))
-io.write(receipt)
+local receipt
+if mode == "same" then
+    print("make-intuition-copy: " .. OUT .. " is already a copy of " .. commit:sub(1, 9) .. "; nothing changed")
+elseif mode == "full" then
+    -- {{{ a full remake, in a fresh folder beside the copy, swapped in at the end
+    local BUILD = OUT .. ".building"
+    if exists(BUILD) then
+        if not exists(BUILD .. "/" .. RECEIPT .. ".building") then
+            error("make-intuition-copy: " .. BUILD .. " exists and is not an unfinished copy of this tool's; left alone")
+        end
+        sh("rm -rf " .. q(BUILD))
+    end
+    sh("mkdir -p " .. q(BUILD))
+    sh("touch " .. q(BUILD .. "/" .. RECEIPT .. ".building"))
+    sh("git -C " .. q(DIR) .. " archive --format=tar " .. q(commit) .. " | tar -x -C " .. q(BUILD))
+    local listing = sh("git -C " .. q(DIR) .. " -c core.quotepath=off ls-tree -r " .. q(commit))
+    for fmode, path in listing:gmatch("(%d+) %a+ %x+\t([^\n]+)") do treat(BUILD, path, fmode) end
+    os.remove(BUILD .. "/" .. RECEIPT .. ".building")
+    receipt = finish_tree(BUILD, {
+        string.format("made:           in full (%s)", old_commit and ("replacing a copy of " .. old_commit:sub(1, 9)) or "the first copy"),
+        string.format("files:          %6d in the commit", counts.files),
+        string.format("left out:       %6d (explanations)", counts.left_out),
+        string.format("stripped:       %6d (comments removed)", counts.stripped),
+        string.format("copied as is:   %6d", counts.copied),
+    })
+    -- the copy's own history (its .git) moves into the new tree; the old
+    -- tree (it holds the receipt, checked above) goes only now
+    if exists(OUT .. "/.git") then sh("mv " .. q(OUT .. "/.git") .. " " .. q(BUILD .. "/.git")) end
+    if exists(OUT) then sh("rm -rf " .. q(OUT)) end
+    sh("mv " .. q(BUILD) .. " " .. q(OUT))
+    -- }}}
+else
+    -- {{{ an update: only the files changed between the two commits
+    -- each line: a letter (A added, M changed, D deleted, T type changed)
+    -- and the path; renames come as a deletion and an addition
+    local changes = sh("git -C " .. q(DIR) .. " -c core.quotepath=off diff --name-status --no-renames " ..
+                       q(old_commit) .. " " .. q(commit))
+    for letter, path in changes:gmatch("(%a)%d*\t([^\n]+)") do
+        local full = OUT .. "/" .. path
+        sh("rm -f " .. q(full))
+        if letter == "D" then
+            counts.deleted = counts.deleted + 1
+        elseif not explanatory(path) then
+            local fmode = sh("git -C " .. q(DIR) .. " -c core.quotepath=off ls-tree " .. q(commit) .. " -- " .. q(path)):match("^(%d+)")
+            local dir = full:match("^(.*)/[^/]+$")
+            sh("mkdir -p " .. q(dir))
+            if fmode == "120000" then
+                local target = sh("git -C " .. q(DIR) .. " show " .. q(commit .. ":" .. path))
+                sh("ln -s " .. q(target) .. " " .. q(full))
+            elseif fmode ~= "160000" then
+                sh("git -C " .. q(DIR) .. " show " .. q(commit .. ":" .. path) .. " > " .. q(full))
+                sh("chmod " .. (fmode == "100755" and "+x " or "-x ") .. q(full))
+            end
+            treat(OUT, path, fmode)
+        else
+            counts.files, counts.left_out = counts.files + 1, counts.left_out + 1
+        end
+    end
+    receipt = finish_tree(OUT, {
+        string.format("made:           as an update from %s", old_commit:sub(1, 9)),
+        string.format("files changed:  %6d since then", counts.files + counts.deleted),
+        string.format("left out:       %6d (explanations)", counts.left_out),
+        string.format("stripped:       %6d (comments removed)", counts.stripped),
+        string.format("copied as is:   %6d", counts.copied),
+        string.format("deleted:        %6d", counts.deleted),
+    })
+    -- }}}
+end
+if receipt then io.write(receipt) end
 print("copy:           " .. OUT)
+
+-- {{{ the copy's own commit and push
+-- The copy is a git repository of its own, made on first use; each commit
+-- is named after the source commit it was made from.
+--   nothing changed in the copy:  no commit
+--   --push without a remote:      an error saying how to add one
+if COMMIT then
+    if not exists(OUT .. "/.git") then sh("git -C " .. q(OUT) .. " init -q -b main") end
+    sh("git -C " .. q(OUT) .. " add -A")
+    if ok("git -C " .. q(OUT) .. " diff --cached --quiet") then
+        print("commit:         nothing changed in the copy")
+    else
+        local msg = "From " .. commit:sub(1, 9) .. ": " .. subject .. "\n\n" ..
+                    "Made by scripts/make-intuition-copy from " .. DIR .. " at " .. commit .. "."
+        local mf = OUT .. ".message"
+        local w = assert(io.open(mf, "w")); w:write(msg); w:close()
+        sh("git -C " .. q(OUT) .. " commit -q -F " .. q(mf))
+        os.remove(mf)
+        print("commit:         " .. sh("git -C " .. q(OUT) .. " log -1 --format='%h %s'"):gsub("%s+$", ""))
+    end
+end
+if PUSH then
+    if not ok("git -C " .. q(OUT) .. " remote get-url origin > /dev/null 2>&1") then
+        error("make-intuition-copy: " .. OUT .. " has no remote \"origin\" to push to;" ..
+              " add one with: git -C " .. OUT .. " remote add origin <url>")
+    end
+    sh("git -C " .. q(OUT) .. " push -q origin main")
+    print("pushed:         " .. sh("git -C " .. q(OUT) .. " remote get-url origin"):gsub("%s+$", ""))
+end
+-- }}}
