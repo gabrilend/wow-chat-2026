@@ -1,6 +1,6 @@
 # Conversation Summary: 90bf80e4-2922-4058-918c-551568e85c2a
 
-Generated on: 2026-10-20 11:38:16
+Generated on: 2026-10-20 12:07:22
 Models: claude-opus-5-5
 
 ## Contents
@@ -55,6 +55,10 @@ Models: claude-opus-5-5
     permissions and the comment-free copy branch are all done. Next, I need your
     three answers: delete the old copy repository, confirm the patch header
     shape, and decide on bots' shorter sight range.
+13. 2026-10-20 11:41, after Request 68 - We're cleaning up the patch system: the
+    install steps are now split one per file and the copy is just a branch, and
+    the header system (issue 189) is next. To start it, I need your answers to
+    its questions about priority numbering.
 
 --------------------------------------------------------------------------------
 
@@ -10466,6 +10470,259 @@ build it:
    settings, so the two can never drift, or set as its own setting beside the
    333? And should instances and battlegrounds change too, or only the
    continents?
+
+--------------------------------------------------------------------------------
+
+### User Request 69
+
+> The install steps (issue 150). The 63 steps are now one file each
+> (patches/E0NN-<name>.sh)
+
+wow, uh, 63 steps? Can you tell me what kinds of steps they're taking? Should
+any of them be merged? Each one should be an individual functional change, but
+that many makes me thing that maybe we could coalesce some of them. If they
+never would be turned on or off individually, they can be merged...
+
+
+
+<pasted_content id="ee2b">
+> The "expected settings" table is not English and not a description: the test
+> reads it. Each row is a file, a setting and a value, such as
+> worldserver.conf|Rate.XP.Kill|3. The test
+> runs the real settings patches on scratch copies of the stock files and checks
+> every row against what comes out.
+> - It can't drift silently: if a patch changes and the table doesn't, the test
+> fails at the next compile. That's its job, a second, independent statement of
+> what each profile should
+>     get, like double-entry bookkeeping.
+> - The lists that can drift are the English ones: the settings table on each
+> profile's page (docs/profiles/beta.md) and docs/patches/patch-registry.md,
+> which also lists every patch.
+>     Nothing checks those.
+  - So my suggestion: keep the test's table, and once each patch has its header
+    (issue 189), generate the English pages from the headers, so they can't
+    drift either.
+</pasted_content id="ee2b">
+
+
+okay this sounds good. Let's work on issue 189.
+
+> Deleting the GitHub repository gabrilend/wow-chat-2026-intuition failed:
+> GitHub's login here lacks permission to delete repositories. To grant it, type
+> ! gh auth refresh -h
+>   github.com -s delete_repo; then I'll delete it.
+
+I don't think we ever built the github repository? Lemme check. Oh whoa it
+actually was on github somehow? How did you do that?
+
+> The pages hook bug is fixed in the ai-stuff installer (committed there) and in
+> this project's hook. Pushes from main now rebuild main's pages, not neuron's.
+
+... ai-stuff installer? what does that mean?
+
+
+
+<pasted_content id="ee2b">
+> Bot sight (issue 194). The server decides each player's reach in one function
+> (Player::GetSightRange), and it can tell a bot because a bot's session has no
+> client attached. The plan
+> is one source patch, B056, that caps a bot's reach at the bot module's largest
+> distance, its reaction range of 150 yards. Players get wow-chat-1's 333, and a
+> real player still sees
+>   bots out to 333.
+</pasted_content id="ee2b">
+
+
+great okay let's work on 194
+
+> Next is the header system (issue 189). These questions need answers before I
+> build it:
+> 1. Should the priority number order only the patches, or also our SQL, so it
+> runs in priority order instead of by the z_ file names? Ordering the SQL too
+> is the bigger job, but it's
+>      what lets the z_ names go away.
+
+all patches should be treated the same. Only their destinations and contents may
+differ, alongside their priority. Right now we have several stages - instead, we
+should have "gates" where a certain priority number is specified, and once we
+pass that threshold then all the patches with a higher priority number can be
+run. For example, let's say we have patches 1-5 which have to run in the first
+stage, we'd set the next gate to be 6 so that any patch that is greater than 6
+won't run until all the patches 1-5 have run (there could be multiple per
+priority, so like 3 patches for priority 1, then 2 for priority 2, then 17 for
+priority 3, etc) patches in the same priority number should be able to run at
+the same time, or in an arbitrary order.
+
+> 4. For bot sight: should the 150-yard cap be read from the bot module's own
+> settings, so the two can never drift, or set as its own setting beside the
+> 333? And should instances and
+>      battlegrounds change too, or only the continents?
+
+bot module's settings. BGs and instances should have their stock distances I
+think?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 69
+
+> Starting with the inventory of the 63 steps: each one's profiles and first
+> description line.
+
+> The bot module reads its distances through the server's own settings store
+> (`sConfigMgr`), so the core can read the same keys. Listing every distance key
+> it uses:
+
+> Both are unique. Reading how the line-edit tool tags and reverts its lines:
+
+> Adding the 333 yards to beta's settings patch, now that bots are capped:
+
+> Updating the docs for bot sight:
+
+> Correct now: on a continent a bot is capped at 200, in a battleground it keeps
+> the stock 250, and a player keeps 333. The patch round-trips. Updating issue
+> 194 and the balance log, then committing:
+
+*[commit] 64d7afc90 in wow-chat-2026 - Beta's players see 333 yards on the continents, and its bots only as far as they act*
+
+> Committed. Now issue 189. The notice says its file changed on disk since I
+> last read it, possibly the other session, so I'm reading the current version
+> first:
+
+> The econ session is `wow-chat-2026-ae`, idle now. Telling it I'm taking 189,
+> as you asked me to, with its fix included, so neither of us edits the same
+> plan or patch runner:
+
+> Before rewriting 189's design around gates, mapping today's stages: what the
+> compile runs, in what order, and where each kind of patch happens.
+
+> The install-step undo has the same fault. Fixing both with one small helper
+> that gives a profile's list back to front:
+
+> Now a test that proves the order: fake patches record their apply and undo
+> calls, and the undos must come exactly reversed.
+
+> All three pass, and the test would have caught the old order. Adding it to the
+> compile's quick tests:
+
+> Now the design. Reading all of 189 as it stands, with the other session's
+> lines:
+
+> I'll rewrite 189 around your gates and split it into sub-issues. First, taking
+> over the other session's two uncommitted blocks in it, as it offered:
+
+> Three more lines are held by the earlier third session (`wow-chat-2026-ed`),
+> which stopped yesterday at your direction. Adopting those too:
+
+> The plan names `dbimport` as the gate-2000 action. Checking that the build
+> actually produces it:
+
+> It's built for basic, beta and release, so gate 2000's action exists. Now the
+> six sub-issue files, short, with the three sections each:
+
+> Validating the new issues, then committing the plan with the undo-order fix:
+
+*[commit] 471071de6 in wow-chat-2026 - Patches come off last first, and the plan for patches that run by priority through gates*
+
+> Now the checker. It reads every file where patches and tests live, lists the
+> whole, broken and skipped ones, fails on any broken one, and mends footer
+> counts with `--fix-lines`:
+
+> It reads all 316 files in under a tenth of a second; none has a header yet, so
+> all are skipped. Now the test, with a small file for each case. It builds a
+> whole file, then breaks one thing at a time:
+
+> All 21 pass, and each fault is named in plain words. Writing the library's
+> summary file, updating 189a, adding its test to the quick tests, and
+> committing:
+
+*[commit] dd1380c14 in wow-chat-2026 - A reader for the header every patch will carry, and a checker that lists every patch and every skipped file*
+
+The bot-sight patch (issue 194) is built and tested, and waits on your compile.
+On 189, the undo-order fix and the header reader (189a) are committed; the
+design is rewritten around your gates and split into six sub-issues (189a to
+189f). Your questions first.
+
+**The 63 install steps, by kind:**
+- **Every server's setup (3):** Lua links (E001), the log folder (E004), the
+  config files (E006).
+- **Vanilla's starting experience (8):** start towns, no flight paths, the
+  starter kit and its level cap, pretrained abilities, no intro cinematic,
+  riding at 40/60, starting professions.
+- **Beta (15):** death knights from level 1 and their outfit, the creatures
+  removed, trainers' lessons, class selectors, empty chests, a bot-module
+  database fix, the narrators' books and reading table, Moonglade, and the four
+  cross-faction permissions.
+- **Basic (36):** each tied to its own issue. Outland's dungeons, gear, levels,
+  quests and tradeskills; the gem and socket stages; legendaries; world bosses;
+  Acherus and Sargobras; the buddies' tables and maps.
+
+**Two need nothing to decide:** E005 is on no profile's list at all (it wrote a
+table the server no longer reads), and E048 is retired and only undoes itself.
+Both can simply be deleted.
+
+**Merge candidates**, groups that look like they always go together:
+- **World boss respawns:** E046 (the list) and E047 (the countdowns).
+- **The death knight story at Acherus:** E040 (Sargobras at the gate), E041 (the
+  soul ledger), E051 (the reward vendors).
+- **The gem stages of issue 155p:** E033 (supply), E034 (jewelcrafters), E035
+  (sockets).
+- **Vanilla's starter kit:** E009 (the kit) and E018 (its level cap).
+
+I'd keep the buddy-map steps separate, because cc-test takes some of them and
+not others. The four cross-faction ones stay separate too, since you asked for
+one each.
+
+**GitHub:** I created it on 2026-10-20 with `gh repo create`, right after you
+said "sure we can do a github repository". The `gh` tool on this computer is
+signed in as gabrilend, so it can make repositories but not delete them.
+
+**"The ai-stuff installer":** `install-pages-hook`, a script in
+`/home/ritz/programming/ai-stuff/scripts/transcript-site/`. That's your ai-stuff
+repository of tools shared across projects; this one installs the hook that
+rebuilds a project's conversation pages before each push. The fix is committed
+there.
+
+**Bot sight (issue 194):** the source patch is B056, on beta's list.
+- **Bots:** capped on the continents at the largest distance the bot module ever
+  looks or acts. It's read from the bot module's own settings, so it can't
+  drift; with stock settings that's 200 yards, its role-play wandering range.
+- **Players:** beta's continents give them 333.
+- **Other maps:** battlegrounds, dungeons, raids and arenas keep stock distances
+  for everyone. Writing it up caught a mistake in my first version: a
+  battleground's stock distance is 250, so a cap there would have shortened
+  bots' sight.
+- **Checked:** the new line compiles and behaves correctly against stand-ins;
+  beta's source patches apply and revert to an identical tree; the settings test
+  passes.
+
+**Issue 189:**
+- **The undo-order bug** the econ session found is fixed: patches now come off
+  last first in both stages, with a test.
+- **Your gate design** is the core of the rewrite: one number line for every
+  kind of patch, gates where the build does its stage work, the same number free
+  to run together, undo exactly reversed. The gates I've proposed are 1000
+  (compile and install), 2000 (databases brought to upstream's state), and 9000
+  (the server may start).
+- **The econ session's needs** are written in:
+  - groups of patches that several profiles take;
+  - a check that two patches touching the same file never share a number;
+  - patches that carry their own files.
+- **189a, the header and its reader**, is built. It tells a whole header from a
+  broken one, naming each fault in plain words, or from none at all, and lists
+  every skipped file. Its test passes 21 checks. No file carries a header yet,
+  so all 316 files are listed as skipped.
+
+The other session is still working in this project; I've kept my claims on the
+shared files through 189b.
+
+Questions:
+1. Should I merge those four groups, and delete E005 and E048?
+2. Are the gate numbers right? The compile at 1000, the databases at 2000, the
+   server's start at 9000.
+3. For deleting the old repository, type `! gh auth refresh -h github.com -s
+   delete_repo`, then I'll delete it.
+
+Next is 189b, writing a header into every patch from today's lists.
 
 --------------------------------------------------------------------------------
 
