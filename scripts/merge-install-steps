@@ -1,0 +1,165 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- merge-install-steps - join install steps that are always taken together
+--
+-- For a general audience: each install step (patches/E0NN-<name>.sh) is one
+-- functional change, on or off on its own. Some come in sets nobody turns on
+-- or off separately (the owner, 2026-10-20: "If they never would be turned
+-- on or off individually, they can be merged"). This joins such a set into
+-- one step: the first step's number and a new name; inside it, each old
+-- step's apply and undo become parts (_E0NN_<old name>_apply / _revert),
+-- and the one step applies the parts in their old order and undoes them in
+-- reverse. The SQL files the parts copy, and the markers in them, are not
+-- touched. Every profile's list in patches/patches.sh that named the old
+-- steps names the new one once, where the first stood. The old step files
+-- are removed with git (git rm), so their history stays.
+--
+-- Proof that nothing changed: each part's code is compared with the old
+-- step's function it came from (only the name differs); any difference
+-- and nothing is written.
+--
+-- Usage: scripts/merge-install-steps [PROJECT_DIR] NEW-NAME E0AA E0BB [E0CC ...]
+--   NEW-NAME  the joined step's name after its number (world-bosses gives
+--             patches/E0AA-world-bosses.sh)
+--   E0AA ...  the steps to join, in the order they run; the first keeps
+--             its number
+-- To split again later: the parts are whole functions; copy each back into
+-- a step of its own.
+--------------------------------------------------------------------------------
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+local args = {}
+for _, a in ipairs(arg) do args[#args + 1] = a end
+if args[1] and args[1]:sub(1, 1) == "/" then DIR = table.remove(args, 1) end
+local NAME = table.remove(args, 1)
+local IDS = args
+if not NAME or #IDS < 2 then error("usage: merge-install-steps [PROJECT_DIR] NEW-NAME E0AA E0BB [E0CC ...]") end
+local P = DIR .. "/patches/"
+
+-- {{{ local helpers
+local function slurp(p) local f = io.open(p, "r"); if not f then return nil end local s = f:read("*a"); f:close(); return s end
+local function spit(p, s) local f = assert(io.open(p, "w")); f:write(s); f:close() end
+local function q(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
+local function run(cmd) local h = io.popen(cmd .. " 2>&1"); local out = h:read("*a"); local ok = h:close(); return out, ok end
+local function one_file(id)
+    local h = io.popen("ls -1 " .. q(P) .. id .. "-*.sh 2>/dev/null")
+    local list = {}
+    for l in h:lines() do list[#list + 1] = l end
+    h:close()
+    if #list ~= 1 then error("merge-install-steps: " .. #list .. " files for " .. id .. " in patches/; wanted one") end
+    return list[1]
+end
+-- a function's code as a clean shell prints it, after sourcing the helpers and one file
+local function body_of(file, fn)
+    local out = run("env -i PATH=" .. q(os.getenv("PATH")) .. " DIR=" .. q(DIR) .. " bash --noprofile --norc -c " ..
+                    q("source " .. q(P .. "E-helpers.sh") .. " >/dev/null 2>&1; source " .. q(file) ..
+                      " >/dev/null 2>&1; declare -f " .. fn))
+    return out
+end
+-- }}}
+
+-- {{{ read each old step: its fold block, its two functions' names
+local steps = {}
+for _, id in ipairs(IDS) do
+    local file = one_file(id)
+    local src = slurp(file)
+    local block = src:match("(# %-%- {{{ patch_" .. id .. "_.-\n# %-%- }}}\n?)")
+    if not block then error("merge-install-steps: no fold block for patch_" .. id .. "_ in " .. file) end
+    local base = block:match("patch_" .. id .. "_([%w_]+)%(%)")
+    if not base then error("merge-install-steps: no patch_" .. id .. "_<name>() in " .. file) end
+    local has_undo = block:find("unpatch_" .. id .. "_" .. base .. "%(%)") ~= nil
+    steps[#steps + 1] = { id = id, file = file, block = block, base = base, has_undo = has_undo }
+end
+-- }}}
+
+-- {{{ the joined file
+local first = IDS[1]
+local newfile = P .. first .. "-" .. NAME .. ".sh"
+local fname = NAME:gsub("%-", "_")
+local parts_text = {}
+for _, s in ipairs(steps) do
+    local part = s.block
+    part = part:gsub("unpatch_" .. s.id .. "_" .. s.base .. "%(%)", "_" .. s.id .. "_" .. s.base .. "_revert()")
+    part = part:gsub("patch_" .. s.id .. "_" .. s.base .. "%(%)", "_" .. s.id .. "_" .. s.base .. "_apply()")
+    part = part:gsub("{{{ patch_" .. s.id .. "_" .. s.base, "{{{ _" .. s.id .. "_" .. s.base .. " (a part of " .. first .. ")")
+    parts_text[#parts_text + 1] = part
+    s.apply_fn, s.revert_fn = "_" .. s.id .. "_" .. s.base .. "_apply", "_" .. s.id .. "_" .. s.base .. "_revert"
+end
+local apply_calls, revert_calls, ids_text = {}, {}, {}
+for _, s in ipairs(steps) do
+    apply_calls[#apply_calls + 1] = "    " .. s.apply_fn .. " || return 1"
+    ids_text[#ids_text + 1] = s.id
+end
+for i = #steps, 1, -1 do
+    local s = steps[i]
+    if s.has_undo then revert_calls[#revert_calls + 1] = "    " .. s.revert_fn .. " || return 1" end
+end
+local text = table.concat({
+    "#!/usr/bin/env bash",
+    "# " .. first .. "-" .. NAME .. ".sh - one install step, loaded by patches/E-patches.sh.",
+    "# Joined by scripts/merge-install-steps (2026-10-20) from steps that were always",
+    "# taken together: " .. table.concat(ids_text, ", ") .. " (the owner: \"sure that's fine I guess. We",
+    "# can split them later if we need to.\"). Each old step is a part below, its code",
+    "# unchanged (only the name: _E0NN_<old name>_apply / _revert); its log lines still",
+    "# say its old number. The step applies the parts in order and undoes them in",
+    "# reverse. To split again: each part is a whole function; copy it back into a",
+    "# step of its own. Helpers are in patches/E-helpers.sh, loaded first.",
+    "",
+    table.concat(parts_text, "\n"),
+    "",
+    "# -- {{{ patch_" .. first .. "_" .. fname,
+    "patch_" .. first .. "_" .. fname .. "() {",
+    table.concat(apply_calls, "\n"),
+    "}",
+    "unpatch_" .. first .. "_" .. fname .. "() {",
+    table.concat(revert_calls, "\n"),
+    "}",
+    "# -- }}}",
+    "",
+}, "\n")
+-- }}}
+
+-- {{{ the proof, then write
+local tmp = newfile .. ".merging"
+spit(tmp, text)
+for _, s in ipairs(steps) do
+    local pairs_to_check = { { "patch_" .. s.id .. "_" .. s.base, s.apply_fn } }
+    if s.has_undo then pairs_to_check[2] = { "unpatch_" .. s.id .. "_" .. s.base, s.revert_fn } end
+    for _, pr in ipairs(pairs_to_check) do
+        local old = body_of(s.file, pr[1]):gsub("^" .. pr[1]:gsub("%p", "%%%0") .. " ", "")
+        local new = body_of(tmp, pr[2]):gsub("^" .. pr[2]:gsub("%p", "%%%0") .. " ", "")
+        if old == "" or old ~= new then
+            os.remove(tmp)
+            error("merge-install-steps: " .. pr[2] .. " is not " .. pr[1] .. "'s code; nothing written")
+        end
+    end
+end
+os.remove(tmp)
+spit(newfile, text)
+for _, s in ipairs(steps) do
+    if s.file ~= newfile then
+        local _, ok = run("git -C " .. q(DIR) .. " rm -q " .. q(s.file))
+        if not ok then os.remove(s.file) end
+    end
+end
+-- the lists: the first id stays, the others go. Only the quoted list on
+-- each list line is edited, never the notes after it, which name old
+-- steps as history (a first version edited the notes too, 2026-10-20).
+local out = {}
+for line in (slurp(P .. "patches.sh") .. ""):gmatch("([^\n]*)\n") do
+    local pre, list, rest = line:match('^(    %["[%w%-]+"%]=)"([^"]*)"(.*)$')
+    if pre then
+        local kept = {}
+        for id in list:gmatch("%S+") do
+            local drop = false
+            for i = 2, #IDS do if id == IDS[i] then drop = true end end
+            if not drop then kept[#kept + 1] = id end
+        end
+        line = pre .. '"' .. table.concat(kept, " ") .. '"' .. rest
+    end
+    out[#out + 1] = line
+end
+spit(P .. "patches.sh", table.concat(out, "\n") .. "\n")
+print("joined " .. table.concat(ids_text, " ") .. " into " .. newfile:sub(#DIR + 2) ..
+      " (each part's code unchanged); the lists name " .. first .. " alone")
+-- }}}

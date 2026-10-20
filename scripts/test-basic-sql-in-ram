@@ -148,8 +148,11 @@ apply_all() {
     step "E044 named areas' borders and middles"          "${WORLD}" "${B}/db_world.src/27-buddy-area-centres.apply.sql"
     step "E045 beds buddies sleep on"                     "${WORLD}" "${B}/db_world.src/28-buddy-beds.apply.sql"
     step "E046 world bosses respawned by hand"            "${WORLD}" "${B}/db_world.src/29-world-boss-respawn.apply.sql"
-    # E048 is retired and installs its own revert form (patches/E048-basic-buddy-kit-required-level.sh); its
-    # apply file is gone (617r2). Until 2026-10-09 this asked for it.
+    # E048 was retired (617r2) and installed its own revert form until its step
+    # was deleted, 2026-10-20 (basic's databases already hold the revert); its
+    # apply file is gone, and its revert file stays for this test, which puts
+    # the saved levels back as a fresh basic database would need. Until
+    # 2026-10-09 this asked for the apply file.
     step "E048 retired: its saved levels put back"        "${WORLD}" "${B}/db_world.src/30-buddy-kit-required-level.revert.sql"
     step "E050 town circles"                              "${WORLD}" "${B}/db_world.src/31-buddy-town-circles.apply.sql"
     step "E051 Acherus reward vendors"                    "${WORLD}" "${B}/db_world.src/32-acherus-choice-vendors.apply.sql"

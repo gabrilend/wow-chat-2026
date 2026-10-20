@@ -42,6 +42,20 @@ beta's Lua loading.
 Which steps a profile runs, and their order, are still its lists in
 `patches/patches.sh`; issue 189 replaces those with a header in each file.
 
+Then, the same day, 55 steps: the owner, asked whether steps never turned
+on or off alone should be joined, "sure that's fine I guess. We can split
+them later if we need to." `scripts/merge-install-steps` (kept, for later
+joins; it proves each part's code unchanged and edits only the lists'
+quoted strings) joined E009 + E018 (vanilla's starter kit), E033 + E034 +
+E035 (basic's gem supply and sockets, 155p), E040 + E041 + E051 (the death
+knight story at Acherus, 718) and E046 + E047 (the world bosses, 155j):
+each old step is a part of the first one's file, applied in its old order
+and undone in reverse. Deleted: E005 (on no profile's list since
+2026-10-17; it filled a table the server no longer reads; its SQL went
+with it) and E048 (retired 2026-10-05, installing only its own revert,
+which basic's databases already hold; its revert SQL stays for basic's
+SQL test).
+
 The split tool is kept for one commit as a record, then renamed
 `scripts/split-install-steps-done` and removed the commit after: it
 refuses to run on the loader, so it has no further use.
