@@ -400,7 +400,9 @@ See `issues/117-visual-powerline-mapping-tool.md` for full specification.
 - **Each push of main to GitHub also updates the comment-free copy**
   (issue 190): `.git/hooks/pre-push`, written by
   `scripts/install-intuition-push-hook`, updates
-  `/mnt/kaun/wow-chat-2026-intuition` from the commit being pushed (only
+  `/mnt/kaun/wow-chat-2026-intuition` (a folder of this repository, on the
+  `intuition` branch: `git worktree add` after a fresh clone, as for
+  neuron) from the commit being pushed (only
   the files that changed, and its report `.intuition-report.md`), commits
   it and pushes it to the `intuition` branch of this project's own GitHub
   repository. A failure stops the push and says why (`git push

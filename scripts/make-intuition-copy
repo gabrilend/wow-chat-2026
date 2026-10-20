@@ -514,13 +514,20 @@ end
 -- }}}
 
 -- {{{ the copy's own commit and push
--- The copy is a git repository of its own, made on first use; each commit
--- is named after the source commit it was made from.
+-- The copy is committed where it stands: a folder of the original's own
+-- repository on the intuition branch (`git worktree add`, the usual
+-- case), or a repository of its own, made on first use. Each commit is
+-- named after the source commit it was made from.
 --   nothing changed in the copy:  no commit
 --   --push without a remote:      an error saying how to add one
+-- Every file is added, the ignored ones too ("add -f"): the copy holds
+-- only the original's tracked files and its own two, and the original
+-- tracks some files its .gitignore names (mysql/conf/my.cnf,
+-- libs/.gitkeep), which a plain add would quietly leave out of the copy's
+-- commit (found 2026-10-20, when the branch was missing them).
 if COMMIT then
     if not exists(OUT .. "/.git") then sh("git -C " .. q(OUT) .. " init -q -b main") end
-    sh("git -C " .. q(OUT) .. " add -A")
+    sh("git -C " .. q(OUT) .. " add -A -f")
     if ok("git -C " .. q(OUT) .. " diff --cached --quiet") then
         print("commit:         nothing changed in the copy")
     else
@@ -538,7 +545,10 @@ if PUSH then
         error("make-intuition-copy: " .. OUT .. " has no remote \"origin\" to push to;" ..
               " add one with: git -C " .. OUT .. " remote add origin <url>")
     end
-    sh("git -C " .. q(OUT) .. " push -q origin " .. q("main:refs/heads/" .. BRANCH))
+    -- the copy's own commit (HEAD: main in a repository of its own, the
+    -- intuition branch in a worktree), without the original's push hook,
+    -- which a worktree shares and which is for pushes of main
+    sh("git -C " .. q(OUT) .. " push -q --no-verify origin " .. q("HEAD:refs/heads/" .. BRANCH))
     print("pushed:         " .. sh("git -C " .. q(OUT) .. " remote get-url origin"):gsub("%s+$", "") .. ", branch " .. BRANCH)
 end
 -- }}}

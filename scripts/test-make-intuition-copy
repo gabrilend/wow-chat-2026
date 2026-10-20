@@ -75,8 +75,13 @@ echo "summary" > "${P}/a.info.md"
 echo "DEFAULT INSTRUCTIONS" > "${P}/strategems/intuition-copy-CLAUDE.md"
 printf -- '-- outside comment\nreturn 1\n' > "${WORK}/outside.lua"
 ln -s "${WORK}/outside.lua" "${P}/link.lua"
+# a file the project tracks although its .gitignore names it (as
+# mysql/conf/my.cnf is here)
+echo "kept.conf" > "${P}/.gitignore"
+echo "setting = 1" > "${P}/kept.conf"
 git -C "${P}" init -q -b main
 git -C "${P}" add -A
+git -C "${P}" add -f kept.conf
 git -C "${P}" -c user.name=test -c user.email=test@test commit -q -m "test project"
 # }}}
 
@@ -116,6 +121,7 @@ check 'grep -q "nothing changed" "${WORK}/same.log" && [[ -f "${C}/a.lua" ]]' "a
 echo "updating only what changed"
 "${MAKE}" "${P}" "${C}" --commit > /dev/null 2>&1
 check '[[ -d "${C}/.git" ]] && [[ "$(git -C "${C}" rev-list --count HEAD)" == "1" ]]' "--commit makes the copy a repository with its first commit"
+check 'git -C "${C}" ls-files --error-unmatch kept.conf > /dev/null 2>&1' "a file the project tracks though its .gitignore names it is in the copy's commit too"
 echo 'local a = 2 -- changed' > "${P}/d.lua"
 printf -- '-- new comment\nlocal changed = true\n' >> "${P}/a.lua"
 git -C "${P}" rm -q c.sql

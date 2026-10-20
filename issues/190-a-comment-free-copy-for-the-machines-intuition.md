@@ -41,7 +41,14 @@ counts. When the copy was made from an earlier commit of the same history
 it is updated, not remade: only the paths changed since are rewritten
 (added and changed ones stripped again, deleted ones removed); `--full`
 remakes it all and keeps the copy's own history. With `--commit` the copy
-commits itself (a repository of its own), each commit named after its
+commits itself where it stands: `/mnt/kaun/wow-chat-2026-intuition` is a
+folder of this project's own repository (`git worktree add ... intuition`,
+since 2026-10-20: the owner, "Can we JUST make it a branch?"), so its
+commits are on the `intuition` branch here; a copy elsewhere becomes a
+repository of its own. Every file is added, ignored ones too, since the
+project tracks a few files its `.gitignore` names (`mysql/conf/my.cnf`,
+`libs/.gitkeep`) that a plain add left out of the branch until that day.
+Each commit is named after its
 source commit; `--push --branch intuition` pushes it to the `intuition`
 branch of this project's own GitHub repository (the owner, 2026-10-20:
 "could we maybe push to a separate branch? They're sufficiently similar
