@@ -98,6 +98,7 @@ check '[[ "$(plan one sql)"       == "E200" ]]'           "one's past the second
 check '[[ "$(plan two sql)"       == "" ]]'               "two's: nothing"
 check '[[ "$(plan one all)"       == "B001 B003 E006 C001 E010 E200" ]]' "one's whole plan in one order across the gates"
 check '! grep -q "test-x" <<< "$("${DIR}/scripts/plan-patches" "${P}" one)"' "a test is never in the plan"
+check '[[ "$("${DIR}/scripts/plan-patches" "${P}" --quick-tests)" == "test-x" ]]' "but gathered as a quick test"
 # same priority: B002 (given 130) and B003 (130 by the rule), in id order
 # though B003's file was written first
 sed -i 's/^# profiles:   three$/# profiles:   three one/' "${P}/patches/B002-c.sh"
@@ -133,16 +134,19 @@ check '! "${DIR}/scripts/plan-patches" "${P}" two --ids > /dev/null 2>&1' "and t
 echo "the real project"
 check '"${DIR}/scripts/plan-patches" "${DIR}" --every-profile > "${WORK}/real.txt" 2>&1' "every profile's plan can be made from the headers"
 check '[[ $(grep -c "^source|" "${WORK}/real.txt") -eq $(grep -c "^    \[\"" <<< "$(sed -n "/declare -A PROFILE_REPO=(/,/^)/p" "${DIR}/scripts/profiles")") ]]' "one plan for each profile in scripts/profiles"
-# the compile's quick tests are those whose headers say "quick-test: yes"
-# (until issue 189f, the compile still keeps its own list; this keeps the
-# two the same, as test-patch-headers-match-lists did until 189c)
-listed="$(sed -n '/^QUICK_TESTS=(/,/^)/p' "${DIR}/scripts/compile" | grep -o 'test-[a-z0-9-]*' | sort)"
-marked="$(grep -l '^\(#\|--\) quick-test: yes$' "${DIR}"/scripts/test-* | grep -v -- '-done$' | sed 's|.*/||' | sort)"   # a retired test (-done) is not run
-check '[[ "${listed}" == "${marked}" ]]' "the tests marked quick are the compile's list$(diff <(echo "${listed}") <(echo "${marked}") | grep '^[<>]' | sed 's/^</ (listed, not marked:/; s/^>/ (marked, not listed:/; s/$/)/' | tr -d '\n')"
+# the compile's quick tests (issue 189f): what the planner gathers from the
+# headers, against a plain reading of the same lines, and each one there
+# and runnable (a retired test, named -done, is not run)
+gathered="$("${DIR}/scripts/plan-patches" "${DIR}" --quick-tests 2>&1)"
+marked="$(grep -l '^\(#\|--\) quick-test: yes$' "${DIR}"/scripts/test-* | grep -v -- '-done$' | sed 's|.*/||' | sort)"
+check '[[ -n "${gathered}" && "${gathered}" == "${marked}" ]]' "the quick tests gathered are the tests marked quick ($(wc -l <<< "${gathered}"))"
+not_runnable=""
+while IFS= read -r t; do [[ -x "${DIR}/scripts/${t}" ]] || not_runnable+=" ${t}"; done <<< "${gathered}"
+check '[[ -z "${not_runnable}" ]]' "each can be run${not_runnable:+ (not:${not_runnable})}"
 # }}}
 
 echo "${checks} checks, ${fails} failed"
 [[ ${fails} -eq 0 ]]
 # ==== footer of test-patch-plan ====
-# lines:      148
+# lines:      152
 # ==== end of footer ====

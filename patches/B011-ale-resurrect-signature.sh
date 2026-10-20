@@ -4,7 +4,7 @@
 # profiles:   none
 # priority:   210
 # kind:       source
-# about:      B011
+# about:      Retired 2026-05-19: matched the Lua engine's resurrect hook to the older core's
 # ==== end of header ====
 # B011-ale-resurrect-signature.sh
 #

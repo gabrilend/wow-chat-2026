@@ -77,6 +77,67 @@ These are conscious omissions, not bugs:
 All five modules track upstream HEAD — vanilla stays current with
 upstream improvements rather than being pinned to specific commits.
 
+<!-- patch-lists: begin. Written by scripts/generate-patch-lists from the patches' headers (issue 189f): edit a header, then run it; do not edit by hand. -->
+## Patches
+
+Every patch this profile takes, in the order the build runs them:
+lowest priority first, each line its header's own (`scripts/plan-patches vanilla`).
+
+**Before the compile (source patches, taken off again once it is through):**
+
+| priority | id   | kind   | about                                                                                       |
+| -------: | ---- | ------ | ------------------------------------------------------------------------------------------- |
+|      120 | B002 | source | Add ALE OnLogin hook to playerbots bot login                                                |
+|      140 | B004 | source | Fix ~695 compiler warnings in upstream modules                                              |
+|      300 | B020 | source | Add LOCK_ALE to ALEEventProcessor::RemoveEvent                                              |
+|      320 | B022 | source | A --conf-dir option for the servers and dbimport, over the compiled-in module config folder |
+|      350 | B025 | source | Vanilla playerbots start in the 148h starter kit (issue 148s)                               |
+|      360 | B026 | source | Fix the bot-login Engine::Init crash (dangling strategy on duplicate add)                   |
+|      370 | B027 | source | Guard Engine::Init against a strategy with a stale/foreign bot facade                       |
+|      660 | B056 | source | Bots see only as far as they act                                                            |
+|      670 | B057 | source | The most any view distance may be, as a setting                                             |
+
+**After the compile and install (install steps and settings, mixed by priority):**
+
+| priority | id    | kind     | about                                                                        |
+| -------: | ----- | -------- | ---------------------------------------------------------------------------- |
+|     1010 | E001  | install  | Create symlinks from install dir to the profile-specific Lua source          |
+|     1040 | E004  | install  | Create RAM-backed log directory symlink                                      |
+|     1060 | E006  | install  | Initialize config files (.dist -> .conf) and apply profile-specific values   |
+|     1100 | C001  | settings | Database Connections                                                         |
+|     1105 | C002  | settings | Directory Paths                                                              |
+|     1110 | C003  | settings | Run Speed 85% (named for its first value, 80%)                               |
+|     1115 | C004  | settings | Fall Damage 10x                                                              |
+|     1135 | C006c | settings | Max Level 40 (Vanilla)                                                       |
+|     1155 | C007c | settings | Starting Level 20 (Vanilla)                                                  |
+|     1160 | C008  | settings | GM Login State                                                               |
+|     1170 | C010  | settings | Network Ports                                                                |
+|     1175 | C011  | settings | Realmlist Setup                                                              |
+|     1185 | C014  | settings | Vanilla Playerbot Progression (enter at 20, climb to the 40 cap)             |
+|     1190 | C015  | settings | Disable Death Knight (Vanilla)                                               |
+|     1195 | C016  | settings | Missing server config keys                                                   |
+|     1200 | C017  | settings | Level-correlated caps                                                        |
+|     1205 | C018  | settings | Vanilla Playerbot Account Count                                              |
+|     1210 | C019  | settings | RealmID per profile                                                          |
+|     1215 | C020  | settings | Vanilla Playerbot Population Band (hold 128–256 active bots)                 |
+|     1220 | C021  | settings | SOAP Loopback Console (remote command channel for local scripts)             |
+|     1225 | C022  | settings | Enable Custom Starting Spells (Vanilla)                                      |
+|     1240 | C025  | settings | Client cache version follows the profile's content (issue 160)               |
+|     1275 | C032  | settings | Preserve Custom Channels (so a script can tell one channel from another)     |
+|     1285 | C034  | settings | No Faster Healing Below Level 15, on Every Server                            |
+|     1305 | C038  | settings | No Quest Sparkles, Object Quest Marks or Map Points                          |
+|     1310 | C039  | settings | Instances and Battlegrounds: See as Far as the Server Allows                 |
+|     1370 | E007  | install  | Override playercreateinfo so vanilla characters spawn at the                 |
+|     1380 | E008  | install  | Clear the flightmaster bit network-wide and replace gossip with              |
+|     1390 | E009  | install  | Apply vanilla profile's class-specific starting equipment kit                |
+|     1400 | E010  | install  | Grant every newly-created vanilla character the full set of                  |
+|     1490 | E019  | install  | Installs a BEFORE INSERT trigger on acore_characters_vanilla.characters      |
+|     1500 | E020  | install  | Push the two ground riding skills to Classic level gates (148l): Apprentice  |
+|     1510 | E021  | install  | Grant every level-20 vanilla character a gathering + a production profession |
+
+**After the databases are brought to upstream's state (our SQL):** none.
+<!-- patch-lists: end -->
+
 ## How to switch to vanilla
 
 From the project root:

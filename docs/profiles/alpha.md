@@ -74,6 +74,37 @@ Alpha is the most isolated profile:
 This isolation is the reason alpha can coexist with a running
 release server on the same machine without breaking either.
 
+<!-- patch-lists: begin. Written by scripts/generate-patch-lists from the patches' headers (issue 189f): edit a header, then run it; do not edit by hand. -->
+## Patches
+
+Every patch this profile takes, in the order the build runs them:
+lowest priority first, each line its header's own (`scripts/plan-patches alpha`).
+
+**Before the compile (source patches, taken off again once it is through):** none.
+
+**After the compile and install (install steps and settings, mixed by priority):**
+
+| priority | id    | kind     | about                                                                      |
+| -------: | ----- | -------- | -------------------------------------------------------------------------- |
+|     1040 | E004  | install  | Create RAM-backed log directory symlink                                    |
+|     1060 | E006  | install  | Initialize config files (.dist -> .conf) and apply profile-specific values |
+|     1100 | C001  | settings | Database Connections                                                       |
+|     1105 | C002  | settings | Directory Paths                                                            |
+|     1110 | C003  | settings | Run Speed 85% (named for its first value, 80%)                             |
+|     1125 | C006a | settings | Max Level 80 (Alpha)                                                       |
+|     1145 | C007a | settings | Starting Level 40 (Alpha)                                                  |
+|     1160 | C008  | settings | GM Login State                                                             |
+|     1170 | C010  | settings | Network Ports                                                              |
+|     1175 | C011  | settings | Realmlist Setup                                                            |
+|     1210 | C019  | settings | RealmID per profile                                                        |
+|     1220 | C021  | settings | SOAP Loopback Console (remote command channel for local scripts)           |
+|     1240 | C025  | settings | Client cache version follows the profile's content (issue 160)             |
+|     1275 | C032  | settings | Preserve Custom Channels (so a script can tell one channel from another)   |
+|     1285 | C034  | settings | No Faster Healing Below Level 15, on Every Server                          |
+
+**After the databases are brought to upstream's state (our SQL):** none.
+<!-- patch-lists: end -->
+
 ## How to switch to alpha
 
 ```bash

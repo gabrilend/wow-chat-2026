@@ -33,10 +33,13 @@ files that don't require touching shared files."
   touches, where the 2026-10-19 merge's conflicts were:
   `patches/E-helpers.sh` (what the install steps share; until 2026-10-20
   every install step was in one file, `patches/E-patches.sh`, now one file
-  each, issue 150), `patches/patches.sh` (each profile's patch lists), `scripts/compile`
-  (the quick-test list), `scripts/test-profile-config-gates` (the
-  expected values), `docs/table-of-contents.md`, `docs/balance-updates.md`,
-  `issues/phase-*-progress.md`, and this file.
+  each, issue 150), `patches/patches.sh` (the runner), `scripts/compile`,
+  `scripts/test-profile-config-gates` (the expected values),
+  `docs/table-of-contents.md`, `docs/balance-updates.md`,
+  `issues/phase-*-progress.md`, and this file. Since issue 189 a
+  profile's patches and the quick tests are no longer lists in shared
+  files: each patch's and test's own header says it, so adding one
+  touches only its own file (and the generated pages, below).
 - Everything else is mostly one file per behaviour (each `B*`, `C*` and
   `E*` patch, most Lua scripts and their tests), so most work can be split by
   file without meeting.
@@ -443,6 +446,11 @@ one, run `scripts/check-patch-headers --fix-lines`**: the footer's line
 count changes with every edit (that is how a file cut short is caught),
 and the compile's quick tests fail until it is mended.
 `scripts/plan-patches PROFILE` shows what a profile takes, in order.
+A test is one of the compile's quick tests when its header says
+`quick-test: yes`. **After adding a patch or changing a header, run
+`scripts/generate-patch-lists`**: it writes the patch registry's list and
+each profile page's from the headers (issue 189f), and the compile's quick
+tests fail while they are out of date.
 
 Built with the **`upstream-patch-system` skill** at
 `/home/ritz/programming/ai-stuff/skills/`. Read it before adding, removing, or

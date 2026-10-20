@@ -4,7 +4,7 @@
 # profiles:   all
 # priority:   10
 # kind:       test
-# about:      test-redirect-listener
+# about:      The redirect experiment's pretend second server accepts a redirected client
 # quick-test: yes
 # ==== end of header ====
 # test-redirect-listener

@@ -4,7 +4,7 @@
 # profiles:   basic beta cc-test release vanilla
 # priority:   320
 # kind:       source
-# about:      B022
+# about:      A --conf-dir option for the servers and dbimport, over the compiled-in module config folder
 # ==== end of header ====
 # B022-runtime-conf-dir-override.sh
 # Adds a runtime --conf-dir / -C CLI argument to authserver, worldserver,

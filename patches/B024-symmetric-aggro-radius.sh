@@ -4,7 +4,7 @@
 # profiles:   beta release
 # priority:   340
 # kind:       source
-# about:      B024
+# about:      Creatures notice weaker players from farther, the reverse of stock aggro
 # ==== end of header ====
 # B024-symmetric-aggro-radius.sh
 # Inverts the "prey on the weak" aggro asymmetry in

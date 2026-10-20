@@ -1,19 +1,9 @@
 # Patch Registry
 
-Patches applied during the build-and-deploy process, organized by phase.
-Each patch is idempotent (safe to run multiple times) and atomic (self-contained).
-
-## Meta-List Structure
-
-There are **three application times** a patch can fire, each with a distinct
-purpose and target:
-
-```
-BUILD_PATCHES
-├── PHASE_BEGIN    (B-patches — pre-compile source fixes)
-├── PHASE_END      (E-patches — post-install setup of shadow tree)
-└── PHASE_CONFIG   (C-patches — post-promote tuning of runtime configs)
-```
+Every change this project makes to AzerothCore, its modules and its installs
+is a patch: a file with a header saying what it is, which profiles take it
+and its priority (issue 189). This page says how they fit together, and
+lists every one of them, written from their headers.
 
 **The source tree is a build artifact.** `source-{profile}/` is cloned
 from upstream by `scripts/redownload-source` and gitignored (line 17 of
@@ -26,88 +16,254 @@ or a manual edit that should have been a patch. See issue 136's
 "Source Tree Is A Build Artifact" section for the canonical
 description of this design.
 
-| Phase         | Tier        | When                                            | Target                                              | Purpose |
-|---------------|-------------|-------------------------------------------------|-----------------------------------------------------|---------|
-| PHASE_BEGIN   | B-patches   | Before cmake/make, on source tree               | `source-{profile}/src/...` and `source-{profile}/modules/...` | Make upstream code compile cleanly against our profile (fix bugs, add hooks, silence warnings). Reverted after build to keep source tree clean. |
-| PHASE_END     | E-patches   | After cmake install to shadow, before validate  | `installed-files-shadow/{etc,bin,...}`              | Set up the just-installed shadow tree: write `.conf` files from `.dist`, create log/symlink dirs, link Lua scripts, apply per-profile SQL. |
-| PHASE_CONFIG  | C-patches   | After promote, before server start              | `installed-files-{profile}/etc/*.conf`              | Apply gameplay-tuning opinions (max level, exp rate, run speed, fall damage, port numbers, realmlist setup) on the live profile config tree. |
+## One number line, with gates
 
-**The separation matters.** Each tier targets a **different state of the
-build tree at a different chronological moment**:
+All patches share one line of priorities, whatever they change; the build
+runs a profile's patches lowest first. A gate (`patches/gates`) is a number
+where the build does a stage of its own work; nothing at or above it runs
+until everything below has finished and the gate's work is done.
 
-- B-patches edit upstream code we don't own; the source tree exists, the
-  binary doesn't yet. Must revert so the source stays clean.
-- E-patches set up the shadow install tree; binaries exist in shadow, the
-  profile dir may not. Validation depends on E-patches having run.
-- C-patches modify the live profile config tree; the profile dir exists
-  with live deployment paths and database names. Some C-patches encode
-  gameplay opinions (max level, exp rate); **others are strictly required**
-  — they rewrite paths and credentials in the profile configs that
-  couldn't be known until promote placed the files in the profile dir.
+| priorities   | what runs there |
+|-------------:|-----------------|
+|      10      | quick tests (they run before anything, and are not on a profile's plan) |
+|   100 -  999 | source patches (`patches/B*.sh`): applied to the source before the compile, taken off once it is through |
+|  1000        | gate: compile and install |
+|  1000 - 1999 | install steps (`patches/E*.sh`) and settings (`config/patches/C*.sh`), mixed by priority |
+|  2000        | gate: the databases brought to upstream's state |
+|  2000 - 8999 | our SQL (issue 189d) |
+|  9000        | gate: the server may start |
 
-The chronological split is the primary reason for three tiers, not two. A
-secondary benefit: putting C-patches after validate means a botched gameplay
-opinion can't break the validate gate.
+Patches of one priority may run in any order; two that change the same
+file may not share one (`scripts/test-source-patches` checks the source
+patches). Undo runs the same patches last first.
+
+The numbering rule a new patch's priority follows by default
+(`scripts/add-patch-header`): a source patch `100 + 10 × its number`, an
+install step `1300 + 10 × its number` (E001, E004, E006 sit lower, at 1010,
+1040, 1060, so the config files exist before the settings), a settings
+patch 5 above the last one.
 
 ## Reading the pipeline
 
 ```
-1. clone/update source
-2. PHASE_BEGIN apply         ← B-patches modify source in place
-3. cmake configure + make
+1. quick tests              ← every test whose header says quick-test: yes
+2. source patches           ← below gate 1000, by priority
+3. cmake configure + make   ← gate 1000
 4. cmake --install (to shadow)
-5. PHASE_END apply           ← E-patches set up shadow's etc/, logs/, db
-6. PHASE_BEGIN unapply       ← B-patches reverted (trap also handles failure)
-7. validate                  ← run shadow worldserver briefly
-8. promote                   ← shadow → installed-files-{profile}/
-9. PHASE_CONFIG apply        ← C-patches tune profile config files
-10. server start
+5. install stage            ← 1000-1999: install steps and settings
+6. source patches undone    ← last first (the exit trap also does it on failure)
+7. validate, promote, server start
 ```
 
----
+<!-- patch-lists: begin. Written by scripts/generate-patch-lists from the patches' headers (issue 189f): edit a header, then run it; do not edit by hand. -->
+## Every patch
 
-## PHASE_BEGIN: Pre-Compile Source Fixes
+Each patch and quick test, lowest priority first, as its header says it.
+A patch's profiles are profile names, a group from `patches/groups`,
+`all` or `none`; `patches/gates` says where the build's own stages stand
+on the priority line. `scripts/plan-patches PROFILE` gives one profile's,
+in the build's order.
 
-Applied after source/modules are cloned, before cmake/make.
-These fix compatibility issues in upstream code.
+| id                             | kind         | priority | profiles                                 | about                                                                                       | file                                                         |
+| ------------------------------ | ------------ | -------: | ---------------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| test-acherus-vendors           | test (quick) |       10 | all                                      | The Acherus vendors step applies, repeats and reverts, in one rolled-back transaction       | `scripts/test-acherus-vendors`                               |
+| test-ale-method-names          | test (quick) |       10 | all                                      | checks that every method the server-side Lua                                                | `scripts/test-ale-method-names`                              |
+| test-ambush                    | test (quick) |       10 | all                                      | runs beta's ambush script (src/lua-beta/ambush.lua) in a                                    | `scripts/test-ambush`                                        |
+| test-arathi-basin-rules        | test (quick) |       10 | all                                      | the Arathi Basin scene's two rules that need no                                             | `scripts/test-arathi-basin-rules`                            |
+| test-beta-lua-load             | test (quick) |       10 | all                                      | loads every Lua file the beta server would load, in                                         | `scripts/test-beta-lua-load`                                 |
+| test-beta-two-side-permissions | test (quick) |       10 | all                                      | beta's four cross-faction permissions (issue 193)                                           | `scripts/test-beta-two-side-permissions`                     |
+| test-buddy-arc                 | test (quick) |       10 | all                                      | checks where a partner's buddies are placed when a game                                     | `scripts/test-buddy-arc`                                     |
+| test-buddy-choice              | test (quick) |       10 | all                                      | play thousands of buddy picks at Sargobras and check                                        | `scripts/test-buddy-choice`                                  |
+| test-buddy-gems                | test (quick) |       10 | all                                      | checks that a buddy's starting gear can always be fully                                     | `scripts/test-buddy-gems`                                    |
+| test-buddy-gm                  | test (quick) |       10 | all                                      | runs the game masters' buddy commands                                                       | `scripts/test-buddy-gm`                                      |
+| test-buddy-hearth              | test (quick) |       10 | all                                      | buddies follow their partner's hearthstone                                                  | `scripts/test-buddy-hearth`                                  |
+| test-buddy-kit                 | test (quick) |       10 | all                                      | checks how a new buddy's bag slots are split over its bags                                  | `scripts/test-buddy-kit`                                     |
+| test-buddy-roam-core           | test (quick) |       10 | all                                      | holds the server's C++ roaming core to the Lua model                                        | `scripts/test-buddy-roam-core`                               |
+| test-buddy-stand-ins           | test (quick) |       10 | all                                      | checks the stand-in maker's choices (issue 617t1):                                          | `scripts/test-buddy-stand-ins`                               |
+| test-buddy-talents             | test (quick) |       10 | all                                      | level every class's buddy through every talent                                              | `scripts/test-buddy-talents`                                 |
+| test-check-issue-references    | test (quick) |       10 | all                                      | checks the issue reference checker against                                                  | `scripts/test-check-issue-references`                        |
+| test-compile-module-set        | test (quick) |       10 | all                                      | check which modules the compile script builds                                               | `scripts/test-compile-module-set`                            |
+| test-dk-buddies-by-level       | test (quick) |       10 | all                                      | a death knight player's buddies come by level                                               | `scripts/test-dk-buddies-by-level`                           |
+| test-dk-buddy-gear             | test (quick) |       10 | all                                      | what a death knight player's buddies wear                                                   | `scripts/test-dk-buddy-gear`                                 |
+| test-dk-skip-story             | test (quick) |       10 | all                                      | Sargobras's "skip the story" for death knights                                              | `scripts/test-dk-skip-story`                                 |
+| test-dk-soul-trade             | test (quick) |       10 | all                                      | a death knight gives a soul to the Lich King at                                             | `scripts/test-dk-soul-trade`                                 |
+| test-druid-moonglade           | test (quick) |       10 | all                                      | plays the druids' Moonglade return (issue 211a) in                                          | `scripts/test-druid-moonglade`                               |
+| test-forget-unprefixed-updates | test (quick) |       10 | all                                      | checks the install step that tidies the                                                     | `scripts/test-forget-unprefixed-updates`                     |
+| test-gear-designs              | test (quick) |       10 | all                                      | check the gear design loop without a picture                                                | `scripts/test-gear-designs`                                  |
+| test-gearsets                  | test (quick) |       10 | all                                      | holds the gearset profiles (issue 617r) to their rules,                                     | `scripts/test-gearsets`                                      |
+| test-gm-command-reference      | test (quick) |       10 | all                                      | the project's game master commands, their one                                               | `scripts/test-gm-command-reference`                          |
+| test-hearthstone               | test (quick) |       10 | all                                      | runs beta's group hearthstone (src/lua-beta/hearthstone.lua)                                | `scripts/test-hearthstone`                                   |
+| test-info-files-match-source   | test (quick) |       10 | all                                      | checks that each Lua file's ".info.md"                                                      | `scripts/test-info-files-match-source`                       |
+| test-line-edits                | test (quick) |       10 | all                                      | check that the source patches' whole-line edits apply                                       | `scripts/test-line-edits`                                    |
+| test-lua-globals               | test (quick) |       10 | all                                      | checks that the game's Lua scripts do not step on each                                      | `scripts/test-lua-globals`                                   |
+| test-lua-unique-names          | test (quick) |       10 | all                                      | checks the files a profile's Lua engine will load:                                          | `scripts/test-lua-unique-names`                              |
+| test-make-intuition-copy       | test (quick) |       10 | all                                      | checks the comment-free copy's maker (issue 190)                                            | `scripts/test-make-intuition-copy`                           |
+| test-movement                  | test (quick) |       10 | all                                      | checks beta's shared geometry helpers                                                       | `scripts/test-movement`                                      |
+| test-navmesh-caves             | test (quick) |       10 | all                                      | the walking mesh and the terrain together find a                                            | `scripts/test-navmesh-caves`                                 |
+| test-patch-headers             | test (quick) |       10 | all                                      | the patch header's reader and checker (issue 189a)                                          | `scripts/test-patch-headers`                                 |
+| test-patch-lists-current       | test (quick) |       10 | all                                      | the docs' patch lists say what the headers say (issue 189f)                                 | `scripts/test-patch-lists-current`                           |
+| test-patch-plan                | test (quick) |       10 | all                                      | the build's order comes from the patches' headers (issue 189c)                              | `scripts/test-patch-plan`                                    |
+| test-patch-undo-order          | test (quick) |       10 | all                                      | patches come off last first (issue 189)                                                     | `scripts/test-patch-undo-order`                              |
+| test-profile-config-gates      | test (quick) |       10 | all                                      | run a profile's config patches on scratch                                                   | `scripts/test-profile-config-gates`                          |
+| test-profile-tables-agree      | test (quick) |       10 | all                                      | checks that every script holding a copy of a                                                | `scripts/test-profile-tables-agree`                          |
+| test-redirect-listener         | test (quick) |       10 | all                                      | The redirect experiment's pretend second server accepts a redirected client                 | `scripts/test-redirect-listener`                             |
+| test-roam-pattern              | test (quick) |       10 | all                                      | hold both implementations of the roaming pattern to                                         | `scripts/test-roam-pattern`                                  |
+| test-sargobras-follow          | test (quick) |       10 | all                                      | The wandering Sargobras keeps near his owner, in a stand-in world                           | `scripts/test-sargobras-follow`                              |
+| test-sql-mirror                | test (quick) |       10 | all                                      | checks that the project's SQL reaches the core's updater                                    | `scripts/test-sql-mirror`                                    |
+| test-steady-mtimes             | test (quick) |       10 | all                                      | the compile script gives patched files back their                                           | `scripts/test-steady-mtimes`                                 |
+| test-travel                    | test (quick) |       10 | all                                      | runs beta's traveller script (src/lua-beta/travel.lua) in a                                 | `scripts/test-travel`                                        |
+| test-treasure                  | test (quick) |       10 | all                                      | runs beta's treasure script (src/lua-beta/treasure.lua.disabled)                            | `scripts/test-treasure`                                      |
+| test-validate-needs-world-up   | test (quick) |       10 | all                                      | checks that a build is only called good when                                                | `scripts/test-validate-needs-world-up`                       |
+| test-valley-deal               | test (quick) |       10 | all                                      | "Can I go somewhere else?": each character's valley order, and where a press lands          | `scripts/test-valley-deal`                                   |
+| test-watch-compile             | test (quick) |       10 | all                                      | checks scripts/watch-compile's verdicts on made-up                                          | `scripts/test-watch-compile`                                 |
+| test-world-boss-countdown      | test (quick) |       10 | all                                      | checks the world bosses' respawn countdown                                                  | `scripts/test-world-boss-countdown`                          |
+| B002                           | source       |      120 | basic beta cc-test vanilla               | Add ALE OnLogin hook to playerbots bot login                                                | `patches/B002-playerbots-ale-login-hook.sh`                  |
+| B003                           | source       |      130 | beta                                     | Enable entry 0 as wildcard for RegisterGameObjectEvent                                      | `patches/B003-ale-gameobject-wildcard.sh`                    |
+| B004                           | source       |      140 | basic beta cc-test release vanilla       | Fix ~695 compiler warnings in upstream modules                                              | `patches/B004-upstream-warning-fixes.sh`                     |
+| B005                           | source       |      150 | basic beta                               | Cap level difference impact on hit/miss at ±3 levels                                        | `patches/B005-accuracy-level-cap.sh`                         |
+| B006                           | source       |      160 | beta                                     | Add PLAYER_EVENT_ON_SELL_ITEM to ALE                                                        | `patches/B006-ale-sell-item-hook.sh`                         |
+| B007                           | source       |      170 | beta                                     | Add SetWalk, IsWalking, IsHostileTo, IsFriendlyTo to ALE Unit methods                       | `patches/B007-ale-unit-methods.sh`                           |
+| B010                           | source       |      200 | none                                     | Add the ARENA_TYPE_NONE value the bot module compares against                               | `patches/B010-playerbots-arena-type-none.sh`                 |
+| B011                           | source       |      210 | none                                     | Retired 2026-05-19: matched the Lua engine's resurrect hook to the older core's             | `patches/B011-ale-resurrect-signature.sh`                    |
+| B020                           | source       |      300 | basic beta cc-test release vanilla       | Add LOCK_ALE to ALEEventProcessor::RemoveEvent                                              | `patches/B020-ale-event-removeevent-lock.sh`                 |
+| B022                           | source       |      320 | basic beta cc-test release vanilla       | A --conf-dir option for the servers and dbimport, over the compiled-in module config folder | `patches/B022-runtime-conf-dir-override.sh`                  |
+| B024                           | source       |      340 | beta release                             | Creatures notice weaker players from farther, the reverse of stock aggro                    | `patches/B024-symmetric-aggro-radius.sh`                     |
+| B025                           | source       |      350 | vanilla                                  | Vanilla playerbots start in the 148h starter kit (issue 148s)                               | `patches/B025-playerbots-vanilla-starter-kit.sh`             |
+| B026                           | source       |      360 | basic beta cc-test release vanilla       | Fix the bot-login Engine::Init crash (dangling strategy on duplicate add)                   | `patches/B026-playerbots-bot-login-strategy-guard.sh`        |
+| B027                           | source       |      370 | basic beta cc-test release vanilla       | Guard Engine::Init against a strategy with a stale/foreign bot facade                       | `patches/B027-playerbots-engine-init-facade-guard.sh`        |
+| B028                           | source       |      380 | basic                                    | Basic: new characters spawn in their faction's rotating starting valley                     | `patches/B028-basic-starting-valley-rotation.sh`             |
+| B029                           | source       |      390 | basic                                    | A trainer gossip option can name which trainer list it opens                                | `patches/B029-gossip-option-trainer-list.sh`                 |
+| B030                           | source       |      400 | basic                                    | Build the basic profile's own server rules into the worldserver                             | `patches/B030-basic-rules-script.sh`                         |
+| B031                           | source       |      410 | basic                                    | Crushing blows start 4 levels later and ramp in over 4 more                                 | `patches/B031-crushing-blows-late.sh`                        |
+| B032                           | source       |      420 | basic                                    | A buff can be cast on anyone, whatever the gap between its level and theirs                 | `patches/B032-no-buff-level-restriction.sh`                  |
+| B033                           | source       |      430 | basic                                    | White (common-quality) gear is never repaired                                               | `patches/B033-white-gear-never-repaired.sh`                  |
+| B035                           | source       |      450 | basic                                    | Respec cost: no cap, and it falls on the weekly reset                                       | `patches/B035-respec-cost-weekly.sh`                         |
+| B036                           | source       |      460 | buddy-set                                | Build the project's buddy module (mod-buddies) into the worldserver                         | `patches/B036-mod-buddies.sh`                                |
+| B037                           | source       |      470 | buddy-set                                | Playerbots: a switch for the group invite at a bot's login                                  | `patches/B037-playerbots-invite-alts-on-login.sh`            |
+| B038                           | source       |      480 | basic                                    | Built-in chat channels a profile refuses                                                    | `patches/B038-refused-channels.sh`                           |
+| B039                           | source       |      490 | basic                                    | Log why the console thread shuts the world down (issue 163)                                 | `patches/B039-cli-console-silent-shutdown-logging.sh`        |
+| B040                           | source       |      500 | basic                                    | Creatures one player cannot select                                                          | `patches/B040-per-player-unselectable.sh`                    |
+| B041                           | source       |      510 | basic                                    | Lua calls for creatures one player cannot select                                            | `patches/B041-ale-per-player-unselectable.sh`                |
+| B042                           | source       |      520 | buddy-set                                | A bot says "AI was reset to defaults" only when asked to reset                              | `patches/B042-quiet-automatic-ai-reset.sh`                   |
+| B043                           | source       |      530 | basic                                    | The world says who stopped it                                                               | `patches/B043-say-why-the-world-stopped.sh`                  |
+| B044                           | source       |      540 | buddy-set                                | Companion accounts: their characters are not in /who and can't be friended                  | `patches/B044-companion-accounts-unseen.sh`                  |
+| B045                           | source       |      550 | buddy-set                                | Playerbots: a bot on a companion account takes no chat commands                             | `patches/B045-playerbots-companions-take-no-commands.sh`     |
+| B046                           | source       |      560 | buddy-set                                | Playerbots: buddies judge gear by their own talent plan and roll                            | `patches/B046-playerbots-buddy-loot-judgement.sh`            |
+| B047                           | source       |      570 | buddy-set                                | Creature outfits: a creature can look like a dressed player character                       | `patches/B047-creature-outfits.sh`                           |
+| B048                           | source       |      580 | buddy-set                                | Buddies don't whisper their owner about failed item moves                                   | `patches/B048-playerbots-buddies-quiet-inventory.sh`         |
+| B049                           | source       |      590 | basic                                    | Spirit heals by stamina, in combat too                                                      | `patches/B049-spirit-heals-by-stamina.sh`                    |
+| B050                           | source       |      600 | buddy-set                                | Playerbots: a buddy weighs spirit by what it heals                                          | `patches/B050-playerbots-buddy-spirit-worth.sh`              |
+| B051                           | source       |      610 | basic                                    | a Lua call that asks the navigation mesh how far a walk is                                  | `patches/B051-ale-walkable-path-length.sh`                   |
+| B052                           | source       |      620 | buddy-set                                | Playerbots: a buddy's long walk never ends in a teleport                                    | `patches/B052-playerbots-buddies-never-teleport-to-owner.sh` |
+| B053                           | source       |      630 | basic                                    | Players walk at the full stock speed; only running and the rest                             | `patches/B053-walking-at-full-speed.sh`                      |
+| B054                           | source       |      640 | buddy-set                                | The server accepts navigation tiles built by version 19 of the                              | `patches/B054-accept-version-19-navigation-tiles.sh`         |
+| B056                           | source       |      660 | basic beta cc-test release vanilla       | Bots see only as far as they act                                                            | `patches/B056-bots-see-only-as-far-as-they-act.sh`           |
+| B057                           | source       |      670 | basic beta cc-test release vanilla       | The most any view distance may be, as a setting                                             | `patches/B057-view-distance-limit-as-a-setting.sh`           |
+| E001                           | install      |     1010 | basic beta cc-test vanilla               | Create symlinks from install dir to the profile-specific Lua source                         | `patches/E001-lua-script-symlinks.sh`                        |
+| E004                           | install      |     1040 | alpha basic beta cc-test release vanilla | Create RAM-backed log directory symlink                                                     | `patches/E004-log-directory-setup.sh`                        |
+| E006                           | install      |     1060 | alpha basic beta cc-test release vanilla | Initialize config files (.dist -> .conf) and apply profile-specific values                  | `patches/E006-initialize-config-files.sh`                    |
+| C001                           | settings     |     1100 | all                                      | Database Connections                                                                        | `config/patches/C001-database-connections.sh`                |
+| C002                           | settings     |     1105 | all                                      | Directory Paths                                                                             | `config/patches/C002-directory-paths.sh`                     |
+| C003                           | settings     |     1110 | alpha basic beta release vanilla         | Run Speed 85% (named for its first value, 80%)                                              | `config/patches/C003-run-speed-80-percent.sh`                |
+| C004                           | settings     |     1115 | basic beta release vanilla               | Fall Damage 10x                                                                             | `config/patches/C004-fall-damage-10x.sh`                     |
+| C005                           | settings     |     1120 | release                                  | Experience Rate 2x                                                                          | `config/patches/C005-exp-rate-2x.sh`                         |
+| C006a                          | settings     |     1125 | alpha                                    | Max Level 80 (Alpha)                                                                        | `config/patches/C006a-max-level-80.sh`                       |
+| C006b                          | settings     |     1130 | beta release                             | Max Level 20 (Beta/Release)                                                                 | `config/patches/C006b-max-level-20.sh`                       |
+| C006c                          | settings     |     1135 | vanilla                                  | Max Level 40 (Vanilla)                                                                      | `config/patches/C006c-max-level-40.sh`                       |
+| C006d                          | settings     |     1140 | basic                                    | Max Level 60 (Basic)                                                                        | `config/patches/C006d-max-level-60.sh`                       |
+| C007a                          | settings     |     1145 | alpha                                    | Starting Level 40 (Alpha)                                                                   | `config/patches/C007a-starting-level-40.sh`                  |
+| C007b                          | settings     |     1150 | basic beta release                       | Starting Level 1 (Beta/Release/Basic)                                                       | `config/patches/C007b-starting-level-1.sh`                   |
+| C007c                          | settings     |     1155 | vanilla                                  | Starting Level 20 (Vanilla)                                                                 | `config/patches/C007c-starting-level-20.sh`                  |
+| C008                           | settings     |     1160 | all                                      | GM Login State                                                                              | `config/patches/C008-gm-login-state.sh`                      |
+| C009                           | settings     |     1165 | beta                                     | Instant Teleport (Beta)                                                                     | `config/patches/C009-instant-teleport-beta.sh`               |
+| C010                           | settings     |     1170 | all                                      | Network Ports                                                                               | `config/patches/C010-network-ports.sh`                       |
+| C011                           | settings     |     1175 | all                                      | Realmlist Setup                                                                             | `config/patches/C011-realmlist-setup.sh`                     |
+| C012                           | settings     |     1180 | beta release                             | Playerbot Level Cap (Beta/Release)                                                          | `config/patches/C012-playerbot-level-cap.sh`                 |
+| C014                           | settings     |     1185 | vanilla                                  | Vanilla Playerbot Progression (enter at 20, climb to the 40 cap)                            | `config/patches/C014-vanilla-playerbot-level-cap.sh`         |
+| C015                           | settings     |     1190 | vanilla                                  | Disable Death Knight (Vanilla)                                                              | `config/patches/C015-vanilla-disable-deathknight.sh`         |
+| C016                           | settings     |     1195 | basic beta cc-test release vanilla       | Missing server config keys                                                                  | `config/patches/C016-missing-server-config-keys.sh`          |
+| C017                           | settings     |     1200 | basic beta release vanilla               | Level-correlated caps                                                                       | `config/patches/C017-level-correlated-caps.sh`               |
+| C018                           | settings     |     1205 | vanilla                                  | Vanilla Playerbot Account Count                                                             | `config/patches/C018-vanilla-playerbot-account-count.sh`     |
+| C019                           | settings     |     1210 | all                                      | RealmID per profile                                                                         | `config/patches/C019-realm-id.sh`                            |
+| C020                           | settings     |     1215 | vanilla                                  | Vanilla Playerbot Population Band (hold 128–256 active bots)                                | `config/patches/C020-vanilla-playerbot-population.sh`        |
+| C021                           | settings     |     1220 | all                                      | SOAP Loopback Console (remote command channel for local scripts)                            | `config/patches/C021-soap-loopback-console.sh`               |
+| C022                           | settings     |     1225 | vanilla                                  | Enable Custom Starting Spells (Vanilla)                                                     | `config/patches/C022-vanilla-custom-spells.sh`               |
+| C023                           | settings     |     1230 | buddy-set                                | Basic: No Random Bots                                                                       | `config/patches/C023-basic-no-random-bots.sh`                |
+| C024                           | settings     |     1235 | basic                                    | Basic Death Knight Rules (interim, until issue 718)                                         | `config/patches/C024-basic-death-knight-rules.sh`            |
+| C025                           | settings     |     1240 | all                                      | Client cache version follows the profile's content (issue 160)                              | `config/patches/C025-client-cache-version.sh`                |
+| C026                           | settings     |     1245 | basic                                    | Basic: No Dual Spec                                                                         | `config/patches/C026-basic-no-dual-spec.sh`                  |
+| C027                           | settings     |     1250 | buddy-set                                | Basic: Buddies Spend Their Own Talents                                                      | `config/patches/C027-basic-buddy-own-talents.sh`             |
+| C028                           | settings     |     1255 | basic                                    | Basic: Honor Without a Cap                                                                  | `config/patches/C028-basic-honor-uncapped.sh`                |
+| C029                           | settings     |     1260 | buddy-set                                | Basic: Buddies Keep Their Own Parties                                                       | `config/patches/C029-basic-buddies-keep-own-parties.sh`      |
+| C030                           | settings     |     1265 | buddy-set                                | Basic: No Group Invite at a Buddy's Login                                                   | `config/patches/C030-basic-buddies-no-login-invite.sh`       |
+| C031                           | settings     |     1270 | basic                                    | Basic: No World Channels (General, Trade, the Defense channels, LFG, Guild Recruitment)     | `config/patches/C031-basic-refused-channels.sh`              |
+| C032                           | settings     |     1275 | all                                      | Preserve Custom Channels (so a script can tell one channel from another)                    | `config/patches/C032-preserve-custom-channels.sh`            |
+| C033                           | settings     |     1280 | cc-test                                  | cc-test: Warden Kicks on a Failed Check                                                     | `config/patches/C033-cc-test-warden-kicks.sh`                |
+| C034                           | settings     |     1285 | all                                      | No Faster Healing Below Level 15, on Every Server                                           | `config/patches/C034-no-low-level-regen-boost.sh`            |
+| C035                           | settings     |     1290 | beta                                     | Beta Playerbot Population (200 random bots)                                                 | `config/patches/C035-beta-playerbot-population.sh`           |
+| C036                           | settings     |     1295 | beta                                     | Beta: Death Knights for Everyone                                                            | `config/patches/C036-beta-death-knights-for-everyone.sh`     |
+| C037                           | settings     |     1300 | beta                                     | Beta: wow-chat-1's Survival Settings                                                        | `config/patches/C037-beta-wow-chat-1-survival-settings.sh`   |
+| C038                           | settings     |     1305 | basic beta release vanilla               | No Quest Sparkles, Object Quest Marks or Map Points                                         | `config/patches/C038-no-quest-sparkles-or-map-points.sh`     |
+| C039                           | settings     |     1310 | basic beta cc-test release vanilla       | Instances and Battlegrounds: See as Far as the Server Allows                                | `config/patches/C039-instances-and-battlegrounds-see-all.sh` |
+| E007                           | install      |     1370 | vanilla                                  | Override playercreateinfo so vanilla characters spawn at the                                | `patches/E007-vanilla-starting-zones.sh`                     |
+| E008                           | install      |     1380 | basic vanilla                            | Clear the flightmaster bit network-wide and replace gossip with                             | `patches/E008-vanilla-remove-flight-paths.sh`                |
+| E009                           | install      |     1390 | vanilla                                  | Apply vanilla profile's class-specific starting equipment kit                               | `patches/E009-vanilla-starter-kit.sh`                        |
+| E010                           | install      |     1400 | vanilla                                  | Grant every newly-created vanilla character the full set of                                 | `patches/E010-vanilla-pretrain-abilities.sh`                 |
+| E011                           | install      |     1410 | beta                                     | Death Knight class system for beta profile (issue 206/167). Wires DK                        | `patches/E011-beta-dk-class-system.sh`                       |
+| E012                           | install      |     1420 | beta                                     | Removes all creature spawns except critters and spirit healers                              | `patches/E012-beta-drop-creatures-keep-essential.sh`         |
+| E013                           | install      |     1430 | beta                                     | Adds quest-learned class abilities to the class trainers' lists (issue                      | `patches/E013-beta-quest-spells-to-trainers.sh`              |
+| E014                           | install      |     1440 | beta                                     | Caps each travelling class trainer to the top of its level slice (issue                     | `patches/E014-beta-trainer-spell-level-cap.sh`               |
+| E015                           | install      |     1450 | beta                                     | Race-specific selector NPCs for the custom class selection system                           | `patches/E015-beta-class-selector-npcs.sh`                   |
+| E016                           | install      |     1460 | beta                                     | Custom gameobject templates for empty-loot treasure chests (issue                           | `patches/E016-beta-empty-loot-chests.sh`                     |
+| E017                           | install      |     1470 | beta                                     | Fixes upstream mod-playerbots migration ordering bug (the                                   | `patches/E017-beta-relocate-logout-texts.sh`                 |
+| E019                           | install      |     1490 | basic vanilla                            | Installs a BEFORE INSERT trigger on acore_characters_vanilla.characters                     | `patches/E019-vanilla-no-intro-cinematic.sh`                 |
+| E020                           | install      |     1500 | basic vanilla                            | Push the two ground riding skills to Classic level gates (148l): Apprentice                 | `patches/E020-vanilla-mount-level-requirements.sh`           |
+| E021                           | install      |     1510 | vanilla                                  | Grant every level-20 vanilla character a gathering + a production profession                | `patches/E021-vanilla-starting-professions.sh`               |
+| E022                           | install      |     1520 | basic                                    | Open every quest to its whole faction on the basic profile (issue 155e):                    | `patches/E022-basic-faction-quest-gating.sh`                 |
+| E023                           | install      |     1530 | basic                                    | Create and seed the rotation-state table the basic profile's                                | `patches/E023-basic-starting-valley-rotation.sh`             |
+| E024                           | install      |     1540 | basic                                    | Basic's Outland dungeon ladder (issue 155f): sixteen dungeons open at 60,                   | `patches/E024-basic-outland-dungeons-64.sh`                  |
+| E025                           | install      |     1550 | basic                                    | One "Visiting Mentor" per starting valley that teaches exactly the classes                  | `patches/E025-basic-valley-universal-trainers.sh`            |
+| E026                           | install      |     1560 | basic                                    | The table of per-creature (and per-map) damage, healing and health                          | `patches/E026-basic-creature-multipliers.sh`                 |
+| E027                           | install      |     1570 | basic                                    | Outland without tradeskills (issue 155n): its herb, ore, gas and fishing                    | `patches/E027-basic-outland-without-tradeskills.sh`          |
+| E028                           | install      |     1580 | basic                                    | Outland without quests (issue 155l): every Outland, Shattrath, Isle and                     | `patches/E028-basic-outland-without-quests.sh`               |
+| E029                           | install      |     1590 | basic                                    | Inscription without glyphs (issue 155o): glyph recipes off the trainers,                    | `patches/E029-basic-inscription-without-glyphs.sh`           |
+| E030                           | install      |     1600 | basic                                    | Darkmoon cards (issue 155o): nothing from a Darkmoon deck binds, and the                    | `patches/E030-basic-darkmoon-cards.sh`                       |
+| E031                           | install      |     1610 | basic                                    | Outland gear scaling (issue 155k, with 155f's dungeon ladder): Outland's                    | `patches/E031-basic-outland-gear-scaling.sh`                 |
+| E032                           | install      |     1620 | basic                                    | Outland world levels (issue 155k): Outland's open-world monsters +4, the                    | `patches/E032-basic-outland-world-levels.sh`                 |
+| E033                           | install      |     1630 | basic                                    | Gem supply (issue 155p, stage 1): prospecting yields, Wrath and epic gem                    | `patches/E033-basic-gem-supply-and-sockets.sh`               |
+| E036                           | install      |     1660 | basic                                    | White gear durability (issue 155p): white weapons and armor last twice as                   | `patches/E036-basic-white-durability.sh`                     |
+| E037                           | install      |     1670 | basic                                    | Class books for the level 61-80 abilities (issue 155q): one stock-style                     | `patches/E037-basic-ability-tomes.sh`                        |
+| E038                           | install      |     1680 | basic                                    | The Dark Portal as the only door into Outland (issue 155l): Shattrath's                     | `patches/E038-basic-outland-one-door.sh`                     |
+| E039                           | install      |     1690 | basic                                    | No guild banks (issue 617l): every Guild Vault spawn removed. Same                          | `patches/E039-basic-no-guild-banks.sh`                       |
+| E040                           | install      |     1700 | basic                                    | Sargobras at the gate of Acherus (issue 718): the gossip NPC in the Ebon                    | `patches/E040-basic-death-knight-story-at-acherus.sh`        |
+| E042                           | install      |     1720 | buddy-set                                | The buddy clan and roster tables (issue 617a1): each owner's companion                      | `patches/E042-basic-buddy-roster.sh`                         |
+| E043                           | install      |     1730 | basic                                    | Sargobras, the buddy selector (issue 617b): his two creatures (the valley                   | `patches/E043-basic-buddy-selector.sh`                       |
+| E044                           | install      |     1740 | buddy-set                                | Every named area's borders and middle (issue 617e2), for the buddies'                       | `patches/E044-basic-buddy-area-centres.sh`                   |
+| E045                           | install      |     1750 | buddy-set                                | The beds buddies sleep on in towns (issue 617e4), placed by hand in game                    | `patches/E045-basic-buddy-beds.sh`                           |
+| E046                           | install      |     1760 | basic                                    | The world bosses' respawn taken off the server's timer (issue 155j): the                    | `patches/E046-basic-world-bosses.sh`                         |
+| E049                           | install      |     1790 | basic                                    | Every town's exploring grid baked ahead of time (issue 617o3), so buddies                   | `patches/E049-basic-buddy-town-bake.sh`                      |
+| E050                           | install      |     1800 | buddy-set                                | The world's little towns as circles (issue 617e4a): every cluster of                        | `patches/E050-basic-buddy-town-circles.sh`                   |
+| E052                           | install      |     1820 | buddy-set                                | Every gearset profile (issue 617r: src/lua-basic/data/gearsets/*.lua) as                    | `patches/E052-basic-gearsets.sh`                             |
+| E053                           | install      |     1830 | buddy-set                                | The `command` rows for the game master commands the project compiles in                     | `patches/E053-custom-command-help.sh`                        |
+| E054                           | install      |     1840 | basic                                    | The game's legendaries as level-60 raid drops (issue 182): level-60 copies                  | `patches/E054-basic-legendaries.sh`                          |
+| E055                           | install      |     1850 | basic                                    | The smaller places buddies roam (issue 617e12, the first cut): every named                  | `patches/E055-basic-buddy-subareas.sh`                       |
+| E056                           | install      |     1860 | buddy-set                                | The kept stand-ins (issue 617t1): one row per stand-in character the buddy                  | `patches/E056-basic-buddy-stand-ins.sh`                      |
+| E057                           | install      |     1870 | basic                                    | The Eternal Belt Buckle usable from level 60 (issue 624): one item's                        | `patches/E057-basic-belt-buckle.sh`                          |
+| E058                           | install      |     1880 | beta                                     | Beta's death knights start at level 1 (issue 206), but the game hands                       | `patches/E058-beta-dk-outfit-for-level-1.sh`                 |
+| E059                           | install      |     1890 | beta                                     | The narrators' books (issue 909): every book on the shelf                                   | `patches/E059-beta-narrator-library.sh`                      |
+| E060                           | install      |     1900 | beta                                     | Each druid's way back from Moonglade, and the visitors they brought there                   | `patches/E060-beta-moonglade-return.sh`                      |
+| E061                           | install      |     1910 | beta                                     | Where each narrator is in its book (issue 910a): one row per narrator bot,                  | `patches/E061-beta-narrator-reading.sh`                      |
+| E062                           | install      |     1920 | beta                                     | Beta: trade with the other faction (permission 51), every account, beta's realm.            | `patches/E062-beta-two-side-trade.sh`                        |
+| E063                           | install      |     1930 | beta                                     | Beta: mail to the other faction (permission 27), every account, beta's realm.               | `patches/E063-beta-two-side-mail.sh`                         |
+| E064                           | install      |     1940 | beta                                     | Beta: the other faction in the /who list (permission 28), every account, beta's realm.      | `patches/E064-beta-two-side-who.sh`                          |
+| E065                           | install      |     1950 | beta                                     | Beta: friends of the other faction (permission 29), every account, beta's realm.            | `patches/E065-beta-two-side-friends.sh`                      |
+<!-- patch-lists: end -->
 
-| ID   | Name                                    | Target                                                  | Description |
-|------|-----------------------------------------|---------------------------------------------------------|-------------|
-| B001 | aoe-loot-item-namespace                 | mod-aoe-loot/src/aoe_loot.cpp                           | **Retired 2026-10-09**: the loot module is now AzerothCore's own (azerothcore/mod-aoe-loot), which compiles against the core unpatched. Was: Fix `Item` vs `WorldPackets::Item` ambiguity; since 2026-10-09 also the packet hook's read-only signature (the new core dropped the other) |
-| B002 | playerbots-ale-login-hook               | mod-playerbots/src/Bot/PlayerbotMgr.cpp, mod-playerbots.cmake | Trigger PLAYER_EVENT_ON_LOGIN for bots |
-| B003 | ale-gameobject-wildcard                 | mod-ale/src/LuaEngine/LuaEngine.cpp                     | Enable entry 0 as wildcard for gameobject events |
-| B004 | upstream-warning-fixes                  | core: FormationMovementGenerator.cpp                    | Since 2026-10-09 only: formation followers' near-zero speed (a log flood) |
-| B005 | accuracy-level-cap                      | src/server/game/Entities/Unit/*                         | Cap level diff for hit/miss at ±3 |
-| B006 | ale-sell-item-hook                      | mod-ale/*, Handlers/ItemHandler.cpp                     | Add PLAYER_EVENT_ON_SELL_ITEM = 74 |
-| B007 | ale-unit-methods                        | mod-ale/*/UnitMethods.h, LuaFunctions.cpp               | Add SetWalk, IsWalking, IsHostileTo, IsFriendlyTo |
-| B008 | mod-talent-bonus                        | modules/mod-talent-bonus                                | **Retired 2026-10-09**: the module was set aside in 405 and is not in the project. Was: Link local module for compilation |
-| B009 | playerbots-equipment-slots-enum         | mod-playerbots                                          | **Retired 2026-10-09** (pin move): playerbots no longer forward-declares the enum, at either pin. Was: Forward-declare `enum EquipmentSlots : uint32;` |
-| B010 | playerbots-arena-type-none              | mod-playerbots                                          | `if (type != ARENA_TYPE_NONE)` enum comparison fix |
-| B011 | ale-resurrect-signature                 | mod-ale                                                 | Reconcile `bool&` vs `bool` mismatch with current core |
-| B012 | player-equipment-slot-sign              | core                                                    | **Retired 2026-10-09** (pin move): no warning with the build's compiler, unpatched, at either pin. Was: Fix int vs `EquipmentSlots` sign-compare warning |
-| B013 | playerbots-logical-op-parentheses       | mod-playerbots                                          | `&&` within `||` parens (-Wlogical-op-parentheses) |
-| B014 | playerbots-switch-enum-default          | mod-playerbots                                          | **Retired 2026-10-09** (pin move): no warning with the build's compiler, unpatched, at either pin. Was: Missing case values for `WSBotStrategy` (-Wswitch) |
-| B015 | playerbots-implicit-float-conversion    | mod-playerbots                                          | **Retired 2026-10-09** (pin move): its file and line are gone upstream; it already did nothing at the old pin. Was: int→float value-change warning |
-| B016 | playerbots-constructor-reorder          | mod-playerbots                                          | **Retired 2026-10-03**: upstream has the fix. Was: Field-init order (-Wreorder-ctor) |
-| B017 | playerbots-unused-variables             | mod-playerbots                                          | **Retired 2026-10-09** (pin move): no warning with the build's compiler, unpatched, at either pin. Was: -Wunused-variable cleanup |
-| B018 | playerbots-sign-compare                 | mod-playerbots                                          | **Retired 2026-10-09** (pin move): no warning with the build's compiler, unpatched, at either pin. Was: Signed/unsigned compare warnings |
-| B019 | playerbots-unused-parameter             | mod-playerbots                                          | **Retired 2026-10-03**: upstream has the fix. Was: -Wunused-parameter cleanup |
-| B020 | ale-event-removeevent-lock              | mod-ale                                                 | Add LOCK_ALE around `ALEEventProcessor::RemoveEvent` |
-| B021 | playerbots-misc-warnings                | mod-playerbots                                          | **Retired 2026-10-09** (pin move): no warning unpatched; worse, widening to size_t broke upstream's `== uint32(-1)` not-found checks (an endless loop in bot outfit parsing). Was: Catch-all bundle for residual one-off warnings |
-| B022 | runtime-conf-dir-override               | core                                                    | Runtime `--conf-dir` override (avoids cmake-baked path) |
-| B023 | ale-formatquery-lifetime                | mod-ale                                                 | **Retired 2026-10-09** (pin move): fixed upstream in mod-ale bd74eae. Was: Fix variadic format-arg lifetime in FormatQuery |
-| B024 | symmetric-aggro-radius                  | core                                                    | Make `Creature::GetAttackDistance` symmetric |
-| B055 | ale-player-entry-point                  | mod-ale/*/PlayerMethods.h, LuaFunctions.cpp             | **Retired 2026-10-19, before any build**: the game already saves the join spot to `character_entry_point`, which the script reads after asking for a save. Was: add `player:GetEntryPoint()` (issue 211a; `ale-player-entry-point.md`) |
+## Older write-ups of source patches
 
-(B025 to B054 are not listed in this table yet: each script's header in
-`patches/` describes it, and `patches/patches.sh` says which profiles use
-it.)
-
-Per-patch source of truth lives in `patches/B###-*.sh` — each script's
-header comments document the upstream symptom, the matched pattern, and
-the inverse-unpatch operation. Detailed write-ups for the older B-patches
-(B001–B008) follow below; the B009+ family is generally one-warning-at-a-time
-and is documented in the scripts themselves rather than duplicated here.
+Each patch file's own comments are where its symptom, its edit and its
+undo are described; these longer write-ups of the first source patches
+were kept from this page's hand-kept days.
 
 ### B001: aoe-loot-item-namespace
 
@@ -244,168 +400,19 @@ Upgrading boost would eliminate 442 warnings.
 
 ---
 
-## PHASE_END: Post-Compile Setup
+## Adding a patch
 
-Reserved for E-patches that set up the just-installed shadow tree (write
-`.conf` files from `.dist`, create log dirs, link Lua scripts, apply
-per-profile SQL). **No E-patches are currently active** — the equivalent
-work happens inside `scripts/generate-configs`, `scripts/install`, and the
-C-patches that run after promote. When the responsibilities split off
-into discrete idempotent patches they will be registered here as
-`patches/E###-*.sh` and indexed in this table.
-
----
-
-## PHASE_CONFIG: Post-Promote Runtime Tuning
-
-Applied after `promote` has moved the validated shadow tree into the active
-profile directory, but before the server is started. These patches operate on
-`installed-files-{profile}/etc/*.conf` and on profile-scoped database tables.
-
-They serve **two purposes** that share a target and a timing:
-
-- **Required path/credential rewriting.** Configs need to know which profile
-  is live (which database to talk to, which directory holds logs, where the
-  data files are). These values couldn't be written before promote because
-  the profile dir didn't exist yet. C001 (database connections) and C002
-  (directory paths) are in this category — without them the server can't
-  find its world.
-- **Gameplay opinions.** Knobs that distinguish this server from a vanilla
-  AzerothCore install: max level, exp rate, run speed, fall damage, port
-  numbers, realmlist setup. C003 through C011 are tuning, not survival.
-
-Each C-patch declares which profile(s) it applies to via the
-`CONFIG_PROFILES` associative array. The orchestrator filters by the active
-profile at run time, so the same patch directory serves all three profiles
-with different selections.
-
-| ID    | Name                     | Target                                                        | Profiles | Description |
-|-------|--------------------------|---------------------------------------------------------------|----------|-------------|
-| C001  | database-connections     | `installed-files-{profile}/etc/authserver.conf` + `worldserver.conf` | all      | Set MySQL connection strings (project-specific host/port/credentials/db names). |
-| C002  | directory-paths          | `installed-files-{profile}/etc/worldserver.conf`              | all      | Set DataDir, LogsDir, SourceDirectory to project layout. |
-| C003  | run-speed-80-percent     | `installed-files-{profile}/etc/worldserver.conf`              | all      | Set player run speed to 80% (slower, more deliberate exploration). |
-| C004  | fall-damage-10x          | `installed-files-{profile}/etc/worldserver.conf`              | all      | Increase fall damage to 10x baseline (encourages careful movement). |
-| C005  | exp-rate-2x              | `installed-files-{profile}/etc/worldserver.conf`              | all      | Double experience rate (faster testing/iteration cycles). |
-| C006a | max-level-80             | `installed-files-{profile}/etc/worldserver.conf`              | alpha, release | Set MaxPlayerLevel = 80 (testing/baseline). |
-| C006b | max-level-20             | `installed-files-{profile}/etc/worldserver.conf`              | beta     | Set MaxPlayerLevel = 20 (wow-chat-1 design). |
-| C007a | starting-level-40        | `installed-files-{profile}/etc/worldserver.conf`              | alpha, release | Set StartPlayerLevel = 40 (testing/baseline). |
-| C007b | starting-level-1         | `installed-files-{profile}/etc/worldserver.conf`              | beta     | Set StartPlayerLevel = 1 (default, made explicit). |
-| C008  | gm-login-state           | `installed-files-{profile}/etc/worldserver.conf`              | all      | Set GM level on login (0 = player, 3 = admin). |
-| C009  | instant-teleport-beta    | `installed-files-{profile}/etc/worldserver.conf`              | beta     | Reduce teleport cooldowns to zero for beta testing. |
-| C010  | network-ports            | `installed-files-{profile}/etc/authserver.conf` + `worldserver.conf` | all      | Set custom non-default server ports (avoids local conflicts). |
-| C011  | realmlist-setup          | `acore_auth.realmlist` (database row)                         | all      | Configure realm entry: address, port, flags. |
-
-### Variant pattern (a/b)
-
-`C006a`/`C006b` and `C007a`/`C007b` demonstrate a **per-profile variant**
-pattern: same conceptual setting (max level, starting level), different
-value for different profiles. Only one variant fires per build because each
-declares non-overlapping `CONFIG_PROFILES` entries.
-
-This pattern lets the C-patch tree document *what setting matters* (the
-slot) and *what value applies* (the variant). When a new profile is added,
-adding a `C006c` variant for it keeps history visible — old values aren't
-overwritten, they're recorded as sibling patches.
-
-### C001: database-connections
-
-**Target:** `${INSTALL_DIR}/etc/authserver.conf`, `${INSTALL_DIR}/etc/worldserver.conf`
-**Action:** Set MySQL connection strings to project-local credentials and profile-scoped database names
-
-```bash
-config_database_connections() {
-    local auth="${INSTALL_DIR}/etc/authserver.conf"
-    local world="${INSTALL_DIR}/etc/worldserver.conf"
-    # Connection format: "host;port;user;pass;database"
-    sed -i 's|^LoginDatabaseInfo .*=.*|LoginDatabaseInfo = "127.0.0.1;3307;ritz;menardi;acore_auth"|' "${auth}"
-    # ... (worldserver: login/world/character db rows)
-}
-CONFIG_PROFILES[config_database_connections]="alpha release beta"
-```
-
-### C006b: max-level-20 (the variant example)
-
-**Target:** `${INSTALL_DIR}/etc/worldserver.conf`
-**Profile:** beta only
-**Action:** Override MaxPlayerLevel to 20
-
-```bash
-config_max_level_20() {
-    local conf="${INSTALL_DIR}/etc/worldserver.conf"
-    sed -i 's|^MaxPlayerLevel.*=.*|MaxPlayerLevel = 20|' "${conf}"
-}
-CONFIG_PROFILES[config_max_level_20]="beta"
-CONFIG_DESCRIPTIONS[config_max_level_20]="Max level 20"
-```
-
-The corresponding alpha/release variant (`C006a`) sets the same setting to
-80 and declares `CONFIG_PROFILES[config_max_level_80]="alpha release"`. The
-orchestrator picks exactly one based on `${PROFILE}` at run time.
-
-### Resolved overlap with E-patches
-
-`E002` (config-database-paths) and `E003` (config-directory-paths) in the
-PHASE_END registry overlap conceptually with `C001` and `C002` — both
-write `.conf` files with paths and credentials.
-
-**The resolution:** keep both tiers, write full and valid configs at every
-stage, and let the C-patches update only the values that need to be
-profile-aware after promote. No stripped-down validate-only stubs — the
-configs in shadow during validation are real, complete configs. The
-C-patches' job is narrower than overwriting the whole file: **they
-specifically update credentials and file paths** that need to point at
-the live profile installation.
-
-What this means concretely:
-
-- **E002 writes valid database connection strings to shadow.** Validation
-  can actually connect. These may use the same credentials and DB names
-  that production will use (release/beta share infrastructure, so the
-  shadow validate uses the same DB host/port/credentials as the eventual
-  live release server reads back at startup).
-- **C001 updates the database connection strings post-promote** if the
-  profile needs different credentials, ports, or DB names than what
-  E002 wrote. For release/beta this is often a no-op (values match);
-  for alpha the C001 update is load-bearing because alpha runs against
-  a separate MySQL on a different port with different DBs.
-- **E003 writes valid directory paths to shadow** (pointing at shadow
-  dirs for the validate run).
-- **C002 updates directory paths post-promote** to point at the
-  profile-correct dirs (`installed-files-{profile}/` instead of shadow).
-
-The chronology principle holds: each tier writes the configs that make
-sense for the state of the build tree at that moment. C-patches are not
-redundant with E-patches — they're the **delta** between "valid for
-shadow validation" and "valid for live profile run."
-
----
-
-## Adding New Patches
-
-1. Assign the next free ID in the appropriate tier (`B###`, `E###`, `C###`).
-   `C###` variants for per-profile splits use `Cnnna` / `Cnnnb` (see
-   C006a/C006b).
-2. Create `patches/<ID>-<name>.sh` (B-patch) or `config/patches/<ID>-<name>.sh`
-   (C-patch). The script header is the source of truth: what upstream symptom
-   it addresses, the matched pattern, the inverse-unpatch sed.
-3. Add a one-line row to the appropriate table in this registry.
-4. Include an idempotent guard (grep before sed, check before create) so the
-   patch is safe to re-run.
-5. B-patches must ship with an exact-inverse unpatch operation so the source
-   tree round-trips cleanly. Multi-line insertions should be wrapped in
-   `// {{{ B###-name ... // }}} B###-name` marker comments; the unpatch
-   then range-deletes by marker.
-
----
-
-## Patch Orchestration
-
-`scripts/apply-patches` iterates the `patches/` and `config/patches/`
-directories in numeric order. Each script self-registers via the
-conventions in `patches/patches.sh` (B-patches) and the corresponding
-C-patch registry. B-patches apply pre-compile, run their compile, and
-unapply via a trap so the source tree stays pristine. C-patches apply
-after promote, against the live profile's `installed-files-{profile}/etc/`.
+1. Take the next free number of its kind (`B###`, `E###`, `C###`; a
+   per-profile variant of a setting is `Cnnna`, `Cnnnb`).
+2. Write `patches/<ID>-<name>.sh` or `config/patches/<ID>-<name>.sh`: an
+   idempotent apply and, for a source patch, an exact undo (multi-line
+   insertions wrapped in `// {{{ B###-name ... // }}} B###-name` markers so
+   the undo removes them by marker). Read the `upstream-patch-system`
+   skill first.
+3. Give it its header: `scripts/add-patch-header <file> --profiles "..."`.
+   The header is what puts it on a profile; nothing else lists it.
+4. `scripts/generate-patch-lists`, so this page and the profile pages list
+   it (the compile's quick tests stop until they do).
 
 ### Design Principles
 
@@ -414,3 +421,6 @@ after promote, against the live profile's `installed-files-{profile}/etc/`.
 3. **One-to-one targeting** — N upstream errors = N anchored apply seds +
    N anchored inverse seds. Broad seds corrupt clean source.
 4. **Failure-safe** — bash traps ensure cleanup on build failure.
+
+The hand-kept tables and the description of the old three-stage design
+this page held until 2026-10-20 are in `profile-patch-history.md`.

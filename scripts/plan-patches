@@ -17,6 +17,10 @@
 --
 -- Usage: scripts/plan-patches [PROJECT_DIR] PROFILE [--stage STAGE] [--ids]
 --        scripts/plan-patches [PROJECT_DIR] --every-profile
+--        scripts/plan-patches [PROJECT_DIR] --quick-tests
+--   --quick-tests    for the compile (issue 189f): the tests in scripts/
+--                    whose headers say "quick-test: yes", one name a line,
+--                    sorted; a retired one (named -done) is left out
 --   --every-profile  for the runner: one line per profile and stage,
 --                    "stage|profile|ids", every profile in scripts/profiles
 --   --stage  source (below the first gate), install (between the first and
@@ -26,17 +30,18 @@
 -- tab-separated. Exit status 1 on any fault.
 --------------------------------------------------------------------------------
 
-local DIR, PROFILE, STAGE, IDS, EVERY = "/mnt/kaun/wow-chat-2026", nil, "all", false, false
+local DIR, PROFILE, STAGE, IDS, EVERY, QUICK = "/mnt/kaun/wow-chat-2026", nil, "all", false, false, false
 do
     local pos, i = {}, 1
     while i <= #arg do
         if arg[i] == "--stage" then i = i + 1; STAGE = arg[i]
         elseif arg[i] == "--ids" then IDS = true
         elseif arg[i] == "--every-profile" then EVERY = true
+        elseif arg[i] == "--quick-tests" then QUICK = true
         else pos[#pos + 1] = arg[i] end
         i = i + 1
     end
-    if EVERY then DIR = pos[1] or DIR; PROFILE = "*"
+    if EVERY or QUICK then DIR = pos[1] or DIR; PROFILE = "*"
     elseif #pos == 2 then DIR, PROFILE = pos[1], pos[2] else PROFILE = pos[1] end
 end
 local HERE   = debug.getinfo(1, "S").source:match("^@(.*/)") or "./"
@@ -102,6 +107,24 @@ end
 local files = {}
 for _, p in ipairs({ "patches/B[0-9][0-9][0-9]-*.sh", "patches/E[0-9][0-9][0-9]-*.sh", "config/patches/C[0-9]*.sh" }) do
     for _, f in ipairs(ls(p)) do files[#files + 1] = f end
+end
+-- the quick tests: every test in scripts/ with a whole header saying so. A
+-- test with no header is no quick test (the house's helpers and longer tests
+-- have none); one with a broken header is a fault, as for a patch, since
+-- it may be a quick test the compile would then silently skip.
+if QUICK then
+    local names, broken = {}, {}
+    for _, rel in ipairs(ls("scripts/test-*")) do
+        if not rel:match("%-done$") then
+            local r = Header.read(DIR .. "/" .. rel)
+            if r.state == "broken" then broken[#broken + 1] = rel .. ": " .. table.concat(r.problems, "; ")
+            elseif r.state == "whole" and r.fields["quick-test"] == "yes" then names[#names + 1] = rel:sub(#"scripts/" + 1) end
+        end
+    end
+    if #broken > 0 then die("tests whose headers can't be read:\n  " .. table.concat(broken, "\n  ")) end
+    table.sort(names)
+    for _, n in ipairs(names) do print(n) end
+    os.exit(0)
 end
 local patches, faults = {}, {}
 for _, rel in ipairs(files) do

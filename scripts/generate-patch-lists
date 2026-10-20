@@ -1,0 +1,178 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- generate-patch-lists - write the patch lists in the docs from the headers (issue 189f)
+--
+-- For a general audience: which patches each profile takes, and what each
+-- one is, used to be written out by hand in the patch registry and on each
+-- profile's page, and nothing checked them, so they drifted from the
+-- patches. Each patch now says it all in its own header (issue 189). This
+-- writes those lists from the headers, between two marker lines in each
+-- page, leaving the rest of the page as it is:
+--
+--   docs/patches/patch-registry.md   every patch and quick test: id, kind,
+--                                    priority, profiles, about
+--   docs/profiles/<profile>.md       that profile's patches, in the order
+--                                    the build runs them, by stage
+--
+-- The per-profile order is the planner's (scripts/plan-patches), the one
+-- the build itself runs. A page without the markers is an error naming
+-- it (put the two marker lines where the list belongs). With --check
+-- nothing is written: it says which pages are out of date and exits 1, as
+-- scripts/test-patch-lists-current does in the compile's quick tests.
+--
+-- Usage: scripts/generate-patch-lists [PROJECT_DIR] [--check]
+--------------------------------------------------------------------------------
+
+local DIR, CHECK = "/mnt/kaun/wow-chat-2026", false
+for _, a in ipairs(arg) do if a == "--check" then CHECK = true else DIR = a end end
+local HERE   = debug.getinfo(1, "S").source:match("^@(.*/)") or "./"
+local Header = dofile(HERE .. "lib/patch-header.lua")
+local function die(msg) io.stderr:write("generate-patch-lists: " .. msg .. "\n"); os.exit(1) end
+
+-- the marker lines; what lies between them is this tool's
+local BEGIN = "<!-- patch-lists: begin. Written by scripts/generate-patch-lists from the patches' headers (issue 189f): edit a header, then run it; do not edit by hand. -->"
+local END   = "<!-- patch-lists: end -->"
+
+-- {{{ local helpers
+local function q(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
+local function slurp(p) local f = io.open(p, "rb"); if not f then return nil end local s = f:read("*a"); f:close(); return s end
+local function spit(p, s) local f = assert(io.open(p, "wb")); f:write(s); f:close() end
+local function lines_of(cmd)
+    local h, t = io.popen(cmd), {}
+    for l in h:lines() do t[#t + 1] = l end
+    local ok = h:close()
+    return t, ok
+end
+-- {{{ local function table_text
+-- A Markdown table, padded so each column lines up in the raw text too;
+-- columns named in `right` are numbers, right-aligned (the ones digits in
+-- one column, the house rule for numbers).
+-- Widths count letters, not bytes: "±" is two bytes and one column.
+local function len(v) return #(v:gsub("[\128-\191]", "")) end
+local function table_text(head, rows, right)
+    local width = {}
+    for c, h in ipairs(head) do width[c] = len(h) end
+    for _, r in ipairs(rows) do for c, v in ipairs(r) do if len(v) > width[c] then width[c] = len(v) end end end
+    local function line(cells)
+        local out = {}
+        for c, v in ipairs(cells) do
+            local pad = (" "):rep(width[c] - len(v))
+            out[c] = right[c] and (pad .. v) or (v .. pad)
+        end
+        return "| " .. table.concat(out, " | ") .. " |"
+    end
+    local rule = {}
+    for c = 1, #head do rule[c] = right[c] and (("-"):rep(width[c] - 1) .. ":") or ("-"):rep(width[c]) end
+    local t = { line(head), "| " .. table.concat(rule, " | ") .. " |" }
+    for _, r in ipairs(rows) do t[#t + 1] = line(r) end
+    return table.concat(t, "\n")
+end
+-- }}}
+local function cell(s) return (((s or ""):gsub("|", "\\|"))) end   -- one value: gsub also returns a count
+-- }}}
+
+-- {{{ every header
+local files = lines_of("cd " .. q(DIR) .. " && ls -1d patches/B[0-9][0-9][0-9]-*.sh patches/E[0-9][0-9][0-9]-*.sh config/patches/C[0-9]*.sh scripts/test-* 2>/dev/null")
+local every, about = {}, {}
+for _, rel in ipairs(files) do
+    if not rel:match("%-done$") then
+        local r = Header.read(DIR .. "/" .. rel)
+        if r.state == "broken" then die(rel .. ": a broken header (scripts/check-patch-headers names the fault)") end
+        if r.state == "whole" then
+            local f = r.fields
+            every[#every + 1] = { id = f.id, kind = f.kind, priority = tonumber(f.priority), profiles = f.profiles,
+                                  about = f.about, rel = rel, quick = f["quick-test"] == "yes" }
+            about[f.id] = f.about
+        end
+    end
+end
+table.sort(every, function(a, b) return a.priority < b.priority or (a.priority == b.priority and a.id < b.id) end)
+-- }}}
+
+-- {{{ the registry's list
+local function registry_block()
+    local rows = {}
+    for _, e in ipairs(every) do
+        rows[#rows + 1] = { e.id, e.kind .. (e.quick and " (quick)" or ""), tostring(e.priority), e.profiles, cell(e.about), "`" .. e.rel .. "`" }
+    end
+    return table.concat({
+        "## Every patch",
+        "",
+        "Each patch and quick test, lowest priority first, as its header says it.",
+        "A patch's profiles are profile names, a group from `patches/groups`,",
+        "`all` or `none`; `patches/gates` says where the build's own stages stand",
+        "on the priority line. `scripts/plan-patches PROFILE` gives one profile's,",
+        "in the build's order.",
+        "",
+        table_text({ "id", "kind", "priority", "profiles", "about", "file" }, rows, { [3] = true }),
+    }, "\n")
+end
+-- }}}
+
+-- {{{ a profile's list
+local STAGES = {
+    { "source",  "Before the compile (source patches, taken off again once it is through)" },
+    { "install", "After the compile and install (install steps and settings, mixed by priority)" },
+    { "sql",     "After the databases are brought to upstream's state (our SQL)" },
+}
+local function profile_block(profile)
+    local out = {
+        "## Patches",
+        "",
+        "Every patch this profile takes, in the order the build runs them:",
+        "lowest priority first, each line its header's own (`scripts/plan-patches " .. profile .. "`).",
+    }
+    for _, st in ipairs(STAGES) do
+        local plan, ok = lines_of(q(HERE .. "plan-patches") .. " " .. q(DIR) .. " " .. q(profile) .. " --stage " .. st[1])
+        if not ok then die("the plan for " .. profile .. " could not be made (run scripts/plan-patches " .. profile .. ")") end
+        out[#out + 1] = ""
+        out[#out + 1] = "**" .. st[2] .. ":**" .. (#plan == 0 and " none." or "")
+        if #plan > 0 then
+            local rows = {}
+            for _, l in ipairs(plan) do
+                local prio, kind, id = l:match("^(%d+)\t(%S+)\t(%S+)\t")
+                rows[#rows + 1] = { prio, id, kind, cell(about[id]) }
+            end
+            out[#out + 1] = ""
+            out[#out + 1] = table_text({ "priority", "id", "kind", "about" }, rows, { [1] = true })
+        end
+    end
+    return table.concat(out, "\n")
+end
+-- }}}
+
+-- {{{ write, or check, each page
+local pages = { { "docs/patches/patch-registry.md", registry_block } }
+for name in ((slurp(DIR .. "/scripts/profiles") or ""):match("declare %-A PROFILE_REPO=%((.-)\n%)") or ""):gmatch('%["([%w%-]+)"%]') do
+    pages[#pages + 1] = { "docs/profiles/" .. name .. ".md", function() return profile_block(name) end }
+end
+local stale, missing = {}, {}
+for _, p in ipairs(pages) do
+    local path = DIR .. "/" .. p[1]
+    local text = slurp(path)
+    local a = text and text:find(BEGIN, 1, true)
+    local b = a and text:find(END, a, true)
+    if not b then
+        missing[#missing + 1] = p[1]
+    else
+        local new = text:sub(1, a - 1) .. BEGIN .. "\n" .. p[2]() .. "\n" .. text:sub(b)
+        if new ~= text then
+            stale[#stale + 1] = p[1]
+            if not CHECK then spit(path, new) end
+        end
+    end
+end
+if #missing > 0 then
+    die("pages without the two marker lines (put them where the list belongs):\n  " .. table.concat(missing, "\n  ") ..
+        "\n  the lines:\n  " .. BEGIN .. "\n  " .. END)
+end
+if CHECK then
+    if #stale > 0 then
+        print("out of date (run scripts/generate-patch-lists): " .. table.concat(stale, ", "))
+        os.exit(1)
+    end
+    print("every patch list is current (" .. #pages .. " pages)")
+else
+    print(#stale .. " of " .. #pages .. " pages rewritten" .. (#stale > 0 and (": " .. table.concat(stale, ", ")) or ""))
+end
+-- }}}

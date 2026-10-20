@@ -4,7 +4,7 @@
 # profiles:   all
 # priority:   10
 # kind:       test
-# about:      test-acherus-vendors
+# about:      The Acherus vendors step applies, repeats and reverts, in one rolled-back transaction
 # quick-test: yes
 # ==== end of header ====
 # test-acherus-vendors

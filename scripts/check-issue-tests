@@ -14,8 +14,9 @@
 -- tests and prints pass or fail with the time taken, so a finished issue
 -- whose test has started failing shows up beside its number.
 --
--- Only the compile's quick tests are run (the QUICK_TESTS list in
--- scripts/compile, which are safe to run at any time; several need the
+-- Only the compile's quick tests are run (the tests whose headers say
+-- "quick-test: yes", gathered by scripts/plan-patches as the compile
+-- gathers them; issue 189f), which are safe to run at any time; several need the
 -- project's MySQL). A test outside that list is shown as "not run", with
 -- the compile's own reason for leaving it out where it gives one, since
 -- those need a prepared state (RAM extracts, MySQL stopped, minutes of
@@ -137,15 +138,18 @@ end
 -- }}}
 
 -- {{{ the quick tests, and the compile's reasons for the others
--- QUICK_TESTS=( ... ) in scripts/compile: the set safe to run any time.
--- The comment above it says, per test left out, why ("test-x, test-y:
--- reason"); those reasons are shown for tests that are not run.
+-- The quick tests, from their headers (scripts/plan-patches --quick-tests,
+-- the compile's own way of finding them): the set safe to run any time.
+-- The compile's comment above its quick-test step says, per test left out,
+-- why ("test-x, test-y: reason"); those reasons are shown for tests that
+-- are not run.
 local quick, leftOut = {}, {}
 do
+    local h = io.popen("'" .. DIR .. "/scripts/plan-patches' '" .. DIR .. "' --quick-tests")
+    for name in h:lines() do quick[name] = true end
+    if not h:close() then io.stderr:write("check-issue-tests: the quick tests could not be gathered (scripts/plan-patches --quick-tests)\n"); os.exit(1) end
     local compile = read(DIR .. "/scripts/compile") or ""
-    local list = compile:match("QUICK_TESTS=%((.-)%)")
-    for name in (list or ""):gmatch("(test%-[%w%-]+)") do quick[name] = true end
-    local notes = compile:match("# Left out, and why:\n(.-)\nQUICK_TESTS")
+    local notes = compile:match("# Left out, and why:\n(.-)\n# Which tests are quick")
     local current
     for line in (notes or ""):gmatch("[^\n]+") do
         local names, why = line:match("^#%s+(test%-[%w%-, ]-):%s*(.+)$")

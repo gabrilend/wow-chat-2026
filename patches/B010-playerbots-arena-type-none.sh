@@ -4,7 +4,7 @@
 # profiles:   none
 # priority:   200
 # kind:       source
-# about:      B010
+# about:      Add the ARENA_TYPE_NONE value the bot module compares against
 # ==== end of header ====
 # B010-playerbots-arena-type-none.sh
 # Adds ARENA_TYPE_NONE constant required by mod-playerbots

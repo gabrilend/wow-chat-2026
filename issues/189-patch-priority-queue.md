@@ -71,7 +71,7 @@ headers alone say which profiles take it and when it runs:
 builds its lists from that; the hand-written lists are gone. Today's
 build, in order (`scripts/compile`, `patches/patches.sh`):
 
-1. the quick tests (still a list in `scripts/compile`, until 189f);
+1. the quick tests (each test whose header says so, 189f);
 2. the source patches (`B*`), by priority, below gate 1000;
 3. the compile and the install (gate 1000);
 4. the install-stage patches by priority, between gates 1000 and 2000:

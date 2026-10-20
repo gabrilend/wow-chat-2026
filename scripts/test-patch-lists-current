@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-patch-lists-current
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      the docs' patch lists say what the headers say (issue 189f)
+# quick-test: yes
+# ==== end of header ====
+# test-patch-lists-current - the docs' patch lists say what the headers say (issue 189f)
+#
+# For a general audience: the patch registry and each profile's page list
+# that profile's patches, written by scripts/generate-patch-lists from the
+# patches' own headers. A header changed without the lists being written
+# again leaves a page saying something no longer true; this fails until
+# they are (run scripts/generate-patch-lists, which says which pages it
+# rewrote).
+#
+# Usage: scripts/test-patch-lists-current [PROJECT_DIR]
+
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+"${DIR}/scripts/generate-patch-lists" "${DIR}" --check
+# ==== footer of test-patch-lists-current ====
+# lines:      26
+# ==== end of footer ====

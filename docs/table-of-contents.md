@@ -58,8 +58,8 @@ wow-chat-2026/
 │   │   ├── travellers-and-trainers.md Travellers on their clock, and where a trainer's lessons come from (503, 701, 206)
 │   │   └── treasure.md            Beta's items: sold or left in chests, through the pool, into another player's chest (402, 404)
 │   ├── patches/                   C++ patch documentation
-│   │   ├── patch-registry.md      Build patch system (BEGIN/END/CONFIG phases)
-│   │   ├── profile-patch-history.md  Which patches each profile took, as hand-written lists with their notes, until the headers took over (189c)
+│   │   ├── patch-registry.md      Every patch on one priority line through the gates; its list written from the headers (189f)
+│   │   ├── profile-patch-history.md  Which patches each profile took, as hand-written lists with their notes, until the headers took over (189c), and the registry's old hand tables
 │   │   ├── accuracy-level-cap.md  Monster hit chance level cap
 │   │   ├── ale-player-entry-point.md  B055 (retired): Lua reading a battleground join spot; why the saved one serves instead (211a)
 │   │   ├── crushing-blows-late.md  B031: crushing blows start 8 levels up, full strength at 12
