@@ -16,11 +16,13 @@
 #     PlayerLimit 100 (beta's 200 bots are players too), Rate.Talent (issue
 #     205's Lua gives the points), Rate.MissChanceMultiplier.* (B005 already
 #     caps the level gap), Visibility.Distance.Continents 333 (ten times the
-#     area to track with 200 bots), Corpse.Decay.* (10-hour corpses beside
-#     the ambush's dead), Guild.CharterCost (a "no guilds" switch never
-#     decided), Warden.Enabled
+#     area to track with 200 bots), Guild.CharterCost (a "no guilds" switch
+#     never decided), Warden.Enabled
 #   handled elsewhere: Rate.MoveSpeed (C003), Rate.Damage.Fall (C004),
-#     EnableLowLevelRegenBoost (C034)
+#     EnableLowLevelRegenBoost (C034), the quest sparkles and map points
+#     (C038, every profile with quests and beta)
+# The 10-hour corpses were held at first, then decided 2026-10-20 (the
+# owner: "this should be on beta").
 # Rate.XP.Kill is 3 because beta has no quests (the owner: "for servers that
 # don't have any quests ... we should have kill experience set to 3"); C005
 # no longer covers beta.
@@ -42,6 +44,13 @@ C037_SETTINGS=(
     "DurabilityLossChance.Block|0.5"
     "Death.SicknessLevel|255"
     "Rate.RepairCost|25"
+    # corpses lie 10 hours, looted or not: the world keeps a record of its fights
+    "Corpse.Decay.NORMAL|36000"
+    "Corpse.Decay.RARE|36000"
+    "Corpse.Decay.ELITE|36000"
+    "Corpse.Decay.RAREELITE|36000"
+    "Corpse.Decay.WORLDBOSS|36000"
+    "Rate.Corpse.Decay.Looted|1"
     # 2. money: loot sells for more, to pay for the repairs
     "Rate.SellValue.Item.Normal|2"
     "Rate.SellValue.Item.Uncommon|3"
@@ -96,7 +105,7 @@ C037_SETTINGS=(
     "AllowTwoSide.Interaction.Guild|1"
     "AllowTwoSide.Interaction.Arena|1"
     "AllowTwoSide.Interaction.Auction|1"
-    # 9. the server, names, and the world's look (no sparkles, marks or map points)
+    # 9. the server and names (the sparkles, marks and map points are C038's)
     "PreventAFKLogout|1"
     "GM.AllowInvite|1"
     "GM.AllowFriend|1"
@@ -111,9 +120,6 @@ C037_SETTINGS=(
     "ChatFakeMessagePreventing|0"
     "ChatStrictLinkChecking.Severity|-1"
     "Visibility.GroupMode|0"
-    "Visibility.ObjectSparkles|0"
-    "Visibility.ObjectQuestMarkers|0"
-    "QuestPOI.Enabled|0"
 )
 # }}}
 

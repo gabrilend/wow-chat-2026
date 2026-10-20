@@ -506,6 +506,18 @@ removes). The settings held back for a decision are listed in C037's
 header and the doc. Takes effect at each profile's next install, then a
 restart.
 
+## 2026-10-20 — Corpses lie 10 hours on beta (C037); no quest sparkles or map points on basic, vanilla, release and beta (C038)
+
+| Knob | Value | Where |
+|---|---|---|
+| `Corpse.Decay.*`, `Rate.Corpse.Decay.Looted` on beta | in C037 | `config/patches/C037-beta-wow-chat-1-survival-settings.sh` |
+| `Visibility.ObjectSparkles`, `Visibility.ObjectQuestMarkers`, `QuestPOI.Enabled` | 0 (stock 1) | `config/patches/C038-no-quest-sparkles-or-map-points.sh` (moved out of C037) |
+
+Why: the owner, 2026-10-20, on wow-chat-1's 10-hour corpses, held at
+first: "this should be on beta". And asked whether the servers with
+quests should lose the sparkles and map points beta already had off:
+"yes". Takes effect at each profile's next install, then a restart.
+
 ## How to add an entry
 
 ```markdown

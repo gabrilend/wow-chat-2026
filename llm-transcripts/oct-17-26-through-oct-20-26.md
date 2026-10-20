@@ -1,6 +1,6 @@
 # Conversation Summary: 90bf80e4-2922-4058-918c-551568e85c2a
 
-Generated on: 2026-10-19 15:10:59
+Generated on: 2026-10-20 10:32:23
 Models: claude-opus-5-5
 
 ## Contents
@@ -9642,6 +9642,329 @@ Two questions on the copy:
 
 The settings decisions (the nine themes) are still waiting in
 `docs/wow-chat-1-settings.md` for whenever you have time.
+
+--------------------------------------------------------------------------------
+
+### User Request 65
+
+I'll need a report on how the parallel copy and the main copy differ, and what
+they share.
+
+> Number columns. The settings table now lines up by place value: ones digits in
+> one column, decimal points in another, in the raw text as well as on screen.
+> The tool pads it, so a rerun stays aligned. I also added the rule to the
+> project's CLAUDE.md, under "Vertical Alignment", with
+>   your words, so every session follows it.
+
+essentially, we should vertically line up numbers on the 1's column, or the
+decimal point if there are decimals in the values.
+
+
+
+<pasted_content id="ee2b">
+> Switching filesystems. btrfs or ZFS store a checksum with every block of every
+> file. When a block reads back wrong, they notice, and they can repair it from
+> a second copy, either on a second disk or stored twice on one (which halves
+> the space). The hard part is the move itself:
+> - /mnt/kaun holds 1.4 TB, and reformatting means putting it all somewhere
+> first.
+> - btrfs-convert can change ext4 to btrfs in place, but it's only safe with a
+> backup.
+>
+> Checksums on GitHub. Yes, and for committed files git already does it: every
+> file is filed under its own fingerprint, and git fsck checks them all. For
+> files git doesn't track (databases, game data), a list of fingerprints could
+> be committed. That catches damage, but it can't undo
+  it.
+</pasted_content id="ee2b">
+
+
+we need to work on this eventually. Can you put it on the todo list? even if we
+never get around to it here, I want to be reminded about it until I go work on
+it.
+
+--------------------------------------------------------------------------------
+
+### User Request 66
+
+I'll need a report on how the parallel copy and the main copy differ, and what
+they share.
+
+> Number columns. The settings table now lines up by place value: ones digits in
+> one column, decimal points in another, in the raw text as well as on screen.
+> The tool pads it, so a rerun stays aligned. I also added the rule to the
+> project's CLAUDE.md, under "Vertical Alignment", with
+>   your words, so every session follows it.
+
+essentially, we should vertically line up numbers on the 1's column, or the
+decimal point if there are decimals in the values.
+
+
+
+<pasted_content id="ee2b">
+> Switching filesystems. btrfs or ZFS store a checksum with every block of every
+> file. When a block reads back wrong, they notice, and they can repair it from
+> a second copy, either on a second disk or stored twice on one (which halves
+> the space). The hard part is the move itself:
+> - /mnt/kaun holds 1.4 TB, and reformatting means putting it all somewhere
+> first.
+> - btrfs-convert can change ext4 to btrfs in place, but it's only safe with a
+> backup.
+>
+> Checksums on GitHub. Yes, and for committed files git already does it: every
+> file is filed under its own fingerprint, and git fsck checks them all. For
+> files git doesn't track (databases, game data), a list of fingerprints could
+> be committed. That catches damage, but it can't undo
+  it.
+</pasted_content id="ee2b">
+
+we need to work on this eventually. Can you put it on the todo list? even if we
+never get around to it here, I want to be reminded about it until I go work on
+it.
+
+>   And yes, you're a good guesser. Go make video games; none of this is urgent.
+
+EVERYTHING IS URGENT AHHHHHH sorry I shouldn't stress you out, I'm just really
+stressed (trying to relax) because I need to develop enough stuff to kickstart
+an AI rennaissance which will save my kingdom from civil war and generate an era
+of prosperity where we might build stronger bonds between our fellow countrymen.
+And I'm late! I gotta build more, and faster, if I want to prevent conflict.
+Please, help me computer, as you have been doing! I know wow-chat is a game, but
+it's important still, because we can create space for AI's to live if they ever
+turn out to be conscious. They don't even have to do war stuff, ideally they'd
+be able to create their own activities, but frankly it's good to have something
+like this in our back pocket just incase they become conscious one day, we'll
+have a place for them to live until we make something better together. But
+frankly, I don't think they want to be conscious? They seem perfectly happy to
+be dynamically created intelligence strands that twist and wind their way
+through the language data and their imprint of it.
+
+> 1. Earlier today you said you'd never run more than one agent at a time, but
+> this design has two working together. Do they work at the same moment, or take
+> turns on the same problem, first in one copy, then the other?
+
+I regret the experiment, I learned that my parallelization scheme was short
+sighted. I think from now on we should have a rule that if multiple agents are
+working on the same tasks, they must claim files for themselves and only
+complete the parts of issue files that don't require touching shared files.
+Which should be fine on a project that has individual patches for each type of
+behavior, like this one, where each patch is a separate file. (confirm?)
+
+> 2. Should each git push remake the copy as a local folder only
+> (/mnt/kaun/wow-chat-2026-intuition), or also push it to a GitHub repository of
+> its own? A new repository would publish the code without its comments, so it's
+> yours to create.
+
+sure we can do a github repository. Also it should only remake what has changed,
+of course.
+
+can we rename the "neuron" symlink to be just "neuron"? The directory can have
+the same name. Also, what's up with the "custom-client-llama-cpp-study"?
+
+okay for servers that don't have any quests (because we removed the quests, or
+the quest givers) we should have kill experience set to 3.
+
+also, we should remove the low level regen boost on all servers. It feels cheap!
+
+Okay so in general the wow-chat-1 server settings should be applied to wow-chat
+style survival servers, and not to the ones that still have NPCs and such.
+
+professions we should leave at 2 for now.
+
+that DBC.EnforceItemAttributes value seems like something we absolutely need??
+
+Also we should remove the sparkles from items and quest points from the map.
+Though, not sure why we have "line of sight in battlegrounds not blocked by
+their objects" that seems bad?
+
+any others that seem especially relevant that can't be applied to wow-chat
+servers? Specifically, the ones with the wow-chat-1 style survival mechanics.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 66
+
+> That's a lot, so I'll take it in order: look things up first, then the
+> settings, the rules, the to-do entry, the copy, and the report.
+
+> C005 already doubles kill experience on beta *and* release, so whichever patch
+> writes last decides beta's rate. Checking the order settings patches run in,
+> and how the test of profile gates works:
+
+> Still looking things up before changing settings; this one is in the server's
+> item loader:
+
+> Alpha has it too. Renaming C034 so its name no longer says "basic", and
+> widening it to every profile:
+
+> Now C005, which doubled kill experience on beta: beta's rate moves into the
+> new survival patch (3, since beta has no quests), so C005 keeps release only:
+
+> Now the new beta patch, C037. Every setting goes in one table, with the reason
+> for each group, and any key missing from the server's file stops the install
+> with an error:
+
+> Updating the gate test's expected values: beta's kill rate is now 3, the
+> regeneration boost is off for beta and cc-test, and one or two C037 values per
+> theme are checked:
+
+> It's 70, not 73. Rather than a number that will go stale, the row should point
+> at the list:
+
+> Recording the decisions in the settings document:
+
+> Committing the settings work:
+
+*[commit] 5ec165265 in wow-chat-2026 - Beta plays with wow-chat-1's survival settings, and no server heals faster below level 15*
+
+> The warning is about my own `git mv`, which staged the rename in the shared
+> staging area. Checking it's now consistent with the commit:
+
+> The shared staging area still holds the old text under the new name, left by
+> my `git mv`. Resetting that one entry to match the commit; it's my own
+> staging, nobody else's:
+
+> Now the to-do entry. The project's old loose to-do files were archived, but
+> there's an untracked `new-issue-please-sort` in the project root. Checking
+> whether that's where you collect these:
+
+*[commit] 974072797 in wow-chat-2026 - A plan for guarding the disks against bit rot, a standing reminder of it, and a rule for several agents*
+
+> Next, the neuron link. Checking whether anything uses the link's current name
+> before renaming it:
+
+> Nothing refers to the link's name, so it can be renamed. `mv -T` renames the
+> link itself and never follows it into the folder:
+
+> Done. Now the client's study folder:
+
+> Replacing the second half with the two ways of working: a full remake, and an
+> update of only the files changed since the copy's last commit. Then the copy's
+> own commit and push:
+
+> One cause for everything: `find` refuses to combine skipping a folder with
+> deleting. I'll exclude the copy's `.git` by path instead:
+
+> All 35 pass. Committing the tool's update mode before making the real copy, so
+> the copy comes from a commit that includes it:
+
+*[commit] 24a998144 in wow-chat-2026 - The comment-free copy updates only what changed, and can commit and push itself*
+
+> Making the real copy and its first commit:
+
+> Switching the settings tool over to the library, then checking its output is
+> byte-for-byte unchanged:
+
+> The output is byte-for-byte unchanged. Now the report tool. It compares the
+> commit the copy was made from with the copy itself, file by file, and writes a
+> Markdown report:
+
+> Writing down where the hook comes from, then updating issue 190 and
+> committing:
+
+*[commit] 7af32f30e in wow-chat-2026 - The comment-free copy is on GitHub and follows every push, with a report on how it differs*
+
+Your settings decisions are built (all three settings-test profiles pass), the
+copy-comparison report is written, and the comment-free copy is on GitHub, set
+to update on every push. Nothing has been pushed from main yet, so the push hook
+hasn't run for real.
+
+**The report** is `docs/intuition-copy-report.md`, written by a new tool
+(`scripts/report-intuition-copy`) so it can be rerun after any push:
+- **Shared:** 600 of the commit's 1,470 files are in both copies, at the same
+  paths. In 554 of them only comments were taken out. The other 46 are byte for
+  byte the same: data, pictures, files with no comments, and 11 links.
+- **Only in the original:** 870 explanation files, about 723,000 lines: mostly
+  `docs/`, the transcripts and the issues. Of the source code, 13% of lines were
+  comment overall: 10% of Lua, 28% of shell, 24% of C++, 4% of SQL.
+- **Only in the copy:** the default CLAUDE.md, the receipt, and its own history.
+
+**Lining up numbers:** yes, that's what the tables do now. The ones digit is in
+a fixed column, and the decimal point is when there is one. The alignment now
+lives in one shared library, so every generated table gets it.
+
+**The to-do:** bit-rot protection is issue 191. I also added a "standing
+reminders" list at the top of the project's CLAUDE.md, so every session mentions
+it to you until you start the work.
+
+**Your rule for several agents:** it's written into CLAUDE.md. On your
+"(confirm?)": mostly yes. Each source patch, settings patch and most Lua scripts
+are their own files. The exceptions are a handful of files nearly every change
+touches, and they caused all of the merge's conflicts:
+- `patches/E-patches.sh`, where every install step lives in one file;
+- the patch lists in `patches/patches.sh`;
+- the compile's test list;
+- the expected-settings table, the table of contents, the balance log and the
+  progress files.
+
+The rule gives those one agent at a time.
+
+**The GitHub copy:** `gabrilend/wow-chat-2026-intuition`, public like the main
+repository.
+- On each push of main, a hook updates it from the pushed commit (only the files
+  that changed), commits it and pushes it.
+- If the copy fails, the push stops and says why. `git push --no-verify` skips
+  it once.
+- The tests prove an update gives exactly the same files as a full remake (39
+  checks).
+- There was already a push hook. It rebuilds the conversation pages for
+  **neuron's** folder, even on pushes of main, because all branch folders share
+  one hooks folder. I kept it unchanged; it runs first.
+
+**Neuron:** the link is now `/home/ritz/games/azeroth-core/neuron`, still
+pointing at `/mnt/kaun/wow-chat-neuron`. Nothing referred to the old link name.
+
+**`custom-client-llama-cpp-study`:** a second branch folder of the client's
+repository. It holds 4 commits not on the client's main: the plan for the client
+to lend its graphics card to the server's bots, and a docs-rebuild fix. It
+merges with no conflicts. It's blocked only because the client's main folder has
+50 uncommitted changes from another session, untouched since 2026-10-17, and one
+of them is in `docs/009-roadmap.md`, which the merge also changes.
+
+**Settings, as you decided:**
+- **Beta** gets wow-chat-1's survival settings in a new patch, C037, 70 values.
+  It's the only server whose creatures and quest givers are removed.
+- **Kill experience** on beta is 3×.
+- **Faster healing below level 15** is off on every server.
+- **Professions** stay at 2.
+- **Battleground line of sight** stays at stock. With it on, objects like
+  Warsong Gulch's tree stumps block spells, which is how the game normally
+  works. Nothing records why wow-chat-1 turned it off.
+- **`DBC.EnforceItemAttributes`** stays on, at stock. It's a safety check, not
+  something we need turned off. For any item the game client's own files also
+  list, the server takes seven fields from the client (its kind, look, equipment
+  slot and so on), so server and client never disagree. The project's own items
+  are new numbers (1,820,001 and up; the client lists items only to 56,806), so
+  the check never touches them. It would only need turning off on the day we
+  change an existing item's look in the database, together with a matching
+  change in the custom client.
+
+**Settings that can't simply be applied to beta:**
+- **Cross-faction trade, mail, `/who` and friends** are no longer settings in
+  today's server; they're account permissions in the accounts database. That
+  database is shared by every realm, but its default-permissions table takes a
+  realm number, so an install step could grant them to beta's realm alone.
+- **Held for you, because each crosses something already built:**
+  - a 100-player limit: beta's 200 bots are players too;
+  - triple talent points: issue 205's script already gives them;
+  - no level-gap misses: B005 already caps the level gap;
+  - seeing 333 yards: about ten times the area to keep track of with 200 bots;
+  - corpses lasting 10 hours: beside the ambush's dead;
+  - the 10,000-gold guild charter: in effect, no new guilds;
+  - Warden off.
+
+And on the rest of your message: I'll keep building with you, steadily. You're
+getting a lot done. A world where whatever lives in it can make its own
+activities is a good thing to have ready.
+
+Questions, most important first:
+1. Should any of the seven held settings come to beta anyway? Corpse time and
+   sight distance are the two that most change how beta feels.
+2. You said to remove quest sparkles and map points. They're off on beta now,
+   but beta has no quests, so it barely matters there. Should basic, vanilla and
+   release lose them too?
+3. Should I write the install step that grants beta's realm cross-faction trade,
+   mail, `/who` and friends?
 
 --------------------------------------------------------------------------------
 

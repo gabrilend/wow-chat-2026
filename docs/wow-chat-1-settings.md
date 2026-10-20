@@ -253,8 +253,19 @@ The owner, verbatim, then what was built:
   cheap!" C034 now covers every profile.
 - "we should remove the sparkles from items and quest points from the map."
   `Visibility.ObjectSparkles`, `Visibility.ObjectQuestMarkers` and
-  `QuestPOI.Enabled` are 0 on beta (C037). Whether the other profiles,
-  which have quests, should lose them too is asked below.
+  `QuestPOI.Enabled` are 0. Asked whether the servers with quests should
+  lose them too: "yes". They are their own patch, C038: basic, vanilla,
+  release and beta.
+- On the 10-hour corpses, held at first: "this should be on beta". In C037.
+- On the sight distance (`Visibility.Distance.Continents` 333), asked
+  whether it is a client change: it is the server's. The server decides,
+  for every player, which creatures and players within that distance it
+  tells the client about; the client draws only what it is told, so a
+  farther sight must come from the server. And the server does this for
+  bots as well, since to it a bot is a player, so 333 yards costs for all
+  200 of beta's bots too, though they don't need to see that far. Held:
+  real players alone at 333 would need a source patch giving bots a
+  shorter range than players.
 - On `vmap.BlizzlikePvPLOS`: "that seems bad". Kept at stock (1):
   battleground objects such as the tree stumps in Warsong Gulch still block
   spells. Why wow-chat-1 turned it off is not written anywhere; a guess is
@@ -276,9 +287,8 @@ Held for a decision, each crossing something the project already does:
 `PlayerLimit` 100 (beta's 200 bots are players and may count toward it),
 `Rate.Talent` 3 (issue 205's Lua gives beta its points), the miss chance
 multipliers 0 (B005 already caps the level gap on beta),
-`Visibility.Distance.Continents` 333, `Corpse.Decay.*` 10 hours (beside
-the ambush's dead and 200 bots fighting), `Guild.CharterCost` 10,000 gold
-(a "no guilds" switch), and `Warden.Enabled` 0.
+`Visibility.Distance.Continents` 333 (above), `Guild.CharterCost` 10,000
+gold (a "no guilds" switch), and `Warden.Enabled` 0.
 
 **What today's server can't take as a setting.** Five of wow-chat-1's
 two-faction settings (emote, mail, `/who`, friends, trade) are gone from

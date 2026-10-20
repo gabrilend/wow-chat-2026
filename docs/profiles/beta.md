@@ -66,7 +66,8 @@ the real settings patches on scratch copies and reads every value back.
 | Death knights need a level-55 character first | no (0) | C036 | issue 206: an option, not an exception |
 | Experience from kills           | 3×         | C037  | no quests on beta (E012); until 2026-10-20 2× from C005 |
 | Faster healing below level 15   | off        | C034  | every profile: "It feels cheap!" |
-| wow-chat-1's survival settings  | the list in C037 | C037 | wear and 25× repairs, loot sells for more, dungeons at any level, both factions together, no quest sparkles or map points, battleground timings; the list and the held ones: `docs/wow-chat-1-settings.md` |
+| wow-chat-1's survival settings  | the list in C037 | C037 | wear and 25× repairs, loot sells for more, corpses lie 10 hours, dungeons at any level, both factions together, battleground timings; the list and the held ones: `docs/wow-chat-1-settings.md` |
+| Quest sparkles, object marks, map points | off | C038 | also on basic, vanilla and release |
 | Fall damage                     | 10×        | C004  | |
 | Run speed                       | 0.85       | C003  | |
 | Instant flight paths            | on         | C009  | |

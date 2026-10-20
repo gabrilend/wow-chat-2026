@@ -71,6 +71,11 @@ declare -a EXPECT_basic=(
     "worldserver.conf|Rate.MoveSpeed.Player|0.85"
     "worldserver.conf|EnableLowLevelRegenBoost|0"          # no faster healing below 15 (C034)
     "worldserver.conf|Rate.XP.Kill|1"
+    # no quest sparkles, object quest marks or map points (C038, 2026-10-20)
+    "worldserver.conf|Visibility.ObjectSparkles|0"
+    "worldserver.conf|Visibility.ObjectQuestMarkers|0"
+    "worldserver.conf|QuestPOI.Enabled|0"
+    "worldserver.conf|Corpse.Decay.NORMAL|60"              # stock: wow-chat-1's corpses are beta's only
     "worldserver.conf|RealmID|5"
     "worldserver.conf|WorldServerPort|4462"
     "worldserver.conf|GM.LoginState|3"
@@ -109,6 +114,7 @@ declare -a EXPECT_cc_test=(
     "worldserver.conf|MinDualSpecLevel|40"
     "worldserver.conf|Rate.MoveSpeed.Player|1"            # stock speed: C003 gated away from cc-test
     "worldserver.conf|EnableLowLevelRegenBoost|0"          # C034 is every profile's since 2026-10-20
+    "worldserver.conf|QuestPOI.Enabled|1"                  # stock: C038 leaves cc-test alone
     "worldserver.conf|Rate.Damage.Fall|1"
     "worldserver.conf|Rate.XP.Kill|1"
     "worldserver.conf|RealmID|6"
@@ -151,7 +157,10 @@ declare -a EXPECT_beta=(
     "worldserver.conf|Battleground.PlayerRespawn|60"
     "worldserver.conf|AllowTwoSide.Interaction.Group|1"
     "worldserver.conf|ChatStrictLinkChecking.Severity|-1"
-    "worldserver.conf|QuestPOI.Enabled|0"
+    "worldserver.conf|QuestPOI.Enabled|0"                  # C038
+    "worldserver.conf|Visibility.ObjectSparkles|0"         # C038
+    "worldserver.conf|Corpse.Decay.NORMAL|36000"           # C037, decided 2026-10-20
+    "worldserver.conf|Rate.Corpse.Decay.Looted|1"          # C037
     "worldserver.conf|vmap.BlizzlikePvPLOS|1"              # stock, the owner's choice
     "worldserver.conf|DBC.EnforceItemAttributes|1"         # stock, the owner's choice
     "worldserver.conf|PlayerLimit|1000"                    # stock: held for a decision (bots count)
