@@ -1,0 +1,165 @@
+#!/usr/bin/env bash
+
+set -o pipefail
+
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+PROFILE="${2:-basic}"
+BUILD_NAME="${3:-build-shadow}"
+SOURCE_TREE="${4:-}"
+CC_JSON="${DIR}/${BUILD_NAME}/compile_commands.json"
+[[ -f "${CC_JSON}" ]] || { echo "ERROR: ${CC_JSON} missing (no recorded build flags to reuse)"; exit 1; }
+
+declare -A SOURCE_BY_PROFILE=(
+    [release]="source-beta" [beta]="source-beta" [vanilla]="source-beta"
+    [basic]="source-beta"   [alpha]="source-alpha"
+    [cc-test]="source-beta"
+)
+SRC="${DIR}/${SOURCE_BY_PROFILE[${PROFILE}]:?unknown profile}"
+[[ -n "${SOURCE_TREE}" ]] && SRC="${SOURCE_TREE}"     # a given tree: the real one is left alone
+WORK="${DIR}/tmp/shared-memory/test-patched-syntax-${PROFILE}"
+rm -rf "${WORK}"
+mkdir -p "${WORK}"
+rsync -a --exclude='.git' "${SRC}/" "${WORK}/tree/"     || exit 1
+rsync -a --exclude='.git' "${SRC}/" "${WORK}/pristine/" || exit 1
+
+export PROFILE DIR
+AC_CODE_DIR="${WORK}/tree"
+export AC_CODE_DIR
+source "${DIR}/patches/patches.sh" || exit 1
+apply_patches_begin > "${WORK}/apply.log" 2>&1 || { echo "ERROR: patches failed to apply:"; cat "${WORK}/apply.log"; exit 1; }
+changed=$(diff -rq "${WORK}/pristine" "${WORK}/tree" | sed -n 's|^Files .*/pristine/\(.*\) and .*|\1|p')
+added=$(diff -rq "${WORK}/pristine" "${WORK}/tree" | sed -n "s|^Only in ${WORK}/tree/\(.*\): \(.*\.cpp\)$|\1/\2|p")
+added_dirs=$(diff -rq "${WORK}/pristine" "${WORK}/tree" | sed -n "s|^Only in ${WORK}/tree/\(.*\): \([^.]*\)$|\1/\2|p")
+for d in ${added_dirs}; do
+    [[ -d "${WORK}/tree/${d}" ]] || continue
+    added+=$'\n'"$(find "${WORK}/tree/${d}" -name '*.cpp' | sed "s|^${WORK}/tree/||" | sort)"
+done
+added=$(echo "${added}" | grep . | sort -u)
+[[ -n "${added}" ]] && echo "Files added by ${PROFILE}'s patches: $(echo "${added}" | grep -c .)"
+echo "Files changed by ${PROFILE}'s patches: $(echo "${changed}" | grep -c .)"
+
+tus=""
+for f in ${changed}; do
+    case "${f}" in
+        *.cpp) tus+="${f}"$'\n' ;;
+        *.h|*.hpp)
+            base=$(basename "${f}")
+            tu=$(python3 - "${CC_JSON}" "${SRC}" "${base}" <<'EOF'
+import json, sys, re
+cc, src, base = sys.argv[1], sys.argv[2], sys.argv[3]
+pat = re.compile(r'#include\s+"' + re.escape(base) + '"')
+for e in json.load(open(cc)):
+    fn = e['file']
+    rel = fn.split('/source-beta/',1)[-1].split('/source-alpha/',1)[-1]
+    try:
+        if pat.search(open(src + '/' + rel, errors='replace').read()):
+            print(rel); break
+    except OSError:
+        pass
+EOF
+)
+            [[ -n "${tu}" ]] && tus+="${tu}"$'\n'
+            ;;
+    esac
+done
+tus=$(echo "${tus}" | grep . | sort -u)
+declare -A BORROW=()          # added file → built sibling whose flags it uses
+for f in ${added}; do
+    dir_rel="$(dirname "${f}")"
+    sib=$(python3 - "${CC_JSON}" "${dir_rel}" <<'EOF2'
+import json, sys
+cc, d = sys.argv[1], sys.argv[2]
+for e in json.load(open(cc)):
+    rel = e['file'].split('/source-beta/',1)[-1].split('/source-alpha/',1)[-1]
+    if rel.rsplit('/',1)[0] == d and rel.endswith('.cpp'):
+        print(rel); break
+EOF2
+)
+    if [[ -n "${sib}" ]]; then BORROW["${f}"]="${sib}"; tus+=$'\n'"${f}"; else echo "  [?] ${f}: added, and no built sibling in ${dir_rel} to borrow flags from"; fi
+done
+tus=$(echo "${tus}" | grep . | sort -u)
+
+JOBS="$(nproc)"
+fail=0
+declare -A CMDFILE=()
+for tu in ${tus}; do
+    cmdfile="${WORK}/cmd.${tu//\//_}.sh"
+    flags_from="${BORROW[${tu}]:-${tu}}"
+    python3 - "${CC_JSON}" "${flags_from}" "${WORK}/tree" "${tu}" > "${cmdfile}" <<'EOF'
+import json, sys, shlex
+cc, tu, tree, target = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+for e in json.load(open(cc)):
+    if e['file'].endswith('/' + tu):
+        args = shlex.split(e.get('command') or ' '.join(e['arguments']))
+        # Drop the precompiled-header binary (-Xclang -include-pch -Xclang X.pch):
+        # it was built from the UNPATCHED headers, so a patched header's new
+        # declarations would be invisible (false "undeclared identifier"),
+        # and clang refuses it anyway once a header it covers has changed.
+        # The textual "-include cmake_pch.hxx" stays; it re-reads the headers.
+        cleaned, i = [], 0
+        while i < len(args):
+            if args[i] == '-Xclang' and i + 3 < len(args) and args[i+1] == '-include-pch':
+                i += 4; continue
+            cleaned.append(args[i]); i += 1
+        args = cleaned
+        out, skip = [], False
+        for a in args:
+            if skip: skip = False; continue
+            if a in ('-o', '-MF', '-MT', '-MQ'): skip = True; continue
+            if a in ('-c', '-MD', '-MMD') or a.endswith('/' + tu): continue
+            # point every include path at the patched copy instead of the real tree
+            a = a.replace('/source-beta/', '/__TREE__/').replace('/source-alpha/', '/__TREE__/')
+            out.append(a)
+        # A tree at newer commits (SOURCE_TREE) can have folders the recorded
+        # build never saw: the core gathers every folder under its sources as
+        # an include path, so a new one (TC9Sidecar/, 2026-10) is missing
+        # from these old flags, as is a new dependency's (deps/libsidecar).
+        # Every source folder is added, and each dependency's stub/ before
+        # its include/ (a default build compiles the stub). Harmless on the
+        # real tree: the same folders are already on the list.
+        import os
+        for top in ('src/server', 'src/common'):
+            out += ['-I' + d for d, _, _ in os.walk(tree + '/' + top)]
+        deps = tree + '/deps'
+        for dep in sorted(os.listdir(deps)) if os.path.isdir(deps) else []:
+            for sub in ('stub', 'include'):
+                if os.path.isdir(deps + '/' + dep + '/' + sub):
+                    out.append('-I' + deps + '/' + dep + '/' + sub)
+        out += ['-fsyntax-only', tree + '/' + target]
+        line = ' '.join(shlex.quote(x) for x in out)
+        # "-I.../__TREE__/x" → the RAM copy
+        line = line.replace('/mnt/kaun/wow-chat-2026/__TREE__/', tree + '/') \
+                   .replace('/mnt/kaun/wow-chat-2026/__TREE__/', tree + '/')
+        print('cd ' + shlex.quote(e['directory']) + ' && ' + line)
+        break
+EOF
+    if [[ ! -s "${cmdfile}" ]]; then
+        echo "  [?] ${tu}: not in ${BUILD_NAME}'s compile_commands.json (module not built there?)"
+        continue
+    fi
+    CMDFILE["${tu}"]="${cmdfile}"
+done
+
+for tu in "${!CMDFILE[@]}"; do
+    while (( $(jobs -rp | wc -l) >= JOBS )); do wait -n; done
+    log="${WORK}/${tu//\//_}.log"
+    ( timeout 600 bash "${CMDFILE[${tu}]}" > "${log}" 2>&1 && touch "${log}.ok" ) &
+done
+wait
+
+for tu in ${tus}; do
+    [[ -n "${CMDFILE[${tu}]:-}" ]] || continue
+    log="${WORK}/${tu//\//_}.log"
+    if [[ -f "${log}.ok" ]]; then
+        echo "  [✓] ${tu}"
+    else
+        echo "  [✗] ${tu}"
+        grep -E "error" "${log}" | head -10 | sed 's/^/        /'
+        fail=$((fail + 1))
+    fi
+done
+
+rm -rf "${WORK}/tree" "${WORK}/pristine"
+echo "Result: ${fail} file(s) failed. Logs: ${WORK}/"
+[[ "${fail}" -eq 0 ]]

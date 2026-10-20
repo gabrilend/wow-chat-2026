@@ -1,0 +1,369 @@
+#!/usr/bin/env bash
+
+set -uo pipefail
+
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+
+MYSQL="${DIR}/mysql/installed-files/bin/mysql"
+WORLD="acore_world_basic"
+CHARS="acore_characters_basic"
+
+if [[ -n "${VALIDATE_MYSQL_SOCKET:-}" ]]; then
+    MYSQL_CONN=(--no-defaults --socket="${VALIDATE_MYSQL_SOCKET}" -uroot -N)
+else
+    export MYSQL_PWD="menardi"
+    MYSQL_CONN=(-h127.0.0.1 -P3307 -uritz -N)
+fi
+
+FAIL_COUNT=0
+
+run_sql() {
+    "${MYSQL}" "${MYSQL_CONN[@]}" -e "$1" 2>&1
+}
+
+report() {
+    local title="$1" offenders="$2"
+    if [[ -z "${offenders}" ]]; then
+        printf '  [PASS] %s\n' "${title}"
+    else
+        printf '  [FAIL] %s\n' "${title}"
+        printf '%s\n' "${offenders}" | sed 's/^/         /'
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    fi
+}
+
+if ! run_sql "SELECT 1" > /dev/null; then
+    echo "ERROR: cannot reach MySQL (${MYSQL_CONN[*]}) — nothing was checked."
+    echo "       to debug: is ./scripts/start-mysql running? Did install create ${WORLD}?"
+    exit 1
+fi
+if [[ -z "$(run_sql "SELECT FROM nothing_at_all")" ]]; then
+    echo "ERROR: a query error produced no output, so broken checks would pass — nothing was checked."
+    echo "       to debug: does run_sql() still fold stderr into its output (2>&1)?"
+    exit 1
+fi
+
+echo "Basic profile state (${WORLD}, ${CHARS})"
+
+report "no starter-kit rows (vanilla-148h-*) in playercreateinfo_item" \
+    "$(run_sql "SELECT race, class, itemid FROM ${WORLD}.playercreateinfo_item WHERE Note LIKE 'vanilla-148h-%' LIMIT 10")"
+report "no pretrain rows (vanilla-148j-*) in playercreateinfo_spell_custom" \
+    "$(run_sql "SELECT racemask, classmask, Spell FROM ${WORLD}.playercreateinfo_spell_custom WHERE Note LIKE 'vanilla-148j-%' LIMIT 10")"
+report "playercreateinfo still holds the stock level-1 zones (E007 not applied)" \
+    "$(run_sql "SELECT race, class, zone FROM ${WORLD}.playercreateinfo WHERE class <> 6 AND zone <> CASE race
+        WHEN 1 THEN 12 WHEN 2 THEN 14 WHEN 3 THEN 1 WHEN 4 THEN 141 WHEN 5 THEN 85
+        WHEN 6 THEN 215 WHEN 7 THEN 1 WHEN 8 THEN 14 WHEN 10 THEN 3431 WHEN 11 THEN 3526 END")"
+report "Apprentice Riding (33388) trains at 40, Journeyman (33391) at 60" \
+    "$(run_sql "SELECT SpellId, ReqLevel FROM ${WORLD}.trainer_spell WHERE (SpellId = 33388 AND ReqLevel <> 40) OR (SpellId = 33391 AND ReqLevel <> 60) LIMIT 10")"
+report "no creature template carries the flightmaster flag" \
+    "$(run_sql "SELECT entry, name FROM ${WORLD}.creature_template WHERE npcflag & 8192 LIMIT 10")"
+report "every map-530 flightmaster has its flavor menu (90070–90104)" \
+    "$(run_sql "SELECT entry FROM ${WORLD}.creature_template WHERE entry IN (17555,17554,16189,16192,24851,26560,21766,18939,19581,19317,18809,18789,18807,18940,19558,18808,16822,18942,18931,18930,20762,18785,18788,18791,16587,20234,22485,21107,22455,18937,18953,20515,22216,18938,19583) AND gossip_menu_id NOT BETWEEN 90070 AND 90104")"
+
+report "no quest restricted to part of one faction (masks within 1101 or 690)" \
+    "$(run_sql "SELECT ID, AllowableRaces FROM ${WORLD}.quest_template WHERE AllowableRaces <> 0
+        AND ((AllowableRaces & ~1101) = 0 AND AllowableRaces <> 1101 OR (AllowableRaces & ~690) = 0 AND AllowableRaces <> 690) LIMIT 10")"
+report "every mentor site has its Visiting Mentor spawned (one per row of basic_155e_hubs)" \
+    "$(run_sql "SELECT h.hub, h.name FROM ${WORLD}.basic_155e_hubs h LEFT JOIN ${WORLD}.creature c ON c.guid = 15500000 + h.hub AND c.id = 1550000 + h.hub WHERE c.guid IS NULL")"
+report "each missing class has a non-empty trainer list (155101-155111), none for death knights" \
+    "$(run_sql "SELECT DISTINCT m.class, 'no list' FROM ${WORLD}.basic_155e_missing m LEFT JOIN ${WORLD}.trainer_spell ts ON ts.TrainerId = 155100 + m.class WHERE ts.SpellId IS NULL
+        UNION ALL SELECT 'death knight list present', COUNT(*) FROM ${WORLD}.trainer WHERE Id = 155106 HAVING COUNT(*) > 0")"
+report "each mentor's menu offers exactly its site's missing classes" \
+    "$(run_sql "SELECT m.hub, m.class, 'no dialogue line' FROM ${WORLD}.basic_155e_missing m
+        LEFT JOIN ${WORLD}.gossip_menu_option o ON o.MenuID = 155000 + m.hub AND o.OptionID = m.class AND o.ActionMenuID = 155100 + m.class
+        WHERE o.MenuID IS NULL")"
+report "no placeholder trainers (26324-26332) left at a mentor site" \
+    "$(run_sql "SELECT c.guid, c.id FROM ${WORLD}.creature c JOIN ${WORLD}.basic_155e_hubs v ON v.map = c.map
+        WHERE c.id BETWEEN 26324 AND 26332 AND POW(c.position_x - v.x, 2) + POW(c.position_y - v.y, 2) < 60 * 60")"
+report "quest race-mask backup table exists (the revert needs it)" \
+    "$(run_sql "SELECT 'missing' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = '${WORLD}' AND table_name = 'basic_155e_quest_race_backup')")"
+
+report "rotation table holds one row per faction with a valid state" \
+    "$(run_sql "SELECT 'rows', COUNT(*) FROM ${CHARS}.basic_starting_valley_rotation HAVING COUNT(*) <> 2
+        UNION ALL
+        SELECT team, current_valley FROM ${CHARS}.basic_starting_valley_rotation WHERE current_valley NOT IN (0,1,2,3,255) OR count_in_batch > 30")"
+
+report "the raised set is non-empty and every template is its original level + its offset" \
+    "$(run_sql "SELECT 'empty set', COUNT(*) FROM ${WORLD}.basic_155f_templates HAVING COUNT(*) = 0
+        UNION ALL SELECT t.entry, CONCAT(t.name, ' ', t.minlevel, '-', t.maxlevel, ' want ', b.minlevel + s.level_offset, '-', b.maxlevel + s.level_offset)
+        FROM ${WORLD}.creature_template t JOIN ${WORLD}.basic_155f_level_backup b ON b.entry = t.entry
+        JOIN ${WORLD}.basic_155f_templates s ON s.entry = t.entry
+        WHERE t.minlevel <> b.minlevel + s.level_offset OR t.maxlevel <> b.maxlevel + s.level_offset LIMIT 10")"
+report "no template spawned only in those dungeons was missed" \
+    "$(run_sql "SELECT DISTINCT c.id, t.name, t.minlevel FROM ${WORLD}.creature c JOIN ${WORLD}.creature_template t ON t.entry = c.id
+        WHERE c.map IN (SELECT map_id FROM ${WORLD}.basic_155f_maps)
+          AND c.id NOT IN (SELECT entry FROM ${WORLD}.basic_155f_templates)
+          AND c.id NOT IN (SELECT c2.id FROM ${WORLD}.creature c2 WHERE c2.map NOT IN (SELECT map_id FROM ${WORLD}.basic_155f_maps))
+        LIMIT 10")"
+report "Kael'thas (Magisters' Terrace) is level 78" \
+    "$(run_sql "SELECT entry, minlevel FROM ${WORLD}.creature_template WHERE entry = 24664 AND (minlevel <> 78 OR maxlevel <> 78)")"
+report "dungeon gear that required more than 60 now requires 60" \
+    "$(run_sql "SELECT i.entry, i.name, i.RequiredLevel FROM ${WORLD}.item_template i
+        JOIN ${WORLD}.basic_155f_item_backup b ON b.entry = i.entry WHERE i.RequiredLevel <> 60 LIMIT 10")"
+report "every one of those dungeons opens at 60 (normal mode)" \
+    "$(run_sql "SELECT m.map_id, a.min_level FROM ${WORLD}.basic_155f_maps m
+        LEFT JOIN ${WORLD}.dungeon_access_template a ON a.map_id = m.map_id AND a.difficulty = 0
+        WHERE a.min_level IS NULL OR a.min_level > 60")"
+report "no normal-mode attunement left on them" \
+    "$(run_sql "SELECT a.map_id, r.requirement_type, r.requirement_id FROM ${WORLD}.dungeon_access_requirements r
+        JOIN ${WORLD}.dungeon_access_template a ON a.id = r.dungeon_access_id
+        WHERE a.difficulty = 0 AND a.map_id IN (SELECT map_id FROM ${WORLD}.basic_155f_maps)")"
+report "heroic mode left stock (entry still level 70)" \
+    "$(run_sql "SELECT a.map_id, a.min_level FROM ${WORLD}.dungeon_access_template a WHERE a.difficulty = 1 AND a.map_id IN (SELECT map_id FROM ${WORLD}.basic_155f_maps) AND a.min_level <> 70")"
+
+report "the creature multiplier table exists with its six value columns" \
+    "$(run_sql "SELECT 'missing columns', 6 - COUNT(*) FROM information_schema.columns
+        WHERE table_schema = '${WORLD}' AND table_name = 'basic_creature_multipliers'
+          AND column_name IN ('entry','map_id','melee','spell','heal','health') HAVING COUNT(*) <> 6")"
+
+OUTLAND_POS="((g.map = 530 AND (g.position_y > -2000 OR g.position_x > 11350)) OR g.map IN (540,542,543,544,545,546,547,548,550,552,553,554,555,556,557,558,564,565,585))"
+report "no herb, ore or fishing-pool spawn left in Outland" \
+    "$(run_sql "SELECT g.guid, g.id FROM ${WORLD}.gameobject g JOIN ${WORLD}.gameobject_template t ON t.entry = g.id
+        WHERE ${OUTLAND_POS} AND (t.type = 25 OR g.id IN (SELECT DISTINCT id FROM ${WORLD}.basic_155n_gameobject)) LIMIT 10")"
+report "no gas cloud left in Outland" \
+    "$(run_sql "SELECT g.guid, g.id FROM ${WORLD}.creature g WHERE g.id IN (17378,17407,17408,24222) AND ${OUTLAND_POS} LIMIT 10")"
+report "no pool still lists a removed spawn" \
+    "$(run_sql "SELECT p.guid FROM ${WORLD}.pool_gameobject p JOIN ${WORLD}.basic_155n_gameobject b ON b.guid = p.guid
+        UNION ALL SELECT p.guid FROM ${WORLD}.pool_creature p JOIN ${WORLD}.basic_155n_creature b ON b.guid = p.guid LIMIT 10")"
+report "every Outland zone needs fishing skill 300" \
+    "$(run_sql "SELECT z.entry, f.skill FROM ${WORLD}.basic_155n_fishing_skill z LEFT JOIN ${WORLD}.skill_fishing_base_level f ON f.entry = z.entry
+        WHERE f.skill IS NULL OR f.skill <> 300")"
+report "no trainer teaches a profession past 300, nor a Master or Grand Master rank" \
+    "$(run_sql "SELECT ts.TrainerId, ts.SpellId, ts.ReqSkillRank FROM ${WORLD}.trainer_spell ts
+        WHERE (ts.ReqSkillLine IN (164,165,171,182,186,197,202,333,393,755,773,185,129,356) AND ts.ReqSkillRank > 300)
+           OR (ts.TrainerId, ts.SpellId) IN (SELECT TrainerId, SpellId FROM ${WORLD}.basic_155n_trainer_spell WHERE ReqSkillRank <= 300) LIMIT 10")"
+report "no recipe past 300 sold or dropped directly" \
+    "$(run_sql "SELECT 'vendor', v.item FROM ${WORLD}.npc_vendor v JOIN ${WORLD}.item_template i ON i.entry = v.item
+        WHERE i.class = 9 AND i.RequiredSkillRank > 300 AND i.RequiredSkill IN (164,165,171,182,186,197,202,333,393,755,773,185,129,356)
+        UNION ALL SELECT 'loot', l.Item FROM ${WORLD}.creature_loot_template l JOIN ${WORLD}.item_template i ON i.entry = l.Item
+        WHERE l.Reference = 0 AND i.class = 9 AND i.RequiredSkillRank > 300 AND i.RequiredSkill IN (164,165,171,182,186,197,202,333,393,755,773,185,129,356) LIMIT 10")"
+
+report "no enabled quest is given or taken in Outland" \
+    "$(run_sql "SELECT s.quest, c.id FROM ${WORLD}.creature_queststarter s JOIN ${WORLD}.creature c ON c.id = s.id
+        WHERE ((c.map = 530 AND (c.position_y > -2000 OR c.position_x > 11350)) OR c.map IN (540,542,543,544,545,546,547,548,550,552,553,554,555,556,557,558,564,565,585))
+          AND NOT EXISTS (SELECT 1 FROM ${WORLD}.disables d WHERE d.sourceType = 1 AND d.entry = s.quest) LIMIT 10")"
+report "the Shattrath portal to the Isle of Quel'Danas is gone" \
+    "$(run_sql "SELECT guid FROM ${WORLD}.gameobject WHERE id = 187056")"
+report "the Dark Portal is the only door: no Shattrath, Stair of Destiny, Dalaran-to-Shattrath or Blasted Lands portal left" \
+    "$(run_sql "SELECT guid, id FROM ${WORLD}.gameobject WHERE id IN (183317, 183321, 183322, 183323, 183324, 183325, 183326, 183327,
+          195139, 195140, 191013, 191014, 195141, 195142)
+        UNION ALL SELECT 'saved', COUNT(*) FROM ${WORLD}.basic_155l_portals HAVING COUNT(*) <> 20")"
+
+report "no Guild Vault (guild bank object) is spawned anywhere; the stock spawns are saved" \
+    "$(run_sql "SELECT g.guid, g.id FROM ${WORLD}.gameobject g JOIN ${WORLD}.gameobject_template t ON t.entry = g.id WHERE t.type = 34
+        UNION ALL SELECT 'saved', COUNT(*) FROM ${WORLD}.basic_617l_guild_vaults HAVING COUNT(*) = 0")"
+
+report "no creature has an empty loot table, no loot hands over a missing shared list, no event or respawn link names a missing spawn" \
+    "$(run_sql "SELECT 'empty loot table', COUNT(*) FROM ${WORLD}.creature_template t WHERE t.lootid <> 0 AND NOT EXISTS (SELECT 1 FROM ${WORLD}.creature_loot_template l WHERE l.Entry = t.lootid) HAVING COUNT(*) > 0
+        UNION ALL SELECT 'missing reference', COUNT(*) FROM ${WORLD}.creature_loot_template l WHERE l.Reference <> 0 AND NOT EXISTS (SELECT 1 FROM ${WORLD}.reference_loot_template r WHERE r.Entry = l.Reference) HAVING COUNT(*) > 0
+        UNION ALL SELECT 'event names missing creature', COUNT(*) FROM ${WORLD}.game_event_creature e WHERE NOT EXISTS (SELECT 1 FROM ${WORLD}.creature c WHERE c.guid = ABS(e.guid)) HAVING COUNT(*) > 0
+        UNION ALL SELECT 'event names missing object', COUNT(*) FROM ${WORLD}.game_event_gameobject e WHERE NOT EXISTS (SELECT 1 FROM ${WORLD}.gameobject g WHERE g.guid = ABS(e.guid)) HAVING COUNT(*) > 0
+        UNION ALL SELECT 'respawn link names missing object', COUNT(*) FROM ${WORLD}.linked_respawn r WHERE r.linkType IN (1, 2) AND NOT EXISTS (SELECT 1 FROM ${WORLD}.gameobject g WHERE g.guid = r.linkedGuid) HAVING COUNT(*) > 0")"
+
+report "no quest or skill condition asks for more than 300 in a skill" \
+    "$(run_sql "SELECT 'quest', ID FROM ${WORLD}.quest_template_addon WHERE RequiredSkillPoints > 300
+        UNION ALL SELECT 'condition', SourceGroup FROM ${WORLD}.conditions WHERE ConditionTypeOrReference = 7 AND ConditionValue2 > 300")"
+
+report "every creature and gameobject spawn id is below 16777215, the server's cap" \
+    "$(run_sql "SELECT 'creature', guid FROM ${WORLD}.creature WHERE guid >= 16777215
+        UNION ALL SELECT 'gameobject', guid FROM ${WORLD}.gameobject WHERE guid >= 16777215")"
+
+report "Sargobras (7180001) stands in the Ebon Hold, in every phase, with his three texts" \
+    "$(run_sql "SELECT 'spawn', COUNT(*) FROM ${WORLD}.creature WHERE guid = 7180001 AND id = 7180001 AND map = 0 AND phaseMask = 4294967295 HAVING COUNT(*) <> 1
+        UNION ALL SELECT 'gossip flag', npcflag FROM ${WORLD}.creature_template WHERE entry = 7180001 AND npcflag & 1 = 0
+        UNION ALL SELECT 'texts', COUNT(*) FROM ${WORLD}.npc_text WHERE ID BETWEEN 7180001 AND 7180003 HAVING COUNT(*) <> 3")"
+report "the rising Sargobras (7180002): no menu, level 100, immune to players, never placed" \
+    "$(run_sql "SELECT 'template', COUNT(*) FROM ${WORLD}.creature_template WHERE entry = 7180002 AND npcflag = 0 AND minlevel = 100 AND maxlevel = 100 AND unit_flags & 256 = 256 HAVING COUNT(*) <> 1
+        UNION ALL SELECT 'placed', COUNT(*) FROM ${WORLD}.creature WHERE id = 7180002 HAVING COUNT(*) <> 0")"
+report "the soul ledger (basic_718_souls) exists in the characters database, with its skipped column" \
+    "$(run_sql "SELECT 'missing' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = '${CHARS}' AND table_name = 'basic_718_souls')
+        UNION ALL SELECT 'no skipped column' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = '${CHARS}' AND table_name = 'basic_718_souls' AND column_name = 'skipped')")"
+
+report "Sargobras: all three creatures (valley, wandering, wandering in a hat) with gossip, three texts, a valley one in each of 8 starting valleys" \
+    "$(run_sql "SELECT 'templates', COUNT(*) FROM ${WORLD}.creature_template WHERE entry BETWEEN 6170001 AND 6170003 AND npcflag & 1 = 1 HAVING COUNT(*) <> 3
+        UNION ALL SELECT 'texts', COUNT(*) FROM ${WORLD}.npc_text WHERE ID BETWEEN 6170001 AND 6170003 HAVING COUNT(*) <> 3
+        UNION ALL SELECT 'valley spawns', COUNT(DISTINCT map, ROUND(position_x), ROUND(position_y)) FROM ${WORLD}.creature WHERE id = 6170001 HAVING COUNT(DISTINCT map, ROUND(position_x), ROUND(position_y)) <> 8
+        UNION ALL SELECT 'wandering one saved', COUNT(*) FROM ${WORLD}.creature WHERE id IN (6170002, 6170003) HAVING COUNT(*) <> 0")"
+report "Sargobras: no valley one within 4 yards of another creature" \
+    "$(run_sql "SELECT CONCAT('spawn ', s.guid, ' near creature ', c.id, ' (', ROUND(SQRT(POW(c.position_x - s.position_x, 2) + POW(c.position_y - s.position_y, 2)), 1), ' yards)'), 1
+        FROM ${WORLD}.creature s JOIN ${WORLD}.creature c ON c.map = s.map AND c.guid <> s.guid AND c.id <> 6170001
+        WHERE s.id = 6170001 AND POW(c.position_x - s.position_x, 2) + POW(c.position_y - s.position_y, 2) < 16")"
+
+report "the named areas' table is full, every middle within its borders, Fargodeep Mine present" \
+    "$(run_sql "SELECT 'rows', COUNT(*) FROM ${WORLD}.buddy_area_centre HAVING COUNT(*) < 2000
+        UNION ALL SELECT CONCAT('middle outside borders: map ', map, ' area ', area, ' piece ', piece), 1 FROM ${WORLD}.buddy_area_centre
+            WHERE centre_x < min_x OR centre_x > max_x OR centre_y < min_y OR centre_y > max_y
+        UNION ALL SELECT 'Fargodeep Mine (0, 57) missing', COUNT(*) FROM ${WORLD}.buddy_area_centre WHERE map = 0 AND area = 57 HAVING COUNT(*) = 0")"
+
+report "the beds table (buddy_bed) has every column" \
+    "$(run_sql "SELECT w.c FROM (
+          SELECT 'id' c UNION ALL SELECT 'map' UNION ALL SELECT 'x' UNION ALL SELECT 'y' UNION ALL SELECT 'z'
+          UNION ALL SELECT 'facing' UNION ALL SELECT 'area' UNION ALL SELECT 'note'
+          UNION ALL SELECT 'tier' UNION ALL SELECT 'link') w
+        LEFT JOIN information_schema.columns ic ON ic.table_schema = '${WORLD}' AND ic.table_name = 'buddy_bed' AND ic.column_name = w.c
+        WHERE ic.column_name IS NULL")"
+
+report "world bosses: seven listed, each a spawn, each off the server's own respawn" \
+    "$(run_sql "SELECT 'listed', COUNT(*) FROM ${WORLD}.basic_155j_world_bosses HAVING COUNT(*) <> 7
+        UNION ALL SELECT CONCAT('listed spawn missing: ', b.guid), 1 FROM ${WORLD}.basic_155j_world_bosses b
+            LEFT JOIN ${WORLD}.creature c ON c.guid = b.guid WHERE c.guid IS NULL
+        UNION ALL SELECT CONCAT('still on a stock respawn: ', c.guid), c.spawntimesecs FROM ${WORLD}.creature c
+            WHERE c.id IN (18728, 17711, 6109, 14887, 14888, 14889, 14890) AND c.spawntimesecs <> 31536000")"
+report "Doom Lord Kazzak four times his stock size, twice his speeds, his reach and radius kept stock" \
+    "$(run_sql "SELECT 'no stock row', COUNT(*) FROM ${WORLD}.basic_155j_kazzak_stock HAVING COUNT(*) <> 1
+        UNION ALL SELECT 'size', m.DisplayScale FROM ${WORLD}.creature_template_model m JOIN ${WORLD}.basic_155j_kazzak_stock s
+            WHERE m.CreatureID = 18728 AND m.Idx = 0 AND ABS(m.DisplayScale - 4 * s.DisplayScale) > 0.001
+        UNION ALL SELECT 'speeds', t.speed_walk FROM ${WORLD}.creature_template t JOIN ${WORLD}.basic_155j_kazzak_stock s
+            WHERE t.entry = 18728 AND (ABS(t.speed_walk - 2 * s.speed_walk) > 0.001 OR ABS(t.speed_run - 2 * s.speed_run) > 0.001)
+        UNION ALL SELECT 'reach after scale', i.CombatReach * m.DisplayScale FROM ${WORLD}.creature_model_info i
+            JOIN ${WORLD}.creature_template_model m ON m.CreatureID = 18728 AND m.Idx = 0 JOIN ${WORLD}.basic_155j_kazzak_stock s
+            WHERE i.DisplayID = 17887 AND ABS(i.CombatReach * m.DisplayScale - s.CombatReach * s.DisplayScale) > 0.01")"
+report "the world boss countdown table (basic_world_boss_timer) has every column" \
+    "$(run_sql "SELECT w.c FROM (
+          SELECT 'guid' c UNION ALL SELECT 'alive' UNION ALL SELECT 'elapsed' UNION ALL SELECT 'tokens') w
+        LEFT JOIN information_schema.columns ic ON ic.table_schema = '${CHARS}' AND ic.table_name = 'basic_world_boss_timer' AND ic.column_name = w.c
+        WHERE ic.column_name IS NULL")"
+
+report "the buddy tables (buddy_clan, buddy_roster) have every column" \
+    "$(run_sql "SELECT CONCAT(w.t, '.', w.c) FROM (
+          SELECT 'buddy_clan' t, 'owner' c UNION ALL SELECT 'buddy_clan', 'companion_account' UNION ALL SELECT 'buddy_clan', 'clan_guild'
+          UNION ALL SELECT 'buddy_roster', 'owner' UNION ALL SELECT 'buddy_roster', 'slot' UNION ALL SELECT 'buddy_roster', 'buddy'
+          UNION ALL SELECT 'buddy_roster', 'class' UNION ALL SELECT 'buddy_roster', 'race' UNION ALL SELECT 'buddy_roster', 'profile'
+          UNION ALL SELECT 'buddy_roster', 'role' UNION ALL SELECT 'buddy_roster', 'talents_reroll' UNION ALL SELECT 'buddy_roster', 'created') w
+        LEFT JOIN information_schema.columns ic ON ic.table_schema = '${CHARS}' AND ic.table_name = w.t AND ic.column_name = w.c
+        WHERE ic.column_name IS NULL")"
+
+report "no trainer teaches a glyph" \
+    "$(run_sql "SELECT ts.TrainerId, ts.SpellId FROM ${WORLD}.trainer_spell ts JOIN ${WORLD}.basic_155o_glyph_trainer_spell b ON b.SpellId = ts.SpellId LIMIT 10")"
+report "every scroll and vellum III recipe is learnable within 300" \
+    "$(run_sql "SELECT 'missing', COUNT(*) FROM ${WORLD}.basic_155o_scroll_items HAVING COUNT(*) = 0
+        UNION ALL SELECT ts.SpellId, ts.ReqSkillRank FROM ${WORLD}.trainer_spell ts
+        WHERE ts.ReqSkillLine = 773 AND ts.ReqSkillRank > 300 LIMIT 10")"
+report "scroll required levels are 3/4 of stock" \
+    "$(run_sql "SELECT i.entry, i.RequiredLevel, b.RequiredLevel FROM ${WORLD}.item_template i JOIN ${WORLD}.basic_155o_scroll_items b ON b.entry = i.entry
+        WHERE i.RequiredLevel <> ROUND(b.RequiredLevel * 0.75) LIMIT 10")"
+report "scrolls no longer share a stacking group with class buffs; one scroll at a time kept" \
+    "$(run_sql "SELECT id, spell_id FROM ${WORLD}.spell_group WHERE id IN (1083,1084,1085,1086,1088) AND spell_id IN (-1066,-1067,-1068,-1069,-1070,-1071)
+        UNION ALL SELECT 'scrolls group', COUNT(*) FROM ${WORLD}.spell_group WHERE id = 1087 HAVING COUNT(*) <> 6")"
+
+report "nothing Darkmoon binds (cards, tarots, decks, deck rewards)" \
+    "$(run_sql "SELECT 'none saved', COUNT(*) FROM ${WORLD}.basic_155o_darkmoon_bonding HAVING COUNT(*) = 0
+        UNION ALL SELECT i.entry, i.name FROM ${WORLD}.item_template i JOIN ${WORLD}.basic_155o_darkmoon_bonding b ON b.entry = i.entry WHERE i.Bonding <> 0 LIMIT 10")"
+report "the 32 Burning Crusade cards are one reference table, rolled by Tempest Keep and Magisters' Terrace bosses" \
+    "$(run_sql "SELECT 'cards', COUNT(*) FROM ${WORLD}.reference_loot_template WHERE Entry = 1550155 HAVING COUNT(*) <> 32
+        UNION ALL SELECT 'Kael''thas rolls', MAX(l.MaxCount) FROM ${WORLD}.creature_loot_template l JOIN ${WORLD}.creature_template t ON t.lootid = l.Entry
+          WHERE t.entry = 24664 AND l.Reference = 1550155 HAVING MAX(l.MaxCount) IS NULL OR MAX(l.MaxCount) <> 3
+        UNION ALL SELECT 'boss rows', COUNT(*) FROM ${WORLD}.creature_loot_template WHERE Reference = 1550155 HAVING COUNT(*) < 16")"
+
+report "Outland gear is rescaled: every rule used, each item at its new item level" \
+    "$(run_sql "SELECT 'rule', r.rule FROM (SELECT 'g' rule UNION SELECT 'w' UNION SELECT 'd' UNION SELECT 'k' UNION SELECT 'r') r
+          LEFT JOIN ${WORLD}.basic_155k_items p ON p.rule = r.rule GROUP BY r.rule HAVING COUNT(p.entry) = 0
+        UNION ALL SELECT i.entry, i.ItemLevel FROM ${WORLD}.item_template i JOIN ${WORLD}.basic_155k_items p ON p.entry = i.entry
+          WHERE i.ItemLevel <> p.new_ilvl LIMIT 10")"
+report "each upper dungeon's best blue lands on its ladder target (≈ epic 83 Old Hillsbrad ... 92 Magisters' Terrace)" \
+    "$(run_sql "SELECT t.name, t.stock_top, MAX(p.new_ilvl) FROM ${WORLD}.basic_155k_dungeon_targets t
+          LEFT JOIN ${WORLD}.basic_155k_items p ON p.rule = 'd' AND p.old_ilvl = t.stock_top AND ABS(p.scale - t.scale) < 0.000001
+          GROUP BY t.map_id, t.name, t.stock_top, t.target_epic
+          HAVING MAX(p.new_ilvl) IS NULL OR MAX(p.new_ilvl) <> ROUND(1.6 * (t.target_epic - 1.3) / 1.3 + 1.84)")"
+report "Kael'thas's six epics are item level 100" \
+    "$(run_sql "SELECT 'Kael''thas epics', COUNT(*) FROM ${WORLD}.basic_155k_items p JOIN ${WORLD}.item_template i ON i.entry = p.entry
+          WHERE p.rule = 'k' AND i.ItemLevel = 100 HAVING COUNT(*) <> 6")"
+report "rescaled Outland gear requires at most 60; world blues bind on pickup" \
+    "$(run_sql "SELECT i.entry, i.RequiredLevel FROM ${WORLD}.item_template i JOIN ${WORLD}.basic_155k_items p ON p.entry = i.entry WHERE i.RequiredLevel > 60
+        UNION ALL SELECT i.entry, 'binds on equip' FROM ${WORLD}.item_template i JOIN ${WORLD}.basic_155k_items p ON p.entry = i.entry
+          WHERE p.rule = 'w' AND i.bonding = 2 LIMIT 10")"
+report "rating stats carry the Burning Crusade discount (no rating of 3+ left at its stock value)" \
+    "$(run_sql "SELECT i.entry, i.name FROM ${WORLD}.item_template i JOIN ${WORLD}.basic_155k_item_backup b ON b.entry = i.entry
+          WHERE ((i.stat_type1 BETWEEN 12 AND 37 OR i.stat_type1 = 44) AND b.stat_value1 >= 3 AND i.stat_value1 = b.stat_value1)
+             OR ((i.stat_type2 BETWEEN 12 AND 37 OR i.stat_type2 = 44) AND b.stat_value2 >= 3 AND i.stat_value2 = b.stat_value2)
+             OR ((i.stat_type3 BETWEEN 12 AND 37 OR i.stat_type3 = 44) AND b.stat_value3 >= 3 AND i.stat_value3 = b.stat_value3)
+             OR ((i.stat_type4 BETWEEN 12 AND 37 OR i.stat_type4 = 44) AND b.stat_value4 >= 3 AND i.stat_value4 = b.stat_value4)
+             OR ((i.stat_type5 BETWEEN 12 AND 37 OR i.stat_type5 = 44) AND b.stat_value5 >= 3 AND i.stat_value5 = b.stat_value5)
+             OR ((i.stat_type6 BETWEEN 12 AND 37 OR i.stat_type6 = 44) AND b.stat_value6 >= 3 AND i.stat_value6 = b.stat_value6)
+             OR ((i.stat_type7 BETWEEN 12 AND 37 OR i.stat_type7 = 44) AND b.stat_value7 >= 3 AND i.stat_value7 = b.stat_value7)
+             OR ((i.stat_type8 BETWEEN 12 AND 37 OR i.stat_type8 = 44) AND b.stat_value8 >= 3 AND i.stat_value8 = b.stat_value8)
+             OR ((i.stat_type9 BETWEEN 12 AND 37 OR i.stat_type9 = 44) AND b.stat_value9 >= 3 AND i.stat_value9 = b.stat_value9)
+             OR ((i.stat_type10 BETWEEN 12 AND 37 OR i.stat_type10 = 44) AND b.stat_value10 >= 3 AND i.stat_value10 = b.stat_value10)
+          LIMIT 10")"
+report "Outland's world monsters are raised +4, the Isle's +6, and no world boss or townsperson with them" \
+    "$(run_sql "SELECT 'raised', COUNT(*) FROM ${WORLD}.basic_155k_world_templates HAVING COUNT(*) < 500 OR SUM(level_offset = 6) = 0
+        UNION ALL SELECT t.entry, t.name FROM ${WORLD}.creature_template t JOIN ${WORLD}.basic_155k_world_templates w ON w.entry = t.entry
+          JOIN ${WORLD}.basic_155k_level_backup b ON b.entry = t.entry
+          WHERE t.minlevel <> b.minlevel + w.level_offset OR t.maxlevel <> b.maxlevel + w.level_offset
+             OR t.\`rank\` = 3 OR (t.npcflag & ~3) <> 0 LIMIT 10")"
+
+report "gem families are complete (+4 13, Outland and Wrath raw 6 each, low raw 7)" \
+    "$(run_sql "SELECT e.id, e.want, COUNT(r.Item) FROM (SELECT 1550160 id, 13 want UNION SELECT 1550161, 6 UNION SELECT 1550162, 6 UNION SELECT 1550163, 6
+          UNION SELECT 1550164, 6 UNION SELECT 1550165, 6 UNION SELECT 1550170, 7 UNION SELECT 1550171, 12 UNION SELECT 1550172, 12) e
+          LEFT JOIN ${WORLD}.reference_loot_template r ON r.Entry = e.id GROUP BY e.id, e.want HAVING COUNT(r.Item) <> e.want")"
+report "prospecting: copper and tin give +4 gems, mithril Outland uncommon, thorium Outland rare" \
+    "$(run_sql "SELECT o.ore, o.ref FROM (SELECT 2770 ore, 1550160 ref UNION SELECT 2771, 1550160 UNION SELECT 3858, 1550161 UNION SELECT 10620, 1550162) o
+          LEFT JOIN ${WORLD}.prospecting_loot_template p ON p.Entry = o.ore AND p.Reference = o.ref WHERE p.Entry IS NULL")"
+report "Wrath cutting recipes: every Design needs at most 300, and drops somewhere" \
+    "$(run_sql "SELECT 'Designs', COUNT(*) FROM ${WORLD}.basic_155p_design_skill HAVING COUNT(*) < 150
+        UNION ALL SELECT i.entry, i.RequiredSkillRank FROM ${WORLD}.item_template i JOIN ${WORLD}.basic_155p_design_skill b ON b.entry = i.entry WHERE i.RequiredSkillRank > 300
+        UNION ALL SELECT e.id, 'no monster drops it' FROM (SELECT 1550166 id UNION SELECT 1550167 UNION SELECT 1550168) e
+          LEFT JOIN ${WORLD}.creature_loot_template c ON c.Reference = e.id GROUP BY e.id HAVING COUNT(c.Entry) = 0 LIMIT 10")"
+report "epic Wrath gems: Kael'thas one sure, Kazzak and Doomwalker two sure; epic gems keep their stock binding" \
+    "$(run_sql "SELECT t.name, c.Chance, c.MaxCount FROM ${WORLD}.creature_template t
+          LEFT JOIN ${WORLD}.creature_loot_template c ON c.Entry = t.lootid AND c.Reference = 1550165
+          WHERE t.entry IN (24664, 18728, 17711) AND (c.Chance IS NULL OR c.Chance < 100 OR c.MaxCount <> IF(t.entry = 24664, 1, 2))
+        UNION ALL SELECT i.entry, i.name, 'binding changed' FROM ${WORLD}.item_template i JOIN ${WORLD}.basic_155p_bonding b ON b.entry = i.entry WHERE i.bonding <> b.bonding LIMIT 10")"
+report "Onyxia's hoard: gold bars, five coloured sacks, ten gem piles; her epic gems beside it" \
+    "$(run_sql "SELECT 'sack entries', COUNT(*) FROM ${WORLD}.item_loot_template WHERE Entry = 49294 HAVING COUNT(*) <> 16
+        UNION ALL SELECT 'gold bars', MAX(MaxCount) FROM ${WORLD}.item_loot_template WHERE Entry = 49294 AND Item = 3577 HAVING MAX(MaxCount) IS NULL OR MAX(MaxCount) <> 45
+        UNION ALL SELECT 'Onyxia binding-gem rows', COUNT(*) FROM ${WORLD}.creature_loot_template c JOIN ${WORLD}.creature_template t ON t.lootid = c.Entry
+          WHERE t.entry = 10184 AND c.Item BETWEEN 1550180 AND 1550183 HAVING COUNT(*) <> 4")"
+report "a Visiting Jewelcrafter (Jewelcrafting trainer list 113) stands in each of the six Azeroth capitals" \
+    "$(run_sql "SELECT 'spawns', COUNT(*) FROM ${WORLD}.creature WHERE guid BETWEEN 15501001 AND 15501006 AND id IN (1550201, 1550202) HAVING COUNT(*) <> 6
+        UNION ALL SELECT 'trainer lists', COUNT(*) FROM ${WORLD}.creature_default_trainer WHERE CreatureId IN (1550201, 1550202) AND TrainerId = 113 HAVING COUNT(*) <> 2")"
+report "titan sites: a crystal trader and a masterwork jewelcrafter at Uldaman and Uldum, and one pair per Un'Goro pylon event" \
+    "$(run_sql "SELECT 'standing spawns', COUNT(*) FROM ${WORLD}.creature WHERE guid BETWEEN 15501011 AND 15501014 AND id IN (1550210, 1550211) HAVING COUNT(*) <> 4
+        UNION ALL SELECT e.eventEntry, COUNT(g.guid) FROM ${WORLD}.game_event e LEFT JOIN ${WORLD}.game_event_creature g ON g.eventEntry = e.eventEntry
+          WHERE e.eventEntry IN (201, 202, 203) AND e.world_event = 5 GROUP BY e.eventEntry HAVING COUNT(g.guid) <> 2
+        UNION ALL SELECT 'internal pylon events', COUNT(*) FROM ${WORLD}.game_event WHERE eventEntry IN (201, 202, 203) AND world_event = 5 HAVING COUNT(*) <> 3
+        UNION ALL SELECT 'gemcutter cuts', COUNT(*) FROM ${WORLD}.trainer_spell WHERE TrainerId = 155300 HAVING COUNT(*) < 50")"
+report "sockets: whites and dungeon blues socketed; armor colourful, weapons prismatic without bonus; blues keep less than a green" \
+    "$(run_sql "SELECT 'whites', COUNT(*) FROM ${WORLD}.basic_155p_socketed WHERE kind = 'w' HAVING COUNT(*) < 100
+        UNION ALL SELECT 'blues', COUNT(*) FROM ${WORLD}.basic_155p_socketed WHERE kind = 'b' HAVING COUNT(*) < 300
+        UNION ALL SELECT i.entry, 'socket count' FROM ${WORLD}.item_template i JOIN ${WORLD}.basic_155p_socketed s ON s.entry = i.entry
+          WHERE (i.socketColor_1 <> 0) + (i.socketColor_2 <> 0) + (i.socketColor_3 <> 0) <> s.sockets
+        UNION ALL SELECT i.entry, 'weapon socket or bonus' FROM ${WORLD}.item_template i JOIN ${WORLD}.basic_155p_socketed s ON s.entry = i.entry
+          WHERE s.weapon AND (i.socketColor_1 <> 14 OR i.socketBonus <> 0)
+        UNION ALL SELECT i.entry, 'armor socket colour' FROM ${WORLD}.item_template i JOIN ${WORLD}.basic_155p_socketed s ON s.entry = i.entry
+          WHERE NOT s.weapon AND i.socketColor_1 NOT IN (2, 4, 8)
+        UNION ALL SELECT s.entry, 'blue keeps too much' FROM ${WORLD}.basic_155p_socketed s WHERE s.kind = 'b' AND s.keep * s.total > 0.8 * s.g + 0.5 LIMIT 10")"
+report "white weapons and armor have twice their stock durability" \
+    "$(run_sql "SELECT 'saved', COUNT(*) FROM ${WORLD}.basic_155p_durability HAVING COUNT(*) < 500
+        UNION ALL SELECT i.entry, i.MaxDurability FROM ${WORLD}.item_template i JOIN ${WORLD}.basic_155p_durability b ON b.entry = i.entry
+          WHERE i.MaxDurability <> LEAST(65535, b.MaxDurability * 2) LIMIT 10")"
+report "Jewelcrafting trainers 112 and 113 teach Outland's cuts between 150 and 300" \
+    "$(run_sql "SELECT a.TrainerId, COUNT(*) FROM ${WORLD}.basic_155p_trainer_added a GROUP BY a.TrainerId HAVING COUNT(*) < 60
+        UNION ALL SELECT 'trainers', COUNT(DISTINCT TrainerId) FROM ${WORLD}.basic_155p_trainer_added HAVING COUNT(DISTINCT TrainerId) <> 2
+        UNION ALL SELECT ts.SpellId, ts.ReqSkillRank FROM ${WORLD}.trainer_spell ts JOIN ${WORLD}.basic_155p_trainer_added a
+          ON a.TrainerId = ts.TrainerId AND a.SpellId = ts.SpellId WHERE ts.ReqSkillRank NOT BETWEEN 150 AND 300 LIMIT 10")"
+
+report "class books: one per level 61-80 trainer ability, one class each, learnable at 60, in their tier's pool" \
+    "$(run_sql "SELECT 'books', COUNT(*) FROM ${WORLD}.basic_155q_books HAVING COUNT(*) < 700
+        UNION ALL SELECT 'classes', COUNT(DISTINCT class) FROM ${WORLD}.basic_155q_books HAVING COUNT(DISTINCT class) <> 10
+        UNION ALL SELECT b.item, 'item missing or wrong' FROM ${WORLD}.basic_155q_books b LEFT JOIN ${WORLD}.item_template i ON i.entry = b.item
+          WHERE i.entry IS NULL OR i.AllowableClass <> (1 << (b.class - 1)) OR i.RequiredLevel <> 60
+             OR i.spellid_1 <> 483 OR i.spellid_2 <> b.taught OR i.spelltrigger_2 <> 6 OR i.requiredspell <> b.talent
+        UNION ALL SELECT b.item, 'not in its pool' FROM ${WORLD}.basic_155q_books b LEFT JOIN ${WORLD}.reference_loot_template r
+          ON r.Entry = IF(b.level <= 70, 1557901, 1557902) AND r.Item = b.item WHERE r.Item IS NULL LIMIT 10")"
+report "class books drop: Ahn'Qiraj and the Emerald Dragons (61-70), Naxxramas (25-person 2.5x) and the Horsemen chests (71-80)" \
+    "$(run_sql "SELECT 'Ahn''Qiraj and dragon drops', COUNT(*) FROM ${WORLD}.creature_loot_template WHERE Reference = 1557901 HAVING COUNT(*) <> 22
+        UNION ALL SELECT 'Naxxramas drops', COUNT(*) FROM ${WORLD}.creature_loot_template WHERE Reference = 1557902 HAVING COUNT(*) <> 28
+        UNION ALL SELECT 'Horsemen chests', COUNT(*) FROM ${WORLD}.gameobject_loot_template WHERE Reference = 1557902 HAVING COUNT(*) <> 2
+        UNION ALL SELECT 'Naxxramas 25-person at 25%', COUNT(*) FROM ${WORLD}.creature_loot_template l JOIN ${WORLD}.creature_template t ON t.lootid = l.Entry
+          WHERE t.entry BETWEEN 29000 AND 30999 AND l.Reference = 1557902 AND l.Chance = 25 HAVING COUNT(*) <> 14
+        UNION ALL SELECT 'dragons roll three', COUNT(*) FROM ${WORLD}.creature_loot_template l JOIN ${WORLD}.creature_template t ON t.lootid = l.Entry
+          WHERE t.entry IN (14887, 14888, 14889, 14890) AND l.Reference = 1557901 AND l.Chance = 100 AND l.MaxCount = 3 HAVING COUNT(*) <> 4")"
+
+echo ""
+if [[ "${FAIL_COUNT}" -eq 0 ]]; then
+    echo "All checks passed."
+    exit 0
+fi
+echo "${FAIL_COUNT} check(s) failed."
+exit 1

@@ -1,0 +1,521 @@
+require("ambush")
+require("travel")
+require("treasure")
+require("load-behaviors")
+ReadyPlayers = {
+    registry = {},
+}
+
+function ReadyPlayers.add(player)
+    if not player then return end
+    local guid = player:GetGUID()
+    ReadyPlayers.registry[guid] = true
+    print("[ReadyPlayers] Added: " .. player:GetName())
+end
+
+function ReadyPlayers.remove(guid)
+    if ReadyPlayers.registry[guid] then
+        ReadyPlayers.registry[guid] = nil
+        print("[ReadyPlayers] Removed: " .. tostring(guid))
+    end
+end
+
+function ReadyPlayers.getAll()
+    local result = {}
+    for guid, _ in pairs(ReadyPlayers.registry) do
+        local player = GetPlayerByGUID(guid)
+        if player and player:IsInWorld() then
+            local ok, x = pcall(function() return player:GetLocation() end)
+            if ok and x then
+                table.insert(result, player)
+            end
+        else
+            ReadyPlayers.registry[guid] = nil
+        end
+    end
+    return result
+end
+
+function ReadyPlayers.isReady(guid)
+    return ReadyPlayers.registry[guid] ~= nil
+end
+DELAY_PERIODIC_SPAWN_CREATURE  = 40  * 1000
+DELAY_PERIODIC_SPAWN_TRAVELLER = 130 * 1000
+DELAY_PERIODIC_SPAWN_TREASURE  = 100 * 1000
+DELAY_BOT_WANDER             = 3000
+DELAY_BOT_LONELINESS_CHECK   = 30000
+DELAY_BOT_SIT_AND_REST       = 3000
+DELAY_BOT_ORBIT_PLAYER       = 2000
+DELAY_BOT_FIND_MONSTERS      = 5000
+DELAY_ORCHESTRATOR_CHECK     = 10000
+
+BOREDOM_CHANCE_AFTER_COMBAT  = 0.15
+BOREDOM_REST_MIN             = 60000
+BOREDOM_REST_MAX             = 180000
+BotOrchestrator = {}
+
+BotOrchestrator.MODE = {
+    WANDERING      = 1,
+    DUNGEON_DELVE  = 2,
+    PROFESSION     = 3,
+    SOCIAL         = 4,
+    COMBAT_SEEK    = 5,
+    PARTY_FOLLOW   = 6,
+}
+
+BotOrchestrator.BEHAVIOR_MODES = {
+    wander          = { 1, 3, 5 },
+    loneliness      = { 1 },
+    sit_and_rest    = { 1, 2, 3, 4, 5 },
+    find_monsters   = { 1, 2, 5 },
+    orbit_player    = { 4, 6 },
+    dungeon_rails   = { 2 },
+}
+
+function BotOrchestrator.isModeValid(bot, behaviorName)
+    local currentMode = bot:GetData("orchestrator_mode") or 1
+    local validModes  = BotOrchestrator.BEHAVIOR_MODES[behaviorName]
+
+    if not validModes then
+        return true
+    end
+
+    for _, mode in ipairs(validModes) do
+        if mode == currentMode then
+            return true
+        end
+    end
+
+    return false
+end
+
+function BotOrchestrator.getMode(bot)
+    return bot:GetData("orchestrator_mode") or 1
+end
+
+function BotOrchestrator.setMode(bot, mode)
+    bot:SetData("orchestrator_mode", mode)
+end
+
+function BotOrchestrator.switchMode(bot, newMode)
+    local oldMode = BotOrchestrator.getMode(bot)
+    if oldMode == newMode then return end
+
+    BotOrchestrator.setMode(bot, newMode)
+
+    if newMode == BotOrchestrator.MODE.WANDERING then
+        bot:RegisterEvent(PeriodicBotWander, DELAY_BOT_WANDER, 1)
+        bot:RegisterEvent(PeriodicBotLonelinessCheck, DELAY_BOT_LONELINESS_CHECK, 1)
+        bot:RegisterEvent(PeriodicBotSitAndRest, DELAY_BOT_SIT_AND_REST, 1)
+        bot:RegisterEvent(PeriodicBotFindMonsters, DELAY_BOT_FIND_MONSTERS, 1)
+
+    elseif newMode == BotOrchestrator.MODE.DUNGEON_DELVE then
+        bot:RegisterEvent(PeriodicBotWander, DELAY_BOT_WANDER, 1)
+        bot:RegisterEvent(PeriodicBotFindMonsters, 3000, 1)
+        bot:RegisterEvent(PeriodicBotSitAndRest, DELAY_BOT_SIT_AND_REST, 1)
+
+    elseif newMode == BotOrchestrator.MODE.SOCIAL then
+        bot:RegisterEvent(PeriodicBotOrbitPlayer, DELAY_BOT_ORBIT_PLAYER, 1)
+        bot:RegisterEvent(PeriodicBotSitAndRest, DELAY_BOT_SIT_AND_REST, 1)
+
+    elseif newMode == BotOrchestrator.MODE.COMBAT_SEEK then
+        bot:RegisterEvent(PeriodicBotWander, DELAY_BOT_WANDER, 1)
+        bot:RegisterEvent(PeriodicBotFindMonsters, 3000, 1)
+        bot:RegisterEvent(PeriodicBotSitAndRest, DELAY_BOT_SIT_AND_REST, 1)
+
+    elseif newMode == BotOrchestrator.MODE.PARTY_FOLLOW then
+    end
+
+    print("[Orchestrator] " .. bot:GetName() .. " switched from mode " ..
+          oldMode .. " to " .. newMode)
+end
+
+function BotOrchestrator.onCombatEnd(bot)
+    if BotOrchestrator.getMode(bot) == BotOrchestrator.MODE.PARTY_FOLLOW then
+        return
+    end
+
+    if bot:GetData("resting_for_activity") then
+        return
+    end
+
+    if math.random() < BOREDOM_CHANCE_AFTER_COMBAT then
+        BotOrchestrator.triggerBoredom(bot)
+    end
+end
+
+function BotOrchestrator.triggerBoredom(bot)
+    bot:SetStandState(1)
+    bot:SetData("resting_for_activity", true)
+
+    local restTime = BOREDOM_REST_MIN + math.random(BOREDOM_REST_MAX - BOREDOM_REST_MIN)
+
+    bot:RegisterEvent(BotOrchestrator.selectActivityCallback, restTime, 1)
+
+    print("[Orchestrator] " .. bot:GetName() .. " is bored, resting before new activity")
+end
+
+function BotOrchestrator.selectActivityCallback(eventID, delay, repeats, bot)
+    if not bot:IsBot() then return end
+    if not bot:IsAlive() then return end
+
+    bot:SetData("resting_for_activity", nil)
+    bot:SetStandState(0)
+
+    BotOrchestrator.selectActivity(bot)
+end
+
+function BotOrchestrator.selectActivity(bot)
+    local choice
+
+    if math.random() < 0.20 then
+        choice = BotOrchestrator.MODE.DUNGEON_DELVE
+    else
+        choice = BotOrchestrator.MODE.WANDERING
+    end
+
+    BotOrchestrator.switchMode(bot, choice)
+
+    local modeNames = {
+        [1] = "WANDERING",
+        [2] = "DUNGEON_DELVE",
+    }
+    print("[Orchestrator] " .. bot:GetName() .. " selected activity: " ..
+          (modeNames[choice] or tostring(choice)))
+end
+local denizens_of_the_spirit_world = {}
+
+local function spiritHeartbeat()
+    local next = next
+    if next(denizens_of_the_spirit_world) == nil then
+        print("no spirits, returning")
+        return
+    end
+    for guid, isDead in pairs(denizens_of_the_spirit_world) do
+        local player = GetPlayerByGUID(guid)
+        if player ~= nil then
+            if not player:IsDead() then
+                print("player is no longer dead, removing from spirit world")
+                denizens_of_the_spirit_world[guid] = nil
+                InitialLogin(nil, player)
+            end
+        end
+    end
+    CreateLuaEvent(spiritHeartbeat, 1000, 1)
+end
+
+
+local function periodicEvent(eventFunction, delay, repeats, player)
+    if player:IsDead() then
+        if denizens_of_the_spirit_world[player:GetGUID()] == nil then
+            denizens_of_the_spirit_world[player:GetGUID()] = true
+        end
+        return
+    else
+        if type(eventFunction) ~= "function" then
+            print("[periodicEvent] ERROR: eventFunction is " .. type(eventFunction) .. ", expected function")
+            print("[periodicEvent] ERROR: actual type = " .. type(eventFunction))
+            if type(eventFunction) == "table" then
+                print("[periodicEvent] ERROR: TABLE PASSED INSTEAD OF FUNCTION!")
+                for k, v in pairs(eventFunction) do
+                    print("[periodicEvent] ERROR: table key: " .. tostring(k) .. " = " .. type(v))
+                    break
+                end
+            end
+            return
+        end
+        if type(delay) ~= "number" then
+            print("[periodicEvent] ERROR: delay is " .. type(delay) .. ", expected number")
+            return
+        end
+        if type(repeats) ~= "number" then
+            print("[periodicEvent] ERROR: repeats is " .. type(repeats) .. ", expected number")
+            return
+        end
+        print("[periodicEvent] Registering: delay=" .. delay .. ", repeats=" .. repeats .. ", player=" .. player:GetName())
+        player:RegisterEvent(eventFunction, delay, repeats)
+    end
+end
+
+
+function PeriodicSpawnAmbush(eventID, delay, repeats, player)
+    periodicEvent(PeriodicSpawnAmbush, delay, repeats, player)
+    if not player:IsStandState()                then print("no ambush - player is sitting down")
+    elseif player:IsDead()                      then print("no ambush - player is dead")
+    elseif player:IsInWater()                   then print("no ambush - player is in water")
+    elseif player:GetData("num-ambushers") >= 3 then print("no ambush - too many ambushers")
+    elseif player:GetData("is-in-boss-fight")   then print("no ambush - in boss fight")
+    elseif player:GetData("is-in-boss-fight")   then print("no ambush - in boss fight")
+    else
+        Ambush.spawnAndAttackPlayer(nil, nil, nil, player)
+    end
+end
+
+function PeriodicSpawnTravellers(eventID, delay, repeats, player)
+    periodicEvent(PeriodicSpawnTravellers, delay, repeats, player)
+    if player:IsDead() or player:IsInWater() or not player:IsStandState() then
+        print("skipping traveller spawn")
+        return
+    else
+        Travel.spawnAndTravel(player)
+    end
+end
+
+function PeriodicSpawnTreasure(eventID, delay, repeats, player)
+    periodicEvent(PeriodicSpawnTreasure, delay, repeats, player)
+    if player:IsDead() or player:IsInWater() or not player:IsStandState() then
+        print("skipping treasure spawn")
+        return
+    else
+        Treasure.spawnTreasure(player)
+    end
+end
+
+
+local function botHasValidPosition(bot)
+    local ok, x = pcall(function() return bot:GetLocation() end)
+    return ok and x ~= nil
+end
+
+function PeriodicBotWander(eventID, delay, repeats, bot)
+    if not bot:IsBot() then return end
+    if not bot:IsAlive() then return end
+    if not botHasValidPosition(bot) then return end
+    if not BotOrchestrator.isModeValid(bot, "wander") then return end
+
+    periodicEvent(PeriodicBotWander, delay, repeats, bot)
+    if BotWander and BotWander.update then
+        BotWander.update(bot)
+    end
+end
+
+function PeriodicBotLonelinessCheck(eventID, delay, repeats, bot)
+    if not bot:IsBot() then return end
+    if not bot:IsAlive() then return end
+    if not botHasValidPosition(bot) then return end
+    if not BotOrchestrator.isModeValid(bot, "loneliness") then return end
+
+    periodicEvent(PeriodicBotLonelinessCheck, delay, repeats, bot)
+    if BotWander and BotWander.lonelinessCheck then
+        BotWander.lonelinessCheck(bot)
+    end
+end
+
+function PeriodicDungeonCooldownCleanup(eventID, delay, repeats, bot)
+    if not bot:IsBot() then return end
+
+    bot:SetData("last_dungeon_exit", nil)
+    print("[DungeonRails] Cooldown expired for " .. bot:GetName())
+end
+
+function PeriodicBotSitAndRest(eventID, delay, repeats, bot)
+    if not bot:IsBot() then return end
+    if not bot:IsAlive() then return end
+    if not botHasValidPosition(bot) then return end
+    if not BotOrchestrator.isModeValid(bot, "sit_and_rest") then return end
+
+    periodicEvent(PeriodicBotSitAndRest, delay, repeats, bot)
+    if SitAndRest and SitAndRest.checkAndRest then
+        SitAndRest.checkAndRest(bot)
+    end
+end
+
+function PeriodicBotOrbitPlayer(eventID, delay, repeats, bot)
+    if not bot:IsBot() then return end
+    if not bot:IsAlive() then return end
+    if not botHasValidPosition(bot) then return end
+    if not BotOrchestrator.isModeValid(bot, "orbit_player") then return end
+
+    periodicEvent(PeriodicBotOrbitPlayer, delay, repeats, bot)
+    if OrbitPlayer and OrbitPlayer.updatePosition then
+        OrbitPlayer.updatePosition(bot)
+    end
+end
+
+function PeriodicBotFindMonsters(eventID, delay, repeats, bot)
+    print("[DEBUG FindMonsters] CALLBACK FIRED")
+    print("[DEBUG FindMonsters] types: " .. type(eventID) .. ", " .. type(delay) .. ", " .. type(repeats) .. ", " .. type(bot))
+end
+
+
+local DELAY_BOT_READY_CHECK = 500
+
+local function registerBotBehaviors(bot)
+    ReadyPlayers.add(bot)
+
+    BotOrchestrator.setMode(bot, BotOrchestrator.MODE.WANDERING)
+
+    periodicEvent(PeriodicBotWander,
+                  DELAY_BOT_WANDER,
+                  1,
+                  bot)
+    periodicEvent(PeriodicBotLonelinessCheck,
+                  DELAY_BOT_LONELINESS_CHECK,
+                  1,
+                  bot)
+    periodicEvent(PeriodicBotSitAndRest,
+                  DELAY_BOT_SIT_AND_REST,
+                  1,
+                  bot)
+    periodicEvent(PeriodicBotOrbitPlayer,
+                  DELAY_BOT_ORBIT_PLAYER,
+                  1,
+                  bot)
+    periodicEvent(PeriodicBotFindMonsters,
+                  DELAY_BOT_FIND_MONSTERS,
+                  1,
+                  bot)
+    print("[PeriodicEvents] Bot " .. bot:GetName() .. " ready, behaviors registered")
+end
+
+local pending_bot_ready = {}
+local MAX_READY_ATTEMPTS = 20
+
+local function checkPendingBotReady()
+    local still_pending = false
+
+    for guid, data in pairs(pending_bot_ready) do
+        local bot = GetPlayerByGUID(guid)
+
+        if not bot then
+            pending_bot_ready[guid] = nil
+        else
+            local ok, x = pcall(function() return bot:GetLocation() end)
+
+            if ok and x then
+                pending_bot_ready[guid] = nil
+                registerBotBehaviors(bot)
+            else
+                data.attempts = data.attempts + 1
+                if data.attempts >= MAX_READY_ATTEMPTS then
+                    local name = "unknown"
+                    local nameOk, n = pcall(function() return bot:GetName() end)
+                    if nameOk and n then name = n end
+                    print("[WaitForBotReady] Giving up on " .. name .. " after " .. data.attempts .. " attempts")
+                    pending_bot_ready[guid] = nil
+                else
+                    still_pending = true
+                end
+            end
+        end
+    end
+
+    if still_pending then
+        CreateLuaEvent(checkPendingBotReady, DELAY_BOT_READY_CHECK, 1)
+    end
+end
+
+function WaitForBotReady(bot)
+    if not bot then return end
+
+    local guid = bot:GetGUID()
+    if not guid then return end
+
+    pending_bot_ready[guid] = { attempts = 0 }
+
+    local count = 0
+    for _ in pairs(pending_bot_ready) do count = count + 1 end
+    if count == 1 then
+        CreateLuaEvent(checkPendingBotReady, DELAY_BOT_READY_CHECK, 1)
+    end
+end
+
+function InitialLogin(_event, player)
+    local isBot = player:IsBot()
+    print("[InitialLogin] " .. player:GetName() .. " (isBot=" .. tostring(isBot) .. ")")
+
+    if player:IsDead() then
+        denizens_of_the_spirit_world[player:GetGUID()] = true
+        CreateLuaEvent(spiritHeartbeat, 1000, 1)
+        return
+    end
+
+    if LevelAffinity and LevelAffinity.trackLogin then
+        LevelAffinity.trackLogin(player)
+    end
+
+    if not player:IsBot() then
+        ReadyPlayers.add(player)
+
+        periodicEvent(PeriodicSpawnAmbush,
+                      DELAY_PERIODIC_SPAWN_CREATURE,
+                      1,
+                      player)
+        periodicEvent(PeriodicSpawnTravellers,
+                      DELAY_PERIODIC_SPAWN_TRAVELLER,
+                      1,
+                      player)
+        periodicEvent(PeriodicSpawnTreasure,
+                      DELAY_PERIODIC_SPAWN_TREASURE,
+                      1,
+                      player)
+        print("[PeriodicEvents] Registered spawn events for player: " .. player:GetName())
+    end
+
+    if player:IsBot() then
+        ReadyPlayers.add(player)
+
+        BotOrchestrator.setMode(player, BotOrchestrator.MODE.WANDERING)
+
+        local INITIAL_BOT_DELAY = 5000
+        periodicEvent(PeriodicBotFindMonsters,     INITIAL_BOT_DELAY, 1, player)
+        print("[PeriodicEvents] Bot " .. player:GetName() .. " TEST: FindMonsters only")
+    end
+end
+
+local function OnPlayerLogout(_event, player)
+    ReadyPlayers.remove(player:GetGUID())
+
+    if LevelAffinity and LevelAffinity.trackLogout then
+        LevelAffinity.trackLogout(player)
+    end
+
+    if ObjectVariables and ObjectVariables.cleanupPlayer then
+        ObjectVariables.cleanupPlayer(player)
+    end
+end
+
+
+local function OnPlayerLeaveCombat(_event, player)
+    if not player:IsBot() then return end
+    if not player:IsAlive() then return end
+
+    BotOrchestrator.onCombatEnd(player)
+end
+
+local function OnGroupMemberAdd(_event, group, guid)
+    local player = GetPlayerByGUID(guid)
+    if not player then return end
+    if not player:IsBot() then return end
+
+    BotOrchestrator.switchMode(player, BotOrchestrator.MODE.PARTY_FOLLOW)
+end
+
+local function OnGroupMemberRemove(_event, group, guid, method, kicker, reason)
+    local player = GetPlayerByGUID(guid)
+    if not player then return end
+    if not player:IsBot() then return end
+
+    BotOrchestrator.triggerBoredom(player)
+end
+
+local function OnGroupDisband(_event, group)
+end
+
+local PLAYER_EVENT_ON_LOGIN        = 3
+local PLAYER_EVENT_ON_LOGOUT       = 4
+local PLAYER_EVENT_ON_LEAVE_COMBAT = 34
+
+local GROUP_EVENT_ON_MEMBER_ADD    = 1
+local GROUP_EVENT_ON_MEMBER_REMOVE = 3
+local GROUP_EVENT_ON_DISBAND       = 5
+
+RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, InitialLogin)
+RegisterPlayerEvent(PLAYER_EVENT_ON_LOGOUT, OnPlayerLogout)
+RegisterPlayerEvent(PLAYER_EVENT_ON_LEAVE_COMBAT, OnPlayerLeaveCombat)
+
+RegisterGroupEvent(GROUP_EVENT_ON_MEMBER_ADD, OnGroupMemberAdd)
+RegisterGroupEvent(GROUP_EVENT_ON_MEMBER_REMOVE, OnGroupMemberRemove)
+RegisterGroupEvent(GROUP_EVENT_ON_DISBAND, OnGroupDisband)
+
+print("[PeriodicEvents] Centralized event system loaded (with boredom/activity hooks)")

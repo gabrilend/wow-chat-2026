@@ -1,0 +1,2 @@
+-- MARKER_E050_REVERT
+DROP TABLE IF EXISTS `buddy_town_circle`;

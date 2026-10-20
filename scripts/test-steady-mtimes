@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+COMPILE="${2:-${DIR}/scripts/compile}"
+
+fails=0; checks=0
+check() { checks=$((checks + 1)); if [[ "$1" == "0" ]]; then echo "  ok:   $2"; else echo "  FAIL: $2"; fails=$((fails + 1)); fi; }
+
+step=$(sed -n '/^# {{{ steady_patched_mtimes$/,/^# }}}$/p' "${COMPILE}")
+[[ "${step}" == *"steady_patched_mtimes()"* ]] || { echo "ERROR: no steady_patched_mtimes fold in ${COMPILE}"; exit 1; }
+eval "${step}"
+
+WORK="${DIR}/tmp/shared-memory/test-steady-mtimes"
+rm -rf "${WORK}"
+mkdir -p "${WORK}/source/src" "${WORK}/build" "${WORK}/project-modules/mod-copied/src"
+git -C "${WORK}/source" init -q
+git -C "${WORK}/source" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init
+printf 'upstream\n' > "${WORK}/source/src/Player.h"
+git -C "${WORK}/source" add -A
+git -C "${WORK}/source" -c user.email=t@t -c user.name=t commit -q -m upstream
+printf 'buddy code\n' > "${WORK}/project-modules/mod-copied/src/a.cpp"
+AC_CODE_DIR="${WORK}/source"
+BUILD_DIR_SHADOW="${WORK}/build"
+declare -A PATCH_PROVIDED_MODULES=( ["mod-copied"]="B036" )
+mtime() { stat -c %Y "$1"; }
+age_all() { find "${WORK}/source" -type f -not -path '*/.git/*' -exec touch -m -d '2026-01-01 00:00:00' {} +; }
+patch_with() { printf '%s\n' "$1" > "${WORK}/source/src/Player.h"; }      # a patch: rewrites the file (new timestamp)
+copy_in()   { rm -rf "${WORK}/source/modules/mod-copied"; mkdir -p "${WORK}/source/modules"; cp -r "${WORK}/project-modules/mod-copied" "${WORK}/source/modules/"; }
+revert()    { git -C "${WORK}/source" checkout -q -- src/Player.h; rm -rf "${WORK}/source/modules/mod-copied"; }
+H="${WORK}/source/src/Player.h"
+C="${WORK}/source/modules/mod-copied/src/a.cpp"
+
+echo "first build: everything new"
+age_all; patch_with "patched A"; copy_in
+steady_patched_mtimes > /dev/null
+t_first=$(mtime "${H}"); c_first=$(mtime "${C}")
+revert; sleep 1.1
+
+echo "second build, same patches"
+patch_with "patched A"; copy_in
+steady_patched_mtimes > /dev/null
+[[ "$(mtime "${H}")" == "${t_first}" ]]; check $? "the same patched content gets the first build's timestamp back"
+[[ "$(mtime "${C}")" == "${c_first}" ]]; check $? "the copied-in module file, unchanged, keeps its old timestamp"
+revert; sleep 1.1
+
+echo "third build, a different patch result (B)"
+patch_with "patched B"; copy_in
+before=$(mtime "${H}")
+steady_patched_mtimes > /dev/null
+[[ "$(mtime "${H}")" == "${before}" && "${before}" != "${t_first}" ]]; check $? "new content keeps its new timestamp (it will rebuild)"
+t_b=$(mtime "${H}")
+revert; sleep 1.1
+
+echo "fourth build, back to A"
+patch_with "patched A"; copy_in
+before=$(mtime "${H}")
+steady_patched_mtimes > /dev/null
+[[ "$(mtime "${H}")" == "${before}" && "$(mtime "${H}")" -gt "${t_b}" ]]; check $? "A again after B is new to this build folder: it keeps a timestamp newer than B's build (rebuilds)"
+revert; sleep 1.1
+
+echo "fifth build, a profile without the patch (upstream content)"
+up_before=$(mtime "${H}")
+steady_patched_mtimes > /dev/null
+[[ "$(mtime "${H}")" == "${up_before}" ]]; check $? "upstream content, first seen in this folder since A: keeps its new timestamp"
+sleep 1.1
+git -C "${WORK}/source" checkout -q -- src/Player.h; touch "${H}"
+steady_patched_mtimes > /dev/null
+[[ "$(mtime "${H}")" == "${up_before}" ]]; check $? "upstream content rebuilt the same way twice: the second time it gets the first timestamp back"
+
+rm -rf "${WORK}"
+echo ""
+[[ ${fails} -eq 0 ]] && echo "All ${checks} checks passed" || echo "${fails} of ${checks} checks failed"
+[[ ${fails} -eq 0 ]]

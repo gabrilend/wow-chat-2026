@@ -1,0 +1,542 @@
+require "movement"
+
+Treasure = { chests = {} }
+
+package.loaded["treasure"] = Treasure
+
+
+Treasure.globalPool     = {}
+Treasure.playerQueues   = {}
+Treasure.activeChests   = {}
+Treasure.counters       = {}
+Treasure.leaving        = {}
+Treasure.distributionIndex = 0
+
+local ITEM_LEVEL_RANGE    = 3
+
+local CHEST_LIFETIME_MS   = 300000
+
+local RECYCLE_MIN_QUALITY = 2
+local QUEST_ITEM_CLASS    = 12
+local BUYBACK_SLOTS       = 12
+local PLAYER_EVENT_ON_SELL_ITEM = 74
+local GAMEOBJECT_EVENT_ON_REMOVE = 13
+
+function Treasure.getOnlinePlayers()
+    local players = {}
+    for _, player in ipairs(GetPlayersInWorld() or {}) do
+        local guid = player:GetGUIDLow()
+        if not player:IsBot() and not Treasure.leaving[guid] then
+            players[#players + 1] = { player = player, level = player:GetLevel(), guid = guid }
+        end
+    end
+    return players
+end
+
+function Treasure.findEligiblePlayer(itemLevel, seller)
+    local eligible = {}
+
+    for _, info in ipairs(Treasure.getOnlinePlayers()) do
+        if math.abs(info.level - itemLevel) <= ITEM_LEVEL_RANGE and info.guid ~= seller then
+            local queue = Treasure.playerQueues[info.guid]
+            eligible[#eligible + 1] = { info = info, queueSize = queue and #queue or 0 }
+        end
+    end
+
+    if #eligible == 0 then
+        return nil
+    end
+
+    local minQueueSize = eligible[1].queueSize
+    for _, entry in ipairs(eligible) do minQueueSize = math.min(minQueueSize, entry.queueSize) end
+    local tied = {}
+    for _, entry in ipairs(eligible) do
+        if entry.queueSize == minQueueSize then tied[#tied + 1] = entry.info end
+    end
+
+    Treasure.distributionIndex = Treasure.distributionIndex + 1
+    return tied[((Treasure.distributionIndex - 1) % #tied) + 1]
+end
+
+function Treasure.distributeToQueue(itemId, itemLevel, count, seller)
+    local target = Treasure.findEligiblePlayer(itemLevel, seller)
+
+    if not target then
+        return false
+    end
+
+    local queue = Treasure.playerQueues[target.guid] or {}
+    Treasure.playerQueues[target.guid] = queue
+    queue[#queue + 1] = { itemId = itemId, itemLevel = itemLevel, count = count or 1, seller = seller }
+
+    print("[Treasure] Queued item " .. itemId .. " (lvl " .. itemLevel .. ") for " .. target.player:GetName())
+    return true
+end
+
+function Treasure.processGlobalPool()
+    local remaining = {}
+
+    for _, item in ipairs(Treasure.globalPool) do
+        local distributed = Treasure.distributeToQueue(item.itemId, item.itemLevel, item.count, item.seller)
+        if not distributed then
+            table.insert(remaining, item)
+        end
+    end
+
+    Treasure.globalPool = remaining
+
+    if #remaining > 0 then
+        print("[Treasure] " .. #remaining .. " items waiting in global pool (no eligible players)")
+    end
+end
+
+function Treasure.addToPool(itemId, itemLevel, count, seller)
+    count = count or 1
+    itemLevel = itemLevel or 1
+
+    local distributed = Treasure.distributeToQueue(itemId, itemLevel, count, seller)
+
+    if not distributed then
+        table.insert(Treasure.globalPool, {
+            itemId    = itemId,
+            itemLevel = itemLevel,
+            count     = count,
+            seller    = seller,
+        })
+        print("[Treasure] Item " .. itemId .. " (lvl " .. itemLevel .. ") added to global pool (no eligible players)")
+    end
+end
+
+function Treasure.getPlayerQueue(playerGUID)
+    local queue = Treasure.playerQueues[playerGUID] or {}
+    Treasure.playerQueues[playerGUID] = {}
+    return queue
+end
+
+function Treasure.returnToPool(chestGUID)
+    local chestData = Treasure.activeChests[chestGUID]
+    if not chestData or not chestData.queueItems then
+        return
+    end
+
+    local returned = 0
+    for _, item in ipairs(chestData.queueItems) do
+        Treasure.addToPool(item.itemId, item.itemLevel, item.count, item.seller)
+        returned = returned + 1
+    end
+
+    if returned > 0 then
+        print("[Treasure] Returned " .. returned .. " items from despawned chest to pool")
+    end
+
+    if ObjectVariables and ObjectVariables.cleanupGameObjectByLocation then
+        ObjectVariables.cleanupGameObjectByLocation(
+            chestData.mapId,
+            chestData.instanceId,
+            chestGUID
+        )
+    end
+
+    Treasure.activeChests[chestGUID] = nil
+end
+
+function Treasure.onChestRemove(_event, chest)
+    if Treasure.activeChests[chest:GetGUIDLow()] then
+        Treasure.returnToPool(chest:GetGUIDLow())
+    end
+end
+
+function Treasure.expireChest(_eventId, _delay, _repeats, chest)
+    chest:RemoveFromWorld(false)
+end
+
+
+local chests = { { id = 900001, minLevel = 1,  maxLevel = 5  },
+                 { id = 900002, minLevel = 3,  maxLevel = 7  },
+                 { id = 900003, minLevel = 6,  maxLevel = 10 },
+                 { id = 900004, minLevel = 11, maxLevel = 15 },
+                 { id = 900005, minLevel = 16, maxLevel = 21 },
+                 { id = 900006, minLevel = 21, maxLevel = 27 },
+                 { id = 900007, minLevel = 27, maxLevel = 31 },
+                 { id = 900008, minLevel = 30, maxLevel = 35 },
+                 { id = 900009, minLevel = 36, maxLevel = 41 },
+                 { id = 900010, minLevel = 36, maxLevel = 40 },
+                 { id = 900011, minLevel = 41, maxLevel = 49 },
+                 { id = 900012, minLevel = 40, maxLevel = 80 },
+                 { id = 900013, minLevel = 50, maxLevel = 60 },
+                 { id = 900014, minLevel = 54, maxLevel = 59 },
+                 { id = 900015, minLevel = 55, maxLevel = 80 },
+                 { id = 900016, minLevel = 57, maxLevel = 62 },
+                 { id = 900017, minLevel = 60, maxLevel = 60 },
+                 { id = 900018, minLevel = 60, maxLevel = 64 },
+                 { id = 900019, minLevel = 64, maxLevel = 66 },
+                 { id = 900020, minLevel = 66, maxLevel = 68 },
+                 { id = 900021, minLevel = 68, maxLevel = 74 },
+                 { id = 900022, minLevel = 69, maxLevel = 72 },
+                 { id = 900023, minLevel = 69, maxLevel = 71 },
+                 { id = 900024, minLevel = 72, maxLevel = 79 },
+                 { id = 900025, minLevel = 72, maxLevel = 79 },
+                 { id = 900026, minLevel = 72, maxLevel = 79 },
+                 { id = 900027, minLevel = 76, maxLevel = 79 },
+                 { id = 900028, minLevel = 80, maxLevel = 80 },
+                 { id = 900029, minLevel = 78, maxLevel = 80 },
+                 { id = 900030, minLevel = 80, maxLevel = 80 },
+                 { id = 900031, minLevel = 80, maxLevel = 80 },
+                 { id = 900032, minLevel = 80, maxLevel = 80 },
+                 { id = 900033, minLevel = 80, maxLevel = 80 },
+                 { id = 900034, minLevel = 80, maxLevel = 80 },
+                 { id = 900035, minLevel = 80, maxLevel = 80 },
+                 { id = 900036, minLevel = 80, maxLevel = 80 },
+                 { id = 900037, minLevel = 1,  maxLevel = 80 },
+               }
+Treasure.chests = chests
+
+function Treasure.addTreasure(playerID, chestID)
+    local player = GetPlayerByGUID(playerID)
+    local playerQueue = player:GetData("treasureChests")
+    table.insert(playerQueue, chestID)
+    player:SetData("treasureChests", playerQueue)
+end
+
+function Treasure.spawnTreasure(player)
+    local treasureMinDist = 20
+    local treasureMaxDist = 35
+    local chestQueue      = player:GetData("treasureChests")
+    local next            = next
+
+    if chestQueue == nil or next(chestQueue) == nil then
+        Treasure.regenerateQueue(player)
+        chestQueue = player:GetData("treasureChests")
+        if next(chestQueue) == nil then
+            print("[Treasure] No chest fits level " .. player:GetLevel() .. " (" .. player:GetName() .. "); none spawned")
+            return
+        end
+    end
+
+    local chestID   = Treasure.getRandomChestFromQueue(player:GetGUID())
+    local playerX, playerY, playerZ, playerO = player:GetLocation()
+    local playerMap = player:GetMap()
+
+    local x, y, z
+    local tries = 0
+    repeat
+        tries = tries + 1
+        x, y = Movement.getPlusSpawnPosition(playerX, playerY, treasureMinDist, treasureMaxDist)
+        z = playerMap:GetHeight(x, y)
+    until z ~= nil or tries >= 5
+
+    if not z then
+        print("[Treasure] Could not find valid terrain for chest spawn")
+        return
+    end
+
+    local o     = math.random(0, 6.28)
+    local chest = player:SummonGameObject(chestID, x, y, z, o, 0)
+
+    if not chest then
+        print("[Treasure] Failed to spawn chest " .. chestID)
+        return
+    end
+
+    player:SendBroadcastMessage("Treasure!")
+    print("[Treasure] Spawning chest " .. chestID .. " for " .. player:GetName())
+
+    local playerGUID  = player:GetGUIDLow()
+    local queuedItems = Treasure.getPlayerQueue(playerGUID)
+    local chestGUID   = chest:GetGUIDLow()
+
+    Treasure.activeChests[chestGUID] = {
+        chestID      = chestID,
+        spawnerGUID  = playerGUID,
+        spawnTime    = os.time(),
+        queueItems   = queuedItems,
+        pendingLoot  = queuedItems,
+        lootInjected = false,
+        mapId        = chest:GetMapId(),
+        instanceId   = chest:GetInstanceId(),
+    }
+
+    chest:RegisterEvent(Treasure.expireChest, CHEST_LIFETIME_MS, 1)
+
+    print("[Treasure] Chest spawned with " .. #queuedItems .. " pending items (holder will see empty)")
+end
+
+function Treasure.generateBaseLoot(chest, chestData)
+    local loot = {}
+
+    local chestId = chestData.chestID
+    local minLevel, maxLevel = 1, 20
+    for _, c in ipairs(Treasure.chests) do
+        if c.id == chestId then
+            minLevel = c.minLevel
+            maxLevel = c.maxLevel
+            break
+        end
+    end
+
+    local avgLevel  = (minLevel + maxLevel) / 2
+    local goldMin   = math.floor(avgLevel * 10)
+    local goldMax   = math.floor(avgLevel * 50)
+    local goldAmount = math.random(goldMin, goldMax)
+
+
+    if avgLevel <= 20 then
+        local lowLevelItems = {
+            { id = 4496,  name = "Small Brown Pouch" },
+            { id = 117,   name = "Tough Jerky" },
+            { id = 159,   name = "Refreshing Spring Water" },
+            { id = 2589,  name = "Linen Cloth" },
+            { id = 2592,  name = "Wool Cloth" },
+            { id = 774,   name = "Malachite" },
+            { id = 818,   name = "Tigerseye" },
+            { id = 1210,  name = "Shadowgem" },
+            { id = 2835,  name = "Rough Stone" },
+            { id = 2836,  name = "Coarse Stone" },
+        }
+
+        if math.random() < 0.5 then
+            local item = lowLevelItems[math.random(#lowLevelItems)]
+            table.insert(loot, { itemId = item.id, count = math.random(1, 3) })
+        end
+
+        if math.random() < 0.3 then
+            local vendorTrash = {
+                { id = 1179, name = "Ice Cold Milk" },
+                { id = 4540, name = "Tough Hunk of Bread" },
+            }
+            local trash = vendorTrash[math.random(#vendorTrash)]
+            table.insert(loot, { itemId = trash.id, count = math.random(1, 5) })
+        end
+    end
+
+    return loot
+end
+
+function Treasure.injectPendingLoot(chest)
+    local chestGUID  = chest:GetGUIDLow()
+    local chestData  = Treasure.activeChests[chestGUID]
+
+    if not chestData then
+        return false
+    end
+
+    if chestData.lootInjected then
+        return true
+    end
+
+    local baseLoot = Treasure.generateBaseLoot(chest, chestData)
+    for _, item in ipairs(baseLoot) do
+        chest:AddLoot(item.itemId, item.count)
+        print("[Treasure] Generated base loot: item " .. item.itemId .. " x" .. item.count)
+    end
+
+    local pendingLoot = chestData.pendingLoot or {}
+    for _, item in ipairs(pendingLoot) do
+        chest:AddLoot(item.itemId, item.count)
+        print("[Treasure] Injected queued item " .. item.itemId .. " x" .. item.count)
+    end
+
+    chestData.lootInjected = true
+    print("[Treasure] Loot injected for chest " .. chestGUID .. " (" .. #baseLoot .. " base + " .. #pendingLoot .. " queued)")
+    return true
+end
+
+function Treasure.isTrackedChest(chest)
+    local chestGUID = chest:GetGUIDLow()
+    return Treasure.activeChests[chestGUID] ~= nil
+end
+
+function Treasure.setupTreasure(_event, player)
+    Treasure.leaving[player:GetGUIDLow()] = nil
+    local playerQueue = {}
+    local playerLevel = player:GetLevel()
+
+    for i, chest in pairs(Treasure.chests) do
+        if playerLevel >= chest.minLevel and playerLevel <= chest.maxLevel then
+            table.insert(playerQueue, chest.id)
+        end
+    end
+    player:SetData("treasureChests", playerQueue)
+
+    Treasure.processGlobalPool()
+end
+
+function Treasure.regenerateQueue(player)
+    local playerQueue = player:GetData("treasureChests") or {}
+    local playerLevel = player:GetLevel()
+
+    for i, chest in pairs(Treasure.chests) do
+        if playerLevel >= chest.minLevel and playerLevel <= chest.maxLevel then
+            table.insert(playerQueue, chest.id)
+        end
+    end
+    player:SetData("treasureChests", playerQueue)
+end
+
+function Treasure.getRandomChestFromQueue(playerID)
+    local player      = GetPlayerByGUID(playerID)
+    local playerQueue = player:GetData("treasureChests")
+    local chestID     = table.remove(playerQueue, math.random(#playerQueue))
+    player:SetData("treasureChests", playerQueue)
+    return chestID
+end
+
+
+function Treasure.onLootItem(event, player, item, count)
+    local itemId   = item:GetEntry()
+    local itemName = item:GetName()
+    print("[Treasure] " .. player:GetName() .. " looted: " .. itemName .. " (ID: " .. itemId .. ") x" .. count)
+
+    for chestGUID, chestData in pairs(Treasure.activeChests) do
+        if chestData.queueItems then
+            for i, queuedItem in ipairs(chestData.queueItems) do
+                if queuedItem.itemId == itemId then
+                    table.remove(chestData.queueItems, i)
+                    print("[Treasure] Removed looted item " .. itemId .. " from chest tracking")
+                    break
+                end
+            end
+        end
+    end
+end
+
+function Treasure.onPlayerLogout(event, player)
+    local playerGUID = player:GetGUIDLow()
+    Treasure.leaving[playerGUID] = true
+
+    Treasure.settleCounter(player, true)
+
+    local queue = Treasure.playerQueues[playerGUID]
+    if queue and #queue > 0 then
+        print("[Treasure] Player " .. player:GetName() .. " logged out with " .. #queue .. " queued items, returning to pool")
+        for _, item in ipairs(queue) do
+            Treasure.globalPool[#Treasure.globalPool + 1] = { itemId = item.itemId, itemLevel = item.itemLevel, count = item.count, seller = item.seller }
+        end
+    end
+    Treasure.playerQueues[playerGUID] = nil
+
+    Treasure.processGlobalPool()
+end
+
+function Treasure.saleLevel(item)
+    local required = item:GetRequiredLevel()
+    if required > 0 then return required end
+    return item:GetItemLevel()
+end
+
+function Treasure.isRecycled(item)
+    return item:GetQuality()       >= RECYCLE_MIN_QUALITY
+       and item:GetClass()         ~= QUEST_ITEM_CLASS
+       and item:GetMaxStackCount() == 1
+end
+
+local function release(entry)
+    if entry.recycle then
+        Treasure.addToPool(entry.itemId, entry.itemLevel, entry.count, entry.seller)
+    end
+end
+
+function Treasure.settleCounter(player, atLogout)
+    local guid    = player:GetGUIDLow()
+    local counter = Treasure.counters[guid]
+    if not counter then return end
+
+    local kept = {}
+    for _, entry in ipairs(counter) do
+        if player:GetItemByGUID(entry.guid) then
+            print("[Treasure] " .. player:GetName() .. " bought back item " .. entry.itemId .. "; it stays theirs")
+        else
+            kept[#kept + 1] = entry
+        end
+    end
+
+    local limit = atLogout and 0 or BUYBACK_SLOTS
+    while #kept > limit do
+        release(table.remove(kept, 1))
+    end
+
+    Treasure.counters[guid] = (#kept > 0) and kept or nil
+end
+
+function Treasure.onSellItem(_event, player, item, _vendor, count)
+    local guid    = player:GetGUIDLow()
+    local counter = Treasure.counters[guid] or {}
+    Treasure.counters[guid] = counter
+
+    for i = #counter, 1, -1 do
+        if counter[i].guid == item:GetGUID() then table.remove(counter, i) end
+    end
+
+    counter[#counter + 1] = {
+        guid      = item:GetGUID(),
+        itemId    = item:GetEntry(),
+        itemLevel = Treasure.saleLevel(item),
+        count     = count,
+        recycle   = Treasure.isRecycled(item),
+        seller    = guid,
+    }
+    Treasure.settleCounter(player, false)
+end
+
+function Treasure.handleChat(event, player, message)
+    if message:sub(1, 8) == "#pooladd" then
+        local args = message:sub(10)
+        local itemId, itemLevel, count = args:match("(%d+)%s+(%d+)%s*(%d*)")
+        itemId    = tonumber(itemId)
+        itemLevel = tonumber(itemLevel)
+        count     = tonumber(count) or 1
+        if itemId and itemLevel then
+            Treasure.addToPool(itemId, itemLevel, count)
+            player:SendBroadcastMessage("Added item " .. itemId .. " (lvl " .. itemLevel .. ") x" .. count .. " to system")
+        else
+            player:SendBroadcastMessage("Usage: #pooladd <itemId> <itemLevel> [count]")
+        end
+        return
+    end
+
+    if message == "#poolsize" then
+        local globalCount = #Treasure.globalPool
+        local queueCount  = 0
+        for _, queue in pairs(Treasure.playerQueues) do
+            queueCount = queueCount + #queue
+        end
+        player:SendBroadcastMessage("Global pool: " .. globalCount .. " | Total queued: " .. queueCount)
+        return
+    end
+
+    if message == "#myqueue" then
+        local playerGUID = player:GetGUIDLow()
+        local queue      = Treasure.playerQueues[playerGUID] or {}
+        if #queue == 0 then
+            player:SendBroadcastMessage("Your treasure queue is empty")
+        else
+            player:SendBroadcastMessage("Your queue has " .. #queue .. " items:")
+            for i, item in ipairs(queue) do
+                player:SendBroadcastMessage("  " .. i .. ". Item " .. item.itemId .. " x" .. item.count)
+            end
+        end
+        return
+    end
+
+    if message == "#treasure" then
+        Treasure.spawnTreasure(player)
+    end
+end
+
+PLAYER_EVENT_ON_LOGIN     = 3
+PLAYER_EVENT_ON_LOGOUT    = 4
+PLAYER_EVENT_ON_LOOT_ITEM = 32
+PLAYER_EVENT_ON_CHAT      = 18
+RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, Treasure.setupTreasure)
+RegisterPlayerEvent(PLAYER_EVENT_ON_LOGOUT, Treasure.onPlayerLogout)
+RegisterPlayerEvent(PLAYER_EVENT_ON_LOOT_ITEM, Treasure.onLootItem)
+RegisterPlayerEvent(PLAYER_EVENT_ON_CHAT, Treasure.handleChat)
+RegisterPlayerEvent(PLAYER_EVENT_ON_SELL_ITEM, Treasure.onSellItem)
+
+for _, chest in ipairs(Treasure.chests) do
+    RegisterGameObjectEvent(chest.id, GAMEOBJECT_EVENT_ON_REMOVE, Treasure.onChestRemove)
+end
+
+print("[Treasure] Treasure system loaded with per-player queue distribution")
+
+

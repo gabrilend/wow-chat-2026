@@ -1,0 +1,211 @@
+#!/usr/bin/env bash
+
+set -o pipefail
+
+DIR="/mnt/kaun/wow-chat-2026"
+SOURCE=""
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+    if [[ "$1" == "--source" ]]; then SOURCE="$2"; shift 2; else POSITIONAL+=("$1"); shift; fi
+done
+set -- "${POSITIONAL[@]}"
+[[ -n "${1:-}" ]] && DIR="$1"
+[[ -n "${SOURCE}" ]] || SOURCE="${DIR}/source-beta"
+
+if [[ -z "${2:-}" ]]; then
+    overall=0
+    for each in basic cc-test beta; do
+        echo "=== ${each}"
+        "$0" "${DIR}" "${each}" --source "${SOURCE}" || overall=1
+    done
+    exit "${overall}"
+fi
+PROFILE="$2"
+
+declare -a EXPECT_basic=(
+    "worldserver.conf|MaxPlayerLevel|60"
+    "worldserver.conf|StartPlayerLevel|1"
+    "worldserver.conf|StartHeroicPlayerLevel|55"          # death knights start at 55 (C017)
+    "worldserver.conf|RecruitAFriend.MaxLevel|60"
+    "worldserver.conf|Rate.Damage.Fall|10.0"
+    "worldserver.conf|Rate.MoveSpeed.Player|0.85"
+    "worldserver.conf|EnableLowLevelRegenBoost|0"          # no faster healing below 15 (C034)
+    "worldserver.conf|Rate.XP.Kill|1"
+    "worldserver.conf|RealmID|5"
+    "worldserver.conf|WorldServerPort|4462"
+    "worldserver.conf|GM.LoginState|3"
+    "worldserver.conf|CharacterCreating.MinLevelForHeroicCharacter|55"
+    "worldserver.conf|CharacterCreating.Disabled.ClassMask|0"
+    "worldserver.conf|PlayerStart.CustomSpells|__unset_or_0__"
+    "worldserver.conf|ClientCacheVersion|__nonzero_uint32__"
+    "modules/playerbots.conf|AiPlayerbot.RandomBotAutologin|0"
+    "modules/playerbots.conf|AiPlayerbot.MinRandomBots|0"
+    "modules/playerbots.conf|AiPlayerbot.MaxRandomBots|0"
+    "modules/playerbots.conf|AiPlayerbot.DisableDeathKnightLogin|1"
+    "worldserver.conf|MinDualSpecLevel|255"
+    "modules/playerbots.conf|AiPlayerbot.AltMaintenanceTalentTree|0"
+    "worldserver.conf|MaxHonorPoints|2147483647"
+    "worldserver.conf|MaxHonorPointsMoneyPerPoint|0"
+    "modules/playerbots.conf|AiPlayerbot.KeepAltsInGroup|1"
+    "modules/playerbots.conf|AiPlayerbot.InviteAltsOnLogin|0"
+    "worldserver.conf|Basic.RefusedChannels|1 2 22 23 25 26"
+)
+
+declare -a EXPECT_cc_test=(
+    "worldserver.conf|MaxPlayerLevel|80"
+    "worldserver.conf|StartPlayerLevel|1"
+    "worldserver.conf|StartHeroicPlayerLevel|55"
+    "worldserver.conf|MinDualSpecLevel|40"
+    "worldserver.conf|Rate.MoveSpeed.Player|1"            # stock speed: C003 gated away from cc-test
+    "worldserver.conf|EnableLowLevelRegenBoost|0"          # C034 is every profile's since 2026-10-20
+    "worldserver.conf|Rate.Damage.Fall|1"
+    "worldserver.conf|Rate.XP.Kill|1"
+    "worldserver.conf|RealmID|6"
+    "worldserver.conf|WorldServerPort|4462"
+    "authserver.conf|RealmServerPort|4362"
+    "worldserver.conf|GM.LoginState|0"                     # a test character meets every player check
+    "worldserver.conf|Warden.ClientCheckFailAction|0"      # C033: logged only, until the custom client answers Warden
+    "worldserver.conf|ClientCacheVersion|__nonzero_uint32__"
+    "modules/playerbots.conf|AiPlayerbot.RandomBotAutologin|0"
+    "modules/playerbots.conf|AiPlayerbot.MinRandomBots|0"
+    "modules/playerbots.conf|AiPlayerbot.MaxRandomBots|0"
+    "modules/playerbots.conf|AiPlayerbot.AltMaintenanceTalentTree|0"
+    "modules/playerbots.conf|AiPlayerbot.KeepAltsInGroup|1"
+    "modules/playerbots.conf|AiPlayerbot.InviteAltsOnLogin|0"
+)
+
+declare -a EXPECT_beta=(
+    "worldserver.conf|MaxPlayerLevel|20"                   # C006b
+    "worldserver.conf|StartPlayerLevel|1"                  # C007b
+    "worldserver.conf|StartHeroicPlayerLevel|1"            # C017: death knights at 1 (issue 206)
+    "worldserver.conf|CharacterCreating.MinLevelForHeroicCharacter|0"   # C036: no level-55 character needed first
+    "worldserver.conf|RecruitAFriend.MaxLevel|20"          # C017
+    "worldserver.conf|Rate.XP.Kill|3"                      # C037: no quests on beta (C005 is release's only since 2026-10-20)
+    "worldserver.conf|Rate.XP.Quest|1"                     # stock: nothing to quest for
+    "worldserver.conf|EnableLowLevelRegenBoost|0"          # C034, every profile since 2026-10-20
+    "worldserver.conf|DurabilityLoss.OnDeath|0"
+    "worldserver.conf|Rate.RepairCost|25"
+    "worldserver.conf|Rate.SellValue.Item.Legendary|10"
+    "worldserver.conf|Rate.XP.Explore|10"
+    "worldserver.conf|SkillChance.Prospecting|1"
+    "worldserver.conf|MaxPrimaryTradeSkill|2"              # stock, the owner's choice
+    "worldserver.conf|WaterBreath.Timer|18000"
+    "worldserver.conf|Instance.IgnoreLevel|1"
+    "worldserver.conf|Battleground.PlayerRespawn|60"
+    "worldserver.conf|AllowTwoSide.Interaction.Group|1"
+    "worldserver.conf|ChatStrictLinkChecking.Severity|-1"
+    "worldserver.conf|QuestPOI.Enabled|0"
+    "worldserver.conf|vmap.BlizzlikePvPLOS|1"              # stock, the owner's choice
+    "worldserver.conf|DBC.EnforceItemAttributes|1"         # stock, the owner's choice
+    "worldserver.conf|PlayerLimit|1000"                    # stock: held for a decision (bots count)
+    "worldserver.conf|Rate.Damage.Fall|10.0"               # C004
+    "worldserver.conf|Rate.MoveSpeed.Player|0.85"          # C003
+    "worldserver.conf|InstantFlightPaths|1"                # C009
+    "worldserver.conf|GM.LoginState|3"                     # C008
+    "worldserver.conf|RealmID|2"                           # C019
+    "worldserver.conf|WorldServerPort|4462"                # C010 (shared today; issue 136b)
+    "authserver.conf|RealmServerPort|4362"                 # C010
+    "modules/playerbots.conf|AiPlayerbot.RandomBotMinLevel|1"   # C012
+    "modules/playerbots.conf|AiPlayerbot.RandomBotMaxLevel|20"  # C012
+    "modules/playerbots.conf|AiPlayerbot.MinRandomBots|200"     # C035; the bots are ambushed too
+    "modules/playerbots.conf|AiPlayerbot.MaxRandomBots|200"     # C035
+)
+
+SCRATCH_ROOT="${DIR}/tmp/shared-memory"
+if [[ ! -d "${SCRATCH_ROOT}" ]]; then
+    echo "ERROR: ${SCRATCH_ROOT} missing (the project's RAM scratch link)."
+    echo "       to debug: does ${DIR}/tmp point at /tmp/<project>, and does"
+    echo "       tmp/shared-memory point at /dev/shm/<project>?"
+    exit 1
+fi
+SCRATCH="${SCRATCH_ROOT}/test-config-gates-${PROFILE}"
+rm -rf "${SCRATCH}"
+mkdir -p "${SCRATCH}/etc/modules"
+
+DIST_SRC="${SCRATCH}/stock"
+mkdir -p "${DIST_SRC}/modules"
+WORLD_DIST="${SOURCE}/src/server/apps/worldserver/worldserver.conf.dist"
+AUTH_DIST="${SOURCE}/src/server/apps/authserver/authserver.conf.dist"
+BOTS_DIST="${SOURCE}/modules/mod-playerbots/conf/playerbots.conf.dist"
+for f in "${WORLD_DIST}" "${AUTH_DIST}" "${BOTS_DIST}"; do
+    if [[ ! -f "${f}" ]]; then
+        echo "ERROR: no stock config at ${f}"
+        echo "       to debug: is ${SOURCE} a cloned source tree with mod-playerbots in modules/?"
+        echo "       From a separate checkout, name the main project's: --source <main project>/source-beta"
+        exit 1
+    fi
+done
+cp "${WORLD_DIST}" "${AUTH_DIST}" "${DIST_SRC}/"
+cp "${SOURCE}"/modules/*/conf/*.conf.dist "${DIST_SRC}/modules/"
+cp "${DIST_SRC}/worldserver.conf.dist"         "${SCRATCH}/etc/worldserver.conf"
+cp "${DIST_SRC}/authserver.conf.dist"          "${SCRATCH}/etc/authserver.conf"
+cp "${DIST_SRC}/modules/playerbots.conf.dist"  "${SCRATCH}/etc/modules/playerbots.conf"
+echo "Stock configs from: ${SOURCE}"
+echo "Scratch:            ${SCRATCH}"
+
+export INSTALL_DIR="${SCRATCH}"
+export PROJECT_DIR="${DIR}"
+export PROFILE DIR
+source "${DIR}/patches/E-patches.sh" || { echo "ERROR: patches/E-patches.sh failed to source"; exit 1; }
+failed=0
+apply_config_values > "${SCRATCH}/apply-config-values.log" 2>&1 || failed=1
+sed -n '/Applying for profile/,$p' "${SCRATCH}/apply-config-values.log"
+
+table_var="EXPECT_${PROFILE//-/_}"
+table_name="${table_var}[@]"
+if [[ -z "$(declare -p "${table_var}" 2>/dev/null)" ]]; then
+    echo "ERROR: no expectation table ${table_var} in this script"
+    exit 1
+fi
+
+pass=0
+fail=0
+for row in "${!table_name}"; do
+    IFS='|' read -r file key want <<< "${row}"
+    conf="${SCRATCH}/etc/${file}"
+    key_re="${key//./\\.}"
+    got=$(grep -E "^${key_re}[[:space:]]*=" "${conf}" | head -1 | sed 's|^[^=]*=[[:space:]]*||; s|[[:space:]]*$||; s|^"||; s|"$||')
+    if [[ "${want}" == "__unset_or_0__" ]]; then
+        if [[ -z "${got}" || "${got}" == "0" ]]; then ok=1; else ok=0; fi
+    elif [[ "${want}" == "__nonzero_uint32__" ]]; then
+        if [[ "${got}" =~ ^[0-9]+$ && "${got}" -gt 0 && "${got}" -le 4294967295 ]]; then ok=1; else ok=0; fi
+    else
+        [[ "${got}" == "${want}" ]] && ok=1 || ok=0
+    fi
+    if [[ "${ok}" -eq 1 ]]; then
+        printf "  [✓] %-52s = %s\n" "${key}" "${got:-<unset>}"
+        pass=$((pass + 1))
+    else
+        printf "  [✗] %-52s = %s   (expected %s, in %s)\n" "${key}" "${got:-<unset>}" "${want}" "${file}"
+        fail=$((fail + 1))
+    fi
+done
+echo "Expectations: ${pass} passed, ${fail} failed"
+
+db_fail=0
+for pair in "worldserver.conf|WorldDatabaseInfo|acore_world" \
+            "worldserver.conf|CharacterDatabaseInfo|acore_characters"; do
+    IFS='|' read -r file key base <<< "${pair}"
+    got=$(grep -E "^${key}[[:space:]]*=" "${SCRATCH}/etc/${file}" | head -1 | sed 's|.*;||; s|"[[:space:]]*$||')
+    want="$(_profile_db_name "${base}")"
+    if [[ "${got}" == "${want}" ]]; then
+        printf "  [✓] %-52s names %s, as the install creates\n" "${key}" "${got}"
+    else
+        printf "  [✗] %-52s names %s, but the install creates %s (C001 and _profile_db_name disagree)\n" "${key}" "${got:-<unset>}" "${want}"
+        db_fail=$((db_fail + 1))
+    fi
+done
+
+missing=0
+all_keys=$(grep -ohE "s\|\^[A-Za-z][A-Za-z0-9\\\.]*" "${DIR}"/config/patches/C*.sh \
+    | sed 's/^s|^//; s/\\\././g; s/\.$//' | sort -u)
+for key in ${all_keys}; do
+    key_re="${key//./\\.}"
+    if ! grep -qE "^${key_re}[[:space:]]*=" "${DIST_SRC}"/worldserver.conf.dist "${DIST_SRC}"/authserver.conf.dist "${DIST_SRC}"/modules/*.conf.dist; then
+        echo "  [✗] a config patch edits '${key}', which no stock .conf.dist contains"
+        missing=$((missing + 1))
+    fi
+done
+echo "Edited keys missing from stock configs: ${missing}"
+
+[[ "${failed}" -eq 0 && "${fail}" -eq 0 && "${missing}" -eq 0 && "${db_fail}" -eq 0 ]]

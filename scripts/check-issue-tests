@@ -1,0 +1,182 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+local opt = { all = false, run = false, untested = false, strict = false }
+for _, a in ipairs(arg) do
+    local flag = a:match("^%-%-(.+)$")
+    if flag and opt[flag] ~= nil then opt[flag] = true
+    elseif flag then io.stderr:write("check-issue-tests: unknown option --" .. flag .. "\n"); os.exit(1)
+    else DIR = a end
+end
+
+local function lines_of(cmd)
+    local out, f = {}, io.popen(cmd)
+    for l in f:lines() do out[#out + 1] = l end
+    f:close()
+    return out
+end
+
+local function read(path)
+    local f = io.open(path, "r")
+    if not f then return nil end
+    local s = f:read("*a")
+    f:close()
+    return s
+end
+
+local issues, order = {}, {}
+local function add_issues(folder, label)
+    for _, path in ipairs(lines_of("find '" .. DIR .. "/issues/" .. folder .. "' -maxdepth 1 -type f 2>/dev/null | sort")) do
+        local name = path:match("([^/]+)$")
+        local num  = name:match("^(%d%d%d%w-)%-") or name:match("^(%d%d%d%w-)%.md$")
+        if num then
+            issues[num] = { path = path, name = name, folder = label, tests = {} }
+            order[#order + 1] = num
+        end
+    end
+end
+add_issues("", "open")
+add_issues("completed", "completed")
+add_issues("declined", "declined")
+
+local tests, testOrder = {}, {}
+for _, path in ipairs(lines_of("ls '" .. DIR .. "/scripts/'test-* 2>/dev/null")) do
+    local name = path:match("([^/]+)$")
+    local header = {}
+    local f = io.open(path, "r")
+    if f then
+        for line in f:lines() do
+            if line:match("^#!") then
+            elseif line:match("^%-%-") or line:match("^#") then
+                header[#header + 1] = line
+            elseif line:match("^%s*$") and #header == 0 then
+            else
+                break
+            end
+        end
+        f:close()
+    end
+    tests[name] = { path = path, header = table.concat(header, "\n") }
+    testOrder[#testOrder + 1] = name
+end
+
+local function link(num, testName)
+    local i = issues[num]
+    if not i then return end
+    for _, t in ipairs(i.tests) do if t == testName then return end end
+    i.tests[#i.tests + 1] = testName
+end
+local function numbers_in(run, testName)
+    for num in (" " .. run .. " "):gmatch("[^%w](%d%d%d%l?%d?)[^%w%-]") do link(num, testName) end
+end
+for _, name in ipairs(testOrder) do
+    local h = tests[name].header:gsub("\n%-%-%s*", " "):gsub("\n#%s*", " ")
+    for run in h:gmatch("[Ii]ssues?%s+([%w/,%s]-)[^%w/,%s]") do numbers_in(run, name) end
+    for run in h:gmatch("%(([%d%l,%s/]+)%)") do numbers_in(run, name) end
+end
+for _, num in ipairs(order) do
+    local text = read(issues[num].path) or ""
+    for name in text:gmatch("scripts/(test%-[%w%-]+)") do
+        if tests[name] then link(num, name) end
+    end
+end
+
+local quick, leftOut = {}, {}
+do
+    local compile = read(DIR .. "/scripts/compile") or ""
+    local list = compile:match("QUICK_TESTS=%((.-)%)")
+    for name in (list or ""):gmatch("(test%-[%w%-]+)") do quick[name] = true end
+    local notes = compile:match("# Left out, and why:\n(.-)\nQUICK_TESTS")
+    local current
+    for line in (notes or ""):gmatch("[^\n]+") do
+        local names, why = line:match("^#%s+(test%-[%w%-, ]-):%s*(.+)$")
+        if names then
+            current = { why = why, names = {} }
+            for n in names:gmatch("(test%-[%w%-]+)") do current.names[#current.names + 1] = n end
+        elseif current and line:match("^#%s+%S") then
+            current.why = current.why .. " " .. line:gsub("^#%s+", "")
+        end
+        if current then for _, n in ipairs(current.names) do leftOut[n] = current.why end end
+    end
+end
+
+local results = {}
+local LOG_DIR = DIR .. "/tmp/shared-memory/issue-tests"
+local RAM_TIERS = "/home/ritz/programming/ai-stuff/scripts/libs/ensure-ram-tiers"
+local tiersReady = false
+local function run(name)
+    if results[name] then return results[name] end
+    if not quick[name] then
+        results[name] = { state = "not run", why = leftOut[name] or "not in the compile's quick tests" }
+        return results[name]
+    end
+    if not tiersReady then
+        local ready = os.execute("'" .. RAM_TIERS .. "' '" .. DIR .. "'")
+        if not (ready == 0 or ready == true) then
+            io.stderr:write("check-issue-tests: could not prepare " .. DIR .. "/tmp/shared-memory (ensure-ram-tiers said why, above); no tests were run\n")
+            os.exit(1)
+        end
+        tiersReady = true
+    end
+    os.execute("mkdir -p '" .. LOG_DIR .. "'")
+    local started = os.time()
+    local ok = os.execute("'" .. tests[name].path .. "' '" .. DIR .. "' > '" .. LOG_DIR .. "/" .. name .. ".log' 2>&1")
+    local passed = (ok == 0 or ok == true)
+    results[name] = { state = passed and "pass" or "fail", seconds = os.time() - started }
+    return results[name]
+end
+
+if opt.run then
+    local missing = {}
+    for _, tree in ipairs({ "source-beta", "mysql" }) do
+        local present = os.execute("test -d '" .. DIR .. "/" .. tree .. "'")
+        if not (present == 0 or present == true) then
+            missing[#missing + 1] = tree .. "/"
+        end
+    end
+    if #missing > 0 then
+        print("NOTE: " .. DIR .. " has no " .. table.concat(missing, " or ") ..
+              " (git ignores them, so a worktree has none); tests that read them fail here for that reason." ..
+              " Run against the main project folder to judge the issues.\n")
+    end
+end
+
+local wanted = { completed = true, open = opt.all, declined = opt.all }
+local shown, untested, failing, covered = 0, 0, 0, 0
+for _, num in ipairs(order) do
+    local i = issues[num]
+    if wanted[i.folder] then
+        shown = shown + 1
+        if #i.tests == 0 then
+            untested = untested + 1
+            print(string.format("%-8s %-10s no test   %s", num, i.folder, i.name))
+        elseif not opt.untested then
+            covered = covered + 1
+            local parts = {}
+            for _, t in ipairs(i.tests) do
+                if opt.run then
+                    local r = run(t)
+                    if r.state == "fail" then failing = failing + 1 end
+                    local detail = r.state == "not run" and ("not run: " .. r.why) or (r.state .. ", " .. r.seconds .. " s")
+                    parts[#parts + 1] = t .. " (" .. detail .. ")"
+                else
+                    parts[#parts + 1] = t
+                end
+            end
+            print(string.format("%-8s %-10s tested   %s\n         %s", num, i.folder, i.name, table.concat(parts, "\n         ")))
+        end
+    end
+end
+local orphans = {}
+for _, name in ipairs(testOrder) do
+    local linked = false
+    for _, num in ipairs(order) do for _, t in ipairs(issues[num].tests) do if t == name then linked = true end end end
+    if not linked then orphans[#orphans + 1] = name end
+end
+print(string.format("\n%d issue(s): %d with a test, %d with none%s",
+    shown, covered, untested, opt.run and string.format("; %d linked test run(s) failing", failing) or ""))
+if #orphans > 0 then
+    print("tests that name no issue, and that no issue names: " .. table.concat(orphans, ", "))
+end
+if opt.run then print("test logs: " .. LOG_DIR) end
+os.exit((opt.strict and failing > 0) and 1 or 0)

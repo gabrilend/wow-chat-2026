@@ -1,0 +1,95 @@
+#!/bin/bash
+
+DIR="/mnt/kaun/wow-chat-2026"
+
+
+
+declare -A PROFILE_REPO=(
+    ["alpha"]="https://github.com/azerothcore/azerothcore-wotlk.git"
+    ["beta"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
+    ["release"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
+    ["vanilla"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
+    ["basic"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
+    ["cc-test"]="https://github.com/liyunfan1223/azerothcore-wotlk.git"
+)
+
+declare -A PROFILE_BRANCH=(
+    ["alpha"]="master"
+    ["beta"]="Playerbot"
+    ["release"]="Playerbot"
+    ["vanilla"]="Playerbot"
+    ["basic"]="Playerbot"
+    ["cc-test"]="Playerbot"
+)
+
+declare -A PROFILE_COMMIT=(
+    ["alpha"]=""
+    ["beta"]="2a2211cd8f3d"
+    ["release"]="2a2211cd8f3d"
+    ["vanilla"]="2a2211cd8f3d"
+    ["basic"]="2a2211cd8f3d"
+    ["cc-test"]="2a2211cd8f3d"
+)
+
+declare -A PROFILE_MODULES=(
+    ["alpha"]="mod-eluna mod-transmog"
+    ["release"]="mod-ale mod-playerbots"
+    ["beta"]="mod-ale mod-aoe-loot mod-grownup mod-playerbots"
+    ["vanilla"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
+    ["basic"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
+    ["cc-test"]="mod-playerbots mod-ale"
+)
+
+
+if [[ -f "${DIR}/.profile" ]]; then
+    PROFILE="$(cat "${DIR}/.profile")"
+else
+    PROFILE="release"
+fi
+
+
+show_help() {
+    echo "Usage: ./scripts/profiles"
+    echo ""
+    echo "List available version profiles and their configurations."
+    echo ""
+    echo "Profiles:"
+    echo "  basic   - Levels 1-60, playerbots + QoL, the development baseline (155)"
+    echo "  cc-test - Stock server + playerbots + ALE, for testing the custom client (176)"
+    echo "  vanilla - Default WotLK + playerbots, light ruleset (148)"
+    echo "  alpha   - Latest playerbots, cutting edge"
+    echo "  release - Stable, wow-chat-1 compatible"
+    echo "  beta    - Current testing, all modules"
+}
+
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+    show_help
+    exit 0
+fi
+
+echo "Available version profiles:"
+echo ""
+printf "%-10s %-50s %-12s\n" "PROFILE" "REPOSITORY" "BRANCH"
+printf "%-10s %-50s %-12s\n" "-------" "----------" "------"
+
+for p in basic cc-test vanilla alpha release beta; do
+    repo="${PROFILE_REPO[$p]}"
+    branch="${PROFILE_BRANCH[$p]}"
+    commit="${PROFILE_COMMIT[$p]}"
+    suffix=""
+    if [[ -n "${commit}" ]]; then
+        suffix=" @${commit:0:7}"
+    fi
+    printf "%-10s %-50s %-12s\n" "${p}" "${repo##*/}" "${branch}${suffix}"
+done
+
+echo ""
+echo "Modules per profile:"
+for p in basic cc-test vanilla alpha release beta; do
+    mods="${PROFILE_MODULES[$p]:-none}"
+    [[ -z "${mods}" ]] && mods="none"
+    echo "  ${p}: ${mods}"
+done
+
+echo ""
+echo "Current profile: ${PROFILE}"

@@ -1,0 +1,14 @@
+{
+  "1": { "class_type": "ImageOnlyCheckpointLoader", "inputs": { "ckpt_name": "__CKPT__" } },
+  "2": { "class_type": "LoadImage", "inputs": { "image": "__IMAGE__" } },
+  "3": { "class_type": "StableZero123_Conditioning_Batched", "inputs": {
+         "clip_vision": ["1", 1], "init_image": ["2", 0], "vae": ["1", 2],
+         "width": 256, "height": 256, "batch_size": 8,
+         "elevation": "__ELEVATION__", "azimuth": 0.0,
+         "elevation_batch_increment": 0.0, "azimuth_batch_increment": 45.0 } },
+  "4": { "class_type": "KSampler", "inputs": { "model": ["1", 0], "seed": "__SEED__", "steps": 30, "cfg": 4.0,
+         "sampler_name": "euler", "scheduler": "sgm_uniform",
+         "positive": ["3", 0], "negative": ["3", 1], "latent_image": ["3", 2], "denoise": 1.0 } },
+  "5": { "class_type": "VAEDecode", "inputs": { "samples": ["4", 0], "vae": ["1", 2] } },
+  "6": { "class_type": "SaveImage", "inputs": { "images": ["5", 0], "filename_prefix": "__PREFIX__" } }
+}

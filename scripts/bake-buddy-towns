@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+PROFILE="$(cat "${DIR}/.profile")"
+DATA="$(sed -n 's|^DataDir[[:space:]]*=[[:space:]]*"\{0,1\}\([^"]*\)"\{0,1\}.*|\1|p' "${DIR}/installed-files-${PROFILE}/etc/worldserver.conf" | tail -1)"
+WORLD_DB="$(sed -n 's|^WorldDatabaseInfo[[:space:]]*=[[:space:]]*"[^;]*;[^;]*;[^;]*;[^;]*;\([^"]*\)".*|\1|p' "${DIR}/installed-files-${PROFILE}/etc/worldserver.conf" | tail -1)"
+MYSQL="${DIR}/mysql/installed-files/bin/mysql"
+SRC="${DIR}/source-beta"
+DETOUR="${SRC}/deps/recastnavigation/Detour"
+BAKER_SRC="${DIR}/tools/buddy-town-baker/buddy-town-baker.cpp"
+CORE="${DIR}/modules/mod-buddies/src/roam"
+
+EXEC_DIR="${DIR}/tmp/tmp"
+SHM_DIR="${DIR}/tmp/shared-memory"
+mkdir -p "${EXEC_DIR}" "${SHM_DIR}"
+BAKER="${EXEC_DIR}/buddy-town-baker"
+PIECES="${SHM_DIR}/buddy-town-pieces.tsv"
+
+[[ -n "${DATA}" && -d "${DATA}/mmaps" ]] || { echo "ERROR: data directory '${DATA}' (DataDir in worldserver.conf) has no mmaps/"; exit 1; }
+[[ -n "${WORLD_DB}" ]] || { echo "ERROR: no WorldDatabaseInfo in installed-files-${PROFILE}/etc/worldserver.conf"; exit 1; }
+[[ -d "${DETOUR}/Source" ]] || { echo "ERROR: the mesh library's sources are missing (${DETOUR}); is source-beta cloned?"; exit 1; }
+
+echo "Listing area pieces from ${WORLD_DB}..."
+"${MYSQL}" -h127.0.0.1 -P3307 -uritz -pmenardi -N --batch "${WORLD_DB}" \
+    -e "SELECT map, area, piece, min_x + 0e0, max_x + 0e0, min_y + 0e0, max_y + 0e0 FROM buddy_area_centre ORDER BY map, area, piece" \
+    2>&1 > "${PIECES}" | grep -v "Using a password" || true
+COUNT="$(wc -l < "${PIECES}")"
+[[ "${COUNT}" -gt 0 ]] || { echo "ERROR: buddy_area_centre in ${WORLD_DB} is empty (install step E044 makes it)"; exit 1; }
+echo "  ${COUNT} area pieces (only towns are baked)"
+
+NEWEST_SRC="$(ls -t "${BAKER_SRC}" "${CORE}"/buddy_*.h "${CORE}"/buddy_explore_core.cpp | head -1)"
+if [[ ! -x "${BAKER}" || "${NEWEST_SRC}" -nt "${BAKER}" ]]; then
+    echo "Compiling the baker..."
+    g++ -std=c++17 -O2 -o "${BAKER}" \
+        -I"${CORE}" -I"${DETOUR}/Include" \
+        "${BAKER_SRC}" "${CORE}/buddy_explore_core.cpp" "${DETOUR}"/Source/*.cpp
+fi
+
+mkdir -p "${DATA}/buddy-towns"
+"${BAKER}" "${DATA}" "${PIECES}"

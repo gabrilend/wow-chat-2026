@@ -1,0 +1,107 @@
+#!/usr/bin/env luajit
+
+local DIR, APPLY = "/mnt/kaun/wow-chat-2026", false
+for _, a in ipairs(arg) do if a == "--apply" then APPLY = true else DIR = a end end
+
+local function lines_of(cmd)
+    local out, h = {}, io.popen(cmd)
+    for l in h:lines() do out[#out + 1] = l end
+    h:close()
+    return out
+end
+local function q(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
+local function exists(path)
+    local r = os.execute("test -e " .. q(path))
+    return r == 0 or r == true
+end
+
+local targets, skipped = {}, {}
+for _, rel in ipairs(lines_of("git -C " .. q(DIR) .. " ls-files issues")) do
+    local name = rel:match("([^/]+)$")
+    local folder = rel:match("^(.*)/[^/]+$")
+    if (folder == "issues" or folder == "issues/completed" or folder == "issues/declined")
+       and name:match("^%d") and not name:match("%.%w+$") then
+        if exists(DIR .. "/" .. rel .. ".md") then skipped[#skipped + 1] = rel
+        else targets[#targets + 1] = rel end
+    end
+end
+
+local textFiles = lines_of("git -C " .. q(DIR) .. " grep -lI -e 'issues/' -- . ':!llm-transcripts'")
+
+local rewrites, renamed = 0, 0
+local touched = {}
+for _, f in ipairs(textFiles) do
+    local p = DIR .. "/" .. f
+    local h = io.open(p, "rb")
+    if h then
+        local s = h:read("*a"); h:close()
+        local n0 = s
+        for _, rel in ipairs(targets) do
+            local name = rel:match("([^/]+)$")
+            s = s:gsub("(issues/" .. "[%w/]-)" .. name:gsub("%p", "%%%0") .. "([^%w%-%.])", function(pre, post)
+                rewrites = rewrites + 1
+                return pre .. name .. ".md" .. post
+            end)
+            s = s:gsub("(issues/[%w/]-)" .. name:gsub("%p", "%%%0") .. "$", function(pre)
+                rewrites = rewrites + 1
+                return pre .. name .. ".md"
+            end)
+        end
+        if s ~= n0 then
+            touched[#touched + 1] = f
+            if APPLY then local w = assert(io.open(p, "wb")); w:write(s); w:close() end
+        end
+    end
+end
+
+local ISSUE_FOLDERS = { "issues", "issues/completed", "issues/declined" }
+local LINK_PREFIXES = { [""] = true, ["../"] = true, ["completed/"] = true, ["declined/"] = true }
+local function where_is(name)
+    for _, folder in ipairs(ISSUE_FOLDERS) do
+        if exists(DIR .. "/" .. folder .. "/" .. name .. ".md") then return folder end
+        for _, t in ipairs(targets) do if t == folder .. "/" .. name then return folder end end
+    end
+end
+local function relative(from_folder, to_folder)
+    if from_folder == to_folder then return "" end
+    if to_folder:sub(1, #from_folder + 1) == from_folder .. "/" then return to_folder:sub(#from_folder + 2) .. "/" end
+    if from_folder:sub(1, #to_folder + 1) == to_folder .. "/" then return "../" end
+    return "../" .. to_folder:match("[^/]+$") .. "/"
+end
+local linkFixes, unmatched = 0, {}
+for _, f in ipairs(lines_of("git -C " .. q(DIR) .. " grep -lE '\\]\\([a-z./]*[0-9][0-9a-z]*-[a-z0-9-]+\\)' -- '*.md' ':!llm-transcripts'")) do
+    local folder = f:match("^(.*)/[^/]+$") or "."
+    local p = DIR .. "/" .. f
+    local h = io.open(p, "rb")
+    if h then
+        local s = h:read("*a"); h:close()
+        local n0 = s
+        s = s:gsub("%]%(([%a%./]-)(%d[%da-z]*%-[%a%d%-]+)%)", function(prefix, name)
+            if not LINK_PREFIXES[prefix] then return nil end
+            local home = where_is(name)
+            if not home then unmatched[#unmatched + 1] = f .. ": " .. prefix .. name; return nil end
+            linkFixes = linkFixes + 1
+            return "](" .. relative(folder, home) .. name .. ".md)"
+        end)
+        if s ~= n0 then
+            touched[#touched + 1] = f
+            if APPLY then local w = assert(io.open(p, "wb")); w:write(s); w:close() end
+        end
+    end
+end
+rewrites = rewrites + linkFixes
+
+for _, rel in ipairs(targets) do
+    if APPLY then
+        local ok = os.execute("git -C " .. q(DIR) .. " mv " .. q(rel) .. " " .. q(rel .. ".md"))
+        if ok == 0 or ok == true then renamed = renamed + 1 else io.stderr:write("could not rename " .. rel .. "\n") end
+    else
+        print("  rename  " .. rel .. "  ->  " .. rel .. ".md")
+    end
+end
+if not APPLY then for _, f in ipairs(touched) do print("  rewrite " .. f) end end
+for _, s in ipairs(skipped) do print("  skipped " .. s .. " (an .md twin exists)") end
+for _, u in ipairs(unmatched) do print("  unmatched link " .. u .. " (no issue by that name; left as written)") end
+print(string.format("%s: %d file(s) to rename, %d reference(s) in %d file(s)%s",
+    APPLY and "done" or "dry run", #targets, rewrites, #touched,
+    APPLY and string.format(", %d renamed", renamed) or "; run again with --apply"))

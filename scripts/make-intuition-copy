@@ -1,0 +1,402 @@
+#!/usr/bin/env luajit
+
+local DIR, OUT, TEMPLATE = "/mnt/kaun/wow-chat-2026", nil, nil
+local REV, FULL, COMMIT, PUSH = "HEAD", false, false, false
+do
+    local pos, i = {}, 1
+    while i <= #arg do
+        local a = arg[i]
+        if     a == "--rev"    then i = i + 1; REV = arg[i]
+        elseif a == "--full"   then FULL = true
+        elseif a == "--commit" then COMMIT = true
+        elseif a == "--push"   then COMMIT, PUSH = true, true
+        else pos[#pos + 1] = a end
+        i = i + 1
+    end
+    if pos[1] and pos[1] ~= "" then DIR = pos[1] end
+    DIR = DIR:gsub("/+$", "")
+    OUT = pos[2] and pos[2] ~= "" and pos[2]:gsub("/+$", "") or (DIR .. "-intuition")
+    TEMPLATE = pos[3] and pos[3] ~= "" and pos[3] or (DIR .. "/strategems/intuition-copy-CLAUDE.md")
+end
+local RECEIPT  = ".intuition-copy"
+
+local SKIP_DIRS = { "docs/", "issues/", "notes/", "tissues/", "strategems/",
+                    "llm-transcripts/", "art-prompts/" }
+local function explanatory(path)
+    for _, d in ipairs(SKIP_DIRS) do if path:sub(1, #d) == d then return true end end
+    local name = path:match("[^/]+$")
+    if name:match("%.md$") or name:match("%.info$") then return true end
+    if name:lower():match("^readme") then return true end
+    return false
+end
+
+local function sh(cmd)
+    local h = io.popen("{ " .. cmd .. "; } 2>&1; echo \"__exit:$?\"")
+    local out = h:read("*a")
+    h:close()
+    local body, code = out:match("^(.-)__exit:(%d+)%s*$")
+    if code ~= "0" then error("make-intuition-copy: `" .. cmd .. "` failed (" .. tostring(code) .. "):\n" .. body) end
+    return body
+end
+local function q(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
+
+local function new_lines()
+    local self = { out = {}, cur = {}, had_comment = false, has_code = false, dropped = 0 }
+    function self.put(s) self.cur[#self.cur + 1] = s; if s:match("%S") then self.has_code = true end end
+    function self.comment() self.had_comment = true end
+    function self.newline()
+        local line = table.concat(self.cur)
+        if self.had_comment and not self.has_code then self.dropped = self.dropped + 1
+        else
+            if self.had_comment then line = line:gsub("%s+$", "") end
+            self.out[#self.out + 1] = line .. "\n"
+        end
+        self.cur, self.had_comment, self.has_code = {}, false, false
+    end
+    function self.finish()
+        if #self.cur > 0 then
+            local line = table.concat(self.cur)
+            if not (self.had_comment and not self.has_code) then
+                if self.had_comment then line = line:gsub("%s+$", "") end
+                self.out[#self.out + 1] = line
+            else self.dropped = self.dropped + 1 end
+        end
+        return table.concat(self.out), self.dropped
+    end
+    return self
+end
+
+local function strip_lua(src)
+    local L, i, n = new_lines(), 1, #src
+    if src:sub(1, 2) == "#!" then
+        local e = src:find("\n", 1, true) or n
+        L.put(src:sub(1, e - 1)); L.newline(); i = e + 1
+    end
+    local function put_multi(s)
+        local start = 1
+        while true do
+            local nl = s:find("\n", start, true)
+            if not nl then L.put(s:sub(start)); return end
+            L.put(s:sub(start, nl - 1)); L.newline(); start = nl + 1
+        end
+    end
+    while i <= n do
+        local c = src:sub(i, i)
+        if c == "-" and src:sub(i + 1, i + 1) == "-" then
+            L.comment()
+            local eq = src:match("^%[(=*)%[", i + 2)
+            if eq then
+                local close = src:find("]" .. eq .. "]", i + 4 + #eq, true)
+                if not close then error("unclosed long comment") end
+                local body = src:sub(i, close + #eq + 1)
+                for _ in body:gmatch("\n") do L.newline(); L.comment() end
+                i = close + #eq + 2
+            else
+                local nl = src:find("\n", i, true) or (n + 1)
+                i = nl
+            end
+        elseif c == "\n" then L.newline(); i = i + 1
+        elseif c == "'" or c == '"' then
+            local j = i + 1
+            while j <= n do
+                local d = src:sub(j, j)
+                if d == "\\" then j = j + 2
+                elseif d == c or d == "\n" then break
+                else j = j + 1 end
+            end
+            L.put(src:sub(i, j)); i = j + 1
+        elseif c == "[" and src:match("^%[=*%[", i) then
+            local eq = src:match("^%[(=*)%[", i)
+            local close = src:find("]" .. eq .. "]", i + 2 + #eq, true)
+            if not close then error("unclosed long string") end
+            put_multi(src:sub(i, close + #eq + 1)); i = close + #eq + 2
+        else
+            local j = src:find("[%-\n'\"%[]", i + 1) or (n + 1)
+            L.put(src:sub(i, j - 1)); i = j
+        end
+    end
+    return L.finish()
+end
+
+local function strip_c(src)
+    local L, i, n = new_lines(), 1, #src
+    while i <= n do
+        local c, c2 = src:sub(i, i), src:sub(i + 1, i + 1)
+        if c == "/" and c2 == "/" then
+            L.comment(); i = src:find("\n", i, true) or (n + 1)
+        elseif c == "/" and c2 == "*" then
+            L.comment()
+            local close = src:find("*/", i + 2, true)
+            if not close then error("unclosed /* comment") end
+            for _ in src:sub(i, close):gmatch("\n") do L.newline(); L.comment() end
+            i = close + 2
+        elseif c == "\n" then L.newline(); i = i + 1
+        elseif c == "R" and c2 == '"' and src:match('^R"([^%s()\\]*)%(', i) then
+            local delim = src:match('^R"([^%s()\\]*)%(', i)
+            local close = src:find(")" .. delim .. '"', i, true)
+            if not close then error("unclosed raw string") end
+            local s, start = src:sub(i, close + #delim + 1), 1
+            while true do
+                local nl = s:find("\n", start, true)
+                if not nl then L.put(s:sub(start)); break end
+                L.put(s:sub(start, nl - 1)); L.newline(); start = nl + 1
+            end
+            i = close + #delim + 2
+        elseif c == '"' or c == "'" or c == "`" then
+            local j = i + 1
+            while j <= n do
+                local d = src:sub(j, j)
+                if d == "\\" then j = j + 2
+                elseif d == c or (d == "\n" and c ~= "`") then break
+                else j = j + 1 end
+            end
+            local s, start = src:sub(i, j), 1
+            while true do
+                local nl = s:find("\n", start, true)
+                if not nl then L.put(s:sub(start)); break end
+                L.put(s:sub(start, nl - 1)); L.newline(); start = nl + 1
+            end
+            i = j + 1
+        else
+            local j = src:find("[/\n\"'`R]", i + 1) or (n + 1)
+            L.put(src:sub(i, j - 1)); i = j
+        end
+    end
+    return L.finish()
+end
+
+local function open_quote_after(line, quote, kind)
+    local i, n = 1, #line
+    while i <= n do
+        local c = line:sub(i, i)
+        if quote then
+            if c == "\\" and (quote == '"' or kind == "sql") then i = i + 1
+            elseif c == quote then
+                if kind == "sql" and line:sub(i + 1, i + 1) == quote then i = i + 1 else quote = nil end
+            end
+        else
+            if c == "\\" and kind == "shell" then i = i + 1
+            elseif c == "'" or c == '"' then quote = c
+            elseif kind == "shell" and c == "#" and (i == 1 or line:sub(i - 1, i - 1):match("[%s;|&(]")) then
+                return nil
+            elseif kind == "sql" and line:sub(i, i + 2):match("^%-%-[%s]") then
+                return nil
+            end
+        end
+        i = i + 1
+    end
+    return quote
+end
+
+local function strip_whole_lines(src, kind)
+    local out, dropped, quote, heredoc, first = {}, 0, nil, nil, true
+    for line, nl in src:gmatch("([^\n]*)(\n?)") do
+        if line == "" and nl == "" then break end
+        local keep = true
+        if heredoc then
+            local body = heredoc.tabs and line:gsub("^\t+", "") or line
+            if body == heredoc.word then heredoc = nil end
+        elseif quote then
+            quote = open_quote_after(line, quote, kind)
+        else
+            local trimmed = line:match("^%s*(.*)$")
+            local is_comment =
+                (kind == "shell" and trimmed:sub(1, 1) == "#" and not (first and trimmed:sub(1, 2) == "#!")) or
+                (kind == "hash"  and trimmed:sub(1, 1) == "#") or
+                (kind == "sql"   and trimmed:match("^%-%-") and not trimmed:match("^%-%- MARKER_"))
+            if is_comment then keep = false
+            else
+                if kind == "shell" then
+                    local tabs, word = line:match("<<(%-?)%s*['\"]?([%w_]+)['\"]?")
+                    if word and not line:match("<<<") then heredoc = { word = word, tabs = tabs == "-" } end
+                end
+                if kind ~= "hash" and not heredoc then quote = open_quote_after(line, nil, kind) end
+            end
+        end
+        if keep then out[#out + 1] = line .. nl else dropped = dropped + 1 end
+        first = false
+    end
+    return table.concat(out), dropped
+end
+
+local function kind_of(path, first_line)
+    local name = path:match("[^/]+$")
+    if name:match("%.lua$") or name:match("%.lua%.") or name:match("%.ext$") then return "lua" end
+    if name:match("%.cpp$") or name:match("%.h$") or name:match("%.c$") or name:match("%.hpp$")
+       or name:match("%.js$") then return "c" end
+    if name:match("%.sh$") then return "shell" end
+    if name:match("%.sql$") then return "sql" end
+    if name:match("%.conf$") or name:match("%.dist$") or name:match("%.py$") then return "hash" end
+    if first_line:match("^#!.*luajit") or first_line:match("^#!.*[/ ]lua%d*%s*$") then return "lua" end
+    if first_line:match("^#!.*bash") or first_line:match("^#!.*/sh%s*$") then return "shell" end
+    if first_line:match("^#!.*python") then return "hash" end
+    return "copy"
+end
+
+local STRIP = { lua = strip_lua, c = strip_c,
+                shell = function(s) return strip_whole_lines(s, "shell") end,
+                sql   = function(s) return strip_whole_lines(s, "sql") end,
+                hash  = function(s) return strip_whole_lines(s, "hash") end }
+
+local function exists(p) local r = os.execute("test -e " .. q(p)); return r == 0 or r == true end
+if exists(OUT) and not exists(OUT .. "/" .. RECEIPT) then
+    error("make-intuition-copy: " .. OUT .. " exists and holds no " .. RECEIPT ..
+          "; it is not a copy this tool made, so it is left alone. Pass another OUT_DIR.")
+end
+
+local function ok(cmd) local r = os.execute(cmd); return r == 0 or r == true end
+local commit = sh("git -C " .. q(DIR) .. " rev-parse --verify " .. q(REV .. "^{commit}")):gsub("%s+$", "")
+local subject = sh("git -C " .. q(DIR) .. " log -1 --format=%s " .. q(commit)):gsub("%s+$", "")
+local old_commit
+if exists(OUT .. "/" .. RECEIPT) then
+    local r = io.open(OUT .. "/" .. RECEIPT, "r")
+    old_commit = r:read("*a"):match("source commit:%s*(%x+)")
+    r:close()
+end
+local mode
+if FULL or not old_commit then mode = "full"
+elseif old_commit == commit then mode = "same"
+elseif ok("git -C " .. q(DIR) .. " merge-base --is-ancestor " .. q(old_commit) .. " " .. q(commit)) then mode = "update"
+else mode = "full" end
+
+local counts = { files = 0, left_out = 0, copied = 0, stripped = 0, lines_removed = 0,
+                 deleted = 0, bytes_before = 0, bytes_after = 0 }
+local by_kind = {}
+
+local function treat(root, path, fmode)
+    counts.files = counts.files + 1
+    local full = root .. "/" .. path
+    if explanatory(path) then
+        os.remove(full)
+        counts.left_out = counts.left_out + 1
+        return
+    end
+    if fmode == "120000" or fmode == "160000" then counts.copied = counts.copied + 1 return end
+    local f = io.open(full, "rb")
+    if not f then error("make-intuition-copy: " .. path .. " is in the commit but was not written to " .. root) end
+    local src = f:read("*a"); f:close()
+    local kind = kind_of(path, src:match("^[^\n]*") or "")
+    by_kind[kind] = (by_kind[kind] or 0) + 1
+    counts.bytes_before = counts.bytes_before + #src
+    if STRIP[kind] then
+        local fine, out, dropped = pcall(STRIP[kind], src)
+        if not fine then error("make-intuition-copy: " .. path .. " (" .. kind .. "): " .. tostring(out)) end
+        local w = assert(io.open(full, "wb")); w:write(out); w:close()
+        counts.stripped, counts.lines_removed = counts.stripped + 1, counts.lines_removed + dropped
+        counts.bytes_after = counts.bytes_after + #out
+    else
+        counts.copied = counts.copied + 1
+        counts.bytes_after = counts.bytes_after + #src
+    end
+end
+
+local function finish_tree(root, lines)
+    local t = io.open(TEMPLATE, "rb")
+    if not t then error("make-intuition-copy: the default instructions " .. TEMPLATE .. " are missing") end
+    local template = t:read("*a"); t:close()
+    local w = assert(io.open(root .. "/CLAUDE.md", "wb")); w:write(template); w:close()
+    sh("find " .. q(root) .. " -mindepth 1 -type d -empty -not -path " .. q(root .. "/.git") ..
+       " -not -path " .. q(root .. "/.git/*") .. " -delete")
+    local kinds = {}
+    for k, v in pairs(by_kind) do kinds[#kinds + 1] = k .. " " .. v end
+    table.sort(kinds)
+    local receipt = table.concat({
+        "made by:        scripts/make-intuition-copy (issue 190)",
+        "source:         " .. DIR,
+        "source commit:  " .. commit,
+        "made at:        " .. os.date("%Y-%m-%d %H:%M:%S"),
+        table.concat(lines, "\n"),
+        string.format("lines removed:  %6d", counts.lines_removed),
+        string.format("bytes:          %6d KB before, %6d KB after", math.floor(counts.bytes_before / 1024), math.floor(counts.bytes_after / 1024)),
+        "by kind:        " .. table.concat(kinds, ", "),
+    }, "\n") .. "\n"
+    w = assert(io.open(root .. "/" .. RECEIPT, "wb")); w:write(receipt); w:close()
+    return receipt
+end
+
+local receipt
+if mode == "same" then
+    print("make-intuition-copy: " .. OUT .. " is already a copy of " .. commit:sub(1, 9) .. "; nothing changed")
+elseif mode == "full" then
+    local BUILD = OUT .. ".building"
+    if exists(BUILD) then
+        if not exists(BUILD .. "/" .. RECEIPT .. ".building") then
+            error("make-intuition-copy: " .. BUILD .. " exists and is not an unfinished copy of this tool's; left alone")
+        end
+        sh("rm -rf " .. q(BUILD))
+    end
+    sh("mkdir -p " .. q(BUILD))
+    sh("touch " .. q(BUILD .. "/" .. RECEIPT .. ".building"))
+    sh("git -C " .. q(DIR) .. " archive --format=tar " .. q(commit) .. " | tar -x -C " .. q(BUILD))
+    local listing = sh("git -C " .. q(DIR) .. " -c core.quotepath=off ls-tree -r " .. q(commit))
+    for fmode, path in listing:gmatch("(%d+) %a+ %x+\t([^\n]+)") do treat(BUILD, path, fmode) end
+    os.remove(BUILD .. "/" .. RECEIPT .. ".building")
+    receipt = finish_tree(BUILD, {
+        string.format("made:           in full (%s)", old_commit and ("replacing a copy of " .. old_commit:sub(1, 9)) or "the first copy"),
+        string.format("files:          %6d in the commit", counts.files),
+        string.format("left out:       %6d (explanations)", counts.left_out),
+        string.format("stripped:       %6d (comments removed)", counts.stripped),
+        string.format("copied as is:   %6d", counts.copied),
+    })
+    if exists(OUT .. "/.git") then sh("mv " .. q(OUT .. "/.git") .. " " .. q(BUILD .. "/.git")) end
+    if exists(OUT) then sh("rm -rf " .. q(OUT)) end
+    sh("mv " .. q(BUILD) .. " " .. q(OUT))
+else
+    local changes = sh("git -C " .. q(DIR) .. " -c core.quotepath=off diff --name-status --no-renames " ..
+                       q(old_commit) .. " " .. q(commit))
+    for letter, path in changes:gmatch("(%a)%d*\t([^\n]+)") do
+        local full = OUT .. "/" .. path
+        sh("rm -f " .. q(full))
+        if letter == "D" then
+            counts.deleted = counts.deleted + 1
+        elseif not explanatory(path) then
+            local fmode = sh("git -C " .. q(DIR) .. " -c core.quotepath=off ls-tree " .. q(commit) .. " -- " .. q(path)):match("^(%d+)")
+            local dir = full:match("^(.*)/[^/]+$")
+            sh("mkdir -p " .. q(dir))
+            if fmode == "120000" then
+                local target = sh("git -C " .. q(DIR) .. " show " .. q(commit .. ":" .. path))
+                sh("ln -s " .. q(target) .. " " .. q(full))
+            elseif fmode ~= "160000" then
+                sh("git -C " .. q(DIR) .. " show " .. q(commit .. ":" .. path) .. " > " .. q(full))
+                sh("chmod " .. (fmode == "100755" and "+x " or "-x ") .. q(full))
+            end
+            treat(OUT, path, fmode)
+        else
+            counts.files, counts.left_out = counts.files + 1, counts.left_out + 1
+        end
+    end
+    receipt = finish_tree(OUT, {
+        string.format("made:           as an update from %s", old_commit:sub(1, 9)),
+        string.format("files changed:  %6d since then", counts.files + counts.deleted),
+        string.format("left out:       %6d (explanations)", counts.left_out),
+        string.format("stripped:       %6d (comments removed)", counts.stripped),
+        string.format("copied as is:   %6d", counts.copied),
+        string.format("deleted:        %6d", counts.deleted),
+    })
+end
+if receipt then io.write(receipt) end
+print("copy:           " .. OUT)
+
+if COMMIT then
+    if not exists(OUT .. "/.git") then sh("git -C " .. q(OUT) .. " init -q -b main") end
+    sh("git -C " .. q(OUT) .. " add -A")
+    if ok("git -C " .. q(OUT) .. " diff --cached --quiet") then
+        print("commit:         nothing changed in the copy")
+    else
+        local msg = "From " .. commit:sub(1, 9) .. ": " .. subject .. "\n\n" ..
+                    "Made by scripts/make-intuition-copy from " .. DIR .. " at " .. commit .. "."
+        local mf = OUT .. ".message"
+        local w = assert(io.open(mf, "w")); w:write(msg); w:close()
+        sh("git -C " .. q(OUT) .. " commit -q -F " .. q(mf))
+        os.remove(mf)
+        print("commit:         " .. sh("git -C " .. q(OUT) .. " log -1 --format='%h %s'"):gsub("%s+$", ""))
+    end
+end
+if PUSH then
+    if not ok("git -C " .. q(OUT) .. " remote get-url origin > /dev/null 2>&1") then
+        error("make-intuition-copy: " .. OUT .. " has no remote \"origin\" to push to;" ..
+              " add one with: git -C " .. OUT .. " remote add origin <url>")
+    end
+    sh("git -C " .. q(OUT) .. " push -q origin main")
+    print("pushed:         " .. sh("git -C " .. q(OUT) .. " remote get-url origin"):gsub("%s+$", ""))
+end

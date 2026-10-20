@@ -1,0 +1,192 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+
+local fails, checks = 0, 0
+local function check(ok, what)
+    checks = checks + 1
+    if not ok then fails = fails + 1; print("  FAIL: " .. what) end
+end
+
+local here = (arg[0]:match("^(.*[/\\])") or "./")
+local Toy = dofile(here .. "lib/toy-world.lua")
+local World, advance          = Toy.World, Toy.advance
+local new_player, new_item    = Toy.new_player, Toy.new_item
+local login, logout           = Toy.login, Toy.logout
+local give, sell, buy_back    = Toy.give, Toy.sell, Toy.buy_back
+
+local quiet = print
+print = function() end
+dofile(DIR .. "/src/lua-beta/movement.lua")
+dofile(DIR .. "/src/lua-beta/treasure.lua.disabled")
+print = quiet
+local Treasure = Treasure
+
+local function silently(fn, ...) print = function() end; local r = { pcall(fn, ...) }; print = quiet; return unpack(r) end
+
+local function reset()
+    for _, p in ipairs(World.order) do if not p.gone then silently(logout, p) end end
+    World.order = {}
+    Treasure.globalPool, Treasure.playerQueues, Treasure.activeChests = {}, {}, {}
+    Treasure.counters, Treasure.leaving, Treasure.distributionIndex = {}, {}, 0
+end
+
+local nextLow = 100
+local function player(name, level, bot)
+    nextLow = nextLow + 1
+    local p = new_player(name, nextLow)
+    p.level, p.bot = level, bot or false
+    silently(login, p)
+    return p
+end
+
+local function queued(p, itemId)
+    local n = 0
+    for _, e in ipairs(Treasure.playerQueues[p.low] or {}) do if e.itemId == itemId then n = n + 1 end end
+    return n
+end
+local function copies(itemId)
+    local n = 0
+    for _, q in pairs(Treasure.playerQueues) do for _, e in ipairs(q) do if e.itemId == itemId then n = n + 1 end end end
+    for _, e in ipairs(Treasure.globalPool) do if e.itemId == itemId then n = n + 1 end end
+    for _, c in pairs(Treasure.activeChests) do for _, e in ipairs(c.queueItems) do if e.itemId == itemId then n = n + 1 end end end
+    for _, list in pairs(Treasure.counters) do for _, e in ipairs(list) do if e.itemId == itemId and e.recycle then n = n + 1 end end end
+    return n
+end
+
+reset()
+local a, b = player("Ada", 10), player("Bo", 10)
+local far   = player("Far", 30)
+local bot   = player("Botty", 10, true)
+silently(function() for i = 1, 6 do Treasure.addToPool(5000 + i, 10, 1) end end)
+check(#(Treasure.playerQueues[a.low] or {}) == 3, "six level-10 items split three and three (Ada has " .. #(Treasure.playerQueues[a.low] or {}) .. ")")
+check(#(Treasure.playerQueues[b.low] or {}) == 3, "six level-10 items split three and three (Bo has " .. #(Treasure.playerQueues[b.low] or {}) .. ")")
+check(Treasure.playerQueues[bot.low] == nil, "a bot of the right level is given nothing")
+check(Treasure.playerQueues[far.low] == nil, "a level-30 player is given no level-10 items")
+
+for _, e in ipairs(Treasure.playerQueues[a.low]) do
+    check(e.itemLevel == 10, "a queue entry keeps its item's level (item " .. e.itemId .. " has " .. tostring(e.itemLevel) .. ")")
+end
+
+silently(Treasure.addToPool, 6001, 50, 1)
+check(copies(6001) == 1 and #Treasure.globalPool == 1, "a level-50 item with no level-50 player waits in the global pool")
+local late = player("Late", 50)
+silently(Treasure.processGlobalPool)
+check(queued(late, 6001) == 1 and #Treasure.globalPool == 0, "the waiting item goes to the level-50 player who logs in")
+
+silently(logout, a)
+check(Treasure.playerQueues[a.low] == nil, "the leaver keeps no queue")
+check(#(Treasure.playerQueues[b.low] or {}) == 6, "the leaver's three items go to the other level-10 player (Bo has " .. #(Treasure.playerQueues[b.low] or {}) .. ")")
+for _, e in ipairs(Treasure.playerQueues[b.low]) do
+    check(e.itemLevel == 10, "items handed on at logout keep their level (" .. tostring(e.itemLevel) .. ")")
+end
+
+reset()
+local owner, other = player("Owner", 10), player("Other", 10)
+silently(Treasure.addToPool, 7001, 10, 1)
+silently(Treasure.addToPool, 7002, 10, 1)
+local holder = (queued(owner, 7001) + queued(owner, 7002) > 0) and owner or other
+local before = #(Treasure.playerQueues[holder.low] or {})
+silently(Treasure.spawnTreasure, holder)
+local chest = holder.objects[1]
+check(chest ~= nil, "a chest is summoned")
+check(#(Treasure.playerQueues[holder.low] or {}) == 0 and before > 0, "the holder's queue moves onto the chest")
+silently(advance, 300000)
+check(chest and chest.gone, "the chest is taken away when its lifetime ends")
+check(next(Treasure.activeChests) == nil, "the expired chest is no longer tracked")
+check(copies(7001) == 1 and copies(7002) == 1, "both unlooted items are back in circulation, once each")
+
+reset()
+local leaver, stayer = player("Leaver", 10), player("Stayer", 10)
+silently(Treasure.addToPool, 7101, 10, 1)
+local who = queued(leaver, 7101) == 1 and leaver or stayer
+if who ~= leaver then silently(Treasure.addToPool, 7102, 10, 1) end
+silently(Treasure.spawnTreasure, leaver)
+local onChest = #leaver.objects[1] and #Treasure.activeChests[leaver.objects[1].low].queueItems
+silently(logout, leaver)
+check(leaver.objects[1] == nil and next(Treasure.activeChests) == nil, "the leaver's chest goes with them")
+check(#(Treasure.playerQueues[stayer.low] or {}) >= onChest, "its items go to the player who stayed")
+check(Treasure.playerQueues[leaver.low] == nil, "nothing is queued for the player who left")
+
+reset()
+local odd = player("Odd", 99)
+local ok, err = silently(Treasure.spawnTreasure, odd)
+check(ok, "spawning for a level no chest fits returns instead of calling itself forever (" .. tostring(err) .. ")")
+check(#odd.objects == 0, "and spawns no chest")
+
+reset()
+local seller, buyer = player("Seller", 10), player("Buyer", 10)
+local sword = give(seller, new_item(8001, { quality = 2, ilvl = 12 }))
+silently(sell, seller, sword)
+check(queued(buyer, 8001) == 0 and copies(8001) == 1, "a sold sword waits on the counter, not yet in anyone's queue")
+buy_back(seller, sword)
+silently(logout, seller)
+check(copies(8001) == 0, "a sword bought back never enters the pool, even at the seller's logout")
+
+reset()
+seller, buyer = player("Seller", 10), player("Buyer", 10)
+local axe = give(seller, new_item(8002, { quality = 3, ilvl = 12 }))
+silently(sell, seller, axe)
+silently(logout, seller)
+check(queued(buyer, 8002) == 1, "a sold axe not bought back reaches a player near its level when the seller logs out")
+check(copies(8002) == 1, "and exists once")
+
+reset()
+seller, buyer = player("Seller", 10), player("Buyer", 10)
+local first = give(seller, new_item(8003, { quality = 2, ilvl = 11 }))
+silently(sell, seller, first)
+for i = 1, 11 do silently(sell, seller, give(seller, new_item(9100 + i, { quality = 1 }))) end
+check(queued(buyer, 8003) == 0, "after 12 sales the first is still in the tab and waits")
+silently(sell, seller, give(seller, new_item(9200, { quality = 1 })))
+check(queued(buyer, 8003) == 1, "the 13th sale pushes the first out, and it enters the pool at once")
+check(#seller.buyback == 12 and #Treasure.counters[seller.low] == 12, "the counter holds what the tab holds, 12")
+
+reset()
+seller = player("Alone", 10)
+local own = give(seller, new_item(8004, { quality = 2, ilvl = 10 }))
+silently(sell, seller, own)
+for i = 1, 12 do silently(sell, seller, give(seller, new_item(9400 + i, { quality = 1 }))) end
+check(queued(seller, 8004) == 0 and #Treasure.globalPool == 1,
+      "a sold copy pushed out of the tab waits in the pool rather than go back to its only fitting player, its seller")
+local newcomer = player("Newcomer", 11)
+silently(Treasure.processGlobalPool)
+check(queued(newcomer, 8004) == 1, "and goes to the next fitting player who arrives")
+
+reset()
+seller, buyer = player("Seller", 10), player("Buyer", 10)
+local white = give(seller, new_item(8101, { quality = 1, ilvl = 10 }))
+local herbs = give(seller, new_item(8102, { quality = 2, ilvl = 10, stack = 20 }))
+local quest = give(seller, new_item(8103, { quality = 2, ilvl = 10, class = 12 }))
+silently(sell, seller, white); silently(sell, seller, herbs); silently(sell, seller, quest)
+silently(logout, seller)
+check(copies(8101) == 0, "a common (white) item is never recycled")
+check(copies(8102) == 0, "an item that stacks is never recycled (a buyback could merge it away)")
+check(copies(8103) == 0, "a quest item is never recycled")
+
+reset()
+seller, buyer = player("Seller", 10), player("Buyer", 10)
+local ring = give(seller, new_item(8201, { quality = 2, ilvl = 10 }))
+silently(sell, seller, ring)
+buy_back(seller, ring)
+silently(sell, seller, ring)
+silently(logout, seller)
+check(copies(8201) == 1, "a ring sold twice with a buyback between enters the pool once (" .. copies(8201) .. ")")
+
+reset()
+local seller_bot, real = player("Selly", 10, true), player("Real", 10)
+silently(sell, seller_bot, give(seller_bot, new_item(8301, { quality = 2, ilvl = 10 })))
+for i = 1, 12 do silently(sell, seller_bot, give(seller_bot, new_item(9300 + i, { quality = 1 }))) end
+check(queued(real, 8301) == 1, "a bot's sold gear, once out of its buyback tab, goes to a real player")
+
+reset()
+seller = player("Seller", 40)
+local low, high = player("Seventeen", 17), player("TwentySix", 26)
+local blade = give(seller, new_item(8401, { quality = 2, required = 20, ilvl = 25 }))
+silently(sell, seller, blade)
+silently(logout, seller)
+check(queued(low, 8401) == 1 and queued(high, 8401) == 0,
+      "an item requiring level 20 (item level 25) goes to the level-17 player, matched by its required level")
+
+print(string.format("test-treasure: %d of %d checks passed", checks - fails, checks))
+os.exit(fails == 0 and 0 or 1)

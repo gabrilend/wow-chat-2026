@@ -1,0 +1,166 @@
+#!/bin/bash
+
+DIR="/mnt/kaun/wow-chat-2026"
+
+set -e
+
+
+if [[ -f "${DIR}/.profile" ]]; then
+    PROFILE="$(cat "${DIR}/.profile")"
+else
+    PROFILE="release"
+fi
+DEFAULT_PROFILE="${PROFILE}"
+
+
+DRY_RUN=false
+INCLUDE_BUILD=false
+
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "${1}" in
+            --profile)
+                if [[ -n "${2:-}" ]]; then
+                    PROFILE="${2}"
+                    shift 2
+                else
+                    echo "Error: --profile requires a profile name"
+                    exit 1
+                fi
+                ;;
+            --profile=*)
+                PROFILE="${1#*=}"
+                if [[ -z "${PROFILE}" ]]; then
+                    echo "Error: --profile requires a profile name"
+                    exit 1
+                fi
+                shift
+                ;;
+            --include-build)
+                INCLUDE_BUILD=true
+                shift
+                ;;
+            --dry-run)
+                DRY_RUN=true
+                shift
+                ;;
+            --help|-h)
+                show_help
+                exit 0
+                ;;
+            *)
+                echo "Error: unrecognized argument '${1}'"
+                echo "Run with --help to see available options."
+                exit 1
+                ;;
+        esac
+    done
+}
+
+show_help() {
+    echo "Usage: ./scripts/redownload-source [options]"
+    echo ""
+    echo "Remove source code for fresh re-clone from git."
+    echo "Run ./scripts/install after to re-download everything."
+    echo ""
+    echo "Options:"
+    echo "  --profile <name>   Use specific profile (default: ${DEFAULT_PROFILE})"
+    echo "  --include-build    Also remove build directory (forces cmake reconfig)"
+    echo "  --dry-run          Show what would be removed without removing"
+    echo "  --help             Show this help message"
+    echo ""
+    echo "What gets removed:"
+    echo "  - Source directory (source-alpha or source-beta)"
+    echo "  - Modules within source directory"
+    echo "  - (optional) Build directory if --include-build"
+    echo ""
+    echo "What stays intact:"
+    echo "  - Installed binaries (installed-files-*)"
+    echo "  - MySQL databases"
+    echo "  - Configuration files"
+    echo "  - Data files (maps, vmaps, etc.)"
+    echo "  - Lua scripts (src/lua/)"
+    echo ""
+    echo "Workflow:"
+    echo "  1. ./scripts/redownload-source    # Remove source"
+    echo "  2. ./scripts/install              # Re-clone and build"
+}
+
+
+get_profile_paths() {
+    case "${PROFILE}" in
+        release) AC_CODE_DIR="${DIR}/source-beta"  ;;
+        beta)    AC_CODE_DIR="${DIR}/source-beta"  ;;
+        vanilla) AC_CODE_DIR="${DIR}/source-beta"  ;;
+        basic)   AC_CODE_DIR="${DIR}/source-beta"  ;;
+        cc-test) AC_CODE_DIR="${DIR}/source-beta"  ;;
+        alpha)   AC_CODE_DIR="${DIR}/source-alpha" ;;
+        *)       echo "ERROR: Unknown profile '${PROFILE}'"; exit 1 ;;
+    esac
+    BUILD_DIR="${DIR}/build-${PROFILE}"
+    BUILD_DIR_SHADOW="${DIR}/build-shadow"
+}
+
+
+parse_args "$@"
+get_profile_paths
+
+echo "Redownload Source"
+echo "  Profile: ${PROFILE}"
+echo "  Source:  ${AC_CODE_DIR}"
+[[ "${INCLUDE_BUILD}" == true ]] && echo "  Build:   ${BUILD_DIR} (will be removed)"
+echo ""
+
+items_to_remove=()
+
+if [[ -d "${AC_CODE_DIR}" ]]; then
+    items_to_remove+=("${AC_CODE_DIR}")
+fi
+
+if [[ "${INCLUDE_BUILD}" == true ]]; then
+    if [[ -d "${BUILD_DIR}" ]]; then
+        items_to_remove+=("${BUILD_DIR}")
+    fi
+    if [[ -d "${BUILD_DIR_SHADOW}" ]]; then
+        items_to_remove+=("${BUILD_DIR_SHADOW}")
+    fi
+fi
+
+if [[ ${#items_to_remove[@]} -eq 0 ]]; then
+    echo "Nothing to remove - source directory doesn't exist."
+    echo "Run ./scripts/install to download source."
+    exit 0
+fi
+
+echo "Will remove:"
+for item in "${items_to_remove[@]}"; do
+    if [[ -d "${item}" ]]; then
+        size=$(du -sh "${item}" 2>/dev/null | cut -f1)
+        echo "  ${item} (${size})"
+    fi
+done
+echo ""
+
+if [[ "${DRY_RUN}" == true ]]; then
+    echo "DRY RUN - nothing removed."
+    exit 0
+fi
+
+read -p "Remove these directories? [y/N] " -n 1 -r
+echo ""
+
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Cancelled."
+    exit 0
+fi
+
+for item in "${items_to_remove[@]}"; do
+    echo "Removing ${item}..."
+    rm -rf "${item}"
+done
+
+echo ""
+echo "Done. Source removed for profile '${PROFILE}'."
+echo ""
+echo "Next steps:"
+echo "  ./scripts/install    # Re-clone and build from scratch"

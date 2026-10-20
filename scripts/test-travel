@@ -1,0 +1,187 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+
+local fails, checks = 0, 0
+local function check(ok, what)
+    checks = checks + 1
+    if not ok then fails = fails + 1; print("  FAIL: " .. what) end
+end
+
+local here = (arg[0]:match("^(.*[/\\])") or "./")
+local Toy = dofile(here .. "lib/toy-world.lua")
+local World, advance, pending = Toy.World, Toy.advance, Toy.pending
+local new_map, new_player     = Toy.new_map, Toy.new_player
+local login, logout           = Toy.login, Toy.logout
+
+local quiet = print
+print = function() end
+dofile(DIR .. "/src/lua-beta/movement.lua")
+dofile(DIR .. "/src/lua-beta/travel.lua")
+print = quiet
+local Travel = Travel
+local trainers = dofile(DIR .. "/src/lua-beta/data/travel-trainers.lua")
+
+local function silently(fn, ...) print = function() end; local r = { pcall(fn, ...) }; print = quiet; return unpack(r) end
+
+local function trainer_in_lists(p)
+    local found
+    for _, id in ipairs(p:GetData("travellers").travellers) do
+        if Travel.isTrainer(id) then
+            check(found == nil, p.name .. " has two class trainers in their lists (" .. tostring(found) .. ", " .. id .. ")")
+            found = id
+        end
+    end
+    return found
+end
+
+local function slice_of(id)
+    for _, r in ipairs(trainers) do if r.trainerID == id then return r end end
+end
+
+local low = 300
+local function a_player(name, class, level, horde)
+    low = low + 1
+    local p = new_player(name, low)
+    p.class, p.level, p.horde = class, level, horde
+    return p
+end
+
+do
+    local p = a_player("Arrival", 1, 5, true)
+    p.x, p.y = 500, 500
+    local ok, err = silently(login, p)
+    check(ok, "logging in should not raise an error (" .. tostring(err) .. ")")
+    check(pending(p, Travel.tick) == 1, "a player should have one traveller clock after login, has " .. pending(p, Travel.tick))
+    silently(advance, TRAVEL_FIRST_INTERVAL + 10)
+    local t = p.spawned[1]
+    check(t ~= nil, "a traveller should appear a minute after login")
+    if t then
+        local ax, ay = math.abs(t.x - p.x), math.abs(t.y - p.y)
+        check(t.summonKind == 1 and t.summonTimer == TRAVEL_DESPAWN_AFTER,
+              "a traveller should be summoned to leave after its time (kind 1, " .. TRAVEL_DESPAWN_AFTER .. " ms), was kind "
+              .. tostring(t.summonKind) .. ", " .. tostring(t.summonTimer))
+        check(pending(p, Travel.tick) == 1, "still one traveller clock after the first traveller")
+    end
+    silently(logout, p)
+    World.events = {}
+end
+
+do
+    local cases = {
+        { "dead",     function(p) p.dead = true end },
+        { "swimming", function(p) p.wet = true end },
+        { "sitting",  function(p) p.standing = false end },
+    }
+    for i, case in ipairs(cases) do
+        local p = a_player("Held" .. i, 1, 5, true)
+        silently(login, p)
+        case[2](p)
+        silently(advance, TRAVEL_FIRST_INTERVAL + 10)
+        check(#p.spawned == 0, "no traveller should come while the player is " .. case[1])
+        check(pending(p, Travel.tick) == 1, "the traveller clock should keep running while the player is " .. case[1])
+        silently(logout, p)
+        World.events = {}
+    end
+end
+
+do
+    local b = a_player("Botty", 1, 5, true)
+    b.bot = true
+    silently(login, b)
+    check(b:GetData("travellers") ~= nil, "a bot's traveller lists should still be made")
+    check(pending(b, Travel.tick) == 0, "a bot should get no traveller clock")
+    silently(logout, b)
+    World.events = {}
+end
+
+do
+    local CLASSES = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 11 }
+    local missing = {}
+    for _, class in ipairs(CLASSES) do
+        for _, horde in ipairs({ true, false }) do
+            for level = 1, 20 do
+                local p = a_player("C" .. class .. "L" .. level, class, level, horde)
+                silently(login, p)
+                local id = trainer_in_lists(p)
+                local row = id and slice_of(id)
+                if not row then
+                    missing[#missing + 1] = (horde and "horde " or "alliance ") .. "class " .. class .. " level " .. level
+                else
+                    check(-row.id == class, "class " .. class .. " was offered a class " .. -row.id .. " trainer (" .. id .. ")")
+                    check(row.minLevel <= level and level <= row.maxLevel,
+                          "level " .. level .. " was offered trainer " .. id .. " for levels " .. row.minLevel .. "-" .. row.maxLevel)
+                end
+                silently(logout, p)
+                World.events = {}
+            end
+        end
+    end
+    check(#missing == 0, #missing .. " class/level/faction combinations meet no class trainer, first: " .. tostring(missing[1]))
+end
+
+do
+    local p = a_player("Climber", 1, 5, true)
+    silently(login, p)
+    local before = trainer_in_lists(p)
+    p.level = 14
+    p:GetData("travellers").travellers = {}
+    silently(Travel.updatePlayerTravellers, p:GetGUID())
+    local after = trainer_in_lists(p)
+    local row = after and slice_of(after)
+    check(before ~= after and row and row.minLevel <= 14 and 14 <= row.maxLevel,
+          "after reaching level 14 the warrior trainer should be the 14-15 one, is " .. tostring(after))
+    silently(logout, p)
+    World.events = {}
+end
+
+do
+    CustomClasses = { definitions = {} }
+    local p = a_player("Plain", 1, 5, true)
+    silently(login, p)
+    local id = trainer_in_lists(p)
+    p:GetData("travellers").travellers = { id }
+    local ok, err = silently(Travel.spawnAndTravel, p)
+    check(ok, "a trainer traveller should come while the class registry has no helpers (" .. tostring(err) .. ")")
+    check(#p.spawned == 1 and p.spawned[1].entry == id, "the trainer should be the traveller sent")
+    CustomClasses = nil
+    silently(logout, p)
+    World.events = {}
+end
+
+do
+    local p = a_player("Sitter", 1, 5, true)
+    silently(login, p)
+    World.events = {}
+    silently(Travel.spawnAndTravel, p)
+    local t = p.spawned[1]
+    check(t ~= nil, "a traveller should be sent")
+    if t then
+        p.standing = false
+        silently(Travel.continueTravelling, 0, 0, 1, t)
+        check(t.stand == 1, "a traveller should sit when the player sits")
+        p.standing = true
+        p.x, p.y = 5000, 5000
+        silently(Travel.continueTravelling, 0, 0, 1, t)
+        check(t.gone, "a traveller with no player within 200 yards should leave")
+    end
+    silently(logout, p)
+    World.events = {}
+end
+
+do
+    local p = a_player("Void", 1, 5, true)
+    p.map = new_map(0, function() return nil end)
+    Toy.maps[0] = p.map
+    silently(login, p)
+    local ok, err = silently(Travel.spawnAndTravel, p)
+    check(ok, "a traveller over ground with no height should not raise an error (" .. tostring(err) .. ")")
+    check(#p.spawned == 0, "no traveller should be placed where there is no ground")
+    Toy.maps[0] = Toy.FLAT
+    silently(logout, p)
+    World.events = {}
+end
+
+print(string.format("%d checks, %d failed", checks, fails))
+os.exit(fails == 0 and 0 or 1)

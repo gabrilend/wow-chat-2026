@@ -1,0 +1,74 @@
+#!/usr/bin/env luajit
+
+local DIR   = arg[1] or "/mnt/kaun/wow-chat-2026"
+local MYSQL = DIR .. "/mysql/installed-files/bin/mysql"
+local DB    = "acore_world_basic"
+local FILE  = DIR .. "/sql/basic/db_world.src/28-buddy-beds.apply.sql"
+local BEGIN_MARK = "-- >>> BOARDINGS BEGIN"
+local END_MARK   = "-- <<< BOARDINGS END"
+local NUM        = "([-%d%.e]+)"
+
+local function query(sql, what)
+    local cmd = string.format("MYSQL_PWD=menardi '%s' -h127.0.0.1 -P3307 -uritz -N -B -e \"%s\"", MYSQL, sql)
+    local pipe = assert(io.popen(cmd, "r"))
+    local lines = {}
+    for line in pipe:lines() do
+        lines[#lines + 1] = line
+    end
+    local ok, why, code = pipe:close()
+    if not ok then
+        io.stderr:write(string.format("export-buddy-boardings: reading %s failed (%s %s); is ./scripts/start-mysql running and E045 installed?\n",
+            what, tostring(why), tostring(code)))
+        os.exit(1)
+    end
+    return lines
+end
+
+local function escape(text)
+    return (text:gsub("\\", "\\\\"):gsub("'", "''"))
+end
+
+local rows = {}
+local recordings = 0
+for _, line in ipairs(query("SELECT id, kind, transport, stop, map, author, note FROM " .. DB .. ".buddy_boarding ORDER BY id",
+                            DB .. ".buddy_boarding")) do
+    local id, kind, transport, stop, map, author, note = line:match("^(%d+)\t(%d+)\t(%d+)\t(%d+)\t(%d+)\t([^\t]*)\t(.*)$")
+    if not id then
+        io.stderr:write("export-buddy-boardings: a recording row could not be read (has the table changed?): " .. line .. "\n")
+        os.exit(1)
+    end
+    rows[#rows + 1] = string.format("INSERT IGNORE INTO `buddy_boarding` (`id`, `kind`, `transport`, `stop`, `map`, `author`, `note`) VALUES (%s, %s, %s, %s, %s, '%s', '%s');",
+        id, kind, transport, stop, map, escape(author), escape(note))
+    recordings = recordings + 1
+end
+
+local steps = 0
+local pattern = "^(%d+)\t(%d+)\t(%d+)\t(%d+)\t" .. NUM .. "\t" .. NUM .. "\t" .. NUM .. "\t" .. NUM .. "\t" .. NUM .. "\t" .. NUM .. "$"
+for _, line in ipairs(query("SELECT boarding, seq, ms, flags, x, y, z, o, jump_xy, jump_z FROM " .. DB ..
+                            ".buddy_boarding_step ORDER BY boarding, seq", DB .. ".buddy_boarding_step")) do
+    local b, seq, ms, flags, x, y, z, o, jxy, jz = line:match(pattern)
+    if not b then
+        io.stderr:write("export-buddy-boardings: a step row could not be read (has the table changed?): " .. line .. "\n")
+        os.exit(1)
+    end
+    rows[#rows + 1] = string.format("INSERT IGNORE INTO `buddy_boarding_step` (`boarding`, `seq`, `ms`, `flags`, `x`, `y`, `z`, `o`, `jump_xy`, `jump_z`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);",
+        b, seq, ms, flags, x, y, z, o, jxy, jz)
+    steps = steps + 1
+end
+
+local f = assert(io.open(FILE, "r"))
+local text = f:read("*a")
+f:close()
+local a = text:find(BEGIN_MARK, 1, true)
+local b = text:find(END_MARK, 1, true)
+if not a or not b or b < a then
+    io.stderr:write("export-buddy-boardings: the BOARDINGS markers were not found in " .. FILE .. "\n")
+    os.exit(1)
+end
+local head_end = text:find("\n", a, true)
+local body = #rows > 0 and (table.concat(rows, "\n") .. "\n") or "-- (no boardings recorded yet)\n"
+text = text:sub(1, head_end) .. body .. text:sub(b)
+f = assert(io.open(FILE, "w"))
+f:write(text)
+f:close()
+print(string.format("export-buddy-boardings: %d recording(s), %d step(s) written to %s", recordings, steps, FILE))

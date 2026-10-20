@@ -1,0 +1,134 @@
+#!/usr/bin/env luajit
+
+local DIR = arg[1]
+if not DIR or DIR:match("^%-%-") then
+    io.stderr:write("usage: move-project-paths DIR [--untracked] [--databases] [--dry-run]\n"); os.exit(1)
+end
+local opt = { untracked = false, databases = false, ["dry-run"] = false }
+for i = 2, #arg do
+    local f = arg[i]:match("^%-%-(.+)$")
+    if not f or opt[f] == nil then io.stderr:write("move-project-paths: unknown option " .. arg[i] .. "\n"); os.exit(1) end
+    opt[f] = true
+end
+
+local OLD_PARENTS = { "/mnt/mtwo/games/azeroth-core/", "/home/ritz/games/azeroth-core/" }
+local NEW_PARENT  = "/mnt/kaun/"
+local MOVED = { "wow-chat-2026", "wow-chat-neuron", "custom-client",
+                "wow-chat-beta-homework", "wow-chat-completed-threads", "wow-chat-fronts-homework",
+                "wow-chat-llama-cpp-study", "wow-chat-treasure-pool", "custom-client-llama-cpp-study" }
+
+local UNTRACKED = { "mysql/conf/my.cnf", "installed-files-*/etc/*.conf", "installed-files-*/etc/modules/*.conf" }
+
+local function lines_of(cmd)
+    local out, f = {}, io.popen(cmd)
+    for l in f:lines() do out[#out + 1] = l end
+    f:close()
+    return out
+end
+local function read(path)
+    local f = io.open(path, "rb"); if not f then return nil end
+    local s = f:read("*a"); f:close(); return s
+end
+local function write(path, s)
+    local f = assert(io.open(path, "wb")); f:write(s); f:close()
+end
+
+local function escape(s) return (s:gsub("%p", "%%%0")) end
+local function rewrite(text)
+    local total = 0
+    for _, parent in ipairs(OLD_PARENTS) do
+        for _, name in ipairs(MOVED) do
+            local pattern = escape(parent .. name) .. "([^%w_%-%.])"
+            local n
+            text, n = text:gsub(pattern, function(after) return NEW_PARENT .. name .. after end)
+            total = total + n
+            if text:sub(-#(parent .. name)) == parent .. name then
+                text = text:sub(1, -#(parent .. name) - 1) .. NEW_PARENT .. name
+                total = total + 1
+            end
+        end
+    end
+    return text, total
+end
+
+local changedFiles, changes = 0, 0
+local function handle(rel)
+    local path = DIR .. "/" .. rel
+    local text = read(path)
+    if not text then return end
+    local out, n = rewrite(text)
+    if n > 0 then
+        changedFiles, changes = changedFiles + 1, changes + n
+        print(string.format("  %4d  %s", n, rel))
+        if not opt["dry-run"] then write(path, out) end
+    end
+end
+
+print("tracked files in " .. DIR .. ":")
+local tracked = lines_of("git -C '" .. DIR .. "' ls-files -z | tr '\\0' '\\n'")
+local KEEP_AS_WRITTEN = { ["scripts/move-project-paths"] = true, ["issues/188-move-to-kaun.md"] = true }
+for _, rel in ipairs(tracked) do
+    if not rel:match("^llm%-transcripts/") and not KEEP_AS_WRITTEN[rel] then
+        local kind = lines_of("test -L '" .. DIR .. "/" .. rel .. "' && echo link || echo file")[1]
+        if kind == "file" then handle(rel) end
+    end
+end
+
+local relinked = 0
+if opt.untracked then
+    print("untracked files:")
+    for _, pattern in ipairs(UNTRACKED) do
+        for _, rel in ipairs(lines_of("cd '" .. DIR .. "' && for f in " .. pattern .. "; do [ -f \"$f\" ] && echo \"$f\"; done")) do
+            handle(rel)
+        end
+    end
+    print("symbolic links into an old place:")
+    for _, line in ipairs(lines_of("find '" .. DIR .. "' -path '" .. DIR .. "/.git' -prune -o -type l -printf '%P\\t%l\\n'")) do
+        local rel, target = line:match("^(.-)\t(.*)$")
+        local newTarget, n = rewrite(target)
+        if n > 0 then
+            relinked = relinked + 1
+            print("  " .. rel .. ": " .. target .. "  ->  " .. newTarget)
+            if not opt["dry-run"] then
+                os.execute("ln -sfn '" .. newTarget .. "' '" .. DIR .. "/" .. rel .. "'")
+            end
+        end
+    end
+end
+
+local rowsMoved = 0
+if opt.databases then
+    print("database update folders:")
+    local mysql = "'" .. DIR .. "/mysql/installed-files/bin/mysql' --no-defaults --socket='" .. DIR ..
+                  "/mysql/databases/mysql.sock' -uritz -pmenardi -N 2>/dev/null"
+    local dbs = lines_of(mysql .. " -e \"SELECT table_schema FROM information_schema.tables WHERE table_name = 'updates_include'\"")
+    if #dbs == 0 then
+        io.stderr:write("move-project-paths: no database answered with an updates_include table (is the project's MySQL running at " ..
+                        DIR .. "/mysql?); none were changed\n")
+        os.exit(1)
+    end
+    for _, db in ipairs(dbs) do
+        for _, parent in ipairs(OLD_PARENTS) do
+            for _, name in ipairs(MOVED) do
+                local old, new = parent .. name, NEW_PARENT .. name
+                local rows = lines_of(mysql .. " " .. db .. " -e \"SELECT path FROM updates_include WHERE path = '" .. old ..
+                                      "' OR path LIKE '" .. old .. "/%'\"")
+                for _, path in ipairs(rows) do
+                    rowsMoved = rowsMoved + 1
+                    local target = new .. path:sub(#old + 1)
+                    print("  " .. db .. ": " .. path .. "  ->  " .. target)
+                    if not opt["dry-run"] then
+                        os.execute(mysql .. " " .. db .. " -e \"START TRANSACTION; " ..
+                            "DELETE FROM updates_include WHERE path = '" .. path .. "' AND EXISTS " ..
+                            "(SELECT 1 FROM (SELECT path FROM updates_include WHERE path = '" .. target .. "') AS t); " ..
+                            "UPDATE updates_include SET path = '" .. target .. "' WHERE path = '" .. path .. "'; COMMIT;\"")
+                    end
+                end
+            end
+        end
+    end
+end
+
+print(string.format("%s%d change(s) in %d file(s)%s%s", opt["dry-run"] and "(dry run) " or "",
+    changes, changedFiles, opt.untracked and string.format(", %d link(s) re-made", relinked) or "",
+    opt.databases and string.format(", %d database row(s) moved", rowsMoved) or ""))

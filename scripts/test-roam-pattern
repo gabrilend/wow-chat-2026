@@ -1,0 +1,17 @@
+#!/bin/bash
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+TMPD="${DIR}/tmp/shared-memory"
+mkdir -p "${TMPD}"
+JSOUT="${TMPD}/roam-pattern-js.txt"
+
+echo "test-roam-pattern: JavaScript (gjs) and Lua (luajit) on the same situations"
+if ! gjs "${DIR}/tests/roam-pattern/js-side.js" "${DIR}" > "${JSOUT}"; then
+    echo "FAIL: the JavaScript half did not run (see above); nothing compared"
+    exit 1
+fi
+if luajit "${DIR}/tests/roam-pattern/lua-side.lua" "${DIR}" "${JSOUT}"; then
+    echo "PASS: both implementations agree with each other on what the pattern fixes"
+else
+    echo "FAIL: the implementations disagree (listed above)"
+    exit 1
+fi

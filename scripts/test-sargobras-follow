@@ -1,0 +1,287 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local SCRIPT = DIR .. "/src/lua-basic/sargobras.lua"
+
+local fails, checks = 0, 0
+local function check(name, ok)
+    checks = checks + 1
+    if ok then print("  ok:   " .. name) else print("  FAIL: " .. name); fails = fails + 1 end
+end
+
+local function object(fields)
+    return setmetatable(fields, { __index = function() return function() return nil end end })
+end
+
+local cliff_x = math.huge
+local in_dungeon = false
+local player = object({
+    GetMap = function() return { IsDungeon = function() return in_dungeon end, IsRaid = function() return false end,
+                                 IsBattleground = function() return false end, IsArena = function() return false end } end,
+    x = 0, y = 0, z = 0, level = 30,
+    GetGUIDLow  = function() return 42 end,
+    GetGUID     = function() return 42 end,
+    GetClass    = function() return 1 end,
+    GetLevel    = function(s) return s.level end,
+    GetTeam     = function() return 0 end,
+    GetMapId    = function() return 0 end,
+    IsInWorld   = function() return true end,
+    GetX = function(s) return s.x end, GetY = function(s) return s.y end, GetZ = function(s) return s.z end,
+    GetLocation = function(s) return s.x, s.y, s.z, 0 end,
+    GetCreaturesInRange = function() return {} end,
+    RegisterEvent = function() end,
+    GetWalkablePathLength = function(s, x, y)
+        if x > cliff_x then return nil end
+        return math.sqrt((x - s.x) ^ 2 + (y - s.y) ^ 2)
+    end,
+})
+
+local orders, tick, turn, giveup = {}, nil, nil, nil
+sarg_followed = false
+local sarg = object({
+    x = 0, y = 0, z = 0, o = 0, stopped = true, walk = nil, level = nil,
+    GetGUIDLow  = function() return 7 end,
+    GetGUID     = function() return 7 end,
+    GetMapId    = function() return 0 end,
+    GetX = function(s) return s.x end, GetY = function(s) return s.y end,
+    GetLocation = function(s) return s.x, s.y, s.z, s.o end,
+    GetO        = function(s) return s.o end,
+    SetFacing   = function(s, o) s.o = o end,
+    IsStopped   = function(s) return s.stopped end,
+    GetDistance = function(s, o) return math.sqrt((s.x - o.x) ^ 2 + (s.y - o.y) ^ 2) end,
+    SetLevel    = function(s, l) s.level = l end,
+    SetWalk     = function(s, on) s.walk = on end,
+    MoveFollow  = function() orders[#orders + 1] = { "follow" }; sarg_followed = true end,
+    MoveIdle    = function() orders[#orders + 1] = { "idle" } end,
+    MoveTo      = function(s, id, x, y, z, path) orders[#orders + 1] = { "moveto", id = id, x = x, y = y, walk = s.walk, path = path } end,
+    RegisterEvent = function(_, fn, ms, times)
+        if ms == 1000 and times == 0 and not tick then tick = fn end
+        if ms == 200 then turn = fn; return 200 end
+        if times == 1 then giveup = fn; return 30 end
+        return 1
+    end,
+    RemoveEventById = function(_, id) if id == 200 then turn = nil end; if id == 30 then giveup = nil end end,
+    DespawnOrUnsummon = function(s) s.gone = true end,
+    RemoveEvents = function() end,
+})
+player.SpawnCreature = function(_, _, x, y, z) sarg.x, sarg.y, sarg.z = x, y, z; return sarg end
+
+local handlers = {}
+local captured = {}
+local function db_result(rows)
+    local i = 1
+    return { GetUInt32 = function(_, c) return rows[i][c + 1] end,
+             NextRow   = function() i = i + 1; return rows[i] ~= nil end }
+end
+local stubs = {
+    CharDBQuery = function(sql)
+        if sql:match("^SHOW TABLES") then return db_result({ { 1 } }) end
+        if sql:match("SELECT slot FROM buddy_roster") then return db_result({ { 3 } }) end
+        return nil
+    end,
+    RegisterPlayerEvent = function(ev, fn) handlers[#handlers + 1] = fn end,
+    RegisterCreatureGossipEvent = function(_, ev, fn) if ev == 2 then captured.on_select = fn end end,
+    RegisterCreatureEvent = function(_, ev, fn) if ev == 6 then captured.on_reach = fn end end,
+    GetPlayerByGUID = function() return player end,
+    GetPlayerGUID   = function(low) return low end,
+    GetCurrTime     = function() return 0 end,
+}
+setmetatable(_G, { __index = function(_, k)
+    if stubs[k] ~= nil then return stubs[k] end
+    return function() return nil end
+end })
+
+
+dofile(SCRIPT)
+local on_login = handlers[1]
+check("script registered its login handler", type(on_login) == "function")
+if not on_login then os.exit(1) end
+
+local function dist(ax, ay, bx, by) return math.sqrt((ax - bx) ^ 2 + (ay - by) ^ 2) end
+local function last_move() for i = #orders, 1, -1 do if orders[i][1] == "moveto" then return orders[i] end end end
+local function step() orders = {}; tick(0, 0, 0, sarg) end
+local function arrive(m) sarg.x, sarg.y, sarg.stopped = m.x, m.y, true; orders = {}; captured.on_reach(6, sarg, 8, m.id) end
+local function settle_turn() local n = 0 while turn and n < 100 do turn(1, 0, 0, sarg); n = n + 1 end end
+local function facing_err(a) return math.abs((a - sarg.o + math.pi) % (2 * math.pi) - math.pi) end
+
+print("summoned at level 30, for the level-20 tier")
+on_login(3, player)
+check("he was summoned and given a once-a-second check", type(tick) == "function")
+if not tick then os.exit(1) end
+check("he is level 21 (his tier's level + 1)", sarg.level == 21)
+local m = last_move()
+check("he walks to his spot (never runs)", m and m.walk == true)
+check("along the navigation mesh", m and m.path == true)
+local r0 = m and dist(m.x, m.y, 0, 0) or 0
+check(string.format("his spot is 5-10 yards from the owner (%.1f)", r0), r0 >= 5 - 1e-6 and r0 <= 10 + 1e-6)
+check("nothing watches the walk: the once-a-second look does nothing meanwhile", (function() step(); return #orders == 0 end)())
+arrive(m)
+check("arrived (the server's event): he stands", orders[1] and orders[1][1] == "idle")
+check("and the give-up timer is gone", giveup == nil)
+
+print("owner walks up to talk to him")
+player.x, player.y = (m.x) * 0.6, (m.y) * 0.6
+step(); settle_turn()
+check("he doesn't move", last_move() == nil and #orders == 0)
+check("he faces the circle's centre (the owner's old spot)", facing_err(math.atan2(0 - sarg.y, 0 - sarg.x)) <= 0.06)
+check("never handed to the server's follow", not sarg_followed)
+
+print("owner steps out of the circle, still within 15 yards")
+player.x, player.y = -m.x * 0.8, -m.y * 0.8 + 2
+local d = dist(player.x, player.y, sarg.x, sarg.y)
+step(); settle_turn()
+check(string.format("(%.1f yards from him) he doesn't move", d), d <= 15 and last_move() == nil)
+check("he turns to face the owner", facing_err(math.atan2(player.y - sarg.y, player.x - sarg.x)) <= 0.06)
+
+print("owner walks 30 yards off")
+player.x, player.y = sarg.x + 30, sarg.y
+step()
+m = last_move()
+check("a new spot, and he walks there", m and m.walk == true and m.path == true)
+local r1 = m and dist(m.x, m.y, player.x, player.y) or 0
+check(string.format("on a new circle round the owner (%.1f yards)", r1), r1 >= 2 and r1 <= 10 + 1e-6)
+check("on the side he comes from", m and m.x < player.x)
+arrive(m); step()
+
+print("a spot with no direct route (beyond a drop)")
+player.x, player.y = sarg.x - 30, sarg.y
+cliff_x = player.x + 2.5
+step()
+m = last_move()
+local r2 = m and dist(m.x, m.y, player.x, player.y) or 99
+check(string.format("pulled in closer, or round, to reachable ground (%.1f yards, x %.1f)", r2, m and m.x or 0),
+    m and m.x <= cliff_x)
+arrive(m); step()
+cliff_x = math.huge
+
+print("owner teleported within the map, 300 yards off")
+local was = sarg
+sarg.gone = nil
+player.x = sarg.x + 300
+local spawned_again = false
+local spawn = player.SpawnCreature
+player.SpawnCreature = function(...) spawned_again = true; return spawn(...) end
+step()
+check("he is summoned anew beside the owner, not sent walking", sarg.gone == true and spawned_again)
+player.SpawnCreature = spawn
+local mm = last_move()
+arrive(mm)
+
+print("into a dungeon, then out again")
+in_dungeon = true
+spawned_again = false
+player.SpawnCreature = function(...) spawned_again = true; return spawn(...) end
+local on_map_change = handlers[4]
+player.RegisterEvent = function(_, fn) fn(0, 0, 0, player) end
+on_map_change(28, player)
+check("no Sargobras in a dungeon", not spawned_again)
+in_dungeon = false
+on_map_change(28, player)
+check("out again: he is summoned anew", spawned_again)
+player.RegisterEvent = function() end
+player.SpawnCreature = spawn
+arrive(last_move())
+
+print("owner de-levelled below his tier (level 20), then walks off")
+player.level = 15
+player.x = sarg.x + 30
+step()
+check("at the next waypoint he goes, instead of walking", sarg.gone == true and last_move() == nil)
+
+print("")
+print("his break, after the owner chooses")
+local go_on_break
+do
+    local i = 1
+    while captured.on_select and true do
+        local name, value = debug.getupvalue(captured.on_select, i)
+        if not name then break end
+        if name == "go_on_break" then go_on_break = value end
+        i = i + 1
+    end
+end
+check("the break is found behind the choice handler", type(go_on_break) == "function")
+if not go_on_break then os.exit(1) end
+
+local FIRE_SECONDS, FIRE_RADIUS, FIRE_PCT_PER_TIER, SIT_RADIUS, SIT_SWING = 120, 2.5, 2, 3, 1.0
+local events, fire_at, dest, walking, stand, flags, said = {}, nil, nil, false, 0, 0, 0
+local next_id = 0
+local hurt = {}
+local function chooser(x, y, hp)
+    return object({ x = x, y = y, z = 0, hp = hp,
+        GetLocation = function(s) return s.x, s.y, s.z, 0 end,
+        GetO = function() return 0 end, IsAlive = function() return true end,
+        GetMaxHealth = function(s) return s.hp end,
+        DealDamage = function(s, target, amount, _, school) hurt[#hurt + 1] = { who = s, target = target, amount = amount, school = school } end })
+end
+local owner_p = chooser(0, 0, 1000)
+local passer  = chooser(5, 0, 1000)
+local b = object({
+    x = 2, y = 0, z = 0, o = math.pi,
+    GetGUIDLow = function() return 7 end,
+    GetLocation = function(s) return s.x, s.y, s.z, s.o end,
+    GetO = function(s) return s.o end,
+    SetFacing = function(s, o) s.o = o end,
+    SummonGameObject = function(_, entry, x, y, z, o, secs) fire_at = { x = x, y = y, secs = secs }; return object({ GetGUID = function() return 99 end }) end,
+    GetMap = function() return object({ GetHeight = function() return 0 end }) end,
+    SetWalk = function(_, on) walking = on end,
+    MoveTo = function(_, _, x, y) dest = { x = x, y = y } end,
+    RegisterEvent = function(_, fn, ms, times) next_id = next_id + 1; events[next_id] = { fn = fn, ms = ms, times = times }; return next_id end,
+    RemoveEventById = function(_, id) events[id] = nil end,
+    SetStandState = function(_, st) stand = st end,
+    GetUnitFlags = function() return flags end,
+    SetUnitFlags = function(_, f) flags = f end,
+    GetPlayersInRange = function() return { owner_p, passer } end,
+    SendUnitSay = function() said = said + 1 end,
+})
+do
+    local i = 1
+    while true do
+        local name, value = debug.getupvalue(go_on_break, i)
+        if not name then break end
+        if name == "slot_of" then value[7] = 3 end
+        i = i + 1
+    end
+end
+go_on_break(b, owner_p)
+
+check("the fire is lit under the owner's feet", fire_at and fire_at.x == 0 and fire_at.y == 0)
+check("the fire lasts " .. FIRE_SECONDS .. " seconds", fire_at and fire_at.secs == FIRE_SECONDS)
+check("he walks (not runs) to his seat", walking == true)
+local r = dest and math.sqrt(dest.x ^ 2 + dest.y ^ 2) or -1
+check("his seat is " .. SIT_RADIUS .. " yards from the fire", math.abs(r - SIT_RADIUS) < 1e-6)
+local seat_angle = dest and math.atan2(dest.y, dest.x) or 0
+check("he walks off at an angle, not straight back (swung " .. SIT_SWING .. " rad)", math.abs(seat_angle - SIT_SWING) < 1e-6)
+
+local turn_ev, fire_ev, bye_ev
+for id, e in pairs(events) do
+    if e.ms == 200 then turn_ev = id elseif e.ms == 1000 and e.times == 0 then fire_ev = id
+    elseif e.times == 1 then bye_ev = id end
+end
+check("he goes when the fire does (one timer at " .. FIRE_SECONDS .. " s)", bye_ev and events[bye_ev].ms == FIRE_SECONDS * 1000)
+
+b.x, b.y = dest.x, dest.y
+local sat_before_facing, turns = false, 0
+while events[turn_ev] and turns < 100 do
+    if stand == 1 then sat_before_facing = true end
+    events[turn_ev].fn(turn_ev, 0, 0, b); turns = turns + 1
+end
+local to_fire = math.atan2(0 - b.y, 0 - b.x)
+local off = math.abs((to_fire - b.o + math.pi) % (2 * math.pi) - math.pi)
+check("he faces the fire", off <= 0.05)
+check("he turned in steps (" .. turns .. " ticks), not a snap", turns > 2)
+check("he sat only after facing it", not sat_before_facing and stand == 1)
+check("he can't be targeted while he sits", bit.band(flags, 0x02000000) ~= 0)
+
+events[fire_ev].fn(fire_ev, 0, 0, b)
+local in_fire, outside = nil, nil
+for _, h in ipairs(hurt) do if h.target == owner_p then in_fire = h end if h.target == passer then outside = h end end
+check("the owner, standing in it, burns: " .. FIRE_PCT_PER_TIER .. "% x tier 3 of 1000 = 60", in_fire and in_fire.amount == 60)
+check("by their own hand (Sargobras is never in a fight)", in_fire and in_fire.who == owner_p)
+check("as fire damage", in_fire and in_fire.school == 2)
+check("someone 5 yards off doesn't", outside == nil)
+
+print("")
+if fails == 0 then print("All " .. checks .. " checks passed") else print(fails .. " of " .. checks .. " checks failed") end
+os.exit(fails == 0 and 0 or 1)

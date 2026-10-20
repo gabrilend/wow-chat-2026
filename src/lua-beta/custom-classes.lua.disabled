@@ -1,0 +1,482 @@
+
+CustomClasses = {}
+
+local SELECTOR_NPC_ENTRIES = {
+    [1]  = 900001,
+    [2]  = 900002,
+    [3]  = 900003,
+    [4]  = 900004,
+    [5]  = 900005,
+    [6]  = 900006,
+    [7]  = 900007,
+    [8]  = 900008,
+    [10] = 900010,
+    [11] = 900011,
+}
+
+
+local DATA_KEY_CUSTOM_CLASS = "custom-class"
+
+local NEARBY_PLAYER_RANGE = 30
+
+local NEARBY_CHECK_INTERVAL = 5000
+
+local LEVEL_RANGE = 3
+
+local CLASS_NAMES = {
+    [1] = "Warrior", [2] = "Paladin", [3] = "Hunter", [4] = "Rogue",
+    [5] = "Priest", [6] = "Death Knight", [7] = "Shaman", [8] = "Mage",
+    [9] = "Warlock", [11] = "Druid",
+}
+
+
+CustomClasses.definitions = {}
+
+
+CustomClasses.definitions[1001] = {
+    name = "Spellblade",
+    baseClass = 1,
+    spells = {
+        { id = 78,   level = 1,  sourceClass = 1 },
+        { id = 284,  level = 4,  sourceClass = 1 },
+        { id = 100,  level = 4,  sourceClass = 1 },
+        { id = 772,  level = 4,  sourceClass = 1 },
+        { id = 6546, level = 10, sourceClass = 1 },
+        { id = 6343, level = 6,  sourceClass = 1 },
+        { id = 1715, level = 8,  sourceClass = 1 },
+        { id = 133,  level = 1,  sourceClass = 8 },
+        { id = 143,  level = 6,  sourceClass = 8 },
+        { id = 145,  level = 12, sourceClass = 8 },
+        { id = 116,  level = 4,  sourceClass = 8 },
+        { id = 205,  level = 8,  sourceClass = 8 },
+        { id = 837,  level = 14, sourceClass = 8 },
+        { id = 122,  level = 10, sourceClass = 8 },
+        { id = 2136, level = 6,  sourceClass = 8 },
+    },
+    tomeClasses = { 1, 8 },
+    description = "A warrior who channels arcane fire and frost through their weapons.",
+}
+
+CustomClasses.definitions[1002] = {
+    name = "Shadow Apostle",
+    baseClass = 5,
+    spells = {
+        { id = 585,  level = 1,  sourceClass = 5 },
+        { id = 591,  level = 6,  sourceClass = 5 },
+        { id = 589,  level = 4,  sourceClass = 5 },
+        { id = 594,  level = 10, sourceClass = 5 },
+        { id = 8092, level = 10, sourceClass = 5 },
+        { id = 8102, level = 16, sourceClass = 5 },
+        { id = 2944, level = 20, sourceClass = 5 },
+        { id = 702,  level = 4,  sourceClass = 9 },
+        { id = 1108, level = 14, sourceClass = 9 },
+        { id = 980,  level = 8,  sourceClass = 9 },
+        { id = 1014, level = 18, sourceClass = 9 },
+        { id = 172,  level = 4,  sourceClass = 9 },
+        { id = 6222, level = 14, sourceClass = 9 },
+    },
+    tomeClasses = { 5, 9 },
+    description = "A priest who has delved into forbidden warlock arts.",
+}
+
+CustomClasses.definitions[1003] = {
+    name = "Beast Shaman",
+    baseClass = 7,
+    spells = {
+        { id = 403,  level = 1,  sourceClass = 7 },
+        { id = 529,  level = 8,  sourceClass = 7 },
+        { id = 548,  level = 14, sourceClass = 7 },
+        { id = 8042, level = 4,  sourceClass = 7 },
+        { id = 8044, level = 8,  sourceClass = 7 },
+        { id = 8045, level = 14, sourceClass = 7 },
+        { id = 324,  level = 8,  sourceClass = 7 },
+        { id = 331,  level = 1,  sourceClass = 7 },
+        { id = 1515, level = 10, sourceClass = 3 },
+        { id = 883,  level = 10, sourceClass = 3 },
+        { id = 2641, level = 10, sourceClass = 3 },
+        { id = 6991, level = 12, sourceClass = 3 },
+        { id = 136,  level = 10, sourceClass = 3 },
+    },
+    tomeClasses = { 3, 7 },
+    description = "A shaman with deep bonds to the animal kingdom.",
+}
+
+CustomClasses.definitions[1004] = {
+    name = "Knight",
+    baseClass = 2,
+    spells = {
+        { id = 1459,  level = 1,  sourceClass = 8 },
+        { id = 20217, level = 4,  sourceClass = 2 },
+
+        { id = 3127,  level = 6,  sourceClass = 2 },
+        { id = 1152,  level = 6,  sourceClass = 2 },
+        { id = 13854, level = 6,  sourceClass = 4 },
+        { id = 20064, level = 6,  sourceClass = 2 },
+        { id = 19297, level = 6,  sourceClass = 3 },
+        { id = 57330, level = 6,  sourceClass = 6 },
+
+        { id = 139,   level = 8,  sourceClass = 5 },
+        { id = 20208, level = 8,  sourceClass = 2 },
+        { id = 16466, level = 8,  sourceClass = 1 },
+
+        { id = 19236, level = 10, sourceClass = 5 },
+        { id = 2983,  level = 10, sourceClass = 4 },
+        { id = 26023, level = 10, sourceClass = 2 },
+
+        { id = 588,   level = 12, sourceClass = 5 },
+        { id = 12974, level = 12, sourceClass = 1 },
+        { id = 34476, level = 12, sourceClass = 3 },
+
+        { id = 6074,  level = 14, sourceClass = 5 },
+        { id = 1460,  level = 14, sourceClass = 8 },
+        { id = 20177, level = 14, sourceClass = 2 },
+        { id = 19306, level = 14, sourceClass = 3 },
+
+        { id = 14751, level = 16, sourceClass = 5 },
+        { id = 53503, level = 16, sourceClass = 2 },
+        { id = 49497, level = 16, sourceClass = 6 },
+
+        { id = 59578, level = 18, sourceClass = 2 },
+        { id = 47515, level = 18, sourceClass = 5 },
+
+        { id = 19750, level = 20, sourceClass = 2 },
+        { id = 53601, level = 20, sourceClass = 2 },
+        { id = 6075,  level = 20, sourceClass = 5 },
+        { id = 7128,  level = 20, sourceClass = 5 },
+    },
+    tomeClasses = { 2, 5, 4, 6, 1, 8, 3 },
+    description = "A holy bodyguard who protects one ally through sacred shields and focused healing. Parry-focused combat with crit scaling.",
+}
+
+
+
+function CustomClasses.loadFromDirectory()
+    print("[CustomClasses] Using hardcoded class definitions (file loading not implemented)")
+end
+
+
+function CustomClasses.getCustomClass(player)
+    local classId = player:GetData(DATA_KEY_CUSTOM_CLASS)
+    if classId and classId ~= 0 then
+        return classId
+    end
+    return nil
+end
+
+function CustomClasses.setCustomClass(player, customClassId)
+    player:SetData(DATA_KEY_CUSTOM_CLASS, customClassId)
+    print("[CustomClasses] " .. player:GetName() .. " selected custom class: " .. customClassId)
+end
+
+function CustomClasses.getDefinition(customClassId)
+    return CustomClasses.definitions[customClassId]
+end
+
+function CustomClasses.canLearnSpell(player, spellId)
+    local customClassId = CustomClasses.getCustomClass(player)
+    if not customClassId then
+        return true
+    end
+
+    local def = CustomClasses.getDefinition(customClassId)
+    if not def then
+        return true
+    end
+
+    for _, spellData in ipairs(def.spells) do
+        if spellData.id == spellId then
+            return true
+        end
+    end
+    return false
+end
+
+function CustomClasses.getTomeClassesFor(player)
+    local customClassId = CustomClasses.getCustomClass(player)
+    if not customClassId then
+        return { player:GetClass() }
+    end
+
+    local def = CustomClasses.getDefinition(customClassId)
+    if not def or not def.tomeClasses then
+        return { player:GetClass() }
+    end
+
+    return def.tomeClasses
+end
+
+function CustomClasses.getEligibleClasses(player)
+    local customClassId = CustomClasses.getCustomClass(player)
+    if not customClassId then return {} end
+
+    local def = CustomClasses.getDefinition(customClassId)
+    if not def or not def.tomeClasses then return {} end
+
+    local playerLevel = player:GetLevel()
+    local minLevel    = playerLevel - LEVEL_RANGE
+    local maxLevel    = playerLevel + LEVEL_RANGE
+
+    local eligible    = {}
+    local seenClasses = {}
+
+    for _, classId in ipairs(def.tomeClasses) do
+        if not seenClasses[classId] then
+            seenClasses[classId] = true
+            local count = CustomClasses.countLearnableSpells(player, def, classId, minLevel, maxLevel)
+            if count > 0 then
+                table.insert(eligible, classId)
+            end
+        end
+    end
+
+    return eligible
+end
+
+
+local MAX_NPC_LEVEL = 80
+local MAX_PLAYER_LEVEL = 20
+
+function CustomClasses.getScaledSpellLevel(trainerLevel)
+    local ratio = trainerLevel / MAX_NPC_LEVEL
+    return math.floor(ratio * MAX_PLAYER_LEVEL)
+end
+
+function CustomClasses.trainerCanTeachSpell(trainerLevel, spellRequiredLevel)
+    local scaledLevel = CustomClasses.getScaledSpellLevel(trainerLevel)
+    local minLevel = scaledLevel - 2
+    local maxLevel = scaledLevel + 2
+    return spellRequiredLevel >= minLevel and spellRequiredLevel <= maxLevel
+end
+
+
+function CustomClasses.countLearnableSpells(player, customClassDef, sourceClass, minLevel, maxLevel)
+    local count = 0
+
+    for _, spellData in ipairs(customClassDef.spells) do
+        if spellData.sourceClass == sourceClass then
+            if spellData.level >= minLevel and spellData.level <= maxLevel then
+                if not player:HasSpell(spellData.id) then
+                    count = count + 1
+                end
+            end
+        end
+    end
+
+    return count
+end
+
+
+local SELECTOR_SHARE_RANGE = 20
+
+function CustomClasses.spawnSelectorNPC(player)
+    local px, py, pz, po = player:GetLocation()
+    local map            = player:GetMap()
+    local race           = player:GetRace()
+
+    local nearbyCreatures = player:GetCreaturesInRange(SELECTOR_SHARE_RANGE)
+    if nearbyCreatures then
+        for _, creature in ipairs(nearbyCreatures) do
+            local entry = creature:GetEntry()
+            for _, selectorEntry in pairs(SELECTOR_NPC_ENTRIES) do
+                if entry == selectorEntry then
+                    print("[CustomClasses] Selector NPC already nearby - skipping spawn for " .. player:GetName())
+                    return nil
+                end
+            end
+        end
+    end
+
+    local npcEntry = SELECTOR_NPC_ENTRIES[race]
+    if not npcEntry then
+        print("[CustomClasses] No selector NPC entry for race " .. race)
+        return nil
+    end
+
+    local spawnDist = 3
+    local x         = px + math.cos(po) * spawnDist
+    local y         = py + math.sin(po) * spawnDist
+    local z         = map:GetHeight(x, y) or pz
+
+    local npcFacing = po + math.pi
+    local npc       = player:SpawnCreature(npcEntry, x, y, z, npcFacing, 1, 0)
+
+    if npc then
+        npc:RegisterEvent(CustomClasses.checkNearbyPlayers, NEARBY_CHECK_INTERVAL, 0)
+        print("[CustomClasses] Spawned selector NPC (race " .. race .. ", entry " .. npcEntry .. ") for " .. player:GetName())
+    else
+        print("[CustomClasses] Failed to spawn selector NPC (entry " .. npcEntry .. " not in DB?)")
+    end
+
+    return npc
+end
+
+function CustomClasses.checkNearbyPlayers(eventId, delay, repeats, npc)
+    local nearbyPlayers = npc:GetPlayersInRange(NEARBY_PLAYER_RANGE)
+    if not nearbyPlayers or #nearbyPlayers == 0 then
+        print("[CustomClasses] No players nearby - despawning selector NPC")
+        npc:RemoveEvents()
+        npc:DespawnOrUnsummon(0)
+    end
+end
+
+function CustomClasses.onNPCGossip(event, player, npc)
+    if player:GetLevel() > 1 then
+        player:SendBroadcastMessage("|cff888888The figure seems uninterested in you.|r")
+        return false
+    end
+
+    local currentClass = CustomClasses.getCustomClass(player)
+    if currentClass then
+        player:SendBroadcastMessage("|cff888888You have already chosen your path.|r")
+        return false
+    end
+
+    player:GossipClearMenu()
+
+    for classId, def in pairs(CustomClasses.definitions) do
+        if def.baseClass == player:GetClass() then
+            player:GossipMenuAddItem(0, def.name, 0, classId)
+        end
+    end
+
+    player:GossipMenuAddItem(0, "Stay with my training (Base Class)", 0, 0)
+
+    player:GossipSendMenu(1, npc)
+    return true
+end
+
+function CustomClasses.onNPCGossipSelect(event, player, npc, sender, intid, code)
+    player:GossipComplete()
+
+    if intid == 0 then
+        player:SendBroadcastMessage("|cff00ff00You have chosen to follow your original training.|r")
+        return
+    end
+
+    local def = CustomClasses.getDefinition(intid)
+    if def then
+        CustomClasses.setCustomClass(player, intid)
+        player:SendBroadcastMessage("|cff00ffff You have become a " .. def.name .. "!|r")
+        player:SendBroadcastMessage("|cff888888" .. def.description .. "|r")
+    else
+        player:SendBroadcastMessage("|cffff0000Unknown class selection.|r")
+    end
+end
+
+
+function CustomClasses.onFirstLogin(event, player)
+    if player:GetLevel() > 1 then
+        return
+    end
+
+    player:RegisterEvent(function(eventId, delay, repeats, player)
+        CustomClasses.spawnSelectorNPC(player)
+    end, 2000, 1)
+
+    print("[CustomClasses] Scheduled NPC spawn for new character: " .. player:GetName())
+end
+
+function CustomClasses.onLogin(event, player)
+    local customClassId = CustomClasses.getCustomClass(player)
+    if customClassId then
+        local def = CustomClasses.getDefinition(customClassId)
+        if def then
+            print("[CustomClasses] " .. player:GetName() .. " logged in as " .. def.name)
+        end
+    end
+end
+
+
+function CustomClasses.handleChat(event, player, message)
+    if message == "#customclass" then
+        local classId = CustomClasses.getCustomClass(player)
+        if classId then
+            local def = CustomClasses.getDefinition(classId)
+            player:SendBroadcastMessage("Custom class: " .. (def and def.name or "Unknown") .. " (ID: " .. classId .. ")")
+        else
+            player:SendBroadcastMessage("No custom class - using base class")
+        end
+        return false
+    end
+
+    if message:sub(1, 10) == "#customset" then
+        local classIdStr = message:sub(12)
+        local classId = tonumber(classIdStr)
+        if classId then
+            CustomClasses.setCustomClass(player, classId)
+            local def = CustomClasses.getDefinition(classId)
+            player:SendBroadcastMessage("Set custom class to: " .. (def and def.name or "Unknown"))
+        else
+            player:SendBroadcastMessage("Usage: #customset <classId>")
+        end
+        return false
+    end
+
+    if message == "#customclear" then
+        player:SetData(DATA_KEY_CUSTOM_CLASS, nil)
+        player:SendBroadcastMessage("Custom class cleared - now using base class")
+        return false
+    end
+
+    if message == "#customlist" then
+        player:SendBroadcastMessage("Available custom classes:")
+        for classId, def in pairs(CustomClasses.definitions) do
+            player:SendBroadcastMessage("  " .. classId .. ": " .. def.name .. " (base: " .. def.baseClass .. ")")
+        end
+        return false
+    end
+
+    if message == "#customspawn" then
+        CustomClasses.spawnSelectorNPC(player)
+        return false
+    end
+
+    if message == "#trainerinfo" then
+        local customClassId = CustomClasses.getCustomClass(player)
+        if not customClassId then
+            player:SendBroadcastMessage("No custom class - base class players use world trainers")
+            return false
+        end
+
+        local def         = CustomClasses.getDefinition(customClassId)
+        local playerLevel = player:GetLevel()
+        local minLevel    = playerLevel - LEVEL_RANGE
+        local maxLevel    = playerLevel + LEVEL_RANGE
+
+        player:SendBroadcastMessage("Eligible trainers at level " .. playerLevel .. " (range " .. minLevel .. "-" .. maxLevel .. "):")
+
+        local eligibleClasses = CustomClasses.getEligibleClasses(player)
+        local numEligible     = #eligibleClasses
+
+        if numEligible > 0 then
+            for _, classId in ipairs(eligibleClasses) do
+                local count     = CustomClasses.countLearnableSpells(player, def, classId, minLevel, maxLevel)
+                local className = CLASS_NAMES[classId] or "Unknown"
+                local pct       = math.floor(100 / numEligible)
+                player:SendBroadcastMessage("  " .. className .. ": " .. count .. " spells (" .. pct .. "% chance)")
+            end
+            player:SendBroadcastMessage("Equal probability selection: 1/" .. numEligible .. " per class")
+        else
+            player:SendBroadcastMessage("No learnable spells - no trainer can spawn")
+        end
+        return false
+    end
+end
+
+
+RegisterPlayerEvent(30, CustomClasses.onFirstLogin)
+
+RegisterPlayerEvent(3, CustomClasses.onLogin)
+
+RegisterPlayerEvent(18, CustomClasses.handleChat)
+
+for race, entry in pairs(SELECTOR_NPC_ENTRIES) do
+    RegisterCreatureGossipEvent(entry, 1, CustomClasses.onNPCGossip)
+    RegisterCreatureGossipEvent(entry, 2, CustomClasses.onNPCGossipSelect)
+end
+
+
+print("[CustomClasses] Custom class system loaded")
+print("[CustomClasses] Test commands: #customclass, #customset, #customclear, #customlist, #customspawn")
+print("[CustomClasses] Trainer info: #trainerinfo")
+print("[CustomClasses] NOTE: Requires creature_template entries 900001-900011 (selector NPCs)")

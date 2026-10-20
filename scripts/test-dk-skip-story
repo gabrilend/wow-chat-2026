@@ -1,0 +1,234 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+
+local fails, checks = 0, 0
+local function check(ok, what)
+    checks = checks + 1
+    if ok then print("  ok:   " .. what) else print("  FAIL: " .. what); fails = fails + 1 end
+end
+
+local TAUREN = 6
+local menu, heard, executed, items, quests_touched = {}, {}, {}, {}, {}
+local rewarded, flags, money, xp_while_rewarding = {}, 0, 2000, {}
+local QUEST_ITEM = { [12619] = 38707, [12679] = 39320 }
+local events, timers, clock = {}, {}, 0
+local tele, dead, raised, buddies_given = nil, false, 0, 0
+local in_world = true
+local spawned = {}
+local x, y, z = 2358, -5667, 426
+
+local function creature_standin(entry)
+    local c = { entry = entry, auras = {}, casts = {}, emote = nil, facing = nil, gone = false, said = nil }
+    c.guid = "creature-" .. entry
+    function c:GetGUID() return self.guid end
+    function c:SetFacing(o) self.facing = o end
+    function c:EmoteState(e) self.emote = e end
+    function c:AddAura(spell) self.auras[spell] = true; return true end
+    function c:RemoveAura(spell) self.auras[spell] = nil end
+    function c:CastSpell(target, spell) self.casts[#self.casts + 1] = { target = target, spell = spell } end
+    function c:DespawnOrUnsummon() self.gone = true end
+    function c:SendUnitSay(t) self.said = t end
+    return c
+end
+
+local dk
+dk = setmetatable({
+    GetClass = function() return 6 end, GetGUIDLow = function() return 900 end, GetGUID = function() return 900 end,
+    GetName = function() return "Rotbrow" end, GetAccountId = function() return 77 end,
+    IsInGuild = function() return true end, GetRace = function() return TAUREN end,
+    GetRaceMask = function() return bit.lshift(1, TAUREN - 1) end,
+    GossipClearMenu = function() menu = {} end,
+    GossipMenuAddItem = function(_, _, text, _, intid) menu[#menu + 1] = { text = text, intid = intid } end,
+    GossipSendMenu = function() end, GossipComplete = function() end,
+    GetQuestRewardStatus = function(_, q) return rewarded[q] == true end,
+    AddQuest = function(_, q) quests_touched[#quests_touched + 1] = q end,
+    CompleteQuest = function() end,
+    RewardQuest = function(_, q)
+        rewarded[q] = true
+        money = money + 5000
+        xp_while_rewarding[#xp_while_rewarding + 1] = bit.band(flags, 0x02000000) == 0
+        if QUEST_ITEM[q] then items[QUEST_ITEM[q]] = (items[QUEST_ITEM[q]] or 0) + 1 end
+    end,
+    HasFlag = function(_, field, f) return field == 150 and bit.band(flags, f) ~= 0 end,
+    SetPlayerFlag = function(_, f) flags = bit.bor(flags, f) end,
+    RemovePlayerFlag = function(_, f) flags = bit.band(flags, bit.bnot(f)) end,
+    GetCoinage = function() return money end,
+    SetCoinage = function(_, m) money = m end,
+    GetItemCount = function(_, e) return items[e] or 0 end,
+    RemoveItem = function(_, e, n) items[e] = (items[e] or 0) - n end,
+    HasItem = function(_, entry) return (items[entry] or 0) > 0 end,
+    AddItem = function(_, entry, n) items[entry] = (items[entry] or 0) + (n or 1); return {} end,
+    SendBroadcastMessage = function(_, t) heard[#heard + 1] = t end,
+    Teleport = function(_, map, tx, ty, tz, o) tele = { map = map, x = tx, y = ty, z = tz, o = o }; x, y, z = tx, ty, tz end,
+    RegisterEvent = function(self, fn, ms, n) events[#events + 1] = { fn = fn, ms = ms } end,
+    GetMapId = function() return tele and tele.map or 609 end,
+    GetX = function() return x end, GetY = function() return y end, GetZ = function() return z end, GetO = function() return 0 end,
+    GetDistance = function(_, px, py, pz) return math.sqrt((px - x) ^ 2 + (py - y) ^ 2 + (pz - z) ^ 2) end,
+    IsDead = function() return dead end,
+    ResurrectPlayer = function(_, pct) dead = false; raised = raised + 1 end,
+    CastSpell = function() end,
+    SpawnCreature = function(_, entry, sx, sy, sz, o, kind, ms)
+        local c = creature_standin(entry); c.x, c.y, c.z, c.o, c.despawn_ms = sx, sy, sz, o, ms
+        spawned[entry] = c; return c
+    end,
+    GetMap = function() return { GetWorldObject = function(_, g)
+        for _, c in pairs(spawned) do if c.guid == g then return c end end end } end,
+}, { __index = function() return function() end end })
+local creature = setmetatable({}, { __index = function() return function() end end })
+local handlers = {}
+local env = setmetatable({
+    RegisterCreatureGossipEvent = function(entry, ev, fn) if entry == 7180001 then handlers[#handlers + 1] = fn end end,
+    RegisterPlayerEvent = function() end,
+    CharDBQuery = function(sql)
+        if sql:find("SHOW COLUMNS FROM basic_718_souls") then return {} end
+        if sql:find("FROM basic_718_souls") then
+            return { GetUInt32 = function(_, c) return ({ 0, 0, 0, 0, 0 })[c + 1] end }
+        end
+        if sql:find("FROM characters WHERE account") then
+            local rows, i = { { 501, "Hoofwise", 60 } }, 1
+            return { GetUInt32 = function(_, c) return rows[i][c + 1] end, GetString = function(_, c) return rows[i][c + 1] end,
+                     NextRow = function() i = i + 1; return rows[i] ~= nil end }
+        end
+        return nil
+    end,
+    CharDBExecute = function(sql) executed[#executed + 1] = sql end,
+    WorldDBQuery = function(sql)
+        local rows, i = { { 38707, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 39320, 38633, 0, 0, 0, 0, 0 } }, 1
+        return { GetUInt32 = function(_, c) return rows[i][c + 1] end, NextRow = function() i = i + 1; return rows[i] ~= nil end }
+    end,
+    CreateLuaEvent = function(fn, ms) timers[#timers + 1] = { fn = fn, at = clock + ms } end,
+    GetPlayerByGUID = function() return in_world and dk or nil end,
+    BuddiesGiveDeathKnightBuddies = function() buddies_given = buddies_given + 1 end,
+    print = function() end,
+}, { __index = _G })
+local chunk = assert(loadfile(DIR .. "/src/lua-basic/death-knight-souls.lua"))
+setfenv(chunk, env)()
+local on_hello, on_select = handlers[1], handlers[2]
+local traded
+for i = 1, 60 do
+    local name = debug.getupvalue(on_select, i)
+    if not name then break end
+    if name == "give_soul" then debug.setupvalue(on_select, i, function(_, guid, done) traded = guid; done(dk) end) end
+    if name == "vanish" then debug.setupvalue(on_select, i, function() end) end
+end
+local function advance(ms)
+    local stop_at = clock + ms
+    while true do
+        table.sort(timers, function(a, b) return a.at < b.at end)
+        local t = timers[1]
+        if not t or t.at > stop_at then break end
+        table.remove(timers, 1)
+        clock = t.at
+        t.fn()
+    end
+    clock = stop_at
+end
+
+print("the menu while a soul is owed")
+on_hello(1, dk, creature)
+local function texts() local t = {} for _, m in ipairs(menu) do t[#t + 1] = m.text end return table.concat(t, " | ") end
+check(texts():find("I'd rather skip the story%.") ~= nil, "Sargobras offers to skip the story")
+check(texts():find("Give Hoofwise %(level 60%) to the Lich King%.") ~= nil, "the soul is offered as before")
+
+print("asking to skip")
+on_select(2, dk, creature, 0, 3)
+check(texts():find("I.d rather skip") == nil, "the skip option is gone once asked")
+check(texts():find("Give Hoofwise %(level 60%) to the Lich King, and skip the story%.") ~= nil, "each soul now carries the skip")
+check(texts():find("I changed my mind, I want to follow the Lich King for a time%.") ~= nil, "the way back is offered")
+
+print("changing one's mind, then asking again")
+on_select(2, dk, creature, 0, 4)
+check(texts():find("I'd rather skip the story%.") ~= nil and texts():find("and skip the story") == nil, "taken back: the souls are plain again")
+on_select(2, dk, creature, 0, 3)
+check(texts():find("and skip the story") ~= nil, "asked again: the skip is back")
+
+print("the trade, then the skip")
+on_select(2, dk, creature, 0, 501)
+check(traded == 501, "the soul is traded")
+check(#events == 1, "the skip waits a moment after the trade")
+check(buddies_given == 0, "a skipper's buddies wait for the rise")
+events[1].fn(0, 0, 0, dk)
+check(items[38707] == 1, "the Runed Soulblade is given")
+local others = 0
+for entry, n in pairs(items) do if entry ~= 38707 then others = others + n end end
+check(others == 0, "and no other item")
+local special = {}
+for _, q in ipairs(quests_touched) do if q >= 12739 and q <= 12750 then special[#special + 1] = q end end
+check(rewarded[12619] and rewarded[12801] and rewarded[13166], "the story's quests are rewarded (what they teach, and their talent points)")
+check(#special == 1 and special[1] == 12739, "only the tauren's own A Special Surprise (12739)")
+local paid = false
+for _, w in ipairs(xp_while_rewarding) do if w then paid = true end end
+check(#xp_while_rewarding > 0 and not paid, "no experience: held off while every quest was rewarded")
+check(bit.band(flags, 0x02000000) == 0, "and experience is on again afterwards")
+check(money == 2000, "no money: back to what it was (" .. money .. ")")
+check((items[39320] or 0) == 0, "no gear: the cloak is taken back")
+local marked = false
+for _, s in ipairs(executed) do if s:find("SET skipped = 1") and s:find("dk = 900") then marked = true end end
+check(marked, "the ledger is marked as skipped")
+local d = tele and math.sqrt((tele.x - 2337.8) ^ 2 + (tele.y - (-5676.7)) ^ 2) or 99
+check(tele and tele.map == 0 and math.abs(tele.z - 382.3) < 0.01 and d <= 6.01, string.format("placed off the Ebon Hold, within 6 yards of its spot (%.2f)", d))
+
+print("the fall")
+in_world = false
+advance(4000)
+in_world = true
+advance(1000)
+check(spawned[7180002] == nil, "nothing happens while still falling")
+x, y, z = tele.x, tele.y, 154.1
+dead = true
+advance(250)
+local riser = spawned[7180002]
+check(riser == nil, "found dead: the scene starts, Sargobras not yet there")
+check(#timers > 0, "the watch outlasted the loading screen (it once ended there)")
+
+print("the rise")
+advance(500)
+riser = spawned[7180002]
+check(riser ~= nil, "a new Sargobras (7180002) appears")
+check(riser and math.abs(math.sqrt((riser.x - x) ^ 2 + (riser.y - y) ^ 2) - 4) < 0.01, "four yards from the body")
+advance(500)
+check(riser.emote == 29 and riser.facing ~= nil, "he points at the body (held)")
+local want = math.atan2(y - riser.y, x - riser.x) % (2 * math.pi)
+check(math.abs(riser.facing - want) < 0.001, "facing it")
+advance(700)
+check(riser.auras[16245], "his animation is frozen mid-point")
+advance(500)
+local circle = spawned[23837]
+check(circle and circle.auras[62296] and circle.x == x and circle.y == y, "a red circle appears under the body")
+check(raised == 0, "not raised yet")
+advance(2500)
+check(raised == 1 and not dead, "the death knight is raised")
+local on_dk, on_him = false, false
+for _, c in ipairs(riser.casts) do
+    if c.spell == 24171 and c.target == dk then on_dk = true end
+    if c.spell == 24171 and c.target == riser then on_him = true end
+end
+check(on_dk and on_him, "the resurrection effect plays on both")
+check(not riser.auras[16245], "his freeze is lifted")
+check(buddies_given == 1, "the buddies are given at the rise")
+advance(1500)
+check(riser.gone and circle.gone, "he and the circle are gone")
+check(riser.despawn_ms >= 6200 - 500, "his own despawn timer outlasts the scene (a backstop)")
+
+print("a second skip, already carrying a runeblade")
+on_select(2, dk, creature, 0, 3)
+on_select(2, dk, creature, 0, 501)
+events[#events].fn(0, 0, 0, dk)
+check(items[38707] == 1, "no second runeblade")
+local said = table.concat(heard, " ")
+check(said:find("I give nothing twice") ~= nil, "and he says why")
+
+print("a fall that doesn't kill")
+dead = false
+local errors = {}
+env.print = function(t) errors[#errors + 1] = t end
+local before = buddies_given
+advance(45000)
+check(#errors == 1 and errors[1]:find("still alive") ~= nil, "logged as an error after the watch runs out")
+check(buddies_given == before + 1, "the buddies are given all the same")
+
+print("")
+print(fails == 0 and ("All " .. checks .. " checks passed") or (fails .. " of " .. checks .. " checks failed"))
+os.exit(fails == 0 and 0 or 1)

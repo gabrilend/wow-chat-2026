@@ -1,0 +1,481 @@
+#!/bin/bash
+
+set -e
+set -o pipefail
+
+SELF_DIR="${BASH_SOURCE[0]%/*}"
+[[ "${SELF_DIR}" == "${BASH_SOURCE[0]}" ]] && SELF_DIR="."
+
+EXPLICIT_DIR=""
+DIR_SCAN_ARGS=("$@")
+for (( dir_scan_index = 0; dir_scan_index < ${#DIR_SCAN_ARGS[@]}; dir_scan_index++ )); do
+    case "${DIR_SCAN_ARGS[dir_scan_index]}" in
+        --dir)   EXPLICIT_DIR="${DIR_SCAN_ARGS[dir_scan_index + 1]:-}" ;;
+        --dir=*) EXPLICIT_DIR="${DIR_SCAN_ARGS[dir_scan_index]#*=}"    ;;
+    esac
+done
+
+if [[ -n "${EXPLICIT_DIR}" ]]; then
+    DIR_CANDIDATE="${EXPLICIT_DIR}"
+    DIR_SOURCE="the --dir argument"
+else
+    DIR_CANDIDATE="${SELF_DIR}/.."
+    DIR_SOURCE="where this script lives, ${BASH_SOURCE[0]}"
+fi
+
+if [[ ! -d "${DIR_CANDIDATE}" ]]; then
+    echo "Project directory does not exist: ${DIR_CANDIDATE}"
+    echo "  This came from ${DIR_SOURCE}."
+    echo "  Nothing has been changed."
+    exit 1
+fi
+
+DIR="$( builtin cd -P -- "${DIR_CANDIDATE}" && pwd )"
+
+
+if [[ -f "${DIR}/.profile" ]]; then
+    PROFILE="$(cat "${DIR}/.profile")"
+else
+    PROFILE="release"
+fi
+DEFAULT_PROFILE="${PROFILE}"
+
+
+declare -A PROFILE_COMMIT=(
+    ["alpha"]=""
+    ["beta"]="2a2211cd8f3d"
+    ["release"]="2a2211cd8f3d"
+    ["vanilla"]="2a2211cd8f3d"
+    ["basic"]="2a2211cd8f3d"
+    ["cc-test"]="2a2211cd8f3d"
+)
+
+declare -A PROFILE_MODULES=(
+    ["alpha"]="mod-eluna mod-transmog"
+    ["beta"]="mod-ale mod-aoe-loot mod-grownup mod-playerbots"
+    ["release"]="mod-ale mod-playerbots"
+    ["vanilla"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
+    ["basic"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
+    ["cc-test"]="mod-playerbots mod-ale"
+)
+
+declare -A PROFILE_MODULE_COMMITS=(
+    ["release:mod-eluna"]="1abf244"
+    ["beta:mod-playerbots"]="037c0141"
+    ["release:mod-playerbots"]="037c0141"
+    ["vanilla:mod-playerbots"]="037c0141"
+    ["basic:mod-playerbots"]="037c0141"
+    ["cc-test:mod-playerbots"]="037c0141"
+    ["beta:mod-ale"]="cead0cb"
+    ["release:mod-ale"]="cead0cb"
+    ["vanilla:mod-ale"]="cead0cb"
+    ["basic:mod-ale"]="cead0cb"
+    ["cc-test:mod-ale"]="cead0cb"
+)
+
+declare -A MODULE_REPOS=(
+    ["mod-ale"]="https://github.com/azerothcore/mod-ale.git"
+    ["mod-eluna"]="https://github.com/azerothcore/mod-eluna.git"
+    ["mod-aoe-loot"]="https://github.com/azerothcore/mod-aoe-loot.git"   # 2026-10-09: AzerothCore's own, was the TerraByte-tbwps fork (owner: "let's switch")
+    ["mod-grownup"]="https://github.com/webluke/mod-grownup"
+    ["mod-playerbots"]="https://github.com/liyunfan1223/mod-playerbots.git --branch=master"
+    ["mod-solo-lfg"]="https://github.com/azerothcore/mod-solo-lfg.git"
+    ["mod-fireworks-on-level"]="https://github.com/azerothcore/mod-fireworks-on-level.git"
+)
+
+
+FORCE_REBUILD=false
+COMPILE_ARGS=()
+
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "${1}" in
+            --profile)
+                if [[ -n "${2:-}" ]]; then
+                    PROFILE="${2}"
+                    COMPILE_ARGS+=("--profile" "${2}")
+                    shift 2
+                else
+                    echo "Error: --profile requires a profile name"
+                    exit 1
+                fi
+                ;;
+            --profile=*)
+                PROFILE="${1#*=}"
+                if [[ -z "${PROFILE}" ]]; then
+                    echo "Error: --profile requires a profile name"
+                    exit 1
+                fi
+                COMPILE_ARGS+=("--profile" "${PROFILE}")
+                shift
+                ;;
+            --dir)
+                if [[ -n "${2:-}" ]]; then
+                    COMPILE_ARGS+=("--dir" "${2}")
+                    shift 2
+                else
+                    echo "Error: --dir requires a path"
+                    exit 1
+                fi
+                ;;
+            --dir=*)
+                COMPILE_ARGS+=("--dir" "${1#*=}")
+                shift
+                ;;
+            --threads)
+                if [[ -n "${2:-}" && "${2}" =~ ^[0-9]+$ ]]; then
+                    COMPILE_ARGS+=("--threads" "${2}")
+                    shift 2
+                else
+                    echo "Error: --threads requires a numeric argument"
+                    exit 1
+                fi
+                ;;
+            --threads=*)
+                threads_value="${1#*=}"
+                if [[ ! "${threads_value}" =~ ^[0-9]+$ ]]; then
+                    echo "Error: --threads requires a numeric argument"
+                    exit 1
+                fi
+                COMPILE_ARGS+=("--threads" "${threads_value}")
+                shift
+                ;;
+            --force)
+                FORCE_REBUILD=true
+                COMPILE_ARGS+=("--force")
+                shift
+                ;;
+            --help|-h)
+                show_help
+                exit 0
+                ;;
+            *)
+                echo "Error: unrecognized argument '${1}'"
+                echo "Run with --help to see available options."
+                exit 1
+                ;;
+        esac
+    done
+}
+
+show_help() {
+    echo "Usage: ./scripts/update [options]"
+    echo ""
+    echo "Update source from git and rebuild."
+    echo "Does NOT touch MySQL, configs, or data files."
+    echo ""
+    echo "Options:"
+    echo "  --dir <path>       Project directory"
+    echo "                     (default: the parent of this script's directory)"
+    echo "  --profile <name>   Use specific profile (default: ${DEFAULT_PROFILE})"
+    echo "  --threads <n>      Number of threads"
+    echo "  --force            Force rebuild even if up-to-date"
+    echo "  --help             Show this help message"
+    echo ""
+    echo "Workflow:"
+    echo "  1. ./scripts/update      - Pull and build to shadow"
+    echo "  2. ./scripts/validate    - Test shadow build"
+    echo "  3. ./scripts/promote     - Copy shadow to main"
+}
+
+
+get_profile_paths() {
+    case "${PROFILE}" in
+        release) AC_CODE_DIR="${DIR}/source-beta"  ;;
+        beta)    AC_CODE_DIR="${DIR}/source-beta"  ;;
+        vanilla) AC_CODE_DIR="${DIR}/source-beta"  ;;
+        basic)   AC_CODE_DIR="${DIR}/source-beta"  ;;
+        cc-test) AC_CODE_DIR="${DIR}/source-beta"  ;;
+        alpha)   AC_CODE_DIR="${DIR}/source-alpha" ;;
+        *)       echo "ERROR: Unknown profile '${PROFILE}'"; exit 1 ;;
+    esac
+    INSTALL_DIR="${DIR}/installed-files-${PROFILE}"
+}
+
+SPINNER_CHARS="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+SPINNER_LEN=10
+CHECK_TMP_DIR="/tmp/wow-chat-2/parallel-checks"
+declare -a PCHECK_NAMES=()
+declare -a PCHECK_DIRS=()
+declare -a PCHECK_COMMITS=()
+
+parallel_check_init() {
+    PCHECK_NAMES=()
+    PCHECK_DIRS=()
+    PCHECK_COMMITS=()
+    rm -rf "${CHECK_TMP_DIR}"
+    mkdir -p "${CHECK_TMP_DIR}"
+}
+
+parallel_check_add() {
+    PCHECK_NAMES+=("$1")
+    PCHECK_DIRS+=("$2")
+    PCHECK_COMMITS+=("${3:-}")
+}
+
+parallel_check_worker() {
+    local name="$1"
+    local repo_dir="$2"
+    local expected_commit="$3"
+    local status_file="${CHECK_TMP_DIR}/${name}.status"
+    echo "checking" > "${status_file}"
+
+    if [[ ! -d "${repo_dir}/.git" ]]; then
+        echo "missing" > "${status_file}"
+        return
+    fi
+
+    local current_head
+    current_head=$(git -C "${repo_dir}" rev-parse HEAD 2>/dev/null)
+
+    if [[ -n "${expected_commit}" ]]; then
+        if [[ "${current_head}" == "${expected_commit}"* ]]; then
+            echo "up-to-date" > "${status_file}"
+        else
+            echo "needs-update" > "${status_file}"
+        fi
+    else
+        git -C "${repo_dir}" fetch --quiet 2>/dev/null || true
+        local remote_head
+        remote_head=$(git -C "${repo_dir}" rev-parse @{u} 2>/dev/null || echo "")
+        if [[ -n "${remote_head}" && "${current_head}" == "${remote_head}" ]]; then
+            echo "up-to-date" > "${status_file}"
+        else
+            echo "needs-update" > "${status_file}"
+        fi
+    fi
+}
+
+parallel_check_display() {
+    local frame="${PARALLEL_CHECK_FRAME:-0}"
+    local spinner_char="${SPINNER_CHARS:$((frame % SPINNER_LEN)):1}"
+
+    for name in "${PCHECK_NAMES[@]}"; do
+        local status_file="${CHECK_TMP_DIR}/${name}.status"
+        local status="checking"
+        [[ -f "${status_file}" ]] && status=$(cat "${status_file}" 2>/dev/null)
+
+        case "${status}" in
+            checking)     printf "  %s Checking %s...\033[K\n" "${spinner_char}" "${name}" ;;
+            up-to-date)   printf "  \033[32m✓\033[0m %s is up-to-date\033[K\n" "${name}" ;;
+            needs-update) printf "  \033[33m↓\033[0m %s needs update\033[K\n" "${name}" ;;
+            missing)      printf "  \033[31m✗\033[0m %s not found\033[K\n" "${name}" ;;
+            *)            printf "  ? %s: %s\033[K\n" "${name}" "${status}" ;;
+        esac
+    done
+}
+
+parallel_check_run() {
+    local -a pids=()
+    local count=${#PCHECK_NAMES[@]}
+
+    [[ $count -eq 0 ]] && return 0
+
+    for i in "${!PCHECK_NAMES[@]}"; do
+        parallel_check_worker "${PCHECK_NAMES[$i]}" "${PCHECK_DIRS[$i]}" "${PCHECK_COMMITS[$i]}" &
+        pids+=($!)
+    done
+
+    parallel_check_display
+
+    PARALLEL_CHECK_FRAME=0
+    while true; do
+        local all_done=true
+        for name in "${PCHECK_NAMES[@]}"; do
+            local status_file="${CHECK_TMP_DIR}/${name}.status"
+            if [[ -f "${status_file}" ]]; then
+                local status=$(cat "${status_file}" 2>/dev/null)
+                [[ "${status}" == "checking" ]] && all_done=false && break
+            else
+                all_done=false
+                break
+            fi
+        done
+
+        [[ "${all_done}" == true ]] && break
+
+        printf "\033[%dA" "${count}"
+        PARALLEL_CHECK_FRAME=$((PARALLEL_CHECK_FRAME + 1))
+        parallel_check_display
+        sleep 0.1
+    done
+
+    printf "\033[%dA" "${count}"
+    parallel_check_display
+
+    for pid in "${pids[@]}"; do
+        wait "${pid}" 2>/dev/null || true
+    done
+
+    declare -gA PARALLEL_CHECK_RESULTS=()
+    local any_needs_update=false
+
+    for name in "${PCHECK_NAMES[@]}"; do
+        local status=$(cat "${CHECK_TMP_DIR}/${name}.status" 2>/dev/null || echo "error")
+        PARALLEL_CHECK_RESULTS["${name}"]="${status}"
+        [[ "${status}" == "needs-update" || "${status}" == "missing" ]] && any_needs_update=true
+    done
+
+    rm -rf "${CHECK_TMP_DIR}"
+    [[ "${any_needs_update}" == true ]] && return 1
+    return 0
+}
+
+
+parse_args "$@"
+get_profile_paths
+
+COMMIT="${PROFILE_COMMIT[$PROFILE]}"
+MODULES="${PROFILE_MODULES[$PROFILE]}"
+
+echo "Updating profile: ${PROFILE}"
+echo ""
+
+if [[ ! -d "${AC_CODE_DIR}/.git" ]]; then
+    echo "Error: Source not found. Run './scripts/install' first."
+    exit 1
+fi
+
+source "${DIR}/patches/patches.sh"
+
+reset_source_trees
+
+for mod_name in ${MODULES}; do
+    mod_dir="${AC_CODE_DIR}/modules/${mod_name}"
+    mod_url="${MODULE_REPOS[$mod_name]:-}"
+    mod_url="${mod_url%% *}"                          # the address, without "--branch=..."
+    [[ -d "${mod_dir}/.git" && -n "${mod_url}" ]] || continue
+    have_url="$(git -C "${mod_dir}" remote get-url origin)"
+    if [[ "${have_url}" != "${mod_url}" ]]; then
+        echo "  ${mod_name}: cloned from ${have_url}, wanted ${mod_url}; removing it to clone again"
+        rm -rf "${mod_dir}"
+    fi
+done
+
+needs_rebuild=false
+
+if [[ "${FORCE_REBUILD}" == true ]]; then
+    echo "Force rebuild requested"
+    needs_rebuild=true
+else
+    parallel_check_init
+    parallel_check_add "Core" "${AC_CODE_DIR}" "${COMMIT}"
+
+    for mod_name in ${MODULES}; do
+        mod_dir="${AC_CODE_DIR}/modules/${mod_name}"
+        mod_commit="${PROFILE_MODULE_COMMITS[${PROFILE}:${mod_name}]:-}"
+        parallel_check_add "${mod_name}" "${mod_dir}" "${mod_commit}"
+    done
+
+    echo "Checking for updates..."
+    if ! parallel_check_run; then
+        needs_rebuild=true
+    fi
+    echo ""
+
+    if [[ "${PARALLEL_CHECK_RESULTS[Core]:-}" == "needs-update" ]]; then
+        echo "Updating Core..."
+        if [[ -n "${COMMIT}" ]]; then
+            git -C "${AC_CODE_DIR}" fetch
+            git -C "${AC_CODE_DIR}" checkout "${COMMIT}"
+        else
+            git -C "${AC_CODE_DIR}" pull --rebase
+        fi
+    fi
+
+    for mod_name in ${MODULES}; do
+        mod_dir="${AC_CODE_DIR}/modules/${mod_name}"
+        mod_commit="${PROFILE_MODULE_COMMITS[${PROFILE}:${mod_name}]:-}"
+        mod_repo="${MODULE_REPOS[$mod_name]:-}"
+
+        if [[ "${PARALLEL_CHECK_RESULTS[${mod_name}]:-}" == "missing" ]]; then
+            if [[ -z "${mod_repo}" ]]; then
+                echo "Warning: Unknown module '${mod_name}', skipping"
+                continue
+            fi
+            echo "Installing ${mod_name}..."
+            cd "${AC_CODE_DIR}/modules"
+            git clone ${mod_repo}
+            if [[ -n "${mod_commit}" ]]; then
+                git -C "${mod_dir}" checkout "${mod_commit}"
+            fi
+            cd - > /dev/null
+            needs_rebuild=true
+        elif [[ "${PARALLEL_CHECK_RESULTS[${mod_name}]:-}" == "needs-update" ]]; then
+            echo "Updating ${mod_name}..."
+            if [[ -n "${mod_commit}" ]]; then
+                git -C "${mod_dir}" fetch
+                git -C "${mod_dir}" checkout "${mod_commit}"
+            else
+                git -C "${mod_dir}" pull --rebase
+            fi
+        fi
+    done
+fi
+
+if patches_need_applying; then
+    echo "Patches pending - rebuild required"
+    needs_rebuild=true
+fi
+
+check_modules_need_rebuild() {
+    local MODULES_DIR="${AC_CODE_DIR}/modules"
+    local BUILD_DIR_SHADOW="${DIR}/build-shadow"
+    local LOADER_FILE="${BUILD_DIR_SHADOW}/modules/gen_scriptloader/static/ModulesLoader.cpp"
+    local MODULES_LIB="${BUILD_DIR_SHADOW}/modules/libmodules.a"
+    local WORLDSERVER="${INSTALL_DIR}/bin/worldserver"
+
+    [[ -f "${BUILD_DIR_SHADOW}/CMakeCache.txt" ]] || return 1
+
+    if [[ -f "${LOADER_FILE}" ]]; then
+        for mod_dir in "${MODULES_DIR}"/*/; do
+            local mod_name=$(basename "${mod_dir}")
+            [[ -d "${mod_dir}/src" ]] || continue
+            local func_pattern="Add${mod_name//-/_}Scripts"
+            if ! grep -q "${func_pattern}" "${LOADER_FILE}" 2>/dev/null; then
+                echo "  (module ${mod_name} not in cmake config)"
+                return 0
+            fi
+        done
+    fi
+
+    if [[ -f "${LOADER_FILE}" && -f "${MODULES_LIB}" ]]; then
+        if [[ "${LOADER_FILE}" -nt "${MODULES_LIB}" ]]; then
+            echo "  (cmake reconfigured, make not run)"
+            return 0
+        fi
+    fi
+
+    if [[ -f "${MODULES_LIB}" && -f "${WORLDSERVER}" ]]; then
+        if [[ "${MODULES_LIB}" -nt "${WORLDSERVER}" ]]; then
+            echo "  (modules rebuilt, worldserver not updated)"
+            return 0
+        fi
+    fi
+
+    return 1  # All good
+}
+
+if check_modules_need_rebuild; then
+    echo "Modules rebuild required"
+    needs_rebuild=true
+fi
+
+if [[ "${needs_rebuild}" == false && -f "${INSTALL_DIR}/bin/worldserver" ]]; then
+    SHADOW_WORLDSERVER="${DIR}/installed-files-shadow/bin/worldserver"
+    if [[ -f "${SHADOW_WORLDSERVER}" && "${SHADOW_WORLDSERVER}" -nt "${INSTALL_DIR}/bin/worldserver" ]]; then
+        echo ""
+        echo "Nothing to compile, but the shadow install holds a newer build than ${INSTALL_DIR#${DIR}/}:"
+        echo "  shadow: $(date -r "${SHADOW_WORLDSERVER}" '+%Y-%m-%d %H:%M')"
+        echo "  main:   $(date -r "${INSTALL_DIR}/bin/worldserver" '+%Y-%m-%d %H:%M')"
+        echo "Validating and promoting it..."
+        exec "${DIR}/scripts/validate" --profile "${PROFILE}"
+    fi
+    echo ""
+    echo "Everything up-to-date, no rebuild needed."
+    echo "Use --force to rebuild anyway."
+    exit 0
+fi
+
+echo ""
+exec "${DIR}/scripts/compile" "${COMPILE_ARGS[@]}"

@@ -1,0 +1,208 @@
+#!/usr/bin/env bash
+
+set -o pipefail
+
+DIR="/mnt/kaun/wow-chat-2026"
+KEEP=false
+for a in "$@"; do
+    case "${a}" in
+        --keep) KEEP=true ;;
+        *)      DIR="${a}" ;;
+    esac
+done
+
+BIN="${DIR}/mysql/installed-files/bin"
+SRC="${DIR}/source-beta/data/sql"
+WORK="/dev/shm/wow-chat-2026/sql-in-ram"
+DATA="${WORK}/data"
+SOCK="${WORK}/mysql.sock"
+LOG="${WORK}/steps.log"
+WORLD="acore_world_basic"
+CHARS="acore_characters_basic"
+for f in "${BIN}/mysqld" "${BIN}/mysql"; do
+    [[ -x "${f}" ]] || { echo "ERROR: ${f} missing (the project's MySQL build)"; exit 1; }
+done
+
+mysql_run() {          # mysql_run DB  (SQL on stdin)
+    "${BIN}/mysql" --no-defaults --socket="${SOCK}" -uroot --default-character-set=utf8mb4 "$1"
+}
+step() {               # step "what" DB FILE  — run one SQL file, stop on error
+    local what="$1" db="$2" file="$3"
+    if mysql_run "${db}" < "${file}" >> "${LOG}" 2>&1; then
+        printf '  [✓] %s\n' "${what}"
+    else
+        printf '  [✗] %s — %s\n' "${what}" "${file#${DIR}/}"
+        tail -5 "${LOG}" | sed 's/^/        /'
+        FAILED=$((FAILED + 1))
+    fi
+}
+stop_server() {
+    [[ -f "${WORK}/mysqld.pid" ]] || return 0
+    local pid
+    pid="$(cat "${WORK}/mysqld.pid")"
+    kill "${pid}" 2>/dev/null || return 0
+    for _ in $(seq 120); do kill -0 "${pid}" 2>/dev/null || return 0; sleep 1; done
+    echo "WARNING: RAM server ${pid} did not stop in 120 s; killing it"
+    kill -9 "${pid}" 2>/dev/null
+    sleep 1
+}
+FAILED=0
+
+stop_server
+rm -rf "${WORK}"
+mkdir -p "${DATA}"
+: > "${LOG}"
+echo "Starting a private MySQL in ${WORK} (no network port)..."
+"${BIN}/mysqld" --no-defaults --initialize-insecure --datadir="${DATA}" >> "${LOG}" 2>&1 \
+    || { echo "ERROR: could not initialize the RAM datadir; see ${LOG}"; exit 1; }
+"${BIN}/mysqld" --no-defaults --datadir="${DATA}" --socket="${SOCK}" --skip-networking \
+    --pid-file="${WORK}/mysqld.pid" --log-error="${WORK}/mysqld.err" --skip-log-bin \
+    --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci \
+    --innodb-buffer-pool-size=1G --innodb-flush-log-at-trx-commit=2 \
+    --log-bin-trust-function-creators=1 &
+for _ in $(seq 60); do [[ -S "${SOCK}" ]] && break; sleep 1; done
+[[ -S "${SOCK}" ]] || { echo "ERROR: server did not start; see ${WORK}/mysqld.err"; exit 1; }
+[[ "${KEEP}" == "true" ]] || trap 'stop_server; rm -rf "${WORK}"' EXIT
+
+load_db() {   # load_db NAME  base/updates folder name
+    local db="$1" kind="$2"
+    echo "CREATE DATABASE \`${db}\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" | mysql_run mysql
+    local n=0 f
+    for f in "${SRC}/base/${kind}"/*.sql; do
+        mysql_run "${db}" < "${f}" >> "${LOG}" 2>&1 || { echo "  [✗] base ${kind}: $(basename "${f}")"; tail -3 "${LOG}"; exit 1; }
+        n=$((n + 1))
+    done
+    local applied
+    applied=$(echo "SELECT name FROM updates;" | mysql_run "${db}" -N 2>>"${LOG}")
+    local u=0
+    for f in "${SRC}/updates/${kind}"/*.sql "${SRC}/custom/${kind}"/*.sql; do
+        [[ -f "${f}" ]] || continue
+        grep -qxF "$(basename "${f}")" <<< "${applied}" && continue
+        mysql_run "${db}" < "${f}" >> "${LOG}" 2>&1 || { echo "  [✗] update ${kind}: $(basename "${f}")"; tail -3 "${LOG}"; exit 1; }
+        u=$((u + 1))
+    done
+    echo "  ${db}: ${n} base files, ${u} updates applied on top"
+}
+echo "Loading stock databases (a few minutes)..."
+load_db "${WORLD}" db_world
+load_db "${CHARS}" db_characters
+
+V="${DIR}/sql/vanilla"
+B="${DIR}/sql/basic"
+apply_all() {
+    step "E008 flight paths removed (vanilla's, shared)"  "${WORLD}" "${V}/db_world.src/03-remove-flight-paths.apply.sql"
+    step "E020 riding levels (vanilla's, shared)"         "${WORLD}" "${V}/db_world.src/05-mount-level-requirements.apply.sql"
+    step "E022 quests open to the whole faction"          "${WORLD}" "${B}/db_world.src/08-faction-quest-gating.apply.sql"
+    step "E024 Outland dungeons (level ladder, open at 60)" "${WORLD}" "${B}/db_world.src/09-outland-dungeons-64.apply.sql"
+    step "E025 Visiting Mentors"                          "${WORLD}" "${B}/db_world.src/10-valley-universal-trainers.apply.sql"
+    step "E026 creature multiplier table"                 "${WORLD}" "${B}/db_world.src/11-creature-multipliers.apply.sql"
+    step "E027 Outland without tradeskills"               "${WORLD}" "${B}/db_world.src/12-outland-without-tradeskills.apply.sql"
+    step "E028 Outland without quests"                    "${WORLD}" "${B}/db_world.src/13-outland-without-quests.apply.sql"
+    step "E029 Inscription without glyphs"                "${WORLD}" "${B}/db_world.src/14-inscription-without-glyphs.apply.sql"
+    step "E030 Darkmoon cards"                            "${WORLD}" "${B}/db_world.src/15-darkmoon-cards.apply.sql"
+    step "E031 Outland gear scaling"                      "${WORLD}" "${B}/db_world.src/16-outland-gear-scaling.apply.sql"
+    step "E032 Outland world monsters +4 (Isle +6)"       "${WORLD}" "${B}/db_world.src/17-outland-world-levels.apply.sql"
+    step "E033 gem supply"                                "${WORLD}" "${B}/db_world.src/18-gem-supply.apply.sql"
+    step "E034 titan-site jewelcrafters"                  "${WORLD}" "${B}/db_world.src/19-titan-jewelers.apply.sql"
+    step "E035 sockets on whites and dungeon blues"       "${WORLD}" "${B}/db_world.src/20-sockets.apply.sql"
+    step "E036 white gear durability doubled"             "${WORLD}" "${B}/db_world.src/21-white-durability.apply.sql"
+    step "E037 class books for the level 61-80 abilities" "${WORLD}" "${B}/db_world.src/22-ability-tomes.apply.sql"
+    step "E038 the Dark Portal as the only door"           "${WORLD}" "${B}/db_world.src/23-outland-one-door.apply.sql"
+    step "E039 no guild banks"                             "${WORLD}" "${B}/db_world.src/24-no-guild-banks.apply.sql"
+    step "E040 Sargobras at the gate of Acherus"          "${WORLD}" "${B}/db_world.src/25-death-knight-sargobras.apply.sql"
+    step "E043 Sargobras the buddy selector"              "${WORLD}" "${B}/db_world.src/26-buddy-selector.apply.sql"
+    step "E044 named areas' borders and middles"          "${WORLD}" "${B}/db_world.src/27-buddy-area-centres.apply.sql"
+    step "E045 beds buddies sleep on"                     "${WORLD}" "${B}/db_world.src/28-buddy-beds.apply.sql"
+    step "E046 world bosses respawned by hand"            "${WORLD}" "${B}/db_world.src/29-world-boss-respawn.apply.sql"
+    step "E048 retired: its saved levels put back"        "${WORLD}" "${B}/db_world.src/30-buddy-kit-required-level.revert.sql"
+    step "E050 town circles"                              "${WORLD}" "${B}/db_world.src/31-buddy-town-circles.apply.sql"
+    step "E051 Acherus reward vendors"                    "${WORLD}" "${B}/db_world.src/32-acherus-choice-vendors.apply.sql"
+    step "E052 the gearsets"                              "${WORLD}" "${B}/db_world.src/33-gearsets.apply.sql"
+    step "E053 the project's commands' help"              "${WORLD}" "${B}/db_world.src/34-custom-command-help.apply.sql"
+    step "E054 legendaries as level-60 raid drops"        "${WORLD}" "${B}/db_world.src/35-legendaries.apply.sql"
+    step "E055 the smaller roaming places"                "${WORLD}" "${B}/db_world.src/36-buddy-subareas.apply.sql"
+    step "E019 no intro cinematic (vanilla's, shared)"    "${CHARS}" "${V}/db_characters.src/01-no-intro-cinematic.apply.sql"
+    step "E023 starting-valley rotation table"            "${CHARS}" "${B}/db_characters.src/02-starting-valley-rotation.apply.sql"
+    step "E041 death knight soul ledger"                  "${CHARS}" "${B}/db_characters.src/03-death-knight-souls.apply.sql"
+    step "E042 buddy clan and roster tables"              "${CHARS}" "${B}/db_characters.src/04-buddy-roster.apply.sql"
+    step "E047 world boss countdowns"                     "${CHARS}" "${B}/db_characters.src/05-world-boss-timers.apply.sql"
+    step "E056 the kept stand-ins"                        "${CHARS}" "${B}/db_characters.src/06-buddy-stand-ins.apply.sql"
+}
+revert_all() {
+    step "E056 revert" "${CHARS}" "${B}/db_characters.src/06-buddy-stand-ins.revert.sql"
+    step "E055 revert" "${WORLD}" "${B}/db_world.src/36-buddy-subareas.revert.sql"
+    step "E054 revert" "${WORLD}" "${B}/db_world.src/35-legendaries.revert.sql"
+    step "E053 revert" "${WORLD}" "${B}/db_world.src/34-custom-command-help.revert.sql"
+    step "E052 revert" "${WORLD}" "${B}/db_world.src/33-gearsets.revert.sql"
+    step "E051 revert" "${WORLD}" "${B}/db_world.src/32-acherus-choice-vendors.revert.sql"
+    step "E050 revert" "${WORLD}" "${B}/db_world.src/31-buddy-town-circles.revert.sql"
+    step "E048 revert" "${WORLD}" "${B}/db_world.src/30-buddy-kit-required-level.revert.sql"
+    step "E046 revert" "${WORLD}" "${B}/db_world.src/29-world-boss-respawn.revert.sql"
+    step "E045 revert" "${WORLD}" "${B}/db_world.src/28-buddy-beds.revert.sql"
+    step "E044 revert" "${WORLD}" "${B}/db_world.src/27-buddy-area-centres.revert.sql"
+    step "E043 revert" "${WORLD}" "${B}/db_world.src/26-buddy-selector.revert.sql"
+    step "E040 revert" "${WORLD}" "${B}/db_world.src/25-death-knight-sargobras.revert.sql"
+    step "E039 revert" "${WORLD}" "${B}/db_world.src/24-no-guild-banks.revert.sql"
+    step "E038 revert" "${WORLD}" "${B}/db_world.src/23-outland-one-door.revert.sql"
+    step "E037 revert" "${WORLD}" "${B}/db_world.src/22-ability-tomes.revert.sql"
+    step "E036 revert" "${WORLD}" "${B}/db_world.src/21-white-durability.revert.sql"
+    step "E035 revert" "${WORLD}" "${B}/db_world.src/20-sockets.revert.sql"
+    step "E034 revert" "${WORLD}" "${B}/db_world.src/19-titan-jewelers.revert.sql"
+    step "E033 revert" "${WORLD}" "${B}/db_world.src/18-gem-supply.revert.sql"
+    step "E032 revert" "${WORLD}" "${B}/db_world.src/17-outland-world-levels.revert.sql"
+    step "E031 revert" "${WORLD}" "${B}/db_world.src/16-outland-gear-scaling.revert.sql"
+    step "E030 revert" "${WORLD}" "${B}/db_world.src/15-darkmoon-cards.revert.sql"
+    step "E029 revert" "${WORLD}" "${B}/db_world.src/14-inscription-without-glyphs.revert.sql"
+    step "E028 revert" "${WORLD}" "${B}/db_world.src/13-outland-without-quests.revert.sql"
+    step "E027 revert" "${WORLD}" "${B}/db_world.src/12-outland-without-tradeskills.revert.sql"
+    step "E026 revert" "${WORLD}" "${B}/db_world.src/11-creature-multipliers.revert.sql"
+    step "E025 revert" "${WORLD}" "${B}/db_world.src/10-valley-universal-trainers.revert.sql"
+    step "E024 revert" "${WORLD}" "${B}/db_world.src/09-outland-dungeons-64.revert.sql"
+    step "E022 revert" "${WORLD}" "${B}/db_world.src/08-faction-quest-gating.revert.sql"
+    step "E020 revert" "${WORLD}" "${V}/db_world.src/05-mount-level-requirements.revert.sql"
+    step "E047 revert" "${CHARS}" "${B}/db_characters.src/05-world-boss-timers.revert.sql"
+    step "E042 revert" "${CHARS}" "${B}/db_characters.src/04-buddy-roster.revert.sql"
+    step "E041 revert" "${CHARS}" "${B}/db_characters.src/03-death-knight-souls.revert.sql"
+    step "E023 revert" "${CHARS}" "${B}/db_characters.src/02-starting-valley-rotation.revert.sql"
+}
+TOUCHED="creature_template, creature_template_model, creature_model_info, creature_default_trainer, trainer, game_event, game_event_creature, item_template, prospecting_loot_template, dungeon_access_template, dungeon_access_requirements, quest_template, creature, gossip_menu, npc_text, gameobject, pool_template, pool_pool, pool_gameobject, pool_creature, skill_fishing_base_level, fishing_loot_template, trainer_spell, creature_loot_template, reference_loot_template, gameobject_loot_template, item_loot_template, npc_vendor, disables, spell_group"
+echo "Before the snapshot:"
+step "E008 flight paths removed (vanilla's, shared)"  "${WORLD}" "${V}/db_world.src/03-remove-flight-paths.apply.sql"
+stock_sum=$(echo "CHECKSUM TABLE ${TOUCHED};" | mysql_run "${WORLD}" -N 2>>"${LOG}")
+echo "Apply:";          apply_all
+echo "Apply again (must be re-applicable):"; apply_all
+if ! echo "INSERT INTO characters (guid, account, name, race, class, gender, level, taximask, innTriggerId) VALUES (99999001, 99001, 'Heldsoul', 1, 1, 0, 60, '', 0);
+      INSERT INTO basic_718_souls (dk, soul, soul_account, holding_account, state) VALUES (99999002, 99999001, 42, 99001, 1);" \
+    | mysql_run "${CHARS}" >> "${LOG}" 2>&1; then
+    echo "  [✗] could not set up the held-soul test (a character row and its ledger row); see ${LOG}"
+    FAILED=$((FAILED + 1))
+fi
+echo "Revert:";         revert_all
+held=$(echo "SELECT account FROM characters WHERE guid = 99999001;" | mysql_run "${CHARS}" 2>>"${LOG}" | tail -n 1)
+if [[ "${held}" == "42" ]]; then
+    echo "  [✓] the ledger's revert returned a held soul to its own account (42)"
+else
+    echo "  [✗] the ledger's revert left a held soul on account '${held}', not its own (42)"
+    FAILED=$((FAILED + 1))
+fi
+echo "DELETE FROM characters WHERE guid = 99999001;" | mysql_run "${CHARS}" >> "${LOG}" 2>&1
+reverted_sum=$(echo "CHECKSUM TABLE ${TOUCHED};" | mysql_run "${WORLD}" -N 2>>"${LOG}")
+if [[ "${stock_sum}" == "${reverted_sum}" ]]; then
+    echo "  [✓] after the revert, the edited world tables checksum exactly as before the apply"
+else
+    echo "  [✗] after the revert, these world tables differ from before the apply:"
+    diff <(echo "${stock_sum}") <(echo "${reverted_sum}") | sed 's/^/      /'
+    FAILED=$((FAILED + 1))
+fi
+echo "Apply after revert:"; apply_all
+
+echo "Post-install checks:"
+VALIDATE_MYSQL_SOCKET="${SOCK}" "${DIR}/scripts/validate-basic-state" "${DIR}" | sed 's/^/  /'
+checks=${PIPESTATUS[0]}
+
+echo "SQL steps failed: ${FAILED}; checker exit: ${checks}. Full log: ${LOG}"
+if [[ "${KEEP}" == "true" ]]; then
+    echo "Kept running. Reach it with: ${BIN}/mysql --no-defaults --socket=${SOCK} -uroot"
+    echo "Stop it with: kill \$(cat ${WORK}/mysqld.pid), wait until that process is gone, then rm -rf ${WORK}"
+fi
+[[ "${FAILED}" -eq 0 && "${checks}" -eq 0 ]]

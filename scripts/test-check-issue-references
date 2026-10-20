@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+
+SCRATCH="${DIR}/tmp/shared-memory/test-check-issue-references"
+mkdir -p "${SCRATCH}" || { echo "ERROR: can't make ${SCRATCH} (is tmp/shared-memory linked?)"; exit 1; }
+ISSUE="${SCRATCH}/999-pretend-issue.md"
+cat > "${ISSUE}" <<'EOF'
+# 999 - A pretend issue for the checker's test
+
+The ambush lives in `src/lua-beta/ambush.lua` (exists) and once lived in
+`src/lua/movement.lua` (moved by the per-profile split). Travellers were
+`src/lua-beta/periodic_events.lua` (switched off since). The bounty board
+was to be `src/lua-beta/bounty-board-never-built.lua` (never existed).
+Every source patch is `patches/B*.sh` (a wildcard: skipped).
+See issue 329 (renumbered, split in two) and issue 210 (exists).
+Issue 334 (now 127) was the patch-system issue before April.
+The wildcard is patch B003 (live); patch B998 never existed; install step
+E008 is written only as its functions. The level caps are C006 (a family:
+C006a to C006d).
+The old helper was `src/lua/never-was.lua` (gone; explained below).
+The servers were started by `scripts/azerothcore` (retired, split up).
+The client ran from `scripts/custom-client` (now `scripts/run` in another project).
+| path                       | edge |
+| src/lua/movement.lua       | x    |
+│ src/lua/periodic_events.lua │
+
+## Since then (checked 2026-10-17)
+
+- The helper `never-was.lua` was folded into the ambush and removed.
+EOF
+
+OUT="$("${DIR}/scripts/check-issue-references" "${DIR}" "${ISSUE}" 2>&1)"
+FAILS=0
+expect() {   # expect "what" "pattern that must appear in the output"
+    if grep -qE "$2" <<< "${OUT}"; then
+        echo "  ok:   $1"
+    else
+        echo "  FAIL: $1 (wanted a line matching: $2)"
+        FAILS=$((FAILS + 1))
+    fi
+}
+refuse() {   # refuse "what" "pattern that must not appear"
+    if grep -qE "$2" <<< "${OUT}"; then
+        echo "  FAIL: $1 (found a line matching: $2)"
+        FAILS=$((FAILS + 1))
+    else
+        echo "  ok:   $1"
+    fi
+}
+expect "an existing path counts as ok"                 "999-pretend-issue.md: [1-9][0-9]* paths ok"
+refuse "an existing path is not listed as a problem"   "src/lua-beta/ambush.lua"
+expect "a path renamed by the per-profile split moved" "moved .*src/lua/movement.lua +->  src/lua-beta/movement.lua"
+expect "a switched-off file is found as .disabled"     "moved .*src/lua-beta/periodic_events.lua +->  src/lua-beta/periodic_events.lua.disabled"
+expect "a file that never existed is missing"          "missing .*bounty-board-never-built.lua"
+refuse "a wildcard path is skipped"                    "patches/B"
+expect "a renumbered, split issue lists both successors" "329 does not exist +->  renumbered to 125 .* or 612b"
+refuse "an existing issue number is not a problem"     "issue .* 210 "
+refuse "an old number annotated (now N) is explained"  "334 does not exist"
+expect "a patch step that never existed is reported"   "patch .* B998 is not in the project"
+refuse "a live source patch is not a problem"          "patch .* B003"
+refuse "an install step written only as functions is live" "patch .* E008"
+refuse "a config step family (C006 for C006a-d) is live" "patch .* C006 "
+expect "a gone path named under Since then is explained" "999-pretend-issue.md: .*[1-9] explained"
+refuse "an explained path is not counted missing"      "missing .*never-was.lua"
+refuse "a path whose line says what it is now is explained" "moved .*scripts/custom-client"
+
+COPY="${SCRATCH}/998-pretend-rewrite.md"
+cp "${ISSUE}" "${COPY}"
+"${DIR}/scripts/check-issue-references" "${DIR}" --rewrite-moved "${COPY}" > /dev/null 2>&1
+REWRITTEN="$(cat "${COPY}")"
+check_text() {   # check_text "what" "pattern" yes|no
+    if grep -qE "$2" <<< "${REWRITTEN}"; then found=yes; else found=no; fi
+    if [[ "${found}" == "$3" ]]; then echo "  ok:   $1"; else echo "  FAIL: $1"; FAILS=$((FAILS + 1)); fi
+}
+check_text "a path moved by a known rename is rewritten"     "src/lua-beta/movement.lua"            yes
+check_text "the old path is gone after the rewrite"          "src/lua/movement.lua"                 no
+check_text "a switched-off file is rewritten to .disabled"   "periodic_events.lua.disabled"         yes
+check_text "an existing path is left as it was"              "src/lua-beta/ambush.lua\\b"           yes
+check_text "a missing path is left for a person"             "bounty-board-never-built.lua"         yes
+check_text "a move into a retired name is not rewritten"     "scripts/azerothcore-deprecated"       no
+check_text "a box drawing with no room keeps its old path"  "│ src/lua/periodic_events.lua │"     yes
+check_text "a table's right edge stays in its column"        "^\\| src/lua-beta/movement.lua  +\\| x"  yes
+WIDTH="$(grep -E '^\| (path|src/lua-beta/movement)' "${COPY}" | awk '{print length($0)}' | sort -u | wc -l)"
+if [[ "${WIDTH}" == "1" ]]; then echo "  ok:   the rewritten table row is as wide as the row above it"; else echo "  FAIL: the rewritten table row changed width"; FAILS=$((FAILS + 1)); fi
+rm -f "${COPY}"
+
+FAKE="${SCRATCH}/pretend-project"
+rm -rf "${FAKE}"
+mkdir -p "${FAKE}/issues/completed" "${FAKE}/patches"
+printf '# E-patches\n' > "${FAKE}/patches/E-patches.sh"
+printf '# 998 - Old Split Script\n\nSplit the old script.\n' > "${FAKE}/issues/completed/998-old-split-script.md"
+printf '# 997 - Later User\n\nBuilds on issue 998 (the old split script).\n' > "${FAKE}/issues/997-later-user.md"
+printf '# 996 - Other\n\n- Issue 998: narrator-audience-facing (a reused number)\n' > "${FAKE}/issues/996-other.md"
+printf '# 995 - Finished But Open\n\n## Status\n- Status: Completed\n' > "${FAKE}/issues/995-finished-but-open.md"
+git -C "${FAKE}" init -q && git -C "${FAKE}" add -A
+OUT="$("${DIR}/scripts/check-issue-references" "${FAKE}" --threads 2>&1)"
+expect "a later issue naming it by its words is in the thread" "after .*named by later issues: 997"
+expect "a later issue not named back is listed"          "not named back: 997"
+expect "the same number with another name is a reused number" "meaning another issue in: 996"
+expect "an issue finished but filed as open is listed"   "995-finished-but-open.md: marked completed"
+mkdir -p "${FAKE}/src/lua-beta"
+printf -- '-- x\n' > "${FAKE}/src/lua-beta/thing.lua"
+printf '# 994 - Old Thing\n\nIt lived in `src/lua/thing.lua`.\n' > "${FAKE}/issues/completed/994-old-thing.md"
+git -C "${FAKE}" add -A
+"${DIR}/scripts/check-issue-references" "${FAKE}" --rewrite-moved > /dev/null 2>&1
+if grep -q "src/lua/thing.lua" "${FAKE}/issues/completed/994-old-thing.md"; then
+    echo "  ok:   a completed issue is never rewritten"
+else
+    echo "  FAIL: a completed issue was rewritten"; FAILS=$((FAILS + 1))
+fi
+rm -rf "${FAKE}"
+
+echo "${OUT}" > "${SCRATCH}/checker-output.txt"
+if [[ "${FAILS}" -eq 0 ]]; then
+    echo "All verdicts as expected"
+else
+    echo "${FAILS} verdict(s) wrong; the checker's output is in ${SCRATCH}/checker-output.txt"
+fi
+[[ "${FAILS}" -eq 0 ]]

@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+DIR="/mnt/kaun/wow-chat-2026"
+if [[ "${1:-}" == "--dir" ]]; then DIR="$2"; shift 2; fi
+DRY=0
+if [[ "${1:-}" == "--dry-run" ]]; then DRY=1; shift; fi
+PROFILE="$(cat "${DIR}/.profile")"
+MYSQL="${DIR}/mysql/installed-files/bin/mysql"
+MYSQLDUMP="${DIR}/mysql/installed-files/bin/mysqldump"
+CHARS="acore_characters_${PROFILE}"
+WORLD="acore_world_${PROFILE}"
+PLANNER="${DIR}/scripts/lib/lessons-sql.lua"
+BACKUPS="${DIR}/backups/lessons"
+SCRATCH="${DIR}/tmp/shared-memory/lessons"
+
+sql() { "${MYSQL}" -h127.0.0.1 -P3307 -uritz -pmenardi --batch --skip-column-names "$@" 2>&1 | grep -v "Using a password" || true; }
+
+NAMES=()
+if [[ "${1:-}" == "--buddies-of" ]]; then
+    OWNER="${2:-}"
+    [[ -n "${OWNER}" ]] || { echo "Usage: $0 [--dry-run] --buddies-of <owner name>"; exit 1; }
+    mapfile -t NAMES < <(sql "${CHARS}" -e "SELECT c.name FROM buddy_roster r JOIN characters c ON c.guid = r.buddy JOIN characters o ON o.guid = r.owner WHERE o.name = '${OWNER//\'/}' ORDER BY c.name")
+    [[ ${#NAMES[@]} -gt 0 ]] || { echo "ERROR: no buddies found for an owner named '${OWNER}' in ${CHARS}"; exit 1; }
+else
+    NAMES=("$@")
+fi
+[[ ${#NAMES[@]} -gt 0 ]] || { echo "Usage: $0 [--dir PROJECT_DIR] [--dry-run] <name> [<name> ...] | --buddies-of <owner name>"; exit 1; }
+
+STEP="checks"
+trap 'echo "STOPPED at step: ${STEP} (character: ${NAME:-none}). Characters before it are done; see above."' ERR
+if pgrep -x worldserver > /dev/null; then
+    echo "ERROR: the world server is running. It keeps each character's spells in memory"
+    echo "and would write them back over these. Stop it, then run this again."
+    exit 1
+fi
+mkdir -p "${BACKUPS}" "${SCRATCH}"
+sql "${WORLD}" -e "SELECT spell_id, req_spell FROM spell_required" > "${SCRATCH}/required.tsv"
+sql "${WORLD}" -e "SELECT DISTINCT ts.SpellId, ts.ReqLevel, ts.ReqSkillLine, ts.ReqSkillRank FROM trainer t JOIN trainer_spell ts ON ts.TrainerId = t.Id WHERE t.Type = 2" > "${SCRATCH}/trade.tsv"
+
+for NAME in "${NAMES[@]}"; do
+    STEP="checks"
+    ROW="$(sql "${CHARS}" -e "SELECT guid, race, class, level FROM characters WHERE name = '${NAME//\'/}'")"
+    if [[ -z "${ROW}" || "${ROW}" == ERROR* ]]; then
+        echo "ERROR: no character named '${NAME}' in ${CHARS}. ${ROW}"
+        exit 1
+    fi
+    read -r GUID RACE CLASS LEVEL <<< "${ROW}"
+    echo "== ${NAME} (guid ${GUID}): race ${RACE}, class ${CLASS}, level ${LEVEL}"
+
+    # {{{ step 2: backup
+    STEP="backup"
+    BACKUP="${BACKUPS}/${NAME}-$(date +%Y-%m-%d-%H%M%S)-spells.sql"
+    {
+        echo "-- written by scripts/teach-character-lessons before teaching ${NAME} (guid ${GUID});"
+        echo "-- to put back: DELETE FROM character_spell and character_skills WHERE guid = ${GUID}; then load this file."
+        "${MYSQLDUMP}" -h127.0.0.1 -P3307 -uritz -pmenardi --no-create-info --skip-triggers \
+            --where="guid = ${GUID}" "${CHARS}" character_spell character_skills 2>&1 | grep -v "Using a password"
+    } > "${BACKUP}"
+    echo "Backup: ${BACKUP}"
+    # }}}
+
+    # {{{ step 3: plan
+    STEP="plan"
+    STATE="${SCRATCH}/${NAME}-state.tsv"
+    LESSONS="${SCRATCH}/class-${CLASS}-lessons.tsv"
+    PLAN="${SCRATCH}/${NAME}-plan.sql"
+    {
+        printf 'char\t%s\t%s\t%s\t%s\n' "${GUID}" "${RACE}" "${CLASS}" "${LEVEL}"
+        sql "${CHARS}" -e "SELECT 'spell', spell FROM character_spell WHERE guid = ${GUID}"
+        sql "${CHARS}" -e "SELECT 'skill', skill, value, max FROM character_skills WHERE guid = ${GUID}"
+    } > "${STATE}"
+    sql "${WORLD}" -e "SELECT DISTINCT ts.SpellId, ts.ReqLevel, ts.ReqAbility1, ts.ReqAbility2, ts.ReqAbility3, ts.ReqSkillLine, ts.ReqSkillRank
+        FROM trainer t JOIN trainer_spell ts ON ts.TrainerId = t.Id WHERE t.Type = 0 AND t.Requirement = ${CLASS}" > "${LESSONS}"
+    luajit "${PLANNER}" "${DIR}" "${STATE}" "${LESSONS}" "${SCRATCH}/required.tsv" "${PLAN}" "${SCRATCH}/trade.tsv"
+    # }}}
+
+    # {{{ step 4: apply
+    STEP="apply"
+    if [[ "${DRY}" == "1" ]]; then
+        sed 's/^COMMIT;$/ROLLBACK;/' "${PLAN}" > "${PLAN}.dry"
+        RESULT="$(sql "${CHARS}" < "${PLAN}.dry")"
+        if [[ -n "${RESULT}" ]]; then echo "${RESULT}"; echo "ERROR: the plan failed in the dry run."; exit 1; fi
+        echo "Dry run: the plan ran and was rolled back. Nothing changed."
+    else
+        RESULT="$(sql "${CHARS}" < "${PLAN}")"
+        if [[ -n "${RESULT}" ]]; then echo "${RESULT}"; echo "ERROR: the plan failed; the transaction did not commit. Nothing changed for ${NAME}."; exit 1; fi
+        echo "Applied."
+    fi
+    # }}}
+done

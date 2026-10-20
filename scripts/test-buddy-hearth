@@ -1,0 +1,80 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local Arc = dofile(DIR .. "/src/lua-basic/lib/buddy-arc.lua")
+
+local fails, checks = 0, 0
+local function check(ok, what)
+    checks = checks + 1
+    if ok then print("  ok:   " .. what) else print("  FAIL: " .. what); fails = fails + 1 end
+end
+
+local events = {}
+local function unit(name, low, x, y, map)
+    local u = { name = name, low = low, x = x, y = y, z = 5, o = 0, map = map, interrupted = 0, to = nil, dead = false }
+    u.GetName = function() return name end
+    u.GetGUIDLow = function() return low end
+    u.IsInWorld = function() return true end
+    u.GetMapId = function() return u.map end
+    u.GetLocation = function() return u.x, u.y, u.z, u.o end
+    u.InterruptSpell = function() u.interrupted = u.interrupted + 1 end
+    u.Teleport = function(_, map, x, y, z, o) u.to = { map = map, x = x, y = y, z = z, o = o } end
+    u.RegisterEvent = function(self, fn, ms, n) events[#events + 1] = { fn = fn, who = self } end
+    u.GetHomebind = function() return { mapId = 1, x = 1000, y = 2000, z = 50 } end
+    return u
+end
+local partner = unit("Growth", 504, 1000, 2000, 1); partner.o = 1.2
+local b1, b2, b3 = unit("Pozeta", 575, 0, 0, 530), unit("Shauzhi", 594, 0, 0, 0), unit("Ecaexo", 596, 0, 0, 530)
+b2.dead = true
+local loner = unit("Solo", 9, 0, 0, 0)
+local players = { [504] = partner, [575] = b1, [594] = b2, [596] = b3, [9] = loner }
+local function rows(list)
+    local i = 1
+    return { GetUInt32 = function(_, c) return list[i][c + 1] end, NextRow = function() i = i + 1; return list[i] ~= nil end }
+end
+local handler
+local env = setmetatable({
+    RegisterPlayerEvent = function(_, fn) handler = fn end,
+    GetPlayerGUID = function(g) return g end,
+    GetPlayerByGUID = function(g) return players[g] end,
+    CharDBQuery = function(sql)
+        if sql:find("SELECT buddy FROM buddy_roster WHERE owner = 504") then return rows({ { 575 }, { 594 }, { 596 } }) end
+        local b = tonumber(sql:match("WHERE buddy = (%d+)"))
+        if b == 575 or b == 594 or b == 596 then return rows({ { 504 } }) end
+        return nil
+    end,
+    print = function() end,
+}, { __index = _G })
+local chunk = assert(loadfile(DIR .. "/src/lua-basic/buddy-hearth.lua"))
+setfenv(chunk, env)()
+local function spell(id) return { GetEntry = function() return id end } end
+local function run_events() local e = events; events = {}; for _, ev in ipairs(e) do ev.fn(0, 0, 0, ev.who) end end
+local function near(a, b) return math.abs(a - b) < 1e-6 end
+
+print("the partner hearths")
+handler(5, partner, spell(8690))
+check(#events == 1, "one follow, a moment later")
+run_events()
+local spots = Arc.places(1000, 2000, 1.2, 3, "centre")
+for i, b in ipairs({ b1, b2, b3 }) do
+    check(b.to and b.to.map == 1 and near(b.to.x, spots[i].x) and near(b.to.y, spots[i].y) and near(b.to.o, spots[i].o),
+        b.name .. " at roster place " .. i .. " round the partner, facing them" .. (b.dead and " (dead)" or ""))
+    check(b.interrupted > 0, b.name .. "'s own cast stopped first")
+end
+
+print("a buddy hearths on its own")
+for _, b in ipairs({ b1, b2, b3 }) do b.to = nil end
+handler(5, b3, spell(8690))
+run_events()
+local home = Arc.places(1000, 2000, 0, 3, "centre")
+check(b3.to and b3.to.map == 1 and near(b3.to.x, home[3].x), "it lands at its partner's bind spot (map 1), not its own")
+check(b1.to == nil and b2.to == nil, "the others stay where they are")
+
+print("nothing else moves anyone")
+handler(5, partner, spell(133))
+handler(5, loner, spell(8690))
+check(#events == 0, "other spells, and players without buddies, schedule nothing")
+
+print(fails == 0 and ("All " .. checks .. " checks passed") or (fails .. " of " .. checks .. " checks failed"))
+os.exit(fails == 0 and 0 or 1)

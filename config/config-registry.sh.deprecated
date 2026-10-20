@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+
+declare -A CONFIG_PROFILES
+
+
+config_database_connections() {
+    local conf_auth="${INSTALL_DIR}/etc/authserver.conf"
+    local conf_world="${INSTALL_DIR}/etc/worldserver.conf"
+
+    sed -i 's|^LoginDatabaseInfo.*=.*|LoginDatabaseInfo = "127.0.0.1;3307;ritz;menardi;'"${DB_AUTH}"'"|' "${conf_auth}"
+    sed -i 's|^LoginDatabaseInfo.*=.*|LoginDatabaseInfo     = "127.0.0.1;3307;ritz;menardi;'"${DB_AUTH}"'"|' "${conf_world}"
+
+    sed -i 's|^WorldDatabaseInfo.*=.*|WorldDatabaseInfo     = "127.0.0.1;3307;ritz;menardi;'"${DB_WORLD}"'"|' "${conf_world}"
+
+    sed -i 's|^CharacterDatabaseInfo.*=.*|CharacterDatabaseInfo = "127.0.0.1;3307;ritz;menardi;'"${DB_CHARS}"'"|' "${conf_world}"
+}
+CONFIG_PROFILES[config_database_connections]="all"
+
+config_directory_paths() {
+    local conf_auth="${INSTALL_DIR}/etc/authserver.conf"
+    local conf_world="${INSTALL_DIR}/etc/worldserver.conf"
+
+    sed -i 's|^DataDir.*=.*|DataDir = "'"${DIR}"'/data"|' "${conf_world}"
+    sed -i 's|^LogsDir.*=.*|LogsDir = "'"${LOGS_DIR}"'"|' "${conf_world}"
+    sed -i 's|^LogsDir.*=.*|LogsDir = "'"${LOGS_DIR}"'"|' "${conf_auth}"
+
+    sed -i 's|^SourceDirectory.*=.*|SourceDirectory = "'"${AC_CODE_DIR}"'"|' "${conf_auth}"
+    sed -i 's|^SourceDirectory.*=.*|SourceDirectory = "'"${AC_CODE_DIR}"'"|' "${conf_world}"
+    sed -i 's|^BuildDirectory.*=.*|BuildDirectory = "'"${BUILD_DIR}"'"|' "${conf_world}"
+
+    sed -i 's|^MySQLExecutable.*=.*|MySQLExecutable = "'"${MYSQL_DIR}"'/bin/mysql"|' "${conf_auth}"
+    sed -i 's|^MySQLExecutable.*=.*|MySQLExecutable = "'"${MYSQL_DIR}"'/bin/mysql"|' "${conf_world}"
+}
+CONFIG_PROFILES[config_directory_paths]="all"
+
+
+config_run_speed_80_percent() {
+    local conf="${INSTALL_DIR}/etc/worldserver.conf"
+    sed -i 's|^Rate\.Run\.Speed.*=.*|Rate.Run.Speed = 0.8|' "${conf}"
+}
+CONFIG_PROFILES[config_run_speed_80_percent]="all"
+
+config_fall_damage_10x() {
+    local conf="${INSTALL_DIR}/etc/worldserver.conf"
+    sed -i 's|^Rate\.Damage\.Fall.*=.*|Rate.Damage.Fall = 10.0|' "${conf}"
+}
+CONFIG_PROFILES[config_fall_damage_10x]="beta release"
+
+config_exp_rate_2x() {
+    local conf="${INSTALL_DIR}/etc/worldserver.conf"
+    sed -i 's|^Rate\.XP\.Kill.*=.*|Rate.XP.Kill = 2.0|' "${conf}"
+    sed -i 's|^Rate\.XP\.Quest.*=.*|Rate.XP.Quest = 2.0|' "${conf}"
+}
+CONFIG_PROFILES[config_exp_rate_2x]="beta release"
+
+
+config_max_level_20() {
+    local conf="${INSTALL_DIR}/etc/worldserver.conf"
+    sed -i 's|^MaxPlayerLevel.*=.*|MaxPlayerLevel = 20|' "${conf}"
+}
+CONFIG_PROFILES[config_max_level_20]="beta"
+
+config_starting_level_1() {
+    local conf="${INSTALL_DIR}/etc/worldserver.conf"
+    sed -i 's|^StartPlayerLevel.*=.*|StartPlayerLevel = 1|' "${conf}"
+}
+CONFIG_PROFILES[config_starting_level_1]="beta"
+
+
+config_gm_login_state() {
+    local conf="${INSTALL_DIR}/etc/worldserver.conf"
+    local gm_level=0
+
+    if [[ "${PROFILE}" == "beta" ]]; then
+        gm_level=3
+    fi
+
+    sed -i 's|^GM\.LoginState.*=.*|GM.LoginState = '"${gm_level}"'|' "${conf}"
+}
+CONFIG_PROFILES[config_gm_login_state]="all"  # All profiles, but value varies
+
+config_instant_teleport_beta() {
+    local conf="${INSTALL_DIR}/etc/worldserver.conf"
+    sed -i 's|^Instant\.Taxi.*=.*|Instant.Taxi = 1|' "${conf}"
+}
+CONFIG_PROFILES[config_instant_teleport_beta]="beta"

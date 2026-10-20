@@ -1,0 +1,101 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local Arc = dofile(DIR .. "/src/lua-basic/lib/buddy-arc.lua")
+
+local fails, checks = 0, 0
+local function check(ok, what)
+    checks = checks + 1
+    if ok then print("  ok:   " .. what) else print("  FAIL: " .. what); fails = fails + 1 end
+end
+
+local function unit(name, low, x, y, o, map)
+    local u = { name = name, low = low, x = x, y = y, z = 10, o = o, map = map or 530, dead = false, revived = false, to = nil }
+    u.GetName = function() return name end
+    u.GetGUIDLow = function() return low end
+    u.GetTypeId = function() return 4 end
+    u.IsInWorld = function() return true end
+    u.IsDead = function() return u.dead end
+    u.GetLocation = function() return u.x, u.y, u.z, u.o end
+    u.GetMapId = function() return u.map end
+    u.GetMap = function() return { GetHeight = function() return 10 end } end
+    u.GetTeam = function() return 1 end
+    u.GetGMRank = function() return 3 end
+    u.ResurrectPlayer = function() u.dead = false; u.revived = true end
+    u.Teleport = function(_, map, x, y, z, o) u.to = { map = map, x = x, y = y, z = z, o = o } end
+    u.SendBroadcastMessage = function(_, text) u.heard[#u.heard + 1] = text end
+    u.heard = {}
+    return u
+end
+local partner = unit("Growth", 504, 0, 0, 0)
+local gm      = unit("Gm", 1, 500, 500, 1.0)
+local b1      = unit("Pozeta", 575, 40, 0, 0)
+local b2      = unit("Shauzhi", 594, 60, 0, 0)
+local players = { [504] = partner, [1] = gm, [575] = b1, [594] = b2 }
+local roster  = { 575, 594, 596 }
+local function result(rows)
+    local i = 1
+    return { GetUInt32 = function(_, c) return rows[i][c + 1] end, GetFloat = function(_, c) return rows[i][c + 1] end,
+             NextRow = function() i = i + 1; return rows[i] ~= nil end }
+end
+local handler
+local env = setmetatable({
+    RegisterPlayerEvent = function(_, fn) handler = fn end,
+    GetPlayerGUID = function(g) return g end,
+    GetPlayerByGUID = function(g) return players[g] end,
+    GetPlayerByName = function(n) for _, p in pairs(players) do if p.name == n then return p end end end,
+    CharDBQuery = function(sql)
+        if sql:find("SELECT buddy FROM buddy_roster") then return result({ { 575 }, { 594 }, { 596 } }) end
+        local b = sql:match("WHERE buddy = (%d+)")
+        if b then for _, r in ipairs(roster) do if r == tonumber(b) then return result({ { 504 } }) end end end
+        return nil
+    end,
+    WorldDBQuery = function(sql) return result({ { -30, 40, 12 } }) end,
+}, { __index = _G })
+local chunk = assert(loadfile(DIR .. "/src/lua-basic/buddy-gm.lua"))
+setfenv(chunk, env)()
+local function reset() for _, u in pairs(players) do u.to = nil; u.revived = false; u.heard = {} end end
+local function near(a, b) return math.abs(a - b) < 1e-6 end
+
+print("to partner, by name, ring")
+reset(); b2.dead = true
+handler(42, gm, "buddies to partner growth ring")
+local spots = Arc.places(0, 0, 0, 3, "ring")
+check(b1.to and near(b1.to.x, spots[1].x) and near(b1.to.y, spots[1].y), "Pozeta stands at roster place 1 round Growth")
+check(b2.to == nil, "the dead Shauzhi is left where it lies")
+local said = table.concat(gm.heard, "\n")
+check(said:find("Shauzhi: dead, left where it lies") and said:find("character 596: not in the world"), "the dead and the absent are named")
+check(said:find("1 of Growth's 3 buddies moved to Growth %(ring%)"), "the summary: 1 of 3")
+
+print("to me, by selecting a buddy, centre")
+reset(); b2.dead = false
+gm.GetSelection = function() return b1 end
+handler(42, gm, "buddies to me centre")
+spots = Arc.places(500, 500, 1.0, 3, "centre")
+check(b1.to and near(b1.to.x, spots[1].x) and b2.to and near(b2.to.y, spots[2].y), "a selected buddy stands for its partner; both brought to the game master")
+check(table.concat(gm.heard, "\n"):find("2 of Growth's 3 buddies moved to you %(centre%)"), "the summary: 2 of 3, to you")
+
+print("revive at graveyard")
+reset(); b2.dead = true
+handler(42, gm, "buddies revive growth at graveyard centre")
+local go = math.atan2(0 - 40, 0 - (-30)) % (2 * math.pi)
+spots = Arc.places(-30, 40, go, 3, "centre")
+check(b2.revived and b2.to and near(b2.to.x, spots[2].x), "the dead Shauzhi is revived at its place by the graveyard")
+check(b1.to == nil and not b1.revived, "the living Pozeta is left alone")
+check(table.concat(gm.heard, "\n"):find("1 of Growth's 3 buddies revived at the nearest graveyard"), "the summary says the graveyard")
+
+print("mistakes")
+reset()
+handler(42, gm, "buddies revive growth")
+check(table.concat(gm.heard, "\n"):find("revive needs where"), "revive with no place asks where")
+reset()
+handler(42, gm, "buddies to nowhere growth")
+check(table.concat(gm.heard, "\n"):find("where to%?"), "an unknown place asks where to")
+local console_lines = {}
+handler(42, nil, "buddies to me growth", { SendSysMessage = function(_, t) console_lines[#console_lines + 1] = t end })
+check(table.concat(console_lines, "\n"):find("needs a game master in the world"), "\"me\" from the console is refused")
+check(handler(42, gm, "something else") == nil, "other commands are not taken")
+
+print(fails == 0 and ("All " .. checks .. " checks passed") or (fails .. " of " .. checks .. " checks failed"))
+os.exit(fails == 0 and 0 or 1)

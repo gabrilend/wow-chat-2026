@@ -1,0 +1,200 @@
+#!/usr/bin/env bash
+
+patch_B019_playerbots_unused_parameter() {
+    local PLAYERBOTS_DIR="${AC_CODE_DIR}/modules/mod-playerbots/src"
+
+    [[ -d "${PLAYERBOTS_DIR}" ]] || return 0
+
+    local FILE
+
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Strategy/CombatStrategy.cpp"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's/std::vector<Multiplier\*>& multipliers)/std::vector<Multiplier*>\& \/*multipliers*\/)/' "${FILE}" 2>/dev/null || true
+    fi
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Strategy/ChatCommandHandlerStrategy.cpp"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's/PlayerbotAI\* botAI)/PlayerbotAI* \/*botAI*\/)/' "${FILE}" 2>/dev/null || true
+    fi
+
+    for f in RacialsStrategy UsePotionsStrategy; do
+        FILE="${PLAYERBOTS_DIR}/Ai/Base/Strategy/${f}.cpp"
+        if [[ -f "${FILE}" ]]; then
+            sed -i 's/PlayerbotAI\* botAI)/PlayerbotAI* \/*botAI*\/)/' "${FILE}" 2>/dev/null || true
+        fi
+    done
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/CastCustomSpellAction.h"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's/WorldObject\* target)/WorldObject* \/*target*\/)/' "${FILE}" 2>/dev/null || true
+        sed -i 's/SpellInfo const\* spellInfo)/SpellInfo const* \/*spellInfo*\/)/' "${FILE}" 2>/dev/null || true
+    fi
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/MovementActions.cpp"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's/, bool idle,/, bool \/*idle*\/,/' "${FILE}" 2>/dev/null || true
+        sed -i 's/, bool react,/, bool \/*react*\/,/' "${FILE}" 2>/dev/null || true
+        sed -i 's/IsMovingAllowed(uint32 mapId, float x, float y, float z)/IsMovingAllowed(uint32 \/*mapId*\/, float \/*x*\/, float \/*y*\/, float \/*z*\/)/' "${FILE}" 2>/dev/null || true
+        sed -i 's/IsDuplicateMove(uint32 mapId,/IsDuplicateMove(uint32 \/*mapId*\/,/' "${FILE}" 2>/dev/null || true
+        sed -i 's/MovementAction::ChaseTo(WorldObject\* obj, float distance, float angle)/MovementAction::ChaseTo(WorldObject* obj, float distance, float \/*angle*\/)/' "${FILE}" 2>/dev/null || true
+    fi
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/ReadyCheckAction.cpp"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's/PlayerbotAI\* botAI)/PlayerbotAI* \/*botAI*\/)/' "${FILE}" 2>/dev/null || true
+        sed -i 's/Event& event)/Event\& \/*event*\/)/' "${FILE}" 2>/dev/null || true
+        sed -i '/class HealthChecker/,/class ManaChecker/ s|bool Check(PlayerbotAI\* botAI, AiObjectContext\* context)|bool Check(PlayerbotAI* /*botAI*/, AiObjectContext* context)|' "${FILE}" 2>/dev/null || true
+        sed -i '/class ManaChecker/,/class DistanceChecker/ s|bool Check(PlayerbotAI\* botAI, AiObjectContext\* context)|bool Check(PlayerbotAI* /*botAI*/, AiObjectContext* context)|' "${FILE}" 2>/dev/null || true
+        sed -i '/class ItemCountChecker/,/^};/ s|bool Check(PlayerbotAI\* botAI, AiObjectContext\* context)|bool Check(PlayerbotAI* /*botAI*/, AiObjectContext* context)|' "${FILE}" 2>/dev/null || true
+    fi
+
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/SayAction.cpp"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's/ObjectGuid guid2)/ObjectGuid \/*guid2*\/)/' "${FILE}" 2>/dev/null || true
+        sed -i 's/std::string const& msg, std::string const& name)/std::string const\& \/*msg*\/, std::string const\& \/*name*\/)/' "${FILE}" 2>/dev/null || true
+    fi
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/SayAction.h"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's/Event& event)/Event\& \/*event*\/)/' "${FILE}" 2>/dev/null || true
+    fi
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/BankAction.cpp"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's/Unit\* bank)/Unit* \/*bank*\/)/' "${FILE}" 2>/dev/null || true
+    fi
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/LfgActions.cpp"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's/Event& event)/Event\& \/*event*\/)/' "${FILE}" 2>/dev/null || true
+        sed -i 's|LfgJoinAction::Execute(Event event)|LfgJoinAction::Execute(Event /*event*/)|' "${FILE}" 2>/dev/null || true
+    fi
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/CheckMountStateAction.cpp"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's|const MountData\& mountData|const MountData\& /*mountData*/|' "${FILE}" 2>/dev/null || true
+    fi
+
+
+    FILE="${PLAYERBOTS_DIR}/Ai/World/Rpg/Action/NewRpgBaseAction.cpp"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's|MoveRandomNear(float moveStep, MovementPriority priority, WorldObject\* center)|MoveRandomNear(float moveStep, MovementPriority priority, WorldObject* /*center*/)|' "${FILE}" 2>/dev/null || true
+    fi
+
+    FILE="${PLAYERBOTS_DIR}/Ai/World/Rpg/Action/NewRpgOutdoorPvP.cpp"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's|NewRpgOutdoorPvpAction::Execute(Event event)|NewRpgOutdoorPvpAction::Execute(Event /*event*/)|' "${FILE}" 2>/dev/null || true
+    fi
+
+    FILE="${PLAYERBOTS_DIR}/Bot/RandomPlayerbotMgr.cpp"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's|float teleX, float teleY, float teleZ)|float teleX, float teleY, float /*teleZ*/)|' "${FILE}" 2>/dev/null || true
+        sed -i 's|HandlePlayerbotConsoleCommand(ChatHandler\* handler, char const\* args)|HandlePlayerbotConsoleCommand(ChatHandler* /*handler*/, char const* args)|' "${FILE}" 2>/dev/null || true
+    fi
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Raid/SerpentshrineCavern/Action/RaidSSCActions.cpp"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's|Player\* designatedLooter,|Player* /*designatedLooter*/,|' "${FILE}" 2>/dev/null || true
+        sed -i 's|Player\* firstCorePasser, Player\* secondCorePasser,|Player* /*firstCorePasser*/, Player* secondCorePasser,|' "${FILE}" 2>/dev/null || true
+    fi
+
+    FILE="${PLAYERBOTS_DIR}/Mgr/Travel/TravelMgr.cpp"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's|WorldPosition::getTransports(uint32 entry)|WorldPosition::getTransports(uint32 /*entry*/)|' "${FILE}" 2>/dev/null || true
+        sed -i -z 's|getNextPoint(WorldPosition\* center, std::vector<WorldPosition\*> points,\n                                                    uint32 amount)|getNextPoint(WorldPosition* center, std::vector<WorldPosition*> points,\n                                                    uint32 /*amount*/)|' "${FILE}" 2>/dev/null || true
+    fi
+
+    FILE="${PLAYERBOTS_DIR}/Script/PlayerbotCommandScript.cpp"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's|HandlePerfMonCommand(ChatHandler\* handler, char const\* args)|HandlePerfMonCommand(ChatHandler* /*handler*/, char const* args)|' "${FILE}" 2>/dev/null || true
+    fi
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/ChooseTravelTargetAction.cpp"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's/bool onlyCompleted, bool newQuests/bool \/*onlyCompleted*\/, bool newQuests/' "${FILE}" 2>/dev/null || true
+    fi
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/ReleaseSpiritAction.cpp"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's/bool isAutoRelease)/bool \/*isAutoRelease*\/)/' "${FILE}" 2>/dev/null || true
+    fi
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/SeeSpellAction.cpp"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's/LastMovement& lastWp)/LastMovement\& \/*lastWp*\/)/' "${FILE}" 2>/dev/null || true
+    fi
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/AutoMaintenanceOnLevelupAction.cpp"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's/LearnTrainerSpells(std::ostringstream\* out)/LearnTrainerSpells(std::ostringstream* \/*out*\/)/' "${FILE}" 2>/dev/null || true
+    fi
+}
+
+unpatch_B019_playerbots_unused_parameter() {
+    local PLAYERBOTS_DIR="${AC_CODE_DIR}/modules/mod-playerbots/src"
+
+    [[ -d "${PLAYERBOTS_DIR}" ]] || return 0
+
+    local FILE
+
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Strategy/CombatStrategy.cpp"
+    [[ -f "${FILE}" ]] && sed -i 's/std::vector<Multiplier\*>& \/\*multipliers\*\//std::vector<Multiplier*>\& multipliers/' "${FILE}" 2>/dev/null || true
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Strategy/ChatCommandHandlerStrategy.cpp"
+    [[ -f "${FILE}" ]] && sed -i 's/PlayerbotAI\* \/\*botAI\*\//PlayerbotAI* botAI/' "${FILE}" 2>/dev/null || true
+
+    for f in RacialsStrategy UsePotionsStrategy; do
+        FILE="${PLAYERBOTS_DIR}/Ai/Base/Strategy/${f}.cpp"
+        [[ -f "${FILE}" ]] && sed -i 's/PlayerbotAI\* \/\*botAI\*\//PlayerbotAI* botAI/' "${FILE}" 2>/dev/null || true
+    done
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/CastCustomSpellAction.h"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's/WorldObject\* \/\*target\*\//WorldObject* target/' "${FILE}" 2>/dev/null || true
+        sed -i 's/SpellInfo const\* \/\*spellInfo\*\//SpellInfo const* spellInfo/' "${FILE}" 2>/dev/null || true
+    fi
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/MovementActions.cpp"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's/bool \/\*idle\*\/,/bool idle,/' "${FILE}" 2>/dev/null || true
+        sed -i 's/bool \/\*react\*\/,/bool react,/' "${FILE}" 2>/dev/null || true
+        sed -i 's/IsMovingAllowed(uint32 \/\*mapId\*\/, float \/\*x\*\/, float \/\*y\*\/, float \/\*z\*\/)/IsMovingAllowed(uint32 mapId, float x, float y, float z)/' "${FILE}" 2>/dev/null || true
+        sed -i 's/IsDuplicateMove(uint32 \/\*mapId\*\//IsDuplicateMove(uint32 mapId/' "${FILE}" 2>/dev/null || true
+        sed -i 's/MovementAction::ChaseTo(WorldObject\* obj, float distance, float \/\*angle\*\/)/MovementAction::ChaseTo(WorldObject* obj, float distance, float angle)/' "${FILE}" 2>/dev/null || true
+    fi
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/ReadyCheckAction.cpp"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's/PlayerbotAI\* \/\*botAI\*\//PlayerbotAI* botAI/' "${FILE}" 2>/dev/null || true
+        sed -i 's/Event& \/\*event\*\//Event\& event/' "${FILE}" 2>/dev/null || true
+    fi
+
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/SayAction.cpp"
+    if [[ -f "${FILE}" ]]; then
+        sed -i 's/ObjectGuid \/\*guid2\*\//ObjectGuid guid2/' "${FILE}" 2>/dev/null || true
+        sed -i 's/std::string const& \/\*msg\*\/, std::string const& \/\*name\*\//std::string const\& msg, std::string const\& name/' "${FILE}" 2>/dev/null || true
+    fi
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/SayAction.h"
+    [[ -f "${FILE}" ]] && sed -i 's/Event& \/\*event\*\//Event\& event/' "${FILE}" 2>/dev/null || true
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/BankAction.cpp"
+    [[ -f "${FILE}" ]] && sed -i 's/Unit\* \/\*bank\*\//Unit* bank/' "${FILE}" 2>/dev/null || true
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/LfgActions.cpp"
+    [[ -f "${FILE}" ]] && sed -i 's/Event& \/\*event\*\//Event\& event/' "${FILE}" 2>/dev/null || true
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/ChooseTravelTargetAction.cpp"
+    [[ -f "${FILE}" ]] && sed -i 's/bool \/\*onlyCompleted\*\/, bool newQuests/bool onlyCompleted, bool newQuests/' "${FILE}" 2>/dev/null || true
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/ReleaseSpiritAction.cpp"
+    [[ -f "${FILE}" ]] && sed -i 's/bool \/\*isAutoRelease\*\//bool isAutoRelease/' "${FILE}" 2>/dev/null || true
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/SeeSpellAction.cpp"
+    [[ -f "${FILE}" ]] && sed -i 's/LastMovement& \/\*lastWp\*\//LastMovement\& lastWp/' "${FILE}" 2>/dev/null || true
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/AutoMaintenanceOnLevelupAction.cpp"
+    [[ -f "${FILE}" ]] && sed -i 's/LearnTrainerSpells(std::ostringstream\* \/\*out\*\/)/LearnTrainerSpells(std::ostringstream* out)/' "${FILE}" 2>/dev/null || true
+}

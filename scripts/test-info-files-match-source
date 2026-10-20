@@ -1,0 +1,127 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+local only = {}
+for i, a in ipairs(arg) do
+    if i == 1 and a:sub(-4) ~= ".lua" then DIR = a else only[#only + 1] = a end
+end
+
+local function lines_of(cmd)
+    local out, h = {}, io.popen(cmd)
+    for l in h:lines() do out[#out + 1] = l end
+    h:close()
+    return out
+end
+local function q(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
+local function read(path)
+    local h = io.open(path, "rb")
+    if not h then return nil end
+    local s = h:read("*a"); h:close()
+    return s
+end
+
+local function handed_out(src)
+    local out = {}
+    for line in (src .. "\n"):gmatch("([^\n]*)\n") do
+        local g = line:match("^%s*([%a_][%w_]*)%s*=%s*{")
+               or line:match("^%s*([%a_][%w_]*)%s*=%s*[%a_][%w_]*%s+or%s+{")
+               or line:match("^package%.loaded%b[]%s*=%s*([%a_][%w_]*)")
+        if g == "local" then g = nil end
+        if g then out[g] = true end
+    end
+    local last = src:match("\nreturn%s+([%a_][%w_]*)%s*$") or src:match("\nreturn%s+([%a_][%w_]*)%s*\n[%s%-]*$")
+    if last then out[last] = true end
+    return out
+end
+
+local function defined_in(src)
+    local found, n, out = {}, 0, handed_out(src)
+    local declared_local = {}
+    for line in (src .. "\n"):gmatch("([^\n]*)\n") do
+        n = n + 1
+        local names = line:match("^%s*local%s+([%a_][%w_%s,]*)")
+        if names and not line:match("^%s*local%s+function") then
+            for nm in names:gmatch("[%a_][%w_]*") do declared_local[nm] = true end
+        end
+        local name = line:match("^%s*function%s+([%a_][%w_]*[.:][%a_][%w_.:]*)%s*%(")
+                  or line:match("^%s*([%a_][%w_]*%.[%a_][%w_.]*)%s*=%s*function%s*%(")
+        if name then
+            name = name:gsub(":", ".")
+            if not out[name:match("^([^.]+)")] then name = nil end
+        else
+            name = line:match("^function%s+([%a_][%w_]*)%s*%(")
+            if name and declared_local[name] then name = nil end
+        end
+        if name then found[name] = found[name] or n end
+    end
+    return found, out
+end
+
+local function listed(named, name)
+    return named[name] or named[name:match("([^.]+)$")]
+end
+
+local function named_in(md)
+    local found, n = {}, 0
+    for line in (md .. "\n"):gmatch("([^\n]*)\n") do
+        n = n + 1
+        for name in line:gmatch("`([%a_][%w_.:]*)%(") do
+            name = name:gsub(":", ".")
+            found[name] = found[name] or n
+        end
+    end
+    return found
+end
+
+local pairs_to_check = {}
+if #only > 0 then
+    for _, f in ipairs(only) do pairs_to_check[#pairs_to_check + 1] = f end
+else
+    for _, f in ipairs(lines_of("cd " .. q(DIR) .. " && git ls-files 'src/*.lua' 'scripts/lib/*.lua'")) do
+        if read(DIR .. "/" .. f:sub(1, -5) .. ".info.md") then pairs_to_check[#pairs_to_check + 1] = f end
+    end
+end
+
+local problems, checked = 0, 0
+for _, f in ipairs(pairs_to_check) do
+    local info = f:sub(1, -5) .. ".info.md"
+    local src, md = read(DIR .. "/" .. f), read(DIR .. "/" .. info)
+    if not src or not md then
+        print("  FAIL " .. f .. ": " .. (src and "" or "no source ") .. (md and "" or "no " .. info))
+        problems = problems + 1
+    else
+        checked = checked + 1
+        local defined, out = defined_in(src)
+        local named = named_in(md)
+        local missing, gone = {}, {}
+        for name, line in pairs(defined) do if not listed(named, name) then missing[#missing + 1] = { name, line } end end
+        for name, line in pairs(named) do
+            local table_name = name:match("^([^.]+)%.")
+            if table_name and out[table_name] and not defined[name] then gone[#gone + 1] = { name, line } end
+        end
+        table.sort(missing, function(a, b) return a[2] < b[2] end)
+        table.sort(gone, function(a, b) return a[2] < b[2] end)
+        for _, m in ipairs(missing) do
+            print(string.format("  FAIL %s:%d defines %s, which %s does not list", f, m[2], m[1], info))
+        end
+        for _, g in ipairs(gone) do
+            print(string.format("  FAIL %s:%d lists %s, which %s no longer defines", info, g[2], g[1], f))
+        end
+        problems = problems + #missing + #gone
+        local count = 0
+        for _ in pairs(defined) do count = count + 1 end
+        local listed_count = 0
+        for _ in pairs(named) do listed_count = listed_count + 1 end
+        if count == 0 and listed_count == 0 then
+            print(string.format("  ok   %s and %s agree (no functions: a data file or a script)", f, info))
+        elseif count == 0 then
+            print("  FAIL " .. f .. ": no handed-out function found, though " .. info .. " lists some; nothing was compared")
+            problems = problems + 1
+        elseif #missing + #gone == 0 then
+            print(string.format("  ok   %s and %s agree (%d functions)", f, info, count))
+        end
+    end
+end
+
+print(string.format("%d pair(s) checked; %d disagreement(s)", checked, problems))
+os.exit(problems == 0 and 0 or 1)

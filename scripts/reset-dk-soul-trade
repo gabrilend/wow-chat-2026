@@ -1,0 +1,174 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+DIR="/mnt/kaun/wow-chat-2026"
+if [[ "${1:-}" == "--dir" ]]; then DIR="$2"; shift 2; fi
+DRY=0
+if [[ "${1:-}" == "--dry-run" ]]; then DRY=1; shift; fi
+DK_NAME="${1:-}"
+if [[ -z "${DK_NAME}" ]]; then
+    echo "Usage: $0 [--dir PROJECT_DIR] <death knight name>"
+    exit 1
+fi
+PROFILE="$(cat "${DIR}/.profile")"
+MYSQL="${DIR}/mysql/installed-files/bin/mysql"
+CHARS="acore_characters_${PROFILE}"
+WORLD="acore_world_${PROFILE}"
+AUTH="acore_auth"
+GM="${DIR}/scripts/gm-command"
+STORY="${DIR}/src/lua-basic/data/death-knight-skip-quests.lua"
+WORLD_CONF="${DIR}/installed-files-${PROFILE}/etc/worldserver.conf"
+
+DK_LEVEL=55                                         # a death knight is made at 55 (stock)
+STORY_SPELLS="53428,48778,50977,33391"
+STORY_SKILLS="762,776"
+PROFESSION_SKILLS="129,164,165,171,182,185,186,197,202,333,356,393,755,762,773"
+AT_LOGIN_RESET_TALENTS=4                            # Player.h: AtLoginFlags
+
+sql() {
+    "${MYSQL}" -h127.0.0.1 -P3307 -uritz -pmenardi -D "${CHARS}" -N -B -e "$1" 2>&1 | grep -v "Using a password" || true
+}
+
+stop() {
+    echo "ERROR at: $1"
+    echo "  why: $2"
+    echo "  done before it: ${DONE:-nothing}"
+    exit 1
+}
+DONE=""
+did() { DONE="${DONE:+${DONE}; }$1"; if [[ "${DRY}" == "1" ]]; then echo "  would: $1"; else echo "  done: $1"; fi; }
+
+echo "Resetting the soul trade of ${DK_NAME} (profile ${PROFILE})"
+
+ROW="$(sql "SELECT guid, account, race, class, online, level, money FROM ${CHARS}.characters WHERE name = '${DK_NAME}'")"
+[[ -n "${ROW}" ]] || stop "finding the death knight" "no character named ${DK_NAME} in ${CHARS}"
+read -r DK_GUID DK_ACCOUNT DK_RACE DK_CLASS DK_ONLINE DK_WAS_LEVEL DK_WAS_MONEY <<< "${ROW}"
+[[ "${DK_CLASS}" == "6" ]] || stop "finding the death knight" "${DK_NAME} is class ${DK_CLASS}, not a death knight (6)"
+[[ "${DK_ONLINE}" == "0" ]] || stop "finding the death knight" "${DK_NAME} is logged in; log it out first"
+
+LEDGER="$(sql "SELECT soul, soul_account, holding_account, state, changed FROM ${CHARS}.basic_718_souls WHERE dk = ${DK_GUID}")"
+[[ -n "${LEDGER}" ]] || stop "reading the ledger" "${DK_NAME} (${DK_GUID}) has no row in basic_718_souls: it was made before the rule, or never logged in"
+read -r SOUL_GUID SOUL_ACCOUNT HOLDING STATE TRADED_AT <<< "${LEDGER}"
+[[ "${STATE}" == "1" ]] || stop "reading the ledger" "${DK_NAME}'s ledger state is ${STATE} (0 owed, 1 given, 2 returning); only a given soul can be reset"
+
+SOUL="$(sql "SELECT name, account, online FROM ${CHARS}.characters WHERE guid = ${SOUL_GUID}")"
+[[ -n "${SOUL}" ]] || stop "finding the soul" "character ${SOUL_GUID} (the ledger's soul) is not in ${CHARS}.characters"
+read -r SOUL_NAME SOUL_NOW_ACCOUNT SOUL_ONLINE <<< "${SOUL}"
+[[ "${SOUL_ONLINE}" == "0" ]] || stop "finding the soul" "${SOUL_NAME} is logged in"
+HOME_NAME="$(sql "SELECT username FROM ${AUTH}.account WHERE id = ${SOUL_ACCOUNT}")"
+[[ -n "${HOME_NAME}" ]] || stop "finding the soul's home account" "no account ${SOUL_ACCOUNT} in ${AUTH}"
+
+BUDDIES_ON="$(sql "SELECT COUNT(*) FROM ${CHARS}.characters c JOIN ${CHARS}.buddy_roster r ON r.buddy = c.guid WHERE r.owner = ${DK_GUID} AND c.online = 1")"
+[[ "${BUDDIES_ON}" == "0" ]] || stop "checking the buddies" "${BUDDIES_ON} of ${DK_NAME}'s buddies are still in the world; wait for them to leave after the logout"
+
+echo "  ${DK_NAME} (guid ${DK_GUID}, level ${DK_WAS_LEVEL}, ${DK_WAS_MONEY} copper) gave ${SOUL_NAME} (guid ${SOUL_GUID}),"
+echo "  traded at $(date -d "@${TRADED_AT}" '+%F %T'); ${SOUL_NAME} is on account ${SOUL_NOW_ACCOUNT}, its home is ${HOME_NAME} (${SOUL_ACCOUNT})"
+
+if [[ "${DRY}" == "1" ]]; then
+    echo "  would: character changeaccount ${HOME_NAME} ${SOUL_NAME}"
+elif [[ "${SOUL_NOW_ACCOUNT}" != "${SOUL_ACCOUNT}" ]]; then
+    OUT="$("${GM}" --dir "${DIR}" "character changeaccount ${HOME_NAME} ${SOUL_NAME}")" \
+        || stop "moving ${SOUL_NAME} home" "the console said: ${OUT}"
+    NOW="$(sql "SELECT account FROM ${CHARS}.characters WHERE guid = ${SOUL_GUID}")"
+    [[ "${NOW}" == "${SOUL_ACCOUNT}" ]] || stop "moving ${SOUL_NAME} home" "still on account ${NOW} after the console's answer: ${OUT}"
+    did "${SOUL_NAME} is home on ${HOME_NAME}"
+else
+    did "${SOUL_NAME} was already home"
+fi
+
+if [[ "${DRY}" == "1" ]]; then
+    echo "  would: character level ${DK_NAME} ${DK_LEVEL}"
+else
+    OUT="$("${GM}" --dir "${DIR}" "character level ${DK_NAME} ${DK_LEVEL}")" \
+        || stop "setting ${DK_NAME} to level ${DK_LEVEL}" "the console said: ${OUT}"
+    did "level ${DK_LEVEL} (was ${DK_WAS_LEVEL})"
+fi
+
+QUESTS="$(grep -o '{ *[0-9]\+, *[0-9]\+ *}' "${STORY}" | grep -o '[0-9]\+' | awk 'NR % 2 == 1' | paste -sd, -)"
+[[ -n "${QUESTS}" ]] || stop "reading the story's quests" "none found in ${STORY}"
+ITEMS="$(sql "SELECT DISTINCT i FROM (
+    SELECT RewardItem1 i FROM ${WORLD}.quest_template WHERE ID IN (${QUESTS}) UNION SELECT RewardItem2 FROM ${WORLD}.quest_template WHERE ID IN (${QUESTS})
+    UNION SELECT RewardItem3 FROM ${WORLD}.quest_template WHERE ID IN (${QUESTS}) UNION SELECT RewardItem4 FROM ${WORLD}.quest_template WHERE ID IN (${QUESTS})
+    UNION SELECT RewardChoiceItemID1 FROM ${WORLD}.quest_template WHERE ID IN (${QUESTS}) UNION SELECT RewardChoiceItemID2 FROM ${WORLD}.quest_template WHERE ID IN (${QUESTS})
+    UNION SELECT RewardChoiceItemID3 FROM ${WORLD}.quest_template WHERE ID IN (${QUESTS}) UNION SELECT RewardChoiceItemID4 FROM ${WORLD}.quest_template WHERE ID IN (${QUESTS})
+    UNION SELECT RewardChoiceItemID5 FROM ${WORLD}.quest_template WHERE ID IN (${QUESTS}) UNION SELECT RewardChoiceItemID6 FROM ${WORLD}.quest_template WHERE ID IN (${QUESTS})
+    UNION SELECT StartItem FROM ${WORLD}.quest_template WHERE ID IN (${QUESTS})) t WHERE i <> 0" | paste -sd, -)"
+FACTIONS="$(sql "SELECT DISTINCT f FROM (
+    SELECT RewardFactionID1 f FROM ${WORLD}.quest_template WHERE ID IN (${QUESTS}) UNION SELECT RewardFactionID2 FROM ${WORLD}.quest_template WHERE ID IN (${QUESTS})
+    UNION SELECT RewardFactionID3 FROM ${WORLD}.quest_template WHERE ID IN (${QUESTS}) UNION SELECT RewardFactionID4 FROM ${WORLD}.quest_template WHERE ID IN (${QUESTS})
+    UNION SELECT RewardFactionID5 FROM ${WORLD}.quest_template WHERE ID IN (${QUESTS})) t WHERE f <> 0" | paste -sd, -)"
+START="$(sql "SELECT map, zone, position_x, position_y, position_z, orientation FROM ${WORLD}.playercreateinfo WHERE race = ${DK_RACE} AND class = 6")"
+[[ -n "${START}" ]] || stop "reading where new death knights appear" "no playercreateinfo row for race ${DK_RACE}, class 6"
+read -r S_MAP S_ZONE S_X S_Y S_Z S_O <<< "${START}"
+MONEY="$(sed -n 's/^StartHeroicPlayerMoney[[:space:]]*=[[:space:]]*\([0-9]*\).*/\1/p' "${WORLD_CONF}" | tail -1)"
+[[ -n "${MONEY}" ]] || stop "reading a new death knight's money" "no StartHeroicPlayerMoney in ${WORLD_CONF}"
+MAX=$(( DK_LEVEL * 5 ))
+SOUL_DATA="${DIR}/src/lua-basic/data/death-knight-soul-data.lua"
+PROF_SPELLS="$(grep -o '\[[0-9]\+\]=[0-9]\+' "${SOUL_DATA}" | grep -o '^\[[0-9]\+' | tr -d '[' | paste -sd, -)"
+[[ -n "${PROF_SPELLS}" ]] || stop "reading the profession spells" "none found in ${SOUL_DATA}"
+PRIMARY_SKILLS="164,165,171,182,186,197,202,333,393,755,773"
+
+COUNTS="$(sql "
+START TRANSACTION;
+-- the counts, before
+SELECT COUNT(*) FROM ${CHARS}.character_queststatus_rewarded WHERE guid = ${DK_GUID} AND quest IN (${QUESTS});
+SELECT COUNT(*) FROM ${CHARS}.character_inventory ci JOIN ${CHARS}.item_instance ii ON ii.guid = ci.item WHERE ci.guid = ${DK_GUID} AND ii.itemEntry IN (${ITEMS});
+SELECT COUNT(*) FROM ${CHARS}.mail WHERE receiver = ${DK_GUID} AND deliver_time >= ${TRADED_AT};
+SELECT COUNT(*) FROM ${CHARS}.character_spell WHERE guid = ${DK_GUID} AND spell IN (${STORY_SPELLS});
+SELECT COUNT(*) FROM ${CHARS}.character_achievement WHERE guid = ${DK_GUID} AND date >= ${TRADED_AT};
+
+-- quests
+DELETE FROM ${CHARS}.character_queststatus_rewarded WHERE guid = ${DK_GUID} AND quest IN (${QUESTS});
+DELETE FROM ${CHARS}.character_queststatus          WHERE guid = ${DK_GUID} AND quest IN (${QUESTS});
+-- the story's items, carried or banked
+DELETE ii, ci FROM ${CHARS}.character_inventory ci JOIN ${CHARS}.item_instance ii ON ii.guid = ci.item
+  WHERE ci.guid = ${DK_GUID} AND ii.itemEntry IN (${ITEMS});
+-- letters that came after the trade, and what they carried
+DELETE ii FROM ${CHARS}.item_instance ii JOIN ${CHARS}.mail_items mi ON mi.item_guid = ii.guid
+  JOIN ${CHARS}.mail m ON m.id = mi.mail_id WHERE m.receiver = ${DK_GUID} AND m.deliver_time >= ${TRADED_AT};
+DELETE mi FROM ${CHARS}.mail_items mi JOIN ${CHARS}.mail m ON m.id = mi.mail_id WHERE m.receiver = ${DK_GUID} AND m.deliver_time >= ${TRADED_AT};
+DELETE FROM ${CHARS}.mail WHERE receiver = ${DK_GUID} AND deliver_time >= ${TRADED_AT};
+-- the soul's professions, carried over at the trade
+SELECT COUNT(*) FROM ${CHARS}.character_spell WHERE guid = ${DK_GUID} AND spell IN (${PROF_SPELLS})
+  AND spell IN (SELECT spell FROM (SELECT spell FROM ${CHARS}.character_spell WHERE guid = ${SOUL_GUID}) s);
+DELETE FROM ${CHARS}.character_spell WHERE guid = ${DK_GUID} AND spell IN (${PROF_SPELLS})
+  AND spell IN (SELECT spell FROM (SELECT spell FROM ${CHARS}.character_spell WHERE guid = ${SOUL_GUID}) s);
+DELETE FROM ${CHARS}.character_skills WHERE guid = ${DK_GUID} AND skill IN (${PRIMARY_SKILLS})
+  AND skill IN (SELECT skill FROM (SELECT skill FROM ${CHARS}.character_skills WHERE guid = ${SOUL_GUID}) s);
+-- spells, skills, reputation, achievements
+DELETE FROM ${CHARS}.character_spell  WHERE guid = ${DK_GUID} AND spell IN (${STORY_SPELLS});
+DELETE FROM ${CHARS}.character_skills WHERE guid = ${DK_GUID} AND skill IN (${STORY_SKILLS});
+UPDATE ${CHARS}.character_skills SET max = ${MAX}, value = LEAST(value, ${MAX})
+  WHERE guid = ${DK_GUID} AND max > ${MAX} AND skill NOT IN (${PROFESSION_SKILLS});
+UPDATE ${CHARS}.character_reputation SET standing = 0 WHERE guid = ${DK_GUID} AND faction IN (${FACTIONS:-0});
+DELETE FROM ${CHARS}.character_achievement          WHERE guid = ${DK_GUID} AND date >= ${TRADED_AT};
+DELETE FROM ${CHARS}.character_achievement_progress WHERE guid = ${DK_GUID} AND date >= ${TRADED_AT};
+-- a death (the fall), if it is still dead
+DELETE FROM ${CHARS}.corpse WHERE guid = ${DK_GUID};
+DELETE FROM ${CHARS}.character_aura WHERE guid = ${DK_GUID} AND spell = 8326;
+-- the character: level, experience, money, talents at next login, where it stands
+UPDATE ${CHARS}.characters SET level = ${DK_LEVEL}, xp = 0, money = ${MONEY}, at_login = at_login | ${AT_LOGIN_RESET_TALENTS},
+  playerFlags = playerFlags & ~16, map = ${S_MAP}, zone = ${S_ZONE},
+  position_x = ${S_X}, position_y = ${S_Y}, position_z = ${S_Z}, orientation = ${S_O}
+  WHERE guid = ${DK_GUID};
+-- the ledger: owed again
+UPDATE ${CHARS}.basic_718_souls SET soul = 0, soul_account = 0, holding_account = 0, state = 0, skipped = 0, changed = UNIX_TIMESTAMP()
+  WHERE dk = ${DK_GUID};
+-- the buddies: made ones set aside (5), chosen-but-unmade rows dropped (chosen again by level)
+UPDATE ${CHARS}.buddy_roster SET stage = 5 WHERE owner = ${DK_GUID} AND buddy <> 0;
+DELETE FROM ${CHARS}.buddy_roster WHERE owner = ${DK_GUID} AND buddy = 0;
+SELECT ROW_COUNT();
+SELECT COUNT(*) FROM ${CHARS}.buddy_roster WHERE owner = ${DK_GUID} AND stage = 5;
+$([[ "${DRY}" == "1" ]] && echo ROLLBACK || echo COMMIT);")"
+[[ "${COUNTS}" != *ERROR* ]] || stop "the database transaction (nothing in it was kept)" "${COUNTS}"
+read -r -d '' N_QUESTS N_ITEMS N_MAILS N_SPELLS N_ACH N_PROF N_DROPPED N_ASIDE <<< "${COUNTS}" || true
+did "${N_QUESTS} story quests, ${N_ITEMS} story items, ${N_MAILS} letters, ${N_SPELLS} story spells, ${N_ACH} achievements and ${N_PROF} carried recipes taken off"
+did "money ${MONEY} copper (was ${DK_WAS_MONEY}); level-bound skills at most ${MAX}; Ebon Blade reputation (factions ${FACTIONS:-none}) back to its start; talents reset at next login"
+did "standing where new death knights appear (map ${S_MAP}, ${S_X}, ${S_Y}, ${S_Z})"
+did "the ledger says owed"
+did "${N_ASIDE} buddies set aside (back at levels 55, 57, 59, 60), ${N_DROPPED} unmade choices dropped"
+
+echo ""
+if [[ "${DRY}" == "1" ]]; then echo "Dry run: the database part was rolled back; nothing changed."; exit 0; fi
+echo "${DK_NAME} owes a soul again. Log in to try the trade; the holding account (SOULS${DK_ACCOUNT}) is kept, empty."

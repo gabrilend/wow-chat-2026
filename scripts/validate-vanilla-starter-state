@@ -1,0 +1,170 @@
+#!/usr/bin/env bash
+
+set -uo pipefail
+
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+
+MYSQL="${DIR}/mysql/installed-files/bin/mysql"
+WORLD="acore_world_vanilla"
+
+export MYSQL_PWD="menardi"
+MYSQL_CONN=(-h127.0.0.1 -P3307 -uritz -N)
+
+FAIL_COUNT=0
+
+run_sql() {
+    local query="$1"
+    "${MYSQL}" "${MYSQL_CONN[@]}" -e "${query}"
+}
+
+report() {
+    local title="$1"
+    local offenders="$2"
+    if [[ -z "${offenders}" ]]; then
+        printf '  [PASS] %s\n' "${title}"
+    else
+        printf '  [FAIL] %s\n' "${title}"
+        printf '%s\n' "${offenders}" | sed 's/^/         /'
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    fi
+}
+
+EXPECTED_ZONE_CASE="CASE p.race
+        WHEN 1 THEN 38 WHEN 3 THEN 38
+        WHEN 11 THEN 10
+        WHEN 4 THEN 331 WHEN 7 THEN 331
+        WHEN 2 THEN 17
+        WHEN 5 THEN 267 WHEN 8 THEN 267
+        WHEN 6 THEN 406 WHEN 10 THEN 406 END"
+
+check_spawn_zone() {
+    local offenders
+    offenders="$(run_sql "
+        SELECT CONCAT('race ', p.race, ' class ', p.class,
+                      ' -> zone ', p.zone, ' (expected ', ${EXPECTED_ZONE_CASE}, ')')
+        FROM ${WORLD}.playercreateinfo p
+        WHERE p.class <> 6 AND p.race <> 9
+          AND p.zone <> (${EXPECTED_ZONE_CASE})
+        ORDER BY p.race, p.class;")"
+    report "148n spawn zone matches the per-race town for every combo" "${offenders}"
+}
+
+check_has_weapon() {
+    local offenders
+    offenders="$(run_sql "
+        SELECT CONCAT('race ', p.race, ' class ', p.class, ' has no weapon in kit')
+        FROM ${WORLD}.playercreateinfo p
+        LEFT JOIN ${WORLD}.playercreateinfo_item i
+               ON i.race = p.race AND i.class = p.class AND i.Note LIKE 'vanilla-148h-%'
+        LEFT JOIN ${WORLD}.item_template t ON t.entry = i.itemid
+        WHERE p.class <> 6 AND p.race <> 9
+        GROUP BY p.race, p.class
+        HAVING SUM(t.class = 2) = 0 OR SUM(t.class = 2) IS NULL
+        ORDER BY p.race, p.class;")"
+    report "148h weapon present for every combo" "${offenders}"
+}
+
+check_bags_and_hearth() {
+    local offenders
+    offenders="$(run_sql "
+        SELECT CONCAT('race ', p.race, ' class ', p.class,
+                      ' -> bag_slots=', COALESCE(SUM(CASE WHEN t.class = 1 THEN i.amount ELSE 0 END), 0),
+                      ' hearth=', COALESCE(SUM(i.itemid IN (6948, 2006948)), 0))
+        FROM ${WORLD}.playercreateinfo p
+        LEFT JOIN ${WORLD}.playercreateinfo_item i
+               ON i.race = p.race AND i.class = p.class AND i.Note LIKE 'vanilla-148h-%'
+        LEFT JOIN ${WORLD}.item_template t ON t.entry = i.itemid
+        WHERE p.class <> 6 AND p.race <> 9
+        GROUP BY p.race, p.class
+        HAVING COALESCE(SUM(CASE WHEN t.class = 1 THEN i.amount ELSE 0 END), 0) < 3
+            OR COALESCE(SUM(i.itemid IN (6948, 2006948)), 0) < 1
+        ORDER BY p.race, p.class;")"
+    report "148h three bags + a hearthstone for every combo" "${offenders}"
+}
+
+check_clone_required_level() {
+    local offenders
+    offenders="$(run_sql "
+        SELECT CONCAT('race ', p.race, ' class ', p.class,
+                      ' item ', i.itemid, ' RequiredLevel=', t.RequiredLevel)
+        FROM ${WORLD}.playercreateinfo p
+        JOIN ${WORLD}.playercreateinfo_item i
+             ON i.race = p.race AND i.class = p.class AND i.Note LIKE 'vanilla-148h-%'
+        JOIN ${WORLD}.item_template t ON t.entry = i.itemid
+        WHERE p.class <> 6 AND p.race <> 9
+          AND t.class IN (2, 4) AND t.RequiredLevel > 20
+        ORDER BY p.race, p.class;")"
+    report "148h equippable kit items are all RequiredLevel <= 20" "${offenders}"
+}
+
+check_pretrain_present() {
+    local offenders
+    offenders="$(run_sql "
+        SELECT CONCAT('class ', cls.c, ' has no 148j pretrain rows')
+        FROM (SELECT 1 c UNION SELECT 2 UNION SELECT 3 UNION SELECT 4
+              UNION SELECT 5 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9
+              UNION SELECT 11) cls
+        WHERE NOT EXISTS (
+            SELECT 1 FROM ${WORLD}.playercreateinfo_spell_custom s
+            WHERE s.Note LIKE 'vanilla-148j-%'
+              AND (s.classmask & (1 << (cls.c - 1))) > 0)
+        ORDER BY cls.c;")"
+    report "148j pretrain spells present for every class" "${offenders}"
+}
+
+check_professions() {
+    local offenders
+    offenders="$(run_sql "
+        SELECT CONCAT('race ', p.race, ' class ', p.class,
+                      ' -> gathering=', SUM(s.skill IN (129,182,186,197,333,356,393)),
+                      ' production=', SUM(s.skill IN (164,165,171,185,202,755,773)))
+        FROM ${WORLD}.playercreateinfo p
+        JOIN ${WORLD}.playercreateinfo_skills s
+          ON s.comment LIKE 'vanilla-148q-%'
+         AND (s.raceMask=0  OR s.raceMask  & (1<<(p.race-1)))
+         AND (s.classMask=0 OR s.classMask & (1<<(p.class-1)))
+        WHERE p.class <> 6 AND p.race <> 9
+        GROUP BY p.race, p.class
+        HAVING (SUM(s.skill IN (129,182,186,197,333,356,393))
+              + SUM(s.skill IN (164,165,171,185,202,755,773))) <> 2
+            OR SUM(s.skill IN (164,165,171,185,202,755,773)) > 1
+        ORDER BY p.race, p.class;")"
+    report "148q every combo has exactly 2 professions (production <= 1)" "${offenders}"
+}
+
+main() {
+    if [[ ! -x "${MYSQL}" ]]; then
+        echo "ERROR: mysql client not found or not executable at ${MYSQL}" >&2
+        echo "  - Is DIR correct? (got: ${DIR})" >&2
+        echo "  - Is the project-local MySQL built? (mysql/installed-files/bin/mysql)" >&2
+        exit 2
+    fi
+
+    local combos
+    combos="$(run_sql "SELECT COUNT(*) FROM ${WORLD}.playercreateinfo WHERE class <> 6 AND race <> 9;")" || {
+        echo "ERROR: could not query ${WORLD}. Is MySQL running on :3307? (start-mysql)" >&2
+        exit 2
+    }
+
+    echo "Vanilla starter-state validation — ${combos} valid (race, class) combos"
+    echo "Database: ${WORLD}   (read-only checks)"
+    echo
+
+    check_spawn_zone
+    check_has_weapon
+    check_bags_and_hearth
+    check_clone_required_level
+    check_pretrain_present
+    check_professions
+
+    echo
+    if [[ "${FAIL_COUNT}" -eq 0 ]]; then
+        echo "All data-side checks PASSED. Remaining 148o work is the in-client"
+        echo "eyeball pass (spawn-walkable, kit visually equipped, hearth tooltip)."
+        exit 0
+    fi
+    echo "${FAIL_COUNT} check(s) FAILED — see flagged rows above."
+    exit 1
+}
+
+main

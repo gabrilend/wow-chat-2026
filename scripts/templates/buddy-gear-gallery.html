@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- GENERATED_STAMP -->
+<title>Buddy Gear Gallery</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Spectral:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --ground: #f2f4ef; --panel: #ffffff; --ink: #1f2a26; --muted: #5f6f68; --rule: #d7ded8;
+  --gold: #a8792a; --gold-soft: #f3e8d2; --art: #e7ece6;
+  --q0: #7d7d7d; --q1: #3a3a3a; --q2: #1f8a12; --q3: #0062c4; --q4: #8a2fd0;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ground: #101613; --panel: #172019; --ink: #e6eee9; --muted: #97a89f; --rule: #2a362f;
+    --gold: #ddb45a; --gold-soft: #2e2716; --art: #1d2721;
+    --q0: #9d9d9d; --q1: #f0f0f0; --q2: #1eff00; --q3: #3399ff; --q4: #c069ff;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ground: #101613; --panel: #172019; --ink: #e6eee9; --muted: #97a89f; --rule: #2a362f;
+  --gold: #ddb45a; --gold-soft: #2e2716; --art: #1d2721;
+  --q0: #9d9d9d; --q1: #f0f0f0; --q2: #1eff00; --q3: #3399ff; --q4: #c069ff;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--ground); color: var(--ink); font: 16px/1.5 "Spectral", Georgia, serif; }
+.wrap { max-width: 1240px; margin: 0 auto; padding: 28px 16px 64px; display: grid; gap: 24px; }
+h1, h2 { font-family: "Cinzel", Georgia, serif; margin: 0; letter-spacing: .02em; }
+h1 { font-size: clamp(1.6rem, 4vw, 2.4rem); }
+.lede { color: var(--muted); max-width: 70ch; margin: 6px 0 0; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.controls span { color: var(--muted); font-size: .9rem; margin-right: 4px; }
+.chip { font: 500 .85rem "JetBrains Mono", monospace; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--rule);
+        background: var(--panel); color: var(--ink); cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--gold-soft); border-color: var(--gold); }
+.grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); }
+.card { min-width: 0; background: var(--panel); border: 1px solid var(--rule); border-radius: 12px; padding: 14px; display: grid; gap: 10px; }
+.card header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.card h2 { font-size: 1.1rem; }
+.card h2 small { font: 500 .8rem "JetBrains Mono", monospace; color: var(--muted); margin-left: 6px; }
+select { min-width: 0; flex: 1 1 160px; font: .85rem "Spectral", serif; color: var(--ink); background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 3px 6px; max-width: 100%; }
+.doll { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .9fr) minmax(0, 1fr); gap: 6px; }
+.col { display: grid; gap: 4px; align-content: start; min-width: 0; }
+.weapons { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.slot { position: relative; border: 1px solid var(--rule); border-left: 3px solid var(--rule); border-radius: 6px; padding: 3px 6px;
+        min-height: 38px; min-width: 0; font-size: .78rem; line-height: 1.2; background: var(--ground); }
+.slot:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.slot .k { display: block; font: 500 .62rem "JetBrains Mono", monospace; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.slot .n { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.slot.empty .n { color: var(--muted); font-style: italic; }
+.slot[data-q="0"] { border-left-color: var(--q0); } .slot[data-q="0"] .n { color: var(--q0); }
+.slot[data-q="1"] { border-left-color: var(--q1); }
+.slot[data-q="2"] { border-left-color: var(--q2); } .slot[data-q="2"] .n { color: var(--q2); }
+.slot[data-q="3"] { border-left-color: var(--q3); } .slot[data-q="3"] .n { color: var(--q3); }
+.slot[data-q="4"] { border-left-color: var(--q4); } .slot[data-q="4"] .n { color: var(--q4); }
+.portrait { min-width: 0; background: var(--art); border-radius: 8px; padding: 10px; display: grid; gap: 6px; align-content: start; font-size: .8rem; }
+.portrait .figure { aspect-ratio: 3 / 4; border-radius: 6px; border: 1px dashed var(--rule); display: grid; place-items: center;
+                    text-align: center; color: var(--muted); font-size: .72rem; padding: 8px; }
+.portrait dl { display: grid; grid-template-columns: auto auto; gap: 1px 8px; margin: 0; }
+.portrait dt { color: var(--muted); } .portrait dd { margin: 0; text-align: right; font-family: "JetBrains Mono", monospace; font-size: .74rem; }
+.tip { position: fixed; z-index: 10; pointer-events: none; max-width: 280px; background: #0d0f1c; color: #fff; border: 1px solid #6c6f8a;
+       border-radius: 6px; padding: 8px 10px; font: 13px/1.4 "Spectral", Georgia, serif; box-shadow: 0 6px 18px rgba(0,0,0,.4); display: none; }
+.tip b { display: block; font-size: 14px; }
+.tip .r { display: flex; justify-content: space-between; gap: 12px; }
+.tip .g { color: #1eff00; } .tip .y { color: #ffd100; } .tip .m { color: #aaa; }
+.tip .t0 { color: #9d9d9d; } .tip .t1 { color: #fff; } .tip .t2 { color: #1eff00; } .tip .t3 { color: #3399ff; } .tip .t4 { color: #c069ff; }
+footer { color: var(--muted); font-size: .85rem; }
+@media (max-width: 460px) { .doll { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .portrait { grid-column: 1 / -1; order: -1; } .portrait .figure { aspect-ratio: auto; min-height: 56px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div>
+    <h1>Buddy Gear Gallery</h1>
+    <p class="lede">What a new buddy wears when it is made: one card per class at each ten-level tier, by talent shape. White vendor gear,
+      gray where no white of the level fills a slot. Hover or focus an item for its tooltip.</p>
+  </div>
+  <div class="controls" id="classes"><span>Class</span></div>
+  <div class="controls" id="tiers"><span>Level</span></div>
+  <div class="grid" id="grid"></div>
+  <footer id="foot"></footer>
+</div>
+<div class="tip" id="tip" role="tooltip"></div>
+<script>
+const DATA = /*BUDDY_GEAR_DATA*/;
+// {{{ names
+const SLOT = { 0: "Head", 1: "Neck", 2: "Shoulders", 3: "Shirt", 4: "Chest", 5: "Waist", 6: "Legs", 7: "Feet", 8: "Wrists", 9: "Hands",
+  10: "Finger", 11: "Finger", 12: "Trinket", 13: "Trinket", 14: "Back", 15: "Main hand", 16: "Off hand", 17: "Ranged", 18: "Tabard" };
+const LEFT = [0, 1, 2, 14, 4, 3, 18, 8], RIGHT = [9, 5, 6, 7, 10, 11, 12, 13], HANDS = [15, 16, 17];
+const INV = { 1: "Head", 2: "Neck", 3: "Shoulder", 4: "Shirt", 5: "Chest", 6: "Waist", 7: "Legs", 8: "Feet", 9: "Wrist", 10: "Hands",
+  11: "Finger", 12: "Trinket", 13: "One-Hand", 14: "Off Hand", 15: "Ranged", 16: "Back", 17: "Two-Hand", 20: "Chest", 21: "Main Hand",
+  22: "Off Hand", 23: "Held In Off-hand", 25: "Thrown", 26: "Ranged" };
+const ARMOR = { 0: "", 1: "Cloth", 2: "Leather", 3: "Mail", 4: "Plate", 6: "Shield" };
+const WEAPON = { 0: "Axe", 1: "Axe", 2: "Bow", 3: "Gun", 4: "Mace", 5: "Mace", 6: "Polearm", 7: "Sword", 8: "Sword", 10: "Staff",
+  13: "Fist Weapon", 15: "Dagger", 16: "Thrown", 18: "Crossbow", 19: "Wand", 20: "Fishing Pole" };
+const STAT = { 3: "Agility", 4: "Strength", 5: "Intellect", 6: "Spirit", 7: "Stamina", 12: "Defense Rating", 13: "Dodge Rating",
+  14: "Parry Rating", 15: "Block Rating", 31: "Hit Rating", 32: "Critical Strike Rating", 35: "Resilience", 36: "Haste Rating",
+  37: "Expertise Rating", 38: "Attack Power", 43: "Mana per 5 sec.", 44: "Armor Penetration", 45: "Spell Power", 48: "Block Value" };
+const SOCKET = { 1: "Meta", 2: "Red", 4: "Yellow", 8: "Blue", 14: "Prismatic" };
+// }}}
+
+// {{{ state
+let pickClass = 0, pickTier = 0;           // 0: all
+const shapeOf = {};                        // card key -> chosen shape (1-10)
+// }}}
+
+// {{{ tooltip
+const tip = document.getElementById("tip");
+function tooltip(it) {
+  const kind = it.cls === 2 ? (WEAPON[it.sub] || "") : (ARMOR[it.sub] || "");
+  let h = `<b class="t${it.q}">${it.n}</b>`;
+  h += `<div class="r"><span>${INV[it.inv] || ""}</span><span>${kind}</span></div>`;
+  if (it.dmg) h += `<div class="r"><span>${it.dmg[0]} - ${it.dmg[1]} Damage</span><span>Speed ${it.speed.toFixed(2)}</span></div>`
+               + `<div>(${((it.dmg[0] + it.dmg[1]) / 2 / it.speed).toFixed(1)} damage per second)</div>`;
+  if (it.armor) h += `<div>${it.armor} Armor</div>`;
+  for (const [t, v] of it.stats) h += `<div class="${t <= 7 ? "" : "g"}">${t <= 7 ? "+" + v + " " + (STAT[t] || "stat " + t) : "Equip: " + (STAT[t] || "stat " + t) + " +" + v}</div>`;
+  for (const s of it.sockets) h += `<div class="m">${SOCKET[s] || "Socket"} Socket</div>`;
+  if (it.rl) h += `<div>Requires Level ${it.rl}</div>`;
+  h += `<div class="y">Item Level ${it.il}</div>`;
+  return h;
+}
+function showTip(el, ev) {
+  const it = DATA.items[el.dataset.item];
+  if (!it) return;
+  tip.innerHTML = tooltip(it);
+  tip.style.display = "block";
+  const r = el.getBoundingClientRect();
+  const x = Math.min(window.innerWidth - tip.offsetWidth - 8, Math.max(8, (ev && ev.clientX) ? ev.clientX + 14 : r.right + 8));
+  const y = Math.min(window.innerHeight - tip.offsetHeight - 8, Math.max(8, (ev && ev.clientY) ? ev.clientY + 14 : r.top));
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+function hideTip() { tip.style.display = "none"; }
+// }}}
+
+// {{{ cards
+function slotHtml(slot, items) {
+  const id = items[String(slot)];
+  const it = id && DATA.items[String(id)];
+  if (!it) return `<div class="slot empty"><span class="k">${SLOT[slot]}</span><span class="n">${slot >= 10 && slot <= 13 || slot === 1 ? "chosen at making" : "none"}</span></div>`;
+  return `<div class="slot" tabindex="0" data-item="${id}" data-q="${it.q}"><span class="k">${SLOT[slot]}</span><span class="n">${it.n}</span></div>`;
+}
+function sums(items) {
+  let armor = 0, dps = 0; const st = {};
+  for (const id of Object.values(items)) {
+    const it = DATA.items[String(id)]; if (!it) continue;
+    armor += it.armor || 0;
+    if (it.dmg && (it.inv === 13 || it.inv === 17 || it.inv === 21)) dps = Math.max(dps, (it.dmg[0] + it.dmg[1]) / 2 / it.speed);
+    for (const [t, v] of it.stats) st[t] = (st[t] || 0) + v;
+  }
+  let rows = `<dt>Armor</dt><dd>${armor}</dd>`;
+  if (dps) rows += `<dt>Weapon dps</dt><dd>${dps.toFixed(1)}</dd>`;
+  for (const [t, v] of Object.entries(st)) rows += `<dt>${STAT[t] || "stat " + t}</dt><dd>+${v}</dd>`;
+  const grays = Object.values(items).filter(id => (DATA.items[String(id)] || {}).q === 0).length;
+  rows += `<dt>Gray pieces</dt><dd>${grays}</dd>`;
+  return rows;
+}
+function card(c, tier) {
+  const key = c.id + "-" + tier;
+  const shape = shapeOf[key] || 1;
+  const items = c.tiers[String(tier)][shape - 1];
+  const opts = c.shapes.map((l, i) => `<option value="${i + 1}"${i + 1 === shape ? " selected" : ""}>${l}</option>`).join("");
+  return `<article class="card" data-key="${key}">
+    <header><h2>${c.name}<small>level ${tier}</small></h2>
+      <select aria-label="Talent shape" data-key="${key}">${opts}</select></header>
+    <div class="doll">
+      <div class="col">${LEFT.map(s => slotHtml(s, items)).join("")}</div>
+      <div class="portrait"><div class="figure">3D figure: waits on the custom client drawing items on a character (617r5)</div>
+        <dl>${sums(items)}</dl></div>
+      <div class="col">${RIGHT.map(s => slotHtml(s, items)).join("")}</div>
+    </div>
+    <div class="weapons">${HANDS.map(s => slotHtml(s, items)).join("")}</div>
+  </article>`;
+}
+function render() {
+  const out = [];
+  for (const c of DATA.classes) {
+    if (pickClass && c.id !== pickClass) continue;
+    for (const t of DATA.tiers) if (!pickTier || t === pickTier) out.push(card(c, t));
+  }
+  document.getElementById("grid").innerHTML = out.join("");
+}
+// }}}
+
+// {{{ controls
+function chips(boxId, list, label, get, set) {
+  const box = document.getElementById(boxId);
+  const all = [{ v: 0, l: "All" }, ...list.map(x => ({ v: x.v, l: label(x) }))];
+  for (const a of all) {
+    const b = document.createElement("button");
+    b.className = "chip"; b.textContent = a.l; b.setAttribute("aria-pressed", String(get() === a.v));
+    b.addEventListener("click", () => { set(a.v); box.querySelectorAll(".chip").forEach(x => x.setAttribute("aria-pressed", String(x === b))); render(); });
+    box.appendChild(b);
+  }
+}
+chips("classes", DATA.classes.map(c => ({ v: c.id, n: c.name })), x => x.n, () => pickClass, v => { pickClass = v; });
+chips("tiers", DATA.tiers.map(t => ({ v: t })), x => String(x.v), () => pickTier, v => { pickTier = v; });
+document.getElementById("grid").addEventListener("change", e => {
+  if (e.target.matches("select")) { shapeOf[e.target.dataset.key] = Number(e.target.value); render(); }
+});
+const grid = document.getElementById("grid");
+grid.addEventListener("mouseover", e => { const s = e.target.closest(".slot[data-item]"); if (s) showTip(s, e); });
+grid.addEventListener("mousemove", e => { const s = e.target.closest(".slot[data-item]"); if (s) showTip(s, e); });
+grid.addEventListener("mouseout", e => { if (e.target.closest(".slot[data-item]")) hideTip(); });
+grid.addEventListener("focusin", e => { const s = e.target.closest(".slot[data-item]"); if (s) showTip(s); });
+grid.addEventListener("focusout", hideTip);
+document.getElementById("foot").textContent = `Generated ${DATA.generated} from the buddy-white gear lists; ${Object.keys(DATA.items).length} items.`;
+render();
+// }}}
+</script>
+</body>
+</html>

@@ -1,0 +1,121 @@
+#!/bin/bash
+
+DIR="/mnt/kaun/wow-chat-2026"
+if [[ -n "$1" && "$1" != [0-9]* ]]; then
+    DIR="$1"
+    shift
+fi
+
+set -euo pipefail
+MINUTES="${1:-10}"
+FLOORS="${DIR}/tmp/shared-memory/exploration-floors"
+ENGINE="${DIR}/docs/HTML/exploration-compare/explore-engine.js"
+[[ -d "${FLOORS}" ]] || { echo "ERROR: no floors in ${FLOORS}; run scripts/generate-exploration-floors first"; exit 1; }
+[[ -f "${ENGINE}" ]] || { echo "ERROR: the engine ${ENGINE} is missing"; exit 1; }
+
+HARNESS='
+const fs = require("fs");
+const [engine, floors, minutes] = process.argv.slice(1);
+globalThis.atob = s => Buffer.from(s, "base64").toString("binary");
+require(engine);
+const { buildMap, Sim } = globalThis.ExploreEngine;
+let failures = 0;
+const fail = m => { failures++; console.log("  FAIL " + m); };
+for (const name of fs.readdirSync(floors).filter(f => f.endsWith(".json")).sort()) {
+  const F = JSON.parse(fs.readFileSync(floors + "/" + name, "utf8"));
+  const t0 = Date.now();
+  const M = buildMap(F);
+  const tm = Date.now() - t0;
+  const live = M.edges.filter(e => !e.cut).length;
+  console.log(`${F.key}: ${M.W}x${M.H} squares at ${M.yd} yd, ${M.count} walkable, ${M.knots.length} knots, ${live} runs, ${M.farEnds.length} far ends, prepared in ${tm} ms`);
+  if (M.count < 1000) fail(F.key + ": under 1000 walkable squares joined to the start");
+  if (!M.farEnds.length) fail(F.key + ": no far ends found");
+  // the flood of walking distance reaches every square joined to the start (2026-10-07: a
+  // rounding slip stopped it a few hundred squares out, unnoticed, under every rule using it)
+  let flooded = 0;
+  for (const c of M.cells) if (isFinite(M.geo[c])) flooded++;
+  if (flooded !== M.count) fail(`${F.key}: walking distance reached ${flooded} of ${M.count} squares`);
+  for (const kind of ["rings", "frontier", "skeleton", "decided"]) {
+    const sim = new Sim(M, kind, 3, 20261007);
+    const t1 = Date.now();
+    const steps = Math.round(minutes * 60 / 0.1);
+    let offFloor = 0;
+    const startCells = sim.buddies.map(b => b.cell);
+    for (let s = 0; s < steps; s++) {
+      sim.step();
+      for (const b of sim.buddies) if (!M.reach[b.cell]) offFloor++;
+    }
+    const ms = Date.now() - t1;
+    const seen = sim.seenCount / M.count;
+    const moved = sim.buddies.filter((b, k) => b.cell !== startCells[k]).length;
+    console.log(`  ${kind.padEnd(9)} seen ${(seen * 100).toFixed(1).padStart(5)}%  far ends ${String(sim.endCount).padStart(3)}/${M.farEnds.length}  unevenness ${sim.unevenness().toFixed(2)}  half seen ${sim.firstHalf === null ? "never" : (sim.firstHalf / 60).toFixed(1) + " min"}  ${minutes} min in ${ms} ms`);
+    if (offFloor) fail(`${F.key}/${kind}: a buddy stood off the floor ${offFloor} times`);
+    if (!moved) fail(`${F.key}/${kind}: no buddy left the start`);
+    if (seen < 0.05) fail(`${F.key}/${kind}: saw under 5% of the floor`);
+    if (kind === "decided") {
+      // the decided design: when its survey ended, and the patrol loop it then built
+      const explored = sim.exploredCount / M.count;
+      const W = M.watch;
+      console.log(`            explored ${(explored * 100).toFixed(1)}%  ` + (sim.patrolFrom === null ? "still surveying" :
+        `survey done at ${(sim.patrolFrom / 60).toFixed(1)} min; patrol loop ${W.tour.length} stops, ${Math.round(W.length)} yards, sees ${(W.covered * 100).toFixed(1)}% of the floor`));
+      if (sim.patrolFrom !== null && W.covered < 0.9) fail(`${F.key}/decided: the watchman stops see only ${(W.covered * 100).toFixed(1)}% of the floor`);
+      if (sim.patrolFrom !== null && explored < 0.97) fail(`${F.key}/decided: patrol began with ${(explored * 100).toFixed(1)}% explored`);
+    }
+  }
+}
+console.log(failures ? failures + " failures" : "all checks passed");
+process.exit(failures ? 1 : 0);
+'
+node -e "${HARNESS}" "${ENGINE}" "${FLOORS}" "${MINUTES}"
+
+PAGE_JS="${DIR}/docs/HTML/exploration-compare/compare.js"
+LOOP='
+const fs = require("fs");
+const [engine, page, floors] = process.argv.slice(1);
+globalThis.atob = s => Buffer.from(s, "base64").toString("binary");
+const any = () => new Proxy(function () {}, { get: (t, k) => k === "canvas" ? {} : k === "fillStyle" ? t._fill || "#888888" : any(), set: (t, k, v) => { if (k === "fillStyle") t._fill = v; return true; }, apply: () => any() });
+function Node(tag) {
+  this.tag = tag; this.kids = []; this.attrs = {}; this.style = {}; this.hidden = false; this.textContent = "";
+  this.classList = { toggle() {} }; this.width = 0; this.height = 0;
+}
+Node.prototype.append = function (...k) { this.kids.push(...k); };
+Node.prototype.replaceChildren = function (...k) { this.kids = k; };
+Node.prototype.setAttribute = function (k, v) { this.attrs[k] = v; if (k === "hidden") this.hidden = true; };
+Node.prototype.addEventListener = function (type, fn) { this["on_" + type] = fn; };
+Node.prototype.querySelectorAll = function () { return []; };
+Node.prototype.getBoundingClientRect = function () { return { width: 300, height: 200 }; };
+Node.prototype.getContext = function () { const c = any(); return c; };
+const root = new Node("section");
+globalThis.document = { getElementById: () => root, createElement: t => new Node(t) };
+globalThis.window = globalThis;
+globalThis.getComputedStyle = () => ({ getPropertyValue: () => "#888888" });
+globalThis.ImageData = function (w, h) { this.width = w; this.height = h; this.data = new Uint8ClampedArray(w * h * 4); };
+globalThis.Image = function () { const self = this; Object.defineProperty(this, "src", { set() { self.onload && self.onload(); } }); };
+let pending = null, now = 0;
+globalThis.requestAnimationFrame = f => { pending = f; };
+globalThis.performance = { now: () => now };
+globalThis.matchMedia = () => ({ matches: false });
+require(engine);
+const list = fs.readdirSync(floors).filter(f => f.endsWith(".json")).sort().map(f => JSON.parse(fs.readFileSync(floors + "/" + f, "utf8")));
+window.EXPLORATION_FLOORS = list;
+require(page);
+const find = (n, pred) => pred(n) ? n : (n.kids || []).reduce((a, k) => a || (k instanceof Node && find(k, pred)), null);
+const problem = find(root, n => n.attrs && n.attrs.role === "alert");
+const clock = find(root, n => n.tag === "span" && n.className === "xc-clock");
+const speed = find(root, n => n.tag === "select" && n.attrs.id === "xc-speed");
+let failures = 0;
+// the page opens on the first cave; four seconds of frames at 60 a second, at the
+// opening speed and then at every speed the page offers (2026-10-07: real time,
+// one step every six frames, rounded to no steps at all and never moved)
+for (const v of ["30", "1", "10", "100"]) {
+  if (v !== "30") { speed.value = v; speed.on_change(); }
+  const before = clock.textContent;
+  for (let f = 0; f < 240; f++) { now += 16.7; const cb = pending; pending = null; if (!cb) break; cb(now); }
+  console.log(`page loop on ${list[0].key} at ${v}x: clock ${before} -> ${clock.textContent}`);
+  if (!problem.hidden) { console.log("  FAIL the loop stopped: " + problem.textContent); failures++; break; }
+  if (clock.textContent === before) { console.log("  FAIL the clock did not move"); failures++; }
+}
+console.log(failures ? failures + " page failures" : "page loop runs");
+process.exit(failures ? 1 : 0);
+'
+node -e "${LOOP}" "${ENGINE}" "${PAGE_JS}" "${FLOORS}"

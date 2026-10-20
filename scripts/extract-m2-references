@@ -1,0 +1,33 @@
+
+import os
+import sys
+
+DIR = sys.argv[1] if len(sys.argv) > 1 else "/mnt/kaun/wow-chat-2026"
+DATA = sys.argv[2] if len(sys.argv) > 2 else "/mnt/mtwo/games/azeroth-core/client/client-files/Data"
+sys.path.insert(0, os.path.join(DIR, "libs/pylibs"))
+import mpyq  # noqa: E402
+
+OUT = os.path.join(DIR, "tmp/shared-memory/m2-reference")
+os.makedirs(OUT, exist_ok=True)
+WANT = [
+    (b"item\\objectcomponents\\head\\", b"helm_plate_d_01_hum"),
+    (b"item\\objectcomponents\\shoulder\\", b"lshoulder_plate_a_01"),
+    (b"item\\objectcomponents\\weapon\\", b"sword_2h_ahnqiraj_d_01"),
+]
+archive = mpyq.MPQArchive(os.path.join(DATA, "common-2.MPQ"), listfile=True)
+files = archive.files or []
+missing = []
+for folder, stem in WANT:
+    hits = [f for f in files if f.lower().startswith(folder + stem) and (f.lower().endswith(b".m2") or f.lower().endswith(b".skin"))]
+    if not hits:
+        missing.append(stem.decode())
+        continue
+    for f in hits:
+        data = archive.read_file(f)
+        name = f.split(b"\\")[-1].decode()
+        with open(os.path.join(OUT, name), "wb") as out:
+            out.write(data)
+        print("extract-m2-references: %s (%d bytes)" % (name, len(data)))
+if missing:
+    sys.stderr.write("extract-m2-references: not found in common-2.MPQ: %s\n" % ", ".join(missing))
+    sys.exit(1)

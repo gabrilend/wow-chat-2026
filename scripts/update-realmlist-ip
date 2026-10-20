@@ -1,0 +1,138 @@
+#!/bin/bash
+
+
+DIR="/mnt/kaun/wow-chat-2026"
+if [[ -n "${1:-}" && -d "${1:-}" ]]; then
+    DIR="$1"
+fi
+
+WORLDSERVER_PORT=4462
+REALM_ID=1
+MYSQL_DIR="${DIR}/mysql/installed-files"
+MYSQL="${MYSQL_DIR}/bin/mysql"
+
+source "${DIR}/scripts/credentials" "${DIR}"
+
+function get_public_ip() {
+    local services=(
+        "ifconfig.me"
+        "icanhazip.com"
+        "api.ipify.org"
+        "checkip.amazonaws.com"
+    )
+
+    local shuffled=($(shuf -e "${services[@]}"))
+    local svc1="${shuffled[0]}"
+    local svc2="${shuffled[1]}"
+
+    local ip1 ip2
+    ip1=$(curl -s --max-time 5 "$svc1" 2>/dev/null | tr -d '[:space:]')
+    ip2=$(curl -s --max-time 5 "$svc2" 2>/dev/null | tr -d '[:space:]')
+
+    if [[ -n "$ip1" && "$ip1" == "$ip2" ]]; then
+        echo "$ip1"
+        return 0
+    fi
+
+    local svc3="${shuffled[2]}"
+    local svc4="${shuffled[3]}"
+    local ip3 ip4
+    ip3=$(curl -s --max-time 5 "$svc3" 2>/dev/null | tr -d '[:space:]')
+    ip4=$(curl -s --max-time 5 "$svc4" 2>/dev/null | tr -d '[:space:]')
+
+    local all_ips=("$ip1" "$ip2" "$ip3" "$ip4")
+    local all_svcs=("$svc1" "$svc2" "$svc3" "$svc4")
+
+    for candidate in "${all_ips[@]}"; do
+        [[ -z "$candidate" ]] && continue
+
+        local count=0
+        for ip in "${all_ips[@]}"; do
+            [[ "$ip" == "$candidate" ]] && ((count++))
+        done
+
+        if [[ $count -ge 2 ]]; then
+            echo "$candidate"
+            return 0
+        fi
+    done
+
+    echo "ERROR: Could not determine public IP (services disagree)" >&2
+    for i in 0 1 2 3; do
+        echo "  ${all_svcs[$i]}: ${all_ips[$i]:-<empty>}" >&2
+    done
+    return 1
+}
+
+function get_current_realmlist() {
+    "${MYSQL}" -u "$(cred_get mysql_user)" \
+          -p"$(cred_get mysql_pass)" \
+          -P "$(cred_get mysql_port)" \
+          -S "$(cred_get mysql_socket)" \
+          -N -e "SELECT address, port FROM acore_auth.realmlist WHERE id = ${REALM_ID};"
+}
+
+function update_realmlist() {
+    local new_ip="$1"
+    local new_port="$2"
+
+    "${MYSQL}" -u "$(cred_get mysql_user)" \
+          -p"$(cred_get mysql_pass)" \
+          -P "$(cred_get mysql_port)" \
+          -S "$(cred_get mysql_socket)" \
+          -e "UPDATE acore_auth.realmlist SET address = '${new_ip}', port = ${new_port} WHERE id = ${REALM_ID};"
+}
+
+function main() {
+    echo "=== Realmlist IP Update ==="
+    echo ""
+
+    local today
+    today=$(date +%Y-%m-%d)
+    mkdir -p /tmp/wow-chat
+    local cache_file="/tmp/wow-chat/.ip-check-${today}"
+
+    if [[ -f "${cache_file}" ]]; then
+        echo "IP already checked today ($(cat "${cache_file}"))"
+        echo "Skipping external lookup - using cached value"
+        echo ""
+        return 0
+    fi
+
+    echo "Current realmlist:"
+    local current
+    current=$(get_current_realmlist)
+    echo "  $current"
+    echo ""
+
+    echo "Detecting public IP..."
+    local public_ip
+    public_ip=$(get_public_ip)
+
+    if [[ $? -ne 0 ]]; then
+        echo "FAILED: Could not determine public IP"
+        echo "Realmlist NOT updated - using existing value"
+        exit 1
+    fi
+
+    echo "  Detected: $public_ip"
+    echo ""
+
+    echo "Updating realmlist..."
+    update_realmlist "$public_ip" "$WORLDSERVER_PORT"
+
+    if [[ $? -eq 0 ]]; then
+        echo "  SUCCESS: address = $public_ip, port = $WORLDSERVER_PORT"
+    else
+        echo "  FAILED: Database update error"
+        exit 1
+    fi
+
+    echo "${public_ip}" > "${cache_file}"
+
+    echo ""
+    echo "New realmlist:"
+    get_current_realmlist
+}
+
+main

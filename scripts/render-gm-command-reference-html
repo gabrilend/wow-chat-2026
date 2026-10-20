@@ -1,0 +1,292 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local TXT  = arg[2] or (DIR .. "/docs/gm-commands.txt")
+local HTML = arg[3] or (DIR .. "/docs/HTML/gm-commands.html")
+
+local h = io.open(TXT, "r")
+if not h then io.stderr:write("ERROR: cannot read " .. TXT .. " (run scripts/generate-gm-command-reference first)\n"); os.exit(1) end
+local lines = {}
+for line in h:lines() do lines[#lines + 1] = line end
+h:close()
+
+local function esc(s) return (s:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"):gsub('"', "&quot;")) end
+local function slug(s) return (s:lower():gsub("[^%w]+", "-"):gsub("^%-+", ""):gsub("%-+$", "")) end
+local function indent_of(s) return #s:match("^( *)") end
+
+local stamp, sections = {}, {}
+local i, section = 1, nil
+while i <= #lines and not lines[i]:match("^=+$") do stamp[#stamp + 1] = lines[i]; i = i + 1 end
+
+local system, stack, anchor = nil, {}, nil
+while i <= #lines do
+    local line = lines[i]
+    if line:match("^=+$") and lines[i + 2] and lines[i + 2]:match("^=+$") then
+        local title = lines[i + 1]:match("^%s*(.-)%s*$")
+        section = { title = title, kind = (title:find("^WHAT'S NEW") or title:find("^EVERY COMMAND")) and "commands" or "prose",
+                    prose = {}, systems = {} }
+        sections[#sections + 1] = section
+        system, stack, anchor = nil, {}, nil
+        i = i + 3
+    elseif not section then
+        i = i + 1
+    elseif section.kind == "prose" then
+        section.prose[#section.prose + 1] = line
+        i = i + 1
+    elseif not line:match("%S") then
+        i = i + 1
+    elseif indent_of(line) == 0 and lines[i + 1] and lines[i + 1]:match("^%-+$") then
+        system = { name = line, families = {} }
+        section.systems[#section.systems + 1] = system
+        stack, anchor = {}, nil
+        i = i + 2
+    else
+        local ind, text = indent_of(line), line:match("^%s*(.-)%s*$")
+        if anchor and ind >= anchor.indent + 4 then
+            anchor.help[#anchor.help + 1] = text
+        elseif text:sub(1, 1) == "." and anchor and anchor.kind == "command" and ind == anchor.indent and not text:find("%s%s%[[^%]]*%]$") then
+            anchor.syntax[#anchor.syntax + 1] = text
+        else
+            local node = { indent = ind, help = {}, syntax = {}, children = {} }
+            if text:sub(1, 1) == "." then
+                local syn, meta = text:match("^(.-)%s%s+%[([^%]]*)%]$")
+                node.kind, node.syntax, node.meta = "command", { syn or text }, meta or ""
+            else
+                node.kind = (ind == 2) and "family" or "group"
+                node.text = text
+            end
+            while #stack > 0 and stack[#stack].indent >= ind do table.remove(stack) end
+            if node.kind == "family" then
+                if not system then io.stderr:write("ERROR: line " .. i .. ": a family outside any system\n"); os.exit(1) end
+                system.families[#system.families + 1] = node
+            elseif #stack > 0 then
+                table.insert(stack[#stack].children, node)
+            else
+                io.stderr:write("ERROR: line " .. i .. ": a command or group outside any family: " .. text .. "\n"); os.exit(1)
+            end
+            if node.kind ~= "command" then stack[#stack + 1] = node end
+            anchor = node
+        end
+        i = i + 1
+    end
+end
+
+local out = {}
+local function w(s) out[#out + 1] = s end
+
+local function syntax_html(s)
+    local cmd, rest = s:match("^(%.[%w_%-]+[^%$#<%[]*)(.*)$")
+    if not cmd then cmd, rest = s, "" end
+    rest = esc(rest)
+    rest = rest:gsub("(%[[^%]]*%])", '<span class="opt">%1</span>')
+    rest = rest:gsub("(&lt;[^&]*&gt;)", '<span class="req">%1</span>')
+    rest = rest:gsub("([%$#][%w_]+)", '<span class="val">%1</span>')
+    return '<span class="cmd">' .. esc(cmd) .. "</span>" .. rest
+end
+
+local counts = { total = 0, new = 0 }
+local function draw_node(node, family_slug)
+    if node.kind == "command" then
+        counts.total = counts.total + 1
+        local level, where, new = node.meta:match("^%s*([^,]+),%s*([^,]+),?%s*(.-)%s*$")
+        local is_new = new == "NEW"
+        if is_new then counts.new = counts.new + 1 end
+        local words = {}
+        for _, s in ipairs(node.syntax) do words[#words + 1] = s end
+        w(string.format('<div class="c%s" data-level="%s" data-new="%s" data-text="%s">', is_new and " new" or "", esc(level or ""),
+            is_new and "1" or "0", esc((table.concat(words, " ") .. " " .. table.concat(node.help, " ")):lower())))
+        w('<div class="row"><code class="syn">')
+        for k, s in ipairs(node.syntax) do w((k > 1 and "<br>" or "") .. syntax_html(s)) end
+        w('</code><span class="meta"><span class="lv lv-' .. esc(level or "") .. '">' .. esc(level or "") .. '</span>'
+            .. '<span class="wh">' .. esc(where or "") .. "</span>" .. (is_new and '<span class="nw">new</span>' or "") .. "</span></div>")
+        if #node.help > 0 then w('<p class="help">' .. esc(table.concat(node.help, " ")) .. "</p>") end
+        w("</div>")
+    else
+        local tag = node.kind == "family" and "h3" or "h4"
+        w(string.format('<div class="%s"%s>', node.kind, node.kind == "family" and (' id="' .. family_slug .. '"') or ""))
+        local title, count = node.text:match("^(.-)%s%s+(%(.*%))$")
+        w(string.format("<%s>%s%s</%s>", tag, esc(title or node.text), count and (' <small>' .. esc(count) .. "</small>") or "", tag))
+        if #node.help > 0 then w('<p class="help">' .. esc(table.concat(node.help, " ")) .. "</p>") end
+        for _, child in ipairs(node.children) do draw_node(child, family_slug) end
+        w("</div>")
+    end
+end
+
+local function prose_html(plines)
+    local blocks, para, pre = {}, {}, {}
+    local function flush()
+        if #para > 0 then blocks[#blocks + 1] = "<p>" .. esc(table.concat(para, " ")) .. "</p>"; para = {} end
+        if #pre > 0 then blocks[#blocks + 1] = "<pre>" .. esc(table.concat(pre, "\n")) .. "</pre>"; pre = {} end
+    end
+    for _, l in ipairs(plines) do
+        if not l:match("%S") then flush()
+        elseif indent_of(l) > 0 then if #para > 0 then flush() end; pre[#pre + 1] = l
+        else if #pre > 0 then flush() end; para[#para + 1] = l end
+    end
+    flush()
+    return table.concat(blocks, "\n")
+end
+
+local toc = {}
+for _, s in ipairs(sections) do
+    local sid = slug(s.title)
+    toc[#toc + 1] = '<li><a href="#' .. sid .. '">' .. esc(s.title:lower():gsub("^%l", string.upper)) .. "</a>"
+    if s.kind == "commands" then
+        toc[#toc + 1] = "<ul>"
+        for _, sys in ipairs(s.systems) do
+            local yid = sid .. "--" .. slug(sys.name)
+            toc[#toc + 1] = '<li><a href="#' .. yid .. '">' .. esc(sys.name:lower():gsub("^%l", string.upper)) .. "</a>"
+            if s.title:find("^EVERY") then
+                toc[#toc + 1] = '<ul class="fams">'
+                for _, f in ipairs(sys.families) do
+                    local name = f.text:match("^(%S+)")
+                    toc[#toc + 1] = '<li><a href="#' .. yid .. "--" .. slug(name) .. '">' .. esc(name) .. "</a></li>"
+                end
+                toc[#toc + 1] = "</ul>"
+            end
+            toc[#toc + 1] = "</li>"
+        end
+        toc[#toc + 1] = "</ul>"
+    end
+    toc[#toc + 1] = "</li>"
+end
+
+local body = {}
+for _, s in ipairs(sections) do
+    local sid = slug(s.title)
+    body[#body + 1] = '<section id="' .. sid .. '"><h2>' .. esc(s.title) .. "</h2>"
+    if s.kind == "prose" then
+        body[#body + 1] = prose_html(s.prose)
+    else
+        local before = #out
+        for _, sys in ipairs(s.systems) do
+            local yid = sid .. "--" .. slug(sys.name)
+            w('<div class="sys" id="' .. yid .. '"><h2 class="sysh">' .. esc(sys.name) .. "</h2>")
+            for _, f in ipairs(sys.families) do draw_node(f, yid .. "--" .. slug(f.text:match("^(%S+)"))) end
+            w("</div>")
+        end
+        local piece = {}
+        for k = before + 1, #out do piece[#piece + 1] = out[k] end
+        for k = #out, before + 1, -1 do out[k] = nil end
+        body[#body + 1] = table.concat(piece, "\n")
+    end
+    body[#body + 1] = "</section>"
+end
+
+local page = [[<!doctype html>
+<!-- ]] .. esc(table.concat(stamp, " ")):gsub("%-%-", "- -") .. [[ Drawn by scripts/render-gm-command-reference-html from docs/gm-commands.txt alone. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Game Master Commands</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Cormorant+SC:wght@600&display=swap">
+<style>
+:root{
+  --bg:#f6f5f1; --surface:#fcfcfb; --ink:#17160f; --ink-2:#55534a; --ink-3:#8a877b;
+  --rule:#e3e1d8; --accent:#2a78d6; --new:#1baf7a; --new-bg:rgba(27,175,122,.09);
+  --val:#b4561f; --opt:#7a5bb8; --req:#2a78d6;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  color-scheme:dark; --bg:#131311; --surface:#1a1a19; --ink:#f3f2ec; --ink-2:#c3c2b7; --ink-3:#8f8d82;
+  --rule:#2c2b27; --accent:#3987e5; --new:#2fcf92; --new-bg:rgba(47,207,146,.10);
+  --val:#e08a52; --opt:#a990e6; --req:#5aa2ff; } }
+:root[data-theme="dark"]{
+  color-scheme:dark; --bg:#131311; --surface:#1a1a19; --ink:#f3f2ec; --ink-2:#c3c2b7; --ink-3:#8f8d82;
+  --rule:#2c2b27; --accent:#3987e5; --new:#2fcf92; --new-bg:rgba(47,207,146,.10);
+  --val:#e08a52; --opt:#a990e6; --req:#5aa2ff; }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "IBM Plex Sans",system-ui,sans-serif}
+.layout{display:grid;grid-template-columns:260px minmax(0,1fr);min-height:100vh}
+nav{position:sticky;top:0;height:100vh;overflow-y:auto;border-right:1px solid var(--rule);padding:18px 14px;background:var(--surface);font-size:13.5px}
+nav ul{list-style:none;margin:0;padding-left:12px}
+nav>ul{padding-left:0}
+nav a{color:var(--ink-2);text-decoration:none;display:block;padding:1px 0}
+nav a:hover{color:var(--accent)}
+nav .fams a{font:12.5px "IBM Plex Mono",monospace;color:var(--ink-3)}
+main{padding:28px 16px 64px;max-width:1000px;width:100%;margin:0 auto}
+h1{font:600 clamp(28px,4vw,40px)/1.1 "Cormorant SC",Georgia,serif;margin:0 0 6px;letter-spacing:.02em}
+.stamp{color:var(--ink-3);font-size:12.5px;margin:0 0 18px}
+section>h2{font:600 13px "IBM Plex Mono",monospace;letter-spacing:.08em;color:var(--ink-3);border-bottom:1px solid var(--rule);padding-bottom:6px;margin:34px 0 12px}
+.sysh{font:600 22px/1.2 "Cormorant SC",Georgia,serif;margin:26px 0 8px;letter-spacing:.02em}
+section p,section pre{max-width:72ch;color:var(--ink-2)}
+pre{font:12.5px/1.5 "IBM Plex Mono",monospace;background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:10px 12px;overflow-x:auto}
+.controls{position:sticky;top:0;z-index:2;background:var(--bg);display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--rule)}
+.controls input[type=search]{flex:1 1 220px;font:14px "IBM Plex Sans",sans-serif;padding:7px 10px;border:1px solid var(--rule);border-radius:8px;background:var(--surface);color:var(--ink)}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{font:500 12.5px "IBM Plex Sans",sans-serif;color:var(--ink-2);background:none;border:0;padding:6px 10px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.count{font-size:12.5px;color:var(--ink-3)}
+.family{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:8px 14px 10px;margin:10px 0}
+.family>h3{font:600 15px "IBM Plex Mono",monospace;margin:4px 0}
+.family h3 small{font:400 12px "IBM Plex Sans",sans-serif;color:var(--ink-3)}
+.group{margin:6px 0 4px 14px;padding-left:10px;border-left:2px solid var(--rule)}
+.group>h4{font:500 13px "IBM Plex Mono",monospace;color:var(--ink-2);margin:6px 0 2px}
+.c{padding:6px 8px;margin:2px -8px;border-radius:6px}
+.c.new{background:var(--new-bg)}
+.row{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;justify-content:space-between}
+.syn{font:13.5px/1.5 "IBM Plex Mono",monospace;overflow-wrap:anywhere}
+.cmd{color:var(--ink);font-weight:500}
+.val{color:var(--val)} .opt{color:var(--opt)} .req{color:var(--req)}
+.meta{display:inline-flex;gap:6px;font:11.5px "IBM Plex Mono",monospace;white-space:nowrap}
+.meta span{border:1px solid var(--rule);border-radius:999px;padding:0 7px;color:var(--ink-2)}
+.meta .nw{border-color:var(--new);color:var(--new);font-weight:500}
+.help{margin:2px 0 0;color:var(--ink-2);font-size:14px;max-width:80ch}
+.hidden{display:none}
+@media (max-width:760px){ .layout{grid-template-columns:1fr} nav{position:static;height:auto;max-height:40vh;border-right:0;border-bottom:1px solid var(--rule)} }
+</style>
+</head>
+<body>
+<div class="layout">
+<nav aria-label="Contents"><ul>
+]] .. table.concat(toc, "\n") .. [[
+
+</ul></nav>
+<main>
+<h1>Game Master Commands</h1>
+<p class="stamp">]] .. esc(table.concat(stamp, " ")) .. [[</p>
+<div class="controls">
+  <input type="search" id="q" placeholder="Search commands and help" aria-label="Search commands and help">
+  <div class="seg" role="group" aria-label="Which commands"><button id="all" aria-pressed="true">all</button><button id="onlynew" aria-pressed="false">new only</button></div>
+  <div class="seg" role="group" aria-label="Who may run them" id="levels">
+    <button data-l="" aria-pressed="true">any level</button><button data-l="player" aria-pressed="false">player</button><button data-l="moderator" aria-pressed="false">moderator</button><button data-l="gm" aria-pressed="false">gm</button><button data-l="admin" aria-pressed="false">admin</button><button data-l="console" aria-pressed="false">console</button>
+  </div>
+  <span class="count" id="count"></span>
+</div>
+]] .. table.concat(body, "\n") .. [[
+
+</main>
+</div>
+<script>
+(function(){
+  var q=document.getElementById('q'), all=document.getElementById('all'), onlynew=document.getElementById('onlynew'),
+      levels=document.querySelectorAll('#levels button'), count=document.getElementById('count');
+  var state={text:'',newOnly:false,level:''};
+  var cmds=[].slice.call(document.querySelectorAll('.c'));
+  var boxes=[].slice.call(document.querySelectorAll('.group,.family,.sys')).reverse();
+  function apply(){
+    var shown=0, words=state.text.toLowerCase().split(/\s+/).filter(Boolean);
+    cmds.forEach(function(c){
+      var ok=(!state.newOnly||c.dataset.new==='1')&&(!state.level||c.dataset.level===state.level)&&
+             words.every(function(w){return c.dataset.text.indexOf(w)>=0;});
+      c.classList.toggle('hidden',!ok); if(ok) shown++;
+    });
+    boxes.forEach(function(b){ b.classList.toggle('hidden', !b.querySelector('.c:not(.hidden)')); });
+    count.textContent=shown+' of '+cmds.length+' shown';
+  }
+  q.addEventListener('input',function(){state.text=q.value;apply();});
+  all.addEventListener('click',function(){state.newOnly=false;all.setAttribute('aria-pressed','true');onlynew.setAttribute('aria-pressed','false');apply();});
+  onlynew.addEventListener('click',function(){state.newOnly=true;onlynew.setAttribute('aria-pressed','true');all.setAttribute('aria-pressed','false');apply();});
+  levels.forEach(function(b){b.addEventListener('click',function(){
+    state.level=b.dataset.l; levels.forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false');}); apply();});});
+  apply();
+})();
+</script>
+</body>
+</html>
+]]
+local o = assert(io.open(HTML, "w"))
+o:write(page)
+o:close()
+print(string.format("%s: %d command entries (%d new) from %s", HTML:sub(#DIR + 2), counts.total, counts.new, TXT:sub(#DIR + 2)))

@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+
+patch_B016_playerbots_constructor_reorder() {
+    local PLAYERBOTS_DIR="${AC_CODE_DIR}/modules/mod-playerbots/src"
+
+    [[ -d "${PLAYERBOTS_DIR}" ]] || return 0
+
+    local FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/GenericSpellActions.cpp"
+    if [[ -f "${FILE}" ]] && grep -q 'range(botAI->GetRange("spell")), spell(spell)' "${FILE}" 2>/dev/null; then
+        sed -i 's/range(botAI->GetRange("spell")), spell(spell)/spell(spell), range(botAI->GetRange("spell"))/' "${FILE}"
+    fi
+
+    if [[ -f "${FILE}" ]] && grep -q "estAmount.*manaEfficiency" "${FILE}" 2>/dev/null; then
+        sed -i 's/estAmount(estAmount), manaEfficiency(manaEfficiency)/manaEfficiency(manaEfficiency), estAmount(estAmount)/' "${FILE}" 2>/dev/null || true
+    fi
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Value/Arrow.h"
+    if [[ -f "${FILE}" ]] && grep -q "built(false), masterUnit(nullptr), botUnit(nullptr)" "${FILE}" 2>/dev/null; then
+        sed -i 's/built(false), masterUnit(nullptr), botUnit(nullptr)/masterUnit(nullptr), botUnit(nullptr), built(false)/' "${FILE}"
+    fi
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Value/LastMovementValue.cpp"
+    if [[ -f "${FILE}" ]] && grep -q "lastMoveToOri(0), lastFlee" "${FILE}" 2>/dev/null; then
+        sed -i 's/lastMoveToOri(0), lastFlee(0)/lastFlee(0), lastMoveToOri(0)/' "${FILE}" 2>/dev/null || true
+    fi
+    if [[ -f "${FILE}" ]] && grep -q "lastMoveToOri(other.lastMoveToOri)," "${FILE}" 2>/dev/null; then
+        sed -i -z 's/lastMoveToOri(other\.lastMoveToOri),\n      lastFlee(other\.lastFlee)/lastFlee(other.lastFlee),\n      lastMoveToOri(other.lastMoveToOri)/' "${FILE}" 2>/dev/null || true
+    fi
+
+    for f in PartyMemberToDispel PartyMemberWithoutAuraValue PartyMemberWithoutItemValue; do
+        FILE="${PLAYERBOTS_DIR}/Ai/Base/Value/${f}.cpp"
+        if [[ -f "${FILE}" ]] && grep -q "PlayerbotAIAware(botAI), FindPlayerPredicate()," "${FILE}" 2>/dev/null; then
+            sed -i 's/PlayerbotAIAware(botAI), FindPlayerPredicate(),/FindPlayerPredicate(), PlayerbotAIAware(botAI),/' "${FILE}" 2>/dev/null || true
+        fi
+    done
+}
+
+unpatch_B016_playerbots_constructor_reorder() {
+    local PLAYERBOTS_DIR="${AC_CODE_DIR}/modules/mod-playerbots/src"
+
+    [[ -d "${PLAYERBOTS_DIR}" ]] || return 0
+
+    local FILE="${PLAYERBOTS_DIR}/Ai/Base/Actions/GenericSpellActions.cpp"
+    [[ -f "${FILE}" ]] && sed -i 's/spell(spell), range(botAI->GetRange("spell"))/range(botAI->GetRange("spell")), spell(spell)/' "${FILE}"
+
+    [[ -f "${FILE}" ]] && sed -i 's/manaEfficiency(manaEfficiency), estAmount(estAmount)/estAmount(estAmount), manaEfficiency(manaEfficiency)/' "${FILE}" 2>/dev/null || true
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Value/Arrow.h"
+    [[ -f "${FILE}" ]] && sed -i 's/masterUnit(nullptr), botUnit(nullptr), built(false)/masterUnit(nullptr), built(false), botUnit(nullptr)/' "${FILE}" 2>/dev/null || true
+
+    FILE="${PLAYERBOTS_DIR}/Ai/Base/Value/LastMovementValue.cpp"
+    [[ -f "${FILE}" ]] && sed -i 's/lastFlee(0), lastMoveToOri(0)/lastMoveToOri(0), lastFlee(0)/' "${FILE}" 2>/dev/null || true
+
+    for f in PartyMemberToDispel PartyMemberWithoutAuraValue PartyMemberWithoutItemValue; do
+        FILE="${PLAYERBOTS_DIR}/Ai/Base/Value/${f}.cpp"
+        if [[ -f "${FILE}" ]] && grep -q "FindPlayerPredicate(), PlayerbotAIAware(botAI)," "${FILE}" 2>/dev/null; then
+            sed -i 's/FindPlayerPredicate(), PlayerbotAIAware(botAI),/PlayerbotAIAware(botAI), FindPlayerPredicate(),/' "${FILE}" 2>/dev/null || true
+        fi
+    done
+}

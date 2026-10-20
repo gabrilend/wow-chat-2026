@@ -1,0 +1,76 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+local CHECK = false
+for _, a in ipairs(arg) do
+    if a == "--check" then CHECK = true elseif a ~= "" then DIR = a end
+end
+local PATCH = DIR .. "/patches/B028-basic-starting-valley-rotation.sh"
+local OUT   = DIR .. "/src/lua-basic/data/starting-valleys.lua"
+
+local function read_valleys(path)
+    local f = assert(io.open(path, "r"), "cannot read " .. path)
+    local text = f:read("*a")
+    f:close()
+    local block = text:match("static Valley const VALLEYS%[2%]%[4%] =(.-)\n%s*};")
+    if not block then error("VALLEYS table not found in " .. path) end
+    local rows = {}
+    for name, map, zone, x, y, z, o in block:gmatch(
+        '{%s*"([^"]+)",%s*(%d+),%s*(%d+),%s*([-%d%.]+)f,%s*([-%d%.]+)f,%s*([-%d%.]+)f,%s*([-%d%.]+)f%s*}') do
+        rows[#rows + 1] = { name = name, map = map, zone = zone, x = x, y = y, z = z, o = o }
+    end
+    if #rows ~= 8 then error(string.format("expected 8 valleys in %s, found %d", path, #rows)) end
+    return rows
+end
+
+local function render(rows)
+    local out = {
+        "--------------------------------------------------------------------------------",
+        "-- data/starting-valleys.lua (issues 155d, 155d1) -- GENERATED, do not edit.",
+        "--",
+        "-- Written by scripts/generate-starting-valleys-lua from the VALLEYS table in",
+        "-- patches/B028-basic-starting-valley-rotation.sh, the one list of the",
+        "-- starting valleys. Edit B028, then re-run the generator.",
+        "--",
+        "-- Shape: [team][index], team 0 Alliance and 1 Horde (the core's TeamId),",
+        "-- index 0-3 as the rotation table's current_valley holds it. Each valley:",
+        "--   name  text     the valley's name",
+        "--   map   integer  map id",
+        "--   zone  integer  area id, as the hearthstone binding stores it",
+        "--   x y z number   the stock arrival position",
+        "--   o     number   facing, radians",
+        "--------------------------------------------------------------------------------",
+        "",
+        "return {",
+    }
+    for team = 0, 1 do
+        out[#out + 1] = string.format("    [%d] = {", team)
+        for i = 0, 3 do
+            local r = rows[team * 4 + i + 1]
+            out[#out + 1] = string.format(
+                '        [%d] = { name = %-20s map = %3s, zone = %4s, x = %10s, y = %10s, z = %8s, o = %7s },',
+                i, '"' .. r.name .. '",', r.map, r.zone, r.x, r.y, r.z, r.o)
+        end
+        out[#out + 1] = "    },"
+    end
+    out[#out + 1] = "}"
+    return table.concat(out, "\n") .. "\n"
+end
+
+local text = render(read_valleys(PATCH))
+
+if CHECK then
+    local f = io.open(OUT, "r")
+    local have = f and f:read("*a")
+    if f then f:close() end
+    if have ~= text then
+        io.stderr:write("starting-valleys.lua is out of date with B028: run scripts/generate-starting-valleys-lua\n")
+        os.exit(1)
+    end
+    print("starting-valleys.lua matches B028")
+else
+    local f = assert(io.open(OUT, "w"))
+    f:write(text)
+    f:close()
+    print("wrote " .. OUT)
+end

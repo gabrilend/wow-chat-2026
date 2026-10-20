@@ -1,0 +1,754 @@
+#!/bin/bash
+
+set -e
+set -o pipefail
+
+set -E
+trap 'STOPPED_AT="${BASH_SOURCE[0]}:${LINENO}"; STOPPED_COMMAND="${BASH_COMMAND}"' ERR
+
+SELF_DIR="${BASH_SOURCE[0]%/*}"
+[[ "${SELF_DIR}" == "${BASH_SOURCE[0]}" ]] && SELF_DIR="."
+
+EXPLICIT_DIR=""
+DIR_SCAN_ARGS=("$@")
+for (( dir_scan_index = 0; dir_scan_index < ${#DIR_SCAN_ARGS[@]}; dir_scan_index++ )); do
+    case "${DIR_SCAN_ARGS[dir_scan_index]}" in
+        --dir)   EXPLICIT_DIR="${DIR_SCAN_ARGS[dir_scan_index + 1]:-}" ;;
+        --dir=*) EXPLICIT_DIR="${DIR_SCAN_ARGS[dir_scan_index]#*=}"    ;;
+    esac
+done
+
+if [[ -n "${EXPLICIT_DIR}" ]]; then
+    DIR_CANDIDATE="${EXPLICIT_DIR}"
+    DIR_SOURCE="the --dir argument"
+else
+    DIR_CANDIDATE="${SELF_DIR}/.."
+    DIR_SOURCE="where this script lives, ${BASH_SOURCE[0]}"
+fi
+
+if [[ ! -d "${DIR_CANDIDATE}" ]]; then
+    echo "Project directory does not exist: ${DIR_CANDIDATE}"
+    echo "  This came from ${DIR_SOURCE}."
+    echo "  Nothing has been changed."
+    exit 1
+fi
+
+DIR="$( builtin cd -P -- "${DIR_CANDIDATE}" && pwd )"
+
+
+if [[ -f "${DIR}/.profile" ]]; then
+    PROFILE="$(cat "${DIR}/.profile")"
+else
+    PROFILE="release"
+fi
+DEFAULT_PROFILE="${PROFILE}"
+
+
+THREADS="${THREADS:-4}"
+AUTO_VALIDATE=true
+RUN_TESTS=true
+
+
+
+declare -A PROFILE_MODULES=(
+    ["alpha"]="mod-eluna mod-transmog"
+    ["beta"]="mod-ale mod-aoe-loot mod-grownup mod-playerbots"
+    ["release"]="mod-ale mod-playerbots"
+    ["vanilla"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
+    ["basic"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
+    ["cc-test"]="mod-playerbots mod-ale"
+)
+
+
+FORCE_REBUILD=false
+DEBUG_BUILD=false
+
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "${1}" in
+            --profile)
+                if [[ -n "${2:-}" ]]; then
+                    PROFILE="${2}"
+                    shift 2
+                else
+                    echo "Error: --profile requires a profile name"
+                    exit 1
+                fi
+                ;;
+            --profile=*)
+                PROFILE="${1#*=}"
+                if [[ -z "${PROFILE}" ]]; then
+                    echo "Error: --profile requires a profile name"
+                    exit 1
+                fi
+                shift
+                ;;
+            --dir)
+                if [[ -n "${2:-}" ]]; then
+                    shift 2
+                else
+                    echo "Error: --dir requires a path"
+                    exit 1
+                fi
+                ;;
+            --dir=*)
+                shift
+                ;;
+            --threads)
+                if [[ -n "${2:-}" && "${2}" =~ ^[0-9]+$ ]]; then
+                    THREADS="${2}"
+                    shift 2
+                else
+                    echo "Error: --threads requires a numeric argument"
+                    exit 1
+                fi
+                ;;
+            --threads=*)
+                THREADS="${1#*=}"
+                if [[ ! "${THREADS}" =~ ^[0-9]+$ ]]; then
+                    echo "Error: --threads requires a numeric argument"
+                    exit 1
+                fi
+                shift
+                ;;
+            --force)
+                FORCE_REBUILD=true
+                shift
+                ;;
+            --debug)
+                DEBUG_BUILD=true
+                FORCE_REBUILD=true
+                shift
+                ;;
+            --no-validate)
+                AUTO_VALIDATE=false
+                shift
+                ;;
+            --skip-tests)
+                RUN_TESTS=false
+                shift
+                ;;
+            --help|-h)
+                show_help
+                exit 0
+                ;;
+            *)
+                echo "Error: unrecognized argument '${1}'"
+                echo "Run with --help to see available options."
+                exit 1
+                ;;
+        esac
+    done
+}
+
+show_help() {
+    echo "Usage: ./scripts/compile [options]"
+    echo ""
+    echo "Compile the server from source (skips git checks)."
+    echo "Builds into shadow directory, then auto-validates and promotes."
+    echo ""
+    echo "Options:"
+    echo "  --dir <path>       Project directory"
+    echo "                     (default: the parent of this script's directory)"
+    echo "  --profile <name>   Use specific profile (default: ${DEFAULT_PROFILE})"
+    echo "  --threads <n>      Number of threads (default: ${THREADS})"
+    echo "  --force            Force cmake reconfiguration"
+    echo "  --debug            Build -O0 -g (Debug); the server then auto-runs the"
+    echo "                     crash catcher, giving exact file:line in tmp/ traces"
+    echo "  --no-validate      Skip auto-validation and promotion"
+    echo "  --skip-tests       Skip the quick tests run before building"
+    echo "                     (they need the project's MySQL running)"
+    echo "  --help             Show this help message"
+    echo ""
+    echo "Pipeline (automatic):"
+    echo "  compile -> validate -> promote"
+    echo ""
+    echo "Manual workflow (with --no-validate):"
+    echo "  1. ./scripts/compile --no-validate  - Build to shadow only"
+    echo "  2. ./scripts/validate               - Test and promote"
+}
+
+
+get_profile_paths() {
+    case "${PROFILE}" in
+        release) AC_CODE_DIR="${DIR}/source-beta"  ;;
+        beta)    AC_CODE_DIR="${DIR}/source-beta"  ;;
+        vanilla) AC_CODE_DIR="${DIR}/source-beta"  ;;
+        basic)   AC_CODE_DIR="${DIR}/source-beta"  ;;
+        cc-test) AC_CODE_DIR="${DIR}/source-beta"  ;;
+        alpha)   AC_CODE_DIR="${DIR}/source-alpha" ;;
+        *)       echo "ERROR: Unknown profile '${PROFILE}'"; exit 1 ;;
+    esac
+    INSTALL_DIR="${DIR}/installed-files-${PROFILE}"
+    BUILD_DIR="${DIR}/build-${PROFILE}"
+    MYSQL_DIR="${DIR}/mysql/installed-files"
+    BOOST_DIR="${DIR}/libs/boost"
+    CCACHE_BIN="${DIR}/libs/ccache/bin/ccache"
+    CCACHE_CACHE_DIR="${DIR}/build-cache"
+    BUILD_DIR_SHADOW="${DIR}/build-shadow"
+    INSTALL_DIR_SHADOW="${DIR}/installed-files-shadow"
+}
+
+setup_log_symlinks() {
+    local TMP_BASE="/tmp/wow-chat-2"
+    local TMP_LOGS="${TMP_BASE}/logs-${PROFILE}"
+    mkdir -p "${TMP_BASE}"
+    mkdir -p "${TMP_LOGS}"
+    [[ -L "${DIR}/tmp" ]] || ln -s "${TMP_BASE}" "${DIR}/tmp"
+    [[ -L "${DIR}/logs-${PROFILE}" ]] || ln -s "${TMP_LOGS}" "${DIR}/logs-${PROFILE}"
+}
+
+declare -A PATCH_PROVIDED_MODULES=(
+    ["mod-buddies"]="B036"   # the project's buddy module (modules/mod-buddies/, issue 617a1)
+)
+
+module_wanted() {
+    local mod_name="${1}"
+    [[ " ${PROFILE_MODULES[${PROFILE}]} " == *" ${mod_name} "* ]] && return 0
+    local providing_patch="${PATCH_PROVIDED_MODULES[${mod_name}]:-}"
+    [[ -n "${providing_patch}" && " ${PHASE_BEGIN_PATCHES[${PROFILE}]} " == *" ${providing_patch} "* ]] && return 0
+    return 1
+}
+
+module_cmake_settings() {
+    local -A seen=()
+    local mod_dir mod_name
+    {
+    for mod_dir in "${AC_CODE_DIR}"/modules/*/ "${DIR}"/modules/*/; do
+        [[ -d "${mod_dir}src" ]] || continue
+        mod_name=$(basename "${mod_dir}")
+        [[ -n "${seen[${mod_name}]:-}" ]] && continue
+        seen[${mod_name}]=1
+        local variable="MODULE_${mod_name^^}"
+        if module_wanted "${mod_name}"; then
+            echo "${variable}=default"
+        else
+            echo "${variable}=disabled"
+        fi
+    done
+    local cache="${BUILD_DIR_SHADOW}/CMakeCache.txt"
+    if [[ -f "${cache}" ]]; then
+        local cached_var cached_dir
+        while IFS= read -r cached_var; do
+            cached_dir="${cached_var#MODULE_}"
+            cached_dir="${cached_dir,,}"
+            [[ -n "${seen[${cached_dir}]:-}" ]] && continue
+            echo "${cached_var}=disabled"
+        done < <(sed -n 's/^\(MODULE_MOD-[A-Z0-9-]*\):STRING=.*/\1/p' "${cache}")
+    fi
+    } | sort
+}
+
+steady_patched_mtimes() {
+    local ledger="${BUILD_DIR_SHADOW}/.steady-mtimes"
+    local -A old_hash=() old_time=()
+    local path hash mtime
+    if [[ -f "${ledger}" ]]; then
+        while IFS=$'\t' read -r path hash mtime; do
+            [[ -n "${path}" ]] || continue
+            old_hash["${path}"]="${hash}"
+            old_time["${path}"]="${mtime}"
+        done < "${ledger}"
+    fi
+
+    local -A wanted=()
+    local repo rel
+    for repo in "${AC_CODE_DIR}" "${AC_CODE_DIR}"/modules/*/; do
+        [[ -d "${repo}/.git" ]] || continue
+        repo="${repo%/}"
+        while IFS= read -r rel; do
+            [[ -n "${rel}" ]] && wanted["${repo}/${rel}"]=1
+        done < <(git -C "${repo}" diff --name-only HEAD; git -C "${repo}" ls-files --others --exclude-standard)
+    done
+    local copied
+    for copied in "${!PATCH_PROVIDED_MODULES[@]}"; do
+        [[ -d "${AC_CODE_DIR}/modules/${copied}" ]] || continue
+        while IFS= read -r path; do wanted["${path}"]=1; done < <(find "${AC_CODE_DIR}/modules/${copied}" -type f)
+    done
+    if [[ -d "${AC_CODE_DIR}/src/server/scripts/Custom" ]]; then
+        while IFS= read -r path; do wanted["${path}"]=1; done < <(find "${AC_CODE_DIR}/src/server/scripts/Custom" -type f)
+    fi
+    for path in "${!old_hash[@]}"; do wanted["${path}"]=1; done
+
+    local restored=0 changed=0 new_ledger=""
+    for path in "${!wanted[@]}"; do
+        [[ -f "${path}" ]] || continue               # gone (a copied module removed): nothing to keep
+        hash=$(sha1sum "${path}" | cut -d' ' -f1)
+        if [[ "${old_hash[${path}]:-}" == "${hash}" ]]; then
+            touch -m -d "@${old_time[${path}]}" "${path}"
+            mtime="${old_time[${path}]}"
+            restored=$((restored + 1))
+        else
+            mtime=$(stat -c %Y "${path}")
+            changed=$((changed + 1))
+        fi
+        new_ledger+="${path}"$'\t'"${hash}"$'\t'"${mtime}"$'\n'
+    done
+    mkdir -p "${BUILD_DIR_SHADOW}"
+    printf '%s' "${new_ledger}" > "${ledger}"
+    echo "Patched and copied files: ${restored} unchanged since the last build (timestamps kept), ${changed} new or changed (will rebuild)"
+}
+
+check_modules_configured() {
+    local MODULES_DIR="${AC_CODE_DIR}/modules"
+    local LOADER_FILE="${BUILD_DIR_SHADOW}/modules/gen_scriptloader/static/ModulesLoader.cpp"
+
+    if [[ ! -f "${BUILD_DIR_SHADOW}/CMakeCache.txt" ]]; then
+        return 0
+    fi
+
+    if [[ ! -f "${LOADER_FILE}" ]]; then
+        return 0
+    fi
+
+    local source_modules=()
+    for mod_dir in "${MODULES_DIR}"/*/; do
+        local mod_name=$(basename "${mod_dir}")
+        [[ -d "${mod_dir}/src" ]] || continue
+        [[ "${mod_name}" == "." || "${mod_name}" == ".." ]] && continue
+        module_wanted "${mod_name}" || continue
+        source_modules+=("${mod_name}")
+    done
+
+    local missing_modules=()
+    for mod_name in "${source_modules[@]}"; do
+        local func_pattern="Add${mod_name//-/_}Scripts"
+        if ! grep -q "${func_pattern}" "${LOADER_FILE}" 2>/dev/null; then
+            missing_modules+=("${mod_name}")
+        fi
+    done
+
+    if [[ ${#missing_modules[@]} -gt 0 ]]; then
+        echo ""
+        echo "Detected unconfigured modules:"
+        for mod in "${missing_modules[@]}"; do
+            echo "  - ${mod}"
+        done
+        echo "Forcing cmake reconfiguration to include new modules."
+        FORCE_REBUILD=true
+    fi
+
+    local COMMANDS_FILE="${BUILD_DIR_SHADOW}/compile_commands.json"
+    [[ -f "${COMMANDS_FILE}" ]] || return 0      # no list yet: cmake runs anyway
+
+    local unseen_sources=()
+    local source_file
+    while IFS= read -r source_file; do
+        local project_module="${source_file#"${DIR}/modules/"}"
+        project_module="${project_module%%/*}"
+        module_wanted "${project_module}" || continue
+        local built_path="${AC_CODE_DIR}/modules/${source_file#"${DIR}/modules/"}"
+        if ! grep -qF "\"${built_path}\"" "${COMMANDS_FILE}"; then
+            unseen_sources+=("${built_path#"${AC_CODE_DIR}/"}")
+        fi
+    done < <(find "${DIR}/modules" -path '*/src/*' -name '*.cpp')
+
+    if [[ ${#unseen_sources[@]} -gt 0 ]]; then
+        echo ""
+        echo "Detected module source files the last configure did not see:"
+        for source_file in "${unseen_sources[@]}"; do
+            echo "  - ${source_file}"
+        done
+        echo "Forcing cmake reconfiguration to include them."
+        FORCE_REBUILD=true
+    fi
+}
+
+print_build_failure() {
+    FAILURE_ALREADY_EXPLAINED=true
+    local ERROR_LOG="${BUILD_DIR_SHADOW}/compile-errors.log"
+    echo ""
+    echo "==============================================================================="
+    echo "BUILD FAILED"
+    echo "==============================================================================="
+    echo ""
+    echo "Debug information preserved at:"
+    echo "  ${ERROR_LOG}"
+    echo ""
+    if [[ -d "${INSTALL_DIR}" && -f "${INSTALL_DIR}/bin/worldserver" ]]; then
+        echo "Your current working binaries are UNCHANGED:"
+        echo "  ${INSTALL_DIR}/bin/worldserver"
+        echo "  ${INSTALL_DIR}/bin/authserver"
+    else
+        echo "No previous working binaries exist."
+        echo "This appears to be a first-time build."
+    fi
+    echo ""
+    echo "To retry after fixing:"
+    echo "  ./scripts/compile"
+    echo "==============================================================================="
+}
+
+QUICK_TESTS=(
+    test-acherus-vendors test-ambush test-arathi-basin-rules test-beta-lua-load test-buddy-arc test-buddy-choice test-check-issue-references test-hearthstone test-travel
+    test-buddy-gems test-buddy-gm test-buddy-hearth test-buddy-kit test-buddy-roam-core
+    test-buddy-stand-ins test-buddy-talents test-compile-module-set test-dk-buddies-by-level test-dk-buddy-gear test-dk-skip-story
+    test-dk-soul-trade test-gear-designs test-gearsets test-gm-command-reference
+    test-line-edits test-lua-unique-names test-movement test-navmesh-caves test-profile-config-gates test-profile-tables-agree test-redirect-listener test-roam-pattern
+    test-sargobras-follow test-sql-mirror test-steady-mtimes test-valley-deal test-world-boss-countdown
+    test-treasure test-info-files-match-source test-lua-globals test-druid-moonglade
+    test-validate-needs-world-up test-watch-compile test-forget-unprefixed-updates
+    test-ale-method-names
+)
+run_quick_tests() {
+    local out="${DIR}/tmp/shared-memory/compile-tests"
+    mkdir -p "${out}" || { echo "ERROR: can't make ${out} (is tmp/shared-memory linked?)"; exit 1; }
+    rm -f "${out}"/*.log "${out}"/*.ok
+
+    if ! "${DIR}/mysql/installed-files/bin/mysqladmin" --no-defaults --socket="${DIR}/mysql/databases/mysql.sock" \
+            -uritz -pmenardi ping > /dev/null 2>&1; then
+        echo "ERROR: the quick tests need the project's MySQL, and it isn't answering."
+        echo "       start it (./scripts/start-mysql) and compile again, or pass --skip-tests"
+        exit 1
+    fi
+
+    echo "Running ${#QUICK_TESTS[@]} quick tests..."
+    local t
+    for t in "${QUICK_TESTS[@]}"; do
+        [[ -x "${DIR}/scripts/${t}" ]] || { echo "ERROR: scripts/${t} is missing or not executable (the compile's test list names it)"; exit 1; }
+    done
+    printf '%s\n' "${QUICK_TESTS[@]}" | xargs -P "$(nproc)" -I{} bash -c \
+        'timeout 600 "$1/scripts/$2" "$1" > "$3/$2.log" 2>&1 && touch "$3/$2.ok"' _ "${DIR}" {} "${out}" || true
+
+    local failed=()
+    for t in "${QUICK_TESTS[@]}"; do
+        [[ -f "${out}/${t}.ok" ]] || failed+=("${t}")
+    done
+    if [[ ${#failed[@]} -gt 0 ]]; then
+        echo "ERROR: ${#failed[@]} of ${#QUICK_TESTS[@]} quick tests failed; nothing was patched or built:"
+        for t in "${failed[@]}"; do
+            echo "  ${t}: tmp/shared-memory/compile-tests/${t}.log"
+            tail -n 3 "${out}/${t}.log" | sed 's/^/      /'
+        done
+        echo "       (--skip-tests builds anyway)"
+        exit 1
+    fi
+    echo "All ${#QUICK_TESTS[@]} quick tests passed (logs: tmp/shared-memory/compile-tests/)"
+}
+
+do_build() {
+    echo ""
+    echo "Building into shadow directories..."
+    echo "  Shadow build:   ${BUILD_DIR_SHADOW}"
+    echo "  Shadow install: ${INSTALL_DIR_SHADOW}"
+
+    local CLANGPP_DIR="/usr/bin/clang++"
+    local CLANG_DIR="/usr/bin/clang"
+    local LUAJIT_INC="/usr/include/luajit-2.1"
+    local LUAJIT_LIB="/usr/lib/libluajit-5.1.so"
+
+    setup_log_symlinks
+    local BUILD_LOG="${DIR}/tmp/build-${PROFILE}.log"
+
+    mkdir -p "${BUILD_DIR_SHADOW}"
+    cd "${BUILD_DIR_SHADOW}"
+
+    local ERROR_LOG="${BUILD_DIR_SHADOW}/compile-errors.log"
+    echo "Build started: $(date)" > "${ERROR_LOG}"
+    echo "Profile: ${PROFILE}" >> "${ERROR_LOG}"
+    echo "Source: ${AC_CODE_DIR}" >> "${ERROR_LOG}"
+    echo "---" >> "${ERROR_LOG}"
+
+    cp "${ERROR_LOG}" "${BUILD_LOG}"
+    echo "Build log: ${BUILD_LOG}"
+    echo "Error log: ${ERROR_LOG}"
+
+    if [[ ! -d "${BOOST_DIR}/lib" ]]; then
+        echo "Local Boost not found - run ./scripts/boost first"
+        exit 1
+    fi
+    echo "Using local Boost from ${BOOST_DIR}"
+
+    if [[ ! -x "${CCACHE_BIN}" ]]; then
+        echo "Local ccache not found, building it now..."
+        "${DIR}/scripts/ccache" --dir "${DIR}"
+    fi
+    mkdir -p "${CCACHE_CACHE_DIR}"
+    export CCACHE_DIR="${CCACHE_CACHE_DIR}"
+    export CCACHE_SLOPPINESS="pch_defines,time_macros,include_file_mtime,include_file_ctime"
+    echo "Using local ccache from ${CCACHE_BIN}"
+    echo "  Cache: ${CCACHE_CACHE_DIR}"
+
+    local PCH_FLAG="-Xclang -fno-pch-timestamp"
+
+    local -a MODULE_FLAGS=()
+    local module_changes=()
+    local setting
+    while IFS= read -r setting; do
+        [[ -n "${setting}" ]] || continue
+        MODULE_FLAGS+=("-D${setting%%=*}=${setting#*=}")
+        if [[ -f "${BUILD_DIR_SHADOW}/CMakeCache.txt" ]]; then
+            local cached
+            cached=$(sed -n "s/^${setting%%=*}:[A-Z]*=//p" "${BUILD_DIR_SHADOW}/CMakeCache.txt" | head -n 1)
+            [[ "${cached:-default}" == "${setting#*=}" ]] || module_changes+=("${setting%%=*} ${cached:-unset} -> ${setting#*=}")
+        fi
+    done < <(module_cmake_settings)
+    echo ""
+    echo "Modules for ${PROFILE}:"
+    for setting in "${MODULE_FLAGS[@]}"; do echo "  ${setting#-D}"; done
+
+    local RECONFIGURE_WHY=""
+    if [[ ! -f "${BUILD_DIR_SHADOW}/CMakeCache.txt" ]]; then
+        RECONFIGURE_WHY="not configured yet"
+    elif [[ "${FORCE_REBUILD}" == "true" ]]; then
+        RECONFIGURE_WHY="--force"
+    elif ! grep -q -- "-fno-pch-timestamp" "${BUILD_DIR_SHADOW}/CMakeCache.txt"; then
+        RECONFIGURE_WHY="adding ${PCH_FLAG} so ccache can cache precompiled-header compiles (this build compiles everything once)"
+    elif [[ ${#module_changes[@]} -gt 0 ]]; then
+        RECONFIGURE_WHY="the module set differs from the last configure: ${module_changes[*]}"
+    elif ! grep -q "^CMAKE_BUILD_TYPE:[A-Z]*=$([[ "${DEBUG_BUILD}" == "true" ]] && echo Debug || echo RelWithDebInfo)\$" "${BUILD_DIR_SHADOW}/CMakeCache.txt"; then
+        RECONFIGURE_WHY="the build type changes back to RelWithDebInfo (the last setup was for a different type)"
+    fi
+    if [[ -n "${RECONFIGURE_WHY}" ]]; then
+        echo ""
+        echo "Running cmake (${RECONFIGURE_WHY})..."
+        if ! cmake "${AC_CODE_DIR}" \
+          -DCMAKE_BUILD_TYPE="$([[ "${DEBUG_BUILD}" == "true" ]] && echo Debug || echo RelWithDebInfo)" \
+          -DBOOST_ROOT="${BOOST_DIR}" \
+          -DLUA_VERSION=luajit \
+          -DLUAJIT_INCLUDE_DIR="${LUAJIT_INC}" \
+          -DLUAJIT_LIBRARIES="${LUAJIT_LIB}" \
+          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR_SHADOW}" \
+          -DCONF_DIR="${INSTALL_DIR}/etc" \
+          -DCMAKE_C_COMPILER="${CLANG_DIR}" \
+          -DCMAKE_CXX_COMPILER="${CLANGPP_DIR}" \
+          -DCMAKE_C_COMPILER_LAUNCHER="${CCACHE_BIN}" \
+          -DCMAKE_CXX_COMPILER_LAUNCHER="${CCACHE_BIN}" \
+          -DCMAKE_CXX_FLAGS="-I${AC_CODE_DIR}/src/common -I${LUAJIT_INC} -Wno-enum-constexpr-conversion -fcolor-diagnostics ${PCH_FLAG}" \
+          -DCMAKE_BINARY_DIR="${BUILD_DIR_SHADOW}" \
+          -DCMAKE_SOURCE_DIR="${AC_CODE_DIR}" \
+          -DCMAKE_COLOR_DIAGNOSTICS=ON \
+          -DWITH_WARNINGS=1 \
+          -DTOOLS_BUILD=all \
+          -DSCRIPTS=static \
+          -DMODULES=static \
+          "${MODULE_FLAGS[@]}" \
+          -DMYSQL_EXECUTABLE="${MYSQL_DIR}/bin/mysql" \
+          -DMYSQL_INCLUDE_DIR="${MYSQL_DIR}/include" \
+          -DMYSQL_LIBRARY="${MYSQL_DIR}/lib/libmysqlclient.so" \
+          2>&1 | tee -a "${BUILD_LOG}" "${ERROR_LOG}"; then
+            echo "" >> "${ERROR_LOG}"
+            echo "CMAKE FAILED at $(date)" >> "${ERROR_LOG}"
+            print_build_failure
+            return 1
+        fi
+    else
+        echo ""
+        echo "Skipping cmake (already configured, use --force to reconfigure)"
+    fi
+
+    local wanted_type configured_type
+    wanted_type="$([[ "${DEBUG_BUILD}" == "true" ]] && echo Debug || echo RelWithDebInfo)"
+    configured_type="$(sed -n 's/^CMAKE_BUILD_TYPE:[A-Z]*=//p' "${BUILD_DIR_SHADOW}/CMakeCache.txt" | head -n 1)"
+    if [[ "${configured_type}" != "${wanted_type}" ]]; then
+        echo ""
+        echo "ERROR: the build is set up as '${configured_type:-unset}', but this run asked for '${wanted_type}'."
+        echo "  Setup was skipped, so the earlier build type would be used and the install mislabelled."
+        echo "  To fix: add --force to re-run setup with ${wanted_type}."
+        FAILURE_ALREADY_EXPLAINED=true
+        return 1
+    fi
+    echo "Configured build type: ${configured_type}"
+
+    echo ""
+    echo "Building with ${THREADS} threads..."
+    local make_result=0
+    make -j${THREADS} 2>&1 | tee -a "${BUILD_LOG}" "${ERROR_LOG}" || make_result=$?
+
+    if [[ ${make_result} -ne 0 ]]; then
+        echo "" >> "${ERROR_LOG}"
+        echo "MAKE FAILED with exit code ${make_result} at $(date)" >> "${ERROR_LOG}"
+        print_build_failure
+        return 1
+    fi
+
+    echo ""
+    echo "Clearing prior Lua script symlinks (so cmake --install can write extensions/)..."
+    TARGET_INSTALL_DIR="${INSTALL_DIR_SHADOW}"
+    unpatch_E001_lua_script_symlinks
+    unset TARGET_INSTALL_DIR
+
+    echo ""
+    echo "Installing to shadow directory..."
+    local install_result=0
+    cmake --install . 2>&1 | tee -a "${BUILD_LOG}" "${ERROR_LOG}" || install_result=$?
+
+    if [[ ${install_result} -ne 0 ]]; then
+        echo "" >> "${ERROR_LOG}"
+        echo "MAKE INSTALL FAILED with exit code ${install_result} at $(date)" >> "${ERROR_LOG}"
+        print_build_failure
+        return 1
+    fi
+
+    TARGET_INSTALL_DIR="${INSTALL_DIR_SHADOW}"
+    patch_E001_lua_script_symlinks
+
+    apply_patches_end
+    unset TARGET_INSTALL_DIR
+
+    if [[ "${DEBUG_BUILD}" == "true" ]]; then
+        echo "Debug" > "${INSTALL_DIR_SHADOW}/bin/.build-type"
+    else
+        echo "RelWithDebInfo" > "${INSTALL_DIR_SHADOW}/bin/.build-type"
+    fi
+
+    echo ""
+    echo "Build complete! Shadow install at: ${INSTALL_DIR_SHADOW}"
+    echo "Log: ${BUILD_LOG}"
+    echo ""
+    echo "NOTE: Binaries are in shadow directory and have NOT been promoted yet."
+    echo "Run validation before promoting to main installation."
+}
+
+report_how_compile_ended() {
+    local status=$1
+    write_compile_goodbye "${status}"
+    [[ ${status} -ne 0 ]] || return 0
+    echo ""
+    echo "==============================================================================="
+    echo "COMPILE FAILED (exit status ${status}). Nothing was promoted; the installed"
+    echo "server in installed-files-${PROFILE:-<profile>}/ is unchanged."
+    if [[ -n "${STOPPED_AT:-}" && "${FAILURE_ALREADY_EXPLAINED:-false}" != "true" ]]; then
+        echo ""
+        echo "It stopped without an error message of its own, at:"
+        echo "  ${STOPPED_AT#${DIR}/}"
+        echo "  running: ${STOPPED_COMMAND}"
+        echo "That command failed, and the script's stop-on-any-failure rule (set -e)"
+        echo "ended the run there. The script should explain this failure itself; the"
+        echo "line above is where to add that."
+    fi
+    echo "==============================================================================="
+}
+
+write_compile_goodbye() {
+    local status=$1
+    [[ -n "${COMPILE_GOODBYE:-}" ]] || return 0   # before the profile is known: nowhere to write
+    local verdict
+    case "${status}" in
+        0)          verdict="succeeded" ;;
+        validating) verdict="compiled; validation and promotion follow (scripts/validate, in this run's log)" ;;
+        *)          verdict="FAILED (exit status ${status})" ;;
+    esac
+    {
+        echo "ended:       $(date '+%Y-%m-%d %H:%M:%S')"
+        echo "profile:     ${PROFILE}"
+        echo "build type:  $([[ "${DEBUG_BUILD:-false}" == "true" ]] && echo Debug || echo RelWithDebInfo)"
+        echo "verdict:     ${verdict}"
+        echo "reached:     ${COMPILE_STAGE:-starting}"
+        echo "minutes:     $(( (SECONDS - ${COMPILE_STARTED_AT:-0}) / 60 ))"
+        [[ "${status}" == "0" || "${status}" == "validating" || -z "${STOPPED_AT:-}" ]] ||
+            echo "stopped at:  ${STOPPED_AT#${DIR}/} (${STOPPED_COMMAND})"
+        echo "log:         ${COMPILE_RUN_LOG#${DIR}/}"
+    } > "${COMPILE_GOODBYE}"
+}
+
+
+trap 'report_how_compile_ended $?' EXIT
+
+parse_args "$@"
+get_profile_paths
+
+source /home/ritz/programming/ai-stuff/scripts/libs/ensure-ram-tiers
+ensure_ram_tiers "${DIR}" || exit 1
+COMPILE_RUN_LOG="${DIR}/tmp/shared-memory/compile-${PROFILE}.log"
+COMPILE_GOODBYE="${DIR}/tmp/shared-memory/compile-${PROFILE}.goodbye"
+COMPILE_STARTED_AT=${SECONDS}
+COMPILE_STAGE="starting"
+rm -f "${COMPILE_GOODBYE}"
+exec > >(tee "${COMPILE_RUN_LOG}") 2>&1
+echo "Run log: ${COMPILE_RUN_LOG#${DIR}/}; receipt at the end: ${COMPILE_GOODBYE#${DIR}/}"
+
+echo "Compiling profile: ${PROFILE}"
+echo "  (skipping git checks)"
+if [[ "${DEBUG_BUILD}" == "true" ]]; then
+    echo "Build type: Debug (--debug)"
+    echo "  - compiled without optimization (-O0 -g): a crash report shows the true"
+    echo "    line and every variable's value, but the server runs several times slower"
+    echo "  - standard assertions stay switched on (no -DNDEBUG)"
+    echo "  - the install is marked Debug, so ./scripts/worldserver runs it under the"
+    echo "    crash catcher automatically"
+    echo "  - cmake's setup re-runs (--debug implies --force). The first Debug build"
+    echo "    compiles nearly everything; the cache makes later ones short"
+else
+    echo "Build type: RelWithDebInfo (optimized, with debug symbols; --debug for Debug)"
+fi
+echo ""
+
+if [[ ! -d "${AC_CODE_DIR}/.git" ]]; then
+    echo "Error: Source not found. Run './scripts/install' first."
+    exit 1
+fi
+
+source "${DIR}/patches/patches.sh"
+
+COMPILE_STAGE="the quick tests"
+[[ "${RUN_TESTS}" == "true" ]] && run_quick_tests
+
+check_modules_configured
+
+COMPILE_STAGE="resetting the source trees"
+reset_source_trees
+
+PIN="$(sed -n '/^declare -A PROFILE_COMMIT=(/,/^)/p' "${DIR}/scripts/update" \
+    | sed -n "s/^ *\[\"${PROFILE}\"\]=\"\([0-9a-f]*\)\".*/\1/p")"
+if [[ -n "${PIN}" ]]; then
+    TREE_COMMIT="$(git -C "${AC_CODE_DIR}" rev-parse HEAD)"
+    if [[ "${TREE_COMMIT}" != "${PIN}"* ]]; then
+        echo "ERROR: ${AC_CODE_DIR} is at ${TREE_COMMIT:0:12}, but the ${PROFILE} profile is pinned to ${PIN}."
+        echo "  The patches are written for the pinned commit, so they would not apply here."
+        echo "  To fix: ./scripts/update   (checks out the pinned commits of the core and modules, then compiles)"
+        echo "  Nothing was changed."
+        exit 1
+    fi
+fi
+
+trap 'compile_status=$?; unapply_patches_begin || compile_status=1; leave_source_trees_clean; report_how_compile_ended ${compile_status}' EXIT
+generate_buddy_gear() {
+    case "${PROFILE}" in basic|cc-test) ;; *) return 0 ;; esac
+    if ! "${DIR}/mysql/installed-files/bin/mysqladmin" --no-defaults --socket="${DIR}/mysql/databases/mysql.sock" \
+            -uritz -pmenardi ping > /dev/null 2>&1; then
+        echo "ERROR: making the buddy gear lists needs the project's MySQL, and it isn't answering."
+        echo "       start it (./scripts/start-mysql) and compile again"
+        exit 1
+    fi
+    echo "Making the buddy gear lists and their gallery..."
+    "${DIR}/scripts/translate-buddy-kit-to-gearset" "${DIR}" || { echo "ERROR: scripts/translate-buddy-kit-to-gearset failed (above)"; exit 1; }
+    "${DIR}/scripts/generate-gearset-sql" "${DIR}" || { echo "ERROR: scripts/generate-gearset-sql failed (above)"; exit 1; }
+    "${DIR}/scripts/generate-buddy-gear-gallery" "${DIR}" || { echo "ERROR: scripts/generate-buddy-gear-gallery failed (above)"; exit 1; }
+    echo "  gear lists:   ${DIR}/src/lua-basic/data/gearsets/buddy-white-*.lua (into the database at the next install)"
+    echo "  gear gallery: ${DIR}/docs/HTML/buddy-gear-gallery.html"
+}
+COMPILE_STAGE="generating the buddy gear"
+generate_buddy_gear
+
+COMPILE_STAGE="applying the source patches"
+apply_patches_begin
+
+steady_patched_mtimes
+
+COMPILE_STAGE="building and installing (cmake, make, install)"
+do_build
+
+trap 'compile_status=$?; leave_source_trees_clean; report_how_compile_ended ${compile_status}' EXIT
+COMPILE_STAGE="reverting the source patches"
+unapply_patches_begin
+leave_source_trees_clean
+
+echo ""
+echo "==============================================================================="
+echo "COMPILE SUCCEEDED ($(cat "${INSTALL_DIR_SHADOW}/bin/.build-type") build). The new build is in the"
+echo "shadow install, not yet promoted."
+echo "==============================================================================="
+
+if [[ "${AUTO_VALIDATE}" == "true" ]]; then
+    echo ""
+    echo "Starting validation..."
+    COMPILE_STAGE="compiled"
+    write_compile_goodbye validating   # exec replaces this script: the EXIT trap will not run
+    exec "${DIR}/scripts/validate" --profile "${PROFILE}"
+else
+    echo ""
+    echo "Auto-validation disabled. To validate and promote manually:"
+    echo "  ./scripts/validate --profile ${PROFILE}"
+    COMPILE_STAGE="compiled"
+fi

@@ -1,0 +1,148 @@
+#!/bin/bash
+
+DIR="/mnt/kaun/wow-chat-2026"
+
+
+if [[ -f "${DIR}/.profile" ]]; then
+    PROFILE="$(cat "${DIR}/.profile")"
+else
+    PROFILE="release"
+fi
+DEFAULT_PROFILE="${PROFILE}"
+
+DEBUG_MODE=0
+
+
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "${1}" in
+            --profile)
+                if [[ -n "${2:-}" ]]; then
+                    PROFILE="${2}"
+                    shift 2
+                else
+                    echo "Error: --profile requires a profile name"
+                    exit 1
+                fi
+                ;;
+            --profile=*)
+                PROFILE="${1#*=}"
+                if [[ -z "${PROFILE}" ]]; then
+                    echo "Error: --profile requires a profile name"
+                    exit 1
+                fi
+                shift
+                ;;
+            --debug)
+                DEBUG_MODE=1
+                shift
+                ;;
+            --help|-h)
+                show_help
+                exit 0
+                ;;
+            *)
+                echo "Error: unrecognized argument '${1}'"
+                echo "Run with --help to see available options."
+                exit 1
+                ;;
+        esac
+    done
+}
+
+show_help() {
+    echo "Usage: ./scripts/authserver [options]"
+    echo ""
+    echo "Start the authentication server for the current profile."
+    echo "Updates realmlist with public IP (cached daily) before starting."
+    echo ""
+    echo "Options:"
+    echo "  --profile <name>   Use specific profile (default: ${DEFAULT_PROFILE})"
+    echo "  --debug            Run under a crash-backtrace catcher; on a"
+    echo "                     segfault a symbolized stack trace is written to"
+    echo "                     tmp/debug-${PROFILE}/ (uses gdb if installed,"
+    echo "                     otherwise an LD_PRELOAD shim + addr2line)"
+    echo "  --help             Show this help message"
+    echo ""
+    echo "Current profile: ${PROFILE}"
+}
+
+
+get_profile_paths() {
+    case "${PROFILE}" in
+        release) AC_CODE_DIR="${DIR}/source-beta"  ;;
+        beta)    AC_CODE_DIR="${DIR}/source-beta"  ;;
+        vanilla) AC_CODE_DIR="${DIR}/source-beta"  ;;
+        basic)   AC_CODE_DIR="${DIR}/source-beta"  ;;
+        cc-test) AC_CODE_DIR="${DIR}/source-beta"  ;;
+        alpha)   AC_CODE_DIR="${DIR}/source-alpha" ;;
+        *)       echo "ERROR: Unknown profile '${PROFILE}'"; exit 1 ;;
+    esac
+    INSTALL_DIR="${DIR}/installed-files-${PROFILE}"
+    MYSQL_DIR="${DIR}/mysql/installed-files"
+}
+
+setup_log_symlinks() {
+    local TMP_BASE="/tmp/wow-chat-2"
+    local TMP_LOGS="${TMP_BASE}/logs-${PROFILE}"
+    mkdir -p "${TMP_BASE}"
+    mkdir -p "${TMP_LOGS}"
+    [[ -L "${DIR}/tmp" ]] || ln -s "${TMP_BASE}" "${DIR}/tmp"
+    [[ -L "${DIR}/logs-${PROFILE}" ]] || ln -s "${TMP_LOGS}" "${DIR}/logs-${PROFILE}"
+}
+
+check_mysql() {
+    if ! "${DIR}/scripts/start-mysql" "${DIR}"; then
+        echo "ERROR: MySQL is not available; not starting the server"
+        exit 1
+    fi
+    echo ""
+}
+
+
+parse_args "$@"
+get_profile_paths
+setup_log_symlinks
+check_mysql
+
+
+if [[ ! -f "${INSTALL_DIR}/bin/authserver" ]]; then
+    echo "Error: authserver not found for profile '${PROFILE}'"
+    echo "Expected: ${INSTALL_DIR}/bin/authserver"
+    echo "Run './scripts/install --profile ${PROFILE}' first."
+    exit 1
+fi
+
+SQUAT_BASE="$(readlink -f "${DIR}")/installed-files-"
+for SQUAT_PID in $(pgrep -x authserver); do
+    SQUAT_EXE="$(readlink "/proc/${SQUAT_PID}/exe")"
+    SQUAT_EXE="${SQUAT_EXE% (deleted)}"       # a server started before the last reinstall runs a replaced binary
+    case "${SQUAT_EXE}" in
+        "${SQUAT_BASE}"*/bin/authserver)
+            echo "Stopping the running authserver (pid ${SQUAT_PID}, ${SQUAT_EXE#${SQUAT_BASE%installed-files-}})..."
+            kill "${SQUAT_PID}"
+            for SQUAT_WAIT in $(seq 1 30); do
+                kill -0 "${SQUAT_PID}" 2>/dev/null || break
+                sleep 1
+            done
+            if kill -0 "${SQUAT_PID}" 2>/dev/null; then
+                echo "ERROR: authserver ${SQUAT_PID} is still running after 30 s; not starting a second one"
+                exit 1
+            fi
+            ;;
+        *)
+            ;;
+    esac
+done
+"${DIR}/scripts/set-active-realm" "${PROFILE}"
+
+echo "Starting authserver (profile: ${PROFILE})"
+export LD_LIBRARY_PATH="${MYSQL_DIR}/lib:${LD_LIBRARY_PATH}"
+cd "${INSTALL_DIR}/bin"
+
+if [[ "${DEBUG_MODE}" -eq 1 ]]; then
+    source "${DIR}/scripts/debug-run.sh"
+    debug_run_binary "./authserver" "authserver"
+else
+    ./authserver
+fi

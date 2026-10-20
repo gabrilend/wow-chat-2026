@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+
+set -o pipefail
+
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+PROFILE="${2:-basic}"
+SOURCE_TREE="${3:-}"
+
+declare -A SOURCE_BY_PROFILE=(
+    [release]="source-beta" [beta]="source-beta" [vanilla]="source-beta"
+    [basic]="source-beta"   [alpha]="source-alpha"
+    [cc-test]="source-beta"
+)
+SRC_NAME="${SOURCE_BY_PROFILE[${PROFILE}]:-}"
+if [[ -z "${SRC_NAME}" ]]; then
+    echo "ERROR: unknown profile '${PROFILE}' (no source tree mapping in this script)"
+    exit 1
+fi
+SRC="${DIR}/${SRC_NAME}"
+[[ -n "${SOURCE_TREE}" ]] && SRC="${SOURCE_TREE}" && SRC_NAME="$(basename "${SOURCE_TREE}")"
+[[ -d "${SRC}" ]] || { echo "ERROR: ${SRC} missing"; exit 1; }
+
+SCRATCH_ROOT="${DIR}/tmp/shared-memory"
+[[ -d "${SCRATCH_ROOT}" ]] || { echo "ERROR: ${SCRATCH_ROOT} missing (RAM scratch link)"; exit 1; }
+WORK="${SCRATCH_ROOT}/test-source-patches-${PROFILE}"
+rm -rf "${WORK}"
+mkdir -p "${WORK}"
+if [[ -d "${SRC}/.git" ]]; then
+    echo "Exporting ${SRC_NAME}'s committed state to RAM..."
+    mkdir -p "${WORK}/pristine"
+    git -C "${SRC}" archive --format=tar HEAD | tar -x -C "${WORK}/pristine" \
+        || { echo "ERROR: export of ${SRC} failed"; exit 1; }
+    for mod_dir in "${SRC}"/modules/*/; do
+        [[ -d "${mod_dir}/.git" ]] || continue
+        mod="$(basename "${mod_dir}")"
+        mkdir -p "${WORK}/pristine/modules/${mod}"
+        git -C "${mod_dir}" archive --format=tar HEAD | tar -x -C "${WORK}/pristine/modules/${mod}" \
+            || { echo "ERROR: export of module ${mod} failed"; exit 1; }
+    done
+else
+    echo "Copying ${SRC_NAME} to RAM (it has no .git: as it is)..."
+    rsync -a "${SRC}/" "${WORK}/pristine/" || { echo "ERROR: copy failed"; exit 1; }
+fi
+rsync -a "${WORK}/pristine/" "${WORK}/tree/" || { echo "ERROR: copy failed"; exit 1; }
+
+export PROFILE DIR
+AC_CODE_DIR="${WORK}/tree"
+export AC_CODE_DIR
+source "${DIR}/patches/patches.sh" || { echo "ERROR: patches/patches.sh failed to source"; exit 1; }
+LIST="${PHASE_BEGIN_PATCHES[${PROFILE}]:-}"
+[[ -n "${LIST}" ]] || { echo "ERROR: no PHASE_BEGIN_PATCHES entry for '${PROFILE}'"; exit 1; }
+
+failed=0
+echo "Applying: ${LIST}"
+for id in ${LIST}; do
+    fn=$(declare -F | grep "^declare -f patch_${id}_" | sed 's/declare -f //')
+    if [[ -z "${fn}" ]]; then
+        echo "  [✗] ${id}: no patch function defined"
+        failed=$((failed + 1))
+        continue
+    fi
+    if ${fn} > "${WORK}/${id}.apply.log" 2>&1; then
+        echo "  [✓] ${id} applied"
+    else
+        echo "  [✗] ${id} returned failure:"
+        sed 's/^/        /' "${WORK}/${id}.apply.log"
+        failed=$((failed + 1))
+    fi
+done
+
+echo "Reverting (reverse order)..."
+reversed=$(echo "${LIST}" | tr ' ' '\n' | tac | tr '\n' ' ')
+for id in ${reversed}; do
+    fn=$(declare -F | grep "^declare -f unpatch_${id}_" | sed 's/declare -f //')
+    [[ -z "${fn}" ]] && { echo "  [!] ${id}: no unpatch function"; continue; }
+    ${fn} > "${WORK}/${id}.revert.log" 2>&1 || echo "  [!] ${id}: unpatch returned failure (see ${WORK}/${id}.revert.log)"
+done
+
+leftover=$(diff -rq "${WORK}/pristine" "${WORK}/tree" | head -20)
+if [[ -n "${leftover}" ]]; then
+    echo "  [✗] tree differs from the original after revert:"
+    echo "${leftover}" | sed 's/^/        /'
+    failed=$((failed + 1))
+else
+    echo "  [✓] round trip: tree is byte-identical to the original"
+fi
+
+echo "Result: ${failed} problem(s). Logs: ${WORK}/"
+rm -rf "${WORK}/pristine" "${WORK}/tree"
+[[ "${failed}" -eq 0 ]]

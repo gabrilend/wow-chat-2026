@@ -1,0 +1,221 @@
+#!/usr/bin/env luajit
+
+local DIR   = arg[1] or "/mnt/kaun/wow-chat-2026"
+local DB    = arg[2] or "acore_world_basic"
+local DATA  = DIR .. "/data-files"
+local OUT_APPLY  = DIR .. "/sql/basic/db_world.src/31-buddy-town-circles.apply.sql"
+local OUT_REVERT = DIR .. "/sql/basic/db_world.src/31-buddy-town-circles.revert.sql"
+local MYSQL = DIR .. "/mysql/installed-files/bin/mysql -h127.0.0.1 -P3307 -uritz -pmenardi -N --batch " .. DB
+
+local LINK_YARDS  = 35
+local MIN_PEOPLE  = 3
+local MARGIN      = 15
+local MERGE_GAP   = 25
+local MAPS        = "0,1,530,571"
+local SERVICES    = 0x10 + 0x80 + 0x1000 + 0x2000 + 0x10000 + 0x20000 + 0x200000
+
+local bit = require("bit")
+local ffi = require("ffi")
+
+local function die(msg)
+    io.stderr:write("generate-buddy-town-circles: ", msg, "\n")
+    os.exit(1)
+end
+
+local QUERY = "SELECT c.map, c.position_x, c.position_y, c.position_z, REPLACE(ct.name, '\\t', ' ') " ..
+    "FROM creature c JOIN creature_template ct ON ct.entry = c.id " ..
+    "WHERE c.map IN (" .. MAPS .. ") AND (ct.npcflag & " .. SERVICES .. ") <> 0 " ..
+    "AND ct.name NOT LIKE '%[DND]%' AND (ct.unit_flags & 33554432) = 0 AND (ct.flags_extra & 128) = 0"
+local p = io.popen(MYSQL .. " -e \"" .. QUERY .. "\" 2>&1")
+local people = {}
+for line in p:read("*a"):gmatch("[^\n]+") do
+    if not line:find("Using a password", 1, true) then
+        if line:find("^ERROR") then die("database " .. DB .. ": " .. line) end
+        local m, x, y, z, name = line:match("^(%d+)\t(%S+)\t(%S+)\t(%S+)\t(.*)$")
+        if not m then die("unreadable row: " .. line) end
+        people[#people + 1] = { map = tonumber(m), x = tonumber(x), y = tonumber(y), z = tonumber(z), name = name }
+    end
+end
+p:close()
+if #people == 0 then die("no helpers found in " .. DB) end
+
+local GRID = 533.3333
+local function u32(d, o) local a, b, c, e = d:byte(o + 1, o + 4); return a + b * 256 + c * 65536 + e * 16777216 end
+local function u16(d, o) local a, b = d:byte(o + 1, o + 2); return a + b * 256 end
+local tiles = {}
+local function area_at(map, x, y)
+    local gx, gy = math.floor(32 - x / GRID), math.floor(32 - y / GRID)
+    local key = map .. ":" .. gx .. ":" .. gy
+    if tiles[key] == nil then
+        local f = io.open(string.format("%s/maps/%03d%02d%02d.map", DATA, map, gx, gy), "rb")
+        tiles[key] = f and f:read("*a") or false
+        if f then f:close() end
+    end
+    local d = tiles[key]
+    if not d then return 0 end
+    local off = u32(d, 12)
+    if off == 0 then return 0 end
+    if bit.band(u16(d, off + 4), 1) ~= 0 then return u16(d, off + 6) end
+    local lx = bit.band(math.floor(16 * (32 - x / GRID)), 15)
+    local ly = bit.band(math.floor(16 * (32 - y / GRID)), 15)
+    return u16(d, off + 8 + 2 * (lx * 16 + ly))
+end
+
+local names = {}
+do
+    local f = io.open(DATA .. "/dbc/AreaTable.dbc", "rb") or die("no " .. DATA .. "/dbc/AreaTable.dbc")
+    local d = f:read("*a")
+    f:close()
+    local n, fields, size, strings = u32(d, 4), u32(d, 8), u32(d, 12), u32(d, 16)
+    local strbase = 20 + n * size
+    for r = 0, n - 1 do
+        local rec = 20 + r * size
+        local id, nameOff = u32(d, rec), u32(d, rec + 11 * 4)
+        local s = strbase + nameOff
+        local e = d:find("\0", s + 1, true)
+        names[id] = e and d:sub(s + 1, e - 1) or "?"
+    end
+end
+
+local parent = {}
+local function find(i) while parent[i] ~= i do parent[i] = parent[parent[i]]; i = parent[i] end; return i end
+local function join(a, b) a, b = find(a), find(b); if a ~= b then parent[a] = b end end
+local buckets = {}
+for i, h in ipairs(people) do
+    parent[i] = i
+    local key = h.map .. ":" .. math.floor(h.x / LINK_YARDS) .. ":" .. math.floor(h.y / LINK_YARDS)
+    buckets[key] = buckets[key] or {}
+    table.insert(buckets[key], i)
+end
+for i, h in ipairs(people) do
+    local bx, by = math.floor(h.x / LINK_YARDS), math.floor(h.y / LINK_YARDS)
+    for dx = -1, 1 do for dy = -1, 1 do
+        for _, j in ipairs(buckets[h.map .. ":" .. (bx + dx) .. ":" .. (by + dy)] or {}) do
+            local o = people[j]
+            if j > i and (h.x - o.x) ^ 2 + (h.y - o.y) ^ 2 <= LINK_YARDS ^ 2 and math.abs(h.z - o.z) <= LINK_YARDS then
+                join(i, j)
+            end
+        end
+    end end
+end
+local groups = {}
+for i in ipairs(people) do
+    local r = find(i)
+    groups[r] = groups[r] or {}
+    table.insert(groups[r], people[i])
+end
+local function circle_of(g)
+    local sx, sy, sz = 0, 0, 0
+    for _, h in ipairs(g) do sx, sy, sz = sx + h.x, sy + h.y, sz + h.z end
+    local cx, cy, cz = sx / #g, sy / #g, sz / #g
+    local far = 0
+    for _, h in ipairs(g) do far = math.max(far, math.sqrt((h.x - cx) ^ 2 + (h.y - cy) ^ 2)) end
+    return { map = g[1].map, x = cx, y = cy, z = cz, r = far + MARGIN, members = g }
+end
+
+local list = {}
+for _, g in pairs(groups) do
+    if #g >= MIN_PEOPLE then list[#list + 1] = circle_of(g) end
+end
+local merged = true
+while merged do
+    merged = false
+    for i = 1, #list do
+        for j = i + 1, #list do
+            local a, b = list[i], list[j]
+            if a.map == b.map and math.sqrt((a.x - b.x) ^ 2 + (a.y - b.y) ^ 2) < a.r + b.r + MERGE_GAP then
+                local all = {}
+                for _, h in ipairs(a.members) do all[#all + 1] = h end
+                for _, h in ipairs(b.members) do all[#all + 1] = h end
+                list[i] = circle_of(all)
+                table.remove(list, j)
+                merged = true
+                break
+            end
+        end
+        if merged then break end
+    end
+end
+local circles = {}
+for _, c in ipairs(list) do
+    local area = area_at(c.map, c.x, c.y)
+    circles[#circles + 1] = { map = c.map, x = c.x, y = c.y, z = c.z, r = c.r, people = #c.members, area = area,
+                              name = names[area] or "?" }
+end
+table.sort(circles, function(a, b)
+    if a.map ~= b.map then return a.map < b.map end
+    if a.name ~= b.name then return a.name < b.name end
+    return a.x < b.x
+end)
+
+local hand = {}
+do
+    local p = io.popen(MYSQL .. " -e \"SELECT map, x, y, z, radius, area, REPLACE(name, '\\t', ' ') FROM buddy_town_circle " ..
+        "WHERE source = 1 ORDER BY id\" 2>&1")
+    for line in p:read("*a"):gmatch("[^\n]+") do
+        if not line:find("Using a password", 1, true) then
+            if line:find("^ERROR 1146") then
+                io.write("(no buddy_town_circle table yet: no hand-placed circles to keep)\n")
+            elseif line:find("^ERROR") then
+                die("database " .. DB .. ": " .. line)
+            else
+                local m, x, y, z, r, a, name = line:match("^(%d+)\t(%S+)\t(%S+)\t(%S+)\t(%S+)\t(%d+)\t(.*)$")
+                if not m then die("unreadable hand-placed row: " .. line) end
+                hand[#hand + 1] = { map = tonumber(m), x = tonumber(x), y = tonumber(y), z = tonumber(z), r = tonumber(r),
+                                    area = tonumber(a), name = name }
+            end
+        end
+    end
+    p:close()
+end
+
+local rows = {}
+for _, c in ipairs(circles) do
+    rows[#rows + 1] = string.format("(%d,%.1f,%.1f,%.1f,%.1f,%d,%d,0,'%s')", c.map, c.x, c.y, c.z, c.r, c.area, c.people,
+        (c.name:gsub("'", "''")))
+end
+for _, c in ipairs(hand) do
+    rows[#rows + 1] = string.format("(%d,%.1f,%.1f,%.1f,%.1f,%d,0,1,'%s')", c.map, c.x, c.y, c.z, c.r, c.area,
+        (c.name:gsub("'", "''")))
+end
+local apply = assert(io.open(OUT_APPLY, "w"))
+apply:write([[
+-- 31-buddy-town-circles (issue 617e4a) - GENERATED by
+-- scripts/generate-buddy-town-circles; don't edit by hand. The world's
+-- little towns, found from the helpful people standing together, as
+-- circles a buddy treats as town, and the circles placed by hand in game
+-- (source 1, from ".buddy town here") as they stood when this was made.
+CREATE TABLE IF NOT EXISTS `buddy_town_circle` (
+    `id`      INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `map`     SMALLINT UNSIGNED NOT NULL,
+    `x`       FLOAT NOT NULL,
+    `y`       FLOAT NOT NULL,
+    `z`       FLOAT NOT NULL,
+    `radius`  FLOAT NOT NULL,
+    `area`    INT UNSIGNED NOT NULL COMMENT 'the area its middle stands in',
+    `people`  INT UNSIGNED NOT NULL COMMENT 'helpers found in it (0 for a hand-placed one)',
+    `source`  TINYINT UNSIGNED NOT NULL COMMENT '0 found by the generator, 1 placed by hand',
+    `name`    VARCHAR(100) NOT NULL,
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+DELETE FROM `buddy_town_circle`;
+INSERT INTO `buddy_town_circle` (`map`, `x`, `y`, `z`, `radius`, `area`, `people`, `source`, `name`) VALUES
+]] .. table.concat(rows, ",\n") .. ";\n")
+apply:close()
+local revert = assert(io.open(OUT_REVERT, "w"))
+revert:write([[
+-- MARKER_E050_REVERT
+-- 31-buddy-town-circles revert (issue 617e4a): the town circles removed.
+DROP TABLE IF EXISTS `buddy_town_circle`;
+]])
+revert:close()
+
+local current
+for _, c in ipairs(circles) do
+    if c.map ~= current then
+        current = c.map
+        io.write(string.format("map %d:\n", c.map))
+    end
+    io.write(string.format("  %-32s %3d people, radius %5.1f, at (%.0f, %.0f)\n", c.name, c.people, c.r, c.x, c.y))
+end
+io.write(string.format("%d circles from %d helpers, %d placed by hand; written to %s\n", #circles, #people, #hand, OUT_APPLY))

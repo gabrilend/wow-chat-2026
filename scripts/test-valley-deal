@@ -1,0 +1,173 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local LUA = DIR .. "/src/lua-basic/"
+
+local fails, checks = 0, 0
+local function check(name, ok)
+    checks = checks + 1
+    if ok then print("  ok:   " .. name) else print("  FAIL: " .. name); fails = fails + 1 end
+end
+
+local Deck    = dofile(LUA .. "lib/valley-deck.lua")
+local Valleys = dofile(LUA .. "data/starting-valleys.lua")
+
+print("the deck")
+local all_same, all_four = true, true
+local orders_seen = {}
+for guid = 1, 2000 do
+    local a, b = Deck.order(guid), Deck.order(guid)
+    local seen = {}
+    for i = 1, 4 do
+        if a[i] ~= b[i] then all_same = false end
+        seen[a[i]] = true
+    end
+    for v = 0, 3 do if not seen[v] then all_four = false end end
+    orders_seen[table.concat(a, ",")] = (orders_seen[table.concat(a, ",")] or 0) + 1
+end
+check("a character's order is the same every time (2000 characters)", all_same)
+check("every order holds each of the four valleys once", all_four)
+local kinds, fewest, most = 0, math.huge, 0
+for _, n in pairs(orders_seen) do
+    kinds = kinds + 1
+    fewest, most = math.min(fewest, n), math.max(most, n)
+end
+check("all 24 orders occur across 2000 characters", kinds == 24)
+check("no order is more than twice as common as another (" .. fewest .. " to " .. most .. ")", most <= 2 * fewest)
+
+local guid, here, visited = 4242, 2, {}
+for press = 1, 4 do
+    here = Deck.next(guid, here)
+    visited[press] = here
+end
+check("three presses visit the three other valleys", visited[1] ~= 2 and visited[2] ~= 2 and visited[3] ~= 2
+    and visited[1] ~= visited[2] and visited[2] ~= visited[3] and visited[1] ~= visited[3])
+check("the fourth press returns to the first valley", visited[4] == 2)
+check("away from every valley, the first card is dealt", Deck.next(guid, nil) == Deck.order(guid)[1])
+check("Northshire's arrival point is found as Northshire", Deck.standing_in(Valleys[0], 0, -8949.95, -132.493) == 0)
+check("a spot in Elwynn's farmland is no valley", Deck.standing_in(Valleys[0], 0, -9460, 60) == nil)
+check("a Horde spot on the Alliance's list is no valley", Deck.standing_in(Valleys[0], 1, -618.518, -4251.67) == nil)
+
+print("")
+print("pressing the option at the valley Sargobras")
+local function object(fields)
+    return setmetatable(fields, { __index = function() return function() return nil end end })
+end
+
+local menu, said, executed = {}, {}, {}
+local player = object({
+    level = 1, class = 1, team = 1, map = 1, x = -618.518, y = -4251.67, z = 38.718,
+    GetGUIDLow  = function() return 777 end,
+    GetGUID     = function() return 777 end,
+    GetLevel    = function(s) return s.level end,
+    GetClass    = function(s) return s.class end,
+    GetTeam     = function(s) return s.team end,
+    GetMapId    = function(s) return s.map end,
+    GetLocation = function(s) return s.x, s.y, s.z, 0 end,
+    IsInGuild   = function() return true end,
+    GossipClearMenu   = function() menu = {} end,
+    GossipMenuAddItem = function(_, icon, text, sender, intid) menu[#menu + 1] = { text = text, intid = intid } end,
+    GossipSendMenu    = function() end,
+    GossipComplete    = function() end,
+    SetBindPoint = function(s, x, y, z, map, area) s.bind = { x = x, y = y, z = z, map = map, area = area } end,
+    Teleport     = function(s, map, x, y, z) s.map, s.x, s.y, s.z = map, x, y, z end,
+    RegisterEvent = function() end,
+})
+local sarg = object({
+    GetEntry    = function() return 6170001 end,
+    GetGUIDLow  = function() return 8 end,
+    SendUnitSay = function(_, text) said[#said + 1] = text end,
+})
+
+local buddies = {}
+for _, g in ipairs({ 901, 902, 903 }) do
+    buddies[g] = object({ guid = g, in_world = g ~= 903,
+        IsInWorld = function(s) return s.in_world end,
+        Teleport  = function(s, map, x, y, z, o) s.at = { map = map, x = x, y = y, z = z, o = o } end })
+end
+local roster = { 901, 902, 903 }
+local function rows(list)
+    local i = 1
+    return { GetUInt32 = function() return list[i] end, NextRow = function() i = i + 1; return list[i] ~= nil end }
+end
+
+local hello, select_
+local stubs = {
+    CharDBQuery = function(sql)
+        if sql:match("^SHOW TABLES") then return { GetUInt32 = function() return 1 end, NextRow = function() return false end } end
+        if sql:match("^SELECT buddy FROM buddy_roster WHERE owner") then return #roster > 0 and rows(roster) or nil end
+        return nil
+    end,
+    CharDBExecute = function(sql) executed[#executed + 1] = sql end,
+    RegisterCreatureGossipEvent = function(entry, ev, fn)
+        if entry == 6170001 and ev == 1 then hello = fn end
+        if entry == 6170001 and ev == 2 then select_ = fn end
+    end,
+    GetPlayersInWorld = function() return {} end,
+    GetPlayerGUID     = function(low) return low end,
+    GetPlayerByGUID   = function(g) return buddies[g] end,
+}
+setmetatable(_G, { __index = function(_, k)
+    if stubs[k] ~= nil then return stubs[k] end
+    return function() return nil end
+end })
+dofile(LUA .. "sargobras.lua")
+check("the valley Sargobras's handlers registered", type(hello) == "function" and type(select_) == "function")
+if not (hello and select_) then os.exit(1) end
+
+local function option()
+    hello(1, player, sarg)
+    for _, m in ipairs(menu) do if m.text == "Actually, can I go somewhere else?" then return m.intid end end
+end
+
+local intid = option()
+check("a level-1 character is offered the option", intid ~= nil)
+local landed = {}
+for press = 1, 4 do
+    executed = {}
+    local expect = Valleys[1][Deck.next(777, Deck.standing_in(Valleys[1], player.map, player.x, player.y))]
+    select_(2, player, sarg, 0, intid, nil)
+    landed[press] = player.x .. "," .. player.y
+    check(string.format("press %d lands in %s", press, expect.name), player.x == expect.x and player.y == expect.y and player.map == expect.map)
+    check(string.format("press %d binds the hearthstone there (area %d)", press, expect.zone),
+        player.bind and player.bind.x == expect.x and player.bind.y == expect.y and player.bind.map == expect.map and player.bind.area == expect.zone)
+    check(string.format("press %d tells the rotation (one +1, guarded by the current valley)", press),
+        #executed == 1 and executed[1]:match("dealt_in_batch = dealt_in_batch %+ 1") and executed[1]:match("team = 1 AND current_valley = %d"))
+end
+check("the first three presses land in three different valleys, none the start",
+    landed[1] ~= landed[2] and landed[2] ~= landed[3] and landed[1] ~= landed[3])
+check("the fourth press is back in the Valley of Trials", player.x == -618.518 and player.y == -4251.67)
+
+local function bearing(b)
+    local a = math.atan2(b.at.y - player.y, b.at.x - player.x) - (Valleys[1][0].o + math.pi)
+    return (a + math.pi) % (2 * math.pi) - math.pi
+end
+local b1, b2 = buddies[901], buddies[902]
+check("both buddies in the world came to the Valley of Trials", b1.at and b2.at and b1.at.map == 1 and b2.at.map == 1)
+check(string.format("the first stands 45 degrees off straight back, to her left (%.1f degrees)", math.deg(bearing(b1))),
+    math.abs(bearing(b1) + math.pi / 4) < 1e-6)
+check(string.format("the second 45 degrees the other way, to her right (%.1f degrees)", math.deg(bearing(b2))),
+    math.abs(bearing(b2) - math.pi / 4) < 1e-6)
+check("3 yards behind her", math.abs(math.sqrt((b1.at.x - player.x) ^ 2 + (b1.at.y - player.y) ^ 2) - 3) < 1e-6)
+check("facing the way she faces", b1.at.o == Valleys[1][0].o)
+check("a buddy not in the world is left where it is", rawget(buddies[903], "at") == nil)
+
+player.level = 2
+check("at level 2 the option is gone", option() == nil)
+executed = {}
+select_(2, player, sarg, 0, intid, nil)
+check("a menu left open from level 1 does nothing at level 2", #executed == 0 and player.x == -618.518)
+player.level = 1
+check("back at level 1 the option returns", option() == intid)
+player.class = 6
+check("a death knight is never offered it", option() == nil)
+
+print("")
+print("the list of valleys")
+local ok = os.execute(DIR .. "/scripts/generate-starting-valleys-lua " .. DIR .. " --check")
+check("the Lua list matches the creation patch's table", ok == 0 or ok == true)
+
+print("")
+print(string.format("%d checks, %d failed", checks, fails))
+os.exit(fails == 0 and 0 or 1)

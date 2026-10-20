@@ -1,0 +1,133 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+DIR="/mnt/kaun/wow-chat-2026"
+if [[ "${1:-}" == "--dir" ]]; then DIR="$2"; shift 2; fi
+DRY=0
+if [[ "${1:-}" == "--dry-run" ]]; then DRY=1; shift; fi
+NAME="${1:-}"
+CLASS_ARG="${2:-}"
+if [[ -z "${NAME}" || -z "${CLASS_ARG}" ]]; then
+    echo "Usage: $0 [--dir PROJECT_DIR] [--dry-run] <character name> <class>"
+    exit 1
+fi
+PROFILE="$(cat "${DIR}/.profile")"
+MYSQL="${DIR}/mysql/installed-files/bin/mysql"
+MYSQLDUMP="${DIR}/mysql/installed-files/bin/mysqldump"
+CHARS="acore_characters_${PROFILE}"
+WORLD="acore_world_${PROFILE}"
+PLANNER="${DIR}/scripts/lib/class-change-sql.lua"
+BACKUPS="${DIR}/backups/class-changes"
+SCRATCH="${DIR}/tmp/shared-memory/class-change"
+OWN_TABLES="characters character_skills character_spell character_spell_cooldown character_action character_talent character_glyphs character_aura"
+PET_TABLES="pet_aura pet_spell pet_spell_cooldown"
+
+declare -A CLASS_BY_NAME=(
+    [warrior]=1 [paladin]=2 [hunter]=3 [rogue]=4 [priest]=5
+    [death-knight]=6 [deathknight]=6 [shaman]=7 [mage]=8 [warlock]=9 [druid]=11
+)
+if [[ "${CLASS_ARG}" =~ ^[0-9]+$ ]]; then
+    NEW_CLASS="${CLASS_ARG}"
+else
+    NEW_CLASS="${CLASS_BY_NAME[${CLASS_ARG,,}]:-}"
+fi
+if [[ -z "${NEW_CLASS}" ]]; then
+    echo "ERROR: '${CLASS_ARG}' is not a class. Known: ${!CLASS_BY_NAME[*]}"
+    exit 1
+fi
+
+sql() { "${MYSQL}" -h127.0.0.1 -P3307 -uritz -pmenardi --batch --skip-column-names "$@" 2>&1 | grep -v "Using a password" || true; }
+
+STEP="checks"
+trap 'echo "STOPPED at step: ${STEP}. Steps before it completed; see above."' ERR
+if pgrep -x worldserver > /dev/null; then
+    echo "ERROR: the world server is running. It keeps each character's class in memory"
+    echo "and would write the old one back. Stop it, then run this again."
+    exit 1
+fi
+ROW="$(sql "${CHARS}" -e "SELECT guid, race, class, level, online FROM characters WHERE name = '${NAME//\'/}'")"
+if [[ -z "${ROW}" || "${ROW}" == ERROR* ]]; then
+    echo "ERROR: no character named '${NAME}' in ${CHARS}. ${ROW}"
+    exit 1
+fi
+read -r GUID RACE OLD_CLASS LEVEL ONLINE <<< "${ROW}"
+echo "Character: ${NAME} (guid ${GUID}), race ${RACE}, class ${OLD_CLASS}, level ${LEVEL}"
+if [[ "${ONLINE}" != "0" ]]; then
+    echo "NOTE: the database still marks ${NAME} online (the server stopped without saving"
+    echo "the logout); that is harmless with the server down."
+fi
+ALLOWED="$(sql "${WORLD}" -e "SELECT COUNT(*) FROM playercreateinfo WHERE race = ${RACE} AND class = ${NEW_CLASS}")"
+if [[ "${ALLOWED}" != "1" ]]; then
+    echo "ERROR: race ${RACE} cannot be class ${NEW_CLASS} (no playercreateinfo row). Nothing changed."
+    exit 1
+fi
+# }}}
+
+# {{{ step 2: backup
+STEP="backup"
+mkdir -p "${BACKUPS}" "${SCRATCH}"
+STAMP="$(date +%Y-%m-%d-%H%M%S)"
+BACKUP="${BACKUPS}/${NAME}-${STAMP}-class-${OLD_CLASS}.sql"
+{
+    echo "-- written by scripts/change-character-class before turning ${NAME} (guid ${GUID})"
+    echo "-- from class ${OLD_CLASS} into class ${NEW_CLASS}; load it (after deleting the"
+    echo "-- character's rows from the same tables) to put the character back."
+    for t in ${OWN_TABLES}; do
+        "${MYSQLDUMP}" -h127.0.0.1 -P3307 -uritz -pmenardi --no-create-info --skip-triggers \
+            --where="guid = ${GUID}" "${CHARS}" "${t}" 2>&1 | grep -v "Using a password"
+    done
+    "${MYSQLDUMP}" -h127.0.0.1 -P3307 -uritz -pmenardi --no-create-info --skip-triggers \
+        --where="owner = ${GUID}" "${CHARS}" character_pet 2>&1 | grep -v "Using a password"
+    PETS="$(sql "${CHARS}" -e "SELECT GROUP_CONCAT(id) FROM character_pet WHERE owner = ${GUID}")"
+    if [[ -n "${PETS}" && "${PETS}" != "NULL" ]]; then
+        for t in ${PET_TABLES}; do
+            "${MYSQLDUMP}" -h127.0.0.1 -P3307 -uritz -pmenardi --no-create-info --skip-triggers \
+                --where="guid IN (${PETS})" "${CHARS}" "${t}" 2>&1 | grep -v "Using a password"
+        done
+    fi
+} > "${BACKUP}"
+echo "Backup: ${BACKUP}"
+# }}}
+
+# {{{ step 3: plan
+STEP="plan"
+STATE="${SCRATCH}/${NAME}-state.tsv"
+PLAN="${SCRATCH}/${NAME}-plan.sql"
+{
+    printf 'char\t%s\t%s\t%s\t%s\n' "${GUID}" "${RACE}" "${OLD_CLASS}" "${LEVEL}"
+    sql "${CHARS}" -e "SELECT 'skill', skill, value, max FROM character_skills WHERE guid = ${GUID}"
+    sql "${CHARS}" -e "SELECT 'spell', spell FROM character_spell WHERE guid = ${GUID}"
+} > "${STATE}"
+luajit "${PLANNER}" "${DIR}" "${STATE}" "${NEW_CLASS}" "${PLAN}"
+echo "Plan: ${PLAN}"
+# }}}
+
+# {{{ step 4: apply
+STEP="apply"
+if [[ "${DRY}" == "1" ]]; then
+    sed 's/^COMMIT;$/ROLLBACK;/' "${PLAN}" > "${PLAN}.dry"
+    RESULT="$(sql "${CHARS}" < "${PLAN}.dry")"
+    if [[ -n "${RESULT}" ]]; then echo "${RESULT}"; echo "ERROR: the plan failed in the dry run."; exit 1; fi
+    echo "Dry run: the plan ran and was rolled back. Nothing changed."
+else
+    RESULT="$(sql "${CHARS}" < "${PLAN}")"
+    if [[ -n "${RESULT}" ]]; then echo "${RESULT}"; echo "ERROR: the plan failed; the transaction did not commit. Nothing changed."; exit 1; fi
+    NOW="$(sql "${CHARS}" -e "SELECT class FROM characters WHERE guid = ${GUID}")"
+    echo "Applied. ${NAME} is now class ${NOW}."
+fi
+# }}}
+
+# {{{ report: items only the old class can use
+STEP="report"
+ITEMS="$(sql "${CHARS}" -e "SELECT DISTINCT ii.itemEntry FROM character_inventory ci JOIN item_instance ii ON ii.guid = ci.item WHERE ci.guid = ${GUID}")"
+if [[ -n "${ITEMS}" ]]; then
+    MASK=$(( 1 << (NEW_CLASS - 1) ))
+    UNUSABLE="$(sql "${WORLD}" -e "SELECT CONCAT(entry, ' ', name) FROM item_template WHERE entry IN ($(echo ${ITEMS} | tr ' ' ',')) AND AllowableClass > 0 AND (AllowableClass & ${MASK}) = 0")"
+    if [[ -n "${UNUSABLE}" ]]; then
+        echo "Items the new class cannot use (left in place):"
+        echo "${UNUSABLE}" | sed 's/^/  /'
+    fi
+fi
+echo "Next: start the server, log ${NAME} in, and as a game master type: .learn all my trainer"
+# }}}

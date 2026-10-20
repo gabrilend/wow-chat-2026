@@ -1,0 +1,68 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+
+local function lines_of(cmd)
+    local out, h = {}, io.popen(cmd)
+    for l in h:lines() do out[#out + 1] = l end
+    h:close()
+    return out
+end
+local function q(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
+
+local function globals_written(path)
+    local names, seen, compiled = {}, {}, false
+    for _, l in ipairs(lines_of("luajit -bl " .. q(path) .. " 2>&1")) do
+        if l:match("^%-%- BYTECODE") then compiled = true end
+        local name = l:match("GSET%s.-;%s*\"(.-)\"")
+        if name and not seen[name] then seen[name] = true; names[#names + 1] = name end
+        if not compiled and l:match("^luajit:") then return nil, l end
+    end
+    if not compiled then return nil, "no bytecode listed" end
+    table.sort(names)
+    return names
+end
+
+local profiles, order = {}, {}
+for _, f in ipairs(lines_of("git -C " .. q(DIR) .. " ls-files 'src/lua-*/*.lua' 'src/lua-*/**/*.lua'")) do
+    local folder = f:match("^src/(lua%-[^/]+)/")
+    if folder and not f:match("/%.") then
+        if not profiles[folder] then profiles[folder] = {}; order[#order + 1] = folder end
+        table.insert(profiles[folder], f)
+    end
+end
+table.sort(order)
+
+local breaks, files_read = 0, 0
+for _, folder in ipairs(order) do
+    local writers = {}
+    for _, f in ipairs(profiles[folder]) do
+        local names, err = globals_written(DIR .. "/" .. f)
+        files_read = files_read + 1
+        if not names then
+            print("  FAIL " .. f .. ": could not be compiled to read its globals: " .. err)
+            breaks = breaks + 1
+        else
+            if f:match("/lib/") and #names > 0 then
+                print("  FAIL " .. f .. " is a library but writes globals: " .. table.concat(names, " "))
+                breaks = breaks + 1
+            end
+            for _, n in ipairs(names) do
+                writers[n] = writers[n] or {}
+                table.insert(writers[n], f)
+            end
+        end
+    end
+    local shared = {}
+    for n, list in pairs(writers) do if #list > 1 then shared[#shared + 1] = n end end
+    table.sort(shared)
+    for _, n in ipairs(shared) do
+        print("  FAIL " .. folder .. ": global " .. n .. " is written by " .. table.concat(writers[n], ", "))
+        breaks = breaks + 1
+    end
+    if #shared == 0 then print(string.format("  ok   %s: %d scripts, no global written twice", folder, #profiles[folder])) end
+end
+
+print(string.format("%d script(s) read; %d break(s)", files_read, breaks))
+os.exit(breaks == 0 and 0 or 1)

@@ -1,0 +1,11 @@
+
+package.loaded["load-behaviors"] = true
+
+
+if Behaviors and Behaviors.loaded then
+    local count = 0
+    for _ in pairs(Behaviors.loaded) do count = count + 1 end
+    print("[LoadBehaviors] Behavior system verified - " .. count .. " behaviors registered")
+else
+    print("[LoadBehaviors] WARNING: Behaviors table not found - check behavior scripts for errors")
+end

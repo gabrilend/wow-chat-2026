@@ -1,0 +1,42 @@
+#!/bin/bash
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+OUT="${DIR}/tmp/tmp"
+mkdir -p "${OUT}"
+g++ -std=c++17 -O1 -Wall -Wextra -Werror -I"${DIR}/modules/mod-buddies/src" \
+    "${DIR}/tests/buddy-stand-ins/pick.cpp" -o "${OUT}/buddy-stand-ins-pick" || exit 1
+nice -n 19 "${OUT}/buddy-stand-ins-pick" || exit 1
+
+FROM_HEADER="$("${OUT}/buddy-stand-ins-pick" --shapes)"
+FROM_DATA="$(TALENT_DATA="${DIR}/src/lua-basic/data/buddy-talent-data.lua" luajit -e '
+local TD = dofile(os.getenv("TALENT_DATA"))
+for _, cls in ipairs({ 1, 2, 3, 4, 5, 6, 7, 8, 9, 11 }) do
+    for shape, s in ipairs(TD.classes[cls].shapes) do print(cls .. " " .. shape .. " " .. s.role) end
+end' < /dev/null)"
+if [[ "${FROM_HEADER}" == "${FROM_DATA}" ]]; then
+    echo "ok: all 100 shape roles match the buddy talent data"
+else
+    echo "FAILED: the stand-in header's shape roles differ from the buddy talent data (header < > data):"
+    diff <(echo "${FROM_HEADER}") <(echo "${FROM_DATA}")
+    exit 1
+fi
+
+MYSQL=("${DIR}/mysql/installed-files/bin/mysql" --no-defaults --socket="${DIR}/mysql/databases/mysql.sock" -uritz -pmenardi -N -B)
+SRC="${DIR}/sql/basic/db_characters.src"
+COUNT="SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '_smoke_test' AND table_name = 'buddy_stand_in';"
+SQL_SCRIPT="CREATE DATABASE IF NOT EXISTS _smoke_test; USE _smoke_test; ${COUNT}
+$(cat "${SRC}/06-buddy-stand-ins.apply.sql")
+$(cat "${SRC}/06-buddy-stand-ins.apply.sql")
+${COUNT}
+INSERT INTO buddy_stand_in (guid, race, class, role, profile, level) VALUES (1, 1, 1, 1, 10, 20);
+SELECT COUNT(*) FROM buddy_stand_in WHERE role = 1 AND level <= 30;
+$(cat "${SRC}/06-buddy-stand-ins.revert.sql")
+${COUNT}"
+RESULT="$("${MYSQL[@]}" <<< "${SQL_SCRIPT}" 2>&1 | grep -v "Using a password")"
+EXPECTED=$'0\n1\n1\n0'
+if [[ "${RESULT}" == "${EXPECTED}" ]]; then
+    echo "ok: the stand-ins' table applies twice, holds a row, and reverts (in _smoke_test)"
+else
+    echo "FAILED: the stand-ins' table: expected the counts 0 1 1 0 (before, applied twice, a row found, reverted), got:"
+    echo "${RESULT}"
+    exit 1
+fi

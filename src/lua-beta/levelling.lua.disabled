@@ -1,0 +1,80 @@
+
+local THRESHOLD_33 = 0.33
+local THRESHOLD_66 = 0.66
+
+local SMSG_SET_FACTION_STANDING = 0x124
+
+local function sendGreenLevelUpEffect(player)
+    local packet = CreatePacket(SMSG_SET_FACTION_STANDING, 9)
+    packet:WriteFloat(0)
+    packet:WriteUByte(1)
+    packet:WriteULong(0)
+    player:SendPacket(packet)
+end
+
+local function awardMidLevelTalent(player, threshold)
+    player:SetFreeTalentPoints(player:GetFreeTalentPoints() + 1)
+    sendGreenLevelUpEffect(player)
+
+    local percent = math.floor(threshold * 100)
+    player:SendBroadcastMessage("You feel more capable. +1 talent point (" .. percent .. "%)")
+end
+
+local function getThresholdKey(level, threshold)
+    return "talent_" .. level .. "_" .. math.floor(threshold * 100)
+end
+
+local function onGiveXP(event, player, amount, victim)
+    local level = player:GetLevel()
+    local currentXP = player:GetXP()
+    local xpToLevel = player:GetUInt32Value(36)
+
+    if xpToLevel <= 0 then return end
+
+    local progress = currentXP / xpToLevel
+
+    local key33 = getThresholdKey(level, THRESHOLD_33)
+    if progress >= THRESHOLD_33 and not player:GetData(key33) then
+        player:SetData(key33, true)
+        awardMidLevelTalent(player, THRESHOLD_33)
+    end
+
+    local key66 = getThresholdKey(level, THRESHOLD_66)
+    if progress >= THRESHOLD_66 and not player:GetData(key66) then
+        player:SetData(key66, true)
+        awardMidLevelTalent(player, THRESHOLD_66)
+    end
+end
+
+local function onLevelChange(event, player, oldLevel)
+    local newLevel = player:GetLevel()
+
+    player:SetData(getThresholdKey(newLevel, THRESHOLD_33), nil)
+    player:SetData(getThresholdKey(newLevel, THRESHOLD_66), nil)
+end
+
+local function onLogin(event, player)
+    local level = player:GetLevel()
+    local currentXP = player:GetXP()
+    local xpToLevel = player:GetUInt32Value(36)
+
+    if xpToLevel <= 0 then return end
+
+    local progress = currentXP / xpToLevel
+
+    if progress >= THRESHOLD_33 then
+        player:SetData(getThresholdKey(level, THRESHOLD_33), true)
+    end
+
+    if progress >= THRESHOLD_66 then
+        player:SetData(getThresholdKey(level, THRESHOLD_66), true)
+    end
+end
+
+local PLAYER_EVENT_ON_GIVE_XP      = 12
+local PLAYER_EVENT_ON_LEVEL_CHANGE = 13
+local PLAYER_EVENT_ON_LOGIN        = 3
+
+RegisterPlayerEvent(PLAYER_EVENT_ON_GIVE_XP,      onGiveXP)
+RegisterPlayerEvent(PLAYER_EVENT_ON_LEVEL_CHANGE, onLevelChange)
+RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN,        onLogin)

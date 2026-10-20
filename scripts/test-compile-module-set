@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+
+set -o pipefail
+
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+
+COMPILE="${DIR}/scripts/compile"
+pieces=$(
+    sed -n '/^# {{{ Modules per profile$/,/^# }}}$/p'     "${COMPILE}"
+    sed -n '/^# {{{ PATCH_PROVIDED_MODULES$/,/^# }}}$/p'  "${COMPILE}"
+    sed -n '/^# {{{ module_wanted$/,/^# }}}$/p'           "${COMPILE}"
+    sed -n '/^# {{{ module_cmake_settings$/,/^# }}}$/p'   "${COMPILE}"
+)
+for piece in "PROFILE_MODULES" "PATCH_PROVIDED_MODULES=" "module_wanted()" "module_cmake_settings()"; do
+    if [[ "${pieces}" != *"${piece}"* ]]; then
+        echo "ERROR: could not cut '${piece}' out of ${COMPILE} (fold marker renamed?)"
+        exit 1
+    fi
+done
+eval "${pieces}"
+source "${DIR}/patches/patches.sh" || { echo "ERROR: patches/patches.sh failed to source"; exit 1; }
+
+SCRATCH_ROOT="${DIR}/tmp/shared-memory"
+[[ -d "${SCRATCH_ROOT}" ]] || { echo "ERROR: ${SCRATCH_ROOT} missing (the project's RAM scratch link)"; exit 1; }
+FAKE="${SCRATCH_ROOT}/test-compile-module-set"
+rm -rf "${FAKE}"
+for mod_name in mod-ale mod-aoe-loot mod-fireworks-on-level mod-playerbots mod-solo-lfg mod-grownup; do
+    mkdir -p "${FAKE}/source/modules/${mod_name}/src"
+done
+AC_CODE_DIR="${FAKE}/source"
+BUILD_DIR_SHADOW="${FAKE}/build"
+
+declare -A EXPECT_ON=(
+    [basic]="mod-ale mod-aoe-loot mod-buddies mod-fireworks-on-level mod-playerbots mod-solo-lfg"
+    [cc-test]="mod-ale mod-buddies mod-playerbots"
+    [beta]="mod-ale mod-aoe-loot mod-grownup mod-playerbots"
+    [vanilla]="mod-ale mod-aoe-loot mod-fireworks-on-level mod-playerbots mod-solo-lfg"
+)
+
+fail=0
+for PROFILE in basic cc-test beta vanilla; do
+    got_on=$(module_cmake_settings | sed -n 's/^MODULE_\(.*\)=default$/\1/p' | tr 'A-Z' 'a-z' | sort | tr '\n' ' ')
+    got_off=$(module_cmake_settings | sed -n 's/^MODULE_\(.*\)=disabled$/\1/p' | tr 'A-Z' 'a-z' | sort | tr '\n' ' ')
+    want_on=$(tr ' ' '\n' <<< "${EXPECT_ON[${PROFILE}]}" | sort | tr '\n' ' ')
+    if [[ "${got_on}" == "${want_on}" ]]; then
+        printf "  [✓] %-8s on: %s\n" "${PROFILE}" "${got_on}"
+        printf "      %-8s off: %s\n" "" "${got_off:-none}"
+    else
+        printf "  [✗] %-8s on: %s\n" "${PROFILE}" "${got_on}"
+        printf "      %-8s expected: %s\n" "" "${want_on}"
+        fail=$((fail + 1))
+    fi
+done
+mkdir -p "${FAKE}/build"
+printf 'MODULE_MOD-ALE:STRING=default\nMODULE_MOD-AOE-LOOT:STRING=default\nMODULE_MOD-GONE-NOW:STRING=default\n' > "${FAKE}/build/CMakeCache.txt"
+rm -rf "${FAKE}/source/modules/mod-aoe-loot"
+PROFILE="cc-test"
+gone=$(module_cmake_settings | grep -E '^MODULE_MOD-(AOE-LOOT|GONE-NOW)=' | sort | tr '\n' ' ')
+if [[ "${gone}" == "MODULE_MOD-AOE-LOOT=disabled MODULE_MOD-GONE-NOW=disabled " ]]; then
+    echo "  [✓] modules the build remembers but the tree lost are switched off: ${gone}"
+else
+    echo "  [✗] modules the build remembers but the tree lost: got '${gone}', expected both disabled"
+    fail=$((fail + 1))
+fi
+rm -rf "${FAKE}"
+echo "Profiles with the wrong module set: ${fail}"
+
+[[ "${fail}" -eq 0 ]]

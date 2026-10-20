@@ -1,0 +1,377 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+
+local here = (arg[0]:match("^(.*[/\\])") or "./")
+local Toy = dofile(here .. "lib/toy-world.lua")
+local quiet = print
+print = function() end
+dofile(DIR .. "/src/lua-beta/druid-moonglade.lua")
+dofile(DIR .. "/src/lua-beta/hearthstone.lua")
+local logged = {}
+print = function(...) logged[#logged + 1] = table.concat({ ... }, " ") end
+
+local checks, fails = 0, 0
+local function check(ok, what)
+    checks = checks + 1
+    if not ok then fails = fails + 1; quiet("  FAIL " .. what) end
+end
+
+local CAST = Moonglade.onCast
+local function BEGIN(p)  Toy.spellEvent(1, p, 18960) end
+local function CANCEL(p) Toy.spellEvent(3, p, 18960, true) end
+local G = Moonglade.GLADE
+
+local MID_X, MID_Y = 7850, -2400
+local function height(x, y)
+    local d = math.sqrt((x - MID_X) ^ 2 + (y - MID_Y) ^ 2)
+    if d > 500 then return 700 end
+    if x > 7600 and x < 7620 then return 512 + 2 * math.min(x - 7600, 7620 - x) end
+    return 512
+end
+local function area(x, y)
+    local d = math.sqrt((x - MID_X) ^ 2 + (y - MID_Y) ^ 2)
+    if d < 120 then return 656 end
+    if x > 7950 and y < -2600 then return 2361 end
+    return 493
+end
+local KALIMDOR = Toy.new_map(1, height, nil, area)
+local EK = Toy.new_map(0, function() return 40 end)
+local DUNGEON = Toy.new_map(36, function() return 0 end)
+Toy.maps[1], Toy.maps[0], Toy.maps[36] = KALIMDOR, EK, DUNGEON
+
+local function druid(name, low, map, x, y, zone)
+    local p = Toy.new_player(name, low)
+    p.class, p.map, p.x, p.y, p.z, p.zone = 11, map, x, y, map.height(x, y), zone
+    return p
+end
+local function land_in_nighthaven(p)
+    p.map, p.x, p.y, p.z, p.zone = KALIMDOR, 7991.88, -2679.84, 512.1, 493
+end
+local function arrive_as_moved(p, zone)
+    local t = p.teleports[#p.teleports]
+    p.map, p.x, p.y, p.z = Toy.maps[t.map], t.x, t.y, t.z
+    p.zone = (t.map == 1 and t.x > 7000 and t.x < 8700 and t.y > -3300 and t.y < -1500) and 493 or zone
+    Moonglade.onZone(27, p, p.zone, 0)
+end
+
+local ann = druid("Ann", 501, EK, -8900, 500, 12)
+Toy.login(ann)
+check(ann:HasSpell(18960), "a druid without Teleport: Moonglade learns it at login")
+local warrior = Toy.new_player("Wat", 502)
+warrior.class = 1
+Toy.login(warrior)
+check(not warrior:HasSpell(18960), "a warrior is not taught Teleport: Moonglade")
+local taught = 0
+local bea = druid("Bea", 503, EK, 0, 0, 12)
+bea.spells[18960] = true
+function bea:LearnSpell(id) taught = taught + 1; self.spells[id] = true end
+Toy.login(bea)
+check(taught == 0, "a druid who knows it is not taught it again")
+
+CAST(5, ann, Toy.spell(18960))
+check(Toy.chardb.moonglade[501] ~= nil, "casting from the world remembers the spot in the database")
+local row = Toy.chardb.moonglade[501] or {}
+check(row[1] == 0 and math.abs(row[2] - -8900) < 0.01 and math.abs(row[3] - 500) < 0.01, "the remembered spot is where the druid stood (map 0, -8900, 500)")
+land_in_nighthaven(ann)
+Toy.advance(Moonglade and 1500 or 0)
+check(#ann.teleports == 1 and ann.teleports[1].map == 1, "a moment after landing, the druid is moved within Kalimdor")
+local t = ann.teleports[1] or {}
+check(t.x and t.x >= G.x_min and t.x <= G.x_max and t.y >= G.y_min and t.y <= G.y_max, "the arrival lies in the glade's box")
+ann.x, ann.y, ann.z = t.x or ann.x, t.y or ann.y, t.z or ann.z
+CAST(5, ann, Toy.spell(18960))
+land_in_nighthaven(ann)
+Toy.advance(1500)
+local back = ann.teleports[2] or {}
+check(back.map == 0 and math.abs((back.x or 0) - -8900) < 0.01 and math.abs((back.y or 0) - 500) < 0.01, "casting in the glade sends the druid back to where they cast it from")
+check(Toy.chardb.moonglade[501] == nil, "going back forgets the spot in the database")
+check(#ann.teleports == 2, "going back is one move, not also a random arrival")
+
+local cid = druid("Cid", 504, KALIMDOR, 7900, -2700, 493)
+Toy.login(cid)
+CAST(5, cid, Toy.spell(18960))
+Toy.advance(1500)
+check(#cid.teleports == 0, "in the glade with nothing remembered, the druid is not moved (the spell's own Nighthaven)")
+check(#cid.messages == 1 and cid.messages[1]:match("nowhere to return"), "and is told there is nowhere to return to")
+
+local dot = druid("Dot", 505, DUNGEON, -16, -383, 1581)
+Toy.login(dot)
+CAST(5, dot, Toy.spell(18960))
+local d = Toy.chardb.moonglade[505] or {}
+check(d[1] == 0 and math.abs((d[2] or 0) - -11208.3) < 0.01 and math.abs((d[3] or 0) - 1672.52) < 0.01,
+      "a cast from the Deadmines remembers its entrance, from the generated table (map 0, -11208.3, 1672.52)")
+check(Moonglade.ENTRANCES[36] and Moonglade.ENTRANCES[489] == nil, "the table has the Deadmines and no battleground (Warsong Gulch)")
+local WARSONG = Toy.new_map(489, function() return 0 end)
+WARSONG.kind = "battleground"
+Toy.maps[489] = WARSONG
+local hob = druid("Hob", 509, WARSONG, 0, 0, 3277)
+hob.entryPoint = { mapId = 1, x = 1628, y = -4419, z = 16, o = 2 }
+Toy.chardb.entry[509] = { 0, -8900, 500, 90, 0 }
+Toy.login(hob)
+CAST(5, hob, Toy.spell(18960))
+check(hob.saves == 1, "a cast from a battleground saves the character, so its join spot is written")
+check(Toy.chardb.moonglade[509] == nil, "the way back is not kept until the spell has landed")
+land_in_nighthaven(hob)
+Toy.advance(1500)
+local hr = Toy.chardb.moonglade[509] or {}
+check(hr[1] == 1 and math.abs((hr[2] or 0) - 1628) < 0.01, "then it is where the druid joined this match (Orgrimmar), not the previous one's")
+local NAGRAND = Toy.new_map(559, function() return 0 end)
+NAGRAND.kind = "arena"
+Toy.maps[559] = NAGRAND
+local ida = druid("Ida", 511, NAGRAND, 0, 0, 3698)
+ida.entryPoint = { mapId = 530, x = -1800, y = 5300, z = -12, o = 0 }
+Toy.login(ida)
+CAST(5, ida, Toy.spell(18960))
+land_in_nighthaven(ida)
+Toy.advance(1500)
+check((Toy.chardb.moonglade[511] or {})[1] == 530, "and from an arena, where she joined it")
+local gus = druid("Gus", 508, WARSONG, 0, 0, 3277)
+Toy.login(gus)
+CAST(5, gus, Toy.spell(18960))
+land_in_nighthaven(gus)
+Toy.advance(1500)
+check(Toy.chardb.moonglade[508] == nil and Moonglade.spots[508] == false, "with no join spot saved, nothing is remembered")
+check(gus.messages[#gus.messages] and gus.messages[#gus.messages]:match("not known"), "and the druid is told so")
+Toy.advance(3000)
+
+local eli = druid("Eli", 506, EK, 300, 300, 12)
+Toy.login(eli)
+CAST(5, eli, Toy.spell(18960))
+Toy.logout(eli)
+Moonglade.spots = {}
+Toy.login(eli)
+check(type(Moonglade.spots[506]) == "table" and math.abs(Moonglade.spots[506].x - 300) < 0.01, "after a logout and a restart the spot is read back from the database")
+eli.map, eli.x, eli.y, eli.zone = KALIMDOR, 7900, -2700, 493
+CAST(5, eli, Toy.spell(18960))
+Toy.advance(1500)
+local e = eli.teleports[#eli.teleports] or {}
+check(e.map == 0 and math.abs((e.x or 0) - 300) < 0.01, "and the return still goes there")
+
+local seen, bad, cells = 0, 0, {}
+math.randomseed(211)
+for i = 1, 400 do
+    local x, y, z = Moonglade.drawArrival(KALIMDOR)
+    if x then
+        seen = seen + 1
+        local a = area(x, y, z)
+        if a == 656 or height(x, y) ~= 512 or (x > 7600 and x < 7620) then bad = bad + 1 end
+        cells[math.floor(x / 150) .. ":" .. math.floor(y / 150)] = true
+    end
+end
+local spread = 0
+for _ in pairs(cells) do spread = spread + 1 end
+check(seen == 400, "every arrival draw finds a spot in this glade (" .. seen .. " of 400)")
+check(bad == 0, "no arrival in the lake, on a mountain, or on or beside the cliff (" .. bad .. " bad)")
+check(spread >= 12, "arrivals are spread over the glade, not one spot (" .. spread .. " of the 150-yard squares)")
+local all_lake = Toy.new_map(1, function() return 512 end, nil, function() return 656 end)
+check(Moonglade.drawArrival(all_lake) == nil, "with no open ground at all, no arrival is drawn")
+
+local function visit_party(base)
+    World = Toy.World
+    local hal = druid("Hal", base, EK, 500, 500, 12)
+    local ivy, jon, kit = Toy.new_player("Ivy", base + 1), Toy.new_player("Jon", base + 2), Toy.new_player("Kit", base + 3)
+    for i, p in ipairs({ ivy, jon, kit }) do p.map, p.x, p.y, p.z, p.zone = EK, 500 + 10 * i, 500, 40, 12 end
+    kit.bot = true
+    for _, p in ipairs({ hal, ivy, jon, kit }) do Toy.login(p) end
+    Toy.group({ hal, ivy, jon, kit })
+    return hal, ivy, jon, kit
+end
+local function go_out(hal)
+    CAST(5, hal, Toy.spell(18960))
+    Toy.spellEvent(2, hal, 18960)
+    land_in_nighthaven(hal)
+    Toy.advance(1500)
+end
+local function near(t, x, y, r) return t and math.sqrt((t.x - x) ^ 2 + (t.y - y) ^ 2) <= r end
+
+do
+    local hal, ivy, jon, kit = visit_party(600)
+    BEGIN(hal)
+    check(ivy.window ~= nil and jon.window ~= nil and kit.window == nil, "the cast beginning asks the players in the group (not the bot)")
+    check(ivy.window and ivy.window.items[1].text:match("Moonglade"), "with the glade's own words")
+    Toy.answer(ivy, 1)
+    Toy.answer(jon, 2)
+    go_out(hal)
+    local spot = hal.teleports[1]
+    check(spot ~= nil, "the druid is moved to a spot in the glade")
+    check(#ivy.teleports == 1 and #kit.teleports == 1 and #jon.teleports == 0, "Ivy (yes) and the bot come; Jon (no) stays")
+    check(spot and near(ivy.teleports[1], spot.x, spot.y, 6) and near(kit.teleports[1], spot.x, spot.y, 6), "the visitors stand round the druid's spot")
+    check(spot and ivy.teleports[1].map == 1, "in Kalimdor")
+    arrive_as_moved(hal, 12); arrive_as_moved(ivy, 12); arrive_as_moved(kit, 12)
+    check(Moonglade.visiting[ivy:GetGUIDLow()] ~= nil, "Ivy is a visitor while in the glade")
+    CAST(5, hal, Toy.spell(18960))
+    land_in_nighthaven(hal)
+    Toy.advance(1500)
+    arrive_as_moved(hal, 12)
+    local ib = ivy.teleports[2]
+    check(ib and ib.map == 0 and math.abs(ib.x - 510) < 0.01 and math.abs(ib.y - 500) < 0.01, "when the druid leaves, Ivy goes back to where she came from (map 0, 510, 500)")
+    check(kit.teleports[2] and math.abs(kit.teleports[2].x - 530) < 0.01, "and so does the bot, to its own spot")
+    check(Moonglade.visiting[ivy:GetGUIDLow()] == nil, "and she is a visitor no more")
+    for _, p in ipairs({ hal, ivy, jon, kit }) do Toy.logout(p) end
+end
+
+do
+    local hal, ivy, jon, kit = visit_party(610)
+    BEGIN(hal); Toy.answer(ivy, 1); Toy.answer(jon, 1)
+    go_out(hal)
+    arrive_as_moved(hal, 12); arrive_as_moved(ivy, 12); arrive_as_moved(jon, 12); arrive_as_moved(kit, 12)
+    Toy.logout(jon)
+    ivy.teleports = {}
+    ivy.map, ivy.x, ivy.y, ivy.zone = KALIMDOR, 6800, -4500, 361
+    Moonglade.onZone(27, ivy, 361, 0)
+    check(Moonglade.visiting[ivy:GetGUIDLow()] == nil, "a visitor who leaves the glade on her own is a visitor no more")
+    Toy.logout(hal)
+    check(#kit.teleports == 2, "the druid logging out sends the visitors back")
+    check(#ivy.teleports == 0, "but not one who had already left")
+    Toy.login(jon)
+    check(jon.teleports[2] and jon.teleports[2].map == 0 and math.abs(jon.teleports[2].x - 520) < 0.01, "a visitor offline when the druid left goes back at their next login")
+    for _, p in ipairs({ ivy, jon, kit }) do Toy.logout(p) end
+end
+
+do
+    local hal, ivy, jon, kit = visit_party(620)
+    BEGIN(hal); Toy.answer(ivy, 1)
+    CANCEL(hal)
+    check(jon.window == nil and next(GroupHearth.pending) == nil, "a cancelled cast withdraws the invitation")
+    Toy.advance(3000)
+    check(#ivy.teleports == 0 and #kit.teleports == 0, "and moves nobody")
+    hal.map, hal.x, hal.y, hal.zone = KALIMDOR, 7900, -2700, 493
+    BEGIN(hal)
+    check(ivy.window == nil and next(GroupHearth.pending) == nil, "casting the way back from the glade invites nobody")
+    for _, p in ipairs({ hal, ivy, jon, kit }) do Toy.logout(p) end
+end
+
+do
+    local hal, ivy, jon, kit = visit_party(630)
+    ivy.map, ivy.x, ivy.y, ivy.zone = DUNGEON, -16, -383, 1581
+    jon.map, jon.zone = Toy.maps[489], 3277
+    BEGIN(hal); Toy.answer(ivy, 1); Toy.answer(jon, 1)
+    go_out(hal)
+    check(#ivy.teleports == 1 and #jon.teleports == 0, "a visitor whose entrance is known comes; one whose is not stays")
+    check(jon.messages[#jon.messages] and jon.messages[#jon.messages]:match("not known"), "and is told why")
+    arrive_as_moved(hal, 12); arrive_as_moved(ivy, 12)
+    Toy.logout(hal)
+    local ib = ivy.teleports[2]
+    check(ib and ib.map == 0 and math.abs(ib.x - -11208.3) < 0.01, "Ivy goes back to the dungeon's entrance, where she went in")
+    for _, p in ipairs({ ivy, jon, kit }) do Toy.logout(p) end
+end
+
+do
+    World = Toy.World
+    local WSG = Toy.maps[489]
+    local hal = druid("Hal", 690, WSG, 0, 0, 3277)
+    hal.entryPoint = { mapId = 0, x = -8800, y = 600, z = 95, o = 0 }
+    local mate = Toy.new_player("Mat", 691)
+    mate.map, mate.zone = WSG, 3277
+    local pal = Toy.new_player("Pal", 692)
+    pal.map, pal.x, pal.y, pal.z, pal.zone = EK, 520, 500, 40, 12
+    for _, p in ipairs({ hal, mate, pal }) do Toy.login(p) end
+    Toy.group({ hal, mate })
+    local party = Toy.group({ hal, pal })
+    hal.group, pal.group = hal.raid or nil, party
+    hal.group = { members = { hal, mate } }
+    function hal.group:GetMembers() return self.members end
+    hal.originalGroup = party
+    BEGIN(hal)
+    check(pal.window ~= nil, "a druid in a battleground invites their own party")
+    check(mate.window == nil, "and not their teammates in the match")
+    Toy.answer(pal, 1)
+    go_out(hal)
+    check(#pal.teleports == 1 and #mate.teleports == 0, "the party member comes; the teammate stays")
+    hal.originalGroup = nil
+    BEGIN(hal)
+    check(mate.window == nil and next(GroupHearth.pending) == nil, "with no party of their own, nobody in the match is invited")
+    for _, p in ipairs({ hal, mate, pal }) do Toy.logout(p) end
+end
+
+do
+    local hal, ivy, jon, kit = visit_party(640)
+    ivy.dead, kit.dead = true, true
+    BEGIN(hal)
+    check(ivy.window ~= nil, "a dead group member is asked too")
+    Toy.answer(ivy, 1)
+    go_out(hal)
+    check(#ivy.teleports == 1 and #kit.teleports == 1, "the dead who said yes (and the dead bot) come")
+    check(not ivy.dead and ivy.raised == 1 and not kit.dead, "and are raised on arriving in the glade")
+    for _, p in ipairs({ hal, ivy, jon, kit }) do Toy.logout(p) end
+end
+
+do
+    local hal, ivy, jon, kit = visit_party(680)
+    ivy.dead = true
+    BEGIN(hal); Toy.answer(ivy, 1); Toy.answer(jon, 1)
+    go_out(hal)
+    arrive_as_moved(hal, 12); arrive_as_moved(ivy, 12); arrive_as_moved(jon, 12)
+    check(ivy.raised == 1, "Ivy, who came dead, was raised on arrival")
+    ivy.dead, jon.dead = true, true
+    Toy.logout(hal)
+    check(ivy.dead and ivy.raised == 1 and #ivy.teleports == 2, "Ivy, who came dead and died again, goes back as a ghost")
+    check(not jon.dead and jon.raised == 1 and #jon.teleports == 2, "Jon, who came alive and died, is raised and goes back")
+    for _, p in ipairs({ ivy, jon, kit }) do Toy.logout(p) end
+end
+
+local function restart()
+    Moonglade.spots, Moonglade.visiting, Moonglade.hosting, Moonglade.trips = {}, {}, {}, {}
+end
+
+do
+    local hal, ivy, jon, kit = visit_party(650)
+    BEGIN(hal); Toy.answer(ivy, 1)
+    go_out(hal)
+    arrive_as_moved(hal, 12); arrive_as_moved(ivy, 12)
+    check(Toy.chardb.visitors[651] and Toy.chardb.visitors[651][1] == 650, "the visitor is kept in the database, with her druid")
+    for _, p in ipairs({ hal, ivy, jon, kit }) do p.gone = true end
+    restart()
+    ivy.teleports = {}
+    Toy.login(ivy)
+    check(#ivy.teleports == 1 and ivy.teleports[1].map == 0 and math.abs(ivy.teleports[1].x - 510) < 0.01,
+          "after a restart, a visitor whose druid is not back goes back at login")
+    check(Toy.chardb.visitors[651] == nil, "and is no longer kept")
+    Toy.logout(ivy)
+end
+
+do
+    local hal, ivy, jon, kit = visit_party(660)
+    BEGIN(hal); Toy.answer(ivy, 1)
+    go_out(hal)
+    arrive_as_moved(hal, 12); arrive_as_moved(ivy, 12)
+    for _, p in ipairs({ hal, ivy, jon, kit }) do p.gone = true end
+    restart()
+    hal.map, hal.x, hal.y, hal.zone = EK, 500, 500, 12
+    Toy.login(hal)
+    check(Toy.chardb.visitors[661] and Toy.chardb.visitors[661][8] == 1, "a druid logging in outside the glade marks their offline visitors as left")
+    ivy.teleports = {}
+    Toy.login(ivy)
+    check(#ivy.teleports == 1 and ivy.teleports[1].map == 0, "and the visitor goes back at her login")
+    for _, p in ipairs({ hal, ivy }) do Toy.logout(p) end
+end
+
+do
+    local hal, ivy, jon, kit = visit_party(670)
+    BEGIN(hal); Toy.answer(ivy, 1)
+    go_out(hal)
+    arrive_as_moved(hal, 12); arrive_as_moved(ivy, 12)
+    for _, p in ipairs({ hal, ivy, jon, kit }) do p.gone = true end
+    restart()
+    Toy.login(hal)
+    ivy.teleports = {}
+    Toy.login(ivy)
+    check(#ivy.teleports == 0 and Moonglade.visiting[671] ~= nil, "a visitor whose druid is back in the glade stays")
+    Toy.logout(hal)
+    check(#ivy.teleports == 1, "and goes back when the druid leaves")
+    Toy.logout(ivy)
+end
+
+local fay = druid("Fay", 507, EK, 0, 0, 12)
+Toy.login(fay)
+CAST(5, fay, Toy.spell(8690))
+Toy.advance(1500)
+check(Toy.chardb.moonglade[507] == nil and #fay.teleports == 0, "another spell is left alone")
+
+local gave_up = {}
+for _, l in ipairs(logged) do local who = l:match("^%[Moonglade%] (%a+) was not in Moonglade"); if who then gave_up[who] = true end end
+check(gave_up.Dot, "an arrival that never reaches the glade says so in the server log")
+
+quiet(string.format("%d checks, %d failed", checks, fails))
+os.exit(fails == 0 and 0 or 1)

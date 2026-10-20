@@ -1,0 +1,154 @@
+#!/usr/bin/env luajit
+
+local DIR = arg[1] or "/mnt/kaun/wow-chat-2026"
+local GEN = arg[2] or "/home/ritz/programming/ai-stuff/gif-generator"
+package.path = GEN .. "/src/?.lua;" .. package.path
+local ffi   = require("ffi")
+local gif   = require("004-gif")
+local Front = dofile(DIR .. "/src/lua-basic/lib/battleground-front.lua")
+local OUT_DIR = DIR .. "/docs/HTML/battleground-front"
+
+local O        = Front.DEFAULTS
+local SCALE    = 3
+local BAR      = 48
+local PER_ALLY = 3
+local PAD      = 10
+local W        = O.width * SCALE + 2 * PAD
+local H        = O.depth * SCALE + 2 * BAR + 2 * PAD
+local FIELD_Y  = PAD + BAR
+local FRAMES   = 480
+local DELAY_CS = 5
+
+local COLORS = {
+    { 18, 22, 29 },
+    { 33, 41, 38 },
+    { 52, 62, 58 },
+    { 70, 66, 52 },
+    { 104, 150, 230 },
+    { 150, 185, 240 },
+    { 224, 96, 84 },
+    { 240, 150, 140 },
+    { 255, 255, 255 },
+    { 70, 110, 180 },
+    { 170, 70, 64 },
+    { 90, 98, 110 },
+    { 140, 170, 220 },
+    { 220, 140, 130 },
+}
+local palette = ffi.new("uint8_t[768]")
+for i, c in ipairs(COLORS) do palette[(i - 1) * 3], palette[(i - 1) * 3 + 1], palette[(i - 1) * 3 + 2] = c[1], c[2], c[3] end
+
+local function px(u) return math.floor(PAD + u * SCALE + 0.5) end
+local function py(v) return math.floor(FIELD_Y + (O.depth - v) * SCALE + 0.5) end
+
+local function new_frame() return ffi.new("uint8_t[?]", W * H) end
+local function plot(f, x, y, c) if x >= 0 and x < W and y >= 0 and y < H then f[y * W + x] = c end end
+local function rect(f, x0, y0, x1, y1, c) for y = y0, y1 do for x = x0, x1 do plot(f, x, y, c) end end end
+
+local function line(f, x0, y0, x1, y1, c, dash)
+    local dx, dy = math.abs(x1 - x0), -math.abs(y1 - y0)
+    local sx, sy = x0 < x1 and 1 or -1, y0 < y1 and 1 or -1
+    local err, n = dx + dy, 0
+    while true do
+        if not dash or (n % 6) < 3 then plot(f, x0, y0, c) end
+        n = n + 1
+        if x0 == x1 and y0 == y1 then break end
+        local e2 = 2 * err
+        if e2 >= dy then err = err + dy; x0 = x0 + sx end
+        if e2 <= dx then err = err + dx; y0 = y0 + sy end
+    end
+end
+
+local function disc(f, cx, cy, r, c)
+    for y = -r, r do for x = -r, r do if x * x + y * y <= r * r then plot(f, cx + x, cy + y, c) end end end
+end
+local function ring(f, cx, cy, r, c)
+    for y = -r, r do for x = -r, r do
+        local d = x * x + y * y
+        if d <= r * r and d > (r - 1) * (r - 1) then plot(f, cx + x, cy + y, c) end
+    end end
+end
+
+local function base()
+    local f = new_frame()
+    rect(f, px(0), py(O.depth), px(O.width), py(0), 1)
+    for s = 1, O.sections - 1 do
+        local x = px(s * O.width / O.sections)
+        line(f, x, py(O.depth), x, py(0), 2, true)
+    end
+    for _, side in ipairs({ "a", "b" }) do
+        local function vv(d) return side == "a" and d or O.depth - d end
+        local mid, f1, f2, f3 = O.width / 2, vv(0), vv(O.fork_v[1]), vv(O.fork_v[2])
+        line(f, px(mid), py(f1), px(mid), py(f2), 3)
+        for half = 1, 2 do
+            local hu = O.width * (2 * half - 1) / 4
+            line(f, px(mid), py(f2), px(hu), py(f3), 3)
+            for quarter = 1, 2 do
+                local q = (half - 1) * 2 + quarter
+                line(f, px(hu), py(f3), px(O.width * (2 * q - 1) / 8), py(vv(O.depth / 2)), 3)
+            end
+        end
+    end
+    return f
+end
+
+local function bars(f, counts, side)
+    local top    = side == "b"
+    local base_y = top and (FIELD_Y - 4) or (py(0) + 4)
+    local grow   = top and -1 or 1
+    local hi     = 0
+    for s = 1, O.sections do hi = math.max(hi, counts[s]) end
+    local sw = O.width / O.sections
+    for s = 1, O.sections do
+        local x0, x1 = px((s - 1) * sw) + 3, px(s * sw) - 3
+        local h      = math.min(BAR - 8, counts[s] * PER_ALLY)
+        if h > 0 then
+            local y0, y1 = base_y, base_y + grow * h
+            rect(f, x0, math.min(y0, y1), x1, math.max(y0, y1), top and 10 or 9)
+        end
+    end
+    line(f, px(0), base_y, px(O.width), base_y, 11)
+    if hi >= O.help_gap then
+        local y = base_y + grow * (hi - O.help_gap) * PER_ALLY
+        line(f, px(0), y, px(O.width), y, 11, true)
+    end
+end
+
+local function render(name, opts)
+    local m      = Front.new_match(opts)
+    O, W, H = m.o, m.o.width * SCALE + 2 * PAD, m.o.depth * SCALE + 2 * BAR + 2 * PAD
+    local field  = base()
+    local frames = {}
+    for t = 1, FRAMES do
+        Front.tick(m)
+        local f = new_frame()
+        ffi.copy(f, field, W * H)
+        local la, lb = Front.line_positions(m)
+        if la then line(f, px(0), py(la), px(O.width), py(la), 12, true) end
+        if lb then line(f, px(0), py(lb), px(O.width), py(lb), 13, true) end
+        for _, b in ipairs(m.bots) do
+            if b.state ~= "dead" then
+                local x, y = px(b.u), py(b.v)
+                local c    = (b.side == "a" and 4 or 6) + (b.role == "ranged" and 1 or 0)
+                if b.role == "melee" then disc(f, x, y, 3, c) else ring(f, x, y, 3, c) end
+                if b.state == "through" then ring(f, x, y, 5, 8) end
+            end
+        end
+        bars(f, Front.counts(m, "a"), "a")
+        bars(f, Front.counts(m, "b"), "b")
+        frames[t] = f
+    end
+    local path  = OUT_DIR .. "/" .. name .. ".gif"
+    local bytes = gif.write(path, { width = W, height = H, palette_bytes = palette, frames = frames, delay_cs = DELAY_CS })
+    local s     = m.stats
+    print(string.format("  %-16s %d frames, %7d bytes (%dx%d): kills %d/%d, help moves %d, two short at once %d, shelters %d, backsteps %d, breakthroughs %d",
+        name .. ".gif", FRAMES, bytes, W, H, s.kills.a, s.kills.b, s.moves, s.crowded_needs, s.shelters, s.backsteps, s.breakthroughs))
+end
+
+os.execute("mkdir -p '" .. OUT_DIR .. "'")
+print("battleground front, seed 7, 40 a side (Alterac Valley's size), 40% ranged:")
+render("worst-last",  { seed = 7, per_side = 40, help_order = "worst last" })
+render("worst-first", { seed = 7, per_side = 40, help_order = "worst first" })
+print("doubled: seed 7, 80 a side on a field twice as wide, 10 sections:")
+render("doubled-worst-last",  { seed = 7, per_side = 80, width = 160, sections = 10, help_order = "worst last" })
+render("doubled-worst-first", { seed = 7, per_side = 80, width = 160, sections = 10, help_order = "worst first" })

@@ -1,0 +1,52 @@
+#!/bin/bash
+
+set -o pipefail
+
+DIR="/mnt/kaun/wow-chat-2026"
+if [[ $# -eq 5 ]]; then DIR="$1"; shift; fi
+[[ $# -eq 4 ]] || { echo "usage: $0 [PROJECT_DIR] NAME CORE PLAYERBOTS ALE"; exit 1; }
+NAME="$1" CORE="$2" BOTS="$3" ALE="$4"
+
+SRC="${DIR}/source-beta"
+ROOT="${DIR}/tmp/shared-memory/upstream-trees"
+TREE="${ROOT}/${NAME}"
+CACHE="${ROOT}/module-cache"
+UNPINNED=(
+    "mod-solo-lfg https://github.com/azerothcore/mod-solo-lfg.git"
+    "mod-aoe-loot https://github.com/azerothcore/mod-aoe-loot.git"
+    "mod-fireworks-on-level https://github.com/azerothcore/mod-fireworks-on-level.git"
+)
+
+[[ -d "${DIR}/tmp/shared-memory" ]] || { echo "ERROR: ${DIR}/tmp/shared-memory missing (the RAM scratch link)"; exit 1; }
+
+export_commit() {
+    local repo="$1" rev="$2" dest="$3"
+    git -C "${repo}" rev-parse --verify --quiet "${rev}^{commit}" > /dev/null \
+        || { echo "ERROR: ${repo} has no commit ${rev} (fetched?)"; return 1; }
+    mkdir -p "${dest}"
+    git -C "${repo}" archive "${rev}" | tar -x -C "${dest}" \
+        || { echo "ERROR: writing ${repo} at ${rev} into ${dest} failed"; return 1; }
+    echo "  ${repo#${DIR}/} at $(git -C "${repo}" log -1 --format='%h (%cs)' "${rev}")"
+}
+
+rm -rf "${TREE}"
+echo "Building ${TREE}"
+export_commit "${SRC}" "${CORE}" "${TREE}" || exit 1
+export_commit "${SRC}/modules/mod-playerbots" "${BOTS}" "${TREE}/modules/mod-playerbots" || exit 1
+export_commit "${SRC}/modules/mod-ale" "${ALE}" "${TREE}/modules/mod-ale" || exit 1
+
+mkdir -p "${CACHE}"
+for entry in "${UNPINNED[@]}"; do
+    read -r mod url <<< "${entry}"
+    if [[ -d "${CACHE}/${mod}/.git" && "$(git -C "${CACHE}/${mod}" remote get-url origin)" != "${url}" ]]; then
+        rm -rf "${CACHE:?}/${mod}"
+    fi
+    if [[ -d "${CACHE}/${mod}/.git" ]]; then
+        git -C "${CACHE}/${mod}" pull --quiet --ff-only || { echo "ERROR: updating ${mod} failed"; exit 1; }
+    else
+        git clone --quiet "${url}" "${CACHE}/${mod}" || { echo "ERROR: cloning ${mod} failed"; exit 1; }
+    fi
+    export_commit "${CACHE}/${mod}" HEAD "${TREE}/modules/${mod}" || exit 1
+done
+
+echo "${TREE}"

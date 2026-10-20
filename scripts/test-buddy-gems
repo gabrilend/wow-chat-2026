@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+
+set -uo pipefail
+
+DIR="/mnt/kaun/wow-chat-2026"
+[[ $# -gt 0 ]] && DIR="$1"
+MYSQL="${DIR}/mysql/installed-files/bin/mysql"
+WORLD="acore_world_basic"
+[[ -x "${MYSQL}" ]] || { echo "ERROR: no mysql client at ${MYSQL}"; exit 1; }
+
+ask() {
+    "${MYSQL}" -h127.0.0.1 -P3307 -uritz -pmenardi -N -B "${WORLD}" -e "$1" 2>&1 | grep -v "Using a password"
+}
+
+failed=0
+
+TIER_CASE="CASE WHEN g.ItemLevel = 55 AND g.Quality = 1 THEN 1 WHEN g.ItemLevel = 60 AND g.Quality = 2 THEN 2 WHEN g.ItemLevel = 70 AND g.Quality = 3 THEN 3 END"
+GEM_FILTER="g.class = 3 AND g.GemProperties <> 0 AND (g.Flags & 524288) = 0 AND g.ItemLimitCategory = 0 AND g.RequiredSkill = 0"
+ITEM_TIER="CASE WHEN it.ItemLevel >= 45 THEN 3 WHEN it.ItemLevel >= 30 THEN 2 ELSE 1 END"
+
+echo "== gems per tier (the kit's choice)"
+counts=$(ask "SELECT ${TIER_CASE} AS tier, COUNT(*) FROM item_template g WHERE ${GEM_FILTER} AND ${TIER_CASE} IS NOT NULL GROUP BY tier ORDER BY tier")
+echo "${counts}"
+for t in 1 2 3; do
+    if ! echo "${counts}" | grep -q "^${t}[[:space:]]"; then
+        echo "FAIL: tier ${t} has no gems"
+        failed=1
+    fi
+done
+
+echo "== white items with a meta socket (must be none)"
+meta=$(ask "SELECT entry, name FROM item_template WHERE Quality = 1 AND 1 IN (socketColor_1, socketColor_2, socketColor_3)")
+if [[ -n "${meta}" ]]; then
+    echo "${meta}"
+    echo "FAIL: white items with meta sockets"
+    failed=1
+else
+    echo "none"
+fi
+
+echo "== socketed whites per tier, by socket colour"
+ask "SELECT ${ITEM_TIER} AS tier, c.color, COUNT(*) FROM item_template it
+     JOIN (SELECT 1 AS n UNION SELECT 2 UNION SELECT 3) s
+     JOIN (SELECT 2 AS color UNION SELECT 4 UNION SELECT 8 UNION SELECT 14) c
+       ON c.color = CASE s.n WHEN 1 THEN it.socketColor_1 WHEN 2 THEN it.socketColor_2 ELSE it.socketColor_3 END
+     WHERE it.Quality = 1 GROUP BY tier, c.color ORDER BY tier, c.color"
+
+echo "== socketed whites below item level 17 (155p: none should have sockets)"
+low=$(ask "SELECT COUNT(*) FROM item_template WHERE Quality = 1 AND ItemLevel < 17 AND socketColor_1 <> 0")
+echo "${low}"
+[[ "${low}" == "0" ]] || { echo "FAIL: low whites with sockets"; failed=1; }
+
+if [[ ${failed} -eq 0 ]]; then
+    echo "test-buddy-gems: OK"
+else
+    echo "test-buddy-gems: FAILED"
+fi
+exit ${failed}

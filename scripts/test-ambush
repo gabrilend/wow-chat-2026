@@ -1,0 +1,318 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+
+local fails, checks = 0, 0
+local function check(ok, what)
+    checks = checks + 1
+    if not ok then fails = fails + 1; print("  FAIL: " .. what) end
+end
+
+
+local here = (arg[0]:match("^(.*[/\\])") or "./")
+local Toy = dofile(here .. "lib/toy-world.lua")
+local World, handlers         = Toy.World, Toy.handlers
+local schedule, advance       = Toy.schedule, Toy.advance
+local pending, new_map, FLAT  = Toy.pending, Toy.new_map, Toy.FLAT
+local new_creature            = Toy.new_creature
+local new_player              = Toy.new_player
+local login, logout           = Toy.login, Toy.logout
+
+local quiet = print
+print = function() end
+dofile(DIR .. "/src/lua-beta/movement.lua")
+dofile(DIR .. "/src/lua-beta/ambush.lua")
+print = quiet
+local Ambush = Ambush
+
+
+local function silently(fn, ...) print = function() end; local r = { fn(...) }; print = quiet; return unpack(r) end
+
+do
+    local p = new_player("Walker", 101)
+    local floorKept, stepsRight = true, true
+    local memory = Ambush.memoryOf(p)
+    memory.interval = 40000
+    for _ = 1, 20000 do
+        local before = memory.interval
+        local after  = silently(Ambush.getNextInterval, p)
+        local step   = math.abs(after - before)
+        if after < AMBUSH_INTERVAL_MIN then floorKept = false end
+        if not (step == 2000 or step == 3000 or step == 4000 or after == AMBUSH_INTERVAL_MIN) then stepsRight = false end
+    end
+    check(floorKept,  "the spawn interval went below its 10-second floor")
+    check(stepsRight, "the spawn interval moved by something other than 2, 3 or 4 seconds")
+
+    local down = 0
+    for _ = 1, 5000 do
+        memory.interval = 210000
+        if silently(Ambush.getNextInterval, p) < 210000 then down = down + 1 end
+    end
+    check(down > 3700 and down < 4300, "above 200 s the walk should go down about 80% of the time, went down " .. down .. "/5000")
+end
+
+do
+    local p = new_player("Relogger", 102)
+    silently(login, p)
+    local memory = Ambush.memoryOf(p)
+    memory.interval = 77000
+    silently(logout, p)
+    World.now = World.now + 60 * 1000
+    silently(login, p)
+    check(memory.interval ~= 40000 and math.abs(memory.interval - 77000) <= 4000,
+          "after a quick relog the walk should carry on from 77 s, it is at " .. tostring(memory.interval))
+    local graceArmed = false
+    for _, e in ipairs(World.events) do
+        if e.owner == p and e.fn == Ambush.spawnAndAttackPlayer and e.at - World.now == AMBUSH_GRACE_PERIOD then graceArmed = true end
+    end
+    check(not graceArmed, "a quick relog should not get the 30-second grace period")
+    silently(logout, p)
+    memory.logoutTime = os.time() - AMBUSH_OFFLINE_RESET - 5
+    World.events = {}
+    silently(login, p)
+    local grace = false
+    for _, e in ipairs(World.events) do
+        if e.owner == p and e.fn == Ambush.spawnAndAttackPlayer and e.at - World.now == AMBUSH_GRACE_PERIOD then grace = true end
+    end
+    check(grace, "after more than ten minutes away the first ambush should wait the 30-second grace period")
+    silently(logout, p)
+    World.events = {}
+end
+
+do
+    local p = new_player("Lonely", 103)
+    World.answer = {}
+    silently(login, p)
+    silently(advance, 10 * 60 * 1000)
+    check(pending(p, Ambush.spawnAndAttackPlayer) == 1,
+          "a player should have exactly one ambush clock, has " .. pending(p, Ambush.spawnAndAttackPlayer))
+    silently(logout, p)
+    World.events = {}
+end
+
+do
+    World.answer = { [0] = { { 500, 1, 60 } } }
+    local p = new_player("Newcomer", 104)
+    p.level = 3
+    silently(login, p)
+    silently(advance, 10 * 60 * 1000)
+    check(#p.spawned > 0, "a player at a level with no rares should still meet normal monsters")
+    check(pending(p, Ambush.spawnAndAttackPlayer) == 1,
+          "a level with no rares should not add ambush clocks, has " .. pending(p, Ambush.spawnAndAttackPlayer))
+    p:SetData("queue", {})
+    p:SetData("rare-queue", {})
+    local asked = {}
+    local real = WorldDBQueryAsync
+    WorldDBQueryAsync = function(sql, cb) asked[#asked + 1] = tonumber(sql:match("`rank` = (%d+)")); real(sql, cb) end
+    silently(Ambush.setupAmbushQueue, p, 2)
+    WorldDBQueryAsync = real
+    check(#asked == 3 and asked[1] == 2 and asked[2] == 4 and asked[3] == 0,
+          "with no rare elites or rares, the ambush should ask rank 2, then 4, then 0 (asked " .. table.concat(asked, ",") .. ")")
+    check(#p:GetData("queue") > 0, "after asking down to normals the normal queue should be filled")
+    silently(logout, p)
+    World.events = {}
+end
+
+do
+    World.answer = { [0] = { { 500, 1, 60 } } }
+    local p = new_player("Missed", 105)
+    p.level = 5
+    silently(login, p)
+    World.events = {}
+    local asked = {}
+    local real = WorldDBQueryAsync
+    WorldDBQueryAsync = function(sql, cb) asked[#asked + 1] = tonumber(sql:match("`rank` = (%d+)")); real(sql, cb) end
+    local i = 0
+    local q = {}
+    function q:GetUInt32(col) local r = { 9999, 19, 20, 4 }; return r[col + 1] end
+    function q:NextRow() i = i + 1; return false end
+    silently(Ambush.pushToAmbushQueue, p, q, 4)
+    WorldDBQueryAsync = real
+    check(asked[1] == 0, "rows that miss the player's level should send the question down to normals")
+    check(#p:GetData("queue") > 0, "and the normal queue should then be filled")
+    silently(logout, p)
+    World.events = {}
+end
+
+World.answer = { [0] = { { 500, 1, 60 } }, [4] = { { 900, 1, 60 } } }
+
+local function fresh_player(name, low, n)
+    local p = new_player(name, low)
+    silently(login, p)
+    World.events = {}
+    local q = {}
+    for i = 1, n or 8 do q[i] = 500 end
+    p:SetData("queue", q)
+    p:SetData("rare-queue", { 0 })
+    return p
+end
+
+do
+    local a = new_player("Asker", 270)
+    local b = new_player("Bystander", 271)
+    silently(login, a)
+    silently(login, b)
+    World.events = {}
+    b:SetData("queue", { 777 })
+    silently(Ambush.setupAmbushQueue, a, 0)
+    local qa, qb = a:GetData("queue"), b:GetData("queue")
+    check(#qa >= 1 and qa[1] == 500, "the asking player's queue should be filled from the answer")
+    check(#qb == 1 and qb[1] == 777, "another player's queue should not change when someone else's refill returns")
+    silently(Ambush.addCreatureToQueue, a, 4242, 10, 10, false)
+    local found = false
+    for _, id in ipairs(a:GetData("queue")) do if id == 4242 then found = true end end
+    check(found, "a creature put back in a queue should be found there by its entry")
+    check(#b:GetData("queue") == 1, "putting a creature back in one queue should not touch another's")
+    silently(logout, a)
+    silently(logout, b)
+    World.events = {}
+end
+
+do
+    local cases = {
+        { "sitting",        function(p) p.standing = false end },
+        { "dead",           function(p) p.dead = true end },
+        { "swimming",       function(p) p.wet = true end },
+        { "three chasing",  function(p) p:SetData("num-ambushers", 3) end },
+        { "in a boss fight", function(p) p:SetData("is-in-boss-fight", true) end },
+    }
+    for i, case in ipairs(cases) do
+        local p = fresh_player("Held" .. i, 200 + i)
+        case[2](p)
+        silently(Ambush.spawnAndAttackPlayer, 0, 0, 1, p)
+        check(#p.spawned == 0, "no monster should come while the player is " .. case[1])
+        check(pending(p, Ambush.spawnAndAttackPlayer) == 1, "the clock should keep running while the player is " .. case[1])
+        silently(logout, p)
+        World.events = {}
+    end
+    local p = fresh_player("Free", 210)
+    p:SetData("num-ambushers", 2)
+    silently(Ambush.spawnAndAttackPlayer, 0, 0, 1, p)
+    check(#p.spawned == 1, "with two chasing, a third monster should still come")
+    silently(logout, p)
+    World.events = {}
+end
+
+do
+    local p = fresh_player("Counter", 220)
+    silently(Ambush.spawnAndAttackPlayer, 0, 0, 1, p)
+    silently(Ambush.spawnAndAttackPlayer, 0, 0, 1, p)
+    local c = p.spawned[1]
+    check(c ~= nil and p:GetData("num-ambushers") == 2, "two spawned monsters should count two ambushers")
+    c.dead = true
+    silently(advance, 1000)
+    check(p:GetData("num-ambushers") == 1, "a monster killed by anyone should come off the count")
+    silently(Ambush.onCreatureDeath, 7, p, c)
+    check(p:GetData("num-ambushers") == 1, "a monster should come off the count once, not twice")
+    p.spawned[2].dead = true
+    silently(advance, 1000)
+    check(p:GetData("num-ambushers") == 0, "the second monster's death should bring the count to 0")
+
+    silently(Ambush.spawnAndAttackPlayer, 0, 0, 1, p)
+    local c2 = p.spawned[3]
+    c2.x, c2.y = 10, 0
+    silently(advance, 1000)
+    c2.combat = false
+    silently(advance, 600)
+    check(p:GetData("num-ambushers") == 1, "a monster still alive after a fight should stay counted")
+    check(pending(c2, Ambush.chasePlayer) == 1, "a monster still alive after a fight should go back to chasing")
+    silently(logout, p)
+    World.events = {}
+end
+
+do
+    local p = fresh_player("Rester", 225)
+    silently(Ambush.spawnAndAttackPlayer, 0, 0, 1, p)
+    local c = p.spawned[1]
+    p.standing = false
+    silently(advance, 1000)
+    check(c.aggro == false, "while the player sits, a circling monster's aggro should be off")
+    p.standing = true
+    silently(advance, 2000)
+    check(c.aggro == true, "when the player stands, the monster's aggro should be back on (issue 305)")
+    schedule(c, function() end, 60000)
+    c.dead = true
+    local cleared = c.moveCleared or 0
+    silently(advance, 1000)
+    check((c.moveCleared or 0) > cleared, "a dead monster's last move should be cancelled, so its corpse stays put (issue 305)")
+    check(pending(c, nil) == 0, "a dead monster should have no timers left (issue 304)")
+    check(c:GetData("ambush-chase-target") == nil and c:GetData("is-rare") == nil, "a dead monster's ambush data should be cleared (issue 304)")
+    check(p:GetData("num-ambushers") == 0, "a monster laid to rest should come off the count")
+    silently(Ambush.onCreatureDeath, 7, p, c)
+    check(p:GetData("num-ambushers") == 0, "a player's kill after the monster was laid to rest should change nothing")
+    silently(logout, p)
+    World.events = {}
+end
+
+do
+    local p = fresh_player("Leaver", 230)
+    silently(Ambush.spawnAndAttackPlayer, 0, 0, 1, p)
+    local c = p.spawned[1]
+    silently(logout, p)
+    local ok, err = pcall(silently, advance, 3000)
+    check(ok, "a chase whose player logged out should not raise an error (" .. tostring(err) .. ")")
+    check(c.gone, "a monster whose player logged out should be despawned")
+    World.events = {}
+end
+
+do
+    local p = fresh_player("Border", 240, 1)
+    silently(Ambush.spawnAndAttackPlayer, 0, 0, 1, p)
+    local c = p.spawned[1]
+    p.map = new_map(1, function() return 0 end)
+    local ok, err = pcall(silently, advance, 1000)
+    check(ok, "a chase across a map border should not raise an error (" .. tostring(err) .. ")")
+    check(c.gone, "a monster left on the other map should be despawned")
+    check(pending(c, nil) == 0, "a despawned monster should have nothing left to do")
+    check(p:GetData("num-ambushers") == 0, "the despawned monster should come off the count")
+    silently(advance, 1000)
+    check(#p.spawned == 2 and p.spawned[2].map == p.map, "the monster should be sent again on the player's new map")
+    silently(logout, p)
+    World.events = {}
+end
+
+do
+    local p = fresh_player("Shore", 250)
+    p.x, p.y = 1000, 1000
+    local tries = 0
+    p.map = new_map(0, function() return 0 end, function(x, y)
+        tries = tries + 1
+        return tries <= 2
+    end)
+    silently(Ambush.spawnAndAttackPlayer, 0, 0, 1, p)
+    local c = p.spawned[1]
+    check(c and not c.gone, "a monster that found dry land on its last try should be kept")
+    if c then
+        local d = math.sqrt((c.x - p.x) ^ 2 + (c.y - p.y) ^ 2)
+        check(d <= AMBUSH_MAX_DISTANCE * 1.5, "a retried spawn should stay near the player, it is " .. math.floor(d) .. " yards away")
+    end
+    silently(logout, p)
+    World.events = {}
+end
+
+do
+    local p = fresh_player("Cliff", 260)
+    p.map = new_map(0, function(x, y)
+        local d = math.sqrt(x * x + y * y)
+        if d < 20 then return 0 end
+        return -100
+    end)
+    silently(Ambush.spawnAndAttackPlayer, 0, 0, 1, p)
+    local c = p.spawned[1]
+    if c and not c.gone then
+        local d = math.sqrt(c.x ^ 2 + c.y ^ 2)
+        check(d >= AMBUSH_RETRY_MIN_DIST - 0.001, "a retried spawn came " .. math.floor(d) .. " yards from the player, nearer than 30")
+    end
+    local q = fresh_player("Void", 261)
+    q.map = new_map(0, function() return nil end)
+    local ok, err = pcall(silently, Ambush.spawnAndAttackPlayer, 0, 0, 1, q)
+    check(ok, "a spawn over ground with no height should not raise an error (" .. tostring(err) .. ")")
+    check(q.spawned[1] == nil or q.spawned[1].gone, "a spawn with no ground anywhere should be given up")
+    silently(logout, p)
+    silently(logout, q)
+    World.events = {}
+end
+
+print(string.format("%d checks, %d failed", checks, fails))
+os.exit(fails == 0 and 0 or 1)

@@ -1,0 +1,85 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+local db, map = nil, 1
+local out_dir = "/mnt/kaun/custom-client/assets/world"
+local i = 1
+if arg[1] and not arg[1]:match("^%-%-") then DIR = arg[1]; i = 2 end
+while arg[i] do
+    if arg[i] == "--db" then db = arg[i + 1]; i = i + 2
+    elseif arg[i] == "--map" then map = tonumber(arg[i + 1]); i = i + 2
+    elseif arg[i] == "--out" then out_dir = arg[i + 1]; i = i + 2
+    else io.stderr:write("generate-custom-client-creatures: unknown option " .. arg[i] .. "\n"); os.exit(2) end
+end
+if not map then io.stderr:write("generate-custom-client-creatures: --map needs a number\n"); os.exit(2) end
+
+local function profile_db()
+    local f = io.open(DIR .. "/.profile", "r")
+    if not f then error("no .profile in " .. DIR .. "; name the database with --db") end
+    local profile = f:read("*l"):gsub("%s+", "")
+    f:close()
+    local SUFFIX = { release = "", beta = "_beta", vanilla = "_vanilla", basic = "_basic", ["cc-test"] = "_cc_test", alpha = "_alpha" }
+    if not SUFFIX[profile] then error("unknown profile '" .. profile .. "' in .profile; name the database with --db") end
+    return "acore_world" .. SUFFIX[profile], profile
+end
+
+local function choose(list, guid)
+    local opts, total = {}, 0
+    for id, scale, p in list:gmatch("(%d+):([%d%.]+):([%d%.]+)") do
+        opts[#opts + 1] = { id = tonumber(id), scale = tonumber(scale), p = tonumber(p) }
+        total = total + tonumber(p)
+    end
+    if #opts == 0 then return nil end
+    local roll = (guid * 2654435761 % 4294967296) / 4294967296
+    if total <= 0 then local o = opts[math.floor(roll * #opts) + 1]; return o.id, o.scale end
+    local at = roll * total
+    for _, o in ipairs(opts) do
+        at = at - o.p
+        if at < 0 then return o.id, o.scale end
+    end
+    return opts[#opts].id, opts[#opts].scale
+end
+
+local profile
+if not db then db, profile = profile_db() end
+local query = table.concat({
+    "SELECT c.guid, c.id, c.position_x, c.position_y, c.position_z, c.orientation, t.name,",
+    "  GROUP_CONCAT(CONCAT(m.CreatureDisplayID, ':', m.DisplayScale, ':', m.Probability) ORDER BY m.Idx SEPARATOR ',')",
+    "FROM creature c JOIN creature_template t ON t.entry = c.id",
+    "LEFT JOIN creature_template_model m ON m.CreatureID = c.id",
+    "WHERE c.map = " .. map,
+    "  AND (t.flags_extra & 128) = 0",
+    "  AND (t.npcflag & 49152) = 0",
+    "  AND c.guid NOT IN (SELECT guid FROM game_event_creature WHERE eventEntry > 0)",
+    "GROUP BY c.guid ORDER BY c.guid",
+}, " ")
+os.execute('mkdir -p "' .. out_dir .. '"')
+local cmd = '"' .. DIR .. '/scripts/mysql-client" "' .. DIR .. '" -N -B ' .. db .. ' -e "' .. query .. '"'
+local p = io.popen(cmd, "r")
+local lines, skipped = {}, 0
+for row in p:lines() do
+    local guid, entry, x, y, z, o, name, displays = row:match("^(%d+)\t(%d+)\t(%S+)\t(%S+)\t(%S+)\t(%S+)\t([^\t]*)\t?(.*)$")
+    if guid then
+        local display, scale = choose(displays or "", tonumber(guid))
+        if display then
+            lines[#lines + 1] = table.concat({ guid, entry, display, scale, x, y, z, o, name }, "\t")
+        else
+            skipped = skipped + 1
+        end
+    end
+end
+local ok = p:close()
+if not ok or #lines == 0 then
+    io.stderr:write("generate-custom-client-creatures: no creatures read from " .. db .. " for map " .. map ..
+        " (is MySQL running? scripts/start-mysql; does the database exist?)\n")
+    os.exit(1)
+end
+local path = out_dir .. "/creatures-" .. map .. ".tsv"
+local f = assert(io.open(path, "w"))
+f:write("# creatures of map " .. map .. " from " .. db .. (profile and (" (profile " .. profile .. ")") or "") ..
+        ", by scripts/generate-custom-client-creatures; don't edit, re-run it\n")
+f:write("# guid\tentry\tdisplay\tsize\tx\ty\tz\tfacing\tname\n")
+f:write(table.concat(lines, "\n"), "\n")
+f:close()
+print(("generate-custom-client-creatures: %d spawns of map %d from %s written to %s%s"):format(
+    #lines, map, db, path, skipped > 0 and (" (" .. skipped .. " with no model left out)") or ""))

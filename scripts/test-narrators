@@ -1,0 +1,217 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local SRC = DIR .. "/src/lua-beta/"
+
+local fails, checks = 0, 0
+local function check(ok, what)
+    checks = checks + 1
+    if ok then print("  ok:   " .. what) else print("  FAIL: " .. what); fails = fails + 1 end
+end
+
+local timer, chat_handlers, logout_handlers, whisper_handlers, world = nil, {}, {}, {}, {}
+function CreateLuaEvent(fn, _ms, _repeats) timer = fn end
+function RegisterPlayerEvent(event, fn)
+    if event == 18 then table.insert(chat_handlers, fn) elseif event == 4 then table.insert(logout_handlers, fn)
+    elseif event == 19 then table.insert(whisper_handlers, fn) end
+end
+function GetPlayersInWorld() return world end
+
+local db = { exists = true, rows = {} }
+function CharDBQuery(sql)
+    if sql:find("^SHOW TABLES") then return db.exists and {} or nil end
+    local guid = sql:match("^SELECT book, position FROM %S+ WHERE guid = (%d+)$")
+    if not guid then error("test-narrators: a query the stand-in does not know: " .. sql) end
+    local row = db.rows[tonumber(guid)]
+    if not row then return nil end
+    return { GetUInt32 = function(_, i) return i == 0 and row.book or row.position end }
+end
+function CharDBExecute(sql)
+    local g, b, p = sql:match("^REPLACE INTO %S+ %(guid, book, position%) VALUES %((%d+), (%d+), (%d+)%)$")
+    if not g then error("test-narrators: a statement the stand-in does not know: " .. sql) end
+    db.rows[tonumber(g)] = { book = tonumber(b), position = tonumber(p) }
+end
+
+local function new_player(name, guid, bot, x, y, map)
+    local p = { name = name, guid = guid, bot = bot, x = x, y = y, map = map or 0, said = {} }
+    function p:IsBot() return self.bot end
+    function p:GetGUIDLow() return self.guid end
+    function p:GetMapId() return self.map end
+    function p:GetDistance(o) return math.sqrt((self.x - o.x) ^ 2 + (self.y - o.y) ^ 2) end
+    function p:Say(text, _lang) table.insert(self.said, text) end
+    function p:GetName() return self.name end
+    p.whispered = {}
+    function p:Whisper(text, _lang, to) table.insert(self.whispered, { text = text, to = to }) end
+    table.insert(world, p)
+    return p
+end
+local function chat(p, msg) for _, fn in ipairs(chat_handlers) do fn(18, p, msg, 1, 0) end end
+local function logout(p)
+    for _, fn in ipairs(logout_handlers) do fn(4, p) end
+    for k, q in ipairs(world) do if q == p then table.remove(world, k) break end end
+end
+local function ticks(n) for _ = 1, n do timer() end end
+local function whisper(from, to, msg)
+    local answer
+    for _, fn in ipairs(whisper_handlers) do local r = fn(19, from, msg, 7, 0, to); if r ~= nil then answer = r end end
+    return answer
+end
+
+local T = DIR .. "/tmp/shared-memory/test-narrators/"
+os.execute("mkdir -p '" .. T .. "texts/1-one'")
+local function write(path, s) local f = assert(io.open(path, "w")); f:write(s); f:close() end
+write(T .. "gutenberg-books.lua", [[return {
+  { id = 1, slug = "one", title = "One", author = "a", genre = "g", match = "one" },
+}]])
+local long = "And then, " .. string.rep("on and on the road went ", 14) .. "until it ended at the sea."
+write(T .. "texts/1-one/sentences.txt", "One a.\n" .. long .. "\nOne c.\n")
+
+dofile(SRC .. "narrators.lua")
+Narrators.library.DATA_DIR = T
+Narrators.library.random = function(_n) return 1 end
+check(type(timer) == "function", "the script sets its timer")
+
+print("who narrates")
+local narrator = new_player("Reader", 40, true, 0, 0)
+local bot      = new_player("Other", 41, true, 3, 0)
+local real     = new_player("Anna", 7, false, 500, 0)
+check(Narrators.is_narrator(narrator) and not Narrators.is_narrator(bot) and not Narrators.is_narrator(real),
+      "a bot numbered a multiple of twenty narrates; another bot and a real player do not")
+
+print("reading only when a real player hears")
+ticks(10)
+check(#narrator.said == 0, "with only a bot near and the player far off, the narrator says nothing")
+real.x = 10
+ticks(1)
+check(narrator.said[1] == "One a.", "a real player within hearing: it reads its first sentence (" .. tostring(narrator.said[1]) .. ")")
+check(db.rows[40] and db.rows[40].book == 1 and db.rows[40].position == 1,
+      "its place is saved as it reads: book 1, one sentence in")
+ticks(1)
+check(#narrator.said == 1, "then it pauses before the next line")
+
+print("a long sentence in parts")
+ticks(30)
+local parts_ok = #narrator.said >= 3
+for k = 2, #narrator.said - 1 do if #narrator.said[k] > 255 then parts_ok = false end end
+check(parts_ok, "the long sentence came as " .. (#narrator.said - 1) .. " or more lines, none past 255 bytes")
+local rebuilt = {}
+for k = 2, #narrator.said do
+    if narrator.said[k] == "One c." then break end
+    rebuilt[#rebuilt + 1] = narrator.said[k]
+end
+check(table.concat(rebuilt, " ") == long, "the parts in order are the sentence")
+
+print("falling quiet while someone talks")
+local before = #narrator.said
+chat(real, "hello there")
+ticks(9)
+check(#narrator.said == before, "after a nearby player speaks, it says nothing for the hush")
+ticks(10)
+check(#narrator.said > before, "after the hush it reads on")
+local bot_before = #narrator.said
+chat(bot, "beep")
+ticks(5)
+check(#narrator.said > bot_before, "a bot speaking does not quiet it")
+
+print("whispered rumours (910b)")
+local answered = whisper(real, narrator, "The old windmill near Goldshire is haunted at night")
+check(answered == false, "a whisper to a narrator goes no further (the bot module does not also answer)")
+check(#narrator.whispered == 1 and narrator.whispered[1].to == real, "the narrator whispers back that it will remember")
+local kw = Narrators.keywords("The old windmill near Goldshire is haunted at night")
+check(kw.windmill and kw.goldshire and kw.haunted and kw.night and not kw.the and not kw.old and not kw.near, "a rumour's keywords are its words of five letters or more; short ones (the, old, near) are left out")
+check(whisper(real, narrator, "and another thing") == false and #Narrators.state[40].rumours == 1, "a second whisper within a second is not kept")
+ticks(1)
+check(whisper(real, bot, "hello bot") == nil, "a whisper to a bot that is not a narrator is left alone")
+check(whisper(bot, narrator, "beep boop windmill") == nil, "a whisper from a bot is left alone")
+local said_before = #narrator.said
+chat(real, "there is never anything about here")
+check(#narrator.said == said_before, "talk without a rumour's word tells nothing (common words do not count)")
+chat(real, "Has anyone seen the windmill lately?")
+local told = narrator.said[#narrator.said] or ""
+check(told:find("Windmill, you say?", 1, true) and told:find("haunted at night", 1, true), "a rumour's word in nearby talk: the narrator tells it (" .. told:sub(1, 60) .. "...)")
+local told_count = #narrator.said
+chat(real, "the windmill again")
+check(#narrator.said == told_count, "a rumour is told once, then forgotten")
+ticks(1)
+for k = 1, 25 do ticks(1); whisper(real, narrator, "rumour number " .. k .. " about the lighthouse") end
+check(#Narrators.state[40].rumours == 20, "a narrator keeps twenty rumours, the oldest dropped (" .. #Narrators.state[40].rumours .. ")")
+
+print("rumours travel between narrators")
+Narrators.state[40].rumours = {}
+local second = new_player("Teller", 60, true, 12, 0)
+local far    = new_player("Faraway", 80, true, 200, 0)
+local ways = {
+    { name = "verbatim", rumour = "The old windmill near Goldshire is haunted at night",
+      held = "The old windmill near Goldshire is haunted at night" },
+    { name = "changed",  rumour = "The old lighthouse by Westfall is haunted",
+      held = "The ancient lighthouse by Westfall is haunted" },
+}
+for _, way in ipairs(ways) do
+    Narrators.retelling = way.name
+    Narrators.random    = function(_n) return 1 end
+    ticks(1)
+    whisper(real, narrator, way.rumour)
+    local word = way.name == "verbatim" and "windmill" or "lighthouse"
+    second.said = {}
+    chat(real, "what about the " .. word .. "?")
+    local h = Narrators.state[60].rumours[#Narrators.state[60].rumours]
+    check(h and h.text == way.held and h.hops == 1 and h.from == "Anna",
+          way.name .. ": a narrator nearby overhears the telling and keeps it as \"" .. tostring(h and h.text) .. "\" (one hop on, from Anna)")
+    check(#second.said == 0, way.name .. ": it does not tell it back to the same talk")
+    check(#Narrators.state[80].rumours == 0, way.name .. ": a narrator out of earshot learns nothing")
+    ticks(11)
+    chat(real, "the " .. word .. " again")
+    local said = second.said[#second.said] or ""
+    check(said:find(way.held, 1, true) ~= nil, way.name .. ": later it tells it on itself (" .. said:sub(1, 50) .. "...)")
+    check(#Narrators.state[40].rumours == 0, way.name .. ": the first narrator, who told it, does not learn it back")
+end
+Narrators.retelling = "verbatim"
+check(not pcall(function() Narrators.retelling = "llm"; Narrators.retell("x") end),
+      "a way of retelling that does not exist (llm, until a model runner) is an error, not word for word")
+Narrators.retelling = "verbatim"
+logout(second)
+logout(far)
+
+print("logging out keeps the place")
+logout(narrator)
+check(Narrators.state[40] == nil, "a narrator that logs out is let go from memory")
+check(not pcall(Narrators.library.getNextSentence, 40), "and its reader in the library is gone")
+check(db.rows[40] ~= nil, "but its saved place stays")
+local relogins = {
+    { row = { book = 1, position = 2 },   first = "One c.", what = "back two sentences in: it reads the third" },
+    { row = { book = 1, position = 99 },  first = "One a.", what = "saved past the book's end (cut differently since): from the start" },
+    { row = { book = 777, position = 1 }, first = "One a.", what = "saved in a book no longer built: the book it was given, from the start" },
+}
+for _, r in ipairs(relogins) do
+    db.rows[40] = r.row
+    local back = new_player("Reader", 40, true, 0, 0)
+    ticks(1)
+    check(back.said[1] == r.first, r.what .. " (" .. tostring(back.said[1]) .. ")")
+    logout(back)
+end
+
+print("no library")
+local printed = {}
+local real_print = print
+print = function(s) table.insert(printed, s) end
+dofile(SRC .. "narrators.lua")
+Narrators.library.DATA_DIR = T .. "nowhere/"
+new_player("Reader2", 60, true, 10, 0)
+ticks(5)
+print = real_print
+check(#printed == 1 and printed[1]:find("E059", 1, true) ~= nil, "a missing library is said once, naming the install step (" .. #printed .. " lines)")
+
+print("no reading table")
+printed = {}
+print = function(s) table.insert(printed, s) end
+dofile(SRC .. "narrators.lua")
+Narrators.library.DATA_DIR = T
+db.exists = false
+ticks(5)
+print = real_print
+check(#printed == 1 and printed[1]:find("E061", 1, true) ~= nil and printed[1]:find("missing", 1, true) ~= nil,
+      "a missing reading table is said once, naming its install step (" .. #printed .. " lines)")
+
+print(string.format("%d checks, %d failed", checks, fails))
+os.exit(fails == 0 and 0 or 1)

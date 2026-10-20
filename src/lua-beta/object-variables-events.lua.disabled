@@ -1,0 +1,14 @@
+
+if ObjectVariables and ObjectVariables._destroyObjData then
+    RegisterPlayerEvent(4, ObjectVariables._destroyObjData)
+
+    RegisterServerEvent(31, ObjectVariables._destroyObjData)
+    RegisterServerEvent(32, ObjectVariables._destroyObjData)
+
+    RegisterServerEvent(17, ObjectVariables._destroyMapData)
+    RegisterServerEvent(18, ObjectVariables._destroyMapData)
+
+    print("[ObjectVariables] Event handlers registered (from .lua file)")
+else
+    print("[ObjectVariables] WARNING: Extension not loaded, events not registered")
+end

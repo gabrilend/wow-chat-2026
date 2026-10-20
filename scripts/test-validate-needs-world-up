@@ -1,0 +1,52 @@
+#!/bin/bash
+
+DIR="/mnt/kaun/wow-chat-2026"
+if [[ -n "$1" ]]; then
+    DIR="$1"
+fi
+
+source /home/ritz/programming/ai-stuff/scripts/libs/ensure-ram-tiers
+ensure_ram_tiers "${DIR}" || exit 1
+WORK="$(mktemp -d "${DIR}/tmp/tmp/validate-test.XXXXXX")"
+trap 'rm -rf "${WORK}"' EXIT
+
+FUNCTION="$(sed -n '/^validate_shadow_worldserver() {/,/^}/p' "${VALIDATE_UNDER_TEST:-${DIR}/scripts/validate}")"
+[[ -n "${FUNCTION}" ]] || { echo "FAIL: validate_shadow_worldserver not found in scripts/validate"; exit 1; }
+eval "${FUNCTION}"
+export VALIDATE_MAX_TIMEOUT=15
+
+FAILS=0
+CHECKS=0
+run_case() {
+    local name=$1 want=$2 body=$3
+    local case_dir="${WORK}/${name}"
+    mkdir -p "${case_dir}/bin" "${case_dir}/etc" "${case_dir}/tmp"
+    touch "${case_dir}/etc/worldserver.conf"
+    printf '#!/bin/bash\n%s\n' "${body}" > "${case_dir}/bin/worldserver"
+    chmod +x "${case_dir}/bin/worldserver"
+
+    local got
+    ( DIR="${case_dir}" PROFILE=test INSTALL_DIR_SHADOW="${case_dir}" MYSQL_DIR="${case_dir}"
+      validate_shadow_worldserver ) > "${case_dir}/out.txt" 2>&1 && got=pass || got=fail
+    CHECKS=$((CHECKS + 1))
+    if [[ "${got}" == "${want}" ]]; then
+        echo "  ok    ${name}: ${got}"
+    else
+        FAILS=$((FAILS + 1))
+        echo "  FAIL  ${name}: validation said ${got}, should say ${want}"
+        sed 's/^/          /' "${case_dir}/out.txt"
+    fi
+}
+
+echo "test-validate-needs-world-up"
+run_case "slow-start-then-up" pass \
+    'echo "Updating World database..."; sleep 8; echo ">> up-to-date"; sleep 3; echo "World initialized in 11 sec"; sleep 60'
+run_case "quiet-and-never-up" fail \
+    'echo "Updating Character database..."; echo ">> Character database is up-to-date!"; sleep 60'
+run_case "crashes" fail \
+    'echo "Loading..."; exit 1'
+run_case "fatal-error" fail \
+    'echo "Loading..."; echo "FATAL: database missing"; sleep 60'
+
+echo "${CHECKS} cases, ${FAILS} failed"
+exit $(( FAILS > 0 ))

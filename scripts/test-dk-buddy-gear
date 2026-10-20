@@ -1,0 +1,157 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+
+local fails, checks = 0, 0
+local function check(ok, what)
+    checks = checks + 1
+    if ok then print("  ok:   " .. what) else print("  FAIL: " .. what); fails = fails + 1 end
+end
+
+local GEAR = {
+    [12619] = { { 38707 }, {} },
+    [12657] = { { 38662 }, {} },
+    [12678] = { { 38671 }, {} },
+    [12679] = { {}, { 39320, 38664, 39322 } },
+    [12720] = { { 38672 }, {} },
+    [12801] = { {}, { 38632, 38633 } },
+}
+local KINDS = { [38707] = 17, [38662] = 2, [38671] = 11, [38672] = 11, [39320] = 16, [38664] = 16, [39322] = 16,
+                [38632] = 17, [38633] = 17, [44444] = 17, [44445] = 17 }
+local function rows(list)
+    local i = 1
+    return #list > 0 and { GetUInt32 = function(_, c) return list[i][c + 1] end,
+                           NextRow = function() i = i + 1; return list[i] ~= nil end } or nil
+end
+local rewarded, skipped, roster_slot = {}, false, 1
+local owner = setmetatable({
+    GetClass = function() return 6 end, GetGUIDLow = function() return 501 end,
+    GetRaceMask = function() return 2 end,
+    GetQuestRewardStatus = function(_, q) return rewarded[q] == true end,
+}, { __index = function() return function() end end })
+local function new_buddy(low, level)
+    local b = { low = low, level = level, worn = { [15] = { entry = 30750 } }, destroyed = {} }
+    return setmetatable(b, { __index = function(t, k)
+        local m = {
+            GetClass = function() return 6 end, GetGUIDLow = function() return t.low end,
+            GetLevel = function() return t.level end, GetName = function() return "Buddy" .. t.low end,
+            GetEquippedItemBySlot = function(_, s) local w = t.worn[s]
+                return w and { GetEntry = function() return w.entry end, GetCount = function() return 1 end, _w = w } end,
+            RemoveItem = function(_, item) t.destroyed[#t.destroyed + 1] = item:GetEntry(); for s, w in pairs(t.worn) do if w == item._w then t.worn[s] = nil end end end,
+            EquipItem = function(_, entry, s) t.worn[s] = { entry = entry }; return {} end,
+            RegisterEvent = function(_, fn) t.pending = fn end,
+        }
+        return m[k] or function() end
+    end })
+end
+local handlers = {}
+local env = setmetatable({
+    RegisterPlayerEvent = function(ev, fn) handlers[ev] = fn end,
+    WorldDBQuery = function(sql)
+        if sql:find("FROM quest_template") then
+            local list = {}
+            for q, g in pairs(GEAR) do
+                local r = { q, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+                for i, e in ipairs(g[1]) do r[1 + i] = e end
+                for i, e in ipairs(g[2]) do r[5 + i] = e end
+                list[#list + 1] = r
+            end
+            return rows(list)
+        end
+        if sql:find("SELECT entry, InventoryType") then
+            local list = {}
+            for e, k in pairs(KINDS) do list[#list + 1] = { e, k } end
+            return rows(list)
+        end
+        if sql:find("Quality = 2") then return rows({ { 44444 }, { 44445 } }) end
+        return nil
+    end,
+    CharDBQuery = function(sql)
+        if sql:find("SELECT owner, slot FROM buddy_roster") then return rows({ { 501, roster_slot } }) end
+        if sql:find("FROM basic_718_souls") then return rows({ { skipped and 1 or 0 } }) end
+        return nil
+    end,
+    GetPlayerByGUID = function() return owner end,
+    GetPlayerGUID = function(l) return l end,
+    print = function() end,
+}, { __index = _G })
+local chunk = assert(loadfile(DIR .. "/src/lua-basic/death-knight-buddy-gear.lua"))
+setfenv(chunk, env)()
+local function appear(b) handlers[3](3, b); b.pending(0, 0, 0, b) end
+
+print("no story played")
+roster_slot = 1
+local b55 = new_buddy(601, 55); appear(b55)
+check(b55.worn[15].entry == 38707, "the level-55 buddy wears the Runed Soulblade")
+check(b55.destroyed[1] == 30750, "the kit's Draenic Warblade is destroyed, not left in the bags")
+roster_slot = 2
+local b57 = new_buddy(602, 57); appear(b57)
+check(b57.worn[15].entry == 38707, "so does the level-57 one")
+roster_slot = 3
+local b59 = new_buddy(603, 59); appear(b59)
+local g = b59.worn[15].entry
+check(g == 44444 or g == 44445, "the level-59 one wears a green two-hander (" .. g .. ")")
+local again = new_buddy(603, 59); appear(again)
+check(again.worn[15].entry == g, "the same green each time for that buddy")
+
+print("part of the story played")
+rewarded = { [12619] = true, [12657] = true, [12678] = true }
+roster_slot = 3
+local p = new_buddy(604, 60); appear(p)
+local pg = p.worn[15].entry
+check(pg == 44444 or pg == 44445, "the level-60 buddy keeps a green until the final quest (" .. pg .. ")")
+check(p.worn[1] and p.worn[1].entry == 38662, "the amulet at the neck")
+check(p.worn[10] and p.worn[10].entry == 38671, "the ring on a finger")
+check(p.worn[14] == nil, "no cloak yet: its quest isn't done")
+
+print("the whole story")
+rewarded = { [12619] = true, [12657] = true, [12678] = true, [12679] = true, [12720] = true, [12801] = true }
+local w = new_buddy(605, 60); appear(w)
+check(w.worn[10].entry == 38671 and w.worn[11].entry == 38672, "both rings, one on each hand")
+local cloak, weapon = w.worn[14].entry, w.worn[15].entry
+check(cloak == 39320 or cloak == 38664 or cloak == 39322, "one of the three cloaks (" .. cloak .. ")")
+check(weapon == 38632 or weapon == 38633, "one of the two great weapons (" .. weapon .. ")")
+local w2 = new_buddy(605, 60); appear(w2)
+check(w2.worn[14].entry == cloak and w2.worn[15].entry == weapon, "the same choices each time for that buddy")
+roster_slot = 1
+local early = new_buddy(608, 55); appear(early)
+check(early.worn[15].entry == 38707 and early.worn[14] ~= nil, "the level-55 buddy keeps the runeblade, with the rest of the set")
+roster_slot = 3
+local others, seen = 0, {}
+for low = 610, 640 do local o = new_buddy(low, 60); appear(o); seen[o.worn[14].entry] = true end
+for _ in pairs(seen) do others = others + 1 end
+check(others == 3, "across buddies, every cloak gets chosen (" .. others .. " of 3)")
+
+print("the owner rewarded a quest")
+rewarded[12801] = nil
+local live = new_buddy(606, 60); appear(live)
+local lg = live.worn[15].entry
+check(lg == 44444 or lg == 44445, "before The Light of Dawn: a green")
+rewarded[12801] = true
+env.CharDBQuery = function(sql)
+    if sql:find("SELECT buddy FROM buddy_roster") then return rows({ { 606 } }) end
+    if sql:find("SELECT owner, slot FROM buddy_roster") then return rows({ { 501, 4 } }) end
+    if sql:find("FROM basic_718_souls") then return rows({ { 0 } }) end
+end
+env.GetPlayerByGUID = function(l) return l == 606 and live or owner end
+local pending
+owner.RegisterEvent = function(_, fn) pending = fn end
+handlers[54](54, owner, {})
+handlers[54](54, owner, {})
+pending(0, 0, 0, owner)
+local wpn = live.worn[15].entry
+check(wpn == 38632 or wpn == 38633, "after it: the great weapon, at once")
+
+print("a skipper")
+env.GetPlayerByGUID = function() return owner end
+env.CharDBQuery = function(sql)
+    if sql:find("SELECT owner, slot FROM buddy_roster") then return rows({ { 501, 1 } }) end
+    if sql:find("FROM basic_718_souls") then return rows({ { 1 } }) end
+end
+local s = new_buddy(607, 55); appear(s)
+check(s.worn[15].entry == 38707 and s.worn[1] == nil and s.worn[14] == nil, "the weapon rule only, no story gear")
+
+print("")
+print(fails == 0 and ("All " .. checks .. " checks passed") or (fails .. " of " .. checks .. " checks failed"))
+os.exit(fails == 0 and 0 or 1)

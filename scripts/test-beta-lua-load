@@ -1,0 +1,133 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+local PROFILE, SOURCE = nil, nil
+do
+    local pos, i = {}, 1
+    while i <= #arg do
+        if arg[i] == "--source" then i = i + 1; SOURCE = arg[i] else pos[#pos + 1] = arg[i] end
+        i = i + 1
+    end
+    if pos[1] and pos[1] ~= "" then DIR = pos[1] end
+    if pos[2] then PROFILE = pos[2] end
+end
+
+if not PROFILE then
+    local overall = 0
+    local h = io.popen("ls -d '" .. DIR .. "'/src/lua-*/ 2>/dev/null")
+    for d in h:lines() do
+        local prof = d:match("/src/lua%-([^/]+)/?$")
+        print("=== " .. prof); io.stdout:flush()
+        local cmd = string.format("'%s' '%s' '%s'%s", arg[0], DIR, prof, SOURCE and (" --source '" .. SOURCE .. "'") or "")
+        local r = os.execute(cmd)
+        if not (r == 0 or r == true) then overall = 1 end
+    end
+    h:close()
+    os.exit(overall)
+end
+local ROOT = DIR .. "/src/lua-" .. PROFILE
+local function ran(cmd) local r = os.execute(cmd); return r == 0 or r == true end
+local function isdir(p) return ran("test -d '" .. p .. "'") end
+SOURCE = SOURCE or (isdir(DIR .. "/source-beta") and DIR .. "/source-beta")
+         or "/mnt/kaun/wow-chat-2026/source-beta"
+
+local function list_files(root)
+    local found = io.popen('find "' .. root .. '" -mindepth 1 -name ".*" -prune -o \\( -type d -o -type f \\) -print | sort')
+    local exts, scripts, dirs = {}, {}, { root }
+    for path in found:lines() do
+        local name, ending = path:match("([^/]+)%.(%a+)$")
+        local isdir = (function() local r = os.execute('test -d "' .. path .. '"'); return r == 0 or r == true end)()
+        if isdir then
+            dirs[#dirs + 1] = path
+        elseif ending == "ext" then
+            exts[#exts + 1] = { path = path, name = name }
+        elseif ending == "lua" then
+            scripts[#scripts + 1] = { path = path, name = name }
+        end
+    end
+    found:close()
+    local search = {}
+    for _, d in ipairs(dirs) do search[#search + 1] = d .. "/?.lua;" .. d .. "/?.ext" end
+    return exts, scripts, table.concat(search, ";")
+end
+
+local registered = 0
+local function count() registered = registered + 1 end
+RegisterPlayerEvent, RegisterServerEvent, RegisterCreatureEvent = count, count, count
+RegisterItemEvent, RegisterGameObjectEvent, RegisterCreatureGossipEvent = count, count, count
+RegisterPlayerGossipEvent, RegisterGameObjectGossipEvent = count, count
+CreateLuaEvent = function() count() return 1 end
+Map, Player, Creature, GameObject, Unit, WorldObject, Object = {}, {}, {}, {}, {}, {}, {}
+GetPlayersInWorld = function() return {} end
+
+local engineGlobals = 0
+do
+    local function names_in(cmd)
+        local h = io.popen(cmd)
+        for name in h:lines() do
+            if _G[name] == nil then _G[name] = function() return nil end; engineGlobals = engineGlobals + 1 end
+        end
+        h:close()
+    end
+    local src = SOURCE .. "/modules/mod-ale/src/LuaEngine/LuaFunctions.cpp"
+    if not ran("test -f '" .. src .. "'") then
+        io.stderr:write("ERROR: the engine's function list is not at " .. src ..
+                        "\n  to debug: pass --source <AzerothCore tree>, the one beta builds from\n")
+        os.exit(1)
+    end
+    names_in("awk '/luaL_Reg GlobalMethods\\[\\]/{f=1} f&&/^};/{exit} f' '" .. src .. "' | grep -o '\"[A-Za-z_]*\"' | tr -d '\"'")
+    names_in("grep -ho 'LuaGlobalFunctions::[A-Za-z_]*' '" .. DIR .. "'/patches/B*.sh 2>/dev/null | sed 's/.*:://' | sort -u")
+end
+
+local exts, scripts, search = list_files(ROOT)
+package.path = search .. ";" .. package.path
+
+local loaded, fails, total = {}, 0, 0
+local realprint = print
+local all = {}
+for _, f in ipairs(exts) do all[#all + 1] = f end
+for _, f in ipairs(scripts) do all[#all + 1] = f end
+
+for _, f in ipairs(all) do
+    total = total + 1
+    local short = f.path:sub(#ROOT + 2)
+    if loaded[f.name] then
+        fails = fails + 1
+        realprint("  FAIL: " .. short .. " — the engine refuses it: " .. loaded[f.name] .. " has the same name")
+    elseif package.loaded[f.name] ~= nil then
+        realprint("  ok:   " .. short .. " (already loaded by an earlier require)")
+    else
+        loaded[f.name] = short
+        local said = {}
+        print = function(...)
+            local parts = {}
+            for i = 1, select("#", ...) do parts[#parts + 1] = tostring((select(i, ...))) end
+            said[#said + 1] = table.concat(parts, " ")
+        end
+        local before = registered
+        local chunk, err = loadfile(f.path)
+        local ok = chunk ~= nil
+        if ok then
+            local result
+            ok, result = pcall(chunk, f.name)
+            if ok then
+                package.loaded[f.name] = result == nil and true or result
+            else
+                err = result
+            end
+        end
+        print = realprint
+        if ok then
+            realprint(string.format("  ok:   %s (%d event registration(s))", short, registered - before))
+            for _, line in ipairs(said) do
+                if line:find("not running") or line:find("ERROR") then realprint("          says: " .. line) end
+            end
+        else
+            fails = fails + 1
+            realprint("  FAIL: " .. short .. " — stops while loading: " .. tostring(err))
+        end
+    end
+end
+
+realprint(string.format("%d file(s) in src/lua-%s/, %d failed to load (%d engine functions stood in)", total, PROFILE, fails, engineGlobals))
+os.exit(fails == 0 and 0 or 1)

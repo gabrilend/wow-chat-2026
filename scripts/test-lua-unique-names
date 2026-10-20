@@ -1,0 +1,43 @@
+#!/bin/bash
+
+DIR="/mnt/kaun/wow-chat-2026"
+if [[ -n "$1" ]]; then
+    DIR="$1"
+fi
+
+FAILS=0
+for TREE in "${DIR}"/src/lua-*/; do
+    LOADED="$(find "${TREE}" -mindepth 1 -name '.*' -prune -o -type f \
+              \( -name '*.lua' -o -name '*.ext' -o -name '*.moon' -o -name '*.out' \) -print | sort)"
+    COUNT="$(echo "${LOADED}" | grep -c .)"
+    TREE_FAILS=0
+
+    STEMS="$(echo "${LOADED}" | grep . | sed 's|.*/||; s|\.[^.]*$||' | sort)"
+    CLASHES="$(echo "${STEMS}" | uniq -d)"
+    if [[ -n "${CLASHES}" ]]; then
+        while read -r NAME; do
+            echo "  FAIL: ${TREE#${DIR}/} loads more than one file named ${NAME}:"
+            echo "${LOADED}" | grep -E "/${NAME}\.[^./]+$" | sed "s|^${DIR}/|          |"
+            TREE_FAILS=$((TREE_FAILS + 1))
+        done <<< "${CLASHES}"
+    fi
+
+    SWITCHED_OFF="$(echo "${LOADED}" | grep . | sed "s|^${TREE}||" | grep -E '(^|/)[^/]*\.disabled/' )"
+    if [[ -n "${SWITCHED_OFF}" ]]; then
+        echo "  FAIL: ${TREE#${DIR}/} loads files from folders named as disabled (give the folder a leading dot):"
+        echo "${SWITCHED_OFF}" | sed 's|^|          |'
+        TREE_FAILS=$((TREE_FAILS + 1))
+    fi
+
+    if [[ "${TREE_FAILS}" -eq 0 ]]; then
+        echo "  ok:   ${TREE#${DIR}/} (${COUNT} loaded files, every name once, none switched off)"
+    fi
+    FAILS=$((FAILS + TREE_FAILS))
+done
+
+if [[ "${FAILS}" -eq 0 ]]; then
+    echo "All script folders load unique names and nothing marked disabled"
+else
+    echo "${FAILS} finding(s): the server loads only the first file of each name, and every file in a folder without a leading dot"
+fi
+[[ "${FAILS}" -eq 0 ]]

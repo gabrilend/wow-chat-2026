@@ -1,0 +1,2316 @@
+#!/usr/bin/env bash
+
+DIR="${DIR:-/mnt/kaun/wow-chat-2026}"
+
+declare -gA STAGED_SQL_DIRS=()
+
+_register_with_updatefetcher() {
+    local DIR_PATH="$1"
+    local DB="$2"
+    local MYSQL_DIR="${DIR}/mysql/installed-files"
+    local MYSQL_SOCKET="${DIR}/mysql/databases/mysql.sock"
+
+    mkdir -p "${DIR_PATH}"
+
+    DIR_PATH="$(readlink -f "${DIR_PATH}")"
+
+    local STAGING="${DIR_PATH}"
+    STAGED_SQL_DIRS["${STAGING}"]="${DB}"
+    DIR_PATH="${STAGING}.updater"
+    mkdir -p "${DIR_PATH}"
+
+    if [[ ! -S "${MYSQL_SOCKET}" ]]; then
+        echo "    NOTICE: MySQL not running — ${DIR_PATH} NOT registered in ${DB}.updates_include"
+        echo "            (re-run install/apply-patches with MySQL up, or this SQL never applies)"
+        return 0
+    fi
+
+    "${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" \
+        -u ritz -pmenardi "${DB}" <<SQL || { echo "    ERROR: could not register ${DIR_PATH} in ${DB}.updates_include (database=${DB}, socket=${MYSQL_SOCKET})"; return 1; }
+CREATE TABLE IF NOT EXISTS \`updates_include\` (
+  \`path\` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'directory to include. \$ means relative to the source directory.',
+  \`state\` enum('RELEASED','ARCHIVED','CUSTOM','PENDING') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'RELEASED' COMMENT 'defines if the directory contains released or archived updates.',
+  PRIMARY KEY (\`path\`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='List of directories where we want to include sql updates.';
+INSERT IGNORE INTO \`updates_include\` (\`path\`, \`state\`) VALUES ('${DIR_PATH}', 'CUSTOM');
+DELETE FROM \`updates_include\` WHERE \`path\` = '${STAGING}';
+SQL
+}
+
+_sql_install_stamp() {
+    if [[ -z "${SQL_INSTALL_STAMP:-}" ]]; then
+        local parts="core=$(git -C "${AC_CODE_DIR}" rev-parse --short=12 HEAD 2>/dev/null || echo none)"
+        local mod
+        for mod in "${AC_CODE_DIR}"/modules/*/; do
+            [[ -d "${mod}.git" ]] || continue
+            parts+=" $(basename "${mod}")=$(git -C "${mod}" rev-parse --short=8 HEAD)"
+        done
+        SQL_INSTALL_STAMP="-- installed against ${parts} (issue 183: a pin move changes this line, so the updater runs the file again, after upstream's)"
+    fi
+    echo "${SQL_INSTALL_STAMP}"
+}
+
+_mirror_staged_sql() {
+    local staging twin stamp f name wrote=0 kept=0 removed=0
+    stamp="$(_sql_install_stamp)"
+    for staging in "${!STAGED_SQL_DIRS[@]}"; do
+        twin="${staging}.updater"
+        mkdir -p "${twin}"
+        for f in "${staging}"/*.sql; do
+            [[ -f "${f}" ]] || continue
+            name="z_$(basename "${f}")"
+            if [[ -f "${twin}/${name}" ]] && cmp -s <(echo "${stamp}"; cat "${f}") "${twin}/${name}"; then
+                kept=$((kept + 1))
+            else
+                { echo "${stamp}"; cat "${f}"; } > "${twin}/${name}"
+                wrote=$((wrote + 1))
+            fi
+        done
+        for f in "${twin}"/z_*.sql; do
+            [[ -f "${f}" ]] || continue
+            [[ -f "${staging}/$(basename "${f}" | sed 's/^z_//')" ]] && continue
+            rm "${f}"
+            removed=$((removed + 1))
+        done
+        _forget_unprefixed_updates "${staging}" "${STAGED_SQL_DIRS[${staging}]}"
+    done
+    echo "  SQL for the updater (issue 183): ${wrote} written, ${kept} unchanged, ${removed} removed, in ${#STAGED_SQL_DIRS[@]} folders"
+}
+
+_forget_unprefixed_updates() {
+    local staging=$1 db=$2
+    local MYSQL_DIR="${DIR}/mysql/installed-files"
+    local MYSQL_SOCKET="${DIR}/mysql/databases/mysql.sock"
+    local names="" f
+    for f in "${staging}"/*.sql; do
+        [[ -f "${f}" ]] || continue
+        names+="${names:+,}'$(basename "${f}")'"
+    done
+    [[ -n "${names}" ]] || return 0
+    if [[ ! -S "${MYSQL_SOCKET}" ]]; then
+        echo "    NOTICE: MySQL not running: old update names in ${db} not tidied (the next install will)"
+        return 0
+    fi
+    local gone
+    gone="$("${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" -u ritz -pmenardi -N "${db}" -e \
+        "DELETE o FROM updates o JOIN updates z ON z.name = CONCAT('z_', o.name) WHERE o.name IN (${names}); SELECT ROW_COUNT();" 2>/dev/null)" ||
+        { echo "    ERROR: could not tidy the old update names in ${db} (${staging#${DIR}/})"; return 1; }
+    [[ "${gone}" == "0" ]] || echo "    ${db}: ${gone} old update name(s) forgotten (their z_ records stay)"
+}
+
+_unregister_from_updatefetcher() {
+    local DIR_PATH; DIR_PATH="$(readlink -f "$1")"
+    _unregister_one "${DIR_PATH}.updater" "$2" || return 1
+    _unregister_one "${DIR_PATH}" "$2"
+}
+_unregister_one() {
+    local DIR_PATH="$1"
+    local DB="$2"
+    local MYSQL_DIR="${DIR}/mysql/installed-files"
+    local MYSQL_SOCKET="${DIR}/mysql/databases/mysql.sock"
+
+    [[ ! -S "${MYSQL_SOCKET}" ]] && return 0
+
+    "${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" \
+        -u ritz -pmenardi "${DB}" \
+        -e "DELETE FROM updates_include WHERE path = '${DIR_PATH}';" 2>/dev/null || true
+}
+
+_profile_db_name() {
+    local base="$1"
+    case "${PROFILE}" in
+        release)      echo "${base}" ;;
+        beta)         echo "${base}_beta" ;;   # its own since 2026-10-17 (issue 136b): it used to share release's, so installing beta emptied release's world
+        vanilla)      echo "${base}_vanilla" ;;
+        basic)        echo "${base}_basic" ;;
+        cc-test)      echo "${base}_cc_test" ;;   # underscore: a hyphen is not allowed in an unquoted database name
+        alpha)        echo "${base}_alpha" ;;
+        *)
+            echo "ERROR: _profile_db_name called for unknown profile '${PROFILE}'" >&2
+            return 1
+            ;;
+    esac
+}
+
+_shared_sql_src() {
+    local -A SHARED_SQL_FROM=( [basic]="vanilla" )
+    local from="${SHARED_SQL_FROM[${PROFILE}]:-${PROFILE}}"
+    echo "${DIR}/sql/${from}/${1}.src"
+}
+
+_buddy_sql_src() {
+    local -A BUDDY_SQL_FROM=( [cc-test]="basic" )
+    local from="${BUDDY_SQL_FROM[${PROFILE}]:-${PROFILE}}"
+    echo "${DIR}/sql/${from}/${1}.src"
+}
+
+apply_config_values() {
+    if [[ ! -d "${DIR}/config/patches" ]]; then
+        echo "  Warning: config/patches/ directory not found, using defaults"
+        return 0
+    fi
+
+    declare -A CONFIG_PROFILES
+    declare -A CONFIG_DESCRIPTIONS
+
+    echo "  Loading config patches:"
+    local patch_count=0
+    declare -A patches_by_profile
+    for patch_file in "${DIR}/config/patches"/C*.sh; do
+        [[ -f "${patch_file}" ]] || continue
+        local patch_name=$(basename "${patch_file}" .sh)
+        source "${patch_file}" || {
+            echo "    [✗] ${patch_name} - syntax error"
+            return 1
+        }
+        local func_name="config_${patch_name#C[0-9]*-}"
+        func_name="${func_name//-/_}"
+        local profiles="${CONFIG_PROFILES[$func_name]:-?}"
+        for profile in ${profiles}; do
+            patches_by_profile["${profile}"]+="${patch_name}"$'\n'
+        done
+        ((patch_count++)) || true
+    done
+
+    if [[ ${patch_count} -eq 0 ]]; then
+        echo "    (none found)"
+        return 0
+    fi
+
+    local listed_profiles
+    listed_profiles=$(printf '%s\n' "${!patches_by_profile[@]}" | grep -vx 'all' | sort)
+    for profile in all ${listed_profiles}; do
+        [[ -z "${patches_by_profile[$profile]:-}" ]] && continue
+        echo "    ${profile}:"
+        while IFS= read -r p; do
+            [[ -n "$p" ]] && echo "      $p"
+        done <<< "${patches_by_profile[$profile]}"
+    done
+
+    local config_funcs_in_file_order
+    config_funcs_in_file_order=$(
+        shopt -s extdebug
+        for fn in $(declare -F | sed -n 's/^declare -f \(config_.*\)/\1/p'); do
+            declare -F "${fn}"
+        done | sort -k3,3 -k2,2n | cut -d' ' -f1
+    )
+
+    echo "  Applying for profile '${PROFILE}':"
+    local applied_count=0
+    local failed_count=0
+    for func in ${config_funcs_in_file_order}; do
+        local profiles="${CONFIG_PROFILES[$func]:-}"
+        local desc="${CONFIG_DESCRIPTIONS[$func]:-${func}}"
+
+        if [[ " ${profiles} " =~ " ${PROFILE} " ]] || [[ " ${profiles} " =~ " all " ]]; then
+            if ${func}; then
+                echo "    [✓] ${desc}"
+                ((applied_count++)) || true
+            else
+                echo "    [✗] ${desc} - FAILED"
+                ((failed_count++)) || true
+            fi
+        fi
+    done
+
+    echo "  Applied ${applied_count} config patches"
+    if [[ ${failed_count} -gt 0 ]]; then
+        echo "  WARNING: ${failed_count} config patches failed"
+        return 1
+    fi
+    return 0
+}
+
+patch_E001_lua_script_symlinks() {
+    local TARGET="${TARGET_INSTALL_DIR:-${INSTALL_DIR}}"
+    local LUA_SRC="${DIR}/src/lua-${PROFILE}"
+    if [[ ! -d "${LUA_SRC}" ]]; then
+        echo "  [E001] ERROR: Lua source directory missing: ${LUA_SRC}"
+        echo "         profile='${PROFILE}'; nothing was linked into ${TARGET}/bin/lua_scripts/"
+        echo "         to debug: does src/lua-${PROFILE}/ exist in git? (every profile"
+        echo "         owns one, even if it holds only a README); is .profile spelled right?"
+        return 1
+    fi
+    mkdir -p "${TARGET}/bin/lua_scripts"
+
+    [[ -L "${TARGET}/bin/lua_scripts/custom" ]] && rm "${TARGET}/bin/lua_scripts/custom"
+    ln -sfn "${LUA_SRC}" "${TARGET}/bin/lua_scripts/custom"
+
+    if [[ -d "${LUA_SRC}/extensions" ]]; then
+        if [[ -L "${TARGET}/bin/lua_scripts/extensions" ]]; then
+            rm "${TARGET}/bin/lua_scripts/extensions"
+        elif [[ -d "${TARGET}/bin/lua_scripts/extensions" ]]; then
+            rm -rf "${TARGET}/bin/lua_scripts/extensions"
+        fi
+        ln -sfn "${LUA_SRC}/extensions" "${TARGET}/bin/lua_scripts/extensions"
+    else
+        [[ -L "${TARGET}/bin/lua_scripts/extensions" ]] && rm "${TARGET}/bin/lua_scripts/extensions"
+    fi
+
+    echo "  [E001] Lua script symlinks (profile=${PROFILE}, src=${LUA_SRC#${DIR}/})"
+}
+
+unpatch_E001_lua_script_symlinks() {
+    local TARGET="${TARGET_INSTALL_DIR:-${INSTALL_DIR}}"
+    [[ -L "${TARGET}/bin/lua_scripts/custom" ]] && rm "${TARGET}/bin/lua_scripts/custom"
+    [[ -L "${TARGET}/bin/lua_scripts/extensions" ]] && rm "${TARGET}/bin/lua_scripts/extensions"
+    echo "  [E001] Removed Lua script symlinks"
+}
+
+patch_E004_log_directory_setup() {
+    local TMP_BASE="/tmp/wow-chat-2"
+    local TMP_LOGS="${TMP_BASE}/logs-${PROFILE}"
+    mkdir -p "${TMP_BASE}"
+    mkdir -p "${TMP_LOGS}"
+    [[ -L "${DIR}/tmp" ]] || ln -s "${TMP_BASE}" "${DIR}/tmp"
+    [[ -L "${DIR}/logs-${PROFILE}" ]] || ln -s "${TMP_LOGS}" "${DIR}/logs-${PROFILE}"
+    echo "  [E004] Log directory setup"
+}
+
+unpatch_E004_log_directory_setup() {
+    [[ -L "${DIR}/tmp" ]] && rm "${DIR}/tmp"
+    [[ -L "${DIR}/logs-${PROFILE}" ]] && rm "${DIR}/logs-${PROFILE}"
+    echo "  [E004] Removed log directory symlinks"
+}
+
+patch_E005_dk_levelstats() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/01-dk-levelstats.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/01-dk-levelstats.apply.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E005_APPLY" "${SQL_FILE}"; then
+        echo "  [E005] Active file already holds apply-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E005] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E005] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E005_dk_levelstats() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/01-dk-levelstats.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E005_REVERT" "${SQL_FILE}"; then
+        echo "  [E005] Active file already holds revert-form content"
+        return 0
+    fi
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E005] Writing revert-form SQL to ${SQL_FILE}"
+    cat > "${SQL_FILE}" <<'SQL'
+-- MARKER_E005_REVERT beta-dk-levelstats
+-- Revert-form: drop the DK level 1..20 rows from player_levelstats.
+-- Table itself is preserved (release shares this DB).
+DELETE FROM `player_levelstats` WHERE `class` = 6 AND `level` BETWEEN 1 AND 20;
+SQL
+}
+
+patch_E007_vanilla_starting_zones() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/01-starting-zones.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E007_APPLY" "${SQL_FILE}"; then
+        echo "  [E007] Active file already holds apply-form content"
+        return 0
+    fi
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E007] Writing apply-form SQL to ${SQL_FILE}"
+    cat > "${SQL_FILE}" <<'SQL'
+-- MARKER_E007_APPLY vanilla-starting-zones
+-- Apply-form (148n/148o): per-race spawn assignment, anchored at each
+-- town's innkeeper NPC (coords measured live from the creature table,
+-- so the spawn tile is guaranteed walkable ground rather than a
+-- copied-from-memory town-center guess). Each row sends a (race, non-DK) pair to a specific
+-- town across the world rather than bucketing every Alliance/Horde
+-- character into one Darkshire/Tarren Mill pair.
+--
+--   Human + Dwarf      → Wetlands / Menethil Harbor (map 0, zone 38)
+--   Draenei            → Duskwood / Darkshire       (map 0, zone 10)
+--   Night Elf + Gnome  → Ashenvale / Astranaar      (map 1, zone 331)
+--   Orc                → Northern Barrens / Ratchet (map 1, zone 17)
+--   Undead + Troll     → Hillsbrad / Tarren Mill    (map 0, zone 267)
+--   Tauren + Blood Elf → Stonetalon / Sun Rock      (map 1, zone 406)
+--
+-- DK rows (class=6) left alone so a re-enabled DK still lands at
+-- Ebon Hold (assumes WotLK opener).
+UPDATE `playercreateinfo` SET `map`=0, `zone`=38,  `position_x`=-3827.93, `position_y`=-831.9,   `position_z`=10.09,  `orientation`=0.4014 WHERE `race` IN (1,3)  AND `class` != 6;
+UPDATE `playercreateinfo` SET `map`=0, `zone`=10,  `position_x`=-10516.0, `position_y`=-1161.21, `position_z`=28.12,  `orientation`=4.0317 WHERE `race` = 11      AND `class` != 6;
+UPDATE `playercreateinfo` SET `map`=1, `zone`=331, `position_x`=2781.16,  `position_y`=-433.0,   `position_z`=116.67, `orientation`=2.5831 WHERE `race` IN (4,7)  AND `class` != 6;
+UPDATE `playercreateinfo` SET `map`=1, `zone`=17,  `position_x`=-1050.04, `position_y`=-3664.8,  `position_z`=23.97,  `orientation`=6.0039 WHERE `race` = 2       AND `class` != 6;
+UPDATE `playercreateinfo` SET `map`=0, `zone`=267, `position_x`=-5.97,    `position_y`=-942.28,  `position_z`=57.16,  `orientation`=2.7415 WHERE `race` IN (5,8)  AND `class` != 6;
+UPDATE `playercreateinfo` SET `map`=1, `zone`=406, `position_x`=893.65,   `position_y`=927.95,   `position_z`=106.36, `orientation`=5.7072 WHERE `race` IN (6,10) AND `class` != 6;
+SQL
+}
+
+unpatch_E007_vanilla_starting_zones() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/01-starting-zones.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E007_REVERT" "${SQL_FILE}"; then
+        echo "  [E007] Active file already holds revert-form content"
+        return 0
+    fi
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E007] Writing revert-form SQL to ${SQL_FILE}"
+    cat > "${SQL_FILE}" <<'SQL'
+-- MARKER_E007_REVERT vanilla-starting-zones
+-- Revert-form: restore each race's upstream default starting zone.
+-- Values are literal from source-beta/data/sql/base/db_world/playercreateinfo.sql.
+UPDATE `playercreateinfo` SET `map`=0,   `zone`=12,   `position_x`=-8949.95, `position_y`=-132.493,  `position_z`=83.5312, `orientation`=0       WHERE `race`=1  AND `class` != 6;  -- Human   → Northshire Valley
+UPDATE `playercreateinfo` SET `map`=1,   `zone`=14,   `position_x`=-618.518, `position_y`=-4251.67,  `position_z`=38.718,  `orientation`=0       WHERE `race`=2  AND `class` != 6;  -- Orc     → Valley of Trials
+UPDATE `playercreateinfo` SET `map`=0,   `zone`=1,    `position_x`=-6240.32, `position_y`=331.033,   `position_z`=382.758, `orientation`=6.17716 WHERE `race`=3  AND `class` != 6;  -- Dwarf   → Coldridge Valley
+UPDATE `playercreateinfo` SET `map`=1,   `zone`=141,  `position_x`=10311.3,  `position_y`=832.463,   `position_z`=1326.41, `orientation`=5.69632 WHERE `race`=4  AND `class` != 6;  -- NElf    → Shadowglen
+UPDATE `playercreateinfo` SET `map`=0,   `zone`=85,   `position_x`=1676.71,  `position_y`=1678.31,   `position_z`=121.67,  `orientation`=2.70526 WHERE `race`=5  AND `class` != 6;  -- Undead  → Deathknell
+UPDATE `playercreateinfo` SET `map`=1,   `zone`=215,  `position_x`=-2917.58, `position_y`=-257.98,   `position_z`=52.9968, `orientation`=0       WHERE `race`=6  AND `class` != 6;  -- Tauren  → Camp Narache
+UPDATE `playercreateinfo` SET `map`=0,   `zone`=1,    `position_x`=-6240.32, `position_y`=331.033,   `position_z`=382.758, `orientation`=0       WHERE `race`=7  AND `class` != 6;  -- Gnome   → Coldridge Valley (shared w/ Dwarves)
+UPDATE `playercreateinfo` SET `map`=1,   `zone`=14,   `position_x`=-618.518, `position_y`=-4251.67,  `position_z`=38.718,  `orientation`=0       WHERE `race`=8  AND `class` != 6;  -- Troll   → Valley of Trials (shared w/ Orcs)
+UPDATE `playercreateinfo` SET `map`=530, `zone`=3431, `position_x`=10349.6,  `position_y`=-6357.29,  `position_z`=33.4026, `orientation`=5.31605 WHERE `race`=10 AND `class` != 6;  -- BElf    → Sunstrider Isle
+UPDATE `playercreateinfo` SET `map`=530, `zone`=3526, `position_x`=-3961.64, `position_y`=-13931.2,  `position_z`=100.615, `orientation`=2.08364 WHERE `race`=11 AND `class` != 6;  -- Draenei → Ammen Vale
+SQL
+}
+
+patch_E006_initialize_config_files() {
+    local TARGET="${TARGET_INSTALL_DIR:-${INSTALL_DIR}}"
+    echo "  [E006] Initializing config files..."
+
+    for app_conf_dist in "${AC_CODE_DIR}/src/server/apps"/*/*.conf.dist; do
+        [[ -f "${app_conf_dist}" ]] || continue
+        cp -f "${app_conf_dist}" "${TARGET}/etc/$(basename "${app_conf_dist}")"
+    done
+
+    if [[ -f "${TARGET}/etc/authserver.conf.dist" ]]; then
+        cp -f "${TARGET}/etc/authserver.conf.dist" "${TARGET}/etc/authserver.conf"
+    fi
+
+    if [[ -f "${TARGET}/etc/worldserver.conf.dist" ]]; then
+        cp -f "${TARGET}/etc/worldserver.conf.dist" "${TARGET}/etc/worldserver.conf"
+    fi
+
+    if [[ -f "${TARGET}/etc/dbimport.conf.dist" ]]; then
+        cp -f "${TARGET}/etc/dbimport.conf.dist" "${TARGET}/etc/dbimport.conf"
+    fi
+
+    mkdir -p "${TARGET}/etc/modules"
+    for mod_conf_dir in "${AC_CODE_DIR}/modules"/*/conf; do
+        if [[ -d "${mod_conf_dir}" ]]; then
+            for conf_dist in "${mod_conf_dir}"/*.conf.dist; do
+                if [[ -f "${conf_dist}" ]]; then
+                    local conf_name=$(basename "${conf_dist}")
+                    cp -f "${conf_dist}" "${TARGET}/etc/modules/${conf_name}"
+                    echo "    Copied ${conf_name}"
+                fi
+            done
+        fi
+    done
+
+    if [[ -d "${TARGET}/etc/modules" ]]; then
+        for conf_dist in "${TARGET}/etc/modules/"*.conf.dist; do
+            if [[ -f "${conf_dist}" ]]; then
+                cp -f "${conf_dist}" "${conf_dist%.dist}"
+            fi
+        done
+    fi
+
+    local ORIG_INSTALL_DIR="${INSTALL_DIR}"
+    INSTALL_DIR="${TARGET}"
+    apply_config_values
+    INSTALL_DIR="${ORIG_INSTALL_DIR}"
+}
+
+unpatch_E006_initialize_config_files() {
+    local TARGET="${TARGET_INSTALL_DIR:-${INSTALL_DIR}}"
+    echo "  [E006] Removing config files (keeping .dist)..."
+
+    [[ -f "${TARGET}/etc/authserver.conf" ]] && rm "${TARGET}/etc/authserver.conf"
+    [[ -f "${TARGET}/etc/worldserver.conf" ]] && rm "${TARGET}/etc/worldserver.conf"
+    [[ -f "${TARGET}/etc/dbimport.conf" ]] && rm "${TARGET}/etc/dbimport.conf"
+
+    if [[ -d "${TARGET}/etc/modules" ]]; then
+        for conf in "${TARGET}/etc/modules/"*.conf; do
+            if [[ -f "${conf}" && -f "${conf}.dist" ]]; then
+                rm "${conf}"
+            fi
+        done
+    fi
+}
+
+patch_E008_vanilla_remove_flight_paths() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/03-remove-flight-paths.sql"
+    local SRC_FILE="$(_shared_sql_src db_world)/03-remove-flight-paths.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E008] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E008] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E008] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E008_vanilla_remove_flight_paths() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/03-remove-flight-paths.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E008_REVERT" "${SQL_FILE}"; then
+        echo "  [E008] Active file already holds revert-form content"
+        return 0
+    fi
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E008] Writing revert-form SQL to ${SQL_FILE}"
+    cat > "${SQL_FILE}" <<'SQL'
+-- MARKER_E008_REVERT vanilla-remove-flight-paths
+-- Revert-form: restore flightmaster bit on the 163 entries R8 enumerated,
+-- reset gossip_menu_id for our 90000-range entries (limitation: original
+-- non-zero values for hybrid trainer+flightmaster NPCs are lost), drop
+-- the 90000-range gossip_menu and npc_text rows.
+
+UPDATE `creature_template` SET `npcflag` = `npcflag` | 8192
+WHERE `entry` IN (
+    352,353,523,931,1233,1387,1571,1572,1573,1574,1575,2226,2299,2389,2409,2432,2835,2851,2858,
+    2859,2861,2941,2995,3305,3310,3615,3838,3841,4267,4312,4314,4317,4319,4321,4407,4551,6026,
+    6706,6726,7823,7824,8018,8019,8020,8609,8610,10378,10583,10897,11138,11139,11899,11900,
+    11901,12577,12578,12596,12616,12617,12636,12740,13177,14242,15177,15178,16189,16192,16227,
+    16587,16822,17554,17555,18785,18788,18789,18791,18807,18808,18809,18930,18931,18937,18938,
+    18939,18940,18942,18953,19317,19558,19581,19583,20234,20515,20762,21107,21766,22216,22455,
+    22485,22931,22935,23612,23736,23859,24032,24061,24155,24366,24795,24851,25288,26560,26566,
+    26602,26842,26844,26845,26846,26847,26848,26850,26851,26852,26853,26876,26877,26878,26879,
+    26880,26881,27046,27344,28037,28195,28196,28197,28574,28615,28618,28623,28624,28674,29480,
+    29721,29750,29757,29762,29950,29951,30269,30271,30314,30433,30569,30869,30870,31069,31078,
+    31426,32571,33849,37888,37915
+);
+
+UPDATE `creature_template` SET `gossip_menu_id` = 0
+WHERE `gossip_menu_id` BETWEEN 90001 AND 90999;
+
+DELETE FROM `gossip_menu` WHERE `MenuID` BETWEEN 90000 AND 90999;
+DELETE FROM `npc_text`    WHERE `ID`     BETWEEN 90000 AND 90999;
+SQL
+}
+
+patch_E009_vanilla_starting_equipment() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/02-starting-equipment.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/02-starting-equipment.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E009] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E009] Active file already matches apply-form content"
+        return 0
+    fi
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E009] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E009_vanilla_starting_equipment() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/02-starting-equipment.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E009_REVERT" "${SQL_FILE}"; then
+        echo "  [E009] Active file already holds revert-form content"
+        return 0
+    fi
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E009] Writing revert-form SQL to ${SQL_FILE}"
+    cat > "${SQL_FILE}" <<'SQL'
+-- MARKER_E009_REVERT vanilla-starting-equipment
+-- Revert-form: drop every row whose Note/comment carries the
+-- 'vanilla-148h-' tag prefix. Default rows (upstream DK [TDB PH],
+-- per-class talent skill entries) stay intact.
+DELETE FROM `playercreateinfo_item`   WHERE `Note`    LIKE 'vanilla-148h-%';
+DELETE FROM `playercreateinfo_skills` WHERE `comment` LIKE 'vanilla-148h-%';
+SQL
+}
+
+patch_E010_vanilla_pretrain_abilities() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/04-pretrain-abilities.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/04-pretrain-abilities.apply.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E010_APPLY" "${SQL_FILE}"; then
+        echo "  [E010] Active file already holds apply-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E010] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E010] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E010_vanilla_pretrain_abilities() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/04-pretrain-abilities.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E010_REVERT" "${SQL_FILE}"; then
+        echo "  [E010] Active file already holds revert-form content"
+        return 0
+    fi
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E010] Writing revert-form SQL to ${SQL_FILE}"
+    cat > "${SQL_FILE}" <<'SQL'
+-- MARKER_E010_REVERT vanilla-pretrain-abilities
+-- Revert-form: drop every pretrain row tagged 'vanilla-148j-'.
+DELETE FROM `playercreateinfo_spell_custom` WHERE `Note` LIKE 'vanilla-148j-%';
+SQL
+}
+
+patch_E019_vanilla_no_intro_cinematic() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/01-no-intro-cinematic.sql"
+    local SRC_FILE="$(_shared_sql_src db_characters)/01-no-intro-cinematic.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E019] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E019] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E019] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E019_vanilla_no_intro_cinematic() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/01-no-intro-cinematic.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E019_REVERT" "${SQL_FILE}"; then
+        echo "  [E019] Active file already holds revert-form content"
+        return 0
+    fi
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)" || return 1
+
+    echo "  [E019] Writing revert-form SQL to ${SQL_FILE}"
+    cat > "${SQL_FILE}" <<'SQL'
+-- MARKER_E019_REVERT vanilla-no-intro-cinematic
+-- Revert-form: drop the trigger so cinematic defaults back to 0 and
+-- race intros play on first login as upstream ships.
+DROP TRIGGER IF EXISTS `tr_no_intro_cinematic`;
+SQL
+}
+
+patch_E020_vanilla_mount_level_requirements() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/05-mount-level-requirements.sql"
+    local SRC_FILE="$(_shared_sql_src db_world)/05-mount-level-requirements.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E020] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E020] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E020] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E020_vanilla_mount_level_requirements() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/05-mount-level-requirements.sql"
+    local SRC_FILE="$(_shared_sql_src db_world)/05-mount-level-requirements.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E020_REVERT" "${SQL_FILE}"; then
+        echo "  [E020] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E020] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E020] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E021_vanilla_starting_professions() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/07-starting-professions.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/07-starting-professions.apply.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E021_APPLY" "${SQL_FILE}"; then
+        echo "  [E021] Active file already holds apply-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E021] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E021] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E021_vanilla_starting_professions() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/07-starting-professions.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/07-starting-professions.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E021_REVERT" "${SQL_FILE}"; then
+        echo "  [E021] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E021] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E021] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E018_vanilla_kit_required_level_cap() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/06-kit-required-level-cap.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/06-kit-required-level-cap.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E018] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E018] Active file already matches apply-form content"
+        return 0
+    fi
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E018] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E018_vanilla_kit_required_level_cap() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/06-kit-required-level-cap.sql"
+    local REV_FILE="${DIR}/sql/${PROFILE}/db_world.src/06-kit-required-level-cap.revert.sql"
+
+    [[ ! -f "${REV_FILE}" ]] && { echo "  [E018] Revert source missing: ${REV_FILE}"; return 1; }
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${REV_FILE}" "${SQL_FILE}"; then
+        echo "  [E018] Active file already matches revert-form content"
+        return 0
+    fi
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E018] Copying revert-form source → ${SQL_FILE}"
+    cp "${REV_FILE}" "${SQL_FILE}"
+}
+
+patch_E011_beta_dk_class_system() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/11-dk-class-system.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/11-dk-class-system.apply.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E011_APPLY" "${SQL_FILE}"; then
+        echo "  [E011] Active file already holds apply-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E011] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E011] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E011_beta_dk_class_system() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/11-dk-class-system.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/11-dk-class-system.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E011_REVERT" "${SQL_FILE}"; then
+        echo "  [E011] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E011] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E011] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E012_beta_drop_creatures_keep_essential() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/12-drop-creatures-keep-essential.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/12-drop-creatures-keep-essential.apply.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E012_APPLY" "${SQL_FILE}"; then
+        echo "  [E012] Active file already holds apply-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E012] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E012] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E012_beta_drop_creatures_keep_essential() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/12-drop-creatures-keep-essential.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E012_REVERT" "${SQL_FILE}"; then
+        echo "  [E012] Active file already holds revert-form content"
+        return 0
+    fi
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E012] Writing revert-form SQL to ${SQL_FILE}"
+    cat > "${SQL_FILE}" <<'SQL'
+-- MARKER_E012_REVERT beta-drop-creatures-keep-essential
+-- Revert-form: restore the `creature` table from the snapshot the
+-- apply captured before its DELETEs ran, then drop the snapshot.
+-- If the snapshot table is missing (e.g. apply never ran), the
+-- restore is a no-op; the orphan-cleanup at the bottom is safe.
+DELETE FROM `creature`;
+INSERT INTO `creature` SELECT * FROM `wow_chat_e012_snapshot_creature`;
+DROP TABLE IF EXISTS `wow_chat_e012_snapshot_creature`;
+
+-- Drop the apply's working temp tables in case they were left behind.
+DROP TABLE IF EXISTS `_essential_creatures`;
+DROP TABLE IF EXISTS `_keep_guids`;
+SQL
+}
+
+patch_E013_beta_quest_spells_to_trainers() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/13-quest-spells-to-trainers.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/13-quest-spells-to-trainers.apply.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E013_APPLY" "${SQL_FILE}"; then
+        echo "  [E013] Active file already holds apply-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E013] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E013] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E013_beta_quest_spells_to_trainers() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/13-quest-spells-to-trainers.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/13-quest-spells-to-trainers.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E013_REVERT" "${SQL_FILE}"; then
+        echo "  [E013] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E013] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E013] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E014_beta_trainer_spell_level_cap() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/14-trainer-spell-level-cap.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/14-trainer-spell-level-cap.apply.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E014_APPLY" "${SQL_FILE}"; then
+        echo "  [E014] Active file already holds apply-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E014] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E014] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E014_beta_trainer_spell_level_cap() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/14-trainer-spell-level-cap.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/14-trainer-spell-level-cap.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E014_REVERT" "${SQL_FILE}"; then
+        echo "  [E014] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E014] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E014] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E015_beta_class_selector_npcs() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/15-class-selector-npcs.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/15-class-selector-npcs.apply.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E015_APPLY" "${SQL_FILE}"; then
+        echo "  [E015] Active file already holds apply-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E015] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E015] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E015_beta_class_selector_npcs() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/15-class-selector-npcs.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E015_REVERT" "${SQL_FILE}"; then
+        echo "  [E015] Active file already holds revert-form content"
+        return 0
+    fi
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E015] Writing revert-form SQL to ${SQL_FILE}"
+    cat > "${SQL_FILE}" <<'SQL'
+-- MARKER_E015_REVERT beta-class-selector-npcs
+-- Revert-form: drop the project's custom selector NPCs and models.
+-- Entry IDs 900001-900011 are project-owned (900009 skipped — Goblin,
+-- absent in WotLK; see apply source for rationale).
+DELETE FROM `creature_template`       WHERE `entry`      IN (900001, 900002, 900003, 900004, 900005, 900006, 900007, 900008, 900010, 900011);
+DELETE FROM `creature_template_model` WHERE `CreatureID` IN (900001, 900002, 900003, 900004, 900005, 900006, 900007, 900008, 900010, 900011);
+SQL
+}
+
+patch_E016_beta_empty_loot_chests() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/16-empty-loot-chests.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/16-empty-loot-chests.apply.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E016_APPLY" "${SQL_FILE}"; then
+        echo "  [E016] Active file already holds apply-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E016] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E016] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E016_beta_empty_loot_chests() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/16-empty-loot-chests.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E016_REVERT" "${SQL_FILE}"; then
+        echo "  [E016] Active file already holds revert-form content"
+        return 0
+    fi
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E016] Writing revert-form SQL to ${SQL_FILE}"
+    cat > "${SQL_FILE}" <<'SQL'
+-- MARKER_E016_REVERT beta-empty-loot-chests
+-- Revert-form: drop the project's custom empty-loot gameobjects.
+-- Entry range 900001-900037 is project-owned.
+DELETE FROM `gameobject_template` WHERE `entry` BETWEEN 900001 AND 900037;
+SQL
+}
+
+patch_E058_beta_dk_outfit_for_level_1() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/18-dk-outfit-for-level-1.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/18-dk-outfit-for-level-1.apply.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E058_APPLY" "${SQL_FILE}"; then
+        echo "  [E058] Active file already holds apply-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E058] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E058] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E058_beta_dk_outfit_for_level_1() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/18-dk-outfit-for-level-1.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/18-dk-outfit-for-level-1.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E058_REVERT" "${SQL_FILE}"; then
+        echo "  [E058] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E058] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E058] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E060_beta_moonglade_return() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/01-moonglade-return.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_characters.src/01-moonglade-return.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E060] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E060_APPLY" "${SQL_FILE}"; then
+        echo "  [E060] Active file already holds apply-form content"
+        return 0
+    fi
+
+    echo "  [E060] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E060_beta_moonglade_return() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/01-moonglade-return.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_characters.src/01-moonglade-return.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E060_REVERT" "${SQL_FILE}"; then
+        echo "  [E060] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E060] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)" || return 1
+
+    echo "  [E060] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E017_beta_relocate_logout_texts() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_playerbots/17-relocate-logout-texts.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_playerbots.src/17-relocate-logout-texts.apply.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E017_APPLY" "${SQL_FILE}"; then
+        echo "  [E017] Active file already holds apply-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E017] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_playerbots" "$(_profile_db_name acore_playerbots)" || return 1
+
+    echo "  [E017] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E017_beta_relocate_logout_texts() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_playerbots/17-relocate-logout-texts.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E017_REVERT" "${SQL_FILE}"; then
+        echo "  [E017] Active file already holds revert-form content"
+        return 0
+    fi
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_playerbots" "$(_profile_db_name acore_playerbots)" || return 1
+
+    echo "  [E017] Writing revert-form SQL to ${SQL_FILE}"
+    cat > "${SQL_FILE}" <<'SQL'
+-- MARKER_E017_REVERT beta-relocate-logout-texts
+-- Revert-form: restore the two named rows in ai_playerbot_texts and
+-- ai_playerbot_texts_chance from the snapshots the apply captured
+-- before renumbering them. Snapshots are small (2-4 rows total).
+DELETE FROM `ai_playerbot_texts`        WHERE `name` IN ('bot_not_your_master', 'bot_rndbot_no_logout');
+DELETE FROM `ai_playerbot_texts_chance` WHERE `name` IN ('bot_not_your_master', 'bot_rndbot_no_logout');
+
+INSERT INTO `ai_playerbot_texts`        SELECT * FROM `wow_chat_e017_snapshot_texts`;
+INSERT INTO `ai_playerbot_texts_chance` SELECT * FROM `wow_chat_e017_snapshot_chance`;
+
+DROP TABLE IF EXISTS `wow_chat_e017_snapshot_texts`;
+DROP TABLE IF EXISTS `wow_chat_e017_snapshot_chance`;
+SQL
+}
+
+
+patch_E022_basic_faction_quest_gating() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/08-faction-quest-gating.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/08-faction-quest-gating.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E022] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E022] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E022] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E022_basic_faction_quest_gating() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/08-faction-quest-gating.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/08-faction-quest-gating.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E022_REVERT" "${SQL_FILE}"; then
+        echo "  [E022] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E022] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E022] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E023_basic_starting_valley_rotation() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/02-starting-valley-rotation.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_characters.src/02-starting-valley-rotation.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E023] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E023] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E023] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E023_basic_starting_valley_rotation() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/02-starting-valley-rotation.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_characters.src/02-starting-valley-rotation.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E023_REVERT" "${SQL_FILE}"; then
+        echo "  [E023] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E023] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)" || return 1
+
+    echo "  [E023] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E024_basic_outland_dungeons_64() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/09-outland-dungeons-64.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/09-outland-dungeons-64.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E024] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E024] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E024] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E024_basic_outland_dungeons_64() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/09-outland-dungeons-64.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/09-outland-dungeons-64.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E024_REVERT" "${SQL_FILE}"; then
+        echo "  [E024] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E024] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E024] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E025_basic_valley_universal_trainers() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/10-valley-universal-trainers.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/10-valley-universal-trainers.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E025] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E025] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E025] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E025_basic_valley_universal_trainers() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/10-valley-universal-trainers.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/10-valley-universal-trainers.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E025_REVERT" "${SQL_FILE}"; then
+        echo "  [E025] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E025] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E025] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E026_basic_creature_multipliers() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/11-creature-multipliers.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/11-creature-multipliers.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E026] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E026] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E026] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E026_basic_creature_multipliers() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/11-creature-multipliers.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/11-creature-multipliers.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E026_REVERT" "${SQL_FILE}"; then
+        echo "  [E026] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E026] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E026] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E027_basic_outland_without_tradeskills() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/12-outland-without-tradeskills.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/12-outland-without-tradeskills.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E027] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E027] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E027] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E027_basic_outland_without_tradeskills() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/12-outland-without-tradeskills.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/12-outland-without-tradeskills.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E027_REVERT" "${SQL_FILE}"; then
+        echo "  [E027] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E027] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E027] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E028_basic_outland_without_quests() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/13-outland-without-quests.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/13-outland-without-quests.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E028] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E028] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E028] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E028_basic_outland_without_quests() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/13-outland-without-quests.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/13-outland-without-quests.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E028_REVERT" "${SQL_FILE}"; then
+        echo "  [E028] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E028] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E028] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E029_basic_inscription_without_glyphs() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/14-inscription-without-glyphs.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/14-inscription-without-glyphs.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E029] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E029] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E029] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E029_basic_inscription_without_glyphs() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/14-inscription-without-glyphs.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/14-inscription-without-glyphs.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E029_REVERT" "${SQL_FILE}"; then
+        echo "  [E029] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E029] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E029] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E030_basic_darkmoon_cards() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/15-darkmoon-cards.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/15-darkmoon-cards.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E030] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E030] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E030] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E030_basic_darkmoon_cards() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/15-darkmoon-cards.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/15-darkmoon-cards.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E030_REVERT" "${SQL_FILE}"; then
+        echo "  [E030] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E030] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E030] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E031_basic_outland_gear_scaling() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/16-outland-gear-scaling.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/16-outland-gear-scaling.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E031] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E031] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E031] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E031_basic_outland_gear_scaling() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/16-outland-gear-scaling.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/16-outland-gear-scaling.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E031_REVERT" "${SQL_FILE}"; then
+        echo "  [E031] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E031] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E031] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E032_basic_outland_world_levels() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/17-outland-world-levels.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/17-outland-world-levels.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E032] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E032] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E032] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E032_basic_outland_world_levels() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/17-outland-world-levels.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/17-outland-world-levels.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E032_REVERT" "${SQL_FILE}"; then
+        echo "  [E032] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E032] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E032] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E033_basic_gem_supply() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/18-gem-supply.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/18-gem-supply.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E033] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E033] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E033] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E033_basic_gem_supply() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/18-gem-supply.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/18-gem-supply.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E033_REVERT" "${SQL_FILE}"; then
+        echo "  [E033] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E033] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E033] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E034_basic_titan_jewelers() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/19-titan-jewelers.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/19-titan-jewelers.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E034] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E034] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E034] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E034_basic_titan_jewelers() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/19-titan-jewelers.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/19-titan-jewelers.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E034_REVERT" "${SQL_FILE}"; then
+        echo "  [E034] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E034] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E034] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E035_basic_sockets() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/20-sockets.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/20-sockets.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E035] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E035] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E035] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E035_basic_sockets() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/20-sockets.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/20-sockets.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E035_REVERT" "${SQL_FILE}"; then
+        echo "  [E035] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E035] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E035] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E036_basic_white_durability() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/21-white-durability.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/21-white-durability.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E036] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E036] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E036] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E036_basic_white_durability() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/21-white-durability.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/21-white-durability.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E036_REVERT" "${SQL_FILE}"; then
+        echo "  [E036] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E036] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E036] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E037_basic_ability_tomes() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/22-ability-tomes.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/22-ability-tomes.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E037] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E037] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E037] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E037_basic_ability_tomes() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/22-ability-tomes.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/22-ability-tomes.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E037_REVERT" "${SQL_FILE}"; then
+        echo "  [E037] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E037] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E037] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E038_basic_outland_one_door() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/23-outland-one-door.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/23-outland-one-door.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E038] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E038] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E038] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E038_basic_outland_one_door() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/23-outland-one-door.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/23-outland-one-door.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E038_REVERT" "${SQL_FILE}"; then
+        echo "  [E038] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E038] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E038] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E039_basic_no_guild_banks() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/24-no-guild-banks.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/24-no-guild-banks.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E039] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E039] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E039] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E039_basic_no_guild_banks() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/24-no-guild-banks.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/24-no-guild-banks.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E039_REVERT" "${SQL_FILE}"; then
+        echo "  [E039] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E039] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E039] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E040_basic_death_knight_sargobras() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/25-death-knight-sargobras.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/25-death-knight-sargobras.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E040] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E040] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E040] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E040_basic_death_knight_sargobras() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/25-death-knight-sargobras.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/25-death-knight-sargobras.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E040_REVERT" "${SQL_FILE}"; then
+        echo "  [E040] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E040] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E040] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E043_basic_buddy_selector() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/26-buddy-selector.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/26-buddy-selector.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E043] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E043] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E043] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E043_basic_buddy_selector() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/26-buddy-selector.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/26-buddy-selector.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E043_REVERT" "${SQL_FILE}"; then
+        echo "  [E043] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E043] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E043] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E044_basic_buddy_area_centres() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/27-buddy-area-centres.sql"
+    local SRC_FILE="$(_buddy_sql_src db_world)/27-buddy-area-centres.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E044] Apply source missing: ${SRC_FILE} (run scripts/generate-buddy-area-centres)"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E044] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E044] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E044_basic_buddy_area_centres() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/27-buddy-area-centres.sql"
+    local SRC_FILE="$(_buddy_sql_src db_world)/27-buddy-area-centres.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E044_REVERT" "${SQL_FILE}"; then
+        echo "  [E044] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E044] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E044] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E045_basic_buddy_beds() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/28-buddy-beds.sql"
+    local SRC_FILE="$(_buddy_sql_src db_world)/28-buddy-beds.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E045] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E045] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E045] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E045_basic_buddy_beds() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/28-buddy-beds.sql"
+    local SRC_FILE="$(_buddy_sql_src db_world)/28-buddy-beds.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E045_REVERT" "${SQL_FILE}"; then
+        echo "  [E045] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E045] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E045] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E046_basic_world_boss_respawn() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/29-world-boss-respawn.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/29-world-boss-respawn.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E046] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E046] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E046] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E046_basic_world_boss_respawn() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/29-world-boss-respawn.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/29-world-boss-respawn.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E046_REVERT" "${SQL_FILE}"; then
+        echo "  [E046] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E046] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E046] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E050_basic_buddy_town_circles() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/31-buddy-town-circles.sql"
+    local SRC_FILE="$(_buddy_sql_src db_world)/31-buddy-town-circles.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E050] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E050] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E050] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E050_basic_buddy_town_circles() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/31-buddy-town-circles.sql"
+    local SRC_FILE="$(_buddy_sql_src db_world)/31-buddy-town-circles.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E050_REVERT" "${SQL_FILE}"; then
+        echo "  [E050] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E050] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E050] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E051_basic_acherus_choice_vendors() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/32-acherus-choice-vendors.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/32-acherus-choice-vendors.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E051] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E051] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E051] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E051_basic_acherus_choice_vendors() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/32-acherus-choice-vendors.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/32-acherus-choice-vendors.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E051_REVERT" "${SQL_FILE}"; then
+        echo "  [E051] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E051] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E051] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E052_basic_gearsets() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/33-gearsets.sql"
+    local SRC_FILE="$(_buddy_sql_src db_world)/33-gearsets.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E052] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E052] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E052] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E052_basic_gearsets() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/33-gearsets.sql"
+    local SRC_FILE="$(_buddy_sql_src db_world)/33-gearsets.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E052_REVERT" "${SQL_FILE}"; then
+        echo "  [E052] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E052] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E052] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E053_custom_command_help() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/34-custom-command-help.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/34-custom-command-help.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E053] Apply source missing: ${SRC_FILE} (run scripts/generate-custom-command-help-sql)"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E053] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E053] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E053_custom_command_help() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/34-custom-command-help.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/34-custom-command-help.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E053_REVERT" "${SQL_FILE}"; then
+        echo "  [E053] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E053] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E053] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E055_basic_buddy_subareas() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/36-buddy-subareas.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/36-buddy-subareas.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E055] Apply source missing: ${SRC_FILE} (run scripts/generate-buddy-subareas)"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E055] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E055] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E055_basic_buddy_subareas() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/36-buddy-subareas.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/36-buddy-subareas.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E055_REVERT" "${SQL_FILE}"; then
+        echo "  [E055] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E055] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E055] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E054_basic_legendaries() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/35-legendaries.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/35-legendaries.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E054] Apply source missing: ${SRC_FILE} (run scripts/generate-basic-legendaries-sql)"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E054] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E054] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E054_basic_legendaries() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/35-legendaries.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/35-legendaries.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E054_REVERT" "${SQL_FILE}"; then
+        echo "  [E054] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E054] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E054] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E057_basic_belt_buckle() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/37-belt-buckle.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/37-belt-buckle.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E057] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E057] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E057] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+unpatch_E057_basic_belt_buckle() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/37-belt-buckle.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/37-belt-buckle.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E057_REVERT" "${SQL_FILE}"; then
+        echo "  [E057] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E057] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E057] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E049_basic_buddy_town_bake() {
+    local WORLD_DB
+    WORLD_DB="$(_profile_db_name acore_world)"
+    local PIECES
+    PIECES="$("${DIR}/mysql/installed-files/bin/mysql" -h127.0.0.1 -P3307 -uritz -pmenardi -N --batch "${WORLD_DB}" \
+        -e "SELECT COUNT(*) FROM buddy_area_centre" 2>&1 | grep -v "Using a password" | tail -1)"
+    if ! [[ "${PIECES}" =~ ^[0-9]+$ ]] || [[ "${PIECES}" -eq 0 ]]; then
+        echo "  [E049] the database answered: ${PIECES}"
+        echo "  [E049] SKIPPED: ${WORLD_DB}.buddy_area_centre is empty or missing (E044's table is loaded at the server's"
+        echo "         first start); run scripts/bake-buddy-towns after it. Until then towns are measured live."
+        return 0
+    fi
+    echo "  [E049] Baking the towns' exploring grids (scripts/bake-buddy-towns)"
+    "${DIR}/scripts/bake-buddy-towns" "${DIR}" || { echo "  [E049] ERROR: the bake failed (its output is above)"; return 1; }
+}
+
+unpatch_E049_basic_buddy_town_bake() {
+    local DATA
+    DATA="$(sed -n 's|^DataDir[[:space:]]*=[[:space:]]*"\{0,1\}\([^"]*\)"\{0,1\}.*|\1|p' "${DIR}/installed-files-${PROFILE}/etc/worldserver.conf" | tail -1)"
+    [[ -n "${DATA}" && -d "${DATA}/buddy-towns" ]] || return 0
+    echo "  [E049] Removing the baked towns (${DATA}/buddy-towns); the server measures towns live again"
+    rm -rf "${DATA}/buddy-towns"
+}
+# -- }}}
+
+# -- {{{ patch_E048_basic_buddy_kit_required_level
+# RETIRED 2026-10-05 (issue 617r2), and undoing itself. It lowered the
+# buddies' level-20 tier items (the vanilla starter kit's) to required level
+# 20, originals saved. Buddies are now dressed from gearsets whose items
+# already fit their level, and nothing else needs the lowered levels, so on
+# every install it now applies its own revert form: the saved levels are put
+# back (a database it never touched is left as it is). Once every database
+# has been through an install, E048 can leave the basic list for good.
+# (The owner, 2026-10-05, asked whether copies of those items without a
+# level requirement could replace it: new item numbers aren't in the
+patch_E048_basic_buddy_kit_required_level() {
+    unpatch_E048_basic_buddy_kit_required_level
+}
+
+unpatch_E048_basic_buddy_kit_required_level() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/30-buddy-kit-required-level.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/30-buddy-kit-required-level.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E048_REVERT" "${SQL_FILE}"; then
+        echo "  [E048] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E048] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_world" "$(_profile_db_name acore_world)" || return 1
+
+    echo "  [E048] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E047_basic_world_boss_timers() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/05-world-boss-timers.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_characters.src/05-world-boss-timers.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E047] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E047] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E047] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E047_basic_world_boss_timers() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/05-world-boss-timers.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_characters.src/05-world-boss-timers.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E047_REVERT" "${SQL_FILE}"; then
+        echo "  [E047] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E047] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)" || return 1
+
+    echo "  [E047] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E041_basic_death_knight_souls() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/03-death-knight-souls.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_characters.src/03-death-knight-souls.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E041] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E041] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E041] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E041_basic_death_knight_souls() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/03-death-knight-souls.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_characters.src/03-death-knight-souls.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E041_REVERT" "${SQL_FILE}"; then
+        echo "  [E041] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E041] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)" || return 1
+
+    echo "  [E041] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E056_basic_buddy_stand_ins() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/06-buddy-stand-ins.sql"
+    local SRC_FILE="$(_buddy_sql_src db_characters)/06-buddy-stand-ins.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E056] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E056] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E056] Copying apply-form source → ${SQL_FILE}"
+    mkdir -p "$(dirname "${SQL_FILE}")"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E056_basic_buddy_stand_ins() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/06-buddy-stand-ins.sql"
+    local SRC_FILE="$(_buddy_sql_src db_characters)/06-buddy-stand-ins.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E056_REVERT" "${SQL_FILE}"; then
+        echo "  [E056] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E056] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)" || return 1
+
+    echo "  [E056] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E042_basic_buddy_roster() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/04-buddy-roster.sql"
+    local SRC_FILE="$(_buddy_sql_src db_characters)/04-buddy-roster.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E042] Apply source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && cmp -s "${SRC_FILE}" "${SQL_FILE}"; then
+        echo "  [E042] Active file already matches apply-form content"
+        return 0
+    fi
+
+    echo "  [E042] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E042_basic_buddy_roster() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/04-buddy-roster.sql"
+    local SRC_FILE="$(_buddy_sql_src db_characters)/04-buddy-roster.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E042_REVERT" "${SQL_FILE}"; then
+        echo "  [E042] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E042] Revert source missing: ${SRC_FILE}"; return 1; }
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)" || return 1
+
+    echo "  [E042] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+patch_E059_beta_narrator_library() {
+    local SCRAPER="${DIR}/scripts/gutenberg-scraper"
+    local TEXTS="${DIR}/src/lua-beta/data/texts"
+
+    [[ ! -x "${SCRAPER}" ]] && { echo "  [E059] Scraper missing or not runnable: ${SCRAPER}"; return 1; }
+    command -v luajit > /dev/null || { echo "  [E059] luajit not found; the scraper is a LuaJIT script"; return 1; }
+
+    echo "  [E059] Building the narrators' library into ${TEXTS}"
+    if ! "${SCRAPER}" "${DIR}"; then
+        echo "  [E059] Some books were not written (listed above); the library is incomplete"
+        return 1
+    fi
+}
+
+unpatch_E059_beta_narrator_library() {
+    local TEXTS="${DIR}/src/lua-beta/data/texts"
+
+    if [[ ! -d "${TEXTS}" ]]; then
+        echo "  [E059] No narrators' library to remove"
+        return 0
+    fi
+    echo "  [E059] Removing the cut books in ${TEXTS} (the shelf and the scraper stay)"
+    rm -rf "${TEXTS}"
+}
+
+patch_E061_beta_narrator_reading() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/02-narrator-reading.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_characters.src/02-narrator-reading.apply.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E061] Apply source missing: ${SRC_FILE}"; return 1; }
+    mkdir -p "${DIR}/sql/${PROFILE}/db_characters"
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E061_APPLY" "${SQL_FILE}"; then
+        echo "  [E061] Active file already holds apply-form content"
+        return 0
+    fi
+
+    echo "  [E061] Copying apply-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+
+unpatch_E061_beta_narrator_reading() {
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/02-narrator-reading.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_characters.src/02-narrator-reading.revert.sql"
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E061_REVERT" "${SQL_FILE}"; then
+        echo "  [E061] Active file already holds revert-form content"
+        return 0
+    fi
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [E061] Revert source missing: ${SRC_FILE}"; return 1; }
+    mkdir -p "${DIR}/sql/${PROFILE}/db_characters"
+
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_characters" "$(_profile_db_name acore_characters)" || return 1
+
+    echo "  [E061] Copying revert-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}

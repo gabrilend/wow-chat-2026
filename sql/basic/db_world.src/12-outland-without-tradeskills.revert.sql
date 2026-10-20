@@ -1,0 +1,105 @@
+-- MARKER_E027_REVERT basic-outland-without-tradeskills
+
+CREATE TABLE IF NOT EXISTS `basic_155n_gameobject` LIKE `gameobject`;
+CREATE TABLE IF NOT EXISTS `basic_155n_gameobject_addon` LIKE `gameobject_addon`;
+CREATE TABLE IF NOT EXISTS `basic_155n_game_event_gameobject` LIKE `game_event_gameobject`;
+CREATE TABLE IF NOT EXISTS `basic_155n_pool_gameobject` LIKE `pool_gameobject`;
+CREATE TABLE IF NOT EXISTS `basic_155n_creature` LIKE `creature`;
+CREATE TABLE IF NOT EXISTS `basic_155n_creature_addon` LIKE `creature_addon`;
+CREATE TABLE IF NOT EXISTS `basic_155n_game_event_creature` LIKE `game_event_creature`;
+CREATE TABLE IF NOT EXISTS `basic_155n_pool_creature` LIKE `pool_creature`;
+CREATE TABLE IF NOT EXISTS `basic_155n_pool_template` LIKE `pool_template`;
+CREATE TABLE IF NOT EXISTS `basic_155n_pool_pool` LIKE `pool_pool`;
+CREATE TABLE IF NOT EXISTS `basic_155n_game_event_pool` LIKE `game_event_pool`;
+CREATE TABLE IF NOT EXISTS `basic_155n_skinloot` (`entry` int unsigned NOT NULL, `skinloot` int unsigned NOT NULL, PRIMARY KEY (`entry`));
+CREATE TABLE IF NOT EXISTS `basic_155n_fishing_skill` (`entry` int unsigned NOT NULL, `skill` smallint DEFAULT NULL, PRIMARY KEY (`entry`));
+CREATE TABLE IF NOT EXISTS `basic_155n_fishing_loot` LIKE `fishing_loot_template`;
+CREATE TABLE IF NOT EXISTS `basic_155n_trainer_spell` LIKE `trainer_spell`;
+CREATE TABLE IF NOT EXISTS `basic_155n_creature_loot` LIKE `creature_loot_template`;
+CREATE TABLE IF NOT EXISTS `basic_155n_reference_loot` LIKE `reference_loot_template`;
+CREATE TABLE IF NOT EXISTS `basic_155n_gameobject_loot` LIKE `gameobject_loot_template`;
+CREATE TABLE IF NOT EXISTS `basic_155n_item_loot` LIKE `item_loot_template`;
+CREATE TABLE IF NOT EXISTS `basic_155n_npc_vendor` LIKE `npc_vendor`;
+CREATE TABLE IF NOT EXISTS `basic_155n_lootid` (`entry` int unsigned NOT NULL, `lootid` int unsigned NOT NULL, PRIMARY KEY (`entry`));
+CREATE TABLE IF NOT EXISTS `basic_155n_conditions` LIKE `conditions`;
+CREATE TABLE IF NOT EXISTS `basic_155n_linked_respawn` LIKE `linked_respawn`;
+CREATE TABLE IF NOT EXISTS `basic_155n_skinning_loot` LIKE `skinning_loot_template`;
+CREATE TABLE IF NOT EXISTS `basic_155n_quest_skill` (`ID` int unsigned NOT NULL, `RequiredSkillPoints` smallint unsigned NOT NULL, PRIMARY KEY (`ID`));
+CREATE TABLE IF NOT EXISTS `basic_155n_skill_conditions` LIKE `conditions`;
+
+INSERT IGNORE INTO `pool_template`          SELECT * FROM `basic_155n_pool_template`;
+INSERT IGNORE INTO `pool_pool`              SELECT * FROM `basic_155n_pool_pool`;
+INSERT IGNORE INTO `game_event_pool`        SELECT * FROM `basic_155n_game_event_pool`;
+INSERT IGNORE INTO `gameobject`             SELECT * FROM `basic_155n_gameobject`;
+INSERT IGNORE INTO `gameobject_addon`       SELECT * FROM `basic_155n_gameobject_addon`;
+INSERT IGNORE INTO `game_event_gameobject`  SELECT * FROM `basic_155n_game_event_gameobject`;
+INSERT IGNORE INTO `pool_gameobject`        SELECT * FROM `basic_155n_pool_gameobject`;
+INSERT IGNORE INTO `creature`               SELECT * FROM `basic_155n_creature`;
+INSERT IGNORE INTO `creature_addon`         SELECT * FROM `basic_155n_creature_addon`;
+INSERT IGNORE INTO `game_event_creature`    SELECT * FROM `basic_155n_game_event_creature`;
+INSERT IGNORE INTO `pool_creature`          SELECT * FROM `basic_155n_pool_creature`;
+
+UPDATE `creature_template` t JOIN `basic_155n_skinloot` b ON b.`entry` = t.`entry` SET t.`skinloot` = b.`skinloot`;
+
+DELETE f FROM `skill_fishing_base_level` f JOIN `basic_155n_fishing_skill` b ON b.`entry` = f.`entry` WHERE b.`skill` IS NULL;
+UPDATE `skill_fishing_base_level` f JOIN `basic_155n_fishing_skill` b ON b.`entry` = f.`entry` SET f.`skill` = b.`skill` WHERE b.`skill` IS NOT NULL;
+INSERT IGNORE INTO `fishing_loot_template`  SELECT * FROM `basic_155n_fishing_loot`;
+
+INSERT IGNORE INTO `trainer_spell`          SELECT * FROM `basic_155n_trainer_spell`;
+INSERT IGNORE INTO `creature_loot_template` SELECT * FROM `basic_155n_creature_loot`;
+INSERT IGNORE INTO `reference_loot_template` SELECT * FROM `basic_155n_reference_loot`;
+INSERT IGNORE INTO `gameobject_loot_template` SELECT * FROM `basic_155n_gameobject_loot`;
+INSERT IGNORE INTO `item_loot_template`     SELECT * FROM `basic_155n_item_loot`;
+INSERT IGNORE INTO `npc_vendor`             SELECT * FROM `basic_155n_npc_vendor`;
+
+UPDATE `creature_template` t JOIN `basic_155n_lootid` b ON b.`entry` = t.`entry` SET t.`lootid` = b.`lootid`;
+INSERT IGNORE INTO `conditions`             SELECT * FROM `basic_155n_conditions`;
+INSERT IGNORE INTO `linked_respawn`         SELECT * FROM `basic_155n_linked_respawn`;
+INSERT IGNORE INTO `skinning_loot_template` SELECT * FROM `basic_155n_skinning_loot`;
+
+UPDATE `quest_template_addon` q JOIN `basic_155n_quest_skill` b ON b.`ID` = q.`ID` SET q.`RequiredSkillPoints` = b.`RequiredSkillPoints`;
+DELETE c FROM `conditions` c JOIN `basic_155n_skill_conditions` b
+  ON  b.`SourceTypeOrReferenceId` = c.`SourceTypeOrReferenceId` AND b.`SourceGroup` = c.`SourceGroup`
+  AND b.`SourceEntry` = c.`SourceEntry` AND b.`SourceId` = c.`SourceId` AND b.`ElseGroup` = c.`ElseGroup`
+  AND b.`ConditionTypeOrReference` = c.`ConditionTypeOrReference` AND b.`ConditionTarget` = c.`ConditionTarget`
+  AND b.`ConditionValue1` = c.`ConditionValue1` AND c.`ConditionValue2` = 300 AND b.`ConditionValue3` = c.`ConditionValue3`;
+INSERT IGNORE INTO `conditions`             SELECT * FROM `basic_155n_skill_conditions`;
+
+DROP TABLE `basic_155n_gameobject`;
+DROP TABLE `basic_155n_gameobject_addon`;
+DROP TABLE `basic_155n_game_event_gameobject`;
+DROP TABLE `basic_155n_pool_gameobject`;
+DROP TABLE `basic_155n_creature`;
+DROP TABLE `basic_155n_creature_addon`;
+DROP TABLE `basic_155n_game_event_creature`;
+DROP TABLE `basic_155n_pool_creature`;
+DROP TABLE `basic_155n_pool_template`;
+DROP TABLE `basic_155n_pool_pool`;
+DROP TABLE `basic_155n_game_event_pool`;
+DROP TABLE `basic_155n_skinloot`;
+DROP TABLE `basic_155n_fishing_skill`;
+DROP TABLE `basic_155n_fishing_loot`;
+DROP TABLE `basic_155n_trainer_spell`;
+DROP TABLE `basic_155n_creature_loot`;
+DROP TABLE `basic_155n_reference_loot`;
+DROP TABLE `basic_155n_gameobject_loot`;
+DROP TABLE `basic_155n_item_loot`;
+DROP TABLE `basic_155n_npc_vendor`;
+DROP TABLE `basic_155n_lootid`;
+DROP TABLE `basic_155n_conditions`;
+DROP TABLE `basic_155n_linked_respawn`;
+DROP TABLE `basic_155n_skinning_loot`;
+DROP TABLE `basic_155n_quest_skill`;
+DROP TABLE `basic_155n_skill_conditions`;
+DROP TABLE IF EXISTS `tmp_155n_live_refs`;
+DROP TABLE IF EXISTS `tmp_155n_locks`;
+DROP TABLE IF EXISTS `tmp_155n_areas`;
+DROP TABLE IF EXISTS `tmp_155n_rank_spells`;
+DROP TABLE IF EXISTS `tmp_155n_zones`;
+DROP TABLE IF EXISTS `tmp_155n_maps`;
+DROP TABLE IF EXISTS `tmp_155n_go`;
+DROP TABLE IF EXISTS `tmp_155n_cr`;
+DROP TABLE IF EXISTS `tmp_155n_pools`;
+DROP TABLE IF EXISTS `tmp_155n_empty`;
+DROP TABLE IF EXISTS `tmp_155n_recipes`;
+

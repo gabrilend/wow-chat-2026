@@ -1,0 +1,167 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local L = DIR .. "/src/lua-cc-test/lib/"
+local Routes, Crossings = dofile(L .. "arathi-basin-routes.lua"), dofile(L .. "arathi-basin-crossings.lua")
+local Squads, Formations = dofile(L .. "arathi-basin-squads.lua"), dofile(L .. "arathi-basin-formations.lua")
+
+local NW, SE = "north-west home", "south-east home"
+local results = {}
+
+local function rng(seed)
+    local state = seed
+    return function(n)
+        state = (1103515245 * state + 12345) % 2147483648
+        return math.floor(state / 2147483648 * n) + 1
+    end
+end
+
+local function is_base(p) for _, b in ipairs(Crossings.BASES) do if b == p then return true end end return false end
+results.maps = {}
+for _, map in ipairs({ Crossings.shared, Crossings.literal }) do
+    local g = Routes.graph(Crossings.as_roads(map))
+    local entry = { name = map.name, about = map.about, roads = #map.roads, first_base = {}, hops = {}, visits = {} }
+    for _, side_home in ipairs({ { "alliance", NW }, { "horde", SE } }) do
+        local side, home = side_home[1], side_home[2]
+        local m = Routes.new_match(g, { alliance = NW, horde = SE })
+        local firsts, hops_total, visits = {}, 0, {}
+        for _ = 1, 60 do
+            local r = Routes.walk(m, side, nil, nil, 20)
+            local first, hop
+            for k = 2, #r do
+                if is_base(r[k]) then
+                    visits[r[k]] = (visits[r[k]] or 0) + 1
+                    if not first then first, hop = r[k], k - 1 end
+                end
+            end
+            if first then firsts[first] = (firsts[first] or 0) + 1; hops_total = hops_total + hop end
+        end
+        entry.first_base[side] = firsts
+        entry.hops[side] = hops_total / 60
+        entry.visits[side] = visits
+    end
+    for _, ending in ipairs({ "stop", "walk on" }) do
+        local m = Routes.new_match(g, { alliance = NW, horde = SE }, { route_end = ending })
+        local through, reached = 0, 0
+        for _ = 1, 30 do
+            local r = Routes.walk(m, "alliance", nil, nil, 30)
+            for k = 2, #r do if r[k] == SE then reached = reached + 1; if k < #r then through = through + 1 end; break end end
+        end
+        entry["route_end_" .. ending:gsub(" ", "_")] = { reached = reached, went_on = through }
+    end
+    results.maps[#results.maps + 1] = entry
+end
+
+results.claimed = {}
+for _, claimed in ipairs({ "assault", "capture" }) do
+    local sd = Squads.new_side(NW, { claimed = claimed })
+    sd.waiting = { { place = "Farm", units = { { id = "a", role = "damage" }, { id = "b", role = "damage" }, { id = "c", role = "healer" } } } }
+    Squads.base_event(sd, "Farm", "assaulted")
+    local at_wave = sd.waiting[1].place
+    results.claimed[#results.claimed + 1] = {
+        reading = claimed,
+        appears_at = at_wave,
+        story = at_wave == "Farm"
+            and "The trio appears at the Farm at the wave (30 s), in the middle of the enemy's capture, with 40 seconds left to click the banner back."
+            or  "The trio is moved home on the click (10 s) and appears at home at the wave (30 s); the Farm's defence is left to whoever is already there.",
+    }
+end
+
+results.tanks = {}
+for _, tanks in ipairs({ "home only", "any group" }) do
+    local draw = rng(20261008)
+    local sd = Squads.new_side(NW, { tanks = tanks })
+    local waits, left_at, stranded_peak, made = {}, {}, 0, 0
+    local held = {}
+    for t = 0, 600, 12 do
+        if draw(4) == 1 then
+            held = {}
+            for _, b in ipairs(Crossings.BASES) do if draw(2) == 1 then held[#held + 1] = b end end
+        end
+        if draw(4) == 1 then made = made + 1; Squads.captured(sd, { id = "tank" .. made, role = "tank", since = t }) end
+        for k = 1, draw(6) - 1 do
+            Squads.died(sd, { id = t .. "-" .. k, role = (k % 3 == 0) and "healer" or "damage" })
+        end
+        local before = {}
+        for _, tk in ipairs(sd.tanks) do before[tk.id] = tk.since end
+        Squads.depart(sd, held, draw)
+        local still = {}
+        for _, tk in ipairs(sd.tanks) do still[tk.id] = true end
+        for id, since in pairs(before) do if not still[id] then waits[#waits + 1] = t - since end end
+        stranded_peak = math.max(stranded_peak, #sd.tanks)
+        if t % 30 == 0 then Squads.wave(sd) end
+    end
+    local sum = 0
+    for _, w in ipairs(waits) do sum = sum + w end
+    results.tanks[#results.tanks + 1] = {
+        reading = tanks, tanks_made = made, tanks_left = #waits,
+        mean_wait = (#waits > 0) and (sum / #waits) or 0,
+        still_waiting_at_end = #sd.tanks, most_waiting_at_once = stranded_peak,
+    }
+end
+
+results.places = {
+    { places = 15, trios = 5,  note = "the stock side: five trios" },
+    { places = 30, trios = 10, note = "doubled, as the stand-in plan (617t) doubled buddies' battlegrounds: ten trios" },
+}
+results.formations = {}
+for _, spacing in ipairs({ 3, 5 }) do
+    for _, shape in ipairs({ "triangle", "diamond" }) do
+        local u = shape == "diamond"
+            and { { id = "t", role = "tank" }, { id = "d1", role = "damage" }, { id = "d2", role = "damage" }, { id = "h", role = "healer" } }
+            or  { { id = "d1", role = "damage" }, { id = "d2", role = "damage" }, { id = "h", role = "healer" } }
+        local spots = Formations.slots(u, shape, 0, 0, 0, { spacing = spacing })
+        local minx, maxx, miny, maxy, far = math.huge, -math.huge, math.huge, -math.huge, 0
+        for id, p in pairs(spots) do
+            minx, maxx, miny, maxy = math.min(minx, p[1]), math.max(maxx, p[1]), math.min(miny, p[2]), math.max(maxy, p[2])
+            if id ~= "h" then far = math.max(far, math.sqrt((p[1] - spots.h[1]) ^ 2 + (p[2] - spots.h[2]) ^ 2)) end
+        end
+        results.formations[#results.formations + 1] = { spacing = spacing, shape = shape, depth = maxx - minx, width = maxy - miny, healer_to_farthest = far }
+    end
+end
+
+local function json(v, ind)
+    ind = ind or ""
+    local t = type(v)
+    if t == "number" then return (v == math.floor(v)) and string.format("%d", v) or string.format("%.2f", v) end
+    if t == "string" then return '"' .. v:gsub('\\', '\\\\'):gsub('"', '\\"') .. '"' end
+    if t == "boolean" then return tostring(v) end
+    if t == "table" then
+        if #v > 0 or next(v) == nil then
+            local parts = {}
+            for _, x in ipairs(v) do parts[#parts + 1] = json(x, ind .. "  ") end
+            return "[" .. table.concat(parts, ", ") .. "]"
+        end
+        local keys = {}
+        for k in pairs(v) do keys[#keys + 1] = k end
+        table.sort(keys)
+        local parts = {}
+        for _, k in ipairs(keys) do parts[#parts + 1] = ind .. '  "' .. k .. '": ' .. json(v[k], ind .. "  ") end
+        return "{\n" .. table.concat(parts, ",\n") .. "\n" .. ind .. "}"
+    end
+    return "null"
+end
+local out = DIR .. "/tmp/shared-memory/arathi-basin-variants.json"
+local f = assert(io.open(out, "w"))
+f:write('{"generated_by": "scripts/compare-arathi-basin-variants", "data": ', json(results), "}\n")
+f:close()
+
+for _, mp in ipairs(results.maps) do
+    print(string.format("map %-8s roads %2d  roads to first base: alliance %.2f, horde %.2f", mp.name, mp.roads, mp.hops.alliance, mp.hops.horde))
+    local fb = {}
+    for b, c in pairs(mp.first_base.alliance) do fb[#fb + 1] = b .. " " .. c end
+    table.sort(fb)
+    print("   alliance first bases: " .. table.concat(fb, ", "))
+    print(string.format("   route end: stop reaches the enemy home %d/30 (on past it %d); walk on %d/30 (on past it %d)",
+        mp.route_end_stop.reached, mp.route_end_stop.went_on, mp.route_end_walk_on.reached, mp.route_end_walk_on.went_on))
+end
+for _, c in ipairs(results.claimed) do print("claimed " .. c.reading .. ": appears at " .. c.appears_at) end
+for _, t in ipairs(results.tanks) do
+    print(string.format("tanks %-9s made %d, left %d, mean wait %.1f s, still waiting at end %d, most at once %d",
+        t.reading, t.tanks_made, t.tanks_left, t.mean_wait, t.still_waiting_at_end, t.most_waiting_at_once))
+end
+for _, fm in ipairs(results.formations) do
+    print(string.format("formation %-8s spacing %d: %.1f deep, %.1f wide, healer to farthest %.1f yd", fm.shape, fm.spacing, fm.depth, fm.width, fm.healer_to_farthest))
+end
+print("written: " .. out:sub(#DIR + 2))

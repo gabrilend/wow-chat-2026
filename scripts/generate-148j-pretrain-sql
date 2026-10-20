@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+
+MYSQL_BIN="${DIR}/mysql/installed-files/bin/mysql"
+MYSQL_SOCKET="${DIR}/mysql/databases/mysql.sock"
+SUBSTRATE_DB="acore_world_release"
+OUTPUT_DIR="${DIR}/sql/vanilla/db_world.src"
+OUTPUT_FILE="${OUTPUT_DIR}/04-pretrain-abilities.apply.sql"
+NOTE_PREFIX="vanilla-148j"
+
+require_mysql_running() {
+    if [[ ! -S "${MYSQL_SOCKET}" ]]; then
+        echo "ERROR: MySQL socket not found at ${MYSQL_SOCKET}" >&2
+        echo "       Start MySQL first: ${DIR}/scripts/start-mysql" >&2
+        exit 1
+    fi
+    if ! "${MYSQL_BIN}" --no-defaults --socket="${MYSQL_SOCKET}" \
+        -u ritz -pmenardi "${SUBSTRATE_DB}" \
+        -e "SELECT 1;" >/dev/null 2>&1; then
+        echo "ERROR: cannot read ${SUBSTRATE_DB} as user ritz" >&2
+        exit 1
+    fi
+}
+
+count_pairs() {
+    "${MYSQL_BIN}" --no-defaults --socket="${MYSQL_SOCKET}" \
+        -u ritz -pmenardi "${SUBSTRATE_DB}" -N -e "
+        SELECT COUNT(DISTINCT t.Requirement, ts.SpellId)
+        FROM trainer t
+        JOIN trainer_spell ts ON ts.TrainerId = t.Id
+        WHERE t.Type = 0
+          AND t.Requirement BETWEEN 1 AND 11
+          AND t.Requirement != 6
+          AND ts.ReqLevel <= 20;"
+}
+
+emit_header() {
+    local pair_count="$1"
+    cat > "${OUTPUT_FILE}" <<HEADER_END
+-- ============================================================================
+-- 04-pretrain-abilities.sql (148j)
+-- ============================================================================
+-- Grants every newly-created vanilla character the full set of class-trainer
+-- spells they would normally have learned by level 20. Without this file, a
+-- level-20 starting character (per C007c) wakes up knowing only their level-1
+-- starter abilities — no Dual Wield for rogues, no Frostbolt rank 4 for
+-- mages, no Charge for warriors. With it, the spellbook matches what a
+-- retail-leveled level-20 character would carry.
+--
+-- Database: acore_world_vanilla
+--
+-- Generation: produced by scripts/generate-148j-pretrain-sql. Do not edit
+-- by hand — re-run the generator after upstream AzerothCore trainer data
+-- shifts and re-commit the output. The query joins the trainer-system
+-- tables filtered to Type=0 (class trainer) with ReqLevel<=20, deduplicates
+-- by (class, spell), and emits one INSERT per row.
+--
+-- Application: discovered and applied by AzerothCore's UpdateFetcher via
+-- the updates_include registration that E008 installs in
+-- acore_world_vanilla.updates_include. AC handles hashing, change
+-- detection, and the updates-table accounting — this file just sits in
+-- ${OUTPUT_DIR#${DIR}/} and gets picked up on each worldserver boot.
+--
+-- Re-applicability: the DELETE-then-INSERT pattern below scopes its
+-- cleanup to rows tagged with the Note prefix "${NOTE_PREFIX}-", so
+-- re-running this file produces the same end state without disturbing
+-- inserts from other vanilla migrations.
+--
+-- Pair count: ${pair_count} (class, spell) rows. DK (class 6) excluded
+-- per 148a; the remaining nine classes are represented.
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- 1. Clear prior rows from this migration so re-applying is safe. The Note
+--    prefix is the migration's signature; only rows it owns are touched.
+-- ----------------------------------------------------------------------------
+
+DELETE FROM playercreateinfo_spell_custom WHERE Note LIKE '${NOTE_PREFIX}-%';
+
+-- ----------------------------------------------------------------------------
+-- 2. Insert one row per (class, spell). race=0 means "every race that can
+--    play this class" — the engine fans out at character creation. The
+--    Note column carries a per-row tag identifying class + spell so a
+--    future SELECT can audit what 148j granted.
+-- ----------------------------------------------------------------------------
+
+HEADER_END
+}
+
+emit_inserts() {
+    "${MYSQL_BIN}" --no-defaults --socket="${MYSQL_SOCKET}" \
+        -u ritz -pmenardi "${SUBSTRATE_DB}" -N -e "
+        SELECT CONCAT(
+            'INSERT INTO playercreateinfo_spell_custom (racemask, classmask, Spell, Note) VALUES (0, ',
+            (1 << (cs.class_id - 1)), ', ', cs.spell_id,
+            ', ''${NOTE_PREFIX}-c', cs.class_id, '-s', cs.spell_id, ''');')
+        FROM (
+            SELECT DISTINCT t.Requirement AS class_id, ts.SpellId AS spell_id
+            FROM trainer t
+            JOIN trainer_spell ts ON ts.TrainerId = t.Id
+            WHERE t.Type = 0
+              AND t.Requirement BETWEEN 1 AND 11
+              AND t.Requirement != 6
+              AND ts.ReqLevel <= 20
+        ) AS cs
+        ORDER BY cs.class_id, cs.spell_id;" \
+    >> "${OUTPUT_FILE}"
+}
+
+emit_footer() {
+    cat >> "${OUTPUT_FILE}" <<'FOOTER_END'
+
+-- ============================================================================
+-- End of 04-pretrain-abilities.sql
+-- ============================================================================
+FOOTER_END
+}
+
+main() {
+    require_mysql_running
+    mkdir -p "${OUTPUT_DIR}"
+
+    local pair_count
+    pair_count="$(count_pairs)"
+
+    echo "Generating ${OUTPUT_FILE}"
+    echo "  source: ${SUBSTRATE_DB}.trainer ⋈ trainer_spell"
+    echo "  filter: Type=0 (class), Requirement 1..11 except 6, ReqLevel<=20"
+    echo "  rows:   ${pair_count} distinct (class, spell)"
+
+    emit_header "${pair_count}"
+    emit_inserts
+    emit_footer
+
+    echo "Done. Wrote ${OUTPUT_FILE}"
+}
+
+main

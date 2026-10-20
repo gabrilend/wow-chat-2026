@@ -1,0 +1,112 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+local SD  = "/mnt/kaun/stable-diffusion"
+local LIBS = "/home/ritz/programming/ai-stuff/libs/lua"
+do
+    local i = 1
+    while i <= #arg do
+        local a = arg[i]
+        if a == "--sd-dir" then SD = arg[i + 1]; i = i + 2
+        elseif a == "--libs" then LIBS = arg[i + 1]; i = i + 2
+        elseif a:sub(1, 2) == "--" then error("generate-gear-gallery: unknown option " .. a .. " (known: --sd-dir DIR, --libs DIR)")
+        else DIR = a; i = i + 1 end
+    end
+end
+package.path = LIBS .. "/?.lua;" .. package.path
+local json = require("dkjson")
+local HERE   = DIR .. "/assets/gear-designs"
+local HTML   = DIR .. "/docs/HTML"
+local OUT    = HTML .. "/gear-gallery.html"
+local VIEWS  = HTML .. "/gear-gallery/views"
+local SD_OUT = SD .. "/output/gear-designs"
+local P = dofile(DIR .. "/src/tools/gear-designs/profiles.lua")
+local Q = dofile(HERE .. "/design-questions.lua")
+local THUMB_WIDTH = 480
+
+local function lines_of(cmd)
+    local p = io.popen(cmd)
+    local out = {}
+    for l in p:lines() do out[#out + 1] = l end
+    p:close()
+    return out
+end
+local function q(s) return "'" .. tostring(s):gsub("'", "'\\''") .. "'" end
+
+local profiles, rounds = {}, 0
+for _, name in ipairs(lines_of("ls -1 " .. q(HERE .. "/profiles") .. " 2>/dev/null")) do
+    if name:match("^round%-%d+%.lua$") then
+        local r = dofile(HERE .. "/profiles/" .. name)
+        rounds = rounds + 1
+        for _, pr in ipairs(r.profiles) do
+            pr.round = r.round
+            profiles[#profiles + 1] = pr
+        end
+    end
+end
+assert(#profiles > 0, "generate-gear-gallery: no profiles in " .. HERE .. "/profiles (run scripts/generate-gear-profiles first)")
+
+local votes = {}
+do
+    local f = io.open(HERE .. "/votes.tsv")
+    if f then
+        for line in f:lines() do
+            local id, up, down = line:match("^(%x+)\t(%d+)\t(%d+)")
+            if id then votes[id] = { up = tonumber(up), down = tonumber(down) } end
+        end
+        f:close()
+    end
+end
+
+local known = {}
+for _, pr in ipairs(profiles) do known[pr.id] = true end
+local views, publish, made, strays = {}, {}, 0, {}
+for _, id in ipairs(lines_of("ls -1 " .. q(SD_OUT) .. " 2>/dev/null")) do
+    if not known[id] then
+        strays[#strays + 1] = id
+    else
+        for _, png in ipairs(lines_of("ls -1t " .. q(SD_OUT .. "/" .. id) .. " 2>/dev/null")) do
+            if png:match("^view_.*%.png$") then
+                local src = SD_OUT .. "/" .. id .. "/" .. png
+                local rel = "gear-gallery/views/" .. id .. "/" .. png:gsub("%.png$", ".webp")
+                local dest = HTML .. "/" .. rel
+                local fresh = lines_of("[ -f " .. q(dest) .. " ] && [ " .. q(dest) .. " -nt " .. q(src) .. " ] && echo fresh")[1]
+                if not fresh then
+                    os.execute("mkdir -p " .. q(dest:match("^(.*)/")))
+                    local ok = os.execute("magick " .. q(src) .. " -resize " .. THUMB_WIDTH .. "x -quality 82 " .. q(dest))
+                    if ok ~= 0 and ok ~= true then error("generate-gear-gallery: couldn't make " .. dest .. " from " .. src .. " (is ImageMagick's magick installed?)") end
+                    made = made + 1
+                end
+                views[id] = views[id] or {}
+                views[id][#views[id] + 1] = rel
+                publish[#publish + 1] = rel .. "\t" .. dest
+            end
+        end
+    end
+end
+
+local data = {
+    questions = Q.questions, pieces = Q.pieces, profiles = profiles, votes = votes, views = views,
+    rounds = rounds, made = os.date("!%Y-%m-%d %H:%M UTC"),
+    rule = { net = P.ANSWERED_NET, margin = P.ANSWERED_MARGIN },
+}
+local text = json.encode(data):gsub("</", "<\\/")
+local tf = assert(io.open(DIR .. "/scripts/templates/gear-gallery.html"))
+local page = tf:read("*a")
+tf:close()
+local at = assert(page:find("/*__DATA__*/", 1, true), "generate-gear-gallery: the template lost its /*__DATA__*/ marker")
+page = page:sub(1, at - 1) .. text .. page:sub(at + #"/*__DATA__*/")
+local f = assert(io.open(OUT, "w"))
+f:write(page)
+f:close()
+os.execute("mkdir -p " .. q(HTML .. "/gear-gallery"))
+local pf = assert(io.open(HTML .. "/gear-gallery/publish-files.txt", "w"))
+pf:write("# published path\tsource (supporting files of docs/HTML/gear-gallery.html; generated)\n")
+for _, l in ipairs(publish) do pf:write(l, "\n") end
+pf:close()
+
+local pictured = 0
+for _ in pairs(views) do pictured = pictured + 1 end
+print(string.format("generate-gear-gallery: %d designs in %d rounds, %d with pictures (%d copies made), %d voted -> %s",
+    #profiles, rounds, pictured, made, (function() local n = 0 for _ in pairs(votes) do n = n + 1 end return n end)(), OUT))
+for _, id in ipairs(strays) do print("  warning: " .. SD_OUT .. "/" .. id .. " matches no design id; skipped") end

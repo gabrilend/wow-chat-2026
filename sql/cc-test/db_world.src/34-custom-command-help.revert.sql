@@ -1,0 +1,2 @@
+-- MARKER_E053_REVERT
+DELETE FROM `command` WHERE `name` IN ('buddy area show', 'buddy area spawns', 'buddy bed add', 'buddy bed link', 'buddy bed list', 'buddy bed remove', 'buddy bed unlink', 'buddy explore', 'buddy gems', 'buddy kit', 'buddy look', 'buddy record delete', 'buddy record discard', 'buddy record list', 'buddy record start', 'buddy record stop', 'buddy standin at', 'buddy standin dismiss', 'buddy standin list', 'buddy standin make', 'buddy town here', 'buddy town remove', 'buddy town show', 'buddy trace');

@@ -1,0 +1,31 @@
+#!/bin/bash
+
+DIR="/mnt/kaun/wow-chat-2026"
+if [[ -n "$1" && "$1" != "-"* ]]; then
+    DIR="$1"
+    shift
+fi
+
+MYSQL_DIR="${DIR}/mysql"
+INSTALL_DIR="${MYSQL_DIR}/installed-files"
+SOCKET="${MYSQL_DIR}/databases/mysql.sock"
+
+SECRETS_FILE="${DIR}/secrets.conf"
+if [[ -f "${SECRETS_FILE}" ]]; then
+    source "${SECRETS_FILE}"
+fi
+
+DB_USER="${DB_USER:-root}"
+
+if [[ ! -S "${SOCKET}" ]]; then
+    echo "ERROR: MySQL socket not found at ${SOCKET}"
+    echo "Is MySQL running? Try: ${DIR}/scripts/start-mysql"
+    exit 1
+fi
+
+exec "${INSTALL_DIR}/bin/mysql" \
+    --no-defaults \
+    --socket="${SOCKET}" \
+    -u "${DB_USER}" \
+    -p"${DB_PASS}" \
+    "$@"

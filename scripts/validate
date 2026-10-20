@@ -1,0 +1,181 @@
+#!/bin/bash
+
+DIR="/mnt/kaun/wow-chat-2026"
+
+
+if [[ -f "${DIR}/.profile" ]]; then
+    PROFILE="$(cat "${DIR}/.profile")"
+else
+    PROFILE="release"
+fi
+DEFAULT_PROFILE="${PROFILE}"
+
+
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "${1}" in
+            --profile)
+                if [[ -n "${2:-}" ]]; then
+                    PROFILE="${2}"
+                    shift 2
+                else
+                    echo "Error: --profile requires a profile name"
+                    exit 1
+                fi
+                ;;
+            --profile=*)
+                PROFILE="${1#*=}"
+                if [[ -z "${PROFILE}" ]]; then
+                    echo "Error: --profile requires a profile name"
+                    exit 1
+                fi
+                shift
+                ;;
+            --help|-h)
+                show_help
+                exit 0
+                ;;
+            *)
+                echo "Error: unrecognized argument '${1}'"
+                echo "Run with --help to see available options."
+                exit 1
+                ;;
+        esac
+    done
+}
+
+show_help() {
+    echo "Usage: ./scripts/validate [options]"
+    echo ""
+    echo "Validate shadow worldserver build before promotion."
+    echo "Starts worldserver from shadow, waits for initialization, then stops."
+    echo ""
+    echo "Options:"
+    echo "  --profile <name>   Use specific profile (default: ${DEFAULT_PROFILE})"
+    echo "  --help             Show this help message"
+    echo ""
+    echo "Workflow:"
+    echo "  1. ./scripts/compile     - Build to shadow"
+    echo "  2. ./scripts/validate    - Test shadow build"
+    echo "  3. ./scripts/promote     - Copy shadow to main"
+}
+
+
+get_profile_paths() {
+    INSTALL_DIR_SHADOW="${DIR}/installed-files-shadow"
+    MYSQL_DIR="${DIR}/mysql/installed-files"
+}
+
+validate_shadow_worldserver() {
+    local MAX_TIMEOUT=${VALIDATE_MAX_TIMEOUT:-300}
+
+    echo ""
+    echo "Validating shadow worldserver..."
+    echo "  Shadow: ${INSTALL_DIR_SHADOW}/bin/worldserver"
+
+    if [[ ! -f "${INSTALL_DIR_SHADOW}/bin/worldserver" ]]; then
+        echo "  ERROR: worldserver not found in shadow"
+        return 1
+    fi
+
+    if [[ ! -f "${INSTALL_DIR_SHADOW}/etc/worldserver.conf" ]]; then
+        echo "  ERROR: worldserver.conf not found in shadow/etc/"
+        return 1
+    fi
+
+    echo "  Starting worldserver from shadow (validation run)..."
+    cd "${INSTALL_DIR_SHADOW}/bin"
+    export LD_LIBRARY_PATH="${MYSQL_DIR}/lib:${LD_LIBRARY_PATH}"
+
+    local VALIDATION_LOG="${DIR}/tmp/shadow-validation-${PROFILE}.log"
+    mkdir -p "${DIR}/tmp"
+    > "${VALIDATION_LOG}"  # Truncate log
+    ./worldserver \
+        -c "${INSTALL_DIR_SHADOW}/etc/worldserver.conf" \
+        -C "${INSTALL_DIR_SHADOW}/etc" \
+        < /dev/null > "${VALIDATION_LOG}" 2>&1 &
+    local WS_PID=$!
+
+    echo "  Worldserver started (PID ${WS_PID})"
+    echo "  Waiting for \"World initialized\" (up to ${MAX_TIMEOUT}s)..."
+
+    local elapsed=0
+    local last_line_count=0
+    local silence_count=0
+    local success=false
+    local unique_count=0
+
+    while [[ ${elapsed} -lt ${MAX_TIMEOUT} ]]; do
+        if grep -qi "World initialized in" "${VALIDATION_LOG}" 2>/dev/null; then
+            sleep 2
+            echo "  Stable: World initialized successfully"
+            success=true
+            break
+        fi
+
+        if ! kill -0 ${WS_PID} 2>/dev/null; then
+            if grep -qi "World initialized in" "${VALIDATION_LOG}" 2>/dev/null; then
+                echo "  Stable: World initialized (server exited cleanly)"
+                success=true
+                break
+            fi
+            echo "  ERROR: Worldserver crashed during startup"
+            echo "  Check log: ${VALIDATION_LOG}"
+            return 1
+        fi
+
+        if grep -qE "^(FATAL|.*Failed to initialize World)" "${VALIDATION_LOG}" 2>/dev/null; then
+            echo "  ERROR: Worldserver failed to initialize"
+            kill ${WS_PID} 2>/dev/null
+            wait ${WS_PID} 2>/dev/null
+            echo "  Check log: ${VALIDATION_LOG}"
+            return 1
+        fi
+
+        local current_line_count
+        current_line_count=$(wc -l < "${VALIDATION_LOG}" 2>/dev/null || echo 0)
+
+        if [[ ${current_line_count} -eq ${last_line_count} ]]; then
+            ((silence_count++))
+        else
+            silence_count=0
+            unique_count=${current_line_count}
+            last_line_count=${current_line_count}
+        fi
+
+        sleep 1
+        ((elapsed++))
+    done
+
+    echo "  Stopping validation worldserver..."
+    if kill ${WS_PID} 2>/dev/null; then
+        sleep 2
+        if kill -0 ${WS_PID} 2>/dev/null; then
+            kill -9 ${WS_PID} 2>/dev/null
+        fi
+    fi
+    wait ${WS_PID} 2>/dev/null
+
+    if [[ "${success}" == "true" ]]; then
+        echo "  Validation successful (${elapsed}s, ${unique_count} lines)"
+        return 0
+    else
+        echo "  ERROR: Validation timeout (${MAX_TIMEOUT}s)"
+        echo "  It never said \"World initialized\"; ${unique_count} lines logged, the last ${silence_count}s silent."
+        echo "  Last line: $(tail -1 "${VALIDATION_LOG}" 2>/dev/null | cut -c1-120)"
+        echo "  Check log: ${VALIDATION_LOG}"
+        return 1
+    fi
+}
+
+
+parse_args "$@"
+get_profile_paths
+
+if ! validate_shadow_worldserver; then
+    exit 1
+fi
+
+echo ""
+echo "Validation passed, promoting to main installation..."
+exec "${DIR}/scripts/promote" --profile "${PROFILE}"

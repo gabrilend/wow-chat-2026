@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+
+set -uo pipefail
+
+DIR="/mnt/kaun/wow-chat-2026"
+PROFILE=""
+ONLY=()
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --dir)     DIR="$2"; shift 2 ;;
+        --profile) PROFILE="$2"; shift 2 ;;
+        *)         ONLY+=("$1"); shift ;;
+    esac
+done
+[[ -n "${PROFILE}" ]] || PROFILE="$(cat "${DIR}/.profile")"
+AC_CODE_DIR="${DIR}/source-beta"
+[[ "${PROFILE}" == "alpha" ]] && AC_CODE_DIR="${DIR}/source-alpha"
+export DIR PROFILE AC_CODE_DIR
+[[ -d "${AC_CODE_DIR}/.git" ]] || { echo "ERROR: no source tree at ${AC_CODE_DIR}"; exit 1; }
+if pgrep -f "cmake --build|make -j|ninja" > /dev/null; then
+    echo "ERROR: a build seems to be running (cmake/make/ninja); this would reset its source. Try again after it."
+    exit 1
+fi
+
+source "${DIR}/patches/patches.sh"
+LIST="${PHASE_BEGIN_PATCHES[$PROFILE]:-}"
+[[ -n "${LIST}" ]] || { echo "ERROR: profile '${PROFILE}' has no source patches"; exit 1; }
+[[ ${#ONLY[@]} -gt 0 ]] && LIST="${ONLY[*]}"
+
+changed_files() {
+    local repo
+    for repo in "${AC_CODE_DIR}" "${AC_CODE_DIR}"/modules/*/; do
+        [[ -d "${repo}/.git" ]] || continue
+        git -C "${repo}" diff --name-only | sed "s|^|$(basename "${repo}"): |"
+    done
+}
+
+fingerprint() {
+    local repo
+    for repo in "${AC_CODE_DIR}" "${AC_CODE_DIR}"/modules/*/; do
+        [[ -d "${repo}/.git" ]] || continue
+        git -C "${repo}" diff | md5sum
+    done | md5sum
+}
+
+ok=0; bad=0
+for id in ${LIST}; do
+    apply_fn="$(declare -F | sed -n "s/^declare -f \(patch_${id}_.*\)/\1/p" | head -1)"
+    revert_fn="$(declare -F | sed -n "s/^declare -f \(unpatch_${id}_.*\)/\1/p" | head -1)"
+    if [[ -z "${apply_fn}" || -z "${revert_fn}" ]]; then
+        echo "  ${id}: NO APPLY OR REVERT FUNCTION (apply '${apply_fn}', revert '${revert_fn}')"
+        bad=$((bad + 1)); continue
+    fi
+    reset_source_trees
+    needs="$(sed -n 's/^# Needs: *\(B[0-9][0-9][0-9]\( B[0-9][0-9][0-9]\)*\).*/\1/p' "${PATCHES_DIR}/${id}"-*.sh | head -1)"
+    for need in ${needs}; do
+        need_fn="$(declare -F | sed -n "s/^declare -f \(patch_${need}_.*\)/\1/p" | head -1)"
+        ${need_fn} > /dev/null 2>&1
+    done
+    base="$(fingerprint)"
+    base_files="$(changed_files)"
+    if ! ${apply_fn} > /dev/null 2>&1; then
+        echo "  ${id}: APPLY FAILED from a clean tree${needs:+ with ${needs} applied}"
+        bad=$((bad + 1)); continue
+    fi
+    once="$(fingerprint)"
+    ${apply_fn} > /dev/null 2>&1
+    if [[ "$(fingerprint)" != "${once}" ]]; then
+        echo "  ${id}: APPLY NOT REPEATABLE (a second apply changed the source again)"
+        bad=$((bad + 1))
+    fi
+    ${revert_fn} > /dev/null 2>&1
+    if [[ "$(fingerprint)" != "${base}" ]]; then
+        echo "  ${id}: REVERT LEAVES CHANGES${needs:+ (beyond ${needs})} in:"
+        comm -13 <(echo "${base_files}" | sort) <(changed_files | sort) | sed 's/^/      /'
+        bad=$((bad + 1))
+    else
+        ok=$((ok + 1))
+    fi
+done
+reset_source_trees
+echo "verify-patches (${PROFILE}): ${ok} OK, ${bad} with a problem; source trees reset to their commits"
+[[ ${bad} -eq 0 ]]

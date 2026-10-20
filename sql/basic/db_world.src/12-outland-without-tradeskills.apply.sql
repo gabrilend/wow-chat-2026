@@ -1,0 +1,238 @@
+-- MARKER_E027_APPLY basic-outland-without-tradeskills
+
+DROP TABLE IF EXISTS `tmp_155n_locks`;
+CREATE TABLE `tmp_155n_locks` (`lock_id` int unsigned NOT NULL, PRIMARY KEY (`lock_id`));
+DROP TABLE IF EXISTS `tmp_155n_areas`;
+CREATE TABLE `tmp_155n_areas` (`area_id` int unsigned NOT NULL, PRIMARY KEY (`area_id`));
+DROP TABLE IF EXISTS `tmp_155n_rank_spells`;
+CREATE TABLE `tmp_155n_rank_spells` (`spell_id` int unsigned NOT NULL, PRIMARY KEY (`spell_id`));
+INSERT INTO `tmp_155n_locks` (`lock_id`) VALUES (8),(9),(10),(11),(18),(19),(20),(21),(22),(25),(26),(27),(29),(30),(31),(32),(33),(34),(35),(38),(39),(40),(41),(42),(45),(47),(48),(49),(50),(51),(259),(379),(380),(399),(400),(439),(440),(441),(442),(443),(444),(519),(521),(719),(939),(1119),(1120),(1121),(1122),(1123),(1124),(1632),(1639),(1641),(1642),(1643),(1644),(1645),(1646),(1649),(1650),(1651),(1652),(1702),(1713),(1714),(1771),(1775),(1782),(1783),(1784),(1785),(1786),(1787),(1788),(1789),(1790),(1791),(1792),(1793),(1800),(1802),(1860);
+INSERT INTO `tmp_155n_areas` (`area_id`) VALUES (3536),(3538),(3539),(3541),(3542),(3543),(3544),(3545),(3546),(3547),(3548),(3549),(3550),(3551),(3552),(3553),(3554),(3555),(3556),(3565),(3582),(3609),(3610),(3611),(3613),(3614),(3615),(3616),(3617),(3618),(3619),(3620),(3621),(3622),(3623),(3624),(3625),(3626),(3627),(3628),(3629),(3630),(3631),(3632),(3633),(3634),(3635),(3636),(3637),(3638),(3640),(3641),(3642),(3643),(3644),(3645),(3646),(3647),(3648),(3649),(3650),(3651),(3652),(3653),(3654),(3655),(3656),(3657),(3658),(3659),(3660),(3661),(3666),(3667),(3668),(3669),(3670),(3671),(3672),(3673),(3674),(3675),(3676),(3677),(3678),(3679),(3680),(3681),(3682),(3683),(3684),(3685),(3686),(3687),(3688),(3689),(3690),(3691),(3692),(3693),(3694),(3695),(3696),(3697),(3699),(3700),(3701),(3705),(3712),(3718),(3719),(3720),(3721),(3722),(3723),(3724),(3725),(3726),(3727),(3728),(3729),(3730),(3731),(3732),(3733),(3734),(3735),(3736),(3737),(3738),(3739),(3740),(3741),(3742),(3743),(3744),(3745),(3746),(3747),(3748),(3749),(3750),(3751),(3752),(3753),(3754),(3755),(3756),(3757),(3758),(3759),(3760),(3761),(3762),(3763),(3764),(3765),(3766),(3767),(3768),(3769),(3770),(3771),(3772),(3773),(3774),(3775),(3776),(3777),(3778),(3779),(3780),(3781),(3782),(3783),(3784),(3785),(3786),(3787),(3788),(3793),(3794),(3795),(3796),(3797),(3798),(3799),(3800),(3801),(3802),(3803),(3804),(3806),(3807),(3808),(3809),(3810),(3811),(3812),(3813),(3814),(3815),(3816),(3818),(3819),(3821),(3822),(3824),(3825),(3826),(3827),(3828),(3829),(3830),(3831),(3832),(3833),(3834),(3835),(3837),(3838),(3839),(3840),(3841),(3842),(3844),(3850),(3851),(3852),(3854),(3855),(3858),(3859),(3860),(3862),(3863),(3864),(3865),(3866),(3867),(3868),(3873),(3874),(3875),(3876),(3877),(3878),(3879),(3880),(3881),(3882),(3883),(3884),(3885),(3886),(3887),(3888),(3889),(3890),(3891),(3892),(3893),(3894),(3895),(3896),(3897),(3898),(3899),(3900),(3901),(3902),(3903),(3904),(3905),(3918),(3919),(3920),(3921),(3922),(3924),(3925),(3926),(3927),(3928),(3929),(3930),(3931),(3932),(3933),(3934),(3935),(3936),(3937),(3938),(3939),(3940),(3941),(3942),(3943),(3944),(3945),(3946),(3947),(3949),(3950),(3951),(3952),(3953),(3954),(3955),(3956),(3957),(3958),(3960),(3961),(3962),(3963),(3964),(3965),(3966),(3967),(3969),(3970),(3971),(3972),(3973),(3974),(3975),(3976),(3977),(3978),(4008),(4078),(4081),(4082),(4083),(4084),(4085),(4086),(4087),(4088),(4089),(4090),(4091),(4092),(4093),(4094),(4095);
+INSERT INTO `tmp_155n_rank_spells` (`spell_id`) VALUES (26791),(27029),(28030),(28597),(28696),(28901),(29355),(29845),(30351),(32550),(32679),(33100),(33361),(45379),(45380),(50299),(50301),(50307),(50309),(51293),(51295),(51298),(51301),(51303),(51305),(51308),(51310),(51312),(54084),(54255),(54256),(61464),(64484),(65281),(65282),(65283),(65284),(65285),(65286),(65287),(65288),(65289),(65290),(65291),(65292),(65293);
+
+DROP TABLE IF EXISTS `tmp_155n_zones`;
+CREATE TABLE `tmp_155n_zones` (`zone_id` int unsigned NOT NULL, PRIMARY KEY (`zone_id`));
+INSERT INTO `tmp_155n_zones` VALUES (3483),(3518),(3519),(3520),(3521),(3522),(3523),(3703),(4080);
+DROP TABLE IF EXISTS `tmp_155n_maps`;
+CREATE TABLE `tmp_155n_maps` (`map_id` int unsigned NOT NULL, PRIMARY KEY (`map_id`));
+INSERT INTO `tmp_155n_maps` VALUES (540),(542),(543),(544),(545),(546),(547),(548),(550),(552),(553),(554),(555),(556),(557),(558),(564),(565),(585);
+
+DROP TABLE IF EXISTS `tmp_155n_go`;
+CREATE TABLE `tmp_155n_go` (`guid` int unsigned NOT NULL, PRIMARY KEY (`guid`));
+INSERT INTO `tmp_155n_go`
+SELECT g.`guid` FROM `gameobject` g JOIN `gameobject_template` t ON t.`entry` = g.`id`
+WHERE ((t.`type` = 3 AND t.`Data0` IN (SELECT `lock_id` FROM `tmp_155n_locks`)) OR t.`type` = 25)   -- 25 = fishing pool
+  AND ((g.`map` = 530 AND (g.`position_y` > -2000 OR g.`position_x` > 11350))
+       OR g.`map` IN (SELECT `map_id` FROM `tmp_155n_maps`));
+
+DROP TABLE IF EXISTS `tmp_155n_cr`;
+CREATE TABLE `tmp_155n_cr` (`guid` int unsigned NOT NULL, PRIMARY KEY (`guid`));
+INSERT INTO `tmp_155n_cr`
+SELECT c.`guid` FROM `creature` c
+WHERE c.`id` IN (17378, 17407, 17408, 24222)   -- Swamp Gas, Felmist, Arcane Vortex, Windy Cloud
+  AND ((c.`map` = 530 AND (c.`position_y` > -2000 OR c.`position_x` > 11350))
+       OR c.`map` IN (SELECT `map_id` FROM `tmp_155n_maps`));   -- dungeons too (Swamp Gas floats in Coilfang)
+
+CREATE TABLE IF NOT EXISTS `basic_155n_gameobject` LIKE `gameobject`;
+INSERT IGNORE INTO `basic_155n_gameobject` SELECT g.* FROM `gameobject` g JOIN `tmp_155n_go` x ON x.`guid` = g.`guid`;
+CREATE TABLE IF NOT EXISTS `basic_155n_gameobject_addon` LIKE `gameobject_addon`;
+INSERT IGNORE INTO `basic_155n_gameobject_addon` SELECT a.* FROM `gameobject_addon` a JOIN `tmp_155n_go` x ON x.`guid` = a.`guid`;
+CREATE TABLE IF NOT EXISTS `basic_155n_game_event_gameobject` LIKE `game_event_gameobject`;
+INSERT IGNORE INTO `basic_155n_game_event_gameobject` SELECT e.* FROM `game_event_gameobject` e JOIN `tmp_155n_go` x ON x.`guid` = e.`guid`;
+CREATE TABLE IF NOT EXISTS `basic_155n_pool_gameobject` LIKE `pool_gameobject`;
+INSERT IGNORE INTO `basic_155n_pool_gameobject` SELECT p.* FROM `pool_gameobject` p JOIN `tmp_155n_go` x ON x.`guid` = p.`guid`;
+
+CREATE TABLE IF NOT EXISTS `basic_155n_creature` LIKE `creature`;
+INSERT IGNORE INTO `basic_155n_creature` SELECT c.* FROM `creature` c JOIN `tmp_155n_cr` x ON x.`guid` = c.`guid`;
+CREATE TABLE IF NOT EXISTS `basic_155n_creature_addon` LIKE `creature_addon`;
+INSERT IGNORE INTO `basic_155n_creature_addon` SELECT a.* FROM `creature_addon` a JOIN `tmp_155n_cr` x ON x.`guid` = a.`guid`;
+CREATE TABLE IF NOT EXISTS `basic_155n_game_event_creature` LIKE `game_event_creature`;
+INSERT IGNORE INTO `basic_155n_game_event_creature` SELECT e.* FROM `game_event_creature` e JOIN `tmp_155n_cr` x ON x.`guid` = e.`guid`;
+CREATE TABLE IF NOT EXISTS `basic_155n_pool_creature` LIKE `pool_creature`;
+INSERT IGNORE INTO `basic_155n_pool_creature` SELECT p.* FROM `pool_creature` p JOIN `tmp_155n_cr` x ON x.`guid` = p.`guid`;
+
+DROP TABLE IF EXISTS `tmp_155n_pools`;
+CREATE TABLE `tmp_155n_pools` (`entry` int unsigned NOT NULL, PRIMARY KEY (`entry`));
+INSERT IGNORE INTO `tmp_155n_pools` SELECT p.`pool_entry` FROM `pool_gameobject` p JOIN `tmp_155n_go` x ON x.`guid` = p.`guid`;
+INSERT IGNORE INTO `tmp_155n_pools` SELECT p.`pool_entry` FROM `pool_creature` p JOIN `tmp_155n_cr` x ON x.`guid` = p.`guid`;
+
+DELETE p FROM `pool_gameobject` p JOIN `tmp_155n_go` x ON x.`guid` = p.`guid`;
+DELETE e FROM `game_event_gameobject` e JOIN `tmp_155n_go` x ON x.`guid` = e.`guid`;
+DELETE a FROM `gameobject_addon` a JOIN `tmp_155n_go` x ON x.`guid` = a.`guid`;
+DELETE g FROM `gameobject` g JOIN `tmp_155n_go` x ON x.`guid` = g.`guid`;
+DELETE p FROM `pool_creature` p JOIN `tmp_155n_cr` x ON x.`guid` = p.`guid`;
+DELETE e FROM `game_event_creature` e JOIN `tmp_155n_cr` x ON x.`guid` = e.`guid`;
+DELETE a FROM `creature_addon` a JOIN `tmp_155n_cr` x ON x.`guid` = a.`guid`;
+DELETE c FROM `creature` c JOIN `tmp_155n_cr` x ON x.`guid` = c.`guid`;
+
+CREATE TABLE IF NOT EXISTS `basic_155n_pool_template` LIKE `pool_template`;
+CREATE TABLE IF NOT EXISTS `basic_155n_pool_pool` LIKE `pool_pool`;
+CREATE TABLE IF NOT EXISTS `basic_155n_game_event_pool` LIKE `game_event_pool`;
+DROP TABLE IF EXISTS `tmp_155n_empty`;
+CREATE TABLE `tmp_155n_empty` (`entry` int unsigned NOT NULL, PRIMARY KEY (`entry`));
+
+INSERT IGNORE INTO `tmp_155n_empty`
+SELECT t.`entry` FROM `pool_template` t JOIN `tmp_155n_pools` x ON x.`entry` = t.`entry`
+WHERE NOT EXISTS (SELECT 1 FROM `pool_gameobject` p WHERE p.`pool_entry` = t.`entry`)
+  AND NOT EXISTS (SELECT 1 FROM `pool_creature`  p WHERE p.`pool_entry` = t.`entry`)
+  AND NOT EXISTS (SELECT 1 FROM `pool_pool`      p WHERE p.`mother_pool` = t.`entry`);
+INSERT IGNORE INTO `tmp_155n_pools` SELECT pp.`mother_pool` FROM `pool_pool` pp JOIN `tmp_155n_empty` e ON e.`entry` = pp.`pool_id`;
+INSERT IGNORE INTO `basic_155n_pool_template` SELECT t.* FROM `pool_template` t JOIN `tmp_155n_empty` e ON e.`entry` = t.`entry`;
+INSERT IGNORE INTO `basic_155n_pool_pool` SELECT pp.* FROM `pool_pool` pp JOIN `tmp_155n_empty` e ON e.`entry` = pp.`pool_id`;
+INSERT IGNORE INTO `basic_155n_game_event_pool` SELECT gp.* FROM `game_event_pool` gp JOIN `tmp_155n_empty` e ON e.`entry` = gp.`pool_entry`;
+DELETE pp FROM `pool_pool` pp JOIN `tmp_155n_empty` e ON e.`entry` = pp.`pool_id`;
+DELETE gp FROM `game_event_pool` gp JOIN `tmp_155n_empty` e ON e.`entry` = gp.`pool_entry`;
+DELETE t FROM `pool_template` t JOIN `tmp_155n_empty` e ON e.`entry` = t.`entry`;
+
+DELETE FROM `tmp_155n_empty`;
+INSERT IGNORE INTO `tmp_155n_empty`
+SELECT t.`entry` FROM `pool_template` t JOIN `tmp_155n_pools` x ON x.`entry` = t.`entry`
+WHERE NOT EXISTS (SELECT 1 FROM `pool_gameobject` p WHERE p.`pool_entry` = t.`entry`)
+  AND NOT EXISTS (SELECT 1 FROM `pool_creature`  p WHERE p.`pool_entry` = t.`entry`)
+  AND NOT EXISTS (SELECT 1 FROM `pool_pool`      p WHERE p.`mother_pool` = t.`entry`);
+INSERT IGNORE INTO `basic_155n_pool_template` SELECT t.* FROM `pool_template` t JOIN `tmp_155n_empty` e ON e.`entry` = t.`entry`;
+INSERT IGNORE INTO `basic_155n_pool_pool` SELECT pp.* FROM `pool_pool` pp JOIN `tmp_155n_empty` e ON e.`entry` = pp.`pool_id`;
+INSERT IGNORE INTO `basic_155n_game_event_pool` SELECT gp.* FROM `game_event_pool` gp JOIN `tmp_155n_empty` e ON e.`entry` = gp.`pool_entry`;
+DELETE pp FROM `pool_pool` pp JOIN `tmp_155n_empty` e ON e.`entry` = pp.`pool_id`;
+DELETE gp FROM `game_event_pool` gp JOIN `tmp_155n_empty` e ON e.`entry` = gp.`pool_entry`;
+DELETE t FROM `pool_template` t JOIN `tmp_155n_empty` e ON e.`entry` = t.`entry`;
+
+CREATE TABLE IF NOT EXISTS `basic_155n_skinloot` (
+  `entry`    int unsigned NOT NULL,
+  `skinloot` int unsigned NOT NULL,
+  PRIMARY KEY (`entry`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='issue 155n: original skinning loot of Outland creatures, for the revert';
+INSERT IGNORE INTO `basic_155n_skinloot` (`entry`, `skinloot`)
+SELECT t.`entry`, t.`skinloot` FROM `creature_template` t
+WHERE t.`skinloot` <> 0
+  AND t.`entry` IN (SELECT c.`id` FROM `creature` c WHERE (c.`map` = 530 AND (c.`position_y` > -2000 OR c.`position_x` > 11350))
+                                                        OR c.`map` IN (SELECT `map_id` FROM `tmp_155n_maps`))
+  AND t.`entry` NOT IN (SELECT c.`id` FROM `creature` c WHERE NOT ((c.`map` = 530 AND (c.`position_y` > -2000 OR c.`position_x` > 11350))
+                                                        OR c.`map` IN (SELECT `map_id` FROM `tmp_155n_maps`)));
+INSERT IGNORE INTO `basic_155n_skinloot` (`entry`, `skinloot`)
+SELECT `entry`, `skinloot` FROM `creature_template` WHERE `entry` IN (17378, 17407, 17408, 24222) AND `skinloot` <> 0;
+UPDATE `creature_template` t JOIN `basic_155n_skinloot` b ON b.`entry` = t.`entry` SET t.`skinloot` = 0;
+
+CREATE TABLE IF NOT EXISTS `basic_155n_fishing_skill` (
+  `entry` int unsigned NOT NULL,
+  `skill` smallint     DEFAULT NULL,
+  PRIMARY KEY (`entry`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='issue 155n: original fishing skill per Outland zone (NULL = had none), for the revert';
+INSERT IGNORE INTO `basic_155n_fishing_skill` (`entry`, `skill`)
+SELECT z.`zone_id`, f.`skill` FROM `tmp_155n_zones` z LEFT JOIN `skill_fishing_base_level` f ON f.`entry` = z.`zone_id`;
+INSERT INTO `skill_fishing_base_level` (`entry`, `skill`) SELECT `zone_id`, 300 FROM `tmp_155n_zones`
+ON DUPLICATE KEY UPDATE `skill` = 300;
+
+CREATE TABLE IF NOT EXISTS `basic_155n_fishing_loot` LIKE `fishing_loot_template`;
+INSERT IGNORE INTO `basic_155n_fishing_loot` SELECT l.* FROM `fishing_loot_template` l JOIN `tmp_155n_areas` a ON a.`area_id` = l.`Entry`;
+DELETE l FROM `fishing_loot_template` l JOIN `tmp_155n_areas` a ON a.`area_id` = l.`Entry`;
+
+CREATE TABLE IF NOT EXISTS `basic_155n_trainer_spell` LIKE `trainer_spell`;
+INSERT IGNORE INTO `basic_155n_trainer_spell`
+SELECT ts.* FROM `trainer_spell` ts
+WHERE (ts.`ReqSkillLine` IN (164, 165, 171, 182, 186, 197, 202, 333, 393, 755, 773, 185, 129, 356) AND ts.`ReqSkillRank` > 300)
+   OR ts.`SpellId` IN (SELECT `spell_id` FROM `tmp_155n_rank_spells`);
+DELETE ts FROM `trainer_spell` ts
+JOIN `basic_155n_trainer_spell` b ON b.`TrainerId` = ts.`TrainerId` AND b.`SpellId` = ts.`SpellId`;
+
+DROP TABLE IF EXISTS `tmp_155n_recipes`;
+CREATE TABLE `tmp_155n_recipes` (`entry` int unsigned NOT NULL, PRIMARY KEY (`entry`));
+INSERT INTO `tmp_155n_recipes` SELECT `entry` FROM `item_template`
+WHERE `class` = 9 AND `RequiredSkillRank` > 300
+  AND `RequiredSkill` IN (164, 165, 171, 182, 186, 197, 202, 333, 393, 755, 773, 185, 129, 356);
+
+CREATE TABLE IF NOT EXISTS `basic_155n_creature_loot` LIKE `creature_loot_template`;
+INSERT IGNORE INTO `basic_155n_creature_loot` SELECT l.* FROM `creature_loot_template` l JOIN `tmp_155n_recipes` r ON r.`entry` = l.`Item` WHERE l.`Reference` = 0;
+DELETE l FROM `creature_loot_template` l JOIN `tmp_155n_recipes` r ON r.`entry` = l.`Item` WHERE l.`Reference` = 0;
+CREATE TABLE IF NOT EXISTS `basic_155n_reference_loot` LIKE `reference_loot_template`;
+INSERT IGNORE INTO `basic_155n_reference_loot` SELECT l.* FROM `reference_loot_template` l JOIN `tmp_155n_recipes` r ON r.`entry` = l.`Item` WHERE l.`Reference` = 0;
+DELETE l FROM `reference_loot_template` l JOIN `tmp_155n_recipes` r ON r.`entry` = l.`Item` WHERE l.`Reference` = 0;
+CREATE TABLE IF NOT EXISTS `basic_155n_gameobject_loot` LIKE `gameobject_loot_template`;
+INSERT IGNORE INTO `basic_155n_gameobject_loot` SELECT l.* FROM `gameobject_loot_template` l JOIN `tmp_155n_recipes` r ON r.`entry` = l.`Item` WHERE l.`Reference` = 0;
+DELETE l FROM `gameobject_loot_template` l JOIN `tmp_155n_recipes` r ON r.`entry` = l.`Item` WHERE l.`Reference` = 0;
+CREATE TABLE IF NOT EXISTS `basic_155n_item_loot` LIKE `item_loot_template`;
+INSERT IGNORE INTO `basic_155n_item_loot` SELECT l.* FROM `item_loot_template` l JOIN `tmp_155n_recipes` r ON r.`entry` = l.`Item` WHERE l.`Reference` = 0;
+DELETE l FROM `item_loot_template` l JOIN `tmp_155n_recipes` r ON r.`entry` = l.`Item` WHERE l.`Reference` = 0;
+CREATE TABLE IF NOT EXISTS `basic_155n_npc_vendor` LIKE `npc_vendor`;
+INSERT IGNORE INTO `basic_155n_npc_vendor` SELECT v.* FROM `npc_vendor` v JOIN `tmp_155n_recipes` r ON r.`entry` = v.`item`;
+DELETE v FROM `npc_vendor` v JOIN `tmp_155n_recipes` r ON r.`entry` = v.`item`;
+
+CREATE TABLE IF NOT EXISTS `basic_155n_lootid` (`entry` int unsigned NOT NULL, `lootid` int unsigned NOT NULL, PRIMARY KEY (`entry`));
+CREATE TABLE IF NOT EXISTS `basic_155n_conditions` LIKE `conditions`;
+CREATE TABLE IF NOT EXISTS `basic_155n_linked_respawn` LIKE `linked_respawn`;
+CREATE TABLE IF NOT EXISTS `basic_155n_skinning_loot` LIKE `skinning_loot_template`;
+
+DROP TABLE IF EXISTS `tmp_155n_live_refs`;
+CREATE TABLE `tmp_155n_live_refs` (`entry` int unsigned NOT NULL, PRIMARY KEY (`entry`));
+INSERT INTO `tmp_155n_live_refs` SELECT DISTINCT `Entry` FROM `reference_loot_template`;
+INSERT IGNORE INTO `basic_155n_creature_loot`   SELECT l.* FROM `creature_loot_template` l   WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+DELETE l FROM `creature_loot_template` l   WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+INSERT IGNORE INTO `basic_155n_gameobject_loot` SELECT l.* FROM `gameobject_loot_template` l WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+DELETE l FROM `gameobject_loot_template` l WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+INSERT IGNORE INTO `basic_155n_item_loot`       SELECT l.* FROM `item_loot_template` l       WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+DELETE l FROM `item_loot_template` l       WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+INSERT IGNORE INTO `basic_155n_reference_loot`  SELECT l.* FROM `reference_loot_template` l  WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+DELETE l FROM `reference_loot_template` l  WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+DELETE FROM `tmp_155n_live_refs`;
+INSERT INTO `tmp_155n_live_refs` SELECT DISTINCT `Entry` FROM `reference_loot_template`;
+INSERT IGNORE INTO `basic_155n_creature_loot`   SELECT l.* FROM `creature_loot_template` l   WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+DELETE l FROM `creature_loot_template` l   WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+INSERT IGNORE INTO `basic_155n_gameobject_loot` SELECT l.* FROM `gameobject_loot_template` l WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+DELETE l FROM `gameobject_loot_template` l WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+INSERT IGNORE INTO `basic_155n_item_loot`       SELECT l.* FROM `item_loot_template` l       WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+DELETE l FROM `item_loot_template` l       WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+INSERT IGNORE INTO `basic_155n_reference_loot`  SELECT l.* FROM `reference_loot_template` l  WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+DELETE l FROM `reference_loot_template` l  WHERE l.`Reference` <> 0 AND l.`Reference` NOT IN (SELECT `entry` FROM `tmp_155n_live_refs`);
+DROP TABLE `tmp_155n_live_refs`;
+
+INSERT IGNORE INTO `basic_155n_lootid` (`entry`, `lootid`)
+SELECT t.`entry`, t.`lootid` FROM `creature_template` t
+WHERE t.`lootid` <> 0 AND NOT EXISTS (SELECT 1 FROM `creature_loot_template` l WHERE l.`Entry` = t.`lootid`);
+UPDATE `creature_template` t JOIN `basic_155n_lootid` b ON b.`entry` = t.`entry` SET t.`lootid` = 0;
+
+INSERT IGNORE INTO `basic_155n_conditions` SELECT c.* FROM `conditions` c
+WHERE (c.`SourceTypeOrReferenceId` = 1  AND NOT EXISTS (SELECT 1 FROM `creature_loot_template` l   WHERE l.`Entry` = c.`SourceGroup` AND l.`Item` = c.`SourceEntry`))
+   OR (c.`SourceTypeOrReferenceId` = 3  AND NOT EXISTS (SELECT 1 FROM `fishing_loot_template` l    WHERE l.`Entry` = c.`SourceGroup` AND l.`Item` = c.`SourceEntry`))
+   OR (c.`SourceTypeOrReferenceId` = 4  AND NOT EXISTS (SELECT 1 FROM `gameobject_loot_template` l WHERE l.`Entry` = c.`SourceGroup` AND l.`Item` = c.`SourceEntry`))
+   OR (c.`SourceTypeOrReferenceId` = 5  AND NOT EXISTS (SELECT 1 FROM `item_loot_template` l       WHERE l.`Entry` = c.`SourceGroup` AND l.`Item` = c.`SourceEntry`))
+   OR (c.`SourceTypeOrReferenceId` = 10 AND NOT EXISTS (SELECT 1 FROM `reference_loot_template` l  WHERE l.`Entry` = c.`SourceGroup` AND l.`Item` = c.`SourceEntry`))
+   OR (c.`SourceTypeOrReferenceId` = 11 AND NOT EXISTS (SELECT 1 FROM `skinning_loot_template` l   WHERE l.`Entry` = c.`SourceGroup` AND l.`Item` = c.`SourceEntry`));
+DELETE c FROM `conditions` c JOIN `basic_155n_conditions` b
+  ON  b.`SourceTypeOrReferenceId` = c.`SourceTypeOrReferenceId` AND b.`SourceGroup` = c.`SourceGroup`
+  AND b.`SourceEntry` = c.`SourceEntry` AND b.`SourceId` = c.`SourceId` AND b.`ElseGroup` = c.`ElseGroup`
+  AND b.`ConditionTypeOrReference` = c.`ConditionTypeOrReference` AND b.`ConditionTarget` = c.`ConditionTarget`
+  AND b.`ConditionValue1` = c.`ConditionValue1` AND b.`ConditionValue2` = c.`ConditionValue2` AND b.`ConditionValue3` = c.`ConditionValue3`;
+
+INSERT IGNORE INTO `basic_155n_linked_respawn` SELECT r.* FROM `linked_respawn` r
+WHERE (r.`linkType` IN (1, 2) AND r.`linkedGuid` IN (SELECT `guid` FROM `basic_155n_gameobject`))
+   OR (r.`linkType` IN (2, 3) AND r.`guid`       IN (SELECT `guid` FROM `basic_155n_gameobject`))
+   OR (r.`linkType` IN (0, 3) AND r.`linkedGuid` IN (SELECT `guid` FROM `basic_155n_creature`))
+   OR (r.`linkType` IN (0, 1) AND r.`guid`       IN (SELECT `guid` FROM `basic_155n_creature`));
+DELETE r FROM `linked_respawn` r JOIN `basic_155n_linked_respawn` b ON b.`guid` = r.`guid` AND b.`linkType` = r.`linkType`;
+
+INSERT IGNORE INTO `basic_155n_skinning_loot` SELECT s.* FROM `skinning_loot_template` s
+WHERE s.`Entry` IN (SELECT `skinloot` FROM `basic_155n_skinloot`)
+  AND NOT EXISTS (SELECT 1 FROM `creature_template` t WHERE t.`skinloot` = s.`Entry`);
+DELETE s FROM `skinning_loot_template` s JOIN `basic_155n_skinning_loot` b ON b.`Entry` = s.`Entry` AND b.`Item` = s.`Item`;
+
+CREATE TABLE IF NOT EXISTS `basic_155n_quest_skill` (`ID` int unsigned NOT NULL, `RequiredSkillPoints` smallint unsigned NOT NULL, PRIMARY KEY (`ID`));
+INSERT IGNORE INTO `basic_155n_quest_skill` (`ID`, `RequiredSkillPoints`)
+SELECT `ID`, `RequiredSkillPoints` FROM `quest_template_addon` WHERE `RequiredSkillPoints` > 300;   -- the quest's skill lives in its addon row
+UPDATE `quest_template_addon` q JOIN `basic_155n_quest_skill` b ON b.`ID` = q.`ID` SET q.`RequiredSkillPoints` = 300;
+
+CREATE TABLE IF NOT EXISTS `basic_155n_skill_conditions` LIKE `conditions`;
+INSERT IGNORE INTO `basic_155n_skill_conditions`
+SELECT * FROM `conditions` WHERE `ConditionTypeOrReference` = 7 AND `ConditionValue2` > 300;
+UPDATE `conditions` SET `ConditionValue2` = 300 WHERE `ConditionTypeOrReference` = 7 AND `ConditionValue2` > 300;
+
+DROP TABLE `tmp_155n_recipes`;
+DROP TABLE `tmp_155n_empty`;
+DROP TABLE `tmp_155n_pools`;
+DROP TABLE `tmp_155n_cr`;
+DROP TABLE `tmp_155n_go`;
+DROP TABLE `tmp_155n_maps`;
+DROP TABLE `tmp_155n_zones`;
+DROP TABLE `tmp_155n_rank_spells`;
+DROP TABLE `tmp_155n_areas`;
+DROP TABLE `tmp_155n_locks`;
+

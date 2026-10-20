@@ -1,0 +1,22 @@
+
+
+AOELoot.Enable = 1
+
+
+AOELoot.Message = 1
+
+
+AOELoot.Range = 55.0
+
+
+AOELoot.MoneyShareDistanceMultiplier = 2.0
+
+
+AOELoot.Group = 1
+
+
+AOELoot.CorpseThreshold = 2
+
+
+
+AOELoot.Debug = 1

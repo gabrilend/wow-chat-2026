@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+DIR="${DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+
+SEARCH_DIRS=(
+    "issues"
+    "issues-beta"
+    "src"
+    "sql/custom"
+    "docs"
+    "config"
+    "scripts"
+)
+
+EXCLUDE_DIRS=(
+    "llm-transcripts"
+    "assets"
+    "mysql/source"
+    "mysql/installed-files"
+    "mysql/databases"
+    ".git"
+    "tmp"
+)
+
+FILE_PATTERNS=(
+    "*.lua"
+    "*.md"
+    "*.sql"
+    "*.cpp"
+    "*.h"
+    "*.conf"
+    "*.sh"
+)
+
+usage() {
+    echo "Usage: $0 <issue_number> [--all]"
+    echo ""
+    echo "Searches for references to an issue number across the project."
+    echo ""
+    echo "Arguments:"
+    echo "  issue_number    The issue number to search for (e.g., 138)"
+    echo "  --all          Search entire project root (not just specific dirs)"
+    echo ""
+    echo "Examples:"
+    echo "  $0 138           # Search for issue 138 in configured directories"
+    echo "  $0 138 --all     # Search entire project for issue 138"
+    exit 1
+}
+
+if [ $# -lt 1 ]; then
+    usage
+fi
+
+ISSUE_NUM="$1"
+SEARCH_ALL=false
+
+if [ $# -eq 2 ] && [ "$2" = "--all" ]; then
+    SEARCH_ALL=true
+fi
+
+build_grep_command() {
+    local num="$1"
+    local search_path="$2"
+
+    local exclude_args=""
+    for exclude in "${EXCLUDE_DIRS[@]}"; do
+        exclude_args+=" --exclude-dir=$exclude"
+    done
+
+    local include_args=""
+    for pattern in "${FILE_PATTERNS[@]}"; do
+        include_args+=" --include=$pattern"
+    done
+
+    echo "grep -rn $exclude_args $include_args -E \"\\bissue $num\\b|\\bIssue $num\\b|#$num\\b|$num-\" \"$search_path\" 2>/dev/null || true"
+}
+
+filter_false_positives() {
+    local num="$1"
+
+    grep -v "github" | \
+    grep -v "INSERT INTO" | \
+    grep -v "VALUES (" | \
+    grep -v "\.$num" | \
+    grep -v "$num\." | \
+    grep -v "[0-9]$num" | \
+    grep -v "$num[0-9]" || true
+}
+
+main() {
+    echo "=========================================="
+    echo "Searching for references to issue $ISSUE_NUM"
+    echo "=========================================="
+    echo ""
+
+    local results_file="/tmp/issue-refs-$ISSUE_NUM.txt"
+    > "$results_file"  # Clear file
+
+    if [ "$SEARCH_ALL" = true ]; then
+        echo "Searching entire project root..."
+        local cmd=$(build_grep_command "$ISSUE_NUM" "$DIR")
+        eval "$cmd" | filter_false_positives "$ISSUE_NUM" | tee -a "$results_file"
+    else
+        echo "Searching configured directories:"
+        for dir in "${SEARCH_DIRS[@]}"; do
+            local full_path="$DIR/$dir"
+            if [ -d "$full_path" ]; then
+                echo "  - $dir/"
+                local cmd=$(build_grep_command "$ISSUE_NUM" "$full_path")
+                eval "$cmd" | filter_false_positives "$ISSUE_NUM" | tee -a "$results_file"
+            fi
+        done
+    fi
+
+    echo ""
+    echo "=========================================="
+
+    local count=$(wc -l < "$results_file" | tr -d ' ')
+
+    if [ "$count" -eq 0 ]; then
+        echo "No references found for issue $ISSUE_NUM"
+        rm "$results_file"
+    else
+        echo "Found $count reference(s) to issue $ISSUE_NUM"
+        echo ""
+        echo "Results saved to: $results_file"
+        echo ""
+        echo "To review:"
+        echo "  cat $results_file"
+        echo ""
+        echo "To update all references to new number:"
+        echo "  ./scripts/update-issue-refs $ISSUE_NUM <new_number>"
+    fi
+}
+
+main

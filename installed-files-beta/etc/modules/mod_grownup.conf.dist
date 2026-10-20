@@ -1,0 +1,19 @@
+[worldserver]
+
+GrownUp.Enable = 1
+
+GrownUp.LoginCheck = 1
+
+GrownUp.Announce = 1
+
+GrownUp.GrownAnnounce = 0
+
+GrownUp.StarterMinScale = 0.6
+
+GrownUp.StarterMaxLevel = 15
+
+GrownUp.HighLevelStart = 65
+
+GrownUp.HighLevelScalePercent = 1.0
+
+GrownUp.MaxScale = 1.2

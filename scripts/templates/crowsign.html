@@ -1,0 +1,758 @@
+<title>Crowsign</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@500;700&family=Alegreya+Sans:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --ground: #eef0f3; --panel: #ffffff; --ink: #1b2230; --muted: #5b6576; --rule: #d5d9e1;
+  --brass: #8a5d0c; --brass-bg: #f6ecd6;
+  --gem: #2f7a6b; --gem-bg: #e0f1ed; --honor: #6b3fa0; --honor-bg: #eee5f7; --gold: #9a6a08; --gold-bg: #f7eed4;
+  --stock: #5b6576; --stock-bg: #eceef1; --plan: #2c5aa0; --plan-bg: #e3ebf7; --open: #a02a20; --open-bg: #f7e4e2;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ground: #12161d; --panel: #1a2029; --ink: #e7eaef; --muted: #9aa3b2; --rule: #2c3440;
+    --brass: #dcb45c; --brass-bg: #2d2615;
+    --gem: #74d1bd; --gem-bg: #15302b; --honor: #c4a3ee; --honor-bg: #2b2140; --gold: #e2c16a; --gold-bg: #332a12;
+    --stock: #9aa3b2; --stock-bg: #232a34; --plan: #7fa6e6; --plan-bg: #1b2940; --open: #ec8277; --open-bg: #3a1c1a;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ground: #12161d; --panel: #1a2029; --ink: #e7eaef; --muted: #9aa3b2; --rule: #2c3440;
+  --brass: #dcb45c; --brass-bg: #2d2615;
+  --gem: #74d1bd; --gem-bg: #15302b; --honor: #c4a3ee; --honor-bg: #2b2140; --gold: #e2c16a; --gold-bg: #332a12;
+  --stock: #9aa3b2; --stock-bg: #232a34; --plan: #7fa6e6; --plan-bg: #1b2940; --open: #ec8277; --open-bg: #3a1c1a;
+}
+* { box-sizing: border-box; }
+body { background: var(--ground); color: var(--ink); font: 16px/1.5 "Alegreya Sans", "Segoe UI", system-ui, sans-serif; }
+.wrap { max-width: 1100px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 64px; display: grid; gap: 36px; }
+h1, h2, h3 { font-family: "Alegreya SC", Georgia, serif; margin: 0; text-wrap: balance; }
+h1 { font-size: 2.1rem; } h2 { font-size: 1.4rem; } h3 { font-size: 1.05rem; color: var(--muted); font-weight: 500; letter-spacing: .03em; }
+p { margin: 0; max-width: 70ch; }
+.lede, .note { color: var(--muted); }
+.note { font-size: .9rem; }
+.mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+section { display: grid; gap: 14px; }
+section section { gap: 10px; }
+ul, ol { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; max-width: 75ch; }
+
+/* the flow chart */
+.flow { overflow-x: auto; background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 14px; }
+.flow svg { display: block; min-width: 920px; width: 100%; height: auto; }
+.flow text { font-family: "Alegreya Sans", system-ui, sans-serif; fill: var(--ink); }
+.flow .small { font-size: 12px; fill: var(--muted); }
+.flow .label { font-size: 14px; font-weight: 700; }
+.box-stock { fill: var(--stock-bg); stroke: var(--stock); }
+.box-plan  { fill: var(--plan-bg);  stroke: var(--plan); }
+.box-open  { fill: var(--open-bg);  stroke: var(--open); stroke-dasharray: 5 4; }
+.cur-gem   { fill: var(--gem-bg);   stroke: var(--gem); }
+.cur-honor { fill: var(--honor-bg); stroke: var(--honor); }
+.cur-gold  { fill: var(--gold-bg);  stroke: var(--gold); }
+.edge-gem   { stroke: var(--gem); }
+.edge-honor { stroke: var(--honor); }
+.edge-gold  { stroke: var(--gold); }
+.edge-mark  { stroke: var(--stock); }
+.edge { fill: none; stroke-width: 2; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: .88rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 14px; height: 14px; border-radius: 3px; border: 1.5px solid; display: inline-block; }
+
+/* tables */
+.tables { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; align-items: start; }
+.tbl { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; overflow-x: auto; }
+.tbl.tall { max-height: 640px; overflow-y: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+th, td { text-align: left; padding: 7px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: "Alegreya SC", Georgia, serif; font-weight: 500; color: var(--muted); letter-spacing: .03em; }
+.tbl.tall thead th { position: sticky; top: 0; background: var(--panel); }
+td.num, th.num { text-align: right; font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; }
+td.id { font-family: "IBM Plex Mono", monospace; font-size: .82rem; color: var(--muted); }
+td.wide { min-width: 22ch; }
+td.desc { min-width: 30ch; color: var(--muted); font-size: .86rem; }
+tr:last-child td { border-bottom: none; }
+caption { caption-side: top; text-align: left; padding: 10px 12px 4px; font-family: "Alegreya SC", Georgia, serif; font-size: 1.05rem; }
+
+/* controls above the long lists */
+.ctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ctl input, .ctl select { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 5px 8px; min-width: 0; }
+.ctl input { width: 16em; max-width: 100%; }
+.ctl button { font: inherit; font-size: .85rem; color: var(--muted); background: var(--panel); border: 1px solid var(--rule); border-radius: 999px; padding: 2px 10px; cursor: pointer; }
+.ctl button[aria-pressed="true"] { color: var(--plan); background: var(--plan-bg); border-color: var(--plan); font-weight: 700; }
+.ctl input:focus-visible, .ctl select:focus-visible, .ctl button:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+.ctl .count { color: var(--muted); font-size: .85rem; margin-left: auto; }
+.ctl-group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ctl-group b { font-weight: 500; color: var(--muted); font-size: .85rem; }
+
+.chip { font-size: .75rem; font-weight: 700; border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.chip.stock { color: var(--stock); background: var(--stock-bg); }
+.chip.plan { color: var(--plan); background: var(--plan-bg); }
+.chip.open { color: var(--open); background: var(--open-bg); }
+.chip.gem { color: var(--gem); background: var(--gem-bg); }
+.chip.gold { color: var(--gold); background: var(--gold-bg); }
+.chip.honor { color: var(--honor); background: var(--honor-bg); }
+
+blockquote { margin: 0; padding: 12px 16px; background: var(--panel); border: 1px solid var(--rule); border-left: 3px solid var(--honor); border-radius: 0 10px 10px 0; display: grid; gap: 10px; max-width: 78ch; }
+blockquote p { font-style: italic; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.card { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 12px 14px; display: grid; gap: 6px; align-content: start; }
+.card h4 { margin: 0; font: 700 1rem "Alegreya SC", Georgia, serif; }
+.card p { font-size: .93rem; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.stats div { border-left: 3px solid var(--honor); padding: 4px 10px; }
+.stats b { display: block; font: 700 1.4rem/1.2 "Alegreya SC", Georgia, serif; font-variant-numeric: tabular-nums; }
+.stats span { color: var(--muted); font-size: .85rem; }
+nav.toc { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: .92rem; }
+nav.toc a { color: var(--plan); }
+a { color: var(--plan); }
+footer { color: var(--muted); font-size: .85rem; display: grid; gap: 8px; border-top: 1px solid var(--rule); padding-top: 16px; }
+footer code, p code, li code { font-family: "IBM Plex Mono", monospace; font-size: .85em; }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:10px">
+    <h1>Crowsign</h1>
+    <p class="lede">Sprite-craft: enchanting as the gathering profession of magic, and two ways to build it without touching the game client. The design is the owner's, from the conversation of 26 September 2026 (kept whole in <code>notes/vision-enchanting-system-update.md</code>, "Second Conversation"). Nothing here is built or scheduled. Every list and count on this page is read from the client's data files and the world database by <code>scripts/generate-crowsign-page</code>; the prose is written by hand.</p>
+    <nav class="toc" aria-label="Sections">
+      <a href="#design">1. The design</a>
+      <a href="#route-a">2. Route A: inside Enchanting</a>
+      <a href="#route-b">3. Route B: its own skill</a>
+      <a href="#extra">4. Materials and other details</a>
+      <a href="#compare">5. The two routes side by side</a>
+      <a href="#open">6. Open questions</a>
+    </nav>
+  </header>
+
+  <!-- ============================================================ 1 -->
+  <section id="design" aria-labelledby="design-h">
+    <h2 id="design-h">1. Crowsign, the design</h2>
+
+    <blockquote>
+      <p>"can we make a secondary profession? If no, then enchanting should have the ability to "investigate" the natural world via herbs and leathers and hides. these could be imbued into "sprites", which are floating elementals of fist-to-watermelon size. if so, then that could be the profession - crowsign."</p>
+      <p>"They can be enchanted with upgrades, and they apply them as small HoT effects. Or similar, the fire one can light foes on fire - minor DoT, just enough to feel spiny. And you can have up to four, of any color."</p>
+      <p>"we can of course enchant these onto vellums, stories and tales given to the spirit world."</p>
+      <p>"return from your trial with a powerful vial, when drank it will give you a powerful sword."</p>
+      <p>"(doesn't create items, that's conjuration. Instead, it applies magical effects to weapons and armor like... y'know, enchantments)"</p>
+    </blockquote>
+
+    <p>Read as a whole, the idea makes enchanting a <b>gathering</b> profession. Enchanting takes magic out of two places. From gear it takes dust, essences, shards and crystals, which is what Disenchant does today. From the natural world (herbs, leathers, hides) it would take <b>sprites</b>, through a new action the owner calls "investigate". Then it passes that magic on to the other crafts. Crowsign is the name of the sprite half. It becomes its own secondary profession if the game allows one. If not, it stays inside enchanting as the "investigate" action.</p>
+
+    <h3>Where the magic goes</h3>
+    <div class="legend" aria-label="Legend">
+      <span><i class="sw" style="background:var(--stock-bg);border-color:var(--stock)"></i>in the stock game</span>
+      <span><i class="sw" style="background:var(--plan-bg);border-color:var(--plan)"></i>the owner's idea</span>
+      <span><i class="sw" style="background:var(--open-bg);border-color:var(--open);border-style:dashed"></i>offered as an alternative, not decided</span>
+      <span><i class="sw" style="background:var(--gem-bg);border-color:var(--gem)"></i>shards, crystals, gems</span>
+      <span><i class="sw" style="background:var(--gold-bg);border-color:var(--gold)"></i>dust</span>
+      <span><i class="sw" style="background:var(--honor-bg);border-color:var(--honor)"></i>sprites</span>
+    </div>
+    <div class="flow" role="img" aria-label="Gear is disenchanted into dust and shards, and herbs, leathers and hides are investigated into sprites. Shards and crystals go to jewelcrafters. Dust goes to blacksmiths, leatherworkers and tailors. Sprites are carried, up to four, and enchanted with upgrades. Enchantments also go onto vellums.">
+      <svg viewBox="0 0 1000 560" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"></path>
+          </marker>
+        </defs>
+        <text x="20"  y="22" class="small">WHAT IS BROKEN DOWN</text>
+        <text x="370" y="22" class="small">WHAT ENCHANTING HOLDS</text>
+        <text x="720" y="22" class="small">WHO USES IT</text>
+
+        <rect x="20" y="50" width="250" height="80" rx="8" class="box-stock" stroke-width="1.5"></rect>
+        <text x="32" y="76" class="label">Gear: weapons and armour</text>
+        <text x="32" y="96" class="small">uncommon to epic quality</text>
+        <text x="32" y="112" class="small">Disenchant (spell 13262)</text>
+
+        <rect x="20" y="300" width="250" height="90" rx="8" class="box-plan" stroke-width="1.5"></rect>
+        <text x="32" y="326" class="label">The natural world</text>
+        <text x="32" y="346" class="small">herbs, leathers, hides</text>
+        <text x="32" y="362" class="small">"investigate": a new action,</text>
+        <text x="32" y="378" class="small">"equivalent to disenchant"</text>
+
+        <rect x="370" y="40" width="250" height="70" rx="10" class="cur-gold" stroke-width="2"></rect>
+        <text x="384" y="66" class="label">Dust (and essences)</text>
+        <text x="384" y="86" class="small">"enchanted dust"</text>
+
+        <rect x="370" y="130" width="250" height="80" rx="10" class="cur-gem" stroke-width="2"></rect>
+        <text x="384" y="156" class="label">Shards and crystals</text>
+        <text x="384" y="176" class="small">"a token of raw magic infused into</text>
+        <text x="384" y="192" class="small">a mineralized [glass]"</text>
+
+        <rect x="370" y="300" width="250" height="100" rx="10" class="cur-honor" stroke-width="2"></rect>
+        <text x="384" y="326" class="label">Sprites</text>
+        <text x="384" y="346" class="small">floating elementals, fist to watermelon</text>
+        <text x="384" y="362" class="small">carried as items, up to four, any colour</text>
+        <text x="384" y="378" class="small">made by a profession spell, like a rod</text>
+
+        <rect x="370" y="440" width="250" height="70" rx="10" class="box-plan" stroke-width="1.5"></rect>
+        <text x="384" y="466" class="label">Enchantments</text>
+        <text x="384" y="486" class="small">onto gear, onto sprites, onto vellums</text>
+
+        <rect x="720" y="40"  width="260" height="46" rx="8" class="box-plan" stroke-width="1.5"></rect>
+        <text x="732" y="68"  class="label">Blacksmiths: dense minerals</text>
+        <rect x="720" y="96"  width="260" height="46" rx="8" class="box-plan" stroke-width="1.5"></rect>
+        <text x="732" y="124" class="label">Leatherworkers: paints that never dry</text>
+        <rect x="720" y="152" width="260" height="46" rx="8" class="box-plan" stroke-width="1.5"></rect>
+        <text x="732" y="180" class="label">Tailors: dyes and thread "sops"</text>
+        <rect x="720" y="208" width="260" height="56" rx="8" class="box-plan" stroke-width="1.5"></rect>
+        <text x="732" y="232" class="label">Jewelcrafters</text>
+        <text x="732" y="250" class="small">level = purity and size; colour = magic</text>
+        <rect x="720" y="276" width="260" height="56" rx="8" class="box-open" stroke-width="1.5"></rect>
+        <text x="732" y="300" class="label">Enchantments needing cut gems</text>
+        <text x="732" y="318" class="small">instead of large shards (alternative)</text>
+        <rect x="720" y="344" width="260" height="66" rx="8" class="box-plan" stroke-width="1.5"></rect>
+        <text x="732" y="368" class="label">The player: four sprites</text>
+        <text x="732" y="386" class="small">small heal over time; fire: a minor</text>
+        <text x="732" y="402" class="small">burn, "just enough to feel spiny"</text>
+        <rect x="720" y="440" width="260" height="70" rx="8" class="box-plan" stroke-width="1.5"></rect>
+        <text x="732" y="464" class="label">Vellums</text>
+        <text x="732" y="484" class="small">"stories and tales given to</text>
+        <text x="732" y="500" class="small">the spirit world"</text>
+
+        <path class="edge edge-gold" d="M270,80 C320,80 330,75 368,75" marker-end="url(#ah)"></path>
+        <path class="edge edge-gem"  d="M270,100 C320,100 330,165 368,165" marker-end="url(#ah)"></path>
+        <path class="edge edge-honor" d="M270,345 C320,345 330,350 368,350" marker-end="url(#ah)"></path>
+        <path class="edge edge-gold" d="M620,60 C660,60 680,63 718,63" marker-end="url(#ah)"></path>
+        <path class="edge edge-gold" d="M620,75 C670,75 680,119 718,119" marker-end="url(#ah)"></path>
+        <path class="edge edge-gold" d="M620,90 C670,90 680,175 718,175" marker-end="url(#ah)"></path>
+        <path class="edge edge-gem"  d="M620,160 C670,160 680,236 718,236" marker-end="url(#ah)"></path>
+        <path class="edge edge-gem"  d="M620,190 C660,190 680,300 718,300" marker-end="url(#ah)"></path>
+        <path class="edge edge-honor" d="M620,360 C660,360 680,377 718,377" marker-end="url(#ah)"></path>
+        <path class="edge edge-mark" d="M495,400 L495,438" marker-end="url(#ah)"></path>
+        <path class="edge edge-mark" d="M620,475 C660,475 680,475 718,475" marker-end="url(#ah)"></path>
+        <path class="edge edge-mark" d="M600,440 C640,420 650,400 622,392" marker-end="url(#ah)"></path>
+      </svg>
+    </div>
+
+    <h3>Sprite rules, as said</h3>
+    <ul>
+      <li><b>What a sprite is:</b> "a floating elemental of fist-to-watermelon size", carried as an inventory item.</li>
+      <li><b>How one is made:</b> a profession spell creates it, "like a runed copper rod" (Enchanting's first recipe, which turns a copper rod, a Strange Dust and a Lesser Magic Essence into the rod every enchantment needs).</li>
+      <li><b>What goes in:</b> what "investigate" draws out of herbs, leathers and hides.</li>
+      <li><b>What it does:</b> small effects over time. A heal over time, or for the fire sprite a minor burn on foes, "just enough to feel spiny".</li>
+      <li><b>How many:</b> "up to four, of any color".</li>
+      <li><b>How it grows:</b> "they can be enchanted with upgrades".</li>
+      <li><b>What it is not:</b> conjuration. Enchanting "applies magical effects to weapons and armor", and so to sprites. It does not make swords out of vials.</li>
+    </ul>
+
+    <h3>The other flows, as said</h3>
+    <ul>
+      <li><b>Gems:</b> "level determines purity and size, colour determines magical effects when crushed into enchantments". Enchanting could enchant dusts and crystals. An arcane crystal would be something like a Large Glimmering Shard, "a token of raw magic infused into a mineralized [glass]". It would then be given to jewelcrafters.</li>
+      <li><b>Alternative:</b> enchantments could require cut gems instead of large glimmering shards, and large glimmering shards (from disenchanted weapons) would go to jewelcrafters.</li>
+      <li><b>Dust:</b> to blacksmiths ("incredibly dense minerals"), leatherworkers ("paints that never go dry and adhere to the leather") and tailors ("dyes and processing steps, but pronounced sops, that modified the threads and gave them enchantments").</li>
+    </ul>
+    <p class="note">The stock game already has two of these flows in miniature. Enchanting makes <b>Enchanted Thorium</b> at skill 250, which <span data-n="use.12655"></span> use. It also makes <b>Enchanted Leather</b> at skill 250, which <span data-n="use.12810"></span> use. The materials table in section 4 counts which crafts consume each dust and shard today.</p>
+  </section>
+
+  <!-- ============================================================ 2 -->
+  <section id="route-a" aria-labelledby="route-a-h">
+    <h2 id="route-a-h">2. Route A: Crowsign as part of Enchanting ("investigate")</h2>
+    <p>This is the route the owner named as the fallback: "an additional ability to enchanting if we can't make our own new profession". It needs no new skill. Enchanting is skill line <span class="mono">333</span>, with a recipe window, a skill bar from 1 to 450, and <span data-n="counts.enchanting"></span> spells the client already lists under it. Crowsign would live inside that window and grow the Enchanting skill.</p>
+
+    <section aria-labelledby="a1-h">
+      <h3 id="a1-h">What the client decides, and what the server decides</h3>
+      <p>The client knows every spell's name, icon, tooltip, reagent list and cast bar from its own spell file. It also builds the recipe window from its own skill-line file: which spells appear under Enchanting, and at which skill they turn yellow, green and grey. The server only confirms what is cast. None of that can change without a client patch.</p>
+      <p>The server owns the rest. It decides what a spell <i>does</i> when cast, through its copy of the spell file, which it can override row by row in the <code>spell_dbc</code> table (<span data-n="override.spell_dbc"></span> rows today, all stock). It owns every item in <code>item_template</code>: an item's name, stats, icon (any icon the client has), stack size and flags reach the client from the server. It owns loot tables, trainers, and scripts (C++ spell scripts, and Lua through the ALE engine). Every client data file has a matching server-side override table. <code>skillline_dbc</code>, <code>skilllineability_dbc</code> and <code>skillraceclassinfo_dbc</code> exist and are empty. They change only the server's picture, never what the client shows.</p>
+      <p>So Route A has one rule. <b>Every Crowsign action borrows a spell the client already lists under Enchanting, or one the client will let the player cast.</b> The client keeps that spell's name, icon and listed reagents. The server changes what it does.</p>
+    </section>
+
+    <section aria-labelledby="a2-h">
+      <h3 id="a2-h">How the three "break it down" spells work today</h3>
+      <p>Investigate is "equivalent to disenchant". The game already has three spells of that kind: Disenchant (Enchanting), Prospecting (Jewelcrafting, ore into gems) and Milling (Inscription, herbs into pigments). All three follow one path through the server (<code>Spell.cpp</code>, the cast check; <code>SpellEffects.cpp</code>, the effect). First the cast check tests the targeted item. Then the effect opens a loot window of a special kind. The loot comes from a table keyed by the item, and the item is used up when the loot is taken.</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Spell</th><th>What it accepts</th><th>How many</th><th>Skill test</th><th>Loot comes from</th><th class="num">Items that qualify</th></tr></thead>
+          <tbody>
+            <tr><td>Disenchant <span class="mono">13262</span><br><span class="note">effect 99</span></td><td>weapon or armour, quality uncommon to epic, with a disenchant group set on the item</td><td>1</td><td>the item's required disenchant skill against Enchanting</td><td><code>disenchant_loot_template</code>, keyed by the item's disenchant group (<span data-n="loot.disenchant_loot_template"></span>)</td><td class="num" data-n="itemFlags.disenchantable"></td></tr>
+            <tr><td>Prospecting <span class="mono">31252</span><br><span class="note">effect 127</span></td><td>items with the "prospectable" flag (bit <span class="mono">0x40000</span>)</td><td>5 from one stack</td><td>the item's required skill rank against Jewelcrafting, hard-coded</td><td><code>prospecting_loot_template</code>, keyed by the ore's own item id (<span data-n="loot.prospecting_loot_template"></span>)</td><td class="num" data-n="itemFlags.prospectable"></td></tr>
+            <tr><td>Milling <span class="mono">51005</span><br><span class="note">effect 158</span></td><td>items with the "millable" flag (bit <span class="mono">0x20000000</span>)</td><td>5 from one stack</td><td>the item's required skill rank against Inscription, hard-coded</td><td><code>milling_loot_template</code>, keyed by the herb's own item id (<span data-n="loot.milling_loot_template"></span>)</td><td class="num" data-n="itemFlags.millable"></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">The skill each spell tests and the flag it looks for are written into the server's C++. A loot table is just rows keyed by an item id, so any number of new rows can be added without code. Both flags live on the server's item rows, and the server sends item rows to the client.</p>
+    </section>
+
+    <section aria-labelledby="a3-h">
+      <h3 id="a3-h">Investigate: three ways to build it</h3>
+      <div class="cards">
+        <div class="card">
+          <h4>1. Disenchant does both</h4>
+          <p>One button, as the owner put it. Disenchant stays the spell. The server's cast check lets it through for herbs, leathers and hides as well as gear, and the effect sends those items to a loot table of Crowsign rows. That takes a small reversible C++ patch (a <code>patches/B*.sh</code>), or a spell script bound to spell 13262 that replaces the cast check and the effect.</p>
+          <p class="note">Unknown: whether the client itself refuses to aim Disenchant at a herb before asking the server. One test in game settles it.</p>
+        </div>
+        <div class="card">
+          <h4>2. Rows in a table no herb uses</h4>
+          <p>Loot is keyed by item id. Investigate's loot could sit in <code>prospecting_loot_template</code> under herb and leather ids: no ore shares those ids, so nothing collides. The effect would open a prospecting-type loot window, so the consume-five-on-loot step already works. Only the check (which items, which skill) needs new code.</p>
+        </div>
+        <div class="card">
+          <h4>3. Lua only, no loot window</h4>
+          <p>An ALE hook on spell cast watches for the chosen spell and its target item. It removes the herbs and hands over the sprite material directly, with no C++. It is the quickest to try. The drawback is that the player gets no loot window, and the cast has to be allowed through first, so this still meets the client question in 1.</p>
+        </div>
+      </div>
+      <p>The flags and ranks that decide what can be investigated are all item fields the server owns. Reuse <code>RequiredSkillRank</code> as the Enchanting skill needed, the way prospecting and milling use it. Mark each investigable item in the loot table, not with a flag: the two free flag bits belong to Jewelcrafting and Inscription. The server's world database has <span data-n="counts.investigate"></span> trade goods in the three groups investigate could take. They are listed below, with whether each is already milled and in how many skinning loot groups it appears (one group can serve many creatures). <code>skill_discovery_template</code> (<span data-n="override.skill_discovery_template"></span> rows) is the stock mechanism for "sometimes you discover a new recipe while crafting", which fits "investigate" too.</p>
+      <div class="ctl" id="inv-ctl"></div>
+      <div class="tbl tall"><table id="inv-tbl"></table></div>
+      <p class="note">The <b>elemental</b> group already holds the game's own coloured magic in item form: Elemental Fire, Essence of Water, the Outland motes, the Northrend crystallized elements. These are the closest things the client has to sprite essences, with names and icons it already knows.</p>
+    </section>
+
+    <section aria-labelledby="a4-h">
+      <h3 id="a4-h">Making sprites: which recipe slot</h3>
+      <p>A sprite is an item, and new items are possible: the server supplies the name, stats and icon. (The vision note records one caveat. Whether a brand-new item id shows its icon everywhere in this client is untested. The Outland ability tomes, 155q, will show it.) The recipe that makes the sprite is the hard part. To appear in the Enchanting window it must be a spell the client already lists under Enchanting. The window then shows that spell's client-side name, reagents and tool, and the <i>item id</i> the client thinks it creates. That item's name and icon come from the server.</p>
+      <p>So there are three ways to get a sprite recipe into the window:</p>
+      <ol>
+        <li><b>Take over a product.</b> Choose an Enchanting recipe whose product the game can spare and rewrite that product's item row as a sprite. The window then shows, for example, "Lesser Magic Wand", and the item it makes appears as the sprite, with the sprite's name and icon. The recipe name stays wrong, but everything else lines up, and it needs no spell override at all. The wands are the plainest candidates (levels 10 to 175 of skill).</li>
+        <li><b>Change what a recipe makes.</b> Override the recipe's created item in <code>spell_dbc</code>. The bag gets a sprite, but the window still shows the old product. This is the only use for the <span data-n="enchanting.none"></span> recipes the client lists under Enchanting that no trainer or recipe item teaches (the retired TBC "Arcane Dust" recipe, <span class="mono">28021</span>, is one).</li>
+        <li><b>No window.</b> Craft sprites from a menu, either gossip on an item such as the rod or on a trainer, written in Lua. Any names are possible, and the skill still rises through the server. There is no recipe window and no skill colours.</li>
+      </ol>
+      <p>Every Enchanting recipe that creates an item, with the skill it is learned at:</p>
+      <div class="tbl tall"><table id="make-tbl"></table></div>
+      <p class="note">Vellums: in 3.3.5 every enchantment recipe can also be cast onto a vellum to make a scroll, which is its own item that the server owns. <span data-n="enchanting.scrolls"></span> Enchanting recipes name a scroll this way. Scrolls are the natural home for "stories and tales given to the spirit world", and for carrying an upgrade to a sprite. Using the scroll on a sprite could apply the enchantment server-side, whatever the enchant spell's own target rules say.</p>
+    </section>
+
+    <section aria-labelledby="a5-h">
+      <h3 id="a5-h">Carrying sprites, and what they do</h3>
+      <div class="cards">
+        <div class="card">
+          <h4>Four sprites, four bag slots</h4>
+          <p>The character sheet has exactly four bag slots. The server applies an equipped item's stats, its "on equip" spells and its enchantments to every slot up to and including the bags. In <code>Player.cpp</code>, the item-modifier step runs for slots 0 to 22, and 19 to 22 are the four bags. A sprite made as a small bag with an on-equip aura would give "up to four, of any colour" with no new code, and enchanting a sprite would be an ordinary item enchantment. The cost is bag space, unless sprites carry a few slots of their own. <i>Read in the source, not yet tried in game.</i></p>
+        </div>
+        <div class="card">
+          <h4>Carried loose in the bags</h4>
+          <p>"On equip" spells do not run for items sitting inside bags. A Lua script would count sprite items when the bags change (or on a timer) and apply or remove the matching auras, capped at four. This means more code, and the four-limit is a rule the script enforces rather than a shape the game already has.</p>
+        </div>
+        <div class="card">
+          <h4>Seen floating</h4>
+          <p>"Floating elementals of fist-to-watermelon size" can also be seen. The server can spawn small creatures that follow the player and circle at a radius. The project's orbit maths is already written for monsters. Any creature model the client has can be used; the creature list in section 4 has the wisps, motes, sprites and faeries. Only one companion pet can be out at a time, so four sprites would be server-spawned followers, not pets.</p>
+        </div>
+      </div>
+      <p>The effects are auras. The buff bar shows the aura's client-side name and icon, so each colour of sprite borrows an existing spell whose name fits and whose effect kind is right: heal over time, damage over time, or a <b>damage shield</b>. A damage shield is the stock game's "spiny": it hurts whoever strikes you, like Thorns, which is exactly "just enough to feel spiny". The server sets the numbers through <code>spell_dbc</code>, so small stays small. Candidates are in section 3's sprite-name list: filter by "heal over time" or "damage over time", and prefer spells that no player learns ("NPC only"), so no class ability is changed by accident.</p>
+    </section>
+
+    <section aria-labelledby="a6-h">
+      <h3 id="a6-h">Every Enchanting spell, by the skill it is learned at</h3>
+      <p>All <span data-n="counts.enchanting"></span> spells the client lists under Enchanting (skill line 333), with the lowest skill any trainer or recipe item asks for. "With the skill" means it comes free when Enchanting is learned. "None" means nothing in this database teaches it. Yellow and grey are the client's own colour points; green falls halfway between them. Trainers teach the ranks by character level: Artisan (to 300) at 35, Master (to 375) at 50, Grand Master (to 450) at 65. Basic (level cap 60) therefore reaches skill 375, vanilla (40) reaches 300, and beta (20) reaches 225 (Expert is taught at 20).</p>
+      <div class="ctl" id="ench-ctl"></div>
+      <div class="tbl tall"><table id="ench-tbl"></table></div>
+    </section>
+  </section>
+
+  <!-- ============================================================ 3 -->
+  <section id="route-b" aria-labelledby="route-b-h">
+    <h2 id="route-b-h">3. Route B: Crowsign as its own skill</h2>
+
+    <section aria-labelledby="b1-h">
+      <h3 id="b1-h">What a real new profession needs</h3>
+      <p>A profession is a <b>skill line</b>. For the client to show one, its own data files need all of the following:</p>
+      <ul>
+        <li>a row in <b>SkillLine</b>: the name ("Crowsign"), the heading it sits under (Professions or Secondary Skills) and its icon;</li>
+        <li>rows in <b>SkillRaceClassInfo</b>: who may hold it, and whether the skills panel draws a bar;</li>
+        <li>a rank row in <b>SkillTiers</b>: the 75 / 150 / 225 / 300 / 375 / 450 steps;</li>
+        <li>one row in <b>SkillLineAbility</b> per recipe: the list the recipe window shows, and each recipe's yellow and grey points;</li>
+        <li>a row in <b>Spell</b> for the "open the window" spell and for every recipe: name, icon, reagents, cast time and tooltip.</li>
+      </ul>
+      <p>The client reads these from its archives. Adding them means shipping a patch archive to every player, and this project makes no client patches. The server-side copies (<code>skillline_dbc</code> and the rest) would make the server accept a skill 800 called Crowsign. The client would still not know its name, would draw nothing, and would open no window. <b>A new skill line is not possible now.</b></p>
+      <p>What is possible: <b>take over a skill line the client already has</b> and nobody uses. The client keeps its name and icon, and its recipe window (if any) lists only the spells the client already files under it. The server decides who holds it, its value and maximum, how it rises, and what its spells do.</p>
+    </section>
+
+    <section aria-labelledby="b2-h">
+      <h3 id="b2-h">Every skill line a player could see</h3>
+      <p>These are every skill line under Professions, Secondary Skills, Languages and Not Displayed, plus the three class-skill lines that behave like professions. "Bar" comes from the client's own display flags: <span class="mono">0x400</span> means the client draws a flat value with no progress bar. "Window" names the spell that opens a recipe window for that line. "Max" is the highest rank in the client's tier file, or "by level" when the line has no tiers (then the server's default is five points per level). The server can set any value and maximum it likes.</p>
+      <div class="ctl" id="sk-ctl"></div>
+      <div class="tbl tall"><table id="sk-tbl"></table></div>
+      <div class="cards">
+        <div class="card">
+          <h4>Survival (142): the best host</h4>
+          <p>It sits under <b>Secondary Skills</b>, beside Cooking, First Aid and Fishing, which is where the owner asked for Crowsign ("can we make a secondary profession?"). Its display flags are 0, so the client draws a real progress bar. Every race and class may hold it. Nobody teaches it, and no item needs it. It was a secondary profession cut before release, and its one spell is Basic Campfire, which Cooking also teaches. The name reads "Survival", which suits investigating the natural world. It has <b>no recipe window</b>, so Crowsign's crafts would come from a Lua menu or from Enchanting's window (Route A's recipe slots), while the Survival bar grows.</p>
+        </div>
+        <div class="card">
+          <h4>Internal (769): a window, but a test bench</h4>
+          <p>The only unused line with a recipe window. Internal Knowledge (<span class="mono">36356</span>) opens it, and the client files 35 developers' test spells under it. The server could rewrite what each one does. The window would still list them by their client names: "Uber Heal Over Time", "Master Buff (Magic)", "Death Touch", "dmg4". It sits under Class Skills with no bar. It works, but it reads like a test bench.</p>
+        </div>
+        <div class="card">
+          <h4>The retired riding skills (eight)</h4>
+          <p>Horse, Wolf, Tiger, Ram, Raptor and Kodo Riding, Mechanostrider Piloting and Undead Horsemanship. Riding (762) replaced them in patch 2.0. They are under Secondary Skills, but their flags (<span class="mono">0x492</span>) show a flat value, not a bar, and <span data-n="ridingItems"></span> old mount items still name them. Their names say "riding", so they make a poor fit.</p>
+        </div>
+        <div class="card">
+          <h4>Not free</h4>
+          <p>Lockpicking (rogues), Runeforging (death knights), the professions, the racial lines and the languages in use. The NPC-only languages (Titan, Draconic, Old Tongue, Demon Tongue) are free but read as languages. Swimming has no race/class row, so the server deletes it at login unless a server-side row is added.</p>
+        </div>
+      </div>
+      <p><b>What a player would see under Route B, with Survival:</b> "Survival 37 / 300" under Secondary Skills; the Crowsign spells in the spellbook under their borrowed client names and icons; sprite items under their new server names. The word "Crowsign" appears only where the server writes text: item names and tooltips, menus, chat. The skills panel always reads "Survival".</p>
+    </section>
+
+    <section aria-labelledby="b3-h">
+      <h3 id="b3-h">The spells each skill line already has, by level</h3>
+      <p>Pick a line to see every spell the client files under it, sorted by spell level (0 means the spell has no level), then by the skill that teaches it.</p>
+      <div class="ctl" id="ss-ctl"></div>
+      <div class="tbl tall"><table id="ss-tbl"></table></div>
+    </section>
+
+    <section aria-labelledby="b4-h">
+      <h3 id="b4-h">Client spells whose names fit sprites</h3>
+      <p>Under either route, a no-patch Crowsign acts through spells the client already has. These are all <span data-n="counts.sprites"></span> spells whose names contain Sprite, Wisp, Mote, Spirit, Elemental, Faerie, Fairy, Will-o, Essence, Pixie or Firefly, sorted by spell level. "Kind" sorts them by what they could lend a sprite: a summon (a creature or object appears), a heal or damage over time, a visual or dummy aura (a server script decides what it does), or a buff. "Who has it" says whether any player skill line or trainer carries the spell (<span data-n="spritePlayer"></span>). The rest are NPC spells, and those are the safest to rewrite. "Now does" is the client's own tooltip with its numbers filled in, or the effect list when there is no tooltip.</p>
+      <div class="ctl" id="sp-ctl"></div>
+      <div class="tbl tall"><table id="sp-tbl"></table></div>
+    </section>
+  </section>
+
+  <!-- ============================================================ 4 -->
+  <section id="extra" aria-labelledby="extra-h">
+    <h2 id="extra-h">4. Materials, and other details that bear on the choice</h2>
+
+    <section aria-labelledby="m-h">
+      <h3 id="m-h">Enchanting materials, and which crafts use them today</h3>
+      <p>Every item any disenchant loot group can give (<span data-n="counts.materials"></span>), by item level. "Gear that gives it" counts the items whose disenchant group can drop it. The craft columns count the recipes in that craft that ask for the material. This is where the owner's flows start from: how much of each dust already reaches blacksmiths, leatherworkers and tailors, and how many shards reach jewelcrafters.</p>
+      <div class="ctl" id="mat-ctl"></div>
+      <div class="tbl tall"><table id="mat-tbl"></table></div>
+    </section>
+
+    <div class="stats" id="stats"></div>
+
+    <section aria-labelledby="c-h">
+      <h3 id="c-h">Creatures whose names fit sprites</h3>
+      <p>These are creatures in the world database whose names hold one of the sprite words. Their models are the looks a floating sprite could borrow: a server-spawned follower takes any creature's model. Names with "DND", "Trigger" or brackets are left out as invisible helpers.</p>
+      <div class="ctl" id="cr-ctl"></div>
+      <div class="tbl tall"><table id="cr-tbl"></table></div>
+    </section>
+
+    <section aria-labelledby="s-h">
+      <h3 id="s-h">Server-side tables a no-patch build would write</h3>
+      <div class="tbl"><table id="ov-tbl"></table></div>
+      <p class="note">The <code>*_dbc</code> tables override the server's copy of a client data file row by row. <code>spell_linked_spell</code> makes one spell cast or apply another. <code>spell_script_names</code> binds a C++ spell script to a spell id. Nothing here reaches the client.</p>
+    </section>
+  </section>
+
+  <!-- ============================================================ 5 -->
+  <section id="compare" aria-labelledby="cmp-h">
+    <h2 id="cmp-h">5. The two routes side by side</h2>
+    <div class="tbl">
+      <table>
+        <thead><tr><th></th><th>Route A: investigate, inside Enchanting</th><th>Route B: a borrowed skill line (Survival)</th></tr></thead>
+        <tbody>
+          <tr><td>Skill shown</td><td>Enchanting, 1 to 450, one bar for both halves</td><td>"Survival" under Secondary Skills, its own bar; Enchanting unchanged</td></tr>
+          <tr><td>Recipe window</td><td>Enchanting's, with recipes borrowed from its own list</td><td>none of its own; a Lua menu, or Enchanting's window</td></tr>
+          <tr><td>The word "Crowsign"</td><td>item names, menus, chat</td><td>item names, menus, chat (the skills panel says Survival)</td></tr>
+          <tr><td>Who can do it</td><td>enchanters only (a primary profession slot)</td><td>anyone, as a secondary skill, like Cooking</td></tr>
+          <tr><td>Investigate</td><td>Disenchant, widened on the server</td><td>a spell taught to Survival holders; the same loot-table work</td></tr>
+          <tr><td>Code</td><td>a cast-check change (C++ patch or spell script), loot rows, item rows, auras</td><td>all of Route A's, plus a server-side race/class row and ranks for Survival, a teacher, and the menu</td></tr>
+          <tr><td>Client risk</td><td>whether the client lets Disenchant aim at a herb</td><td>none for the bar; the recipe list lives outside the client's window</td></tr>
+          <tr><td>Fit to the words</td><td>"it would be an additional ability to enchanting if we can't make our own new profession"</td><td>"can we make a secondary profession? ... if so, then that could be the profession - crowsign"</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">The two can be combined. Route A's recipe slots and investigate work serve both routes; Route B adds only a skill bar that isn't Enchanting's, and who may hold it.</p>
+  </section>
+
+  <!-- ============================================================ 6 -->
+  <section id="open" aria-labelledby="open-h">
+    <h2 id="open-h">6. Open questions</h2>
+    <ol>
+      <li><b>Which route?</b> Crowsign as Enchanting's "investigate" (enchanters only), or as a borrowed secondary skill (Survival) that anyone can hold?</li>
+      <li><b>How much does investigate take?</b> One item, like Disenchant, or five from a stack, like Milling and Prospecting?</li>
+      <li><b>Which items?</b> Herbs, leathers and hides as said. Should cloth, meat, or the existing elemental items (Elemental Fire, the motes) be investigated as well, or be the <i>output</i> of investigating?</li>
+      <li><b>What comes out?</b> A sprite directly, or a material (an "essence of the natural world") that a recipe then shapes into a sprite "like a runed copper rod"?</li>
+      <li><b>Where do the four sprites live?</b> In the four bag slots (the game already applies their effects there), or loose in the bags with a script enforcing the four?</li>
+      <li><b>"Of any colour":</b> may all four be the same colour (four fire sprites), or one of each?</li>
+      <li><b>Always on, or on a trigger?</b> A passive heal over time, and for fire either a burn on nearby foes or a damage shield ("spiny") on whoever strikes you?</li>
+      <li><b>Are sprites seen?</b> Floating in the world, fist to watermelon by level, or only as icons in the bags?</li>
+      <li><b>How does a sprite grow?</b> Through enchantments laid on it like armour, or through recipes that turn a small sprite into a larger one?</li>
+      <li><b>Gems:</b> should enchantments ask for cut gems (the alternative offered) or keep the large shards, with the shards going on to jewelcrafters?</li>
+      <li><b>The dust flows:</b> reuse the stock recipes that already exist (Enchanted Thorium for blacksmiths, Enchanted Leather for leatherworkers), or borrow other recipe slots for "dense minerals", "paints that never dry" and thread "sops"?</li>
+      <li><b>The vial line:</b> "return from your trial with a powerful vial, when drank it will give you a powerful sword", then "(doesn't create items, that's conjuration...)". Is the vial a Crowsign thing, or the example that was ruled out?</li>
+      <li><b>Recipe names:</b> is a window line that says "Lesser Magic Wand" but makes an "Ember Sprite" acceptable, or should sprite crafts live in a menu with their own names?</li>
+      <li><b>Level range:</b> basic (level 60) can reach Enchanting 375, vanilla (40) 300, beta (20) 225. Which sprite tiers exist, and at what skill?</li>
+      <li><b>Untested client behaviour</b> the choice leans on. Does the client let Disenchant aim at a herb? Does a new item id show its icon everywhere? Does the client build the recipe window from its own files only (believed, not tried)?</li>
+    </ol>
+  </section>
+
+  <footer>
+    <p>Generated <span id="gen"></span> by <code>scripts/generate-crowsign-page</code> (LuaJIT), from <code>scripts/templates/crowsign.html</code>. Regenerate with <code>scripts/generate-crowsign-page [PROJECT_DIR]</code>.</p>
+    <p>Client data: <code>data-files/dbc/</code> SkillLine, SkillLineCategory, SkillLineAbility (skill line, spell, acquire method, yellow and grey points), SkillRaceClassInfo (display flags, tiers), SkillTiers, Spell (name, rank, level, effects, auras, reagents, created item, tooltip), SpellIcon, SpellDuration. The field positions are checked against Disenchant, Prospecting, Milling and Enchant Bracer - Minor Health on every run.</p>
+    <p>World database (<code>acore_world_release</code>, read-only). The learning rank is the lowest <code>trainer_spell.ReqSkillRank</code> for the spell, or for the "learn" spell that teaches it; otherwise the lowest <code>RequiredSkillRank</code> of a recipe item (<code>item_template</code> class 9). Materials: <code>disenchant_loot_template</code> joined to <code>item_template</code>. Investigate candidates: <code>item_template</code> class 7, subclasses 6, 9, 10, with <code>milling_loot_template</code> and <code>skinning_loot_template</code> counts. Flags: <code>item_template.Flags</code> bits 0x40000 and 0x20000000; <code>DisenchantID</code>. Creatures: <code>creature_template</code> names matching the sprite words.</p>
+  </footer>
+</div>
+
+<script>
+const DATA = /*DATA*/;
+
+// {{{ helpers
+const $ = id => document.getElementById(id);
+const fmt = n => (n == null ? "–" : Number(n).toLocaleString("en-US"));
+const itemName = id => DATA.items[String(id)] || ("item " + id);
+function el(tag, props, kids) {
+  const e = document.createElement(tag);
+  if (props) for (const k in props) { if (k === "cls") e.className = props[k]; else if (k === "text") e.textContent = props[k]; else e.setAttribute(k, props[k]); }
+  (kids || []).forEach(k => e.append(k));
+  return e;
+}
+function chip(text, cls) { return el("span", { cls: "chip " + cls, text }); }
+// }}}
+
+// {{{ the numbers inside the prose
+const lootOf = t => DATA.loot.find(l => l.table === t);
+const overOf = t => DATA.overrides.find(o => o.table === t);
+const riding = [148, 149, 150, 152, 533, 553, 554, 713];
+const COMPUTED = {
+  "enchanting.none": DATA.enchanting.filter(e => e.src === "none").length,
+  "enchanting.scrolls": DATA.enchanting.filter(e => /enchant item/.test(e.fx) && e.made > 0).length,
+  "ridingItems": DATA.skills.filter(s => riding.includes(s.id)).reduce((a, s) => a + s.items, 0),
+  "spritePlayer": DATA.sprites.filter(s => s.player).length + " of them do",
+};
+document.querySelectorAll("[data-n]").forEach(node => {
+  const key = node.dataset.n;
+  let v = COMPUTED[key];
+  if (v === undefined && key.startsWith("loot.")) { const l = lootOf(key.slice(5)); v = fmt(l.rows) + " rows, " + fmt(l.entries) + " keys"; }
+  if (v === undefined && key.startsWith("override.")) v = fmt(overOf(key.slice(9)).rows);
+  if (v === undefined && key.startsWith("use.")) {
+    // which crafts list this item as a reagent, and in how many recipes
+    const item = Number(key.slice(4));
+    v = DATA.skills.map(s => [s.name, (DATA.skillSpells[String(s.id)] || []).filter(r => r.reag.some(g => g[0] === item)).length])
+      .filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).map(([name, n]) => fmt(n) + " " + name + " recipes").join(", ");
+  }
+  if (v === undefined) v = key.split(".").reduce((o, k) => o && o[k], DATA);
+  node.textContent = typeof v === "number" ? fmt(v) : v;
+});
+$("gen").textContent = DATA.generated;
+// }}}
+
+// {{{ one filterable table
+// rows: the data; cols: [{h, f(row) -> string|Node, cls}]; text(row): what the
+// filter box searches; groups: [{label, buttons: [{label, test(row)}]}], one
+// pressed button per group (the first is "all").
+function table(opts) {
+  const ctl = $(opts.ctl), tbl = $(opts.tbl);
+  const state = { q: "", pick: (opts.groups || []).map(() => 0) };
+  const input = el("input", { type: "search", placeholder: opts.placeholder || "Filter by name or id", "aria-label": "Filter " + opts.label });
+  ctl.append(input);
+  if (opts.extra) opts.extra(ctl);
+  (opts.groups || []).forEach((g, gi) => {
+    const box = el("div", { cls: "ctl-group", role: "group", "aria-label": g.label }, [el("b", { text: g.label })]);
+    g.buttons.forEach((b, bi) => {
+      const btn = el("button", { type: "button", "aria-pressed": bi === 0 ? "true" : "false", text: b.label });
+      btn.addEventListener("click", () => {
+        state.pick[gi] = bi;
+        box.querySelectorAll("button").forEach((x, xi) => x.setAttribute("aria-pressed", xi === bi ? "true" : "false"));
+        draw();
+      });
+      box.append(btn);
+    });
+    ctl.append(box);
+  });
+  const count = el("span", { cls: "count", "aria-live": "polite" });
+  ctl.append(count);
+  const thead = el("thead", null, [el("tr", null, opts.cols.map(c => el("th", { cls: c.cls || "", text: c.h })))]);
+  const tbody = el("tbody");
+  tbl.append(thead, tbody);
+  function draw() {
+    const rows = (typeof opts.rows === "function" ? opts.rows() : opts.rows).filter(r =>
+      (!state.q || opts.text(r).toLowerCase().includes(state.q)) &&
+      (opts.groups || []).every((g, gi) => state.pick[gi] === 0 || g.buttons[state.pick[gi]].test(r)));
+    tbody.replaceChildren(...rows.map(r => el("tr", null, opts.cols.map(c => {
+      const v = c.f(r), td = el("td", { cls: c.cls || "" });
+      if (v instanceof Node) td.append(v); else td.textContent = v == null ? "" : v;
+      return td;
+    }))));
+    const total = (typeof opts.rows === "function" ? opts.rows() : opts.rows).length;
+    count.textContent = fmt(rows.length) + " of " + fmt(total);
+  }
+  input.addEventListener("input", () => { state.q = input.value.trim().toLowerCase(); draw(); });
+  draw();
+  return draw;
+}
+const reagents = r => r.reag.map(([id, n]) => (n > 1 ? n + " × " : "") + itemName(id)).join(", ");
+const skillRanges = key => [
+  { label: "all", test: () => true },
+  ...[[1, 74], [75, 149], [150, 224], [225, 299], [300, 374], [375, 450]].map(([a, b]) => ({ label: a + "–" + b, test: r => r[key] != null && r[key] >= a && r[key] <= b })),
+  { label: "not taught", test: r => r[key] == null },
+];
+const levelRanges = key => [
+  { label: "all", test: () => true },
+  { label: "0", test: r => r[key] === 0 },
+  ...[[1, 20], [21, 40], [41, 60], [61, 80]].map(([a, b]) => ({ label: a + "–" + b, test: r => r[key] >= a && r[key] <= b })),
+  { label: "81+", test: r => r[key] > 80 },
+];
+// }}}
+
+// {{{ the Enchanting list
+table({
+  ctl: "ench-ctl", tbl: "ench-tbl", label: "Enchanting spells", rows: DATA.enchanting,
+  text: r => r.name + " " + r.rank + " " + r.id + " " + reagents(r) + " " + (r.made ? itemName(r.made) : ""),
+  groups: [
+    { label: "Skill", buttons: skillRanges("req") },
+    { label: "Kind", buttons: [
+      { label: "all", test: () => true },
+      { label: "enchantments", test: r => /enchant item/.test(r.fx) },
+      { label: "makes an item", test: r => /create item/.test(r.fx) },
+      { label: "other", test: r => !/enchant item|create item/.test(r.fx) },
+    ] },
+  ],
+  cols: [
+    { h: "Skill", cls: "num", f: r => r.req == null ? "–" : r.req },
+    { h: "Yellow", cls: "num", f: r => r.yellow || "" },
+    { h: "Green", cls: "num", f: r => r.yellow && r.grey ? Math.round((r.yellow + r.grey) / 2) : "" },
+    { h: "Grey", cls: "num", f: r => r.grey || "" },
+    { h: "Spell", cls: "wide", f: r => r.name + (r.rank ? " (" + r.rank + ")" : "") },
+    { h: "Learned", f: r => chip(r.src, r.src === "none" ? "open" : r.src === "trainer" ? "stock" : r.src === "recipe item" ? "gold" : "gem") },
+    { h: "Reagents", cls: "desc", f: reagents },
+    { h: "Makes", cls: "desc", f: r => /create item/.test(r.fx) && r.made ? itemName(r.made) : (r.made ? "scroll: " + itemName(r.made) : "") },
+    { h: "Id", cls: "id", f: r => r.id },
+  ],
+});
+// }}}
+
+// {{{ the investigate candidates, and the recipes that make an item
+table({
+  ctl: "inv-ctl", tbl: "inv-tbl", label: "investigate candidates", rows: DATA.investigate,
+  text: r => r.name + " " + r.id,
+  groups: [
+    { label: "Group", buttons: [{ label: "all", test: () => true }, ...["herb", "leather and hides", "elemental"].map(g => ({ label: g, test: r => r.group === g }))] },
+    { label: "Item level", buttons: [{ label: "all", test: () => true }, ...[[0, 20], [21, 40], [41, 60], [61, 70], [71, 999]].map(([a, b]) => ({ label: b > 900 ? "71+" : a + "–" + b, test: r => r.ilvl >= a && r.ilvl <= b }))] },
+  ],
+  cols: [
+    { h: "Item lvl", cls: "num", f: r => r.ilvl },
+    { h: "Item", cls: "wide", f: r => r.name },
+    { h: "Group", f: r => r.group },
+    { h: "Milled today", f: r => r.milled ? chip("milled", "gold") : "" },
+    { h: "Skinning loot groups", cls: "num", f: r => r.skinned ? fmt(r.skinned) : "" },
+    { h: "Id", cls: "id", f: r => r.id },
+  ],
+});
+(() => {
+  const t = $("make-tbl");
+  const rows = DATA.enchanting.filter(r => /create item/.test(r.fx));
+  t.append(el("thead", null, [el("tr", null, ["Skill", "Recipe (client name)", "Makes (server item)", "Reagents", "Learned", "Id"].map((h, i) => el("th", { cls: i === 0 ? "num" : "", text: h })))]));
+  t.append(el("tbody", null, rows.map(r => el("tr", null, [
+    el("td", { cls: "num", text: r.req == null ? "–" : r.req }),
+    el("td", { cls: "wide", text: r.name }),
+    el("td", { text: itemName(r.made) + " (" + r.made + ")" }),
+    el("td", { cls: "desc", text: reagents(r) }),
+    el("td", null, [chip(r.src, r.src === "none" ? "open" : "stock")]),
+    el("td", { cls: "id", text: r.id }),
+  ]))));
+})();
+// }}}
+
+// {{{ the skill lines
+const VERDICT_CHIP = { "free": "gem", "retired": "gold", "in use": "stock", "hidden": "plan", "rare": "honor" };
+table({
+  ctl: "sk-ctl", tbl: "sk-tbl", label: "skill lines", rows: DATA.skills,
+  text: r => r.name + " " + r.id + " " + r.category,
+  groups: [
+    { label: "Heading", buttons: [{ label: "all", test: () => true }, ...["Professions", "Secondary Skills", "Languages", "Class Skills", "Not Displayed"].map(c => ({ label: c, test: r => r.category === c }))] },
+    { label: "Verdict", buttons: [{ label: "all", test: () => true }, ...["free", "retired", "rare", "in use", "hidden"].map(v => ({ label: v, test: r => r.verdict === v }))] },
+  ],
+  cols: [
+    { h: "Skill line", cls: "wide", f: r => r.name },
+    { h: "Heading", f: r => r.category },
+    { h: "Verdict", f: r => chip(r.verdict, VERDICT_CHIP[r.verdict] || "stock") },
+    { h: "Max", cls: "num", f: r => r.max || "by level" },
+    { h: "Bar", f: r => r.flags === "" ? "–" : r.flags.split(" ").every(f => parseInt(f, 16) & 0x400) ? "no" : "yes" },
+    { h: "Window", f: r => r.window ? "spell " + r.window : "" },
+    { h: "Spells", cls: "num", f: r => r.abilities },
+    { h: "Taught by trainers", cls: "num", f: r => r.trainers || "" },
+    { h: "Items need it", cls: "num", f: r => r.items || "" },
+    { h: "Notes", cls: "desc", f: r => r.note },
+    { h: "Id", cls: "id", f: r => r.id },
+  ],
+});
+// }}}
+
+// {{{ the spells of one skill line
+(() => {
+  let current = "142";
+  const sel = el("select", { "aria-label": "Skill line" });
+  DATA.skills.filter(s => s.abilities > 0).forEach(s => {
+    const o = el("option", { value: String(s.id), text: s.name + " (" + s.abilities + ", " + s.verdict + ")" });
+    if (String(s.id) === current) o.selected = true;
+    sel.append(o);
+  });
+  const draw = table({
+    ctl: "ss-ctl", tbl: "ss-tbl", label: "spells of the chosen skill line", rows: () => DATA.skillSpells[current] || [],
+    extra: c => c.append(sel),
+    text: r => r.name + " " + r.rank + " " + r.id + " " + r.fx + " " + r.desc,
+    groups: [{ label: "Spell level", buttons: levelRanges("lvl") }],
+    cols: [
+      { h: "Level", cls: "num", f: r => r.lvl },
+      { h: "Skill", cls: "num", f: r => r.req == null ? "–" : r.req },
+      { h: "Spell", cls: "wide", f: r => r.name + (r.rank ? " (" + r.rank + ")" : "") },
+      { h: "Learned", f: r => chip(r.src, r.src === "none" ? "open" : "stock") },
+      { h: "Now does", cls: "desc", f: r => r.desc || r.fx },
+      { h: "Id", cls: "id", f: r => r.id },
+    ],
+  });
+  sel.addEventListener("change", () => { current = sel.value; draw(); });
+})();
+// }}}
+
+// {{{ the sprite-name spells
+table({
+  ctl: "sp-ctl", tbl: "sp-tbl", label: "sprite-name spells", rows: DATA.sprites,
+  text: r => r.name + " " + r.rank + " " + r.id + " " + r.desc + " " + r.fx + " " + r.icon,
+  groups: [
+    { label: "Spell level", buttons: levelRanges("lvl") },
+    { label: "Kind", buttons: [{ label: "all", test: () => true }, ...["summon", "heal over time", "damage over time", "heal", "damage", "buff", "visual / dummy", "other"].map(k => ({ label: k, test: r => r.kind === k }))] },
+    { label: "Word", buttons: [{ label: "all", test: () => true }, ...["sprite", "wisp", "mote", "faerie", "fairy", "will-o", "pixie", "firefly", "elemental", "essence", "spirit"].map(w => ({ label: w, test: r => r.word === w }))] },
+    { label: "Who has it", buttons: [{ label: "all", test: () => true }, { label: "NPC only", test: r => !r.player }, { label: "players", test: r => r.player }] },
+  ],
+  cols: [
+    { h: "Level", cls: "num", f: r => r.lvl },
+    { h: "Spell", cls: "wide", f: r => r.name + (r.rank ? " (" + r.rank + ")" : "") },
+    { h: "Kind", f: r => r.kind },
+    { h: "Now does", cls: "desc", f: r => r.desc || r.fx },
+    { h: "Who has it", f: r => chip(r.player ? "players" : "NPC only", r.player ? "stock" : "gem") },
+    { h: "Icon", cls: "id", f: r => r.icon },
+    { h: "Id", cls: "id", f: r => r.id },
+  ],
+});
+// }}}
+
+// {{{ materials
+(() => {
+  const crafts = Object.keys(DATA.crafts).filter(c => DATA.materials.some(m => m.uses && m.uses[c]));
+  table({
+    ctl: "mat-ctl", tbl: "mat-tbl", label: "materials", rows: DATA.materials,
+    text: r => r.name + " " + r.id,
+    groups: [{ label: "Kind", buttons: [{ label: "all", test: () => true }, ...["dust", "essence", "shard", "crystal"].map(k => ({ label: k, test: r => r.kind === k }))] }],
+    cols: [
+      { h: "Item lvl", cls: "num", f: r => r.ilvl },
+      { h: "Material", cls: "wide", f: r => r.name },
+      { h: "Kind", f: r => chip(r.kind, r.kind === "dust" ? "gold" : r.kind === "essence" ? "honor" : "gem") },
+      { h: "Gear that gives it", cls: "num", f: r => fmt(r.sources) },
+      ...crafts.map(c => ({ h: DATA.crafts[c], cls: "num", f: r => (r.uses && r.uses[c]) || "" })),
+      { h: "Id", cls: "id", f: r => r.id },
+    ],
+  });
+})();
+// }}}
+
+// {{{ stats, creatures, override tables
+(() => {
+  const s = $("stats");
+  const free = DATA.skills.filter(k => k.verdict === "free").map(k => k.name).join(", ");
+  [
+    [DATA.counts.enchanting, "spells under Enchanting"],
+    [DATA.enchanting.filter(e => /create item/.test(e.fx)).length, "of them make an item"],
+    [DATA.counts.skills, "skill lines a player could see"],
+    [DATA.skills.filter(k => k.verdict === "free" || k.verdict === "retired").length, "free or retired (" + free + " free)"],
+    [DATA.counts.sprites, "spells with sprite-like names"],
+    [DATA.sprites.filter(k => !k.player && (k.kind === "heal over time" || k.kind === "damage over time")).length, "NPC-only heal or damage over time among them"],
+    [DATA.counts.materials, "enchanting materials"],
+    [DATA.counts.investigate, "herbs, leathers and elementals"],
+  ].forEach(([n, t]) => s.append(el("div", null, [el("b", { text: fmt(n) }), el("span", { text: t })])));
+})();
+table({
+  ctl: "cr-ctl", tbl: "cr-tbl", label: "creatures", rows: DATA.creatures,
+  text: r => r.name + " " + r.sub + " " + r.id,
+  groups: [{ label: "Level", buttons: levelRanges("min") }],
+  cols: [
+    { h: "Level", cls: "num", f: r => r.min === r.max ? r.min : r.min + "–" + r.max },
+    { h: "Creature", cls: "wide", f: r => r.name },
+    { h: "Title", f: r => r.sub },
+    { h: "Id", cls: "id", f: r => r.id },
+  ],
+});
+(() => {
+  const t = $("ov-tbl");
+  t.append(el("thead", null, [el("tr", null, [el("th", { text: "Table" }), el("th", { cls: "num", text: "Rows today" })])]));
+  t.append(el("tbody", null, DATA.overrides.concat(DATA.loot).map(o => el("tr", null, [el("td", { cls: "mono", text: o.table }), el("td", { cls: "num", text: fmt(o.rows) })]))));
+})();
+// }}}
+</script>

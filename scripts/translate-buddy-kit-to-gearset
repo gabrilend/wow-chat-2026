@@ -1,0 +1,275 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local MAX_LEVEL = tonumber(arg[2] or "") or 60
+local MYSQL  = DIR .. "/mysql/installed-files/bin/mysql"
+local WORLD  = "acore_world_basic"
+local BOTS   = "acore_playerbots_basic"
+local OUT    = DIR .. "/src/lua-basic/data/gearsets/buddy-white-%d.lua"
+local TD     = dofile(DIR .. "/src/lua-basic/data/buddy-talent-data.lua")
+
+local WINDOW, LOWEST = 5, 2
+local BRACKETS = {}
+for l = 2, MAX_LEVEL do BRACKETS[#BRACKETS + 1] = l end
+
+local CLASS_RACES = {
+    [1] = { 1, 2, 3, 4, 5, 6, 7, 8, 10, 11 }, [2] = { 1, 3, 10, 11 }, [3] = { 2, 3, 4, 6, 8, 10, 11 },
+    [4] = { 1, 2, 3, 4, 5, 7, 8, 10 }, [5] = { 1, 3, 4, 5, 8, 10, 11 }, [6] = { 1, 2, 3, 4, 5, 6, 7, 8, 10, 11 },
+    [7] = { 2, 6, 8, 11 }, [8] = { 1, 5, 7, 8, 10, 11 }, [9] = { 1, 2, 5, 7, 10 }, [11] = { 4, 6 },
+}
+local function set(...) local t = {} for _, v in ipairs({ ... }) do t[v] = true end return t end
+local WEAPONS = {
+    [1] = set(0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 13, 15, 16, 18), [2] = set(0, 1, 4, 5, 6, 7, 8),
+    [3] = set(0, 1, 2, 3, 6, 7, 8, 10, 13, 15, 16, 18),        [4] = set(0, 2, 3, 4, 7, 13, 15, 16, 18),
+    [5] = set(4, 10, 15, 19),                                  [6] = set(0, 1, 4, 5, 6, 7, 8),
+    [7] = set(0, 1, 4, 5, 10, 13, 15),                         [8] = set(7, 10, 15, 19),
+    [9] = set(7, 10, 15, 19),                                  [11] = set(4, 5, 6, 10, 13, 15),
+}
+local function armour_max(class, level)
+    if class == 1 or class == 2 then return level >= 40 and 4 or 3 end
+    if class == 6 then return 4 end
+    if class == 3 or class == 7 then return level >= 40 and 3 or 2 end
+    if class == 4 or class == 11 then return 2 end
+    return 1
+end
+local SHIELD_CLASSES = set(1, 2, 7)
+local function dual_wield(class, level, thirds)
+    if class == 1 or class == 3 then return level >= 20 end
+    if class == 4 then return level >= 10 end
+    if class == 6 then return true end
+    if class == 7 then return thirds[2] >= 2 and level >= 40 end
+    return false
+end
+local ARMOUR_SLOTS = { [1] = { 0 }, [2] = { 1 }, [3] = { 2 }, [5] = { 4 }, [20] = { 4 }, [6] = { 5 }, [7] = { 6 },
+                       [8] = { 7 }, [9] = { 8 }, [10] = { 9 }, [11] = { 10, 11 }, [12] = { 12, 13 }, [16] = { 14 } }
+
+local K = { TWO = "two", ONE = "one", OFF = "off", DAGGER = "dagger", STAFF = "staff", SHIELD = "shield",
+            HELD = "held", SHOOTER = "shooter", WAND = "wand" }
+local function W(main, off, ranged) return { main = main, off = off, ranged = ranged } end
+local WANTS = {
+    [1]  = { W({ K.TWO, K.ONE }, {}, K.SHOOTER), W({ K.ONE, K.TWO }, { K.OFF }, K.SHOOTER), W({ K.ONE }, { K.SHIELD }, K.SHOOTER) },
+    [2]  = { W({ K.ONE }, { K.SHIELD, K.HELD }), W({ K.ONE }, { K.SHIELD }), W({ K.TWO, K.ONE }, {}) },
+    [3]  = { W({ K.TWO, K.ONE }, {}, K.SHOOTER), W({ K.TWO, K.ONE }, {}, K.SHOOTER), W({ K.TWO, K.ONE }, {}, K.SHOOTER) },
+    [4]  = { W({ K.DAGGER, K.ONE }, { K.DAGGER, K.OFF }, K.SHOOTER), W({ K.ONE, K.DAGGER }, { K.OFF, K.DAGGER }, K.SHOOTER),
+             W({ K.DAGGER, K.ONE }, { K.DAGGER, K.OFF }, K.SHOOTER) },
+    [5]  = { W({ K.STAFF, K.ONE }, { K.HELD }, K.WAND), W({ K.STAFF, K.ONE }, { K.HELD }, K.WAND), W({ K.STAFF, K.ONE }, { K.HELD }, K.WAND) },
+    [6]  = { W({ K.TWO }, {}), W({ K.ONE, K.TWO }, { K.OFF }), W({ K.TWO }, {}) },
+    [7]  = { W({ K.ONE }, { K.SHIELD, K.HELD }), W({ K.ONE, K.TWO }, { K.OFF, K.SHIELD }), W({ K.ONE }, { K.SHIELD, K.HELD }) },
+    [8]  = { W({ K.STAFF, K.ONE }, { K.HELD }, K.WAND), W({ K.STAFF, K.ONE }, { K.HELD }, K.WAND), W({ K.STAFF, K.ONE }, { K.HELD }, K.WAND) },
+    [9]  = { W({ K.STAFF, K.ONE }, { K.HELD }, K.WAND), W({ K.STAFF, K.ONE }, { K.HELD }, K.WAND), W({ K.STAFF, K.ONE }, { K.HELD }, K.WAND) },
+    [11] = { W({ K.STAFF, K.ONE }, { K.HELD }), W({ K.TWO, K.STAFF }, {}), W({ K.STAFF, K.ONE }, { K.HELD }) },
+}
+local function is_kind(f, k)
+    local weapon = f.class == 2
+    if k == K.TWO     then return weapon and f.inv == 17 end
+    if k == K.ONE     then return weapon and (f.inv == 13 or f.inv == 21) end
+    if k == K.OFF     then return weapon and (f.inv == 13 or f.inv == 22) end
+    if k == K.DAGGER  then return weapon and f.sub == 15 end
+    if k == K.STAFF   then return weapon and f.sub == 10 end
+    if k == K.SHIELD  then return f.class == 4 and f.sub == 6 end
+    if k == K.HELD    then return f.inv == 23 end
+    if k == K.SHOOTER then return weapon and (f.sub == 2 or f.sub == 3 or f.sub == 18) end
+    if k == K.WAND    then return weapon and f.sub == 19 end
+    return false
+end
+
+local function query(db, sql)
+    local pipe = assert(io.popen(string.format("MYSQL_PWD=menardi '%s' -h127.0.0.1 -P3307 -uritz -N -B %s -e \"%s\" 2>&1", MYSQL, db, sql)))
+    local rows = {}
+    for line in pipe:lines() do
+        if line:match("^ERROR") then error("MySQL: " .. line .. " (is it running? scripts/start-mysql)") end
+        local row = {}
+        for field in (line .. "\t"):gmatch("([^\t]*)\t") do row[#row + 1] = field end
+        rows[#rows + 1] = row
+    end
+    pipe:close()
+    return rows
+end
+
+local STAT_NAME = { [3] = "agi", [4] = "str", [5] = "int", [6] = "spi", [7] = "sta", [12] = "defrtng", [13] = "dodgertng",
+                    [14] = "parryrtng", [15] = "blockrtng", [31] = "hitrtng", [32] = "critstrkrtng", [36] = "hastertng",
+                    [37] = "exprtng", [38] = "atkpwr", [43] = "manargn", [44] = "armorpenrtng", [45] = "splpwr", [48] = "block" }
+local function read_items(sql_where, gray)
+    local found = {}
+    local cols = { "it.entry", "it.name", "it.class", "it.subclass", "it.InventoryType", "it.RequiredLevel", "it.ItemLevel",
+                   "it.AllowableClass", "it.AllowableRace", "it.armor", "it.dmg_min1", "it.dmg_max1", "it.delay" }
+    for i = 1, 10 do cols[#cols + 1] = "it.stat_type" .. i; cols[#cols + 1] = "it.stat_value" .. i end
+    for _, r in ipairs(query(WORLD, "SELECT DISTINCT " .. table.concat(cols, ", ") .. sql_where)) do
+        local f = { id = tonumber(r[1]), name = r[2], class = tonumber(r[3]), sub = tonumber(r[4]), inv = tonumber(r[5]),
+                    req = tonumber(r[6]), ilvl = tonumber(r[7]), allow_class = tonumber(r[8]), allow_race = tonumber(r[9]),
+                    armor = tonumber(r[10]), stats = {}, gray = gray }
+        local delay = tonumber(r[13])
+        f.dps = (delay > 0) and ((tonumber(r[11]) + tonumber(r[12])) / 2) / (delay / 1000) or 0
+        for i = 0, 9 do
+            local t, v = tonumber(r[14 + i * 2]), tonumber(r[15 + i * 2])
+            if v ~= 0 and STAT_NAME[t] then f.stats[STAT_NAME[t]] = (f.stats[STAT_NAME[t]] or 0) + v end
+        end
+        found[#found + 1] = f
+    end
+    return found
+end
+local items = read_items(
+        " FROM item_template it JOIN npc_vendor v ON v.item = it.entry WHERE it.Quality = 1 AND it.class IN (2, 4)" ..
+        " AND (it.RequiredLevel BETWEEN " .. LOWEST .. " AND " .. MAX_LEVEL .. " OR (it.class = 2 AND it.RequiredLevel = 1))", false)
+local grays = read_items(" FROM item_template it WHERE it.Quality = 0 AND it.class = 4 AND it.subclass BETWEEN 1 AND 4" ..
+        " AND it.name NOT LIKE '%Deprecated%' AND it.name NOT LIKE '%Test%' AND it.name NOT LIKE 'OLD%'" ..
+        " AND it.name NOT LIKE '%[PH]%' AND it.name NOT LIKE '%(old)%'" ..
+        " AND it.RequiredLevel BETWEEN " .. LOWEST .. " AND " .. MAX_LEVEL, true)
+
+local SCALE_OF = { [1] = { 1, 2, 3 }, [2] = { 4, 5, 6 }, [3] = { 7, 8, 9 }, [4] = { 10, 11, 12 }, [5] = { 13, 14, 15 },
+                   [6] = { 16, 17, 19 }, [7] = { 20, 21, 22 }, [8] = { 23, 24, 25 }, [9] = { 26, 27, 28 }, [11] = { 29, 30, 31 } }
+local scale = {}
+for _, r in ipairs(query(BOTS, "SELECT id, field, val FROM playerbots_weightscale_data")) do
+    local id = tonumber(r[1])
+    scale[id] = scale[id] or {}
+    scale[id][r[2]] = tonumber(r[3])
+end
+local function score(f, class, thirds)
+    local s = 0
+    for i = 1, 3 do
+        local w = scale[SCALE_OF[class][i]] or {}
+        local part = f.armor * (w.armor or 0) / 100
+        for stat, v in pairs(f.stats) do part = part + v * (w[stat] or 0) end
+        if f.class == 2 then part = part + f.dps * ((f.sub == 2 or f.sub == 3 or f.sub == 18) and (w.rgddps or 0) or (w.mledps or 0)) end
+        s = s + part * thirds[i] / 3
+    end
+    return s
+end
+
+local function usable(f, class, level, thirds)
+    if f.req > level then return false end
+    if f.allow_class ~= -1 and f.allow_class ~= 0 and bit.band(f.allow_class, bit.lshift(1, class - 1)) == 0 then return false end
+    if f.allow_race ~= -1 and f.allow_race ~= 0 then
+        for _, race in ipairs(CLASS_RACES[class]) do
+            if bit.band(f.allow_race, bit.lshift(1, race - 1)) == 0 then return false end
+        end
+    end
+    if f.class == 2 then
+        if not WEAPONS[class][f.sub] then return false end
+        if f.inv == 22 and not dual_wield(class, level, thirds) then return false end
+    elseif f.class == 4 then
+        if f.sub == 6 then return SHIELD_CLASSES[class] == true end
+        if f.sub >= 1 and f.sub <= 4 and f.sub > armour_max(class, level) then return false end
+        if f.sub > 6 then return false end
+    end
+    return true
+end
+
+local function dress(class, shape_id, level)
+    local thirds = TD.classes[class].shapes[shape_id].thirds
+    local lowest = math.max(LOWEST, level - (WINDOW - 1))
+    local all = {}
+    for _, f in ipairs(items) do
+        if usable(f, class, level, thirds) then all[#all + 1] = { f = f, s = score(f, class, thirds) } end
+    end
+    local function order(a, b)
+        local wa, wb = a.f.req >= lowest, b.f.req >= lowest
+        if wa ~= wb then return wa end
+        local ha = a.f.class == 4 and a.f.sub or 0
+        local hb = b.f.class == 4 and b.f.sub or 0
+        if ha ~= hb and a.f.inv == b.f.inv then return ha > hb end
+        if math.abs(a.s - b.s) > 1e-9 then return a.s > b.s end
+        if a.f.req ~= b.f.req then return a.f.req > b.f.req end
+        if a.f.ilvl ~= b.f.ilvl then return a.f.ilvl > b.f.ilvl end
+        return a.f.id < b.f.id
+    end
+    table.sort(all, order)
+    local rec = {}
+    local function hand(f) return f.class == 2 or f.inv == 14 or f.inv == 23 end
+    local function fill(list)
+        for _, c in ipairs(list) do
+            local slots = not hand(c.f) and ARMOUR_SLOTS[c.f.inv]
+            if slots then
+                for _, slot in ipairs(slots) do
+                    if not rec[slot] then rec[slot] = c.f; break end
+                end
+            end
+        end
+    end
+    fill(all)
+    local poor = {}
+    for _, f in ipairs(grays) do
+        if usable(f, class, level, thirds) then poor[#poor + 1] = { f = f, s = score(f, class, thirds) } end
+    end
+    table.sort(poor, order)
+    fill(poor)
+    local main_tree = 1
+    for i = 2, 3 do if thirds[i] > thirds[main_tree] then main_tree = i end end
+    local w = WANTS[class][main_tree]
+    local function take(slot, kinds)
+        for _, k in ipairs(kinds) do
+            for _, c in ipairs(all) do
+                if is_kind(c.f, k) and not (slot == 16 and k == K.OFF and not dual_wield(class, level, thirds)) then
+                    rec[slot] = c.f
+                    return c.f
+                end
+            end
+        end
+    end
+    local main = take(15, w.main)
+    if not main or main.inv ~= 17 then take(16, w.off) end
+    if w.ranged then take(17, { w.ranged }) end
+    return rec
+end
+
+local SLOTNAME = { [0] = "head", "neck", "shoulders", "shirt", "chest", "waist", "legs", "feet", "wrists",
+                   "hands", "finger", "finger", "trinket", "trinket", "back", "main hand", "off hand", "ranged" }
+local classes = {}
+for class in pairs(WANTS) do classes[#classes + 1] = class end
+table.sort(classes)
+local tiers = {}
+for _, level in ipairs(BRACKETS) do
+    local tier = level < 10 and 1 or math.floor(level / 10) * 10
+    tiers[tier] = tiers[tier] or {}
+    table.insert(tiers[tier], level)
+end
+local total, files = 0, 0
+for tier = 1, MAX_LEVEL do
+    if tiers[tier] then
+        local name = "buddy-white-" .. tier
+        local o = {}
+        local function wr(s2) o[#o + 1] = s2 end
+        wr("--------------------------------------------------------------------------------")
+        wr(string.format("-- data/gearsets/%s.lua (issue 617r2) - a gearset profile", name))
+        wr("--")
+        wr(string.format("-- What a buddy of levels %d-%d is made wearing: white vendor gear (gray where no white fills a slot), by class",
+            tiers[tier][1], tier == 1 and 9 or tier + 9))
+        wr("-- and talent shape, then level. GENERATED by scripts/translate-buddy-kit-to-")
+        wr("-- gearset from the buddy module's old dressing rules (plus the shape's stat")
+        wr("-- weights), a first list thrown together to be curated by hand (owner,")
+        wr("-- 2026-10-05); the buddy module reads it through the gearset_item table")
+        wr("-- (scripts/generate-gearset-sql). Until the translator is retired a re-run")
+        wr("-- overwrites hand edits. Shape: lib/gearsets.info.md.")
+        wr("--------------------------------------------------------------------------------")
+        wr("")
+        wr("return {")
+        wr(string.format('    name    = "%s",', name))
+        wr('    keys    = { "shape", "level" },')
+        wr("    records = {")
+        for _, class in ipairs(classes) do
+            for shape_id, shape in ipairs(TD.classes[class].shapes) do
+                wr(string.format("        [%d] = {   -- %s, %s", class * 100 + shape_id, TD.classes[class].name, shape.label))
+                for _, level in ipairs(tiers[tier]) do
+                    local rec = dress(class, shape_id, level)
+                    wr(string.format("            [%d] = { items = {", level))
+                    for slot = 0, 17 do
+                        local it = rec[slot]
+                        if it then wr(string.format("                [%2d] = %5d,   -- %-9s %s (level %d%s)", slot, it.id, SLOTNAME[slot], it.name, it.req, it.gray and ", gray" or "")) end
+                    end
+                    wr("            } },")
+                    total = total + 1
+                end
+                wr("        },")
+            end
+        end
+        wr("    },")
+        wr("}")
+        local f2 = assert(io.open(string.format(OUT, tier), "w"))
+        f2:write(table.concat(o, "\n") .. "\n")
+        f2:close()
+        files = files + 1
+    end
+end
+print(string.format("wrote %d profiles (buddy-white-1 ... -%d): %d records (%d classes x 10 shapes x %d brackets), from %d white vendor items",
+    files, math.floor(MAX_LEVEL / 10) * 10, total, #classes, #BRACKETS, #items))

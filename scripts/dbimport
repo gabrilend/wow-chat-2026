@@ -1,0 +1,86 @@
+#!/bin/bash
+
+DIR="/mnt/kaun/wow-chat-2026"
+
+if [[ -f "${DIR}/.profile" ]]; then
+    PROFILE="$(cat "${DIR}/.profile")"
+else
+    PROFILE="release"
+fi
+DEFAULT_PROFILE="${PROFILE}"
+
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "${1}" in
+            --profile)
+                if [[ -n "${2:-}" ]]; then
+                    PROFILE="${2}"
+                    shift 2
+                else
+                    echo "Error: --profile requires a profile name"
+                    exit 1
+                fi
+                ;;
+            --profile=*)
+                PROFILE="${1#*=}"
+                if [[ -z "${PROFILE}" ]]; then
+                    echo "Error: --profile requires a profile name"
+                    exit 1
+                fi
+                shift
+                ;;
+            --help|-h)
+                show_help
+                exit 0
+                ;;
+            *)
+                break
+                ;;
+        esac
+    done
+    REMAINING_ARGS=("$@")
+}
+
+show_help() {
+    echo "Usage: ./scripts/dbimport [--profile <name>] [dbimport options...]"
+    echo ""
+    echo "Run the bundled dbimport binary against the active profile's"
+    echo "install directory, with LD_LIBRARY_PATH set so it finds the"
+    echo "project's libmysqlclient (the system one is the wrong version)."
+    echo ""
+    echo "Options:"
+    echo "  --profile <name>   Use specific profile (default: ${DEFAULT_PROFILE})"
+    echo "  --help             Show this help message"
+    echo ""
+    echo "Anything after these options is passed through to dbimport."
+    echo ""
+    echo "Current profile: ${PROFILE}"
+}
+
+resolve_paths() {
+    INSTALL_DIR="${DIR}/installed-files-${PROFILE}"
+    MYSQL_DIR="${DIR}/mysql/installed-files"
+}
+
+
+REMAINING_ARGS=()
+parse_args "$@"
+resolve_paths
+
+if [[ ! -x "${INSTALL_DIR}/bin/dbimport" ]]; then
+    echo "Error: dbimport not found for profile '${PROFILE}'"
+    echo "Expected: ${INSTALL_DIR}/bin/dbimport"
+    echo "Run './scripts/install --profile ${PROFILE}' first."
+    exit 1
+fi
+
+if [[ ! -d "${MYSQL_DIR}/lib" ]]; then
+    echo "Error: project MySQL libs not found at ${MYSQL_DIR}/lib"
+    echo "Run './scripts/mysql-install' first."
+    exit 1
+fi
+
+echo "Running dbimport (profile: ${PROFILE})"
+export LD_LIBRARY_PATH="${MYSQL_DIR}/lib:${LD_LIBRARY_PATH}"
+cd "${INSTALL_DIR}/bin"
+exec ./dbimport "${REMAINING_ARGS[@]}"

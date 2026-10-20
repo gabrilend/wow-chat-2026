@@ -1,0 +1,141 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local LIB = DIR .. "/src/lua-beta/lib/"
+local S   = dofile(LIB .. "gutenberg-sentences.lua")
+
+local fails, checks = 0, 0
+local function check(ok, what)
+    checks = checks + 1
+    if ok then print("  ok:   " .. what) else print("  FAIL: " .. what); fails = fails + 1 end
+end
+local function same(list, want)
+    if #list ~= #want then return false end
+    for k = 1, #want do if list[k] ~= want[k] then return false end end
+    return true
+end
+local function show(list) return "[" .. table.concat(list, "] [") .. "]" end
+
+print("cutting into sentences")
+local r = S.split("Hello, world. How are you?")
+check(same(r, { "Hello, world.", "How are you?" }), "full stops cut, commas don't: " .. show(r))
+r = S.split("Mr. Darling and Dr. Livesey met J. M. Barrie. They spoke.")
+check(same(r, { "Mr. Darling and Dr. Livesey met J. M. Barrie.", "They spoke." }), "abbreviations and initials don't cut: " .. show(r))
+r = S.split("\"Hello,\" she said. \"How are you?\" he asked.")
+check(same(r, { "\"Hello,\" she said.", "\"How are you?\" he asked." }), "a question inside quotes before \"he asked\" doesn't cut: " .. show(r))
+r = S.split("\"Stop!\" he cried. Then silence.")
+check(same(r, { "\"Stop!\" he cried.", "Then silence." }), "an exclamation followed by a small letter doesn't cut: " .. show(r))
+r = S.split("I wonder... perhaps not. It was 1632. In York.")
+check(same(r, { "I wonder... perhaps not.", "It was 1632.", "In York." }), "an ellipsis before a small letter doesn't cut; a number before a stop does: " .. show(r))
+r = S.split("He was there, said I. Then we left.")
+check(same(r, { "He was there, said I.", "Then we left." }), "\"I\" before a stop ends the sentence: " .. show(r))
+r = S.split("He came. . . . And went.")
+check(#r == 1, "spaced dots don't cut: " .. show(r))
+check(S.plain_punctuation("\226\128\156Hi\226\128\157 \226\128\148 it\226\128\153s") == "\"Hi\" -- it's", "curly quotes and dashes become plain")
+
+print("a Gutenberg file")
+local book = table.concat({
+    "The Project Gutenberg eBook of A Test", "", "Title: A Test Book", "", "Author: Nobody", "",
+    "*** START OF THE PROJECT GUTENBERG EBOOK A TEST ***", "",
+    "A TEST BOOK", "", "by Nobody", "", "Contents", "",
+    "CHAPTER I.", "", "Preface words that are not the story. More of them.", "",
+    "CHAPTER II.", "",
+    "Once upon a time there was a _very_ small", "dragon. [Illustration: a dragon]", "It slept.", "",
+    "CHAPTER X. How the dragon woke and what it ate.", "",
+    "It woke, ate {a gloss} 15 Bread and slept again.", "",
+    "*** END OF THE PROJECT GUTENBERG EBOOK A TEST ***", "", "Licence text that must not be read.",
+}, "\n")
+check(S.title_of(book) == "A Test Book", "the title line is read")
+r = S.from_gutenberg(book)
+check(r[1] == "Preface words that are not the story.", "title, byline, contents and headings are left out (first: " .. tostring(r[1]) .. ")")
+local joined = table.concat(r, " ")
+check(not joined:find("Licence") and not joined:find("Project Gutenberg"), "nothing of the licence is kept")
+check(joined:find("Once upon a time there was a very small dragon.", 1, true) ~= nil, "lines are joined, italics marks and picture markers removed")
+check(joined:find("How the dragon woke and what it ate.", 1, true) and not joined:find("CHAPTER"), "a heading joined to its summary loses the heading, keeps the summary")
+check(not joined:find("gloss"), "{marginal notes} are removed")
+r = S.from_gutenberg(book, { starts = "Once upon a time", verse_line_numbers = true })
+check(r[1] == "Once upon a time there was a very small dragon.", "the story's first words skip the preface (first: " .. tostring(r[1]) .. ")")
+check(table.concat(r, " "):find("ate Bread", 1, true) ~= nil, "a verse line number (a multiple of 5) between words is removed")
+local ok, err = pcall(S.from_gutenberg, book, { starts = "Never written" })
+check(not ok and tostring(err):find("Never written", 1, true), "first words that aren't there are an error naming them")
+ok = pcall(S.from_gutenberg, "no markers here")
+check(not ok, "a file without the START line is an error, not read whole")
+
+print("parts for one chat line")
+local long = string.rep("word ", 40) .. "and then; " .. string.rep("more ", 40) .. "end."
+local parts = S.speakable_parts(long, 255)
+local fit = true
+for _, p in ipairs(parts) do if #p > 255 then fit = false end end
+check(#parts >= 2 and fit, #parts .. " parts, each within 255 bytes")
+check(parts[1]:sub(-1) == ";", "cut at the semicolon first (\"..." .. parts[1]:sub(-12) .. "\")")
+check(table.concat(parts, " ") == long, "the parts put back together are the sentence")
+check(#S.speakable_parts("Short.", 255) == 1, "a short sentence is one part")
+
+print("the in-game library, on a test shelf")
+local T = DIR .. "/tmp/shared-memory/test-gutenberg-library/"
+os.execute("mkdir -p '" .. T .. "texts/1-one' '" .. T .. "texts/2-two'")
+local function write(path, s) local f = assert(io.open(path, "w")); f:write(s); f:close() end
+write(T .. "gutenberg-books.lua", [[return {
+  { id = 1, slug = "one", title = "One", author = "a", genre = "g", match = "one" },
+  { id = 2, slug = "two", title = "Two", author = "b", genre = "g", match = "two" },
+  { id = 3, slug = "three", title = "Not built", author = "c", genre = "g", match = "three" },
+}]])
+write(T .. "texts/1-one/sentences.txt", "One a.\nOne b.\nOne c.\n")
+write(T .. "texts/2-two/sentences.txt", "Two a.\nTwo b.\n")
+local Library = dofile(LIB .. "narrator-library.lua")
+Library.DATA_DIR = T
+local seq, k = { 1, 2, 1, 2, 2, 1 }, 0
+Library.random = function(n) k = k + 1; return ((seq[(k - 1) % #seq + 1] - 1) % n) + 1 end
+local built, on_shelf = Library.availableBooks()
+check(built == 2 and on_shelf == 3, "2 of the 3 books are built, and only those are read")
+Library.start("A")
+Library.start("B")
+Library.setBook("A", 1)
+Library.setBook("B", 1)
+local a1, a2 = Library.getNextSentence("A"), Library.getNextSentence("A")
+local b1 = Library.getNextSentence("B")
+check(a1 == "One a." and a2 == "One b." and b1 == "One a.", "two narrators in one book keep their own places (A: " .. a1 .. " " .. a2 .. "; B: " .. b1 .. ")")
+Library.setMode("A", Library.RUMORS)
+check(Library.getMode("A") == Library.RUMORS and Library.getMode("B") == Library.STORY, "one narrator's mode is its own")
+Library.setMode("A", Library.STORY)
+check(Library.getNextSentence("A") == "One c.", "back from rumours, it goes on from the same sentence")
+local after = Library.getNextSentence("A")
+check(after == "Two a." and Library.getCurrentBook("A").id == 2, "past its last sentence it takes another book (" .. after .. ")")
+check(Library.getCurrentBook("A").sentences == 2 and Library.getPosition("A") == 1, "the book's count and its place are told")
+Library.setPosition("A", 0)
+check(Library.getNextSentence("A") == "Two a.", "a place can be set")
+check(not pcall(Library.setPosition, "A", 3), "a place past the book's end is an error")
+check(not pcall(Library.setBook, "A", 3), "a book that isn't built is an error")
+check(not pcall(Library.setMode, "A", "singing"), "an unknown mode is an error")
+check(not pcall(Library.start, "A"), "starting one narrator twice is an error")
+Library.clearInstance("A")
+check(not pcall(Library.getNextSentence, "A"), "a despawned narrator is forgotten (asking for it is an error)")
+check(Library.getNextSentence("B") == "One b.", "the other narrator is untouched")
+check(not pcall(Library.clearInstance, "never"), "clearing one never started is an error")
+
+print("the real shelf")
+Library = dofile(LIB .. "narrator-library.lua")
+Library.DATA_DIR = DIR .. "/src/lua-beta/data/"
+local okb, b2, s2 = pcall(Library.availableBooks)
+if not okb then
+    check(false, "the real shelf opens: " .. tostring(b2))
+else
+    check(b2 == s2, string.format("every book on the shelf is built (%d of %d)", b2, s2))
+    local shelf = dofile(Library.DATA_DIR .. "gutenberg-books.lua")
+    local total, empty = 0, {}
+    for _, bk in ipairs(shelf) do
+        local f = io.open(Library.DATA_DIR .. "texts/" .. bk.id .. "-" .. bk.slug .. "/sentences.txt")
+        local n = 0
+        if f then for _ in f:lines() do n = n + 1 end f:close() end
+        total = total + n
+        if n < 50 then empty[#empty + 1] = bk.slug end
+    end
+    check(#empty == 0, string.format("no book under 50 sentences (%d sentences in all)", total))
+    Library.start(1)
+    local first = Library.getNextSentence(1)
+    check(type(first) == "string" and #first > 0, "a narrator on the real shelf says: " .. first:sub(1, 70))
+end
+
+print(string.format("%d checks, %d failed", checks, fails))
+os.exit(fails == 0 and 0 or 1)

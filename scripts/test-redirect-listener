@@ -1,0 +1,35 @@
+#!/bin/bash
+
+set -euo pipefail
+
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+PORT=14463
+KEY="0102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F202122232425262728"
+LOG="${DIR}/tmp/shared-memory/redirect-listener.log"
+
+[[ -d "${DIR}/tmp/shared-memory" ]] || { echo "ERROR: ${DIR}/tmp/shared-memory missing (RAM scratch link)"; exit 1; }
+
+: > "${LOG}"
+luajit "${DIR}/src/tools/redirect-listener.lua" "${DIR}" --port "${PORT}" --key "${KEY}" --answer auth-ok > /dev/null &
+LISTENER_PID=$!
+trap 'kill ${LISTENER_PID}' EXIT
+sleep 0.5
+
+luajit "${DIR}/src/tools/redirect-fake-client.lua" "${PORT}" "${KEY}"
+sleep 0.3
+
+FAILED=0
+for expected in "digest MATCHES" "sent scrambled auth response" "client sent opcode 0x1DC, 8 body bytes: 2A00000000000000"; do
+    if grep -q "${expected}" "${LOG}"; then
+        echo "ok:   listener log has \"${expected}\""
+    else
+        echo "FAIL: listener log lacks \"${expected}\""
+        FAILED=1
+    fi
+done
+if [[ ${FAILED} -ne 0 ]]; then
+    echo "--- listener log ---"
+    cat "${LOG}"
+    exit 1
+fi
+echo "test-redirect-listener: passed"

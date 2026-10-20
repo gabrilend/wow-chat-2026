@@ -1,0 +1,375 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local MYSQL   = DIR .. "/mysql/installed-files/bin/mysql"
+local PROFILE = io.open(DIR .. "/.profile"):read("*l")
+local WORLD   = arg[2] or ("acore_world_" .. PROFILE)
+local OUTFITS = os.getenv("ELITE_OUTFITS") or (DIR .. "/src/lua-basic/data/gearsets/elite.lua")
+local TD      = dofile(DIR .. "/src/lua-basic/data/buddy-talent-data.lua")
+local SPEC = {}
+for class, c in pairs(TD.classes) do
+    for _, tree in ipairs(c.trees) do SPEC[tree.tab] = { class = class, name = c.name .. ": " .. tree.name, tree = tree } end
+end
+local MAX_LEVEL = 60
+
+local ALLOWED_MAPS = {
+    [409] = "Molten Core",
+    [33]  = "Shadowfang Keep",  [34]  = "The Stockade",       [36]  = "The Deadmines",
+    [43]  = "Wailing Caverns",  [47]  = "Razorfen Kraul",     [48]  = "Blackfathom Deeps",
+    [70]  = "Uldaman",          [90]  = "Gnomeregan",         [109] = "Sunken Temple",
+    [129] = "Razorfen Downs",   [189] = "Scarlet Monastery",  [209] = "Zul'Farrak",
+    [229] = "Blackrock Spire",  [230] = "Blackrock Depths",   [289] = "Scholomance",
+    [329] = "Stratholme",       [349] = "Maraudon",           [389] = "Ragefire Chasm",
+    [429] = "Dire Maul",
+}
+
+local SLOT_FITS = {
+    [0] = { [1] = true },  [1] = { [2] = true },  [2] = { [3] = true },
+    [4] = { [5] = true, [20] = true },            [5] = { [6] = true },
+    [6] = { [7] = true },  [7] = { [8] = true },  [8] = { [9] = true },  [9] = { [10] = true },
+    [10] = { [11] = true }, [11] = { [11] = true }, [12] = { [12] = true }, [13] = { [12] = true },
+    [14] = { [16] = true },
+    [15] = { [13] = true, [17] = true, [21] = true },
+    [16] = { [13] = true, [14] = true, [22] = true, [23] = true },
+    [17] = { [15] = true, [25] = true, [26] = true, [28] = true },
+}
+local TWO_HAND = 17
+local function set(...) local t = {} for _, v in ipairs({ ... }) do t[v] = true end return t end
+local WEAPONS = {
+    [1]  = set(0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 13, 15, 16, 18),
+    [2]  = set(0, 1, 4, 5, 6, 7, 8),
+    [3]  = set(0, 1, 2, 3, 6, 7, 8, 10, 13, 15, 16, 18),
+    [4]  = set(0, 2, 3, 4, 7, 13, 15, 16, 18),
+    [5]  = set(4, 10, 15, 19),
+    [6]  = set(0, 1, 4, 5, 6, 7, 8),
+    [7]  = set(0, 1, 4, 5, 10, 13, 15),
+    [8]  = set(7, 10, 15, 19),
+    [9]  = set(7, 10, 15, 19),
+    [11] = set(4, 5, 6, 10, 13, 15),
+}
+local ARMOR = {
+    [1]  = set(0, 1, 2, 3, 4, 6),     [2] = set(0, 1, 2, 3, 4, 6, 7),
+    [3]  = set(0, 1, 2, 3),           [4] = set(0, 1, 2),
+    [5]  = set(0, 1),                 [6] = set(0, 1, 2, 3, 4, 10),
+    [7]  = set(0, 1, 2, 3, 6, 9),     [8] = set(0, 1),
+    [9]  = set(0, 1),                [11] = set(0, 1, 2, 8),
+}
+local ITEM_CLASS_WEAPON, ITEM_CLASS_ARMOR = 2, 4
+local FLAG_UNIQUE_EQUIPPED = 524288
+
+local function query(sql, db)
+    db = db or WORLD
+    local cmd = string.format("MYSQL_PWD=menardi '%s' -h127.0.0.1 -P3307 -uritz -N -B %s -e \"%s\" 2>&1",
+        MYSQL, db, sql:gsub('"', '\\"'))
+    local pipe = assert(io.popen(cmd, "r"))
+    local rows = {}
+    for line in pipe:lines() do
+        if line:match("^ERROR") then
+            io.stderr:write("test-gearsets: MySQL refused a query on " .. db .. ": " .. line .. "\n" ..
+                "  to debug: is MySQL running (scripts/start-mysql)? does " .. db .. " exist?\n")
+            os.exit(2)
+        end
+        local row = {}
+        for field in (line .. "\t"):gmatch("([^\t]*)\t") do row[#row + 1] = field end
+        rows[#rows + 1] = row
+    end
+    pipe:close()
+    return rows
+end
+
+local profile = dofile(OUTFITS)
+local outfits = {}
+for key, by_race in pairs(profile.records) do
+    local class, shape = math.floor(key / 100), key % 100
+    local c = TD.classes[class] or error("elite: shape key " .. key .. " names no class")
+    local sh = c.shapes[shape] or error("elite: shape key " .. key .. " names no shape")
+    for race, rec in pairs(by_race) do
+        outfits[string.format("%s %s (race %d)", c.name, sh.label, race)] = { class = class, race = race, items = rec.items }
+    end
+end
+
+local ids, seen = {}, {}
+for _, elite in pairs(outfits) do
+    for _, item in pairs(elite.items) do
+        if not seen[item] then seen[item] = true; ids[#ids + 1] = item end
+    end
+end
+local id_list = table.concat(ids, ",")
+
+local facts = {}
+for _, r in ipairs(query("SELECT entry, name, InventoryType, class, subclass, AllowableClass, RequiredLevel, RequiredHonorRank, Flags FROM item_template WHERE entry IN (" .. id_list .. ")")) do
+    facts[tonumber(r[1])] = { name = r[2], inv = tonumber(r[3]), class = tonumber(r[4]), sub = tonumber(r[5]),
+        allow = tonumber(r[6]), level = tonumber(r[7]), honor = tonumber(r[8]), flags = tonumber(r[9]) }
+end
+
+local map_list = {}
+for map in pairs(ALLOWED_MAPS) do map_list[#map_list + 1] = map end
+map_list = table.concat(map_list, ",")
+local drops = {}
+for _, r in ipairs(query(
+    "WITH RECURSIVE src(item, map, via) AS (" ..
+    " SELECT l.Item, c.map, l.Reference FROM creature_loot_template l JOIN creature_template t ON t.lootid = l.Entry JOIN creature c ON c.id = t.entry WHERE c.map IN (" .. map_list .. ")" ..
+    " UNION SELECT l.Item, g.map, l.Reference FROM gameobject_loot_template l JOIN gameobject_template gt ON gt.type = 3 AND gt.Data1 = l.Entry JOIN gameobject g ON g.id = gt.entry WHERE g.map IN (" .. map_list .. ")" ..
+    " UNION SELECT r.Item, s.map, r.Reference FROM reference_loot_template r JOIN src s ON s.via > 0 AND r.Entry = s.via)" ..
+    " SELECT DISTINCT item, map FROM src WHERE via = 0 AND item IN (" .. id_list .. ")")) do
+    local item = tonumber(r[1])
+    drops[item] = drops[item] or {}
+    drops[item][tonumber(r[2])] = true
+end
+
+local fails, checks = 0, 0
+local function check(ok, what)
+    checks = checks + 1
+    if not ok then fails = fails + 1; print("  FAIL: " .. what) end
+end
+
+local names = {}
+for name in pairs(outfits) do names[#names + 1] = name end
+table.sort(names)
+for _, name in ipairs(names) do
+    local elite = outfits[name]
+    print(name)
+    local uniques = {}
+    for slot, item in pairs(elite.items) do
+        local f = facts[item]
+        local label = string.format("slot %d, item %d %s", slot, item, f and ("(" .. f.name .. ")") or "")
+        local fails_before = fails
+        check(f ~= nil, label .. ": no such item in " .. WORLD)
+        if f then
+            check(SLOT_FITS[slot] and SLOT_FITS[slot][f.inv], label .. ": inventory type " .. f.inv .. " does not go in this slot")
+            check(f.allow == -1 or bit.band(f.allow, bit.lshift(1, elite.class - 1)) ~= 0, label .. ": the item's class list leaves out class " .. elite.class)
+            if f.class == ITEM_CLASS_WEAPON then
+                check(WEAPONS[elite.class][f.sub], label .. ": class " .. elite.class .. " can't wield weapon kind " .. f.sub)
+            elseif f.class == ITEM_CLASS_ARMOR then
+                check(ARMOR[elite.class][f.sub], label .. ": class " .. elite.class .. " can't wear armor kind " .. f.sub)
+            end
+            check(f.level <= MAX_LEVEL, label .. ": needs level " .. f.level)
+            check(f.honor == 0, label .. ": needs an honor rank (PvP gear)")
+            local where = {}
+            for map in pairs(drops[item] or {}) do where[#where + 1] = ALLOWED_MAPS[map] end
+            table.sort(where)
+            check(#where > 0, label .. ": drops in neither Molten Core nor a classic dungeon")
+            if bit.band(f.flags, FLAG_UNIQUE_EQUIPPED) ~= 0 then
+                check(not uniques[item], label .. ": unique, listed twice")
+                uniques[item] = true
+            end
+            print(string.format("  %s %-3d %-32s %s", fails == fails_before and "ok" or "--", slot, f.name, table.concat(where, ", ")))
+        end
+    end
+    local main = facts[elite.items[15]]
+    check(not (main and main.inv == TWO_HAND and elite.items[16]), "a two-handed weapon with something in the off hand")
+end
+
+print("")
+print("The gearset command (stand-in world)")
+local templates
+do
+    local function item(entry) return { entry = entry, GetCount = function() return 1 end, GetEntry = function() return entry end } end
+    local function buddy(name, worn, race, class, spec)
+        local b = { name = name, worn = worn, removed = {}, equipped = {}, saved = false, spells = {}, dead = false, refuse = {} }
+        if spec then local t = SPEC[spec].tree.talents[1]; b.spells[t.spells[#t.spells] ] = true end
+        b.GetName = function() return name end
+        b.GetRace = function() return race end
+        b.GetLevel = function() return 60 end
+        b.GetGUIDLow = function() return 0 end
+        b.GetClass = function() return class end
+        b.AddItem = function() return true end
+        b.IsInWorld = function() return true end
+        b.IsDead = function() return b.dead end
+        b.HasSpell = function(_, s) return b.spells[s] == true end
+        b.LearnSpell = function(_, s) b.spells[s] = true end
+        b.GetEquippedItemBySlot = function(_, slot) return b.worn[slot] end
+        b.RemoveItem = function(_, it) for s, w in pairs(b.worn) do if w == it then b.worn[s] = nil; b.removed[s] = true end end end
+        b.EquipItem = function(_, entry, slot)
+            if b.worn[slot] or b.refuse[entry] then return nil end
+            local t = templates[entry]
+            if t and t.class == 4 and t.sub == 4 and not b.spells[750] then return nil end
+            b.worn[slot] = item(entry); b.equipped[slot] = entry; return b.worn[slot]
+        end
+        b.SaveToDB = function() b.saved = true end
+        return b
+    end
+    templates = {}
+    for id, f in pairs(facts) do templates[id] = { class = f.class, sub = f.sub } end
+    local rows = { { 1, 575 }, { 2, 599 }, { 3, 600 }, { 4, 596 }, { 5, 595 } }
+    local pozeta = buddy("Pozeta", { [3] = item(3427), [15] = item(1194), [16] = item(2362), [18] = item(22999), [0] = item(34008) }, 6, 1, 161)
+    local rogue  = buddy("Rogue", {}, 3, 4, 181)
+    local ecaexo = buddy("Ecaexo", { [0] = item(1) }, 8, 8, 61); ecaexo.dead = true
+    local xazian = buddy("Xazian", { [16] = item(2362) }, 8, 1, 163); xazian.spells[750] = true
+    xazian.refuse[profile.records[110][8].items[16] ] = true
+    local players = { [575] = pozeta, [599] = rogue, [596] = ecaexo, [595] = xazian }
+    local said, handler_fn = {}, nil
+    local env = setmetatable({
+        RegisterPlayerEvent = function(_, fn) handler_fn = fn end,
+        GetPlayerGUID = function(g) return g end,
+        GetPlayerByGUID = function(g) return players[g] end,
+        GetItemTemplate = function(entry)
+            local t = templates[entry]
+            return t and { GetClass = function() return t.class end, GetSubClass = function() return t.sub end }
+        end,
+        CharDBQuery = function(sql)
+            local i = 1
+            return { GetUInt32 = function(_, c) return rows[i][c + 1] end,
+                     NextRow   = function() i = i + 1; return rows[i] ~= nil end }
+        end,
+    }, { __index = _G })
+    env.dofile = function(path) return dofile(path) end
+    local chunk = assert(loadfile(DIR .. "/src/lua-basic/gearset-command.lua"))
+    setfenv(chunk, env)()
+    check(type(handler_fn) == "function", "the script registers a command handler")
+    local console = { SendSysMessage = function(_, text) said[#said + 1] = text end }
+    local handled = handler_fn(42, nil, "elite growth", console)
+    check(handled == false, "the console command is reported handled")
+    local want = profile.records[108][6].items
+    local all = true
+    for slot, entry in pairs(want) do if pozeta.equipped[slot] ~= entry then all = false end end
+    check(all, "Pozeta (points only in Arms: shape 8, all Arms) wears every item of that record")
+    check(pozeta.removed[16] and not pozeta.worn[16], "Pozeta's shield is taken off for the two-hander")
+    check(pozeta.worn[3] and pozeta.worn[18] and not pozeta.removed[3] and not pozeta.removed[18], "shirt and tabard are left alone")
+    check(pozeta.saved, "Pozeta is saved")
+    local text = table.concat(said, "\n")
+    check(text:find("Rogue %(race 3, class 4, shape 9, level 60%): no record for shape 409 in elite") ~= nil, "a buddy with no record is named, not dressed")
+    check(next(rogue.equipped) == nil, "nothing is put on a buddy with no elite")
+    check(text:find("character 600%): not in the world") ~= nil, "a buddy not in the world is reported")
+    check(pozeta.spells[750], "Pozeta is taught Plate Mail (750) before the Might set")
+    check(text:find("Pozeta lacked proficiencies.-750") ~= nil, "the teaching is reported")
+    check(text:find("Ecaexo is dead: skipped") ~= nil and ecaexo.worn[0] and not ecaexo.removed[0], "a dead buddy is reported and nothing is taken off")
+    check(xazian.equipped[16] == 2362, "a refused shield puts the old one back")
+    check(text:find("old item back on") ~= nil, "and says so")
+    check(text:find("Growth: 1 of 5 buddies fully dressed in elite") ~= nil, "the summary counts the dressed")
+    for _, line in ipairs(said) do print("  | " .. line) end
+
+    said = {}
+    check(handler_fn(42, nil, "gearset elite buddies growth", console) == false, ".gearset elite buddies growth is handled")
+    check(table.concat(said, "\n"):find("Growth: %d of 5 buddies fully dressed in elite") ~= nil, "and dresses the same buddies")
+    said = {}
+    handler_fn(42, nil, "gearset nosuch buddies growth", console)
+    check(table.concat(said, "\n"):find("no gearset profile nosuch") ~= nil, "an unknown profile is named")
+end
+
+print("")
+print("Finding records")
+do
+    local G = dofile(DIR .. "/src/lua-basic/lib/gearsets.lua")
+    local shapes = TD.classes[2].shapes
+    check(G.nearest_shape(shapes, { 0, 0, 0 }) == 7, "no points: shape 7, one-third each")
+    check(G.nearest_shape(shapes, { 10, 0, 21 }) == 5, "10 Holy, 21 Retribution: shape 5 (1/3 Holy, 2/3 Retribution)")
+    check(G.nearest_shape(shapes, { 0, 10, 21 }) == 6, "10 Protection, 21 Retribution: shape 6 (1/3 Protection, 2/3 Retribution)")
+    check(G.nearest_shape(shapes, { 0, 0, 31 }) == 10, "all Retribution: shape 10")
+    local p = { name = "t", keys = { "shape", "level" }, records = {
+        [205] = { [10] = { items = { [15] = 1 } }, [20] = { items = { [15] = 2 } } },
+        [206] = { [10] = { items = { [15] = 3 } } } } }
+    check(G.record(p, { class = 2, shape = 5, level = 24 }).items[15] == 2, "a level key takes the highest record at or below (24 -> 20)")
+    check(G.record(p, { class = 2, shape = 5, level = 19 }).items[15] == 1, "and 19 -> 10")
+    check(G.record(p, { class = 2, shape = 6, level = 60 }).items[15] == 3, "the Protection-leaning paladin has its own record")
+    local none, why = G.record(p, { class = 2, shape = 5, level = 5 })
+    check(none == nil and why:find("no record at or below level 5"), "below every level: named, not guessed")
+    none, why = G.record(p, { class = 2, shape = 4, level = 30 })
+    check(none == nil and why:find("no record for shape 204"), "a missing shape: named, not a near match")
+end
+
+print("")
+print("The buddy-white tier profiles")
+do
+    local bw = { records = {} }
+    local keyed, inside = true, true
+    for _, tier in ipairs({ 1, 10, 20, 30, 40, 50, 60 }) do
+        local p = dofile(DIR .. "/src/lua-basic/data/gearsets/buddy-white-" .. tier .. ".lua")
+        if p.name ~= "buddy-white-" .. tier or table.concat(p.keys, ",") ~= "shape,level" then keyed = false end
+        for key, by_level in pairs(p.records) do
+            bw.records[key] = bw.records[key] or {}
+            for level, rec in pairs(by_level) do
+                if level < (tier == 1 and 2 or tier) or level > (tier == 1 and 9 or tier + 9) then inside = false end
+                bw.records[key][level] = rec
+            end
+        end
+    end
+    check(keyed, "each tier profile is named buddy-white-<tier> and keyed by shape, then level")
+    check(inside, "each tier's records lie inside its own ten levels")
+    local missing, records, ids, seen_b = 0, 0, {}, {}
+    for class, c in pairs(TD.classes) do
+        for shape in ipairs(c.shapes) do
+            local by_level = bw.records[class * 100 + shape]
+            if not by_level or not by_level[2] then missing = missing + 1 end
+            for _, rec in pairs(by_level or {}) do
+                records = records + 1
+                for _, id in pairs(rec.items) do if not seen_b[id] then seen_b[id] = true; ids[#ids + 1] = id end end
+            end
+        end
+    end
+    check(missing == 0, "every class and talent shape has records from level 2 (" .. records .. " records)")
+    local bf = {}
+    for _, r in ipairs(query("SELECT it.entry, it.Quality, it.InventoryType, it.class, it.subclass, it.AllowableClass, it.RequiredLevel," ..
+        " (SELECT COUNT(*) FROM npc_vendor v WHERE v.item = it.entry) FROM item_template it WHERE it.entry IN (" .. table.concat(ids, ",") .. ")")) do
+        bf[tonumber(r[1])] = { quality = tonumber(r[2]), inv = tonumber(r[3]), class = tonumber(r[4]), sub = tonumber(r[5]),
+                               allow = tonumber(r[6]), req = tonumber(r[7]), sold = tonumber(r[8]) }
+    end
+    local bad = 0
+    for key, by_level in pairs(bw.records) do
+        local class = math.floor(key / 100)
+        for level, rec in pairs(by_level) do
+            for slot, id in pairs(rec.items) do
+                local f = bf[id]
+                local white = f and f.quality == 1 and f.sold > 0
+                local gray  = f and f.quality == 0 and f.class == ITEM_CLASS_ARMOR
+                local lowest = (f and f.class == ITEM_CLASS_WEAPON) and 1 or 2
+                local ok = f and (white or gray) and f.req <= level and f.req >= lowest
+                    and SLOT_FITS[slot] and SLOT_FITS[slot][f.inv]
+                    and (f.allow == -1 or bit.band(f.allow, bit.lshift(1, class - 1)) ~= 0)
+                    and (f.class ~= ITEM_CLASS_WEAPON or WEAPONS[class][f.sub])
+                    and (f.class ~= ITEM_CLASS_ARMOR or ARMOR[class][f.sub])
+                if not ok then bad = bad + 1; if bad <= 10 then print(string.format("  FAIL: shape key %d level %d slot %d item %d", key, level, slot, id)) end end
+            end
+        end
+    end
+    check(bad == 0, "every item is white and sold by a vendor, or gray armour, wearable at its record's level (from 2 for armour, 1 for weapons), fits its slot and suits its class")
+    local pipe = io.popen(DIR .. "/scripts/generate-gearset-sql " .. DIR .. " --stdout")
+    local made = pipe:read("*a"); pipe:close()
+    local f = io.open(DIR .. "/sql/basic/db_world.src/33-gearsets.apply.sql")
+    local disk = f and f:read("*a"); if f then f:close() end
+    check(made == disk, "the gearset SQL on disk (install step E052) is exactly what the profiles make")
+end
+
+print("")
+print("The vanilla starter kit profile")
+do
+    local VANILLA = "acore_world_vanilla"
+    local kit = dofile(DIR .. "/src/lua-basic/data/gearsets/vanilla-starter.lua")
+    check(table.concat(kit.keys, ",") == "class,race", "the starter kit is keyed by class, then race")
+    local kit_ids, seen_k = {}, {}
+    for _, by_race in pairs(kit.records) do
+        for _, rec in pairs(by_race) do
+            for _, id in pairs(rec.items) do if not seen_k[id] then seen_k[id] = true; kit_ids[#kit_ids + 1] = id end end
+        end
+    end
+    local kf = {}
+    for _, r in ipairs(query("SELECT entry, InventoryType, class, subclass, AllowableClass FROM item_template WHERE entry IN (" .. table.concat(kit_ids, ",") .. ")", VANILLA)) do
+        kf[tonumber(r[1])] = { inv = tonumber(r[2]), class = tonumber(r[3]), sub = tonumber(r[4]), allow = tonumber(r[5]) }
+    end
+    local combos, bad = 0, 0
+    for class, by_race in pairs(kit.records) do
+        for race, rec in pairs(by_race) do
+            combos = combos + 1
+            for slot, id in pairs(rec.items) do
+                local f = kf[id]
+                local ok = f and SLOT_FITS[slot] and SLOT_FITS[slot][f.inv]
+                    and (f.allow == -1 or bit.band(f.allow, bit.lshift(1, class - 1)) ~= 0)
+                    and (f.class ~= ITEM_CLASS_WEAPON or WEAPONS[class][f.sub])
+                    and (f.class ~= ITEM_CLASS_ARMOR or ARMOR[class][f.sub])
+                if not ok then bad = bad + 1; print(string.format("  FAIL: class %d race %d slot %d item %d", class, race, slot, id)) end
+            end
+        end
+    end
+    check(bad == 0, string.format("every item of all %d race-and-class kits exists in %s, fits its slot and suits its class", combos, VANILLA))
+    local pipe = io.popen(DIR .. "/scripts/generate-vanilla-starting-equipment-sql " .. DIR .. " --stdout")
+    local made = pipe:read("*a"); pipe:close()
+    local f = io.open(DIR .. "/sql/vanilla/db_world.src/02-starting-equipment.apply.sql")
+    local disk = f:read("*a"); f:close()
+    check(made == disk, "the starter SQL on disk is exactly what the generator makes from the profile")
+end
+
+print("")
+if fails == 0 then print(string.format("All %d checks passed (%d elite records, %d items)", checks, #names, #ids))
+else print(string.format("%d of %d checks failed", fails, checks)) end
+os.exit(fails == 0 and 0 or 1)

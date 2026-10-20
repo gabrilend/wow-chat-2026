@@ -1,0 +1,54 @@
+#!/bin/bash
+
+DIR="/mnt/kaun/wow-chat-2026"
+if [[ -n "$1" ]]; then
+    DIR="$1"
+fi
+
+MYSQL_DIR="${DIR}/mysql"
+INSTALL_DIR="${MYSQL_DIR}/installed-files"
+DATA_DIR="${MYSQL_DIR}/databases"
+PID_FILE="${DATA_DIR}/mysqld.pid"
+SOCKET="${DATA_DIR}/mysql.sock"
+MYSQLD_BIN="$(readlink -f "${INSTALL_DIR}/bin/mysqld")"
+
+is_our_mysqld() {
+    local exe
+    exe="$(readlink "/proc/${1}/exe" 2>/dev/null)" || return 1
+    exe="${exe% (deleted)}"
+    [[ "${exe}" == "${MYSQLD_BIN}" ]]
+}
+
+if [[ ! -f "${PID_FILE}" ]]; then
+    echo "MySQL not running (no PID file)"
+    exit 0
+fi
+
+PID=$(cat "${PID_FILE}")
+
+if ! is_our_mysqld "${PID}"; then
+    echo "MySQL not running (stale PID file: process ${PID} is not this project's mysqld)"
+    rm -f "${PID_FILE}"
+    exit 0
+fi
+
+echo "Stopping MySQL (PID ${PID})..."
+
+"${INSTALL_DIR}/bin/mysqladmin" \
+    --socket="${SOCKET}" \
+    -u root \
+    shutdown 2>/dev/null || kill "${PID}"
+
+for i in {1..60}; do
+    if ! kill -0 "${PID}" 2>/dev/null; then
+        echo "MySQL stopped"
+        rm -f "${PID_FILE}"
+        exit 0
+    fi
+    sleep 1
+done
+
+echo "WARNING: MySQL did not stop gracefully, forcing..."
+kill -9 "${PID}" 2>/dev/null
+rm -f "${PID_FILE}"
+echo "MySQL killed"

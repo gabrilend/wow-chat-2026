@@ -1,0 +1,51 @@
+#!/bin/bash
+
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+WORK="${DIR}/tmp/shared-memory/test-sql-mirror"
+rm -rf "${WORK}"
+mkdir -p "${WORK}/staging" "${WORK}/core" || exit 1
+
+fails=0
+check() { if [[ "$2" == "yes" ]]; then echo "  ok:   $1"; else echo "  FAIL: $1"; fails=$((fails + 1)); fi; }
+
+git -C "${WORK}/core" init -q
+git -C "${WORK}/core" -c user.email=t@t -c user.name=t commit -q --allow-empty -m one
+printf 'SELECT 1;\n' > "${WORK}/staging/04-roster.sql"
+printf 'SELECT 2;\n' > "${WORK}/staging/36-subareas.sql"
+printf 'SELECT 3;\n' > "${WORK}/staging/08-gating.sql"
+
+source "${DIR}/patches/E-patches.sh" || { echo "FAILED: patches/E-patches.sh did not load"; exit 1; }
+AC_CODE_DIR="${WORK}/core"
+STAGED_SQL_DIRS=( ["${WORK}/staging"]="none" )
+TWIN="${WORK}/staging.updater"
+
+out="$(_mirror_staged_sql)"
+check "first run: three written (${out##*: })" "$([[ "${out}" == *"3 written, 0 unchanged, 0 removed"* ]] && echo yes || echo no)"
+check "each mirrored as z_<name>" "$([[ -f "${TWIN}/z_04-roster.sql" && -f "${TWIN}/z_08-gating.sql" && -f "${TWIN}/z_36-subareas.sql" ]] && echo yes || echo no)"
+first="$(head -1 "${TWIN}/z_04-roster.sql")"
+check "the stamp first, naming the core's commit" "$([[ "${first}" == "-- installed against core=$(git -C "${WORK}/core" rev-parse --short=12 HEAD)"* ]] && echo yes || echo no)"
+check "the file after the stamp, unchanged" "$([[ "$(tail -n +2 "${TWIN}/z_36-subareas.sql")" == "SELECT 2;" ]] && echo yes || echo no)"
+order="$(printf '%s\n' 2026_10_09_00.sql z_04-roster.sql z_36-subareas.sql 2026_07_19_00.sql z_08-gating.sql | LC_ALL=C sort | tr '\n' ' ')"
+check "sorted by name, upstream's dated files first, ours in their own order (${order% })" \
+    "$([[ "${order}" == "2026_07_19_00.sql 2026_10_09_00.sql z_04-roster.sql z_08-gating.sql z_36-subareas.sql " ]] && echo yes || echo no)"
+
+out="$(_mirror_staged_sql)"
+check "second run, nothing changed: nothing written" "$([[ "${out}" == *"0 written, 3 unchanged, 0 removed"* ]] && echo yes || echo no)"
+
+before="$(sha1sum "${TWIN}"/z_*.sql | cut -d' ' -f1 | tr '\n' ' ')"
+git -C "${WORK}/core" -c user.email=t@t -c user.name=t commit -q --allow-empty -m two
+unset SQL_INSTALL_STAMP                                  # a new install run
+out="$(_mirror_staged_sql)"
+after="$(sha1sum "${TWIN}"/z_*.sql | cut -d' ' -f1 | tr '\n' ' ')"
+same=0
+for h in ${before}; do [[ " ${after}" == *" ${h} "* ]] && same=$((same + 1)); done
+check "a pin move rewrites every mirrored file, so each hash changes (${out##*: })" \
+    "$([[ "${out}" == *"3 written"* && ${same} -eq 0 ]] && echo yes || echo no)"
+
+rm "${WORK}/staging/08-gating.sql"
+out="$(_mirror_staged_sql)"
+check "a staged file removed leaves the mirror too" "$([[ "${out}" == *"1 removed"* && ! -f "${TWIN}/z_08-gating.sql" ]] && echo yes || echo no)"
+
+rm -rf "${WORK}"
+echo ""
+if [[ ${fails} -eq 0 ]]; then echo "All 8 checks passed"; else echo "${fails} of 8 checks failed"; exit 1; fi

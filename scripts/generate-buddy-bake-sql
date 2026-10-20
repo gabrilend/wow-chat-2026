@@ -1,0 +1,224 @@
+#!/usr/bin/env luajit
+
+local DIR     = arg[1] or "/mnt/kaun/wow-chat-2026"
+local CHAR_DB = arg[2] or "acore_characters_basic"
+local WORLD   = arg[3] or "acore_world_basic"
+local DBC     = DIR .. "/data-files/dbc/"
+local OUT_DIR = DIR .. "/tmp/shared-memory/buddy-bake"
+local MYSQL   = DIR .. "/mysql/installed-files/bin/mysql -h127.0.0.1 -P3307 -uritz -pmenardi -N --batch "
+
+local ENTRY_BASE = 6280000
+local ENTRY_TOP  = 7179999
+local BASE_TEMPLATE = 6170002
+
+local function die(msg)
+    io.stderr:write("generate-buddy-bake-sql: ", msg, "\n")
+    os.exit(1)
+end
+
+local function u32(d, o) local a, b, c, e = d:byte(o + 1, o + 4); return a + b * 256 + c * 65536 + e * 16777216 end
+local function load_dbc(name)
+    local f = io.open(DBC .. name, "rb") or die("cannot open " .. DBC .. name .. " (the client's data files: is PROJECT_DIR the main project, which holds data-files/?)")
+    local d = f:read("*a")
+    f:close()
+    if d:sub(1, 4) ~= "WDBC" then die(name .. " is not a WDBC file") end
+    return u32(d, 4), u32(d, 12), function(o) return u32(d, o) end
+end
+
+local function query(db, sql)
+    local p = io.popen(MYSQL .. db .. " -e \"" .. sql .. "\" 2>&1")
+    local rows = {}
+    for line in p:lines() do
+        if line:find("^mysql: %[Warning%]") then
+        elseif line:find("^ERROR") then
+            die("query failed on " .. db .. ": " .. line .. "\n  the query: " .. sql)
+        else
+            local r, start = {}, 1
+            while true do
+                local tab = line:find("\t", start, true)
+                local v   = line:sub(start, (tab or 0) - 1)
+                if v == "NULL" then r[#r + 1] = false else r[#r + 1] = tonumber(v) or v end
+                if not tab then break end
+                start = tab + 1
+            end
+            rows[#rows + 1] = r
+        end
+    end
+    p:close()
+    return rows
+end
+
+local races = {}
+do
+    local n, rs, u = load_dbc("ChrRaces.dbc")
+    for r = 0, n - 1 do
+        local b = 20 + r * rs
+        races[u(b)] = { faction = u(b + 2 * 4), body = { [0] = u(b + 4 * 4), [1] = u(b + 5 * 4) }, team = u(b + 13 * 4) }
+    end
+end
+
+local OUTFIT_FROM = { 0, 2, 3, 4, 5, 6, 7, 8, 9, 14, 18 }
+local SLOT_NAME = { [0] = "head", [2] = "shoulders", [3] = "shirt", [4] = "chest", [5] = "waist", [6] = "legs",
+                    [7] = "feet", [8] = "wrists", [9] = "hands", [14] = "back", [18] = "tabard",
+                    [15] = "main hand", [16] = "off hand", [17] = "ranged" }
+local UNIT_CLASS = { [1] = 1, [2] = 2, [3] = 2, [4] = 4, [5] = 8, [6] = 1, [7] = 2, [8] = 8, [9] = 8, [11] = 2 }
+
+local buddies = query(CHAR_DB, "SELECT c.guid, c.name, c.race, c.gender, c.class, c.level, c.skin, c.face, c.hairStyle, c.hairColor, c.facialStyle, c.health, c.power1, IFNULL(c.equipmentCache, ''), r.owner, o.name FROM buddy_roster r JOIN characters c ON c.guid = r.buddy LEFT JOIN characters o ON o.guid = r.owner WHERE r.buddy <> 0 ORDER BY c.guid")
+if #buddies == 0 then die("no buddies in " .. CHAR_DB .. ".buddy_roster (no row has a character): nothing to bake") end
+
+local wanted = {}
+for _, b in ipairs(buddies) do
+    local n = 0
+    for v in tostring(b[14]):gmatch("%d+") do
+        n = n + 1
+        if n <= 38 and n % 2 == 1 and tonumber(v) > 0 then wanted[tonumber(v)] = true end
+    end
+end
+local ids = {}
+for id in pairs(wanted) do ids[#ids + 1] = id end
+local display = {}
+if #ids > 0 then
+    for _, row in ipairs(query(WORLD, "SELECT entry, displayid FROM item_template WHERE entry IN (" .. table.concat(ids, ",") .. ")")) do
+        display[row[1]] = row[2]
+    end
+end
+
+local stats = {}
+for _, row in ipairs(query(WORLD, "SELECT level, class, basehp0, basemana FROM creature_classlevelstats")) do
+    stats[row[1] * 100 + row[2]] = { hp = row[3], mana = row[4] }
+end
+if #query(WORLD, "SELECT entry FROM creature_template WHERE entry = " .. BASE_TEMPLATE) == 0 then
+    die("the base creature " .. BASE_TEMPLATE .. " (the wandering Sargobras, sql/basic/db_world.src/26-buddy-selector) is not in " .. WORLD .. "; apply that step first")
+end
+
+local baked, failed = {}, {}
+for _, b in ipairs(buddies) do
+    local guid, name, race, gender, class, level = b[1], b[2], b[3], b[4], b[5], b[6]
+    local why
+    local entry = ENTRY_BASE + guid
+    local items = {}
+    local n = 0
+    for v in tostring(b[14]):gmatch("%d+") do
+        n = n + 1
+        if n <= 38 and n % 2 == 1 then items[(n - 1) / 2] = tonumber(v) end
+    end
+
+    if entry > ENTRY_TOP then why = string.format("guid %d puts its creature at %d, past the buddy range's top %d", guid, entry, ENTRY_TOP) end
+    local rc = races[race]
+    if not why and not (rc and rc.body[gender] and rc.body[gender] > 0) then
+        why = string.format("race %d sex %d has no body in ChrRaces.dbc", race, gender)
+    end
+    local unit_class = UNIT_CLASS[class]
+    if not why and not unit_class then why = "class " .. class .. " has no creature class" end
+    local st = unit_class and stats[level * 100 + unit_class]
+    if not why and not st then why = string.format("no creature_classlevelstats row for level %d, creature class %d", level, unit_class) end
+
+    local outfit = {}
+    if not why then
+        for place, slot in ipairs(OUTFIT_FROM) do
+            local item = items[slot] or 0
+            if item > 0 and not (display[item] and display[item] > 0) then
+                why = string.format("its %s (slot %d, item %d) has no picture in item_template", SLOT_NAME[slot], slot, item)
+                break
+            end
+            outfit[place] = item > 0 and display[item] or 0
+        end
+    end
+
+    if why then
+        table.insert(failed, string.format("%s (guid %d): %s", name, guid, why))
+    else
+        local from = string.format("%d %d %d %d %d %d %d %d|%s", race, gender, level, b[7], b[8], b[9], b[10], b[11], table.concat(outfit, " "))
+        table.insert(baked, {
+            guid = guid, name = name, entry = entry, level = level, owner = b[15], owner_name = b[16] or "",
+            faction = rc.faction, body = rc.body[gender], race = race, gender = gender,
+            skin = b[7], face = b[8], hair = b[9], hair_color = b[10], beard = b[11],
+            unit_class = unit_class,
+            health_mod = 1,
+            mana_mod   = 1,
+            outfit = outfit, mh = items[15] or 0, oh = items[16] or 0, ranged = items[17] or 0,
+            from = from,
+        })
+    end
+end
+
+os.execute("mkdir -p '" .. OUT_DIR .. "'")
+local function sq(s) return "'" .. tostring(s):gsub("\\", "\\\\"):gsub("'", "''") .. "'" end
+local stamp = os.date("!%Y-%m-%d %H:%M UTC")
+
+local a = {}
+local function w(s) a[#a + 1] = s end
+w("-- buddy-bake.apply.sql - GENERATED " .. stamp .. " by scripts/generate-buddy-bake-sql")
+w("-- from " .. CHAR_DB .. " (buddy_roster, characters) and " .. WORLD .. " (item_template,")
+w("-- creature_classlevelstats), to give each buddy a creature dressed as itself (issue 628a).")
+w("-- Nothing reads creature_outfit yet: B047's outfit list is filled in code")
+w("-- (buddies_outfits.cpp); loading it from this table is 628a's step 1.")
+w("-- Apply to " .. WORLD .. " by hand; buddy-bake.revert.sql takes it all out.")
+w("")
+w("CREATE TABLE IF NOT EXISTS `creature_outfit` (")
+w("  `entry` INT UNSIGNED NOT NULL PRIMARY KEY,   -- the creature this look belongs to")
+w("  `race` TINYINT UNSIGNED NOT NULL, `gender` TINYINT UNSIGNED NOT NULL,")
+w("  `skin` TINYINT UNSIGNED NOT NULL, `face` TINYINT UNSIGNED NOT NULL,")
+w("  `hair` TINYINT UNSIGNED NOT NULL, `hair_color` TINYINT UNSIGNED NOT NULL, `facial_hair` TINYINT UNSIGNED NOT NULL,")
+w("  -- item pictures (display ids), in the client's order")
+w("  `head` INT UNSIGNED NOT NULL, `shoulders` INT UNSIGNED NOT NULL, `shirt` INT UNSIGNED NOT NULL,")
+w("  `chest` INT UNSIGNED NOT NULL, `waist` INT UNSIGNED NOT NULL, `legs` INT UNSIGNED NOT NULL,")
+w("  `feet` INT UNSIGNED NOT NULL, `wrists` INT UNSIGNED NOT NULL, `hands` INT UNSIGNED NOT NULL,")
+w("  `back` INT UNSIGNED NOT NULL, `tabard` INT UNSIGNED NOT NULL,")
+w("  `baked_from` VARCHAR(255) NOT NULL DEFAULT '' -- what it was made from; unchanged means no rebake")
+w(");")
+w("")
+if #baked > 0 then
+    local list = {}
+    for _, k in ipairs(baked) do list[#list + 1] = k.entry end
+    local inlist = table.concat(list, ",")
+    w("DELETE FROM `creature_outfit`         WHERE `entry`      IN (" .. inlist .. ");")
+    w("DELETE FROM `creature_equip_template` WHERE `CreatureID` IN (" .. inlist .. ");")
+    w("DELETE FROM `creature_template_model` WHERE `CreatureID` IN (" .. inlist .. ");")
+    w("DELETE FROM `creature_template`       WHERE `entry`      IN (" .. inlist .. ");")
+    w("")
+    w("DROP TEMPORARY TABLE IF EXISTS `tmp_628a_template`;")
+    w("CREATE TEMPORARY TABLE `tmp_628a_template` AS SELECT * FROM `creature_template` WHERE `entry` = " .. BASE_TEMPLATE .. ";")
+    for _, k in ipairs(baked) do
+        w(string.format("-- %s, buddy of %s (owner guid %d)", k.name, k.owner_name ~= "" and k.owner_name or "?", k.owner))
+        w(string.format("UPDATE `tmp_628a_template` SET `entry` = %d, `name` = %s, `subname` = '', `minlevel` = %d, `maxlevel` = %d, `faction` = %d, `npcflag` = 1, `rank` = 0, `unit_class` = %d, `HealthModifier` = %.4f, `ManaModifier` = %.4f;",
+            k.entry, sq(k.name), k.level, k.level, k.faction, k.unit_class, k.health_mod, k.mana_mod))
+        w("INSERT INTO `creature_template` SELECT * FROM `tmp_628a_template`;")
+        w(string.format("INSERT INTO `creature_template_model` (`CreatureID`, `Idx`, `CreatureDisplayID`, `DisplayScale`, `Probability`, `VerifiedBuild`) VALUES (%d, 0, %d, 1, 1, 0);", k.entry, k.body))
+        if k.mh + k.oh + k.ranged > 0 then
+            w(string.format("INSERT INTO `creature_equip_template` (`CreatureID`, `ID`, `ItemID1`, `ItemID2`, `ItemID3`, `VerifiedBuild`) VALUES (%d, 1, %d, %d, %d, 0);", k.entry, k.mh, k.oh, k.ranged))
+        end
+        w(string.format("INSERT INTO `creature_outfit` VALUES (%d, %d, %d, %d, %d, %d, %d, %d, %s, %s);",
+            k.entry, k.race, k.gender, k.skin, k.face, k.hair, k.hair_color, k.beard, table.concat(k.outfit, ", "), sq(k.from)))
+    end
+    w("DROP TEMPORARY TABLE `tmp_628a_template`;")
+
+    local r = {}
+    r[#r + 1] = "-- buddy-bake.revert.sql - GENERATED " .. stamp .. " by scripts/generate-buddy-bake-sql;"
+    r[#r + 1] = "-- takes out what buddy-bake.apply.sql of the same run put in (issue 628a)."
+    r[#r + 1] = "DELETE FROM `creature_outfit`         WHERE `entry`      IN (" .. inlist .. ");"
+    r[#r + 1] = "DELETE FROM `creature_equip_template` WHERE `CreatureID` IN (" .. inlist .. ");"
+    r[#r + 1] = "DELETE FROM `creature_template_model` WHERE `CreatureID` IN (" .. inlist .. ");"
+    r[#r + 1] = "DELETE FROM `creature_template`       WHERE `entry`      IN (" .. inlist .. ");"
+    local f = io.open(OUT_DIR .. "/buddy-bake.revert.sql", "w") or die("cannot write " .. OUT_DIR .. "/buddy-bake.revert.sql")
+    f:write(table.concat(r, "\n"), "\n")
+    f:close()
+end
+local f = io.open(OUT_DIR .. "/buddy-bake.apply.sql", "w") or die("cannot write " .. OUT_DIR .. "/buddy-bake.apply.sql")
+f:write(table.concat(a, "\n"), "\n")
+f:close()
+
+print(string.format("generate-buddy-bake-sql: %d buddies read from %s; %d baked, %d left out", #buddies, CHAR_DB, #baked, #failed))
+for _, k in ipairs(baked) do
+    print(string.format("  baked   %-12s creature %d, level %d, body %d, faction %d, %d of 11 outfit places dressed",
+        k.name, k.entry, k.level, k.body, k.faction,
+        (function() local c = 0 for _, d in ipairs(k.outfit) do if d > 0 then c = c + 1 end end return c end)()))
+end
+for _, why in ipairs(failed) do print("  LEFT OUT " .. why) end
+if #baked > 0 then
+    print("  WARNING: health and mana are each creature's normal for its class and level, not the buddy's own:")
+    print("           the buddy's maximums aren't saved (character_stats is empty while PlayerSave.Stats.MinLevel is 0;")
+    print("           issue 628a, open question 2)")
+end
+print("  wrote " .. OUT_DIR .. "/buddy-bake.apply.sql" .. (#baked > 0 and (" and buddy-bake.revert.sql") or " (the table only: nothing baked)"))
+if #failed > 0 then os.exit(1) end

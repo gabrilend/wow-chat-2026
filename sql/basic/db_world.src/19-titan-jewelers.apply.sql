@@ -1,0 +1,68 @@
+-- MARKER_E034_APPLY basic-titan-jewelers
+
+DELETE FROM `game_event_creature`      WHERE `eventEntry` IN (201, 202, 203);
+DELETE FROM `game_event`               WHERE `eventEntry` IN (201, 202, 203);
+DELETE FROM `creature`                 WHERE `guid` BETWEEN 15501011 AND 15501020;
+DELETE FROM `creature_default_trainer` WHERE `CreatureId` IN (1550210, 1550211);
+DELETE FROM `trainer_spell`            WHERE `TrainerId` = 155300;
+DELETE FROM `trainer`                  WHERE `Id` = 155300;
+DELETE FROM `creature_template_model`  WHERE `CreatureID` IN (1550210, 1550211);
+DELETE FROM `creature_template`        WHERE `entry` IN (1550210, 1550211);
+DELETE FROM `npc_text`                 WHERE `ID` = 1553000;
+
+DROP TABLE IF EXISTS `tmp_155p_spots`;
+CREATE TABLE `tmp_155p_spots` (
+  `site` varchar(8) NOT NULL, `role` varchar(8) NOT NULL, `map` smallint unsigned NOT NULL,
+  `x` float NOT NULL, `y` float NOT NULL, `z` float NOT NULL, `o` float NOT NULL, PRIMARY KEY (`site`, `role`));
+INSERT INTO `tmp_155p_spots` (`site`, `role`, `map`, `x`, `y`, `z`, `o`) VALUES ('pylon_e','jeweler',1,-7194.85,-2313.74,-238.61,4.398),('pylon_e','trader',1,-7198.65,-2312.50,-237.38,4.398),('pylon_n','jeweler',1,-6284.29,-1553.80,-231.56,6.035),('pylon_n','trader',1,-6285.28,-1557.68,-233.36,6.035),('pylon_w','jeweler',1,-7424.39,-358.58,-238.38,2.036),('pylon_w','trader',1,-7420.82,-356.79,-235.02,2.036),('uldaman','jeweler',0,-6070.53,-2947.52,209.78,4.779),('uldaman','trader',0,-6069.84,-2963.40,209.78,1.587),('uldum','jeweler',1,-9612.27,-2817.05,8.77,3.142),('uldum','trader',1,-9612.27,-2813.05,8.38,3.142);
+
+DROP TEMPORARY TABLE IF EXISTS `tmp_155p_template`;
+CREATE TEMPORARY TABLE `tmp_155p_template` AS SELECT * FROM `creature_template` WHERE `entry` IN (28149, 27980);
+UPDATE `tmp_155p_template` SET
+  `name`    = IF(`entry` = 28149, 'Earthen Crystal-Keeper', 'Earthen Gemcutter'),
+  `subname` = IF(`entry` = 28149, 'Crystal Trader', 'Masterwork Jewelcrafter'),
+  `npcflag` = IF(`entry` = 28149, 1, 1 | 16 | 64),     -- gossip; gossip + trainer + profession trainer
+  `entry`   = IF(`entry` = 28149, 1550210, 1550211),
+  `difficulty_entry_1` = 0, `difficulty_entry_2` = 0, `difficulty_entry_3` = 0, `KillCredit1` = 0, `KillCredit2` = 0,
+  `faction` = 35, `gossip_menu_id` = 0, `minlevel` = 60, `maxlevel` = 60,
+  `lootid` = 0, `pickpocketloot` = 0, `skinloot` = 0, `AIName` = '', `ScriptName` = '';
+INSERT INTO `creature_template` SELECT * FROM `tmp_155p_template`;
+DROP TEMPORARY TABLE `tmp_155p_template`;
+DROP TEMPORARY TABLE IF EXISTS `tmp_155p_model`;
+CREATE TEMPORARY TABLE `tmp_155p_model` AS SELECT * FROM `creature_template_model` WHERE `CreatureID` IN (28149, 27980);
+UPDATE `tmp_155p_model` SET `CreatureID` = IF(`CreatureID` = 28149, 1550210, 1550211);
+INSERT INTO `creature_template_model` SELECT * FROM `tmp_155p_model`;
+DROP TEMPORARY TABLE `tmp_155p_model`;
+
+INSERT INTO `npc_text` (`ID`, `text0_0`, `text0_1`, `Probability0`) VALUES
+  (1553000, 'The titans set crystals of power into everything they shaped. Bring me a Nexus Crystal and I will draw a gem out of it.',
+            'The titans set crystals of power into everything they shaped. Bring me a Nexus Crystal and I will draw a gem out of it.', 1);
+
+INSERT INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`, `VerifiedBuild`) VALUES
+  (155300, 2, 0, 'The titans'' own cuts, for those at the height of the craft.', 0);
+INSERT INTO `creature_default_trainer` (`CreatureId`, `TrainerId`) VALUES (1550211, 155300);
+INSERT IGNORE INTO `trainer_spell` (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`, `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`)
+SELECT 155300, n.`SpellId`, n.`MoneyCost`, 755, 300, 0, 0, 0, 0
+FROM `basic_155n_trainer_spell` n
+JOIN `basic_155p_cuts` c ON c.`spell` = n.`SpellId`
+JOIN `item_template` g ON g.`entry` = c.`item`
+WHERE n.`TrainerId` = 111 AND g.`class` = 3 AND g.`GemProperties` <> 0 AND g.`subclass` <> 6
+  AND ((g.`Quality` = 2 AND g.`ItemLevel` = 70) OR (g.`Quality` = 3 AND g.`ItemLevel` = 80));
+
+INSERT INTO `creature` (`guid`, `id`, `map`, `spawnMask`, `phaseMask`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `Comment`)
+SELECT 15501010 + CASE s.`site` WHEN 'uldaman' THEN 1 WHEN 'uldum' THEN 3 WHEN 'pylon_n' THEN 5 WHEN 'pylon_w' THEN 7 ELSE 9 END
+                + IF(s.`role` = 'trader', 0, 1),
+       IF(s.`role` = 'trader', 1550210, 1550211), s.`map`, 1, 1, s.`x`, s.`y`, s.`z`, s.`o`, 300,
+       CONCAT('issue 155p: titan-site ', s.`role`, ', ', s.`site`)
+FROM `tmp_155p_spots` s;
+INSERT INTO `game_event` (`eventEntry`, `start_time`, `end_time`, `occurence`, `length`, `holiday`, `holidayStage`, `description`, `world_event`, `announce`) VALUES
+  (201, '2000-01-01 00:00:00', '2000-01-01 00:00:00', 5184000, 2592000, 0, 0, 'basic 155p: titan jewelcrafters at the Northern Crystal Pylon', 5, 0),
+  (202, '2000-01-01 00:00:00', '2000-01-01 00:00:00', 5184000, 2592000, 0, 0, 'basic 155p: titan jewelcrafters at the Western Crystal Pylon',  5, 0),
+  (203, '2000-01-01 00:00:00', '2000-01-01 00:00:00', 5184000, 2592000, 0, 0, 'basic 155p: titan jewelcrafters at the Eastern Crystal Pylon',  5, 0);
+INSERT INTO `game_event_creature` (`eventEntry`, `guid`) VALUES
+  (201, 15501015), (201, 15501016),
+  (202, 15501017), (202, 15501018),
+  (203, 15501019), (203, 15501020);
+
+DROP TABLE `tmp_155p_spots`;
+

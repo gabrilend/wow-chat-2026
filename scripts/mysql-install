@@ -1,0 +1,1109 @@
+#!/bin/bash
+
+set -euo pipefail
+
+
+MYSQL_DEFAULT_VERSION="9.6.0"
+MYSQL_HOST="dev.mysql.com"
+
+MYSQL_GB_PER_JOB=2
+
+MEMORY_RESERVE_GB=2
+
+MYSQL_DATABASES=(
+    acore_auth
+    acore_characters
+    acore_world
+    acore_playerbots
+)
+
+MYSQL_SOCKET_WAIT=60
+MYSQL_SHUTDOWN_WAIT=60
+
+
+TOOL_NAMES=()
+TOOL_REASONS=()
+TOOL_PACKAGES=()
+
+HEADER_NAMES=()
+HEADER_REASONS=()
+HEADER_PACKAGES=()
+
+HOST_NAMES=()
+HOST_REASONS=()
+
+declare -A PACKAGE_HINTS=(
+    [compiler]="apt:g++ dnf:gcc-c++ pacman:gcc xbps:gcc apk:g++ zypper:gcc-c++ brew:gcc"
+    [cmake]="apt:cmake dnf:cmake pacman:cmake xbps:cmake apk:cmake zypper:cmake brew:cmake"
+    [make]="apt:make dnf:make pacman:make xbps:make apk:make zypper:make brew:make"
+    [bison]="apt:bison dnf:bison pacman:bison xbps:bison apk:bison zypper:bison brew:bison"
+    [curl]="apt:curl dnf:curl pacman:curl xbps:curl apk:curl zypper:curl brew:curl"
+    [tar]="apt:tar dnf:tar pacman:tar xbps:tar apk:tar zypper:tar brew:gnu-tar"
+    [xz]="apt:xz-utils dnf:xz pacman:xz xbps:xz apk:xz zypper:xz brew:xz"
+    [file]="apt:file dnf:file pacman:file xbps:file apk:file zypper:file brew:file-formula"
+    [pkgconfig]="apt:pkg-config dnf:pkgconf-pkg-config pacman:pkgconf xbps:pkg-config apk:pkgconf zypper:pkg-config brew:pkg-config"
+    [openssl]="apt:libssl-dev dnf:openssl-devel pacman:openssl xbps:openssl-devel apk:openssl-dev zypper:libopenssl-devel brew:openssl"
+    [ncurses]="apt:libncurses-dev dnf:ncurses-devel pacman:ncurses xbps:ncurses-devel apk:ncurses-dev zypper:ncurses-devel brew:ncurses"
+    [zstd]="apt:libzstd-dev dnf:libzstd-devel pacman:zstd xbps:libzstd-devel apk:zstd-dev zypper:libzstd-devel brew:zstd"
+    [zlib]="apt:zlib1g-dev dnf:zlib-devel pacman:zlib xbps:zlib-devel apk:zlib-dev zypper:zlib-devel brew:zlib"
+)
+
+package_manager() {
+    local manager
+    for manager in apt dnf pacman xbps-install apk zypper brew; do
+        if command -v "${manager}" >/dev/null 2>&1; then
+            case "${manager}" in
+                xbps-install) echo "xbps" ;;
+                *)            echo "${manager}" ;;
+            esac
+            return 0
+        fi
+    done
+    echo ""
+}
+
+install_hint() {
+    local handle="$1"
+    local hints="${PACKAGE_HINTS[${handle}]:-}"
+
+    if [[ -z "${hints}" ]]; then
+        echo "no package name on record for '${handle}'"
+        return 0
+    fi
+
+    local manager
+    manager="$(package_manager)"
+
+    if [[ -n "${manager}" ]]; then
+        local pair
+        for pair in ${hints}; do
+            if [[ "${pair%%:*}" == "${manager}" ]]; then
+                local package="${pair#*:}"
+                case "${manager}" in
+                    apt)    echo "sudo apt install ${package}"     ;;
+                    dnf)    echo "sudo dnf install ${package}"     ;;
+                    pacman) echo "sudo pacman -S ${package}"       ;;
+                    xbps)   echo "sudo xbps-install -S ${package}" ;;
+                    apk)    echo "sudo apk add ${package}"         ;;
+                    zypper) echo "sudo zypper install ${package}"  ;;
+                    brew)   echo "brew install ${package}"         ;;
+                esac
+                return 0
+            fi
+        done
+    fi
+
+    echo "package name by distribution: ${hints}"
+}
+
+need_tool()   { TOOL_NAMES+=("$1");   TOOL_REASONS+=("$2");   TOOL_PACKAGES+=("$3");   }
+need_header() { HEADER_NAMES+=("$1"); HEADER_REASONS+=("$2"); HEADER_PACKAGES+=("$3"); }
+need_host()   { HOST_NAMES+=("$1");   HOST_REASONS+=("$2");                            }
+
+find_compiler() {
+    if [[ -n "${CXX:-}" ]] && command -v "${CXX}" >/dev/null 2>&1; then
+        echo "${CXX}"
+        return 0
+    fi
+    local candidate
+    for candidate in g++ clang++ c++; do
+        if command -v "${candidate}" >/dev/null 2>&1; then
+            echo "${candidate}"
+            return 0
+        fi
+    done
+    echo ""
+}
+
+header_present() {
+    local header="$1"
+    local compiler="$2"
+
+    [[ -z "${compiler}" ]] && return 1
+
+    printf '#include <%s>\nint probe;\n' "${header}" \
+        | "${compiler}" -E -x c++ - -o /dev/null >/dev/null 2>&1
+}
+
+host_reachable() {
+    ( exec 3<>"/dev/tcp/$1/443" ) >/dev/null 2>&1
+}
+
+check_environment() {
+    local label="$1"
+    local satisfied=0
+    local missing=0
+    local report=""
+    local index
+
+    echo "Checking what ${label} needs from this machine..."
+
+    local compiler
+    compiler="$(find_compiler)"
+
+    for index in "${!TOOL_NAMES[@]}"; do
+        local tool="${TOOL_NAMES[${index}]}"
+        local found
+
+        if [[ "${tool}" == "c++-compiler" ]]; then
+            found="${compiler}"
+        else
+            found="$(command -v "${tool}" 2>/dev/null)"
+        fi
+
+        if [[ -n "${found}" ]]; then
+            printf '  present  %-16s %s\n' "${tool}" "${found}"
+            satisfied=$((satisfied + 1))
+        else
+            printf '  MISSING  %-16s needed for %s\n' "${tool}" "${TOOL_REASONS[${index}]}"
+            report+="    ${tool} — $(install_hint "${TOOL_PACKAGES[${index}]}")"$'\n'
+            missing=$((missing + 1))
+        fi
+    done
+
+    if [[ ${#HEADER_NAMES[@]} -gt 0 ]]; then
+        if [[ -z "${compiler}" ]]; then
+            echo "  skipped  header checks   no C++ compiler to ask"
+        else
+            for index in "${!HEADER_NAMES[@]}"; do
+                local header="${HEADER_NAMES[${index}]}"
+                if header_present "${header}" "${compiler}"; then
+                    printf '  present  %-16s found by %s\n' "${header}" "${compiler}"
+                    satisfied=$((satisfied + 1))
+                else
+                    printf '  MISSING  %-16s needed for %s\n' "${header}" "${HEADER_REASONS[${index}]}"
+                    report+="    ${header} — $(install_hint "${HEADER_PACKAGES[${index}]}")"$'\n'
+                    missing=$((missing + 1))
+                fi
+            done
+        fi
+    fi
+
+    for index in "${!HOST_NAMES[@]}"; do
+        local host="${HOST_NAMES[${index}]}"
+        if host_reachable "${host}"; then
+            printf '  present  %-16s reachable\n' "${host}"
+            satisfied=$((satisfied + 1))
+        else
+            printf '  MISSING  %-16s unreachable, needed for %s\n' "${host}" "${HOST_REASONS[${index}]}"
+            report+="    ${host} — no route to port 443; check network, DNS, and proxy settings"$'\n'
+            missing=$((missing + 1))
+        fi
+    done
+
+    echo ""
+
+    if [[ ${missing} -eq 0 ]]; then
+        echo "All ${satisfied} requirements satisfied."
+        echo ""
+        return 0
+    fi
+
+    echo "Cannot start ${label}."
+    echo "  Satisfied: ${satisfied}"
+    echo "  Missing:   ${missing}"
+    echo ""
+    echo "  Install the missing pieces:"
+    printf '%s' "${report}"
+    echo ""
+    echo "  To debug:"
+    echo "    Is a package installed here under a different name?"
+    echo "      Install it and run again; this list is built from the"
+    echo "      machine each time, so a name that turned out to be"
+    echo "      wrong shows as satisfied once resolved."
+    echo "    Do the development headers live somewhere unusual?"
+    echo "      Header presence is decided by asking the compiler, so"
+    echo "      setting CXX or CPLUS_INCLUDE_PATH to reach them is"
+    echo "      enough; the files need not be under /usr/include."
+    echo "    Is a host unreachable but the network otherwise fine?"
+    echo "      An outbound HTTPS proxy shows as unreachable here,"
+    echo "      because the check opens a direct TCP connection."
+    echo ""
+    return 1
+}
+
+
+cpu_count() {
+    local count=""
+
+    if command -v nproc >/dev/null 2>&1; then
+        count="$(nproc 2>/dev/null)"
+    fi
+    if [[ -z "${count}" ]] && command -v getconf >/dev/null 2>&1; then
+        count="$(getconf _NPROCESSORS_ONLN 2>/dev/null)"
+    fi
+    if [[ -z "${count}" ]] && [[ -r /proc/cpuinfo ]]; then
+        count="$(grep -c '^processor' /proc/cpuinfo 2>/dev/null)"
+    fi
+    if [[ -z "${count}" ]] && command -v sysctl >/dev/null 2>&1; then
+        count="$(sysctl -n hw.ncpu 2>/dev/null)"
+    fi
+
+    if [[ ! "${count}" =~ ^[0-9]+$ ]] || [[ "${count}" -lt 1 ]]; then
+        echo "1"
+        return 0
+    fi
+    echo "${count}"
+}
+
+memory_gb() {
+    local kib=""
+
+    if [[ -r /proc/meminfo ]]; then
+        kib="$(awk '/^MemTotal:/ {print $2; exit}' /proc/meminfo 2>/dev/null)"
+    fi
+    if [[ "${kib}" =~ ^[0-9]+$ ]]; then
+        echo $(( kib / 1024 / 1024 ))
+        return 0
+    fi
+
+    if command -v sysctl >/dev/null 2>&1; then
+        local bytes
+        bytes="$(sysctl -n hw.memsize 2>/dev/null)"
+        if [[ "${bytes}" =~ ^[0-9]+$ ]]; then
+            echo $(( bytes / 1024 / 1024 / 1024 ))
+            return 0
+        fi
+    fi
+
+    echo "0"
+}
+
+build_jobs() {
+    local gb_per_job="$1"
+
+    if [[ -n "${THREADS:-}" ]]; then
+        if [[ "${THREADS}" =~ ^[0-9]+$ ]] && [[ "${THREADS}" -ge 1 ]]; then
+            echo "${THREADS}"
+            return 0
+        fi
+        echo "Ignoring THREADS='${THREADS}': not a positive whole number." >&2
+    fi
+
+    local cpus memory jobs
+    cpus="$(cpu_count)"
+    memory="$(memory_gb)"
+    jobs="${cpus}"
+
+    if [[ "${memory}" -gt 0 ]]; then
+        local usable=$(( memory - MEMORY_RESERVE_GB ))
+        [[ "${usable}" -lt 1 ]] && usable=1
+
+        local memory_jobs=$(( usable / gb_per_job ))
+        [[ "${memory_jobs}" -lt 1 ]] && memory_jobs=1
+        [[ "${memory_jobs}" -lt "${jobs}" ]] && jobs="${memory_jobs}"
+    fi
+
+    echo "${jobs}"
+}
+
+describe_jobs() {
+    local jobs="$1"
+    local gb_per_job="$2"
+    local cpus memory
+    cpus="$(cpu_count)"
+    memory="$(memory_gb)"
+
+    if [[ -n "${THREADS:-}" ]]; then
+        echo "Building with ${jobs} parallel jobs (THREADS set in environment)."
+    elif [[ "${memory}" -eq 0 ]]; then
+        echo "Building with ${jobs} parallel jobs (${cpus} processors; memory size unknown, so not capped by it)."
+    else
+        echo "Building with ${jobs} parallel jobs (${cpus} processors; ${memory}GB memory less ${MEMORY_RESERVE_GB}GB reserved, at ~${gb_per_job}GB per job)."
+    fi
+}
+
+
+PROJECT_MARKERS=(
+    "scripts/worldserver"
+    "patches/patches.sh"
+    "docs/concept-catalog.md"
+)
+
+resolve_project_dir() {
+    local explicit="$1"
+    local script_source="$2"
+
+    if [[ -n "${explicit}" ]]; then
+        if [[ -e "${explicit}" && ! -d "${explicit}" ]]; then
+            echo "Not a directory: ${explicit}" >&2
+            echo "  This came from --dir. Nothing has been changed." >&2
+            return 1
+        fi
+        if [[ ! -d "${explicit}" ]]; then
+            echo "Creating project directory ${explicit}" >&2
+            mkdir -p "${explicit}" || return 1
+        fi
+        ( builtin cd -P -- "${explicit}" && pwd )
+        return 0
+    fi
+
+    local self_dir="${script_source%/*}"
+    [[ "${self_dir}" == "${script_source}" ]] && self_dir="."
+    local candidate="${self_dir}/.."
+
+    local marker
+    local found=()
+    local absent=()
+    for marker in "${PROJECT_MARKERS[@]}"; do
+        if [[ -e "${candidate}/${marker}" ]]; then
+            found+=("${marker}")
+        else
+            absent+=("${marker}")
+        fi
+    done
+
+    if [[ ${#absent[@]} -eq 0 ]]; then
+        ( builtin cd -P -- "${candidate}" && pwd )
+        return 0
+    fi
+
+    echo "Cannot tell where the project is." >&2
+    echo "  This script ran from:    ${script_source}" >&2
+    echo "  Looked for a project at: ${candidate}" >&2
+    echo "" >&2
+    echo "  Files that would prove it is one:" >&2
+    for marker in "${found[@]}";  do echo "    present  ${marker}" >&2; done
+    for marker in "${absent[@]}"; do echo "    MISSING  ${marker}" >&2; done
+    echo "" >&2
+    echo "  So this is a copy of one script sitting on its own, rather" >&2
+    echo "  than one inside a checkout." >&2
+    echo "" >&2
+    echo "  Nothing has been downloaded or built." >&2
+    echo "" >&2
+    echo "  Say where the project should go:" >&2
+    echo "    ${script_source} --dir /path/to/wow-chat-2026" >&2
+    echo "" >&2
+    echo "  The directory is created if it does not exist yet, and no" >&2
+    echo "  marker check is applied to it — a fresh install has none of" >&2
+    echo "  those files until the project is cloned into place." >&2
+    return 1
+}
+
+
+random_password() {
+    local length="${1:-32}"
+
+    if [[ ! -r /dev/urandom ]]; then
+        echo "Cannot generate a password: /dev/urandom is not readable." >&2
+        echo "  Nothing has been written. This is the kernel's entropy" >&2
+        echo "  source; its absence usually means a restricted container." >&2
+        return 1
+    fi
+
+    local password
+    password="$(LC_ALL=C tr -dc 'A-Za-z0-9' < /dev/urandom | head -c "${length}")"
+
+    if [[ "${#password}" -ne "${length}" ]]; then
+        echo "Cannot generate a password: got ${#password} characters, wanted ${length}." >&2
+        return 1
+    fi
+
+    echo "${password}"
+}
+
+write_secret() {
+    local path="$1"
+    local secret="$2"
+
+    : > "${path}"        || return 1
+    chmod 600 "${path}"  || return 1
+    printf '%s\n' "${secret}" >> "${path}" || return 1
+}
+
+same_path() {
+    local left="$1"
+    local right="$2"
+
+    [[ -d "${left}"  ]] || return 1
+    [[ -d "${right}" ]] || return 1
+
+    local left_real right_real
+    left_real="$(  builtin cd -P -- "${left}"  && pwd )"
+    right_real="$( builtin cd -P -- "${right}" && pwd )"
+
+    [[ "${left_real}" == "${right_real}" ]]
+}
+
+write_server_config() {
+    local target="$1"
+
+    mkdir -p "${target%/*}"
+
+    cat > "${target}" <<CONFIG_EOF
+# MySQL configuration for Everland Ghostsong
+#
+# GENERATED by scripts/mysql-install. Edits here are replaced the next
+# time it regenerates. Change the settings in that script instead, then
+# run: scripts/mysql-install --regenerate-config
+
+[mysqld]
+# Directories
+basedir = ${DIR}/mysql/installed-files
+datadir = ${DIR}/mysql/databases
+tmpdir  = ${DIR}/tmp
+
+# Socket and port. Port 3307 rather than the usual 3306 so this server
+# and a system MySQL can run at the same time without colliding.
+socket  = ${DIR}/mysql/databases/mysql.sock
+port    = 3307
+
+# Networking
+bind-address = 127.0.0.1
+skip-networking = 0
+
+# Character set
+character-set-server = utf8mb4
+collation-server = utf8mb4_unicode_ci
+
+# InnoDB settings
+# NOTE: innodb_log_file_size was removed in MySQL 9.x; the capacity
+# setting below replaces it.
+innodb_buffer_pool_size = 256M
+innodb_redo_log_capacity = 128M
+innodb_flush_log_at_trx_commit = 2
+
+# Performance
+max_connections = 50
+table_open_cache = 256
+
+# Logging
+log_error = ${DIR}/mysql/databases/error.log
+slow_query_log = 1
+slow_query_log_file = ${DIR}/mysql/databases/slow.log
+long_query_time = 2
+
+# Allow non-SUPER users to create triggers and functions. Required so
+# that per-profile patches shipping triggers install through the
+# application account rather than needing root. Project-local MySQL on
+# loopback only, single-trust environment, so the "less safe" caveat in
+# MySQL's documentation does not bite here.
+log_bin_trust_function_creators = 1
+
+[client]
+socket = ${DIR}/mysql/databases/mysql.sock
+port = 3307
+default-character-set = utf8mb4
+
+[mysql]
+default-character-set = utf8mb4
+CONFIG_EOF
+
+    echo "  Wrote ${target}"
+}
+
+
+EXPLICIT_DIR=""
+EXPLICIT_VERSION=""
+EXPLICIT_JOBS=""
+USE_LATEST=false
+ASSUME_YES=false
+REGENERATE_CONFIG_ONLY=false
+
+show_help() {
+    echo "Usage: scripts/mysql-install [options]"
+    echo ""
+    echo "Build and set up this project's MySQL server."
+    echo ""
+    echo "Options:"
+    echo "  --dir <path>          Project directory. Created if it does not"
+    echo "                        exist. Required when this script is run on"
+    echo "                        its own, outside a checkout. Inside one,"
+    echo "                        the default is the parent of this script's"
+    echo "                        directory."
+    echo "  --version <x.y.z>     MySQL version to build."
+    echo "                        Default: ${MYSQL_DEFAULT_VERSION}."
+    echo "  --latest              Discover the newest release instead of"
+    echo "                        using the pinned version."
+    echo "  --jobs <n>            Parallel compile jobs. Default: derived"
+    echo "                        from this machine's processors and memory."
+    echo "  --yes                 Do not ask before starting. Required when"
+    echo "                        running without a terminal."
+    echo "  --regenerate-config   Rewrite mysql/conf/my.cnf and stop."
+    echo "                        Builds nothing."
+    echo "  --help                Show this message."
+    echo ""
+    echo "The version and the project directory are separate named"
+    echo "options and cannot be confused for one another. Before issue"
+    echo "154 a bare first argument was read as the directory, so passing"
+    echo "a version number set the project directory to that number."
+    echo ""
+    echo "The root password is generated during setup and written to"
+    echo "mysql-root-password in the project directory."
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --dir)
+            EXPLICIT_DIR="${2:-}"
+            if [[ -z "${EXPLICIT_DIR}" ]]; then
+                echo "--dir needs a path after it."
+                exit 1
+            fi
+            shift 2
+            ;;
+        --dir=*)
+            EXPLICIT_DIR="${1#*=}"
+            shift
+            ;;
+        --version)
+            EXPLICIT_VERSION="${2:-}"
+            if [[ ! "${EXPLICIT_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                echo "--version needs a version like 9.6.0, got '${EXPLICIT_VERSION}'."
+                exit 1
+            fi
+            shift 2
+            ;;
+        --jobs)
+            EXPLICIT_JOBS="${2:-}"
+            if [[ ! "${EXPLICIT_JOBS}" =~ ^[0-9]+$ ]] || [[ "${EXPLICIT_JOBS}" -lt 1 ]]; then
+                echo "--jobs needs a positive whole number, got '${EXPLICIT_JOBS}'."
+                exit 1
+            fi
+            shift 2
+            ;;
+        --latest)            USE_LATEST=true;             shift ;;
+        --yes|-y)            ASSUME_YES=true;             shift ;;
+        --regenerate-config) REGENERATE_CONFIG_ONLY=true; shift ;;
+        --help|-h)           show_help; exit 0 ;;
+        *)
+            echo "Unrecognised argument: $1"
+            echo ""
+            echo "  If you meant a project directory, write --dir $1"
+            echo "  If you meant a MySQL version, write --version $1"
+            echo ""
+            show_help
+            exit 1
+            ;;
+    esac
+done
+
+if [[ "${USE_LATEST}" == true && -n "${EXPLICIT_VERSION}" ]]; then
+    echo "--latest and --version ${EXPLICIT_VERSION} ask for different things."
+    echo "  Pick one: --version pins, --latest discovers."
+    exit 1
+fi
+
+DIR="$(resolve_project_dir "${EXPLICIT_DIR}" "${BASH_SOURCE[0]}")"
+
+MYSQL_DIR="${DIR}/mysql"
+SOURCE_DIR="${MYSQL_DIR}/source"
+BUILD_DIR="${MYSQL_DIR}/build"
+INSTALL_DIR="${MYSQL_DIR}/installed-files"
+DATA_DIR="${MYSQL_DIR}/databases"
+CONF_DIR="${MYSQL_DIR}/conf"
+CONF_FILE="${CONF_DIR}/my.cnf"
+
+PASSWORD_FILE="${DIR}/mysql-root-password"
+
+SETUP_OPTIONS_FILE="${MYSQL_DIR}/.setup-options.cnf"
+SETUP_PID_FILE="${DATA_DIR}/mysqld-setup.pid"
+SOCKET_FILE="${DATA_DIR}/mysql.sock"
+
+
+installed_version() {
+    if [[ -x "${INSTALL_DIR}/bin/mysql" ]]; then
+        "${INSTALL_DIR}/bin/mysql" --version | awk '{print $3}' | tr -d ','
+    else
+        echo ""
+    fi
+}
+
+latest_version() {
+    curl -sS --fail --max-time 30 "https://${MYSQL_HOST}/downloads/mysql/" \
+        | sed -n 's/.*MySQL Community Server \([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/p' \
+        | head -1
+}
+
+
+config_points_here() {
+    [[ -r "${CONF_FILE}" ]] || return 1
+
+    local configured
+    configured="$(sed -n 's/^[[:space:]]*datadir[[:space:]]*=[[:space:]]*//p' "${CONF_FILE}" | head -1)"
+
+    [[ -n "${configured}" ]] || return 1
+
+    if [[ -d "${configured}" ]]; then
+        same_path "${configured}" "${DATA_DIR}"
+    else
+        same_path "${configured%/*}" "${MYSQL_DIR}"
+    fi
+}
+
+ensure_config() {
+    echo "Server configuration:"
+
+    if [[ ! -f "${CONF_FILE}" ]]; then
+        echo "  None present; writing one for this project."
+        write_server_config "${CONF_FILE}"
+        return 0
+    fi
+
+    if config_points_here; then
+        echo "  ${CONF_FILE} already describes this project."
+        return 0
+    fi
+
+    local backup="${CONF_FILE}.bak"
+    echo "  ${CONF_FILE} points somewhere other than ${DIR}."
+    echo "  This happens on a copy taken from another machine, where the"
+    echo "  configuration carries that machine's paths."
+    echo "  Keeping the old one at ${backup} and rewriting."
+    cp "${CONF_FILE}" "${backup}"
+    write_server_config "${CONF_FILE}"
+}
+
+ensure_temp_dir() {
+    local target="/tmp/wow-chat-2"
+
+    mkdir -p "${target}"
+
+    if [[ -e "${DIR}/tmp" && ! -L "${DIR}/tmp" ]]; then
+        echo "  ${DIR}/tmp exists and is not a symlink; leaving it alone."
+        return 0
+    fi
+
+    if [[ ! -e "${DIR}/tmp" ]]; then
+        ln -s "${target}" "${DIR}/tmp"
+        echo "  Linked ${DIR}/tmp -> ${target}"
+    fi
+}
+
+
+download_and_extract() {
+    local version="$1"
+    local major_minor="${version%.*}"
+    local tarball="mysql-${version}.tar.gz"
+    local url="https://${MYSQL_HOST}/get/Downloads/MySQL-${major_minor}/${tarball}"
+
+    echo "Downloading MySQL ${version}..."
+    curl -L --fail --progress-bar -o "${MYSQL_DIR}/${tarball}" "${url}"
+
+    if ! file "${MYSQL_DIR}/${tarball}" | grep -q "gzip compressed"; then
+        echo "The downloaded file is not a gzip archive."
+        echo "  File: ${MYSQL_DIR}/${tarball}"
+        echo "  Type: $(file -b "${MYSQL_DIR}/${tarball}")"
+        echo "  URL:  ${url}"
+        echo ""
+        echo "  The bad file has been removed. The previous source tree,"
+        echo "  build, and any installed server are untouched."
+        echo ""
+        echo "  To debug:"
+        echo "    Does MySQL ${version} exist?"
+        echo "      The vendor answers a request for a version it does"
+        echo "      not have with an error page rather than a 404."
+        echo "    Was this version discovered rather than pinned?"
+        echo "      Run without --latest to use the pinned ${MYSQL_DEFAULT_VERSION}."
+        rm -f "${MYSQL_DIR}/${tarball}"
+        return 1
+    fi
+
+    echo "Extracting..."
+    rm -rf "${SOURCE_DIR}"
+    mkdir -p "${SOURCE_DIR}"
+    tar -xzf "${MYSQL_DIR}/${tarball}" \
+        --directory="${SOURCE_DIR}" \
+        --strip-components=1
+
+    rm "${MYSQL_DIR}/${tarball}"
+}
+
+configure_and_build() {
+    local jobs="$1"
+
+    echo "Configuring..."
+    rm -rf "${BUILD_DIR}"
+    mkdir -p "${BUILD_DIR}"
+
+    rm -f  "${SOURCE_DIR}/CMakeCache.txt"
+    rm -rf "${SOURCE_DIR}/CMakeFiles/"
+
+    cmake -S "${SOURCE_DIR}" -B "${BUILD_DIR}" \
+        -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+        -DMYSQL_DATADIR="${DATA_DIR}" \
+        -DSYSCONFDIR="${CONF_DIR}" \
+        -DWITH_SSL=system \
+        -DDEFAULT_CHARSET=utf8mb4 \
+        -DDEFAULT_COLLATION=utf8mb4_unicode_ci \
+        -DWITH_RAPID=OFF
+
+    echo "Building (this takes a while)..."
+    cmake --build "${BUILD_DIR}" -j"${jobs}"
+
+    echo "Installing..."
+    cmake --install "${BUILD_DIR}"
+
+    if [[ ! -x "${INSTALL_DIR}/bin/mysqld" ]] || [[ ! -x "${INSTALL_DIR}/bin/mysql" ]]; then
+        echo "The build finished but the server binaries are not where they should be."
+        echo "  Expected: ${INSTALL_DIR}/bin/mysqld"
+        echo "            ${INSTALL_DIR}/bin/mysql"
+        echo "  Present:  $(ls "${INSTALL_DIR}/bin" 2>/dev/null | head -8 | tr '\n' ' ')"
+        echo ""
+        echo "  Nothing has been initialised. Any existing data directory"
+        echo "  is untouched."
+        echo ""
+        echo "  To debug:"
+        echo "    Did cmake install to a different prefix?"
+        echo "      Its install step prints every path it wrote."
+        return 1
+    fi
+}
+
+
+stop_setup_server() {
+    if [[ -f "${SETUP_PID_FILE}" ]]; then
+        local pid
+        pid="$(cat "${SETUP_PID_FILE}")"
+
+        if kill -0 "${pid}" 2>/dev/null; then
+            echo "Stopping the setup server..."
+            kill "${pid}" 2>/dev/null || true
+
+            local waited=0
+            while kill -0 "${pid}" 2>/dev/null && [[ ${waited} -lt ${MYSQL_SHUTDOWN_WAIT} ]]; do
+                sleep 1
+                waited=$((waited + 1))
+            done
+
+            if kill -0 "${pid}" 2>/dev/null; then
+                echo "  Server ${pid} did not stop within ${MYSQL_SHUTDOWN_WAIT}s."
+                echo "  It is still running; stop it with: kill ${pid}"
+            fi
+        fi
+        rm -f "${SETUP_PID_FILE}"
+    fi
+
+    rm -f "${SETUP_OPTIONS_FILE}"
+}
+
+start_setup_server() {
+    echo "Starting the server for setup..."
+
+    rm -f "${SETUP_PID_FILE}"
+
+    "${INSTALL_DIR}/bin/mysqld" \
+        --defaults-file="${CONF_FILE}" \
+        --user="$(whoami)" \
+        --pid-file="${SETUP_PID_FILE}" \
+        --skip-networking \
+        &
+
+    trap stop_setup_server EXIT
+
+    local waited=0
+    while [[ ! -S "${SOCKET_FILE}" ]] && [[ ${waited} -lt ${MYSQL_SOCKET_WAIT} ]]; do
+        sleep 1
+        waited=$((waited + 1))
+    done
+
+    if [[ ! -S "${SOCKET_FILE}" ]]; then
+        echo "The server did not open its socket within ${MYSQL_SOCKET_WAIT}s."
+        echo "  Socket expected at: ${SOCKET_FILE}"
+        echo "  Error log:          ${DATA_DIR}/error.log"
+        echo ""
+        echo "  The server was built and its data directory initialised."
+        echo "  No password was set and no databases were created."
+        echo ""
+        echo "  To debug:"
+        echo "    What does the last page of the error log say?"
+        echo "      A refused start names the setting it objected to."
+        echo "    Is another server already using this data directory?"
+        echo "      Two servers on one data directory is the most common"
+        echo "      cause; scripts/stop-mysql clears the usual one."
+        return 1
+    fi
+
+    echo "  Up after ${waited}s."
+}
+
+set_root_password() {
+    echo "Setting the root password..."
+
+    local password
+    password="$(random_password 32)"
+
+    if ! write_secret "${PASSWORD_FILE}" "${password}"; then
+        echo "Could not write the password file at ${PASSWORD_FILE}."
+        echo "  The server is running with an empty root password."
+        echo "  Nothing else has been changed."
+        return 1
+    fi
+
+    : > "${SETUP_OPTIONS_FILE}"
+    chmod 600 "${SETUP_OPTIONS_FILE}"
+    {
+        echo "[client]"
+        echo "user=root"
+        echo "password=${password}"
+        echo "socket=${SOCKET_FILE}"
+    } >> "${SETUP_OPTIONS_FILE}"
+
+    "${INSTALL_DIR}/bin/mysql" \
+        --defaults-file="${CONF_FILE}" \
+        --user=root --skip-password \
+        --execute="ALTER USER 'root'@'localhost' IDENTIFIED BY '${password}';"
+
+    echo "  Password written to ${PASSWORD_FILE}"
+}
+
+create_databases() {
+    echo "Creating databases..."
+
+    local database
+    for database in "${MYSQL_DATABASES[@]}"; do
+        "${INSTALL_DIR}/bin/mysql" \
+            --defaults-extra-file="${SETUP_OPTIONS_FILE}" \
+            --execute="CREATE DATABASE IF NOT EXISTS \`${database}\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+        echo "  ${database}"
+    done
+}
+
+grant_application_user() {
+    local secrets="${DIR}/secrets.conf"
+
+    if [[ ! -r "${secrets}" ]]; then
+        return 1
+    fi
+
+    local db_user db_pass
+    db_user="$( source "${secrets}"; echo "${DB_USER:-}" )"
+    db_pass="$( source "${secrets}"; echo "${DB_PASS:-}" )"
+
+    if [[ -z "${db_user}" || -z "${db_pass}" ]]; then
+        echo "  ${secrets} is missing DB_USER or DB_PASS."
+        return 1
+    fi
+
+    echo "Granting access to '${db_user}'..."
+
+    "${INSTALL_DIR}/bin/mysql" \
+        --defaults-extra-file="${SETUP_OPTIONS_FILE}" \
+        --execute="CREATE USER IF NOT EXISTS '${db_user}'@'localhost' IDENTIFIED BY '${db_pass}';"
+
+    local database
+    for database in "${MYSQL_DATABASES[@]}"; do
+        "${INSTALL_DIR}/bin/mysql" \
+            --defaults-extra-file="${SETUP_OPTIONS_FILE}" \
+            --execute="GRANT ALL PRIVILEGES ON \`${database}\`.* TO '${db_user}'@'localhost' WITH GRANT OPTION;"
+    done
+
+    "${INSTALL_DIR}/bin/mysql" \
+        --defaults-extra-file="${SETUP_OPTIONS_FILE}" \
+        --execute="GRANT ALL PRIVILEGES ON \`acore\_%\`.* TO '${db_user}'@'localhost' WITH GRANT OPTION;"
+
+    "${INSTALL_DIR}/bin/mysql" \
+        --defaults-extra-file="${SETUP_OPTIONS_FILE}" \
+        --execute="FLUSH PRIVILEGES;"
+
+    echo "  Granted on the four databases and on acore_* for the"
+    echo "  per-profile databases scripts/install creates later."
+    return 0
+}
+
+initialize_database() {
+    if [[ -d "${DATA_DIR}/mysql" ]]; then
+        echo "Data directory already initialised at ${DATA_DIR}"
+        echo "  Leaving it and its root password alone."
+        echo "  To start over, remove that directory's contents first."
+        return 1
+    fi
+
+    echo "Initialising the data directory..."
+    mkdir -p "${DATA_DIR}"
+
+    "${INSTALL_DIR}/bin/mysqld" \
+        --defaults-file="${CONF_FILE}" \
+        --initialize-insecure \
+        --user="$(whoami)"
+
+    return 0
+}
+
+
+echo "=== MySQL setup for Everland Ghostsong ==="
+echo "Project: ${DIR}"
+echo ""
+
+if [[ "${REGENERATE_CONFIG_ONLY}" == true ]]; then
+    ensure_config
+    ensure_temp_dir
+    echo ""
+    echo "Configuration is in place. Nothing was built."
+    exit 0
+fi
+
+need_tool "curl"         "downloading the MySQL source archive"          "curl"
+need_tool "tar"          "unpacking the archive"                         "tar"
+need_tool "file"         "confirming the download is really an archive"  "file"
+need_tool "cmake"        "configuring and driving the MySQL build"       "cmake"
+need_tool "c++-compiler" "compiling the server"                          "compiler"
+need_tool "make"         "the build tool cmake generates for by default" "make"
+need_tool "bison"        "generating the SQL parser from its grammar"    "bison"
+need_tool "pkg-config"   "locating the system libraries MySQL links"     "pkgconfig"
+
+need_header "openssl/ssl.h" "the server's TLS support, built against the system OpenSSL" "openssl"
+need_header "ncurses.h"     "line editing in the mysql command-line client"             "ncurses"
+
+need_host "${MYSQL_HOST}" "the MySQL source archive"
+
+if ! check_environment "the MySQL build"; then
+    exit 1
+fi
+
+INSTALLED="$(installed_version)"
+
+if [[ -n "${INSTALLED}" ]]; then
+    echo "Installed: MySQL ${INSTALLED}"
+else
+    echo "Installed: none"
+fi
+
+if [[ -n "${EXPLICIT_VERSION}" ]]; then
+    TARGET_VERSION="${EXPLICIT_VERSION}"
+    echo "Target:    MySQL ${TARGET_VERSION} (--version)"
+elif [[ "${USE_LATEST}" == true ]]; then
+    echo "Looking up the newest release..."
+    TARGET_VERSION="$(latest_version)"
+
+    if [[ ! "${TARGET_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        echo "Could not read a version number from the download page."
+        echo "  Read back:  '${TARGET_VERSION}'"
+        echo "  Page:       https://${MYSQL_HOST}/downloads/mysql/"
+        echo ""
+        echo "  Nothing has been downloaded or built."
+        echo ""
+        echo "  To debug:"
+        echo "    Has the page layout changed?"
+        echo "      The version is found by matching the words 'MySQL"
+        echo "      Community Server' followed by three numbers."
+        echo "    Do you just want a working server?"
+        echo "      Run without --latest to build the pinned"
+        echo "      ${MYSQL_DEFAULT_VERSION}, or name one with --version."
+        exit 1
+    fi
+    echo "Target:    MySQL ${TARGET_VERSION} (newest published)"
+else
+    TARGET_VERSION="${MYSQL_DEFAULT_VERSION}"
+    echo "Target:    MySQL ${TARGET_VERSION} (pinned; --latest to look up the newest)"
+fi
+
+if [[ "${INSTALLED}" == "${TARGET_VERSION}" ]]; then
+    echo ""
+    echo "Already at ${TARGET_VERSION}. Nothing to do."
+    echo "To rebuild anyway, remove ${INSTALL_DIR}/bin/mysql first."
+    exit 0
+fi
+
+if [[ -n "${EXPLICIT_JOBS}" ]]; then
+    JOBS="${EXPLICIT_JOBS}"
+    echo "Building with ${JOBS} parallel jobs (--jobs given)."
+else
+    JOBS="$(build_jobs "${MYSQL_GB_PER_JOB}")"
+    describe_jobs "${JOBS}" "${MYSQL_GB_PER_JOB}"
+fi
+echo ""
+
+if [[ "${ASSUME_YES}" != true ]]; then
+    if [[ -t 0 ]]; then
+        read -r -p "Build MySQL ${TARGET_VERSION} with ${JOBS} jobs? [y/N] " -n 1 REPLY
+        echo ""
+        if [[ ! "${REPLY}" =~ ^[Yy]$ ]]; then
+            echo "Stopped. Nothing has been changed."
+            exit 1
+        fi
+    else
+        echo "No terminal to ask for confirmation, and --yes was not given."
+        echo "  Nothing has been changed."
+        echo ""
+        echo "  Pass --yes to run without asking. This is what makes an"
+        echo "  unattended install possible; before issue 154 the"
+        echo "  question could not be skipped at all."
+        exit 1
+    fi
+fi
+echo ""
+
+ensure_config
+ensure_temp_dir
+echo ""
+
+mkdir -p "${MYSQL_DIR}"
+
+download_and_extract "${TARGET_VERSION}"
+configure_and_build  "${JOBS}"
+
+echo ""
+
+DID_INITIALISE=false
+DID_PASSWORD=false
+DID_DATABASES=false
+DID_GRANT=false
+
+if initialize_database; then
+    DID_INITIALISE=true
+
+    start_setup_server
+
+    set_root_password
+    DID_PASSWORD=true
+
+    create_databases
+    DID_DATABASES=true
+
+    if grant_application_user; then
+        DID_GRANT=true
+    fi
+
+    stop_setup_server
+    trap - EXIT
+fi
+
+echo ""
+echo "=== Done ==="
+echo "MySQL ${TARGET_VERSION} installed to ${INSTALL_DIR}"
+echo ""
+echo "Completed:"
+echo "  Server built and installed"
+echo "  Configuration written to ${CONF_FILE}"
+
+if [[ "${DID_INITIALISE}" == true ]]; then
+    echo "  Data directory initialised at ${DATA_DIR}"
+else
+    echo ""
+    echo "Skipped, because the data directory already existed:"
+    echo "  Root password, databases, and application grants."
+    echo "  The existing databases and their passwords are unchanged."
+fi
+
+if [[ "${DID_PASSWORD}" == true ]]; then
+    echo "  Root password generated"
+    echo ""
+    echo "The root password is in this file, readable only by you:"
+    echo ""
+    echo "    ${PASSWORD_FILE}"
+    echo ""
+    echo "Read it with:  cat ${PASSWORD_FILE}"
+fi
+
+if [[ "${DID_DATABASES}" == true ]]; then
+    echo "Databases created: ${MYSQL_DATABASES[*]}"
+fi
+
+if [[ "${DID_INITIALISE}" == true && "${DID_GRANT}" != true ]]; then
+    echo ""
+    echo "Not done — the application account has no access yet:"
+    echo "  ${DIR}/secrets.conf is missing or incomplete, so there was"
+    echo "  no account name and password to grant."
+    echo ""
+    echo "  To finish:"
+    echo "    Write DB_USER and DB_PASS into ${DIR}/secrets.conf,"
+    echo "    then let scripts/install create the account when it sets"
+    echo "    up a profile."
+fi
+
+echo ""
+echo "Next:"
+echo "  Start the server:  ${DIR}/scripts/start-mysql"
+echo "  Connect to it:     ${DIR}/scripts/mysql-client"
+echo "  Set up a profile:  ${DIR}/scripts/install"

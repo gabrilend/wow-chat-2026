@@ -1,0 +1,64 @@
+#!/bin/bash
+
+DIR="/mnt/kaun/wow-chat-2026"
+
+PROFILE="${1:-}"
+if [[ -z "${PROFILE}" ]]; then
+    echo "Usage: $0 <profile>"
+    echo "  profile: release | beta | vanilla | alpha | basic | cc-test"
+    exit 1
+fi
+
+case "${PROFILE}" in
+    release)  ACTIVE_ID=1 ;;
+    beta)     ACTIVE_ID=2 ;;
+    vanilla)  ACTIVE_ID=3 ;;
+    alpha)    ACTIVE_ID=4 ;;
+    basic)    ACTIVE_ID=5 ;;
+    cc-test)  ACTIVE_ID=6 ;;
+    *)
+        echo "ERROR: unknown profile '${PROFILE}' (expected release|beta|vanilla|alpha|basic|cc-test)"
+        exit 1
+        ;;
+esac
+
+MYSQL_DIR="${DIR}/mysql/installed-files"
+MYSQL_SOCKET="${DIR}/mysql/databases/mysql.sock"
+
+if [[ ! -S "${MYSQL_SOCKET}" ]]; then
+    echo "WARNING: MySQL socket not found at ${MYSQL_SOCKET}; skipping realm flip"
+    echo "         (set-active-realm will be re-run on the next worldserver launch)"
+    exit 0
+fi
+
+"${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" \
+    -u ritz -pmenardi acore_auth 2>/dev/null <<'SQL'
+INSERT IGNORE INTO realmlist (id, name, address, localAddress, localSubnetMask, port, gamebuild)
+VALUES
+  (1, 'release', '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340),
+  (2, 'beta',    '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340),
+  (3, 'vanilla', '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340),
+  (4, 'alpha',   '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340),
+  (5, 'basic',   '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340),
+  (6, 'cc-test', '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340);
+SQL
+
+"${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" \
+    -u ritz -pmenardi acore_auth <<'SQL'
+UPDATE realmlist SET name = CASE id
+    WHEN 1 THEN 'release'
+    WHEN 2 THEN 'beta'
+    WHEN 3 THEN 'vanilla'
+    WHEN 4 THEN 'alpha'
+    WHEN 5 THEN 'basic'
+    WHEN 6 THEN 'cc-test'
+    ELSE name END;
+SQL
+
+"${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" \
+    -u ritz -pmenardi acore_auth 2>/dev/null <<SQL
+UPDATE realmlist SET flag = 2;
+UPDATE realmlist SET flag = 0 WHERE id = ${ACTIVE_ID};
+SQL
+
+echo "Active realm: ${PROFILE} (id=${ACTIVE_ID})"

@@ -1,0 +1,12 @@
+made by:        scripts/make-intuition-copy (issue 190)
+source:         /mnt/kaun/wow-chat-2026
+source commit:  24a998144c5ccee614dbd965815049e13173a4e4
+made at:        2026-10-20 10:25:29
+made:           in full (the first copy)
+files:            1470 in the commit
+left out:          870 (explanations)
+stripped:          554 (comments removed)
+copied as is:       46
+lines removed:   39551
+bytes:           29801 KB before,  24998 KB after
+by kind:        c 71, copy 34, hash 15, lua 210, shell 159, sql 99

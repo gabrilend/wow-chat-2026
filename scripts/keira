@@ -1,0 +1,28 @@
+#!/bin/bash
+
+DIR="/mnt/kaun/wow-chat-2026"
+
+
+KEIRA_VERSION="3.10.1"
+KEIRA_DIR="/home/ritz/games/azeroth-core/keira"
+
+
+show_help() {
+    echo "Usage: ./scripts/keira"
+    echo ""
+    echo "Launch Keira3 database editor for WoW tables."
+    echo "Version: ${KEIRA_VERSION}"
+}
+
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+    show_help
+    exit 0
+fi
+
+if [[ -d "${KEIRA_DIR}" ]]; then
+    "${KEIRA_DIR}/Keira-${KEIRA_VERSION}.LINUX.AppImage" &
+    echo "Keira3 launched (version ${KEIRA_VERSION})"
+else
+    echo "Error: Keira not found at ${KEIRA_DIR}"
+    exit 1
+fi
