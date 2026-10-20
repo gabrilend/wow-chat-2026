@@ -6,6 +6,40 @@
 
 **On new session or context compaction:** Read `docs/concept-catalog.md` to restore project knowledge. The catalog contains 800 concepts covering all game systems, algorithms, configuration, and design philosophy. This is essential context for working on this project.
 
+### Standing reminders
+
+Tell the owner about each of these once per session, in a line, until its
+issue says work on it has started (then remove it from this list):
+
+- **Guard the disks against bit rot** (issue 191): both disks are ext4,
+  which doesn't checksum file contents; fingerprints, recovery data and
+  perhaps btrfs or ZFS. The owner, 2026-10-20: "I want to be reminded about
+  it until I go work on it."
+
+### When more than one agent works here
+
+The owner, 2026-10-20: "if multiple agents are working on the same tasks,
+they must claim files for themselves and only complete the parts of issue
+files that don't require touching shared files."
+
+- **Claim before editing.** Before changing a file, an agent adds a line
+  to `tmp/shared-memory/file-claims` (the file's path, the agent's session
+  name, the time) and reads the list first: a file another agent claimed
+  is not touched. Claims are let go (the line removed) when the work is
+  committed.
+- **Shared files belong to one agent at a time**, named by the owner or
+  claimed like any other, and the other agents leave those parts of their
+  issues undone and say so. These are the files nearly every change
+  touches, where the 2026-10-19 merge's conflicts were:
+  `patches/E-patches.sh` (every install step in one file),
+  `patches/patches.sh` (each profile's patch lists), `scripts/compile`
+  (the quick-test list), `scripts/test-profile-config-gates` (the
+  expected values), `docs/table-of-contents.md`, `docs/balance-updates.md`,
+  `issues/phase-*-progress.md`, and this file.
+- Everything else is mostly one file per behaviour (each `B*` and `C*`
+  patch, most Lua scripts and their tests), so most work can be split by
+  file without meeting.
+
 ## Project Overview
 
 Everland Ghostsong is a WoW 3.3.5a private server with custom roguelike survival mechanics. The world is empty by default - monsters spawn around players (ambush system), treasure spawns, and traveler NPCs wander the world. Players use playerbots as AI companions.
