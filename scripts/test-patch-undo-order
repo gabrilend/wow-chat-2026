@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# test-patch-undo-order - patches come off last first (issue 189)
+#
+# For a general audience: a profile's patches are applied in its list's
+# order, and a patch may be laid over another's output (issue 192's econ
+# profile layers its own on basic's). Undoing them must go the other way,
+# last first, or a lower patch's undo looks for a shape that is no longer
+# there. This loads the real patch runner with three pretend patches of
+# each kind that only write down when they are applied and undone, applies
+# them through the runner's own functions and checks every undo came in
+# exactly the reverse order. It touches no source tree or server.
+#
+# Usage: scripts/test-patch-undo-order [PROJECT_DIR]
+
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+LOG="${DIR}/tmp/shared-memory/test-patch-undo-order.log"
+mkdir -p "${LOG%/*}"
+: > "${LOG}"
+
+fails=0
+checks=0
+check() {
+    checks=$((checks + 1))
+    if eval "$1"; then echo "  ok:   $2"; else echo "  FAIL: $2"; fails=$((fails + 1)); fi
+}
+
+# the real runner, then pretend patches and profile lists in place of the real ones
+export DIR PROFILE=undo-order-test
+source "${DIR}/patches/patches.sh" > /dev/null 2>&1
+_snapshot_dirty_state() { cat "${LOG}"; }        # each undo "changes" the log, so it is reported
+_mirror_staged_sql() { :; }
+for id in B901 B902 B903 E901 E902 E903; do
+    eval "patch_${id}_test()   { echo \"apply ${id}\" >> '${LOG}'; }"
+    eval "unpatch_${id}_test() { echo \"undo ${id}\"  >> '${LOG}'; }"
+done
+PHASE_BEGIN_PATCHES[undo-order-test]="B901 B902 B903"
+PHASE_END_PATCHES[undo-order-test]="E901 E902 E903"
+
+echo "the list helper"
+check '[[ "$(_reversed_list B1 B2 B3)" == "B3 B2 B1" && "$(_reversed_list)" == "" && "$(_reversed_list B1)" == "B1" ]]' \
+      "a list comes back last first (three, none, one)"
+
+echo "source patches"
+for id in ${PHASE_BEGIN_PATCHES[undo-order-test]}; do "patch_${id}_test"; done
+unapply_patches_begin > /dev/null 2>&1
+check '[[ "$(grep "^undo B" "${LOG}" | tr "\n" " ")" == "undo B903 undo B902 undo B901 " ]]' \
+      "applied B901 B902 B903, undone B903 B902 B901 ($(grep "^undo B" "${LOG}" | tr "\n" " "))"
+
+echo "install steps"
+for id in ${PHASE_END_PATCHES[undo-order-test]}; do "patch_${id}_test"; done
+unapply_patches_end > /dev/null 2>&1
+check '[[ "$(grep "^undo E" "${LOG}" | tr "\n" " ")" == "undo E903 undo E902 undo E901 " ]]' \
+      "applied E901 E902 E903, undone E903 E902 E901 ($(grep "^undo E" "${LOG}" | tr "\n" " "))"
+
+rm -f "${LOG}"
+echo "${checks} checks, ${fails} failed"
+[[ ${fails} -eq 0 ]]

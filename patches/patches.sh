@@ -251,8 +251,17 @@ _snapshot_dirty_state() {
 }
 # }}}
 
+# {{{ _reversed_list
+# Its arguments, last first, one line: "B002 B004 B020" -> "B020 B004 B002".
+_reversed_list() {
+    local i out=""
+    for (( i = $#; i >= 1; i-- )); do out+="${!i} "; done
+    printf '%s' "${out% }"
+}
+# }}}
+
 # {{{ unapply_patches_begin
-# Reverse all PHASE_BEGIN patches for the current profile.
+# Reverse all PHASE_BEGIN patches for the current profile, last first.
 #
 # Canonical use: compile's EXIT trap calls this after build (success or
 # failure) to keep source clean for the next session. In that context the
@@ -272,7 +281,14 @@ _snapshot_dirty_state() {
 # changed file content. No-ops stay silent. The summary at the end says
 # how many were no-ops so the absence-of-output isn't ambiguous.
 unapply_patches_begin() {
-    local patches="${PHASE_BEGIN_PATCHES[$PROFILE]:-}"
+    # Back to front: a patch laid over another's output comes off before the
+    # one beneath it, or the lower one's revert looks for a shape that is no
+    # longer there. Until 2026-10-20 this walked the list front to back
+    # (found by wow-chat-2026-ae for issue 192's econ profile, which layers
+    # its patches on basic's; the owner: "We definitely need to undo them
+    # the same order we applied them, but reversed.").
+    local patches
+    patches="$(_reversed_list ${PHASE_BEGIN_PATCHES[$PROFILE]:-})"
 
     if [[ -z "${patches}" ]]; then
         return 0
@@ -679,7 +695,9 @@ _report_patches_end_stop() {
 # Reverse all PHASE_END patches (remove configs, symlinks, database entries)
 # Used by apply-patches --revert
 unapply_patches_end() {
-    local patches="${PHASE_END_PATCHES[$PROFILE]:-}"
+    # Back to front, as unapply_patches_begin and for the same reason.
+    local patches
+    patches="$(_reversed_list ${PHASE_END_PATCHES[$PROFILE]:-})"
 
     if [[ -z "${patches}" ]]; then
         echo ""
