@@ -401,11 +401,12 @@ See `issues/117-visual-powerline-mapping-tool.md` for full specification.
   (issue 190): `.git/hooks/pre-push`, written by
   `scripts/install-intuition-push-hook`, updates
   `/mnt/kaun/wow-chat-2026-intuition` from the commit being pushed (only
-  the files that changed), commits it and pushes it to
-  `gabrilend/wow-chat-2026-intuition`. A failure stops the push and says
-  why (`git push --no-verify` skips it once). The hook that was there
-  before (the conversation pages' rebuild) is kept as
-  `pre-push.before-intuition` and runs first. Like the commit hook, it is
+  the files that changed, and its report `.intuition-report.md`), commits
+  it and pushes it to the `intuition` branch of this project's own GitHub
+  repository. A failure stops the push and says why (`git push
+  --no-verify` skips it once). The hook that was there before (the
+  conversation pages' rebuild, now of whichever folder is pushing) is kept
+  as `pre-push.before-intuition` and runs first. Like the commit hook, it is
   not version-controlled: after a fresh clone, run the installer again.
 
 ## Patch System

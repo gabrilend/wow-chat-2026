@@ -2,11 +2,12 @@
 # install-intuition-push-hook - remake the comment-free copy on every push
 #
 # For a general audience: the project keeps a second copy of itself with
-# the comments and explanations taken out (issue 190), on GitHub as
-# gabrilend/wow-chat-2026-intuition. This installs a step git runs before
-# each push of main to GitHub ("origin"): it updates that copy with only
-# the files that changed, commits it and pushes it. If the copy fails, the
-# push stops and says why (git push --no-verify pushes without it).
+# the comments and explanations taken out (issue 190), on GitHub as the
+# "intuition" branch of the project's own repository. This installs a step
+# git runs before each push of main to GitHub ("origin"): it updates that
+# copy with only the files that changed (and its report), commits it and
+# pushes it to that branch. If the copy fails, the push stops and says why
+# (git push --no-verify pushes without it).
 #
 # Git keeps hooks outside version control (in .git/hooks/, shared by every
 # folder of the repository), so after a fresh clone this script is run
@@ -57,9 +58,9 @@ while read -r local_ref local_sha remote_ref remote_sha; do
     [[ "\${local_ref}" == "refs/heads/main" ]] || continue
     [[ "\${local_sha}" =~ ^0+\$ ]] && continue          # a deletion of main: nothing to copy
     echo "intuition copy: updating ${COPY} from \${local_sha:0:9}"
-    if ! "${DIR}/scripts/make-intuition-copy" "${DIR}" "${COPY}" --rev "\${local_sha}" --push; then
+    if ! "${DIR}/scripts/make-intuition-copy" "${DIR}" "${COPY}" --rev "\${local_sha}" --push --branch intuition; then
         echo "ERROR: the comment-free copy was not updated, so the push is stopped."
-        echo "       to debug: run ${DIR}/scripts/make-intuition-copy ${DIR} ${COPY} --rev \${local_sha} --push"
+        echo "       to debug: run ${DIR}/scripts/make-intuition-copy ${DIR} ${COPY} --rev \${local_sha} --push --branch intuition"
         echo "       to push without it this once: git push --no-verify"
         exit 1
     fi

@@ -32,10 +32,21 @@
 --   --commit     commit the result inside the copy (a git repository of its
 --                own, made on first use), named after the source commit
 --   --push       push that commit to the copy's remote "origin"
+--   --branch B   the branch on origin it is pushed to (default main). The
+--                push hook names "intuition": the copy lives as a branch of
+--                the original's own repository (the owner, 2026-10-20:
+--                "They're sufficiently similar and related that they can be
+--                in the same repository")
+--
+-- Every update also writes .intuition-report.md at the copy's root, from
+-- scripts/report-intuition-copy (what the copy and the original share and
+-- how they differ), so the report is current after every push and is
+-- committed with the copy (the owner: "shouldn't it be automatic on the
+-- git push?").
 --------------------------------------------------------------------------------
 
 local DIR, OUT, TEMPLATE = "/mnt/kaun/wow-chat-2026", nil, nil
-local REV, FULL, COMMIT, PUSH = "HEAD", false, false, false
+local REV, FULL, COMMIT, PUSH, BRANCH = "HEAD", false, false, false, "main"
 do
     local pos, i = {}, 1
     while i <= #arg do
@@ -44,6 +55,7 @@ do
         elseif a == "--full"   then FULL = true
         elseif a == "--commit" then COMMIT = true
         elseif a == "--push"   then COMMIT, PUSH = true, true
+        elseif a == "--branch" then i = i + 1; BRANCH = arg[i]
         else pos[#pos + 1] = a end
         i = i + 1
     end
@@ -489,6 +501,18 @@ end
 if receipt then io.write(receipt) end
 print("copy:           " .. OUT)
 
+-- {{{ the report, written into the copy beside the receipt
+-- scripts/report-intuition-copy, found beside this script (so a project
+-- without its own copy of the tools still gets one), compares the copy
+-- with the commit it came from. Only when the copy changed: an unchanged
+-- copy keeps its report.
+if receipt then
+    local here = (debug.getinfo(1, "S").source:match("^@(.*/)") or "./")
+    sh(q(here .. "report-intuition-copy") .. " " .. q(DIR) .. " " .. q(OUT) .. " > " .. q(OUT .. "/.intuition-report.md"))
+    print("report:         " .. OUT .. "/.intuition-report.md")
+end
+-- }}}
+
 -- {{{ the copy's own commit and push
 -- The copy is a git repository of its own, made on first use; each commit
 -- is named after the source commit it was made from.
@@ -514,7 +538,7 @@ if PUSH then
         error("make-intuition-copy: " .. OUT .. " has no remote \"origin\" to push to;" ..
               " add one with: git -C " .. OUT .. " remote add origin <url>")
     end
-    sh("git -C " .. q(OUT) .. " push -q origin main")
-    print("pushed:         " .. sh("git -C " .. q(OUT) .. " remote get-url origin"):gsub("%s+$", ""))
+    sh("git -C " .. q(OUT) .. " push -q origin " .. q("main:refs/heads/" .. BRANCH))
+    print("pushed:         " .. sh("git -C " .. q(OUT) .. " remote get-url origin"):gsub("%s+$", "") .. ", branch " .. BRANCH)
 end
 -- }}}

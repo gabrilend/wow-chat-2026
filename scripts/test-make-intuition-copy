@@ -130,7 +130,8 @@ check '[[ ! -e "${C}/c.sql" && ! -e "${C}/b.cpp" && -f "${C}/e.cpp" && ! -e "${C
 check 'grep -q "local changed = true" "${C}/a.lua" && ! grep -q "new comment" "${C}/a.lua" && ! grep -q "changed$" "${C}/d.lua"' "changed and new files are stripped"
 check '[[ "$(git -C "${C}" rev-list --count HEAD)" == "2" ]] && git -C "${C}" log -1 --format=%s | grep -q "^From [0-9a-f]*: second$"' "the update is committed in the copy, named after the source commit"
 "${MAKE}" "${P}" "${WORK}/fresh" > /dev/null 2>&1
-check 'diff -r -x .git -x .intuition-copy "${C}" "${WORK}/fresh" > /dev/null' "the updated copy is the same, file for file, as a full remake"
+check 'diff -r -x .git -x .intuition-copy -x .intuition-report.md "${C}" "${WORK}/fresh" > /dev/null' "the updated copy is the same, file for file, as a full remake"
+check 'grep -q "^# The Comment-Free Copy and the Original" "${C}/.intuition-report.md" && git -C "${C}" ls-files --error-unmatch .intuition-report.md > /dev/null 2>&1' "every update writes the report into the copy, and commits it"
 "${MAKE}" "${P}" "${C}" --full --commit > /dev/null 2>&1
 check '[[ -d "${C}/.git" ]] && [[ "$(git -C "${C}" rev-list --count HEAD)" -ge 2 ]]' "a full remake keeps the copy's own history"
 
@@ -151,7 +152,7 @@ check '[[ -x "${H}/.git/hooks/pre-push.before-intuition" ]] && grep -q "before:"
 sha=1234567890abcdef1234567890abcdef12345678
 echo "refs/heads/main ${sha} refs/heads/main 0000000000000000000000000000000000000000" | "${H}/.git/hooks/pre-push" origin https://example
 check 'grep -q "^before: origin$" "${WORK}/before-calls" && grep -q "refs/heads/main ${sha}" "${WORK}/before-calls"' "the kept hook runs first, with the same input"
-check 'grep -q -- "--rev ${sha} --push" "${WORK}/maker-calls"' "a push of main to origin updates and pushes the copy from the pushed commit"
+check 'grep -q -- "--rev ${sha} --push --branch intuition" "${WORK}/maker-calls"' "a push of main to origin updates and pushes the copy from the pushed commit"
 : > "${WORK}/maker-calls"
 echo "refs/heads/neuron ${sha} refs/heads/neuron 0000000000000000000000000000000000000000" | "${H}/.git/hooks/pre-push" neuron https://example
 check '[[ ! -s "${WORK}/maker-calls" ]]' "a push to another remote, or of another branch, leaves the copy alone"
@@ -172,7 +173,7 @@ check '[[ ${bad_sh} -eq 0 ]]' "every shell script in the copy parses"
 src_markers=$(git -C "${DIR}" grep -h "^-- MARKER_" HEAD -- '*.sql' | wc -l)
 copy_markers=$(grep -rh "^-- MARKER_" "${R}" --include="*.sql" | wc -l)
 check '[[ ${src_markers} -eq ${copy_markers} ]]' "every install marker is still there (${copy_markers} of ${src_markers})"
-check '[[ -z "$(find "${R}" -name "*.md" -not -path "${R}/CLAUDE.md" | head -1)" ]]' "no .md file but the default CLAUDE.md"
+check '[[ -z "$(find "${R}" -name "*.md" -not -path "${R}/CLAUDE.md" -not -path "${R}/.intuition-report.md" | head -1)" ]]' "no .md file but the default CLAUDE.md and the copy's own report"
 # the copy, made into a project of its own, copied again: a second pass
 # that removes anything means the first pass missed a comment
 git -C "${R}" init -q -b main

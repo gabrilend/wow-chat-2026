@@ -22,7 +22,6 @@ wow-chat-2026/
 │   ├── architecture.md            System architecture and data flow
 │   ├── configuration.md           Configuration options reference
 │   ├── wow-chat-1-settings.md     wow-chat-1's 97 tuned server settings beside today's, for decisions
-│   ├── intuition-copy-report.md   Generated: the comment-free copy beside the original, what they share and how they differ (190)
 │   ├── custom-id-ranges.md        How added rows are numbered (issue x 10,000; the spawn cap)
 │   ├── installation.md            Setup and installation guide (server)
 │   ├── connection-guide.md        Player connection guide (client)
@@ -123,7 +122,7 @@ wow-chat-2026/
 ├── strategems/                    Data flow patterns proven across the project
 │   ├── precompute-derivable-data.md       Compute static data once; look it up at runtime
 │   ├── other-peoples-software-as-a-rubric.md  Read neighbours' code for its rules; write our own answer
-│   ├── intuition-copy.md                  A comment-free copy of the project, worked beside this one (190)
+│   ├── intuition-copy.md                  A comment-free copy of the project, worked beside this one (190); its report, what the two share and how they differ, is `.intuition-report.md` in the copy (the `intuition` branch), rewritten on every push
 │   └── intuition-copy-CLAUDE.md           The default instructions every intuition copy gets
 │
 ├── assets/gear-designs/           the gear designs (506): design-questions.lua, profiles/round-NNN.lua, votes.tsv, generated.tsv, camera-plan.lua (506e), comfyui/ workflows

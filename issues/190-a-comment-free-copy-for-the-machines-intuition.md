@@ -42,15 +42,20 @@ it is updated, not remade: only the paths changed since are rewritten
 (added and changed ones stripped again, deleted ones removed); `--full`
 remakes it all and keeps the copy's own history. With `--commit` the copy
 commits itself (a repository of its own), each commit named after its
-source commit; `--push` pushes it to `gabrilend/wow-chat-2026-intuition`
-(public, like the original; made 2026-10-20 with the owner's "sure we can
-do a github repository"). `scripts/install-intuition-push-hook` writes the
-pre-push hook that does this for every push of main to origin, from the
-commit being pushed; it keeps a hook already there and runs it first.
+source commit; `--push --branch intuition` pushes it to the `intuition`
+branch of this project's own GitHub repository (the owner, 2026-10-20:
+"could we maybe push to a separate branch? They're sufficiently similar
+and related that they can be in the same repository"; it was its own
+repository, `gabrilend/wow-chat-2026-intuition`, for its first day).
+Every update also writes `.intuition-report.md` into the copy, from
+`scripts/report-intuition-copy`: what the two share and how they differ,
+so the report is current after every push (the owner: "shouldn't it be
+automatic on the git push?"). `scripts/install-intuition-push-hook` writes
+the pre-push hook that does this for every push of main to origin, from
+the commit being pushed; it keeps a hook already there and runs it first.
 `scripts/test-make-intuition-copy` checks the tricky cases, an update
-against a full remake, the hook in a throwaway repository, and a full copy
-of this project (39 checks). `scripts/report-intuition-copy` writes
-`docs/intuition-copy-report.md`: what the two share and how they differ.
+against a full remake, the report, the hook in a throwaway repository,
+and a full copy of this project (40 checks; a quick test of the compile).
 
 Before this, there was one copy of the project, its comments and documents
 read by every agent.
