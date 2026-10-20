@@ -4,6 +4,12 @@
 - Created: 2026-06-03
 - Phase: 1 (Foundation)
 - Priority: Medium (cleanup; system works without this, but pipeline isn't uniform)
+- Related: 189 (2026-10-20: each patch's header names its profiles and
+  priority, read from the folder; the split here is part of that)
+- Still to do as of 2026-10-20: `patches/E-patches.sh` holds 59 steps in
+  about 3,200 lines (the counts below are from 2026-06-03, when it held
+  15); every install step added since went into the same file, and it is
+  where two sessions' work meets most often.
 
 ## Overview
 

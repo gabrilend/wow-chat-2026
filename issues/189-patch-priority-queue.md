@@ -60,6 +60,43 @@ carrying the order. And a rename, or a priority change, is handled the
 house way, by **unpatching** the old and patching the new (the revert SQL
 runs, then the new file), never by editing the updater's records.
 
+**A folder and a header, instead of lists** (the owner, 2026-10-20: "it's
+fine if the patch lists are one file. Though, it would be better to have a
+directory for them, and to parse everything from that directory (except
+files which don't have a specific header, length in lines in the header
+and footer, and footer)", and of the compile's quick-test list: "should
+be the same system"). Each patch, and each test, says about itself what
+the lists say about it today, in a header at its top and a footer at its
+end; the runner reads every file in the folder and takes only those whose
+header and footer are whole. A proposed shape, for the owner to confirm
+(question 4):
+
+```
+# ==== header: 7 lines, footer: 3 lines ====
+# id:        E062
+# profiles:  beta
+# priority:  620
+# kind:      install step
+# about:     trade across the factions, on beta's realm
+# ==== end of header ====
+  ... the patch ...
+# ==== footer of E062 ====
+# lines:     148
+# ==== end of footer ====
+```
+
+The first line gives both lengths; the runner checks that the header has
+that many lines and ends with its closing line, that the footer does too,
+and that the footer names the same id and the file's line count. A file
+cut short loses its footer, and a header edited out of shape no longer
+matches its stated length, so neither is run. Files without a header at
+all (helpers, notes) are skipped, and every skipped file is listed in the
+run's report, so nothing is left out unseen. For tests, the header says
+`quick-test: yes` (and which profiles), and the compile gathers its quick
+tests from `scripts/` that way instead of keeping a list. This also
+settles the per-file split of the install steps (issue 150): each E step
+becomes its own file with this header, as the B and C patches are.
+
 ## Suggested Implementation Steps
 
 1. Answer the open questions.
@@ -87,3 +124,8 @@ runs, then the new file), never by editing the updater's records.
 3. **Keep the old-names tidy-up until this lands?** It works and is
    tested; or revert it now and accept the 35 warnings until the unpatch
    rule replaces it.
+4. **The header's shape.** Is the proposed header and footer above right:
+   both lengths stated on the first line, the id and the file's line count
+   in the footer? And should a patch file that has a header but a broken
+   one stop the run with an error (as the project prefers), while a file
+   with no header at all is only listed as skipped?
