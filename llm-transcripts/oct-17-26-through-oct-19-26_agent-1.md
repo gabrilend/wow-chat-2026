@@ -1,6 +1,6 @@
 # Conversation Summary: 90bf80e4-2922-4058-918c-551568e85c2a
 
-Generated on: 2026-10-19 14:22:11
+Generated on: 2026-10-19 15:10:59
 Models: claude-opus-5-5
 
 ## Contents
@@ -9433,6 +9433,215 @@ My suggestion for each theme, for you to accept or change:
 
 Once you've decided, the chosen settings become settings patches, and the two
 old folders (about 7.9 GB) can go.
+
+--------------------------------------------------------------------------------
+
+### User Request 64
+
+<pasted_content id="ee2b">
+    256 +| 7 | `Visibility.ObjectSparkles` | 0 | 1 | 1 | 1 | 1 | 1 |  | Whether or not to display sparkles on gameobjects related to active quests. |
+      257 +| 8 | `Visibility.ObjectQuestMarkers` | 0 | 1 | 1 | 1 | 1 | 1 |  | Show quest icons above game objects in the same way as creature quest givers. |
+      258 +| 9 | `vmap.BlizzlikePvPLOS` | 0 | 1 | 1 | 1 | 1 | 1 |  | Check line of sight for battleground and arena gameobjects and other doodads (such as WSG treestumps). |
+      259 +| 10 | `GM.AllowInvite` | 1 | 0 | 0 | 0 | 0 | 0 |  | Allow players to invite GM characters. |
+      260 +| 11 | `GM.AllowFriend` | 1 | 0 | 0 | 0 | 0 | 0 |  | Allow players to add GM characters to their friends list. |
+</pasted_content id="ee2b">
+
+
+when we have columns of numbers like this, we should pad them to the right. This
+is important because we need to keep all the digits in the same "position" in
+terms of their X coordinate, to provide some structure the data is oriented
+around.
+
+> - Silent corruption. A stray bit flip in memory without error correction
+> (ECC), a bad cable, or a firmware bug can write wrong bytes that nothing
+> notices. Your two disks are ext4, which checksums its own bookkeeping but not
+> file contents, so this kind goes unseen.
+
+tell me about switching to a filesystem that does. Can we put the checksums on
+github?
+
+> - The physical medium decays. An SSD left unpowered slowly leaks the charge
+> that holds its bits, and magnetic disks grow bad sectors.
+
+can we append a second half of the checksum to a "private key" that we store in
+triple duplicate? We can have 9 things that all agree on something, like a
+triforce, if we need to. Then, it should be a reversible checksum, that we can
+use to calculate backwards when we know that something has changed.
+
+
+
+<pasted_content id="ee2b">
+>   The remedies, roughly from most to least effective:
+> 1. Backups that keep old versions (snapshots, restic or borg), so a deletion
+> doesn't spread to the copies.
+>   2. Three copies, on two kinds of media, one of them away from home.
+> 3. A filesystem that checksums file contents (btrfs or ZFS), run with a
+> regular "scrub" that checks every file.
+>   4. ECC memory.
+>   5. Disk-health monitoring (SMART).
+> 6. Pushing git repositories to a remote, so a check (git fsck) can find damage
+> and the remote can repair it.
+> 7. Projects that can be rebuilt from recorded intent: issues, generators,
+> tests.
+</pasted_content id="ee2b">
+
+
+eh I skimmed this list, it looks hardddddd I wanna make video games!!
+
+> How those files can be in history if they were uncommitted: yes, just as you
+> guessed. Issue 104 copied wow-chat-1's Lua folder into wow-chat-2026 on
+> 2026-01-28, uncommitted changes and never-committed files included, and
+> committed the copy. levelling.lua came back separately on
+> 2026-04-06 (issue 120). My check compared each file's fingerprint, so those
+> copies are byte-for-byte the same as the ones in the old folder.
+
+Yay I'm a good guesser!
+
+> basic is meant to be the stock game, and beta is "the original wow-chat
+> roguelike design", so beta looks like their natural home. But CLAUDE.md calls
+> alpha "the wow-chat-1 relic". Should they go to beta or to alpha?
+
+hey can you find where that description originates from your context and delete
+it in the docs? We don't want to summarize the profiles like that. It's
+reductionist and unfair to the source-code.
+
+we should also build a parallel copy of the project, updated whenever we git
+push, that stores all of the source-code without comments. Also, none of the
+explanation documents or claude.md directions. Instead, we will have a blank
+claude.md file that is default and applied anytime we apply this pattern (which
+we should be documenting as a new design pattern), which should say some helpful
+hints on how to proceed like "try checking the scripts directory for common
+actions" and "try following the compilation pipeline, looking at a list of src
+it pulls in what order and build your understanding of the project based on the
+order that things go in. Also we should remove the .info.md files for this
+parallel copy. It is expected that we have two agents running autonomously
+working on the problems in the project. One of them uses the parallel copy, the
+other uses the one with comments. The parallel copy is meant to be the
+"machine's intuition", and it is used in tandem with ours to achieve the desired
+goal or outcome.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 64
+
+> Four things to do here: line up the numbers in the table, remove the profile
+> summaries, design the comment-free copy, and answer your questions. Starting
+> with the table: each number column gets padded so the units digits, and any
+> decimal points, sit at the same position.
+
+> The digits line up now, decimal points included. Swapping the new table into
+> the document:
+
+> Now the profile summaries. Finding where those descriptions are written:
+
+> While I'm in CLAUDE.md, I'm adding your number-alignment rule to its "Vertical
+> Alignment" section, so every session follows it:
+
+> Now my settings document, which quoted the summaries:
+
+> In the profiles index, two rows open with a label; I'm cutting the labels and
+> keeping what's actually in each profile:
+
+> No label phrases are left in CLAUDE.md, the docs or the notes. Committing the
+> alignment rule, the aligned table and the summary cleanup:
+
+*[commit] bafd68e22 in wow-chat-2026 - Number columns line up by place value, and the profiles lose their one-phrase labels*
+
+> Now the comment-free copy. It's a new feature, so it gets an issue file first.
+> Checking for an existing issue on the same idea, and where design patterns are
+> written down in this project:
+
+> Now the pattern itself, and the default CLAUDE.md the copy gets:
+
+> Writing the test: small hand-made cases for each tricky spot, then a full run
+> on this project:
+
+> Before running on the whole project, checking how big the committed tree is,
+> since the test writes the copy into RAM:
+
+> All 27 pass. Clearing grep's warning about a stray backslash:
+
+> It reads cleanly: the code and its alignment are untouched, and the comments
+> are gone. Checking whether this project's scripts carry `.info.md` summaries,
+> so the new tools get them too if so:
+
+*[commit] 30daef277 in wow-chat-2026 - A comment-free copy of the project, for an agent to learn it from the code alone*
+
+I've finished the table alignment, removed the profile summaries, and built a
+first working version of the comment-free copy. All of it is committed.
+
+**Number columns.** The settings table now lines up by place value: ones digits
+in one column, decimal points in another, in the raw text as well as on screen.
+The tool pads it, so a rerun stays aligned. I also added the rule to the
+project's CLAUDE.md, under "Vertical Alignment", with your words, so every
+session follows it.
+
+**Profile summaries.** They came from the profile list in the project's
+CLAUDE.md. Copies were in the profiles index, alpha's page, the table of
+contents and the roadmap. They're gone from all of them; each place now gives
+only facts (level range, which server, a link to the profile's own page). My
+settings document no longer quotes them either.
+
+**The comment-free copy** (issue 190, pattern written in
+`strategems/intuition-copy.md`):
+- A new tool, `scripts/make-intuition-copy`, builds it from the last commit:
+  - It leaves out documents, issues, notes, transcripts, the `.info.md` files
+    and CLAUDE.md, and puts the default CLAUDE.md with your two hints at the
+    root.
+  - It takes comments out of Lua and C++ by reading them the way their compilers
+    do, so a `--` inside a string stays.
+  - For shell and SQL it removes only whole comment lines, never inside a
+    here-document or an open string. The SQL marker lines the install steps look
+    for stay.
+- On this project: 1,462 files; 865 left out as explanation; 39,363 comment
+  lines removed from 551 source files.
+- Its test (27 checks, all passing) confirms the copy still works: every Lua
+  file compiles, every shell script parses, all 96 install markers are there,
+  and stripping the copy a second time removes nothing.
+- Not built yet: the update on every `git push`. That waits on two of the
+  questions below.
+
+**Switching filesystems.** btrfs or ZFS store a checksum with every block of
+every file. When a block reads back wrong, they notice, and they can repair it
+from a second copy, either on a second disk or stored twice on one (which halves
+the space). The hard part is the move itself:
+- `/mnt/kaun` holds 1.4 TB, and reformatting means putting it all somewhere
+  first.
+- `btrfs-convert` can change ext4 to btrfs in place, but it's only safe with a
+  backup.
+
+**Checksums on GitHub.** Yes, and for committed files git already does it: every
+file is filed under its own fingerprint, and `git fsck` checks them all. For
+files git doesn't track (databases, game data), a list of fingerprints could be
+committed. That catches damage, but it can't undo it.
+
+**A checksum you can calculate backwards from.** A fingerprint can't be
+reversed; it's far smaller than the file. What you're describing does exist, as
+recovery data (Reed–Solomon codes; the `par2` tool makes them):
+- You store extra data, say 10% of the file's size. When up to that much of the
+  file is damaged, the original bytes can be worked out from it.
+- Your triforce has a real counterpart: keep three copies and take whatever two
+  of them agree on, which is called majority voting.
+- Your private key adds something a plain fingerprint lacks. A fingerprint made
+  with a secret key also proves that nobody changed the file on purpose, because
+  anyone can recompute a plain one after editing. Git can sign commits with a
+  key this way.
+- One limit: recovery data for 1.4 TB at 10% would be 140 GB, far too big for
+  GitHub. For the source code alone it's small.
+
+And yes, you're a good guesser. Go make video games; none of this is urgent.
+
+Two questions on the copy:
+1. Earlier today you said you'd never run more than one agent at a time, but
+   this design has two working together. Do they work at the same moment, or
+   take turns on the same problem, first in one copy, then the other?
+2. Should each `git push` remake the copy as a local folder only
+   (`/mnt/kaun/wow-chat-2026-intuition`), or also push it to a GitHub repository
+   of its own? A new repository would publish the code without its comments, so
+   it's yours to create.
+
+The settings decisions (the nine themes) are still waiting in
+`docs/wow-chat-1-settings.md` for whenever you have time.
 
 --------------------------------------------------------------------------------
 

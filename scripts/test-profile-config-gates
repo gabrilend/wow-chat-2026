@@ -108,6 +108,7 @@ declare -a EXPECT_cc_test=(
     "worldserver.conf|StartHeroicPlayerLevel|55"
     "worldserver.conf|MinDualSpecLevel|40"
     "worldserver.conf|Rate.MoveSpeed.Player|1"            # stock speed: C003 gated away from cc-test
+    "worldserver.conf|EnableLowLevelRegenBoost|0"          # C034 is every profile's since 2026-10-20
     "worldserver.conf|Rate.Damage.Fall|1"
     "worldserver.conf|Rate.XP.Kill|1"
     "worldserver.conf|RealmID|6"
@@ -135,8 +136,25 @@ declare -a EXPECT_beta=(
     "worldserver.conf|StartHeroicPlayerLevel|1"            # C017: death knights at 1 (issue 206)
     "worldserver.conf|CharacterCreating.MinLevelForHeroicCharacter|0"   # C036: no level-55 character needed first
     "worldserver.conf|RecruitAFriend.MaxLevel|20"          # C017
-    "worldserver.conf|Rate.XP.Kill|2.0"                    # C005
-    "worldserver.conf|Rate.XP.Quest|2.0"                   # C005
+    "worldserver.conf|Rate.XP.Kill|3"                      # C037: no quests on beta (C005 is release's only since 2026-10-20)
+    "worldserver.conf|Rate.XP.Quest|1"                     # stock: nothing to quest for
+    "worldserver.conf|EnableLowLevelRegenBoost|0"          # C034, every profile since 2026-10-20
+    # wow-chat-1's survival settings (C037, docs/wow-chat-1-settings.md), one or two per theme
+    "worldserver.conf|DurabilityLoss.OnDeath|0"
+    "worldserver.conf|Rate.RepairCost|25"
+    "worldserver.conf|Rate.SellValue.Item.Legendary|10"
+    "worldserver.conf|Rate.XP.Explore|10"
+    "worldserver.conf|SkillChance.Prospecting|1"
+    "worldserver.conf|MaxPrimaryTradeSkill|2"              # stock, the owner's choice
+    "worldserver.conf|WaterBreath.Timer|18000"
+    "worldserver.conf|Instance.IgnoreLevel|1"
+    "worldserver.conf|Battleground.PlayerRespawn|60"
+    "worldserver.conf|AllowTwoSide.Interaction.Group|1"
+    "worldserver.conf|ChatStrictLinkChecking.Severity|-1"
+    "worldserver.conf|QuestPOI.Enabled|0"
+    "worldserver.conf|vmap.BlizzlikePvPLOS|1"              # stock, the owner's choice
+    "worldserver.conf|DBC.EnforceItemAttributes|1"         # stock, the owner's choice
+    "worldserver.conf|PlayerLimit|1000"                    # stock: held for a decision (bots count)
     "worldserver.conf|Rate.Damage.Fall|10.0"               # C004
     "worldserver.conf|Rate.MoveSpeed.Player|0.85"          # C003
     "worldserver.conf|InstantFlightPaths|1"                # C009

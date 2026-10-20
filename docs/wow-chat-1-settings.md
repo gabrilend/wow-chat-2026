@@ -234,6 +234,64 @@ Once decided, the chosen settings become settings patches (`config/patches/C*.sh
 gated by profile), and the two old folders can be deleted (about 7.9 GB on
 /mnt/mtwo). This file stays as the record of what wow-chat-1 had.
 
+### Decided 2026-10-20
+
+The owner, verbatim, then what was built:
+
+- "in general the wow-chat-1 server settings should be applied to wow-chat
+  style survival servers, and not to the ones that still have NPCs and
+  such." Beta is the survival server (E012 takes its creatures out); every
+  other profile keeps its NPCs. Beta takes them in
+  `config/patches/C037-beta-wow-chat-1-survival-settings.sh`, except the
+  ones below.
+- "professions we should leave at 2 for now." `MaxPrimaryTradeSkill` stays
+  2; prospecting and milling raising their skill came along with the rest.
+- "for servers that don't have any quests (because we removed the quests,
+  or the quest givers) we should have kill experience set to 3." Beta:
+  `Rate.XP.Kill` 3 in C037; C005's 2× is release's only.
+- "we should remove the low level regen boost on all servers. It feels
+  cheap!" C034 now covers every profile.
+- "we should remove the sparkles from items and quest points from the map."
+  `Visibility.ObjectSparkles`, `Visibility.ObjectQuestMarkers` and
+  `QuestPOI.Enabled` are 0 on beta (C037). Whether the other profiles,
+  which have quests, should lose them too is asked below.
+- On `vmap.BlizzlikePvPLOS`: "that seems bad". Kept at stock (1):
+  battleground objects such as the tree stumps in Warsong Gulch still block
+  spells. Why wow-chat-1 turned it off is not written anywhere; a guess is
+  its bots, which cast through objects poorly, but that is a guess.
+- On `DBC.EnforceItemAttributes`: "seems like something we absolutely
+  need??" It is a safety check, and it stays on (stock 1). When it is on,
+  for any item the game client's own files also list, the server replaces
+  seven of the item's fields from the database with the client's (its kind
+  and sub-kind, sound, material, equipment slot, look and sheath), and logs
+  each mismatch, so server and client never disagree about how an item looks
+  or where it goes. Turning it off lets the database win, which only matters
+  when the project changes one of those seven fields on an existing item: no
+  SQL in the project does (checked 2026-10-20); the project's own items are
+  new entries the client's files don't list, which the check never touches.
+  It becomes needed (off) the day an existing item's look or slot is changed
+  in the database, together with the custom client carrying the same change.
+
+Held for a decision, each crossing something the project already does:
+`PlayerLimit` 100 (beta's 200 bots are players and may count toward it),
+`Rate.Talent` 3 (issue 205's Lua gives beta its points), the miss chance
+multipliers 0 (B005 already caps the level gap on beta),
+`Visibility.Distance.Continents` 333, `Corpse.Decay.*` 10 hours (beside
+the ambush's dead and 200 bots fighting), `Guild.CharterCost` 10,000 gold
+(a "no guilds" switch), and `Warden.Enabled` 0.
+
+**What today's server can't take as a setting.** Five of wow-chat-1's
+two-faction settings (emote, mail, `/who`, friends, trade) are gone from
+the settings file: today's server makes them permissions in the accounts
+database (`RBAC_PERM_ALLOW_TWO_SIDE_TRADE`, `..._TWO_SIDE_WHO_LIST`,
+`..._TWO_SIDE_ADD_FRIEND` and the like, checked in `TradeHandler.cpp`,
+`MiscHandler.cpp`, `CharacterHandler.cpp`, `MailHandler.cpp`). The accounts
+database is shared by every realm, but its default-permissions table takes
+a realm number, so they could be granted to beta's realm alone by an
+install step. `CloseIdleConnections` is gone too (idle sessions follow
+`SocketTimeOutTime` now), and `Rate.MoveSpeed` split into player and
+creature speeds (C003 sets the players').
+
 ## The table
 
 Columns: the old value; the stock value in the old server; the stock value

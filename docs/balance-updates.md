@@ -485,6 +485,27 @@ that was about 12 spawns a second across the world. The owner, 2026-10-17:
 number of playerbots." and "if it's 500 bots now, then we should turn it
 down to 200." Takes effect at beta's next install, then a restart.
 
+## 2026-10-20 — Beta takes wow-chat-1's survival settings (C037); no low-level healing boost anywhere (C034); beta's kill experience 3× (C037, C005)
+
+| Knob | Value | Where |
+|---|---|---|
+| wow-chat-1's tuned server settings, on beta | the list in the patch | `config/patches/C037-beta-wow-chat-1-survival-settings.sh` |
+| Low-level healing boost (`EnableLowLevelRegenBoost`), every profile | 0 (stock 1) | `config/patches/C034-no-low-level-regen-boost.sh` (was `C034-basic-...`, basic only) |
+| Kill experience (`Rate.XP.Kill`) on beta | in C037 | C005 (2×) is release's only now |
+
+Why: the settings wow-chat-1 ran with were found in its old server folder
+and laid out in `docs/wow-chat-1-settings.md`. The owner, 2026-10-20: "in
+general the wow-chat-1 server settings should be applied to wow-chat style
+survival servers, and not to the ones that still have NPCs and such";
+"professions we should leave at 2 for now"; on battleground line of sight
+through objects, "that seems bad" (kept at stock); "we should remove the
+low level regen boost on all servers. It feels cheap!"; "for servers that
+don't have any quests (because we removed the quests, or the quest givers)
+we should have kill experience set to 3" (beta, whose quest givers E012
+removes). The settings held back for a decision are listed in C037's
+header and the doc. Takes effect at each profile's next install, then a
+restart.
+
 ## How to add an entry
 
 ```markdown
