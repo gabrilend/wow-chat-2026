@@ -263,9 +263,12 @@ The owner, verbatim, then what was built:
   tells the client about; the client draws only what it is told, so a
   farther sight must come from the server. And the server does this for
   bots as well, since to it a bot is a player, so 333 yards costs for all
-  200 of beta's bots too, though they don't need to see that far. Held:
-  real players alone at 333 would need a source patch giving bots a
-  shorter range than players.
+  200 of beta's bots too, though they don't need to see that far. Decided
+  2026-10-20: "Bots should only be able to see as far as the largest range
+  they can see", read from the bot module's settings, and "BGs and
+  instances should have their stock distances". Built: B056 caps a bot's
+  reach at the bot module's largest sight-like distance (200 yards with
+  stock settings), and C037 gives beta's continents 333 (issue 194).
 - On `vmap.BlizzlikePvPLOS`: "that seems bad". Kept at stock (1):
   battleground objects such as the tree stumps in Warsong Gulch still block
   spells. Why wow-chat-1 turned it off is not written anywhere; a guess is

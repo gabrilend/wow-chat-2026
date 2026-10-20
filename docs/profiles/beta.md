@@ -93,7 +93,9 @@ Lua login hook), B003 (game-object wildcard), B004 (warning fixes), B005
 (monster accuracy capped by level), B006 (a hook when items are sold),
 B007 (more unit methods for Lua), B020 (event removal lock), B022 (runtime
 config folder), B024 (symmetric aggro radius), B026 and B027 (playerbot
-login guards). `scripts/test-source-patches <project> beta` applies and
+login guards), B056 (a bot sees only as far as the bot module ever looks
+or acts, so players can see 333 yards on the continents; issue 194).
+`scripts/test-source-patches <project> beta` applies and
 reverts them on a copy in RAM.
 
 ## Install steps (after compiling)

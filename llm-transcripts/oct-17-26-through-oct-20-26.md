@@ -1,6 +1,6 @@
 # Conversation Summary: 90bf80e4-2922-4058-918c-551568e85c2a
 
-Generated on: 2026-10-20 11:08:54
+Generated on: 2026-10-20 11:38:16
 Models: claude-opus-5-5
 
 ## Contents
@@ -50,6 +50,11 @@ Models: claude-opus-5-5
     settings, and the comment-free copy is on GitHub with its comparison report
     in docs. Next, decide whether any of the seven held settings, such as corpse
     time and sight distance, should come to beta.
+12. 2026-10-20 11:12, after Request 67 - We're cleaning up the project and
+    reviving wow-chat-1's server settings for beta; that work, the cross-faction
+    permissions and the comment-free copy branch are all done. Next, I need your
+    three answers: delete the old copy repository, confirm the patch header
+    shape, and decide on bots' shorter sight range.
 
 --------------------------------------------------------------------------------
 
@@ -10242,6 +10247,225 @@ Questions:
    listed as skipped?
 3. Should bots get a shorter sight range than players (a source patch), so
    beta's players could see 333 yards as wow-chat-1 did?
+
+--------------------------------------------------------------------------------
+
+### User Request 68
+
+<pasted_content id="ee2b">
+> Why the install steps are one file: they were the project's first kind of
+> patch, so their shared helpers and the settings runner were written into the
+> same file. Issue 150 planned
+> splitting them, one file per step as the B and C patches already are, back in
+> June when there were 15. It was never done, and the file now holds 59 steps in
+> about 3,200 lines.
+>   That's why it's where sessions collide.
+</pasted_content id="ee2b">
+
+
+let's work on this issue file then.
+
+
+
+<pasted_content id="ee2b">
+> Your folder-and-header design: written into issue 189, which already plans a
+> priority number per patch. It covers the per-profile patch lists, the
+> compile's test list, and the
+>   install-step split together. The shape I'm proposing:
+>   - the first line states the header's and footer's lengths;
+> - the header gives the id, profiles, priority, kind and one line about the
+> patch;
+> - the footer repeats the id and the file's line count, so a file cut short is
+> never run;
+> - a file with no header (a helper, a note) is skipped, and skipped files are
+> listed in the run's report, not left out silently.
+</pasted_content id="ee2b">
+
+
+great let's work on that next.
+
+
+
+<pasted_content id="ee2b">
+> "Expected settings": the table inside scripts/test-profile-config-gates of
+> values each profile's settings must come out with, for example "beta: kill
+> experience 3". Every settings
+> change adds a row to it. You're right that the table of contents, the balance
+> log and the progress files are just documents. They're on the shared list only
+> because many unrelated
+> changes add lines to them, which is how two sessions end up editing the same
+> lines.
+</pasted_content id="ee2b">
+
+
+So, it's like a table of contents for the changes the patches make? It's just in
+english, right? Is it parsed? I feel like that could drift easily. Don't we have
+a list somewhere else that also lists all the patches we have? Is this the best
+spot for it, or can we remove this drifting file?
+
+> The copy is now the intuition branch of gabrilend/wow-chat-2026, pushed and
+> confirmed on GitHub. The separate repository gabrilend/wow-chat-2026-intuition
+> from yesterday still
+  exists.
+
+uh, hold on, there's a separate repository? Where is it on disk? Can we JUST
+make it a branch?
+
+
+
+<pasted_content id="ee2b">
+> Sight distance is the server's, not the client's. The server decides, for
+> every player, which creatures and players within that range it tells the
+> client about; the client can only
+> draw what it's told. To the server a bot is a player, so 333 yards would cost
+> for all 200 of beta's bots too. Letting only real players see that far would
+> need a source patch giving
+>   bots a shorter range, so it stays held.
+</pasted_content id="ee2b">
+
+
+I think that's worth it. Bots should only be able to see as far as the largest
+range they can see.
+
+> 1. Should I delete the old separate repository
+> gabrilend/wow-chat-2026-intuition, now that the copy lives on the branch?
+> Deleting can't be undone, so it's your call.
+
+Sure.
+
+> 2. Is the proposed patch header right? And should a file whose header exists
+> but is broken stop the run with an error, while a file with no header is only
+> listed as skipped?
+
+Sure.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 68
+
+> In order: the copy repository first (small), then the install-step split
+> (issue 150), then the header system (189). First, whether the other session
+> holds any of the shared files:
+
+> No claims are held. Claiming the shared files for this round's work:
+
+> Now the folder: the old one moves aside, the branch is checked out in its
+> place, and the two are compared before the old one goes:
+
+> Adding the test case for a tracked file the project's `.gitignore` names:
+
+> All 41 pass. Remaking the branch in full so its commit gets the missing files,
+> then pushing it:
+
+> Deleting the separate GitHub repository, as you said:
+
+*[commit] f57b45f79 in wow-chat-2026 - The comment-free copy is now just a branch of this repository, and holds every file it should*
+
+> Committed. Now issue 150, splitting the install steps. Reading its intended
+> layout and steps:
+
+> E057 is there (line 2809). My count missed it because it sits inside another
+> block: a block before it was never closed. Finding the unbalanced fold:
+
+> All 73 blocks balance now: 63 install steps and 10 helpers. Checking how
+> `patches.sh` loads the steps and finds each one's function, since the split
+> has to keep that working:
+
+> 63 step files, 10 helpers in `E-helpers.sh` (431 lines), and a 17-line loader.
+> Now the three scripts that read the file's text, starting with the
+> issue-reference checker:
+
+> The checker builds its list of existing steps from the tracked files (B and C
+> by file name) plus the text of `E-patches.sh`. Install steps are now named by
+> file too:
+
+> The checker's test only needs `E-patches.sh` to exist, so it's fine as it is.
+> Next, the test that cuts a helper's code out of the file; that helper now
+> lives in `E-helpers.sh`:
+
+> Only the deliberate history note in the checker still names it. Now CLAUDE.md:
+
+> Updating issue 150's current behavior before committing:
+
+*[commit] a25cd58dd in wow-chat-2026 - Every install step gets a file of its own*
+
+> The core can tell: a bot's session is "headless"
+> (`GetSession()->IsHeadless()`), which is how the Lua engine's own bot check
+> works. That's enough for a plan. Writing it as issue 194:
+
+*[commit] 1186a29ce in wow-chat-2026 - A plan for bots that see only as far as they act, so players can see wow-chat-1's 333 yards*
+
+The install steps are split, one file per step (issue 150). The copy is now only
+a branch of this repository. Bot sight has a plan (issue 194). Two things wait
+on you: one sign-in so I can delete the old repository, and three answers before
+the header system can be built.
+
+**The install steps (issue 150).** The 63 steps are now one file each
+(`patches/E0NN-<name>.sh`), and the 10 helpers they share are in
+`patches/E-helpers.sh`.
+- `E-patches.sh` is now a 17-line loader, because the patch runner and five
+  tests load it by name.
+- The splitting tool proved nothing changed: it loaded the old file and the new
+  files each in a clean shell, and every function's code and both global values
+  matched, 2,249 lines compared.
+- One fault turned up: E057 had been written inside E054's fold block. I fixed
+  the markers before splitting.
+- Every test that loads the steps passes. The issue stays open until your next
+  install runs the steps from their own files.
+
+**The "expected settings" table** is not English and not a description: the test
+reads it. Each row is a file, a setting and a value, such as
+`worldserver.conf|Rate.XP.Kill|3`. The test runs the real settings patches on
+scratch copies of the stock files and checks every row against what comes out.
+- It can't drift silently: if a patch changes and the table doesn't, the test
+  fails at the next compile. That's its job, a second, independent statement of
+  what each profile should get, like double-entry bookkeeping.
+- The lists that *can* drift are the English ones: the settings table on each
+  profile's page (`docs/profiles/beta.md`) and `docs/patches/patch-registry.md`,
+  which also lists every patch. Nothing checks those.
+- So my suggestion: keep the test's table, and once each patch has its header
+  (issue 189), generate the English pages from the headers, so they can't drift
+  either.
+
+**The separate repository.** On disk it was `/mnt/kaun/wow-chat-2026-intuition`,
+a git repository of its own. Now it's just a branch:
+- its history is the `intuition` branch of this repository;
+- the folder is a second folder of this repository on that branch, the way
+  neuron's is;
+- the copy commits and pushes that branch directly.
+
+The switch found a fault: the project tracks a few files its own `.gitignore`
+names (`mysql/conf/my.cnf`, `libs/.gitkeep`), and the copy had been quietly
+leaving them out. Fixed, the branch remade and pushed, with a test case for it
+(41 checks pass).
+
+Deleting the GitHub repository `gabrilend/wow-chat-2026-intuition` failed:
+GitHub's login here lacks permission to delete repositories. To grant it, type
+`! gh auth refresh -h github.com -s delete_repo`; then I'll delete it.
+
+**The pages hook bug** is fixed in the ai-stuff installer (committed there) and
+in this project's hook. Pushes from main now rebuild main's pages, not neuron's.
+
+**Bot sight (issue 194).** The server decides each player's reach in one
+function (`Player::GetSightRange`), and it can tell a bot because a bot's
+session has no client attached. The plan is one source patch, B056, that caps a
+bot's reach at the bot module's largest distance, its reaction range of 150
+yards. Players get wow-chat-1's 333, and a real player still sees bots out to
+333.
+
+**Next is the header system (issue 189).** These questions need answers before I
+build it:
+1. Should the priority number order only the patches, or also our SQL, so it
+   runs in priority order instead of by the `z_` file names? Ordering the SQL
+   too is the bigger job, but it's what lets the `z_` names go away.
+2. Should source, settings and install patches share one priority number line,
+   or have one each? They already run at different times, so one each reads more
+   simply.
+3. Should the tidy-up of the updater's old file names stay until this lands?
+4. For bot sight: should the 150-yard cap be read from the bot module's own
+   settings, so the two can never drift, or set as its own setting beside the
+   333? And should instances and battlegrounds change too, or only the
+   continents?
 
 --------------------------------------------------------------------------------
 

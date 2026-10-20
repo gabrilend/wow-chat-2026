@@ -15,9 +15,12 @@
 #   held, each crossing something the project already does (see the doc):
 #     PlayerLimit 100 (beta's 200 bots are players too), Rate.Talent (issue
 #     205's Lua gives the points), Rate.MissChanceMultiplier.* (B005 already
-#     caps the level gap), Visibility.Distance.Continents 333 (ten times the
-#     area to track with 200 bots), Guild.CharterCost (a "no guilds" switch
-#     never decided), Warden.Enabled
+#     caps the level gap), Guild.CharterCost (a "no guilds" switch never
+#     decided), Warden.Enabled
+# Visibility.Distance.Continents 333 was held too (ten times the area to
+# track, for 200 bots as well); taken 2026-10-20 with B056, which keeps a
+# bot's reach to the bot module's own largest distance (issue 194).
+# Instances and battlegrounds keep their stock distances (the owner).
 #   handled elsewhere: Rate.MoveSpeed (C003), Rate.Damage.Fall (C004),
 #     EnableLowLevelRegenBoost (C034), the quest sparkles and map points
 #     (C038, every profile with quests and beta)
@@ -120,6 +123,8 @@ C037_SETTINGS=(
     "ChatFakeMessagePreventing|0"
     "ChatStrictLinkChecking.Severity|-1"
     "Visibility.GroupMode|0"
+    # players see 333 yards on the continents; bots no farther than they act (B056)
+    "Visibility.Distance.Continents|333"
 )
 # }}}
 

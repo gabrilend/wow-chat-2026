@@ -518,6 +518,19 @@ first: "this should be on beta". And asked whether the servers with
 quests should lose the sparkles and map points beta already had off:
 "yes". Takes effect at each profile's next install, then a restart.
 
+## 2026-10-20 — Beta's players see 333 yards on the continents (C037); bots no farther than they act (B056)
+
+| Knob | Value | Where |
+|---|---|---|
+| `Visibility.Distance.Continents` on beta | 333 (stock 100) | `config/patches/C037-beta-wow-chat-1-survival-settings.sh` |
+| A bot's reach on the continents | the bot module's largest sight-like distance | `patches/B056-bots-see-only-as-far-as-they-act.sh` |
+
+Why: wow-chat-1's sight distance, held because the server tracks it for
+every bot too. The owner, 2026-10-20: "Bots should only be able to see as
+far as the largest range they can see", read from the bot module's
+settings, and "BGs and instances should have their stock distances".
+Issue 194. Takes effect at beta's next compile (B056) and install (C037).
+
 ## How to add an entry
 
 ```markdown

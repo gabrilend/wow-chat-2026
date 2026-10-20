@@ -164,6 +164,9 @@ declare -a EXPECT_beta=(
     "worldserver.conf|vmap.BlizzlikePvPLOS|1"              # stock, the owner's choice
     "worldserver.conf|DBC.EnforceItemAttributes|1"         # stock, the owner's choice
     "worldserver.conf|PlayerLimit|1000"                    # stock: held for a decision (bots count)
+    "worldserver.conf|Visibility.Distance.Continents|333"  # C037, with B056 capping bots (issue 194)
+    "worldserver.conf|Visibility.Distance.Instances|170"   # stock (the owner: instances and BGs keep theirs)
+    "worldserver.conf|Visibility.Distance.BGArenas|250"    # stock
     "worldserver.conf|Rate.Damage.Fall|10.0"               # C004
     "worldserver.conf|Rate.MoveSpeed.Player|0.85"          # C003
     "worldserver.conf|InstantFlightPaths|1"                # C009
