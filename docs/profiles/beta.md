@@ -94,7 +94,8 @@ Lua login hook), B003 (game-object wildcard), B004 (warning fixes), B005
 B007 (more unit methods for Lua), B020 (event removal lock), B022 (runtime
 config folder), B024 (symmetric aggro radius), B026 and B027 (playerbot
 login guards), B056 (a bot sees only as far as the bot module ever looks
-or acts, so players can see 333 yards on the continents; issue 194).
+or acts, on every map, so players can see the server's full 250 yards;
+issue 194).
 `scripts/test-source-patches <project> beta` applies and
 reverts them on a copy in RAM.
 

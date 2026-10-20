@@ -268,7 +268,12 @@ The owner, verbatim, then what was built:
   they can see", read from the bot module's settings, and "BGs and
   instances should have their stock distances". Built: B056 caps a bot's
   reach at the bot module's largest sight-like distance (200 yards with
-  stock settings), and C037 gives beta's continents 333 (issue 194).
+  stock settings), on every map, and C037 gives beta's continents 250,
+  not 333: the server clamps every view distance to 250
+  (`MAX_VISIBILITY_DISTANCE`), so wow-chat-1's 333 was 250 in effect. Then
+  "for battlegrounds and instances we just have 100% view distance for all
+  players and bots, always", bots at their own largest: C039, 250 in
+  instances and battlegrounds on every profile (issue 194).
 - On `vmap.BlizzlikePvPLOS`: "that seems bad". Kept at stock (1):
   battleground objects such as the tree stumps in Warsong Gulch still block
   spells. Why wow-chat-1 turned it off is not written anywhere; a guess is

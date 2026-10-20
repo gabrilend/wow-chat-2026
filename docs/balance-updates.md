@@ -531,6 +531,22 @@ far as the largest range they can see", read from the bot module's
 settings, and "BGs and instances should have their stock distances".
 Issue 194. Takes effect at beta's next compile (B056) and install (C037).
 
+## 2026-10-20 — 250 yards everywhere it is raised; instances and battlegrounds at 250 on every profile (C039); bots capped on every map (B056)
+
+| Knob | Value | Where |
+|---|---|---|
+| `Visibility.Distance.Continents` on beta | 250 (was 333 in the entry above) | `config/patches/C037-beta-wow-chat-1-survival-settings.sh` |
+| `Visibility.Distance.Instances`, `.BGArenas`, basic vanilla release beta cc-test | 250 (stock 170, 250) | `config/patches/C039-instances-and-battlegrounds-see-all.sh` |
+| A bot's reach, every map, every one of those profiles | the bot module's largest sight-like distance | `patches/B056-bots-see-only-as-far-as-they-act.sh` |
+
+Why: the server clamps every view distance to 250 (`MAX_VISIBILITY_DISTANCE`),
+with an error at each start, so 333 was 250 in effect and is written as
+250. The owner, 2026-10-20: "how about for battlegrounds and instances we
+just have 100% view distance for all players and bots, always? ...
+So how about the largest size for them [buddy-bots, stand-ins] in dungeons
+and BGs and instances and such?" Takes effect at each profile's next
+compile (B056) and install (C037, C039).
+
 ## How to add an entry
 
 ```markdown

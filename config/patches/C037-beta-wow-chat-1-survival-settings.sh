@@ -19,8 +19,9 @@
 #     decided), Warden.Enabled
 # Visibility.Distance.Continents 333 was held too (ten times the area to
 # track, for 200 bots as well); taken 2026-10-20 with B056, which keeps a
-# bot's reach to the bot module's own largest distance (issue 194).
-# Instances and battlegrounds keep their stock distances (the owner).
+# bot's reach to the bot module's own largest distance (issue 194), and
+# written as 250, the most the server allows. Instances and battlegrounds
+# are C039's (250 for every profile).
 #   handled elsewhere: Rate.MoveSpeed (C003), Rate.Damage.Fall (C004),
 #     EnableLowLevelRegenBoost (C034), the quest sparkles and map points
 #     (C038, every profile with quests and beta)
@@ -123,8 +124,10 @@ C037_SETTINGS=(
     "ChatFakeMessagePreventing|0"
     "ChatStrictLinkChecking.Severity|-1"
     "Visibility.GroupMode|0"
-    # players see 333 yards on the continents; bots no farther than they act (B056)
-    "Visibility.Distance.Continents|333"
+    # players see as far as the server allows on the continents (wow-chat-1
+    # wrote 333, but the server clamps anything above 250, MAX_VISIBILITY_DISTANCE,
+    # with an error at every start); bots no farther than they act (B056)
+    "Visibility.Distance.Continents|250"
 )
 # }}}
 

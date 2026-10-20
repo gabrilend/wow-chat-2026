@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # B056 - Bots see only as far as they act
-# Issue 194 (beta, 2026-10-20).
+# Issue 194 (2026-10-20): every profile built from source-beta (basic,
+# vanilla, release, beta, cc-test); alpha's older server has other code.
 #
 # For a general audience: the server decides, for every player, how far
 # away it tells that player about creatures and other players (the map's
@@ -29,13 +30,16 @@
 # Where: Player::GetSightRange (src/server/game/Entities/Player/Player.cpp),
 # which the server's visibility updates ask for each player. A bot is a
 # player whose session is headless (WorldSession::IsHeadless, the core's
-# own test, which the Lua engine's IsBot also uses). Only on the
-# continents: on any instanced map (dungeons, raids, battlegrounds, arenas:
-# Map::Instanceable) bots keep the stock distance too (the owner: "BGs and
-# instances should have their stock distances"). That matters: a
-# battleground's stock distance, 250 yards, is above the bots' 200, so a
-# cap there would have shortened them. FindMap, not GetMap: a player
-# between maps has none, and then nothing is capped.
+# own test, which the Lua engine's IsBot also uses; buddies and stand-ins
+# are bots by it too). On every map: the owner, 2026-10-20, "for
+# battlegrounds and instances we just have 100% view distance for all
+# players and bots, always ... buddy-bots probably can't use vast
+# distances, and stand-ins definitely. So how about the largest size for
+# them in dungeons and BGs and instances and such?" So players see the
+# full distance there (C039 sets instances and battlegrounds to 250, the
+# most the server allows, MAX_VISIBILITY_DISTANCE), and bots their own
+# largest. (The first version, the same day, left instanced maps at stock
+# and capped only the continents.)
 #
 # Mechanics: one exact whole-line edit (patches.sh, line_edits_apply /
 # line_edits_revert), tagged "  // B056"; the revert turns back only the
@@ -46,7 +50,7 @@
 B056_EDITS=$(printf '%s\t%s\t%s\n' \
     'src/server/game/Entities/Player/Player.cpp' \
     '    return sightRange;' \
-    '    if (GetSession() && GetSession()->IsHeadless() && FindMap() && !FindMap()->Instanceable()) { static float const botReach = [] { float m = 0.0f; for (auto const& d : std::initializer_list<std::pair<char const*, float>>{ { "AiPlayerbot.SightDistance", 100.0f }, { "AiPlayerbot.ReactDistance", 150.0f }, { "AiPlayerbot.GrindDistance", 75.0f }, { "AiPlayerbot.RpgDistance", 200.0f }, { "AiPlayerbot.SpellDistance", 28.5f }, { "AiPlayerbot.HealDistance", 38.5f }, { "AiPlayerbot.FishingDistance", 40.0f }, { "AiPlayerbot.LootDistance", 15.0f }, { "AiPlayerbot.AggroDistance", 22.0f }, { "AiPlayerbot.FarDistance", 20.0f } }) m = std::max(m, sConfigMgr->GetOption<float>(d.first, d.second, false)); return m; }(); if (sightRange > botReach) sightRange = botReach; } return sightRange;')
+    '    if (GetSession() && GetSession()->IsHeadless()) { static float const botReach = [] { float m = 0.0f; for (auto const& d : std::initializer_list<std::pair<char const*, float>>{ { "AiPlayerbot.SightDistance", 100.0f }, { "AiPlayerbot.ReactDistance", 150.0f }, { "AiPlayerbot.GrindDistance", 75.0f }, { "AiPlayerbot.RpgDistance", 200.0f }, { "AiPlayerbot.SpellDistance", 28.5f }, { "AiPlayerbot.HealDistance", 38.5f }, { "AiPlayerbot.FishingDistance", 40.0f }, { "AiPlayerbot.LootDistance", 15.0f }, { "AiPlayerbot.AggroDistance", 22.0f }, { "AiPlayerbot.FarDistance", 20.0f } }) m = std::max(m, sConfigMgr->GetOption<float>(d.first, d.second, false)); return m; }(); if (sightRange > botReach) sightRange = botReach; } return sightRange;')
 
 # {{{ patch_B056_bots_see_only_as_far_as_they_act
 patch_B056_bots_see_only_as_far_as_they_act() {
