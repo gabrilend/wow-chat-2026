@@ -98,7 +98,9 @@ single line shared by all kinds. A gate is a priority number with an action
 the build takes when it is reached; no patch at or above a gate runs until
 every patch below it has finished and the gate's action is done. Patches of
 the same priority may run at once or in any order. The gates, in a file of
-their own (`patches/gates`), starting from today's stages:
+their own (`patches/gates`), one for each of today's stages, no more (the
+owner, 2026-10-20: "However many sections we have now, that's how many we
+should have with the newly numbered system"):
 
 | gate | action when reached | patches below it |
 |---:|---|---|
