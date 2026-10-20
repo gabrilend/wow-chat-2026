@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# test-beta-two-side-permissions - beta's four cross-faction permissions (issue 193)
+#
+# For a general audience: on beta, trading, mail, the /who list and adding
+# friends across the factions are granted to every account on beta's realm
+# by SQL in the shared accounts database (install steps E062-E065). This
+# checks that the SQL files are what their generator writes; that each names
+# beta's realm as the realm-number patch (C019) sets it, and the right
+# permission; that the install steps put the apply form in place and the
+# revert form back; and, on a scratch copy of the accounts database's
+# default-permissions table (made in the project's MySQL scratch database
+# _smoke_test, the one the project's user may create tables in, and dropped
+# after; never the real table), that applying adds exactly the 16 rows for
+# beta's realm, twice changes nothing, and reverting puts the table back as
+# it was.
+#
+# Usage: scripts/test-beta-two-side-permissions [PROJECT_DIR]
+
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+SRC="${DIR}/sql/beta/db_auth.src"
+WORK="${DIR}/tmp/shared-memory/test-beta-two-side-permissions"
+MYSQL=("${DIR}/mysql/installed-files/bin/mysql" --no-defaults "--socket=${DIR}/mysql/databases/mysql.sock" -uritz -pmenardi)
+SCRATCH_DB="_smoke_test"
+
+fails=0
+checks=0
+check() {
+    checks=$((checks + 1))
+    if eval "$1"; then echo "  ok:   $2"; else echo "  FAIL: $2"; fails=$((fails + 1)); fi
+}
+sql() { "${MYSQL[@]}" -N -e "$1" 2>&1 | grep -v "Using a password"; }
+
+rm -rf "${WORK}"
+mkdir -p "${WORK}"
+
+echo "the files"
+"${DIR}/scripts/generate-beta-two-side-sql" "${DIR}" "${WORK}/generated" > /dev/null
+check 'diff -r "${WORK}/generated" "${SRC}" > /dev/null' "the committed SQL is exactly what the generator writes"
+realm=$(grep -oE "^[[:space:]]*beta\)[[:space:]]*REALM_ID=[0-9]+" "${DIR}/config/patches/C019-realm-id.sh" | grep -oE "[0-9]+$")
+declare -A WANT=([01-two-side-trade]=51 [02-two-side-mail]=27 [03-two-side-who]=28 [04-two-side-friends]=29)
+for stem in "${!WANT[@]}"; do
+    check 'grep -qE "\(0, ${WANT[$stem]}, ${realm}\)" "${SRC}/${stem}.apply.sql" && grep -q "permissionId\` = ${WANT[$stem]} AND \`realmId\` = ${realm};" "${SRC}/${stem}.revert.sql"' \
+          "${stem}: permission ${WANT[$stem]}, beta's realm ${realm} (C019), in both forms"
+done
+
+echo "the install steps"
+(
+    export DIR PROFILE=beta
+    source "${DIR}/patches/E-patches.sh" > /dev/null 2>&1
+    _register_with_updatefetcher() { mkdir -p "$1"; }
+    STAGE="${WORK}/stage"; mkdir -p "${STAGE}/sql/beta"; cp -r "${SRC}" "${STAGE}/sql/beta/"
+    DIR="${STAGE}"
+    patch_E062_beta_two_side_trade > /dev/null && patch_E063_beta_two_side_mail > /dev/null &&
+        patch_E064_beta_two_side_who > /dev/null && patch_E065_beta_two_side_friends > /dev/null || exit 1
+    for f in "${STAGE}"/sql/beta/db_auth/*.sql; do grep -q "_APPLY" "$f" || exit 2; done
+    unpatch_E062_beta_two_side_trade > /dev/null && unpatch_E065_beta_two_side_friends > /dev/null || exit 3
+    grep -q "_REVERT" "${STAGE}/sql/beta/db_auth/01-two-side-trade.sql" && grep -q "_REVERT" "${STAGE}/sql/beta/db_auth/04-two-side-friends.sql" || exit 4
+    grep -q "_APPLY" "${STAGE}/sql/beta/db_auth/02-two-side-mail.sql" || exit 5
+)
+rc=$?
+check '[[ ${rc} -eq 0 ]]' "each step puts its apply form in place, and its undo the revert form, touching only its own file (${rc})"
+
+echo "on a scratch copy of the table"
+sql "CREATE DATABASE IF NOT EXISTS ${SCRATCH_DB};
+     DROP TABLE IF EXISTS ${SCRATCH_DB}.rbac_default_permissions;
+     CREATE TABLE ${SCRATCH_DB}.rbac_default_permissions LIKE acore_auth.rbac_default_permissions;
+     INSERT INTO ${SCRATCH_DB}.rbac_default_permissions SELECT * FROM acore_auth.rbac_default_permissions;"
+before=$(sql "SELECT secId, permissionId, realmId FROM ${SCRATCH_DB}.rbac_default_permissions ORDER BY 1, 2, 3")
+check '[[ -n "${before}" && "${before}" != *ERROR* ]]' "a scratch copy of the default permissions is made ($(echo "${before}" | grep -c .) rows, as in acore_auth)"
+for pass in 1 2; do
+    for f in "${SRC}"/*.apply.sql; do "${MYSQL[@]}" "${SCRATCH_DB}" < "$f" 2>&1 | grep -v "Using a password"; done
+done
+added=$(sql "SELECT COUNT(*) FROM ${SCRATCH_DB}.rbac_default_permissions WHERE realmId = ${realm} AND permissionId IN (27, 28, 29, 51)")
+others=$(sql "SELECT COUNT(*) FROM ${SCRATCH_DB}.rbac_default_permissions WHERE realmId <> ${realm} AND permissionId IN (27, 28, 29, 51)")
+check '[[ "${added}" == "16" && "${others}" == "0" ]]' "applied twice: 16 rows for beta's realm (4 permissions x 4 account levels), none for any other realm (${added}, ${others})"
+for f in "${SRC}"/*.revert.sql; do "${MYSQL[@]}" "${SCRATCH_DB}" < "$f" 2>&1 | grep -v "Using a password"; done
+after=$(sql "SELECT secId, permissionId, realmId FROM ${SCRATCH_DB}.rbac_default_permissions ORDER BY 1, 2, 3")
+check '[[ "${after}" != *ERROR* && "${before}" == "${after}" ]]' "reverted: the table is exactly as before"
+sql "DROP TABLE ${SCRATCH_DB}.rbac_default_permissions;"
+
+rm -rf "${WORK}"
+echo "${checks} checks, ${fails} failed"
+[[ ${fails} -eq 0 ]]

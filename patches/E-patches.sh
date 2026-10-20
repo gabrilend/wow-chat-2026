@@ -3166,3 +3166,62 @@ unpatch_E061_beta_narrator_reading() {
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
+
+# -- {{{ _beta_two_side_step
+# Beta's four cross-faction permissions (issue 193): trading, mail, the /who
+# list and adding friends across the factions are permissions in the
+# accounts database in today's server, not settings. Each of E062-E065
+# grants one to every account level on beta's realm only, through the
+# server's database updater, from SQL that scripts/generate-beta-two-side-sql
+# writes (it reads beta's realm number from C019). The accounts database is
+# shared by every realm (acore_auth, never a per-profile name), so every
+# realm's server reads this folder too and applies the same rows; the realm
+# number in them keeps them beta's. The revert form removes that one
+# permission's rows for beta's realm. Same cp-apply / cp-revert idiom as E061.
+#   $1 = the step (E062), $2 = the files' stem (01-two-side-trade),
+#   $3 = apply or revert
+_beta_two_side_step() {
+    local step="$1" stem="$2" form="$3"
+    local MARK; MARK=$(echo "${form}" | tr '[:lower:]' '[:upper:]')
+    local SQL_FILE="${DIR}/sql/${PROFILE}/db_auth/${stem}.sql"
+    local SRC_FILE="${DIR}/sql/${PROFILE}/db_auth.src/${stem}.${form}.sql"
+
+    [[ ! -f "${SRC_FILE}" ]] && { echo "  [${step}] ${form} source missing: ${SRC_FILE} (scripts/generate-beta-two-side-sql writes it)"; return 1; }
+    mkdir -p "${DIR}/sql/${PROFILE}/db_auth"
+
+    # Register on every run (see E023 for why this comes before the check).
+    _register_with_updatefetcher "${DIR}/sql/${PROFILE}/db_auth" "acore_auth" || return 1
+
+    if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_${step}_${MARK}" "${SQL_FILE}"; then
+        echo "  [${step}] Active file already holds ${form}-form content"
+        return 0
+    fi
+
+    echo "  [${step}] Copying ${form}-form source → ${SQL_FILE}"
+    cp "${SRC_FILE}" "${SQL_FILE}"
+}
+# -- }}}
+
+# -- {{{ patch_E062_beta_two_side_trade
+# Beta: trade with the other faction (permission 51), every account, beta's realm.
+patch_E062_beta_two_side_trade()   { _beta_two_side_step E062 01-two-side-trade apply; }
+unpatch_E062_beta_two_side_trade() { _beta_two_side_step E062 01-two-side-trade revert; }
+# -- }}}
+
+# -- {{{ patch_E063_beta_two_side_mail
+# Beta: mail to the other faction (permission 27), every account, beta's realm.
+patch_E063_beta_two_side_mail()   { _beta_two_side_step E063 02-two-side-mail apply; }
+unpatch_E063_beta_two_side_mail() { _beta_two_side_step E063 02-two-side-mail revert; }
+# -- }}}
+
+# -- {{{ patch_E064_beta_two_side_who
+# Beta: the other faction in the /who list (permission 28), every account, beta's realm.
+patch_E064_beta_two_side_who()   { _beta_two_side_step E064 03-two-side-who apply; }
+unpatch_E064_beta_two_side_who() { _beta_two_side_step E064 03-two-side-who revert; }
+# -- }}}
+
+# -- {{{ patch_E065_beta_two_side_friends
+# Beta: friends of the other faction (permission 29), every account, beta's realm.
+patch_E065_beta_two_side_friends()   { _beta_two_side_step E065 04-two-side-friends apply; }
+unpatch_E065_beta_two_side_friends() { _beta_two_side_step E065 04-two-side-friends revert; }
+# -- }}}

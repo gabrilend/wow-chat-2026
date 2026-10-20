@@ -297,8 +297,11 @@ database (`RBAC_PERM_ALLOW_TWO_SIDE_TRADE`, `..._TWO_SIDE_WHO_LIST`,
 `..._TWO_SIDE_ADD_FRIEND` and the like, checked in `TradeHandler.cpp`,
 `MiscHandler.cpp`, `CharacterHandler.cpp`, `MailHandler.cpp`). The accounts
 database is shared by every realm, but its default-permissions table takes
-a realm number, so they could be granted to beta's realm alone by an
-install step. `CloseIdleConnections` is gone too (idle sessions follow
+a realm number, so they can be granted to beta's realm alone. Decided
+2026-10-20 ("yes, make sure it's one for each of cross-faction trade,
+mail, /who, and friends"): install steps E062-E065, one each, issue 193.
+The emote setting has no permission of its own in today's server.
+`CloseIdleConnections` is gone too (idle sessions follow
 `SocketTimeOutTime` now), and `Rate.MoveSpeed` split into player and
 creature speeds (C003 sets the players').
 

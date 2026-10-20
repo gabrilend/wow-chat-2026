@@ -584,6 +584,7 @@ QUICK_TESTS=(
     test-treasure test-info-files-match-source test-lua-globals test-druid-moonglade
     test-validate-needs-world-up test-watch-compile test-forget-unprefixed-updates
     test-ale-method-names
+    test-beta-two-side-permissions test-make-intuition-copy
 )
 run_quick_tests() {
     local out="${DIR}/tmp/shared-memory/compile-tests"
