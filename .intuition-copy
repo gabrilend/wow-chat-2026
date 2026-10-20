@@ -1,13 +1,12 @@
 made by:        scripts/make-intuition-copy (issue 190)
 source:         /mnt/kaun/wow-chat-2026
-source commit:  52b604a822482d533e35d9fc1672602b679fc05a
-made at:        2026-10-20 11:05:33
-made:           as an update from 24a998144
-files changed:      33 since then
-left out:           10 (explanations)
-stripped:           22 (comments removed)
-copied as is:        0
-deleted:             1
-lines removed:    2066
-bytes:             349 KB before,    229 KB after
-by kind:        lua 5, shell 9, sql 8
+source commit:  0c19c70654147299f63741aef450e831801413fe
+made at:        2026-10-20 11:26:36
+made:           in full (replacing a copy of 52b604a82)
+files:            1486 in the commit
+left out:          872 (explanations)
+stripped:          568 (comments removed)
+copied as is:       46
+lines removed:   39845
+bytes:           29848 KB before,  25027 KB after
+by kind:        c 71, copy 34, hash 15, lua 213, shell 162, sql 107

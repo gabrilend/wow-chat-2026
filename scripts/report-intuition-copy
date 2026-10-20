@@ -50,6 +50,7 @@ for mode, path in listing:gmatch("(%d+) %a+ %x+\t([^\n]+)") do
     local is_link = mode == "120000" or mode == "160000"
     local in_copy = is_link and (os.execute("test -L " .. q(copy_path)) == 0 or os.execute("test -L " .. q(copy_path)) == true)
                     or (not is_link and slurp(copy_path) ~= nil)
+    if path == "CLAUDE.md" then in_copy = false end
     if not in_copy then
         local src = is_link and "" or (slurp(SRC .. "/" .. path) or "")
         local name = path:match("[^/]+$")
@@ -91,7 +92,7 @@ local in_commit = {}
 for path in listing:gmatch("%d+ %a+ %x+\t([^\n]+)") do in_commit[path] = true end
 local only_copy = {}
 for path in sh("cd " .. q(COPY) .. " && find . -path ./.git -prune -o \\( -type f -o -type l \\) -print"):gmatch("%./([^\n]+)") do
-    if not in_commit[path] then only_copy[#only_copy + 1] = path end
+    if not in_commit[path] or path == "CLAUDE.md" then only_copy[#only_copy + 1] = path end
 end
 table.sort(only_copy)
 local where = sh("git -C " .. q(COPY) .. " remote get-url origin 2>/dev/null || true"):gsub("%s+$", "")
