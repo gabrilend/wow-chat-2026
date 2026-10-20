@@ -17,7 +17,7 @@
 -- Writes, for each profile with such commands:
 --   sql/<profile>/db_world.src/34-custom-command-help.apply.sql
 --   sql/<profile>/db_world.src/34-custom-command-help.revert.sql
--- installed by E053 (patches/E-patches.sh).
+-- installed by E053 (patches/E053-custom-command-help.sh).
 --
 -- Usage: scripts/generate-custom-command-help-sql [PROJECT_DIR]
 --------------------------------------------------------------------------------

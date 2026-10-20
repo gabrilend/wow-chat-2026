@@ -28,9 +28,11 @@ TABLE_MADE=false
 cleanup() { rm -rf "${WORK}"; [[ "${TABLE_MADE}" == "true" ]] && ${MYSQL} -e "DROP TABLE IF EXISTS updates" 2>/dev/null; }
 trap cleanup EXIT
 
-# the step under test, lifted out of patches/E-patches.sh as it is
-eval "$(sed -n '/^_forget_unprefixed_updates() {/,/^}/p' "${DIR}/patches/E-patches.sh")"
-declare -F _forget_unprefixed_updates > /dev/null || { echo "FAIL: _forget_unprefixed_updates not found in patches/E-patches.sh"; exit 1; }
+# the step under test, lifted out of patches/E-helpers.sh as it is (the
+# install steps' shared helpers; in patches/E-patches.sh until issue 150's
+# split, 2026-10-20)
+eval "$(sed -n '/^_forget_unprefixed_updates() {/,/^}/p' "${DIR}/patches/E-helpers.sh")"
+declare -F _forget_unprefixed_updates > /dev/null || { echo "FAIL: _forget_unprefixed_updates not found in patches/E-helpers.sh"; exit 1; }
 
 if ${MYSQL} -e "SHOW TABLES LIKE 'updates'" 2>/dev/null | grep -q .; then
     echo "FAIL: _smoke_test already has an updates table; not touching it"; exit 1

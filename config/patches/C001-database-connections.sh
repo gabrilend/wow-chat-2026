@@ -51,7 +51,7 @@ config_database_connections() {
             # playerbots. Until then beta shared release's, so beta's
             # destructive install steps (E012 clears creatures) emptied
             # release's world, and characters crossed between the two.
-            # Must match _profile_db_name in patches/E-patches.sh, which
+            # Must match _profile_db_name in patches/E-helpers.sh, which
             # the install uses to create and seed them;
             # scripts/test-profile-config-gates checks the two agree.
             DB_PORT="3307"

@@ -274,7 +274,7 @@ echo "Expectations: ${pass} passed, ${fail} failed"
 # {{{ check_database_names
 # The databases the servers are told to use (C001) must be the ones the
 # install creates and seeds and the install steps write to
-# (_profile_db_name in patches/E-patches.sh). Two copies of one naming rule:
+# (_profile_db_name in patches/E-helpers.sh). Two copies of one naming rule:
 # until 2026-10-17 both said beta used release's databases, and nothing
 # would have noticed one changing without the other.
 db_fail=0

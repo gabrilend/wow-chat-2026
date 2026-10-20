@@ -169,14 +169,18 @@ do
     end
 end
 -- Patch steps that exist: B in patches/ (".retired" in the name: retired),
--- C in config/patches/, E in patches/E-patches.sh, where a step is written
--- either as a "# E004:" header or only as its functions ("patch_E008_...";
--- read from headers alone, E008 was reported gone while it ran on two
--- profiles).
+-- C in config/patches/, E in patches/ too since 2026-10-20 (one file each,
+-- patches/E0NN-<name>.sh, issue 150). Before that every E step lived in
+-- patches/E-patches.sh, written either as a "# E004:" header or only as its
+-- functions ("patch_E008_..."; read from headers alone, E008 was reported
+-- gone while it ran on two profiles); that file is still read below, for a
+-- checkout from before the split.
 local patchState = {}
 for p in pairs(exists) do
     local b = p:match("^patches/(B%d%d%d%a?)%-[^/]+$")
     if b then patchState[b] = p:find("retired", 1, true) and "retired" or "live" end
+    local e = p:match("^patches/(E%d%d%d%a?)%-[^/]+%.sh$")
+    if e then patchState[e] = "live" end
     local c = p:match("^config/patches/(C%d%d%d%a?)[%-%._]")
     if c then
         patchState[c] = "live"

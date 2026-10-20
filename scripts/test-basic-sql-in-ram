@@ -148,7 +148,7 @@ apply_all() {
     step "E044 named areas' borders and middles"          "${WORLD}" "${B}/db_world.src/27-buddy-area-centres.apply.sql"
     step "E045 beds buddies sleep on"                     "${WORLD}" "${B}/db_world.src/28-buddy-beds.apply.sql"
     step "E046 world bosses respawned by hand"            "${WORLD}" "${B}/db_world.src/29-world-boss-respawn.apply.sql"
-    # E048 is retired and installs its own revert form (E-patches.sh); its
+    # E048 is retired and installs its own revert form (patches/E048-basic-buddy-kit-required-level.sh); its
     # apply file is gone (617r2). Until 2026-10-09 this asked for it.
     step "E048 retired: its saved levels put back"        "${WORLD}" "${B}/db_world.src/30-buddy-kit-required-level.revert.sql"
     step "E050 town circles"                              "${WORLD}" "${B}/db_world.src/31-buddy-town-circles.apply.sql"
@@ -204,7 +204,7 @@ revert_all() {
 # The tables basic's world SQL edits; after the revert they must checksum
 # exactly as before the apply (a revert that restores "nearly" is a failed
 # revert). E008 (vanilla's flight-path removal, shared) has no revert file
-# here (its revert lives inline in E-patches.sh), so it is applied first and
+# here (its revert lives inline in its step file, patches/E0NN-*.sh), so it is applied first and
 # the snapshot is taken after it.
 TOUCHED="creature_template, creature_template_model, creature_model_info, creature_default_trainer, trainer, game_event, game_event_creature, item_template, prospecting_loot_template, dungeon_access_template, dungeon_access_requirements, quest_template, creature, gossip_menu, npc_text, gameobject, pool_template, pool_pool, pool_gameobject, pool_creature, skill_fishing_base_level, fishing_loot_template, trainer_spell, creature_loot_template, reference_loot_template, gameobject_loot_template, item_loot_template, npc_vendor, disables, spell_group"
 echo "Before the snapshot:"

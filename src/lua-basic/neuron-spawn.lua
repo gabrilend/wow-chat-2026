@@ -9,7 +9,7 @@
 -- NOT WIRED TO NEURON YET. neuron's Spawn.script still generates its own
 -- copy of this exact sequence inline, on purpose: ALE's custom script
 -- directory is symlinked strictly per profile
--- (patches/E-patches.sh, patch_E001_lua_script_symlinks -- LUA_SRC is
+-- (patches/E001-lua-script-symlinks.sh, patch_E001_lua_script_symlinks -- LUA_SRC is
 -- src/lua-${PROFILE}, never shared), and this file currently lives only
 -- under lua-basic. The active profile recorded in .profile is "vanilla",
 -- whose own Lua directory does not load this file. Pointing neuron's

@@ -6,10 +6,45 @@
 - Priority: Medium (cleanup; system works without this, but pipeline isn't uniform)
 - Related: 189 (2026-10-20: each patch's header names its profiles and
   priority, read from the folder; the split here is part of that)
-- Still to do as of 2026-10-20: `patches/E-patches.sh` holds 59 steps in
-  about 3,200 lines (the counts below are from 2026-06-03, when it held
-  15); every install step added since went into the same file, and it is
-  where two sessions' work meets most often.
+- State: split 2026-10-20 (the owner: "let's work on this issue file
+  then"); waits on the owner's next install of a profile to see the steps
+  run from their own files (step 5), then completed
+
+## Current Behavior (2026-10-20)
+
+Split by `scripts/split-install-steps` (a one-time tool): the 63 install
+steps are one file each, `patches/E0NN-<name>.sh`, named after their
+functions; the 10 helpers they share (`_register_with_updatefetcher`,
+`_unregister_from_updatefetcher`, `_profile_db_name`, `_mirror_staged_sql`,
+`_sql_install_stamp`, `_forget_unprefixed_updates`, `_shared_sql_src`,
+`_buddy_sql_src`, `_beta_two_side_step`, `apply_config_values`) and the two
+globals (`DIR`, `STAGED_SQL_DIRS`) are in `patches/E-helpers.sh`; and
+`patches/E-patches.sh` is a 17-line loader that sources the helpers and
+then every `E[0-9][0-9][0-9]-*.sh`. It was kept rather than deleted (step 6)
+because `patches/patches.sh` and five tests source it, and the runner
+finds each step's functions by name once loaded, so nothing that loads
+it changed. The tool proved the split changed no code: the old file and
+the loader were each sourced in a clean shell and every function's code
+and both globals compared (2,249 lines of definitions, identical).
+
+Found while splitting: E057's block was written inside E054's (E054's
+closing fold marker sat after E057's); the markers were moved first.
+
+Three scripts read the old file's text and were pointed at the new files:
+`scripts/check-issue-references` (a step is live when its
+`patches/E0NN-*.sh` file exists), `scripts/test-forget-unprefixed-updates`
+(lifts its helper out of `E-helpers.sh`); comments naming the old file for
+a helper or a step now name the new one. Tests run after the split, all
+passing: the profile settings test (three profiles), the SQL mirror, the
+old-names tidy-up, beta's permissions, basic's and beta's SQL in RAM, and
+beta's Lua loading.
+
+Which steps a profile runs, and their order, are still its lists in
+`patches/patches.sh`; issue 189 replaces those with a header in each file.
+
+The split tool is kept for one commit as a record, then renamed
+`scripts/split-install-steps-done` and removed the commit after: it
+refuses to run on the loader, so it has no further use.
 
 ## Overview
 

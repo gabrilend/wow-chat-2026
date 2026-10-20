@@ -246,7 +246,7 @@ end
 --          and outside a quoted string still open from an earlier line;
 --          the first line's "#!" stays
 --   sql:   a line starting "--", outside an open string, except the
---          install steps' "-- MARKER_" lines, which patches/E-patches.sh reads
+--          install steps' "-- MARKER_" lines, which the steps (patches/E0NN-*.sh) read
 --   hash:  a line starting "#" (settings files, Python)
 local function open_quote_after(line, quote, kind)
     -- which quote is still open at the end of the line (nil: none)

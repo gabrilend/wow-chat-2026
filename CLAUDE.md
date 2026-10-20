@@ -31,13 +31,14 @@ files that don't require touching shared files."
   claimed like any other, and the other agents leave those parts of their
   issues undone and say so. These are the files nearly every change
   touches, where the 2026-10-19 merge's conflicts were:
-  `patches/E-patches.sh` (every install step in one file),
-  `patches/patches.sh` (each profile's patch lists), `scripts/compile`
+  `patches/E-helpers.sh` (what the install steps share; until 2026-10-20
+  every install step was in one file, `patches/E-patches.sh`, now one file
+  each, issue 150), `patches/patches.sh` (each profile's patch lists), `scripts/compile`
   (the quick-test list), `scripts/test-profile-config-gates` (the
   expected values), `docs/table-of-contents.md`, `docs/balance-updates.md`,
   `issues/phase-*-progress.md`, and this file.
-- Everything else is mostly one file per behaviour (each `B*` and `C*`
-  patch, most Lua scripts and their tests), so most work can be split by
+- Everything else is mostly one file per behaviour (each `B*`, `C*` and
+  `E*` patch, most Lua scripts and their tests), so most work can be split by
   file without meeting.
 
 ## Project Overview
@@ -140,7 +141,7 @@ One script per command since issue 142 (2026-04-14); the old
 - Databases: `acore_auth` (shared by every realm), and per profile
   `acore_world_<profile>`, `acore_characters_<profile>`,
   `acore_playerbots_<profile>` (the names come from `_profile_db_name` in
-  `patches/E-patches.sh`; issue 136b). Sizes: `du -sh mysql/databases/*`.
+  `patches/E-helpers.sh`; issue 136b). Sizes: `du -sh mysql/databases/*`.
 
 ### Data on more than one disk, and reading in parallel (2026-10-18)
 
@@ -423,7 +424,9 @@ HEAD:
   applied before compile and reverted after.
 - `config/patches/C*.sh` — config-value patches applied to the generated
   `.conf` files at install time, gated per-profile via `CONFIG_PROFILES`.
-- `patches/E-patches.sh` — install-time setup (config init, SQL, symlinks).
+- `patches/E0NN-<name>.sh` — install-time setup (config init, SQL,
+  symlinks), one file per step; `patches/E-helpers.sh` holds what they
+  share, and `patches/E-patches.sh` loads both (issue 150).
 - `patches/patches.sh` — the per-profile patch lists and the runner.
 
 Built with the **`upstream-patch-system` skill** at

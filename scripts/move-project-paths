@@ -151,7 +151,7 @@ end
 -- {{{ the updater's recorded folders
 -- The server's database updater remembers each folder it reads update files
 -- from, by full path, in every database's updates_include table; the install
--- steps record them resolved (patches/E-patches.sh, _register_with_updatefetcher).
+-- steps record them resolved (patches/E-helpers.sh, _register_with_updatefetcher).
 -- After a move the old rows still name the old place, which the links left
 -- there still reach, and the next install records the new place too; the
 -- updater then reads every file twice and the worldserver stops ("Duplicate

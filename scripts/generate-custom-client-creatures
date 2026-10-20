@@ -15,7 +15,7 @@
 -- Usage: scripts/generate-custom-client-creatures [PROJECT_DIR] [--db NAME] [--map ID] [--out DIR]
 --   PROJECT_DIR  default /mnt/kaun/wow-chat-2026
 --   --db NAME    the world database (default: the active profile's, from
---                .profile, named as patches/E-patches.sh's _profile_db_name
+--                .profile, named as patches/E-helpers.sh's _profile_db_name
 --                names it: release and beta acore_world, the others
 --                acore_world_<profile>)
 --   --map ID     the map (default 1, Kalimdor)
@@ -52,7 +52,7 @@ local function profile_db()
     if not f then error("no .profile in " .. DIR .. "; name the database with --db") end
     local profile = f:read("*l"):gsub("%s+", "")
     f:close()
-    -- the project's naming rule (_profile_db_name in patches/E-patches.sh)
+    -- the project's naming rule (_profile_db_name in patches/E-helpers.sh)
     local SUFFIX = { release = "", beta = "_beta", vanilla = "_vanilla", basic = "_basic", ["cc-test"] = "_cc_test", alpha = "_alpha" }
     if not SUFFIX[profile] then error("unknown profile '" .. profile .. "' in .profile; name the database with --db") end
     return "acore_world" .. SUFFIX[profile], profile
