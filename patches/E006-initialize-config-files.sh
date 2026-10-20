@@ -73,12 +73,12 @@ patch_E006_initialize_config_files() {
         done
     fi
 
-    # Apply profile-specific config values (database, paths, gameplay settings)
-    # Temporarily override INSTALL_DIR for config patches
-    local ORIG_INSTALL_DIR="${INSTALL_DIR}"
-    INSTALL_DIR="${TARGET}"
-    apply_config_values
-    INSTALL_DIR="${ORIG_INSTALL_DIR}"
+    # The profile's settings (database, paths, gameplay) are no longer laid
+    # on here: since issue 189c each settings patch (config/patches/C*.sh)
+    # runs in its own turn in the install stage, at priorities above this
+    # step's, so they meet the files this step has just made. (While this
+    # step ran them, a failing settings patch was also lost: this function's
+    # last line was an assignment, which always succeeds.)
 }
 
 unpatch_E006_initialize_config_files() {

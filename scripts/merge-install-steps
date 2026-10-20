@@ -10,9 +10,11 @@
 -- step's apply and undo become parts (_E0NN_<old name>_apply / _revert),
 -- and the one step applies the parts in their old order and undoes them in
 -- reverse. The SQL files the parts copy, and the markers in them, are not
--- touched. Every profile's list in patches/patches.sh that named the old
--- steps names the new one once, where the first stood. The old step files
--- are removed with git (git rm), so their history stays.
+-- touched. The joined step takes the first step's header (its profiles
+-- and priority: since issue 189c the headers are what put a step on a
+-- profile), so it runs where the first ran; the steps must all be taken by
+-- the same profiles, or nothing is written. The old step files are removed
+-- with git (git rm), so their history stays.
 --
 -- Proof that nothing changed: each part's code is compared with the old
 -- step's function it came from (only the name differs); any difference
@@ -35,6 +37,8 @@ local NAME = table.remove(args, 1)
 local IDS = args
 if not NAME or #IDS < 2 then error("usage: merge-install-steps [PROJECT_DIR] NEW-NAME E0AA E0BB [E0CC ...]") end
 local P = DIR .. "/patches/"
+local HERE   = debug.getinfo(1, "S").source:match("^@(.*/)") or "./"
+local Header = dofile(HERE .. "lib/patch-header.lua")
 
 -- {{{ local helpers
 local function slurp(p) local f = io.open(p, "r"); if not f then return nil end local s = f:read("*a"); f:close(); return s end
@@ -68,7 +72,15 @@ for _, id in ipairs(IDS) do
     local base = block:match("patch_" .. id .. "_([%w_]+)%(%)")
     if not base then error("merge-install-steps: no patch_" .. id .. "_<name>() in " .. file) end
     local has_undo = block:find("unpatch_" .. id .. "_" .. base .. "%(%)") ~= nil
-    steps[#steps + 1] = { id = id, file = file, block = block, base = base, has_undo = has_undo }
+    local head = Header.read(file)
+    if head.state ~= "whole" then error("merge-install-steps: " .. file .. " has no whole header (scripts/check-patch-headers)") end
+    steps[#steps + 1] = { id = id, file = file, block = block, base = base, has_undo = has_undo, head = head.fields }
+end
+for i = 2, #steps do
+    if steps[i].head.profiles ~= steps[1].head.profiles then
+        error("merge-install-steps: " .. steps[i].id .. " is taken by \"" .. steps[i].head.profiles .. "\", " ..
+              steps[1].id .. " by \"" .. steps[1].head.profiles .. "\"; only steps taken together can be joined")
+    end
 end
 -- }}}
 
@@ -142,24 +154,12 @@ for _, s in ipairs(steps) do
         if not ok then os.remove(s.file) end
     end
 end
--- the lists: the first id stays, the others go. Only the quoted list on
--- each list line is edited, never the notes after it, which name old
--- steps as history (a first version edited the notes too, 2026-10-20).
-local out = {}
-for line in (slurp(P .. "patches.sh") .. ""):gmatch("([^\n]*)\n") do
-    local pre, list, rest = line:match('^(    %["[%w%-]+"%]=)"([^"]*)"(.*)$')
-    if pre then
-        local kept = {}
-        for id in list:gmatch("%S+") do
-            local drop = false
-            for i = 2, #IDS do if id == IDS[i] then drop = true end end
-            if not drop then kept[#kept + 1] = id end
-        end
-        line = pre .. '"' .. table.concat(kept, " ") .. '"' .. rest
-    end
-    out[#out + 1] = line
-end
-spit(P .. "patches.sh", table.concat(out, "\n") .. "\n")
+-- the first step's header on the joined one: same profiles, same priority
+local h1 = steps[1].head
+local said, ok = run(q(HERE .. "add-patch-header") .. " " .. q(DIR) .. " " .. q(newfile:sub(#DIR + 2)) ..
+                     " --profiles " .. q(h1.profiles) .. " --priority " .. q(h1.priority) ..
+                     " --about " .. q("joined install steps " .. table.concat(ids_text, ", ") .. " (" .. NAME .. ")"))
+if not ok then error("merge-install-steps: joined, but the header could not be written:\n" .. said) end
 print("joined " .. table.concat(ids_text, " ") .. " into " .. newfile:sub(#DIR + 2) ..
-      " (each part's code unchanged); the lists name " .. first .. " alone")
+      " (each part's code unchanged), at " .. first .. "'s priority " .. h1.priority .. " for " .. h1.profiles)
 -- }}}

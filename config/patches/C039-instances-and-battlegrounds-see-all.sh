@@ -43,9 +43,8 @@ config_instances_and_battlegrounds_see_all() {
         return 1
     fi
 }
-CONFIG_PROFILES[config_instances_and_battlegrounds_see_all]="basic vanilla release beta cc-test"
 CONFIG_DESCRIPTIONS[config_instances_and_battlegrounds_see_all]="Instances and battlegrounds seen to 250 yards, the server's most"
 # -- }}}
 # ==== footer of C039 ====
-# lines:      51
+# lines:      50
 # ==== end of footer ====

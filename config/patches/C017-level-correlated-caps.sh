@@ -15,8 +15,8 @@
 #
 # Strategy: read whatever MaxPlayerLevel the .conf currently holds (set
 # upstream by the C006* family) and keep both knobs within it, so
-# the validator passes on first read. The runner (apply_config_values
-# in patches/E-helpers.sh) applies patches in filename order, so C006*
+# the validator passes on first read. The install stage runs settings
+# patches by priority (their headers: C006* at 1125-1140, this at 1200), so C006*
 # runs before C017 and the value parsed here is the profile-correct one.
 # Until 2026-09-29 it applied them in alphabetical function-name order,
 # which ran this patch first and pinned both knobs to the stock 80.
@@ -77,9 +77,8 @@ config_level_correlated_caps() {
     sed -i "s|^StartHeroicPlayerLevel[[:space:]]*=.*|StartHeroicPlayerLevel = ${dk_start}|" "${conf}"
     sed -i "s|^RecruitAFriend\.MaxLevel[[:space:]]*=.*|RecruitAFriend.MaxLevel = ${max_level}|" "${conf}"
 }
-CONFIG_PROFILES[config_level_correlated_caps]="release beta vanilla basic"
 CONFIG_DESCRIPTIONS[config_level_correlated_caps]="Death knights start at 55 (or the cap if lower; beta: 1); RecruitAFriend.MaxLevel pinned to MaxPlayerLevel"
 # -- }}}
 # ==== footer of C017 ====
-# lines:      85
+# lines:      84
 # ==== end of footer ====

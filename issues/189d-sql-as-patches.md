@@ -13,6 +13,10 @@ Install steps copy our SQL into folders registered with the server's
 database updater, renamed `z_` (issue 183) so they sort after upstream's
 by name; the updater records files by name, and `_forget_unprefixed_updates`
 removes the double records a rename leaves.
+Since 189c the runner already plans an SQL stage, between gates 2000 and
+9000 (`patches/gates`; `scripts/plan-patches PROFILE --stage sql`; the
+runner's `PHASE_SQL_PATCHES`), and nothing is in it yet: an SQL patch is
+an install step today, between gates 1000 and 2000.
 
 ## Intended Behavior
 

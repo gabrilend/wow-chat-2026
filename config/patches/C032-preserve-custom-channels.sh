@@ -35,9 +35,8 @@ config_preserve_custom_channels() {
     # key name is greedy and can swallow longer keys sharing the prefix.
     sed -i 's|^PreserveCustomChannels[[:space:]]*=.*|PreserveCustomChannels = 1|' "${conf}"
 }
-CONFIG_PROFILES[config_preserve_custom_channels]="all"
 CONFIG_DESCRIPTIONS[config_preserve_custom_channels]="Keep custom chat channels, so they have ids (neuron's channel)"
 # -- }}}
 # ==== footer of C032 ====
-# lines:      43
+# lines:      42
 # ==== end of footer ====

@@ -9,10 +9,15 @@
 
 ## Current Behavior
 
-The compile's quick tests are a list in `scripts/compile`. The patch
-registry (`docs/patches/patch-registry.md`) and the patch lists on the
-profile pages (`docs/profiles/*.md`) are written by hand, and nothing
-checks them, so they can drift from the patches.
+The compile's quick tests are a list in `scripts/compile`; since 189c
+`scripts/test-patch-plan` checks it names exactly the tests whose headers
+say `quick-test: yes`. The patch registry (`docs/patches/patch-registry.md`)
+and the patch lists on the profile pages (`docs/profiles/*.md`) are written
+by hand, and nothing checks them, so they can drift from the patches; the
+registry already has (it still describes settings gated by
+`CONFIG_PROFILES` lines, which 189c removed: the headers say it now).
+`scripts/plan-patches PROFILE` prints a profile's patches in order, the
+data those pages would be written from.
 
 ## Intended Behavior
 

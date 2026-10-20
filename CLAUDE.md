@@ -423,20 +423,26 @@ HEAD:
 - `patches/B*.sh` — C++/source patches (compile fixes, module behavior),
   applied before compile and reverted after.
 - `config/patches/C*.sh` — config-value patches applied to the generated
-  `.conf` files at install time, gated per-profile via `CONFIG_PROFILES`.
+  `.conf` files at install time, each in its turn among the install steps.
 - `patches/E0NN-<name>.sh` — install-time setup (config init, SQL,
   symlinks), one file per step; `patches/E-helpers.sh` holds what they
   share, and `patches/E-patches.sh` loads both (issue 150).
-- `patches/patches.sh` — the per-profile patch lists and the runner.
+- `patches/patches.sh` — the runner. Each profile's lists are built
+  when it loads, from the patches' headers, by `scripts/plan-patches`
+  (issue 189c); nobody writes them by hand any more (the old lists and
+  their notes: `docs/patches/profile-patch-history.md`).
 
 Every patch and quick test carries a header and footer (issue 189: id,
 profiles, priority, kind, a line about it; the id again and the file's
-line count). **After editing one, run `scripts/check-patch-headers
---fix-lines`**: the footer's line count changes with every edit (that is
-how a file cut short is caught), and the compile's quick tests fail until
-it is mended. A new patch gets its header from `scripts/write-patch-headers`
-once it is on a profile's list (while the lists still drive the build;
-189c moves the build to the headers).
+line count). **The header is what puts a patch on a profile**: its
+profiles (names, a group from `patches/groups`, `all`, `none`) and its
+priority (lowest first; `patches/gates` says where the build's stages
+stand between them) are all the build reads. A new patch gets its header
+from `scripts/add-patch-header FILE --profiles "..."`. **After editing
+one, run `scripts/check-patch-headers --fix-lines`**: the footer's line
+count changes with every edit (that is how a file cut short is caught),
+and the compile's quick tests fail until it is mended.
+`scripts/plan-patches PROFILE` shows what a profile takes, in order.
 
 Built with the **`upstream-patch-system` skill** at
 `/home/ritz/programming/ai-stuff/skills/`. Read it before adding, removing, or

@@ -51,9 +51,8 @@ config_directory_paths() {
     sed -i 's|^MySQLExecutable.*=.*|MySQLExecutable = "'"${MYSQL_DIR}"'/bin/mysql"|' "${conf_auth}"
     sed -i 's|^MySQLExecutable.*=.*|MySQLExecutable = "'"${MYSQL_DIR}"'/bin/mysql"|' "${conf_world}"
 }
-CONFIG_PROFILES[config_directory_paths]="all"
 CONFIG_DESCRIPTIONS[config_directory_paths]="Directory paths (DataDir, LogsDir, Source)"
 # -- }}}
 # ==== footer of C002 ====
-# lines:      59
+# lines:      58
 # ==== end of footer ====

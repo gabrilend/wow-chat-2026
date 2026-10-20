@@ -2,6 +2,8 @@
 # test-source-patches - dry-run a profile's source patches on a RAM copy of
 # the source tree: apply them all, check each one reported success, revert
 # them all, and confirm the copy is byte-identical to where it started.
+# Also that no two patches of one priority change the same file (issue
+# 189c: those may run in either order, so neither may be laid on the other).
 #
 # For a general audience: the project changes the game server's source code
 # with small reversible scripts, applied before each compile and removed
@@ -92,6 +94,28 @@ LIST="${PHASE_BEGIN_PATCHES[${PROFILE}]:-}"
 # }}}
 
 # {{{ apply_each
+# Each patch's changed files are written down as it applies (for the
+# layering check below): the files written since a mark made just before
+# it, kept only where the content really differs from what the file held
+# before this patch (a sed that matched nothing still rewrites its file).
+# What a file held before is its copy in "last/" when an earlier patch
+# changed it, else the pristine one.
+# {{{ changed_by
+# $1 = the patch's id; writes ${WORK}/<id>.changed, one path a line
+changed_by() {
+    local id="$1" rel before
+    : > "${WORK}/${id}.changed"
+    while IFS= read -r rel; do
+        before="${WORK}/last/${rel}"
+        [[ -f "${before}" ]] || before="${WORK}/pristine/${rel}"
+        if ! cmp -s "${before}" "${WORK}/tree/${rel}"; then
+            echo "${rel}" >> "${WORK}/${id}.changed"
+            mkdir -p "$(dirname "${WORK}/last/${rel}")"
+            cp "${WORK}/tree/${rel}" "${WORK}/last/${rel}"
+        fi
+    done < <(find "${WORK}/tree" -type f -newer "${WORK}/${id}.mark" -printf '%P\n')
+}
+# }}}
 failed=0
 echo "Applying: ${LIST}"
 for id in ${LIST}; do
@@ -101,6 +125,7 @@ for id in ${LIST}; do
         failed=$((failed + 1))
         continue
     fi
+    touch "${WORK}/${id}.mark"
     if ${fn} > "${WORK}/${id}.apply.log" 2>&1; then
         echo "  [✓] ${id} applied"
     else
@@ -108,7 +133,39 @@ for id in ${LIST}; do
         sed 's/^/        /' "${WORK}/${id}.apply.log"
         failed=$((failed + 1))
     fi
+    changed_by "${id}"
 done
+# }}}
+
+# {{{ layering
+# Patches of one priority may run in any order (issue 189, the owner:
+# "patches in the same priority number should be able to run at the same
+# time, or in an arbitrary order"). Two that change the same file can't:
+# one is laid over the other, so the later must have the higher priority.
+# The priorities are the headers' (scripts/plan-patches).
+declare -A PRIORITY_OF=()
+while IFS=$'\t' read -r prio _kind pid _file; do
+    PRIORITY_OF["${pid}"]="${prio}"
+done < <("${DIR}/scripts/plan-patches" "${DIR}" "${PROFILE}" --stage source)
+clashes=0
+for a in ${LIST}; do
+    for b in ${LIST}; do
+        [[ "${a}" < "${b}" ]] || continue
+        [[ "${PRIORITY_OF[${a}]:-x}" == "${PRIORITY_OF[${b}]:-y}" ]] || continue
+        both="$(comm -12 <(sort "${WORK}/${a}.changed") <(sort "${WORK}/${b}.changed"))"
+        if [[ -n "${both}" ]]; then
+            echo "  [✗] ${a} and ${b} share priority ${PRIORITY_OF[${a}]} and both change:"
+            echo "${both}" | sed 's/^/        /'
+            echo "      to fix: give the one laid over the other a higher priority (its header)"
+            clashes=$((clashes + 1))
+        fi
+    done
+done
+if [[ ${clashes} -eq 0 ]]; then
+    echo "  [✓] layering: no two patches of one priority change the same file"
+else
+    failed=$((failed + clashes))
+fi
 # }}}
 
 # {{{ revert_each
@@ -131,5 +188,5 @@ fi
 # }}}
 
 echo "Result: ${failed} problem(s). Logs: ${WORK}/"
-rm -rf "${WORK}/pristine" "${WORK}/tree"
+rm -rf "${WORK}/pristine" "${WORK}/tree" "${WORK}/last"
 [[ "${failed}" -eq 0 ]]

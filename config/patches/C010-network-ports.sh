@@ -41,9 +41,8 @@ config_network_ports() {
     # Authserver port (RealmServerPort)
     sed -i 's|^RealmServerPort.*=.*|RealmServerPort = '"${AUTHSERVER_PORT}"'|' "${conf_auth}"
 }
-CONFIG_PROFILES[config_network_ports]="all"
 CONFIG_DESCRIPTIONS[config_network_ports]="Network ports (4362/4462)"
 # -- }}}
 # ==== footer of C010 ====
-# lines:      49
+# lines:      48
 # ==== end of footer ====

@@ -47,9 +47,8 @@ config_vanilla_playerbot_population() {
     sed -i 's|^AiPlayerbot\.MinRandomBots[[:space:]]*=.*|AiPlayerbot.MinRandomBots = '"${BOT_FLOOR}"'|' "${conf}"
     sed -i 's|^AiPlayerbot\.MaxRandomBots[[:space:]]*=.*|AiPlayerbot.MaxRandomBots = '"${BOT_CEIL}"'|' "${conf}"
 }
-CONFIG_PROFILES[config_vanilla_playerbot_population]="vanilla"
 CONFIG_DESCRIPTIONS[config_vanilla_playerbot_population]="Playerbot population band 128–256 active"
 # -- }}}
 # ==== footer of C020 ====
-# lines:      55
+# lines:      54
 # ==== end of footer ====

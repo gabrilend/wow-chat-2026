@@ -45,9 +45,8 @@ config_cc_test_warden_kicks() {
     fi
     sed -i 's|^Warden\.ClientCheckFailAction[[:space:]]*=.*|Warden.ClientCheckFailAction = '"${WARDEN_FAIL_ACTION}"'|' "${conf}"
 }
-CONFIG_PROFILES[config_cc_test_warden_kicks]="cc-test"
 CONFIG_DESCRIPTIONS[config_cc_test_warden_kicks]="Warden failures logged (kicks once the custom client answers Warden)"
 # -- }}}
 # ==== footer of C033 ====
-# lines:      53
+# lines:      52
 # ==== end of footer ====

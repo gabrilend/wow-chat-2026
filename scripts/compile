@@ -585,7 +585,7 @@ QUICK_TESTS=(
     test-validate-needs-world-up test-watch-compile test-forget-unprefixed-updates
     test-ale-method-names
     test-beta-two-side-permissions test-make-intuition-copy test-patch-undo-order test-patch-headers
-    test-patch-headers-match-lists
+    test-patch-plan
 )
 run_quick_tests() {
     local out="${DIR}/tmp/shared-memory/compile-tests"

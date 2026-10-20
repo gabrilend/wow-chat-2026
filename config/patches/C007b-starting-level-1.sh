@@ -16,9 +16,8 @@ config_starting_level_1() {
     local conf="${INSTALL_DIR}/etc/worldserver.conf"
     sed -i 's|^StartPlayerLevel.*=.*|StartPlayerLevel = '"${START_LEVEL}"'|' "${conf}"
 }
-CONFIG_PROFILES[config_starting_level_1]="beta release basic"
 CONFIG_DESCRIPTIONS[config_starting_level_1]="Starting level 1"
 # -- }}}
 # ==== footer of C007b ====
-# lines:      24
+# lines:      23
 # ==== end of footer ====

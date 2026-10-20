@@ -28,9 +28,8 @@ config_basic_honor_uncapped() {
     # anchored with [[:space:]]*= so it can't match MaxHonorPointsMoneyPerPoint
     sed -i 's|^MaxHonorPoints[[:space:]]*=.*|MaxHonorPoints = 2147483647|' "${conf}"
 }
-CONFIG_PROFILES[config_basic_honor_uncapped]="basic"
 CONFIG_DESCRIPTIONS[config_basic_honor_uncapped]="Honor effectively uncapped (glyphs cost more than the stock 75,000)"
 # -- }}}
 # ==== footer of C028 ====
-# lines:      36
+# lines:      35
 # ==== end of footer ====

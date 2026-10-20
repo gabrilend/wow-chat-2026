@@ -18,9 +18,8 @@ config_max_level_60() {
     local conf="${INSTALL_DIR}/etc/worldserver.conf"
     sed -i 's|^MaxPlayerLevel.*=.*|MaxPlayerLevel = '"${MAX_LEVEL}"'|' "${conf}"
 }
-CONFIG_PROFILES[config_max_level_60]="basic"
 CONFIG_DESCRIPTIONS[config_max_level_60]="Max level 60"
 # -- }}}
 # ==== footer of C006d ====
-# lines:      26
+# lines:      25
 # ==== end of footer ====

@@ -18,9 +18,8 @@ config_starting_level_20() {
     local conf="${INSTALL_DIR}/etc/worldserver.conf"
     sed -i 's|^StartPlayerLevel.*=.*|StartPlayerLevel = '"${START_LEVEL}"'|' "${conf}"
 }
-CONFIG_PROFILES[config_starting_level_20]="vanilla"
 CONFIG_DESCRIPTIONS[config_starting_level_20]="Starting level 20"
 # -- }}}
 # ==== footer of C007c ====
-# lines:      26
+# lines:      25
 # ==== end of footer ====

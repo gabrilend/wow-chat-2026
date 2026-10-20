@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-patch-plan
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      the build's order comes from the patches' headers (issue 189c)
+# quick-test: yes
+# ==== end of header ====
+# test-patch-plan - the build's order comes from the patches' headers (issue 189c)
+#
+# For a general audience: since issue 189c nothing lists which patches a
+# profile takes; each patch's header says its profiles and its priority,
+# and the planner (scripts/plan-patches) reads them all and puts them in
+# order. This builds a small pretend project in RAM (three profiles, a group
+# of two, the three gates, and nine pretend patches of every kind, their
+# headers written by scripts/add-patch-header, which is checked on the way)
+# and checks what the planner says: lowest priority first whatever the
+# kind, patches of one priority in id order, each stage between its gates,
+# a group meaning its profiles, a test never in the plan. Then that each
+# fault stops it, naming the file: a profile name that is nothing known, a
+# priority sitting on a gate, a patch with no header, a header cut short.
+# Last, the real project: every profile's plan can be made.
+#
+# Usage: scripts/test-patch-plan [PROJECT_DIR]
+
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+WORK="${DIR}/tmp/shared-memory/test-patch-plan"
+P="${WORK}/p"
+rm -rf "${WORK}"
+mkdir -p "${P}/patches" "${P}/config/patches" "${P}/scripts"
+
+fails=0
+checks=0
+check() {
+    checks=$((checks + 1))
+    if eval "$1"; then echo "  ok:   $2"; else echo "  FAIL: $2"; fails=$((fails + 1)); fi
+}
+
+# {{{ the pretend project
+# the table's name is put together rather than written out, or
+# scripts/test-profile-tables-agree takes this pretend table for one of the
+# real copies of it and finds it disagrees
+table="PROFILE"; table+="_REPO"
+printf '%s\n' "declare -A ${table}=(" '    ["one"]="x"' '    ["two"]="x"' '    ["three"]="x"' ")" > "${P}/scripts/profiles"
+printf '%s\n' "# the pretend group" "pair: one two" > "${P}/patches/groups"
+printf '%s\n' "1000: compile and install" "2000: databases" "9000: the server may start" > "${P}/patches/gates"
+
+# a pretend patch: its "# ID - about" line and a body
+# $1 = path from the project, $2 = id
+pretend() {
+    printf '%s\n' "#!/usr/bin/env bash" "# $2 - pretend patch $2" "true" > "${P}/$1"
+}
+# file | id | profiles | priority ("" for the tool's rule)
+PATCHES=(
+    "patches/B001-a.sh|B001|all|"
+    "patches/B003-b.sh|B003|pair|"
+    "patches/B002-c.sh|B002|three|130"
+    "patches/E006-d.sh|E006|all|1060"
+    "config/patches/C001-e.sh|C001|one|"
+    "config/patches/C002-f.sh|C002|two three|"
+    "patches/E010-g.sh|E010|one|"
+    "patches/E200-h.sh|E200|one|2100"
+)
+echo "headers written by add-patch-header"
+added_ok=1
+for row in "${PATCHES[@]}"; do
+    IFS='|' read -r file id profiles priority <<< "${row}"
+    pretend "${file}" "${id}"
+    args=( "${P}" "${file}" --profiles "${profiles}" )
+    [[ -n "${priority}" ]] && args+=( --priority "${priority}" )
+    "${DIR}/scripts/add-patch-header" "${args[@]}" > "${WORK}/add.log" 2>&1 || { added_ok=0; cat "${WORK}/add.log"; }
+done
+printf '%s\n' "#!/usr/bin/env bash" "# test-x - pretend quick test" "true" > "${P}/scripts/test-x"
+"${DIR}/scripts/add-patch-header" "${P}" scripts/test-x --profiles all --quick-test > "${WORK}/add.log" 2>&1 || added_ok=0
+check '[[ ${added_ok} -eq 1 ]]' "a header for each of the nine"
+check 'grep -qx "# priority:   110" "${P}/patches/B001-a.sh"' "a source patch's priority by the rule (B001: 110)"
+check 'grep -qx "# priority:   1400" "${P}/patches/E010-g.sh"' "an install step's by the rule (E010: 1400)"
+check 'grep -qx "# priority:   1105" "${P}/config/patches/C002-f.sh"' "a settings patch's 5 above the last (C001 1100, C002 1105)"
+check 'grep -qx "# quick-test: yes" "${P}/scripts/test-x"' "a quick test marked so"
+out="$("${DIR}/scripts/add-patch-header" "${P}" patches/B001-a.sh --profiles one 2>&1)"
+check '[[ "${out}" == *"left alone"* ]] && [[ $(grep -c "==== header" "${P}/patches/B001-a.sh") -eq 1 ]]' "a file with a header is left alone"
+printf '%s\n' "x" > "${P}/patches/notapatch.sh"
+check '! "${DIR}/scripts/add-patch-header" "${P}" patches/notapatch.sh --profiles one > /dev/null 2>&1' "a file not named as a patch is refused"
+rm -f "${P}/patches/notapatch.sh"
+check '"${DIR}/scripts/check-patch-headers" "${P}" --quiet > /dev/null 2>&1' "the checker finds every header whole"
+# }}}
+
+# {{{ the plan
+echo "the plan"
+plan() { "${DIR}/scripts/plan-patches" "${P}" "$1" --stage "$2" --ids 2>&1; }
+check '[[ "$(plan one source)"    == "B001 B003" ]]'      "one's source patches: B001 B003 (B003 by the group)"
+check '[[ "$(plan three source)"  == "B001 B002" ]]'      "three's: B001 B002 (not in the group; B002 at 130 on its own priority)"
+check '[[ "$(plan one install)"   == "E006 C001 E010" ]]' "one's install stage: E006 (1060), C001 (1100), E010 (1400), kinds mixed by priority"
+check '[[ "$(plan two install)"   == "E006 C002" ]]'      "two's install stage: E006 C002"
+check '[[ "$(plan one sql)"       == "E200" ]]'           "one's past the second gate: E200 (2100)"
+check '[[ "$(plan two sql)"       == "" ]]'               "two's: nothing"
+check '[[ "$(plan one all)"       == "B001 B003 E006 C001 E010 E200" ]]' "one's whole plan in one order across the gates"
+check '! grep -q "test-x" <<< "$("${DIR}/scripts/plan-patches" "${P}" one)"' "a test is never in the plan"
+# same priority: B002 (given 130) and B003 (130 by the rule), in id order
+# though B003's file was written first
+sed -i 's/^# profiles:   three$/# profiles:   three one/' "${P}/patches/B002-c.sh"
+check '[[ "$(plan one source)" == "B001 B002 B003" ]]' "two patches of one priority, in id order: B001 B002 B003"
+sed -i 's/^# profiles:   three one$/# profiles:   three/' "${P}/patches/B002-c.sh"
+check '[[ "$("${DIR}/scripts/plan-patches" "${P}" --every-profile | grep -c "|")" -eq 9 ]]' "--every-profile: three stages for each of three profiles"
+check '[[ "$("${DIR}/scripts/plan-patches" "${P}" --every-profile | grep "^install|one|")" == "install|one|E006 C001 E010" ]]' "--every-profile's lines are the runner's lists"
+check '! "${DIR}/scripts/plan-patches" "${P}" four > /dev/null 2>&1' "asking for a profile that isn't one is an error"
+# }}}
+
+# {{{ the faults
+echo "faults stop the plan, naming the file"
+fault() {   # $1 = what it says, $2 = the file it names; runs the plan, checks both
+    local said
+    said="$("${DIR}/scripts/plan-patches" "${P}" one 2>&1)" && return 1
+    [[ "${said}" == *"$2"* && "${said}" == *"$1"* ]]
+}
+sed -i 's/^# profiles:   pair$/# profiles:   pair fuor/' "${P}/patches/B003-b.sh"
+check 'fault "is not a profile" "B003-b.sh"' "a misspelt profile name"
+sed -i 's/^# profiles:   pair fuor$/# profiles:   pair/' "${P}/patches/B003-b.sh"
+sed -i 's/^# priority:   1400$/# priority:   2000/' "${P}/patches/E010-g.sh"
+check 'fault "is a gate" "E010-g.sh"' "a priority on a gate"
+sed -i 's/^# priority:   2000$/# priority:   1400/' "${P}/patches/E010-g.sh"
+pretend "patches/B004-new.sh" "B004"
+check 'fault "no header" "B004-new.sh"' "a patch with no header"
+rm -f "${P}/patches/B004-new.sh"
+sed -i '$d' "${P}/patches/B001-a.sh"
+check 'fault "B001-a.sh" "B001-a.sh"' "a header cut short (its footer's last line gone)"
+check '! "${DIR}/scripts/plan-patches" "${P}" two --ids > /dev/null 2>&1' "and then no profile's list at all, rather than one without it"
+# }}}
+
+# {{{ the real project
+echo "the real project"
+check '"${DIR}/scripts/plan-patches" "${DIR}" --every-profile > "${WORK}/real.txt" 2>&1' "every profile's plan can be made from the headers"
+check '[[ $(grep -c "^source|" "${WORK}/real.txt") -eq $(grep -c "^    \[\"" <<< "$(sed -n "/declare -A PROFILE_REPO=(/,/^)/p" "${DIR}/scripts/profiles")") ]]' "one plan for each profile in scripts/profiles"
+# the compile's quick tests are those whose headers say "quick-test: yes"
+# (until issue 189f, the compile still keeps its own list; this keeps the
+# two the same, as test-patch-headers-match-lists did until 189c)
+listed="$(sed -n '/^QUICK_TESTS=(/,/^)/p' "${DIR}/scripts/compile" | grep -o 'test-[a-z0-9-]*' | sort)"
+marked="$(grep -l '^\(#\|--\) quick-test: yes$' "${DIR}"/scripts/test-* | grep -v -- '-done$' | sed 's|.*/||' | sort)"   # a retired test (-done) is not run
+check '[[ "${listed}" == "${marked}" ]]' "the tests marked quick are the compile's list$(diff <(echo "${listed}") <(echo "${marked}") | grep '^[<>]' | sed 's/^</ (listed, not marked:/; s/^>/ (marked, not listed:/; s/$/)/' | tr -d '\n')"
+# }}}
+
+echo "${checks} checks, ${fails} failed"
+[[ ${fails} -eq 0 ]]
+# ==== footer of test-patch-plan ====
+# lines:      148
+# ==== end of footer ====

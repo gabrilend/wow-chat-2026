@@ -158,9 +158,8 @@ config_beta_wow_chat_1_survival_settings() {
         return 1
     fi
 }
-CONFIG_PROFILES[config_beta_wow_chat_1_survival_settings]="beta"
 CONFIG_DESCRIPTIONS[config_beta_wow_chat_1_survival_settings]="wow-chat-1's survival settings (${#C037_SETTINGS[@]} values; docs/wow-chat-1-settings.md)"
 # -- }}}
 # ==== footer of C037 ====
-# lines:      166
+# lines:      165
 # ==== end of footer ====

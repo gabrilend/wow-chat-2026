@@ -23,9 +23,8 @@ config_instant_teleport_beta() {
     fi
     sed -i 's|^InstantFlightPaths[[:space:]]*=.*|InstantFlightPaths = '"${INSTANT_TAXI}"'|' "${conf}"
 }
-CONFIG_PROFILES[config_instant_teleport_beta]="beta"
 CONFIG_DESCRIPTIONS[config_instant_teleport_beta]="Instant taxi travel"
 # -- }}}
 # ==== footer of C009 ====
-# lines:      31
+# lines:      30
 # ==== end of footer ====

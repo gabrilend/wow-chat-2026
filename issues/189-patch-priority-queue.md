@@ -65,14 +65,18 @@ on undo.
 
 ## Current Behavior
 
-Today's build, in order (`scripts/compile`, `patches/patches.sh`):
+Since 189c (2026-10-20) every patch carries a header (189a, 189b) and the
+headers alone say which profiles take it and when it runs:
+`scripts/plan-patches` reads them and the runner (`patches/patches.sh`)
+builds its lists from that; the hand-written lists are gone. Today's
+build, in order (`scripts/compile`, `patches/patches.sh`):
 
-1. the quick tests (a list in `scripts/compile`);
-2. the source patches (`B*`), in the order each profile's list
-   (`PHASE_BEGIN_PATCHES`) writes them;
-3. the compile and the install;
-4. the install steps (`E*`), in list order (`PHASE_END_PATCHES`); E006
-   runs the settings patches (`C*`) inside it, by file name;
+1. the quick tests (still a list in `scripts/compile`, until 189f);
+2. the source patches (`B*`), by priority, below gate 1000;
+3. the compile and the install (gate 1000);
+4. the install-stage patches by priority, between gates 1000 and 2000:
+   install steps (`E*`) and settings patches (`C*`) mixed, the settings
+   each in its own turn after E006 has made the config files;
 5. the source patches undone; since 2026-10-20 last first
    (`_reversed_list`, `scripts/test-patch-undo-order`; until then front to
    back, found by wow-chat-2026-ae for 192), and the install steps' undo
@@ -83,8 +87,8 @@ Today's build, in order (`scripts/compile`, `patches/patches.sh`):
    updater remembers files by name, so a rename leaves two records, which
    `_forget_unprefixed_updates` removes (the symptom, not the cause).
 
-A patch's place is a position in a string, repeated per profile, kept by
-hand.
+Not yet: gate 2000's action (step 6 still happens at the server's start,
+189d) and carried files (189e).
 
 ## Intended Behavior
 

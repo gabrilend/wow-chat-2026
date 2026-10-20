@@ -293,102 +293,74 @@ _buddy_sql_src() {
 }
 # -- }}}
 
+# -- {{{ apply_settings_patch
+# One settings patch (config/patches/C*.sh, issue 119) into the installed
+# server's config files: the install stage runs these at their own
+# priorities since issue 189c (before, E006 ran them all inside itself).
+# The function's name comes from the file's: C006b-max-level-20.sh holds
+# config_max_level_20 (the id and its dash dropped, dashes made underscores).
+# The files were sourced by patches/patches.sh when it loaded.
+# Writes into TARGET_INSTALL_DIR when the build sets it (the shadow install
+# being built) and INSTALL_DIR otherwise, as E006 did for them; the patches
+# themselves read INSTALL_DIR, so it is shadowed here for the call.
+# Prints "[✓] about" or "[✗] about - FAILED"; returns the patch's status.
+#   $1 = the patch's id (C006b)
+apply_settings_patch() {
+    local id="$1" files file func desc
+    files=( "${DIR}/config/patches/${id}-"*.sh )
+    # one file, or the id names nothing (or two files share it): an error,
+    # since the headers said this profile takes it
+    if [[ ${#files[@]} -ne 1 || ! -f "${files[0]}" ]]; then
+        echo "    [✗] ${id} - FAILED: expected one file ${DIR}/config/patches/${id}-*.sh, found ${#files[@]}"
+        return 1
+    fi
+    file="$(basename "${files[0]}" .sh)"
+    func="config_${file#"${id}"-}"
+    func="${func//-/_}"
+    if ! declare -F "${func}" > /dev/null; then
+        echo "    [✗] ${id} - FAILED: ${file}.sh defines no function ${func} (was it sourced? patches/patches.sh does that)"
+        return 1
+    fi
+    desc="${CONFIG_DESCRIPTIONS[$func]:-${func}}"
+    local INSTALL_DIR="${TARGET_INSTALL_DIR:-${INSTALL_DIR}}"
+    if ${func}; then
+        echo "    [✓] ${desc}"
+    else
+        echo "    [✗] ${desc} - FAILED"
+        return 1
+    fi
+}
+# -- }}}
+
 # -- {{{ apply_config_values
-# Apply all config values for current profile (Issue 119)
-# Called after init_config() copies .dist to .conf
-# Sources all config patch files from config/patches/
+# Every settings patch the current profile takes, in the order the build
+# runs them (lowest priority first, from the patches' headers by way of
+# patches/patches.sh's install list), and nothing else. The build itself no
+# longer calls this: apply_patches_end runs each settings patch in its turn
+# among the install steps. scripts/test-profile-config-gates calls it to lay
+# a profile's settings over stock config files, so the test applies exactly
+# the patches, and the order, that an install does.
+# Unlike the build, a failure does not stop the rest: every patch is tried
+# so the report names every failure; the return is 1 if any failed.
+# Needs patches/patches.sh loaded (it builds the lists and sources the files).
 apply_config_values() {
-    # Check if config patches directory exists
-    if [[ ! -d "${DIR}/config/patches" ]]; then
-        echo "  Warning: config/patches/ directory not found, using defaults"
-        return 0
+    if ! declare -p PHASE_END_PATCHES > /dev/null 2>&1; then
+        echo "  ERROR: no install list is loaded (source patches/patches.sh first)"
+        return 1
     fi
-
-    # Declare profile and description mapping arrays
-    declare -A CONFIG_PROFILES
-    declare -A CONFIG_DESCRIPTIONS
-
-    # Load and syntax-check all config patch files
-    echo "  Loading config patches:"
-    local patch_count=0
-    declare -A patches_by_profile
-    # Config functions in the order their files were loaded (C001 first).
-    # Application order matters: C017 reads the MaxPlayerLevel that a
-    # C006* patch writes, so it must run after it. `declare -F` lists
-    # functions alphabetically by name, which put config_level_correlated_caps
-    # (C017) ahead of config_max_level_60 (C006d) -- C017 then read the
-    # stock 80 and pinned StartHeroicPlayerLevel and RecruitAFriend.MaxLevel
-    # to 80, which fail the server's "<= MaxPlayerLevel" check at boot.
-    for patch_file in "${DIR}/config/patches"/C*.sh; do
-        [[ -f "${patch_file}" ]] || continue
-        local patch_name=$(basename "${patch_file}" .sh)
-        source "${patch_file}" || {
-            echo "    [✗] ${patch_name} - syntax error"
-            return 1
-        }
-        # Extract function name from filename (C001-foo-bar -> config_foo_bar)
-        local func_name="config_${patch_name#C[0-9]*-}"
-        func_name="${func_name//-/_}"
-        local profiles="${CONFIG_PROFILES[$func_name]:-?}"
-        # Add patch to each individual profile (expand "alpha release" -> alpha, release)
-        for profile in ${profiles}; do
-            patches_by_profile["${profile}"]+="${patch_name}"$'\n'
-        done
-        ((patch_count++)) || true
-    done
-
-    if [[ ${patch_count} -eq 0 ]]; then
-        echo "    (none found)"
-        return 0
-    fi
-
-    # Output grouped by profile: "all" first, then every profile name some
-    # gate mentions, sorted. This used to be a hard-coded "all alpha beta
-    # release", which silently left vanilla-only (and later basic-only)
-    # patches out of the printed summary even though they were applied.
-    local listed_profiles
-    listed_profiles=$(printf '%s\n' "${!patches_by_profile[@]}" | grep -vx 'all' | sort)
-    for profile in all ${listed_profiles}; do
-        [[ -z "${patches_by_profile[$profile]:-}" ]] && continue
-        echo "    ${profile}:"
-        while IFS= read -r p; do
-            [[ -n "$p" ]] && echo "      $p"
-        done <<< "${patches_by_profile[$profile]}"
-    done
-
-    # Sort every config_ function by the file that defined it, then by its
-    # line in that file. With extdebug on, `declare -F name` answers
-    # "name line file"; the file names carry the C001, C002... order.
-    local config_funcs_in_file_order
-    config_funcs_in_file_order=$(
-        shopt -s extdebug
-        for fn in $(declare -F | sed -n 's/^declare -f \(config_.*\)/\1/p'); do
-            declare -F "${fn}"
-        done | sort -k3,3 -k2,2n | cut -d' ' -f1
-    )
-
     echo "  Applying for profile '${PROFILE}':"
-    local applied_count=0
-    local failed_count=0
-    for func in ${config_funcs_in_file_order}; do
-        local profiles="${CONFIG_PROFILES[$func]:-}"
-        local desc="${CONFIG_DESCRIPTIONS[$func]:-${func}}"
-
-        # Only process patches that apply to this profile
-        if [[ " ${profiles} " =~ " ${PROFILE} " ]] || [[ " ${profiles} " =~ " all " ]]; then
-            if ${func}; then
-                echo "    [✓] ${desc}"
-                ((applied_count++)) || true
-            else
-                echo "    [✗] ${desc} - FAILED"
-                ((failed_count++)) || true
-            fi
+    local id applied_count=0 failed_count=0
+    for id in ${PHASE_END_PATCHES[$PROFILE]:-}; do
+        [[ "${id}" == C* ]] || continue                  # an install step, not a settings patch
+        if apply_settings_patch "${id}"; then
+            ((applied_count++)) || true
+        else
+            ((failed_count++)) || true
         fi
     done
-
     echo "  Applied ${applied_count} config patches"
     if [[ ${failed_count} -gt 0 ]]; then
-        echo "  WARNING: ${failed_count} config patches failed"
+        echo "  ERROR: ${failed_count} config patches failed"
         return 1
     fi
     return 0

@@ -33,9 +33,8 @@ config_basic_death_knight_rules() {
     sed -i 's|^CharacterCreating\.Disabled\.ClassMask[[:space:]]*=.*|CharacterCreating.Disabled.ClassMask = 0|' "${conf_world}"
     sed -i 's|^AiPlayerbot\.DisableDeathKnightLogin[[:space:]]*=.*|AiPlayerbot.DisableDeathKnightLogin = 1|' "${conf_bots}"
 }
-CONFIG_PROFILES[config_basic_death_knight_rules]="basic"
 CONFIG_DESCRIPTIONS[config_basic_death_knight_rules]="Death knights: need a level-55 character; no DK bots"
 # -- }}}
 # ==== footer of C024 ====
-# lines:      41
+# lines:      40
 # ==== end of footer ====

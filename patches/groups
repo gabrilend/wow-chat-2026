@@ -4,8 +4,8 @@
 # When several profiles take the same set of patches, the set gets a name
 # here, and those patches say the name; adding a profile to the set is then
 # one line, here, instead of one in every patch's header. Read by
-# scripts/write-patch-headers (which writes the name when a patch's
-# profiles are exactly a group) and, from issue 189c, by the patch runner.
+# scripts/plan-patches, which the patch runner asks for each profile's
+# patches (issue 189c), so a name here reaches the build at once.
 #
 # One group a line: "name: profile profile ...". Lines starting with "#"
 # and blank lines are ignored.

@@ -19,9 +19,8 @@ config_fall_damage_10x() {
     local conf="${INSTALL_DIR}/etc/worldserver.conf"
     sed -i 's|^Rate\.Damage\.Fall.*=.*|Rate.Damage.Fall = '"${FALL_DAMAGE_MULTIPLIER}"'|' "${conf}"
 }
-CONFIG_PROFILES[config_fall_damage_10x]="beta release vanilla basic"
 CONFIG_DESCRIPTIONS[config_fall_damage_10x]="Fall damage 10x (careful movement)"
 # -- }}}
 # ==== footer of C004 ====
-# lines:      27
+# lines:      26
 # ==== end of footer ====

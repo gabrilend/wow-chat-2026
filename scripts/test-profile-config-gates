@@ -241,7 +241,10 @@ export PROFILE DIR
 # alphabetical function-name order; the copy passed and the install still
 # wrote StartHeroicPlayerLevel = 80 (C017 ran before C006d). Calling the
 # runner itself means the order tested is the order installed.
-source "${DIR}/patches/E-patches.sh" || { echo "ERROR: patches/E-patches.sh failed to source"; exit 1; }
+# patches.sh rather than E-patches.sh alone (issue 189c): it builds the
+# profiles' lists from the patches' headers, and the settings patches are
+# run from that list, so the test gets the install's set and order.
+source "${DIR}/patches/patches.sh" || { echo "ERROR: patches/patches.sh failed to source"; exit 1; }
 failed=0
 apply_config_values > "${SCRATCH}/apply-config-values.log" 2>&1 || failed=1
 # Only the applying half of the runner's report; its listing of every
@@ -331,5 +334,5 @@ echo "Edited keys missing from stock configs: ${missing}"
 
 [[ "${failed}" -eq 0 && "${fail}" -eq 0 && "${missing}" -eq 0 && "${db_fail}" -eq 0 ]]
 # ==== footer of test-profile-config-gates ====
-# lines:      335
+# lines:      338
 # ==== end of footer ====

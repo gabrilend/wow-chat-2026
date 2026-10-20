@@ -55,9 +55,8 @@ config_run_speed_80_percent() {
     fi
     sed -i "s|^${key_re}[[:space:]]*=.*|${key} = ${RUN_SPEED}|" "${conf}"
 }
-CONFIG_PROFILES[config_run_speed_80_percent]="release beta vanilla basic alpha"
 CONFIG_DESCRIPTIONS[config_run_speed_80_percent]="Run speed 85% (slower exploration)"
 # -- }}}
 # ==== footer of C003 ====
-# lines:      63
+# lines:      62
 # ==== end of footer ====

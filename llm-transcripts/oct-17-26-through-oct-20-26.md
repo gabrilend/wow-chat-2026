@@ -1,6 +1,6 @@
 # Conversation Summary: 90bf80e4-2922-4058-918c-551568e85c2a
 
-Generated on: 2026-10-20 13:22:49
+Generated on: 2026-10-20 13:53:27
 Models: claude-opus-5-5
 
 ## Contents
@@ -63,6 +63,10 @@ Models: claude-opus-5-5
     every patch carries a header with its priority and runs through gates (issue
     189); the header reader is built. Next is your answer on merging the four
     step groups, then headers on every patch.
+15. 2026-10-20 13:25, after Request 71 - We're moving the project's patches to
+    one header-driven system that runs by priority through gates; every patch
+    now carries its header. Next I'll build the runner that reads those headers
+    instead of the lists, then you compile once to confirm.
 
 --------------------------------------------------------------------------------
 
@@ -11043,6 +11047,89 @@ lists, run patches by priority through the gates, and add the same-file layering
 check. The lists go away then. It changes how your compile runs, so it gets
 tested on pretend patches first. You'll compile once to confirm the build
 reports the same patches as before. I'm still holding the shared files for it.
+
+--------------------------------------------------------------------------------
+
+### User Request 72
+
+<pasted_content id="ee2b">
+> Bots would stay at their 200 whatever the new limit is. Two questions are open
+> there:
+>   1. How far: wow-chat-1's 333, or as far as the game client itself draws?
+> 2. Should those raids and dungeons keep their shorter distances (the server's
+> writers probably set them for crowded fights), or see the full distance like
+> everywhere else?
+</pasted_content id="ee2b">
+
+
+we won't know until we have performance demand details. So, just leave it as a
+knob we can turn for performance benefits, maybe add a worldserver.conf setting
+for it or something...?
+
+> - 189b, headers on every patch: a tool wrote a header and footer into 189
+> files: 41 source patches, 55 install steps, 41 settings patches and every
+> quick test. Each says its
+>     profiles and priority; written a second time, nothing changes.
+
+what are the odds that issue 189 has 189 files written...
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 72
+
+> Building that knob now: a source patch that turns the fixed 250 into a
+> `worldserver.conf` setting, 250 by default, so nothing changes until someone
+> turns it. It needs a few lines of new code, more than the one-line edits the
+> last patch used, so first a look at how existing patches add a block:
+
+> Returning early skips only the overrides, so it's safe. Writing B057:
+
+> Adding B057 to the five profiles' source-patch lists, giving it its header,
+> then testing that it applies and reverts cleanly on each profile:
+
+> The gate wants the write paths written out in full:
+
+> The gate wants literal destinations, so one `cp --parents` with the folder
+> written out:
+
+> Applied to all four (Map.cpp uses the other setting's name, so this count
+> misses it). Compiling the patched header in a small program that turns the
+> setting up:
+
+> The patched header compiles, and the limit follows the setting: 250 at start,
+> 400 once set, and a 300 setting is no longer clamped. Updating issue 195 and
+> committing:
+
+*[commit] f7e7c96f3 in wow-chat-2026 - The server's 250-yard view limit, and the instances' forced distances, become settings*
+
+The view limit is now a knob, as you asked. A new source patch, B057, on every
+profile built from today's server, adds two `worldserver.conf` settings:
+
+- **`Visibility.Distance.Max`, 250 by default:** the most any view distance may
+  be (the number that used to be fixed in the code). Raising it lets the
+  continent, instance and battleground distances go higher. It also loads more
+  of the map around each player to match, which is the performance cost to
+  watch.
+- **`Visibility.Distance.InstanceOverrides`, 1 by default:** with 1, the
+  dungeons and raids that force their own distance keep it, as stock does: 150
+  to 200 in several of the later raids and dungeons, 300 in Ahn'Qiraj's temple.
+  With 0, every instance uses the normal instance setting.
+
+Both start at today's behaviour, so nothing changes until one is turned. Bots
+stay at their own 200 whatever the limit is.
+
+It hasn't been compiled. B057 applies and reverts cleanly on all five profiles.
+I also applied it to a copy in memory and compiled the patched part: the limit
+follows the setting (250 at start, 400 once set, and a 300 distance is no longer
+cut down). Issue 195 stays open until it's compiled and measured.
+
+**The 189 files:** pure coincidence. The writer counted 41 source patches, 55
+install steps, 41 settings patches and 52 quick tests, and it happened to come
+to 189 in issue 189. It didn't last long: B057 got its header just now, so it's
+190.
+
+Next is 189c, the runner that reads the headers and runs patches through the
+gates.
 
 --------------------------------------------------------------------------------
 

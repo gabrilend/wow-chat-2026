@@ -1,0 +1,127 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- add-patch-header - put the header and footer on a new patch (issue 189c)
+--
+-- For a general audience: since issue 189c a patch's header is the only
+-- place that says which profiles take it and when it runs; the build reads
+-- nothing else. A new patch file therefore needs its header before the build
+-- will run it. This writes one, the same shape every patch has (issue 189),
+-- from what the file's name and folder already say and what is given here:
+--
+--   id        from the file name (B058, E066, C040, or a test's name)
+--   kind      from the folder: patches/B* source, patches/E* install,
+--             config/patches/C* settings, scripts/test-* test
+--   priority  given, or the rule the numbering follows (patches/gates):
+--             source 100 + 10 x number, install 1300 + 10 x number,
+--             settings 5 above the highest settings patch now, test 10
+--   profiles  given (profile names, groups from patches/groups, all, none)
+--   about     given, or the file's own "# ID - ..." line
+--
+-- A file that already has a whole header is left alone (mend a header by
+-- editing it, then scripts/check-patch-headers --fix-lines); a broken one is
+-- an error. The result is checked by reading it back, and by
+-- scripts/plan-patches, which refuses a profile name that is nothing known.
+--
+-- Usage: scripts/add-patch-header [PROJECT_DIR] FILE --profiles "NAMES"
+--                                 [--priority N] [--about "TEXT"] [--quick-test]
+--   FILE is relative to PROJECT_DIR (patches/B058-something.sh).
+--------------------------------------------------------------------------------
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+local FILE, PROFILES, PRIORITY, ABOUT, QUICK
+do
+    local pos, i = {}, 1
+    while i <= #arg do
+        local a = arg[i]
+        if     a == "--profiles"   then i = i + 1; PROFILES = arg[i]
+        elseif a == "--priority"   then i = i + 1; PRIORITY = tonumber(arg[i])
+        elseif a == "--about"      then i = i + 1; ABOUT    = arg[i]
+        elseif a == "--quick-test" then QUICK = true
+        else pos[#pos + 1] = a end
+        i = i + 1
+    end
+    if #pos == 2 then DIR, FILE = pos[1], pos[2] else FILE = pos[1] end
+end
+local HERE   = debug.getinfo(1, "S").source:match("^@(.*/)") or "./"
+local Header = dofile(HERE .. "lib/patch-header.lua")
+local function die(msg) io.stderr:write("add-patch-header: " .. msg .. "\n"); os.exit(1) end
+if not FILE or not PROFILES then
+    die("usage: add-patch-header [PROJECT_DIR] FILE --profiles \"NAMES\" [--priority N] [--about \"TEXT\"] [--quick-test]")
+end
+
+-- {{{ local helpers
+local function slurp(p) local f = io.open(p, "rb"); if not f then return nil end local s = f:read("*a"); f:close(); return s end
+local function spit(p, s) local f = assert(io.open(p, "wb")); f:write(s); f:close() end
+local function q(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
+-- }}}
+
+-- {{{ what the name and folder say
+-- one row per kind of patch: where it lives, how its id is read from the
+-- name, and its priority when none is given
+local KINDS = {
+    { kind = "source",   pattern = "^patches/(B%d%d%d)%-[^/]+%.sh$",
+      priority = function(id) return 100 + 10 * tonumber(id:sub(2)) end },
+    { kind = "install",  pattern = "^patches/(E%d%d%d)%-[^/]+%.sh$",
+      priority = function(id) return 1300 + 10 * tonumber(id:sub(2)) end },
+    { kind = "settings", pattern = "^config/patches/(C%d%d%d%a?)%-[^/]+%.sh$",
+      priority = function()
+          -- the settings run in the order they were added: 5 above the last
+          local top = 1095
+          local h = io.popen("ls -1 " .. q(DIR .. "/config/patches") .. " 2>/dev/null")
+          for name in h:lines() do
+              local r = name:match("^C%d") and Header.read(DIR .. "/config/patches/" .. name)
+              local p = r and r.state == "whole" and tonumber(r.fields.priority)
+              if p and p > top then top = p end
+          end
+          h:close()
+          return top + 5
+      end },
+    { kind = "test",     pattern = "^scripts/(test%-[%w%-]+)$",
+      priority = function() return 10 end },
+}
+local entry
+for _, k in ipairs(KINDS) do
+    local id = FILE:match(k.pattern)
+    if id then entry = { kind = k.kind, id = id, priority = PRIORITY or k.priority(id) } end
+end
+if not entry then
+    die(FILE .. " is not where a patch lives (patches/B###-*.sh, patches/E###-*.sh, config/patches/C###-*.sh, scripts/test-*)")
+end
+-- }}}
+
+-- {{{ write it
+local full = DIR .. "/" .. FILE
+local text = slurp(full) or die("no file " .. full)
+local r = Header.parse(text)
+if r.state == "whole"  then print(FILE .. " has a header already; left alone") os.exit(0) end
+if r.state == "broken" then die(FILE .. " has a broken header; mend or remove it first:\n  " .. table.concat(r.problems, "\n  ")) end
+
+local c = text:match("^#![^\n]*lua") and "--" or "#"
+local about = ABOUT or text:match("\n" .. (c == "--" and "%-%-" or "#") .. " " .. entry.id:gsub("%-", "%%-") .. " %- ([^\n]+)")
+if not about then die("no --about given, and " .. FILE .. " has no \"" .. c .. " " .. entry.id .. " - ...\" line to take it from") end
+about = about:gsub("%s+", " ")
+
+local fields = {
+    c .. " id:         " .. entry.id,
+    c .. " profiles:   " .. PROFILES,
+    c .. " priority:   " .. entry.priority,
+    c .. " kind:       " .. entry.kind,
+    c .. " about:      " .. about,
+}
+if QUICK then fields[#fields + 1] = c .. " quick-test: yes" end
+local header = { c .. " ==== header: " .. (#fields + 2) .. " lines, footer: 3 lines ====" }
+for _, f in ipairs(fields) do header[#header + 1] = f end
+header[#header + 1] = c .. " ==== end of header ===="
+
+if text:sub(-1) ~= "\n" then text = text .. "\n" end
+local shebang, rest = text:match("^(#![^\n]*\n)(.*)$")
+local new = (shebang or "") .. table.concat(header, "\n") .. "\n" .. (shebang and rest or text) ..
+            c .. " ==== footer of " .. entry.id .. " ====\n" .. c .. " lines:      0\n" .. c .. " ==== end of footer ====\n"
+local count = select(2, new:gsub("\n", "\n"))
+new = new:gsub("\n" .. c:gsub("%-", "%%-") .. " lines:      0\n", "\n" .. c .. " lines:      " .. count .. "\n")
+spit(full, new)
+
+local back = Header.read(full)
+if back.state ~= "whole" then die("wrote " .. FILE .. " but it does not read back whole:\n  " .. table.concat(back.problems or {}, "\n  ")) end
+print(string.format("%s: %s, %s, priority %d, profiles %s", FILE, entry.id, entry.kind, entry.priority, PROFILES))
+-- }}}

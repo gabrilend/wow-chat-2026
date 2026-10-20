@@ -41,9 +41,8 @@ config_basic_buddies_no_login_invite() {
         printf '\n# C030 (basic, 617c2): no group invite at a buddy'"'"'s login (switch added by B037)\n%s = %s\n' "${key}" "${val}" >> "${conf}"
     fi
 }
-CONFIG_PROFILES[config_basic_buddies_no_login_invite]="basic cc-test"
 CONFIG_DESCRIPTIONS[config_basic_buddies_no_login_invite]="No group invite at a buddy's login: buddies are grouped by distance (switch from B037)"
 # -- }}}
 # ==== footer of C030 ====
-# lines:      49
+# lines:      48
 # ==== end of footer ====
