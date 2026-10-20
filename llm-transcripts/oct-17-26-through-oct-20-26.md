@@ -1,6 +1,6 @@
 # Conversation Summary: 90bf80e4-2922-4058-918c-551568e85c2a
 
-Generated on: 2026-10-20 12:07:22
+Generated on: 2026-10-20 13:09:29
 Models: claude-opus-5-5
 
 ## Contents
@@ -59,6 +59,10 @@ Models: claude-opus-5-5
     install steps are now split one per file and the copy is just a branch, and
     the header system (issue 189) is next. To start it, I need your answers to
     its questions about priority numbering.
+14. 2026-10-20 12:10, after Request 69 - We're rebuilding the patch system so
+    every patch carries a header with its priority and runs through gates (issue
+    189); the header reader is built. Next is your answer on merging the four
+    step groups, then headers on every patch.
 
 --------------------------------------------------------------------------------
 
@@ -10723,6 +10727,199 @@ Questions:
    delete_repo`, then I'll delete it.
 
 Next is 189b, writing a header into every patch from today's lists.
+
+--------------------------------------------------------------------------------
+
+### User Request 70
+
+<pasted_content id="ee2b">
+>   The 63 install steps, by kind:
+> - Every server's setup (3): Lua links (E001), the log folder (E004), the
+> config files (E006).
+> - Vanilla's starting experience (8): start towns, no flight paths, the starter
+> kit and its level cap, pretrained abilities, no intro cinematic, riding at
+> 40/60, starting
+>     professions.
+> - Beta (15): death knights from level 1 and their outfit, the creatures
+> removed, trainers' lessons, class selectors, empty chests, a bot-module
+> database fix, the narrators' books
+>     and reading table, Moonglade, and the four cross-faction permissions.
+> - Basic (36): each tied to its own issue. Outland's dungeons, gear, levels,
+> quests and tradeskills; the gem and socket stages; legendaries; world bosses;
+> Acherus and Sargobras; the
+>     buddies' tables and maps.
+</pasted_content id="ee2b">
+
+
+okay these seem reasonable. I'm surprised that basic's included there, you gave
+the impression that it was just for "initial patches" meaning the first patches
+we made for the project. But this makes more sense now. So, we have one unified
+format for all patches now?
+
+
+
+<pasted_content id="ee2b">
+>   Merge candidates, groups that look like they always go together:
+>   - World boss respawns: E046 (the list) and E047 (the countdowns).
+> - The death knight story at Acherus: E040 (Sargobras at the gate), E041 (the
+> soul ledger), E051 (the reward vendors).
+> - The gem stages of issue 155p: E033 (supply), E034 (jewelcrafters), E035
+> (sockets).
+>   - Vanilla's starter kit: E009 (the kit) and E018 (its level cap).
+</pasted_content id="ee2b">
+
+
+sure that's fine I guess. We can split them later if we need to.
+
+> GitHub: I created it on 2026-10-20 with gh repo create, right after you said
+> "sure we can do a github repository". The gh tool on this computer is signed
+> in as gabrilend, so it can
+>   make repositories but not delete them.
+
+neat
+
+
+
+<pasted_content id="ee2b">
+>   Bot sight (issue 194): the source patch is B056, on beta's list.
+> - Bots: capped on the continents at the largest distance the bot module ever
+> looks or acts. It's read from the bot module's own settings, so it can't
+> drift; with stock settings
+>     that's 200 yards, its role-play wandering range.
+  - Players: beta's continents give them 333.
+> - Other maps: battlegrounds, dungeons, raids and arenas keep stock distances
+> for everyone. Writing it up caught a mistake in my first version: a
+> battleground's stock distance is
+>     250, so a cap there would have shortened bots' sight.
+> - Checked: the new line compiles and behaves correctly against stand-ins;
+> beta's source patches apply and revert to an identical tree; the settings test
+> passes.
+</pasted_content id="ee2b">
+
+
+how about for battlegrounds and instances we just have 100% view distance for
+all players and bots, always? That way we can see distant stuff happening. Makes
+it more immersive I think. Though, buddy-bots probably can't use vast distances,
+and stand-ins definitely. So how about the largest size for them in dungeons and
+BGs and instances and such?
+
+> - Your gate design is the core of the rewrite: one number line for every kind
+> of patch, gates where the build does its stage work, the same number free to
+> run together, undo exactly
+>     reversed. The gates I've proposed are 1000 (compile and install), 2000 (databases brought to upstream's state), and 9000 (the server may start).
+
+sure. However many sections we have now, that's how many we should have with the
+newly numbered system.
+
+> 3. For deleting the old repository, type ! gh auth refresh -h github.com -s
+> delete_repo, then I'll delete it.
+
+I already deleted it from the website.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 70
+
+> Taking these in order: answer the format question, do the merges and
+> deletions, then change bot sight for battlegrounds and instances. First, two
+> facts I need: whether E048's undo has already run on basic, and the largest
+> view distance the server allows.
+
+> Every one of the ten has an undo, and the ids appear only in vanilla's and
+> basic's lists. Running the four merges:
+
+> Merged, and the lists are right. The tool edited the lists by pattern, so
+> checking it changed only the lists themselves, not the notes after them:
+
+> The old files are gone and the four joined ones are in place. Checking the
+> notes after each list are byte-for-byte unchanged:
+
+> Restored; only the two list strings differ now. Fixing the tool so it can't do
+> that again: it will edit only the quoted list on each list line.
+
+> Fixed: the new edit leaves every note alone, and E047 survives in the history
+> text. Now E005 and E048. Checking that E048's undo is already in place on
+> basic:
+
+> The beta SQL test and C017 mention E005 only as history. Basic's SQL test
+> reads E048's *undo SQL* directly, so those SQL files stay; only the step goes.
+> Checking what E005 uses, before deleting both:
+
+> All pass. Updating issue 150's count (63 steps are now 57) and committing the
+> merges and deletions:
+
+> 55 now: 63, minus 6 joined into others, minus 2 deleted.
+
+*[commit] b03abc1a8 in wow-chat-2026 - Install steps that always go together are joined, and two dead ones are deleted*
+
+> Updating beta's settings patch notes and the test's expected sight values:
+
+> B056 is now on all five lists. Rerunning the stand-in check for the new rule
+> (a bot in a battleground now capped too), then source patches and settings for
+> every profile:
+
+> Most of issue 194 has changed, so I'm rewriting it whole (it's this session's
+> file):
+
+*[commit] fbfd672bd in wow-chat-2026 - Instances and battlegrounds are seen to the server's full 250 yards, and every bot sees only as far as it acts*
+
+> Recording your answer on the number of gates in issue 189:
+
+*[commit] cb4a5e15f in wow-chat-2026 - The priority plan keeps one gate per stage the build has today*
+
+Done and committed: the merges, the view-distance change, and your answer on the
+gates. Nothing here is compiled or installed yet.
+
+**One unified format?** Not yet. The format is designed (issue 189a), and the
+reader that checks it is built and tested, but no patch carries a header so far.
+The next step, 189b, writes a header into every patch and quick test from
+today's lists. After that comes the runner that reads them (189c).
+
+About "basic": it's the name of one profile, the levels 1–60 server, not "the
+first patches". Its 36 install steps are the changes that make that server what
+it is.
+
+**The merges are done.** The four groups are joined into single steps: vanilla's
+starter kit; basic's gems and sockets; the death knight story at Acherus; the
+world bosses. E005 and E048 are deleted, so 55 steps remain. A small reusable
+tool did the joins (`scripts/merge-install-steps`): each old step became a part
+inside the joined file, with its code unchanged, which the tool proved. Each
+part can be copied back out if you want to split them later.
+
+One mistake was caught before committing: the tool's first version also deleted
+the old step numbers from the history notes beside the lists. I restored the
+notes, and the tool now edits only the lists themselves. Every test that loads
+the steps passes.
+
+**View distance:**
+- **The server's maximum is 250 yards.** It clamps anything larger and logs an
+  error at every start, so wow-chat-1's 333 was really 250. Beta's continents
+  now say 250.
+- **Battlegrounds and instances are 250 for everyone**, on every profile built
+  from today's server: basic, vanilla, release, beta and cc-test. That's the
+  stock 170 raised in dungeons and raids, and the already-stock 250 in
+  battlegrounds, now written down.
+- **Bots, buddies and stand-ins** are capped on every map at the bot module's
+  own largest distance, 200 yards with stock settings. To the server, all three
+  are bots.
+- **Alpha** is left out, because its older server has different code.
+- **Checked:**
+  - against stand-ins, a bot is capped at 200 in a battleground and on a
+    continent, and a player keeps the full distance;
+  - every profile's source patches apply and revert cleanly;
+  - the settings test passes for basic, beta and cc-test (vanilla and release
+    have no table in it, a gap older than this).
+
+Seeing past 250 would mean raising the server's limit itself: a separate source
+patch, with more of the world loaded around every player.
+
+**The gates:** written into 189 as one gate per stage the build has today, no
+more.
+
+**The old copy repository:** noted that you deleted it on the website.
+
+Next is 189b, headers on every patch. I'm still holding the shared files for it,
+and the other session (econ, issue 192) is waiting on that work.
 
 --------------------------------------------------------------------------------
 
