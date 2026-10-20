@@ -112,51 +112,54 @@ lowest priority first, each line its header's own (`scripts/plan-patches beta`).
 
 **After the compile and install (install steps and settings, mixed by priority):**
 
-| priority | id    | kind     | about                                                                                  |
-| -------: | ----- | -------- | -------------------------------------------------------------------------------------- |
-|     1010 | E001  | install  | Create symlinks from install dir to the profile-specific Lua source                    |
-|     1040 | E004  | install  | Create RAM-backed log directory symlink                                                |
-|     1060 | E006  | install  | Initialize config files (.dist -> .conf) and apply profile-specific values             |
-|     1100 | C001  | settings | Database Connections                                                                   |
-|     1105 | C002  | settings | Directory Paths                                                                        |
-|     1110 | C003  | settings | Run Speed 85% (named for its first value, 80%)                                         |
-|     1115 | C004  | settings | Fall Damage 10x                                                                        |
-|     1130 | C006b | settings | Max Level 20 (Beta/Release)                                                            |
-|     1150 | C007b | settings | Starting Level 1 (Beta/Release/Basic)                                                  |
-|     1160 | C008  | settings | GM Login State                                                                         |
-|     1165 | C009  | settings | Instant Teleport (Beta)                                                                |
-|     1170 | C010  | settings | Network Ports                                                                          |
-|     1175 | C011  | settings | Realmlist Setup                                                                        |
-|     1180 | C012  | settings | Playerbot Level Cap (Beta/Release)                                                     |
-|     1195 | C016  | settings | Missing server config keys                                                             |
-|     1200 | C017  | settings | Level-correlated caps                                                                  |
-|     1210 | C019  | settings | RealmID per profile                                                                    |
-|     1220 | C021  | settings | SOAP Loopback Console (remote command channel for local scripts)                       |
-|     1240 | C025  | settings | Client cache version follows the profile's content (issue 160)                         |
-|     1275 | C032  | settings | Preserve Custom Channels (so a script can tell one channel from another)               |
-|     1285 | C034  | settings | No Faster Healing Below Level 15, on Every Server                                      |
-|     1290 | C035  | settings | Beta Playerbot Population (200 random bots)                                            |
-|     1295 | C036  | settings | Beta: Death Knights for Everyone                                                       |
-|     1300 | C037  | settings | Beta: wow-chat-1's Survival Settings                                                   |
-|     1305 | C038  | settings | No Quest Sparkles, Object Quest Marks or Map Points                                    |
-|     1310 | C039  | settings | Instances and Battlegrounds: See as Far as the Server Allows                           |
-|     1410 | E011  | install  | Death Knight class system for beta profile (issue 206/167). Wires DK                   |
-|     1420 | E012  | install  | Removes all creature spawns except critters and spirit healers                         |
-|     1430 | E013  | install  | Adds quest-learned class abilities to the class trainers' lists (issue                 |
-|     1440 | E014  | install  | Caps each travelling class trainer to the top of its level slice (issue                |
-|     1450 | E015  | install  | Race-specific selector NPCs for the custom class selection system                      |
-|     1460 | E016  | install  | Custom gameobject templates for empty-loot treasure chests (issue                      |
-|     1470 | E017  | install  | Fixes upstream mod-playerbots migration ordering bug (the                              |
-|     1880 | E058  | install  | Beta's death knights start at level 1 (issue 206), but the game hands                  |
-|     1890 | E059  | install  | The narrators' books (issue 909): every book on the shelf                              |
-|     1900 | E060  | install  | Each druid's way back from Moonglade, and the visitors they brought there              |
-|     1910 | E061  | install  | Where each narrator is in its book (issue 910a): one row per narrator bot,             |
-|     1920 | E062  | install  | Beta: trade with the other faction (permission 51), every account, beta's realm.       |
-|     1930 | E063  | install  | Beta: mail to the other faction (permission 27), every account, beta's realm.          |
-|     1940 | E064  | install  | Beta: the other faction in the /who list (permission 28), every account, beta's realm. |
-|     1950 | E065  | install  | Beta: friends of the other faction (permission 29), every account, beta's realm.       |
+| priority | id    | kind     | about                                                                      |
+| -------: | ----- | -------- | -------------------------------------------------------------------------- |
+|     1010 | E001  | install  | Create symlinks from install dir to the profile-specific Lua source        |
+|     1040 | E004  | install  | Create RAM-backed log directory symlink                                    |
+|     1060 | E006  | install  | Initialize config files (.dist -> .conf) and apply profile-specific values |
+|     1100 | C001  | settings | Database Connections                                                       |
+|     1105 | C002  | settings | Directory Paths                                                            |
+|     1110 | C003  | settings | Run Speed 85% (named for its first value, 80%)                             |
+|     1115 | C004  | settings | Fall Damage 10x                                                            |
+|     1130 | C006b | settings | Max Level 20 (Beta/Release)                                                |
+|     1150 | C007b | settings | Starting Level 1 (Beta/Release/Basic)                                      |
+|     1160 | C008  | settings | GM Login State                                                             |
+|     1165 | C009  | settings | Instant Teleport (Beta)                                                    |
+|     1170 | C010  | settings | Network Ports                                                              |
+|     1175 | C011  | settings | Realmlist Setup                                                            |
+|     1180 | C012  | settings | Playerbot Level Cap (Beta/Release)                                         |
+|     1195 | C016  | settings | Missing server config keys                                                 |
+|     1200 | C017  | settings | Level-correlated caps                                                      |
+|     1210 | C019  | settings | RealmID per profile                                                        |
+|     1220 | C021  | settings | SOAP Loopback Console (remote command channel for local scripts)           |
+|     1240 | C025  | settings | Client cache version follows the profile's content (issue 160)             |
+|     1275 | C032  | settings | Preserve Custom Channels (so a script can tell one channel from another)   |
+|     1285 | C034  | settings | No Faster Healing Below Level 15, on Every Server                          |
+|     1290 | C035  | settings | Beta Playerbot Population (200 random bots)                                |
+|     1295 | C036  | settings | Beta: Death Knights for Everyone                                           |
+|     1300 | C037  | settings | Beta: wow-chat-1's Survival Settings                                       |
+|     1305 | C038  | settings | No Quest Sparkles, Object Quest Marks or Map Points                        |
+|     1310 | C039  | settings | Instances and Battlegrounds: See as Far as the Server Allows               |
+|     1890 | E059  | install  | The narrators' books (issue 909): every book on the shelf                  |
 
-**After the databases are brought to upstream's state (our SQL):** none.
+**After the databases are brought to upstream's state (our SQL):**
+
+| priority | id   | kind | about                                                                                  |
+| -------: | ---- | ---- | -------------------------------------------------------------------------------------- |
+|     2410 | E011 | sql  | Death Knight class system for beta profile (issue 206/167). Wires DK                   |
+|     2420 | E012 | sql  | Removes all creature spawns except critters and spirit healers                         |
+|     2430 | E013 | sql  | Adds quest-learned class abilities to the class trainers' lists (issue                 |
+|     2440 | E014 | sql  | Caps each travelling class trainer to the top of its level slice (issue                |
+|     2450 | E015 | sql  | Race-specific selector NPCs for the custom class selection system                      |
+|     2460 | E016 | sql  | Custom gameobject templates for empty-loot treasure chests (issue                      |
+|     2470 | E017 | sql  | Fixes upstream mod-playerbots migration ordering bug (the                              |
+|     2880 | E058 | sql  | Beta's death knights start at level 1 (issue 206), but the game hands                  |
+|     2900 | E060 | sql  | Each druid's way back from Moonglade, and the visitors they brought there              |
+|     2910 | E061 | sql  | Where each narrator is in its book (issue 910a): one row per narrator bot,             |
+|     2920 | E062 | sql  | Beta: trade with the other faction (permission 51), every account, beta's realm.       |
+|     2930 | E063 | sql  | Beta: mail to the other faction (permission 27), every account, beta's realm.          |
+|     2940 | E064 | sql  | Beta: the other faction in the /who list (permission 28), every account, beta's realm. |
+|     2950 | E065 | sql  | Beta: friends of the other faction (permission 29), every account, beta's realm.       |
 <!-- patch-lists: end -->
 
 `scripts/test-source-patches <project> beta` applies and reverts the

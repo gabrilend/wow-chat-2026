@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E017
 # profiles:   beta
-# priority:   1470
-# kind:       install
+# priority:   2470
+# kind:       sql
 # about:      Fixes upstream mod-playerbots migration ordering bug (the
 # ==== end of header ====
 # E017-beta-relocate-logout-texts.sh - one install step, loaded by patches/E-patches.sh

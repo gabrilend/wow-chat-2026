@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E012
 # profiles:   beta
-# priority:   1420
-# kind:       install
+# priority:   2420
+# kind:       sql
 # about:      Removes all creature spawns except critters and spirit healers
 # ==== end of header ====
 # E012-beta-drop-creatures-keep-essential.sh - one install step, loaded by patches/E-patches.sh

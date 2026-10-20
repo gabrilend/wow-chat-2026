@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E054
 # profiles:   basic
-# priority:   1840
-# kind:       install
+# priority:   2840
+# kind:       sql
 # about:      The game's legendaries as level-60 raid drops (issue 182): level-60 copies
 # ==== end of header ====
 # E054-basic-legendaries.sh - one install step, loaded by patches/E-patches.sh

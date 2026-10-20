@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E009
 # profiles:   vanilla
-# priority:   1390
-# kind:       install
+# priority:   2390
+# kind:       sql
 # about:      Apply vanilla profile's class-specific starting equipment kit
 # ==== end of header ====
 # E009-vanilla-starter-kit.sh - one install step, loaded by patches/E-patches.sh.

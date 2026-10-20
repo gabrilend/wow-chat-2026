@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E011
 # profiles:   beta
-# priority:   1410
-# kind:       install
+# priority:   2410
+# kind:       sql
 # about:      Death Knight class system for beta profile (issue 206/167). Wires DK
 # ==== end of header ====
 # E011-beta-dk-class-system.sh - one install step, loaded by patches/E-patches.sh

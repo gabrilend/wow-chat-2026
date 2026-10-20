@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E045
 # profiles:   buddy-set
-# priority:   1750
-# kind:       install
+# priority:   2750
+# kind:       sql
 # about:      The beds buddies sleep on in towns (issue 617e4), placed by hand in game
 # ==== end of header ====
 # E045-basic-buddy-beds.sh - one install step, loaded by patches/E-patches.sh

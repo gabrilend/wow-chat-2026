@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E021
 # profiles:   vanilla
-# priority:   1510
-# kind:       install
+# priority:   2510
+# kind:       sql
 # about:      Grant every level-20 vanilla character a gathering + a production profession
 # ==== end of header ====
 # E021-vanilla-starting-professions.sh - one install step, loaded by patches/E-patches.sh

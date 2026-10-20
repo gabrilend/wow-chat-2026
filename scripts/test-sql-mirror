@@ -7,17 +7,19 @@
 # about:      checks that the project's SQL reaches the core's updater
 # quick-test: yes
 # ==== end of header ====
-# test-sql-mirror - checks that the project's SQL reaches the core's updater
-# after upstream's, and runs again after a pin move (issue 183).
+# test-sql-mirror - checks that the project's SQL reaches the core's updater,
+# and runs again after a pin move (issues 183, 189d).
 #
-# For a general audience: the install steps write our SQL into staging
-# folders; one finishing step copies each file into the folder the server's
-# updater scans, renamed so it sorts after every upstream update and with a
-# first line naming the source commits it was installed against. This
-# checks that copy on a small made-up folder, with a throwaway git history
+# For a general audience: the SQL steps write our SQL into staging folders;
+# one finishing step copies each file into the folder the server's updater
+# scans, under its own name, with a first line naming the source commits it
+# was installed against. (Upstream's updates come first by time: the build
+# starts the server once before our SQL is placed, issue 189d. Until then
+# the copies were renamed z_<name> to sort after upstream's.) This checks
+# that copy on a small made-up folder, with a throwaway git history
 # standing in for the server's source, and no server or database at all:
-#   - every staged file is mirrored as z_<name>, the stamp first;
-#   - z_ names sort after a dated upstream name, and keep our own order;
+#   - every staged file is mirrored under its own name, the stamp first;
+#   - a z_ copy left from before 189d is removed;
 #   - a second run with nothing changed writes nothing;
 #   - a new commit (a pin move) changes every mirrored file;
 #   - a staged file removed is removed from the mirror.
@@ -43,25 +45,26 @@ source "${DIR}/patches/E-patches.sh" || { echo "FAILED: patches/E-patches.sh did
 AC_CODE_DIR="${WORK}/core"
 STAGED_SQL_DIRS=( ["${WORK}/staging"]="none" )
 TWIN="${WORK}/staging.updater"
+_forget_z_prefixed_updates() { :; }     # the database half; test-forget-z-prefixed-updates checks it
+mkdir -p "${TWIN}"
+printf 'old\n' > "${TWIN}/z_04-roster.sql"               # a copy from before issue 189d
 
 out="$(_mirror_staged_sql)"
-check "first run: three written (${out##*: })" "$([[ "${out}" == *"3 written, 0 unchanged, 0 removed"* ]] && echo yes || echo no)"
-check "each mirrored as z_<name>" "$([[ -f "${TWIN}/z_04-roster.sql" && -f "${TWIN}/z_08-gating.sql" && -f "${TWIN}/z_36-subareas.sql" ]] && echo yes || echo no)"
-first="$(head -1 "${TWIN}/z_04-roster.sql")"
+check "first run: three written, the old z_ copy removed (${out##*: })" "$([[ "${out}" == *"3 written, 0 unchanged, 1 removed"* ]] && echo yes || echo no)"
+check "each mirrored under its own name" "$([[ -f "${TWIN}/04-roster.sql" && -f "${TWIN}/08-gating.sql" && -f "${TWIN}/36-subareas.sql" ]] && echo yes || echo no)"
+check "no z_ copy left" "$(ls "${TWIN}"/z_* > /dev/null 2>&1 && echo no || echo yes)"
+first="$(head -1 "${TWIN}/04-roster.sql")"
 check "the stamp first, naming the core's commit" "$([[ "${first}" == "-- installed against core=$(git -C "${WORK}/core" rev-parse --short=12 HEAD)"* ]] && echo yes || echo no)"
-check "the file after the stamp, unchanged" "$([[ "$(tail -n +2 "${TWIN}/z_36-subareas.sql")" == "SELECT 2;" ]] && echo yes || echo no)"
-order="$(printf '%s\n' 2026_10_09_00.sql z_04-roster.sql z_36-subareas.sql 2026_07_19_00.sql z_08-gating.sql | LC_ALL=C sort | tr '\n' ' ')"
-check "sorted by name, upstream's dated files first, ours in their own order (${order% })" \
-    "$([[ "${order}" == "2026_07_19_00.sql 2026_10_09_00.sql z_04-roster.sql z_08-gating.sql z_36-subareas.sql " ]] && echo yes || echo no)"
+check "the file after the stamp, unchanged" "$([[ "$(tail -n +2 "${TWIN}/36-subareas.sql")" == "SELECT 2;" ]] && echo yes || echo no)"
 
 out="$(_mirror_staged_sql)"
 check "second run, nothing changed: nothing written" "$([[ "${out}" == *"0 written, 3 unchanged, 0 removed"* ]] && echo yes || echo no)"
 
-before="$(sha1sum "${TWIN}"/z_*.sql | cut -d' ' -f1 | tr '\n' ' ')"
+before="$(sha1sum "${TWIN}"/*.sql | cut -d' ' -f1 | tr '\n' ' ')"
 git -C "${WORK}/core" -c user.email=t@t -c user.name=t commit -q --allow-empty -m two
 unset SQL_INSTALL_STAMP                                  # a new install run
 out="$(_mirror_staged_sql)"
-after="$(sha1sum "${TWIN}"/z_*.sql | cut -d' ' -f1 | tr '\n' ' ')"
+after="$(sha1sum "${TWIN}"/*.sql | cut -d' ' -f1 | tr '\n' ' ')"
 same=0
 for h in ${before}; do [[ " ${after}" == *" ${h} "* ]] && same=$((same + 1)); done
 check "a pin move rewrites every mirrored file, so each hash changes (${out##*: })" \
@@ -69,11 +72,11 @@ check "a pin move rewrites every mirrored file, so each hash changes (${out##*: 
 
 rm "${WORK}/staging/08-gating.sql"
 out="$(_mirror_staged_sql)"
-check "a staged file removed leaves the mirror too" "$([[ "${out}" == *"1 removed"* && ! -f "${TWIN}/z_08-gating.sql" ]] && echo yes || echo no)"
+check "a staged file removed leaves the mirror too" "$([[ "${out}" == *"1 removed"* && ! -f "${TWIN}/08-gating.sql" ]] && echo yes || echo no)"
 
 rm -rf "${WORK}"
 echo ""
 if [[ ${fails} -eq 0 ]]; then echo "All 8 checks passed"; else echo "${fails} of 8 checks failed"; exit 1; fi
 # ==== footer of test-sql-mirror ====
-# lines:      79
+# lines:      82
 # ==== end of footer ====

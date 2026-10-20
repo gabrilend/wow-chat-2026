@@ -56,9 +56,12 @@ _register_with_updatefetcher() {
 
     # Issue 183: the folder the steps write is staging; the updater scans
     # its twin, <folder>.updater/, which _mirror_staged_sql fills at the end
-    # of the install steps with every file renamed z_<name> (after every
-    # upstream update) and stamped with the commits it was installed
-    # against (so a pin move runs it again). Remembered here for the mirror.
+    # of the SQL stage with every file under its own name, stamped with the
+    # commits it was installed against (so a pin move runs it again).
+    # Remembered here for the mirror. (Until issue 189d the copies were
+    # renamed z_<name>, to sort after every upstream update; since, the
+    # build's gate 2000 starts the server once before our SQL is placed, so
+    # upstream's are applied first by time, not by name.)
     local STAGING="${DIR_PATH}"
     STAGED_SQL_DIRS["${STAGING}"]="${DB}"
     DIR_PATH="${STAGING}.updater"
@@ -126,10 +129,12 @@ _sql_install_stamp() {
 
 # -- {{{ _mirror_staged_sql
 # Every staging folder the steps registered this run, mirrored into the twin
-# the updater scans (issue 183): each staged foo.sql as z_foo.sql, the stamp
-# first, the file after it, written only when it differs; a twin file whose
-# staged one is gone is removed. Run at the end of the install steps (and of
-# their reverts), so it sees whatever they wrote.
+# the updater scans (issue 183): each staged foo.sql under its own name, the
+# stamp first, the file after it, written only when it differs; a twin file
+# whose staged one is gone is removed (so are the z_ copies of before issue
+# 189d, whose staged files never had that name). Run at the end of the SQL
+# stage (and of its reverts), so it sees whatever the steps wrote; the
+# server's next start, the build's validation, applies them.
 _mirror_staged_sql() {
     local staging twin stamp f name wrote=0 kept=0 removed=0
     stamp="$(_sql_install_stamp)"
@@ -138,7 +143,7 @@ _mirror_staged_sql() {
         mkdir -p "${twin}"
         for f in "${staging}"/*.sql; do
             [[ -f "${f}" ]] || continue
-            name="z_$(basename "${f}")"
+            name="$(basename "${f}")"
             if [[ -f "${twin}/${name}" ]] && cmp -s <(echo "${stamp}"; cat "${f}") "${twin}/${name}"; then
                 kept=$((kept + 1))
             else
@@ -146,50 +151,57 @@ _mirror_staged_sql() {
                 wrote=$((wrote + 1))
             fi
         done
-        for f in "${twin}"/z_*.sql; do
+        for f in "${twin}"/*.sql; do
             [[ -f "${f}" ]] || continue
-            [[ -f "${staging}/$(basename "${f}" | sed 's/^z_//')" ]] && continue
+            [[ -f "${staging}/$(basename "${f}")" ]] && continue
             rm "${f}"
             removed=$((removed + 1))
         done
-        _forget_unprefixed_updates "${staging}" "${STAGED_SQL_DIRS[${staging}]}"
+        _forget_z_prefixed_updates "${staging}" "${STAGED_SQL_DIRS[${staging}]}" || return 1
     done
     echo "  SQL for the updater (issue 183): ${wrote} written, ${kept} unchanged, ${removed} removed, in ${#STAGED_SQL_DIRS[@]} folders"
 }
 # -- }}}
 
-# -- {{{ _forget_unprefixed_updates
-# Before issue 183 the updater read the staging folders themselves, so the
-# database recorded each file by its own name (04-buddy-roster.sql); since,
-# it reads the twin and records z_04-buddy-roster.sql. The old record stays,
-# and at every start the server warns that the file "was applied to the
-# database, but is missing in your update directory now" (35 such warnings
-# on basic, 2026-10-18; a warning is an error by the house rules). This
-# removes, from the folder's database, the record of each of THIS folder's
-# files under its old name, and only where its z_ record is there too: the
-# file is still recorded as applied, once, under the name the updater now
-# uses, so nothing runs again. Upstream's records are never named here.
-#   staging  path    a staging folder (its *.sql are the names to forget)
+# -- {{{ _forget_z_prefixed_updates
+# The switch-over from issue 183's z_ names (issue 189d; the owner chose it
+# to happen on the next install by itself). From 183 to 189d the updater
+# read each file as z_<name> and recorded it so; since 189d it reads the
+# file under its own name. A z_ record left behind would make the server
+# warn at every start that a file it applied "is missing in your update
+# directory now" (a warning is an error by the house rules), so this
+# forgets, from the folder's database, the z_ record of each of THIS
+# folder's files. The file is then applied once more under its own name at
+# the next start (every one of our files is written to be safe to run
+# again; a pin move has always run them all again). Upstream's records are
+# never named here (none of them is z_ plus one of our names). Once the
+# switch is done there is nothing left to forget, and it says nothing.
+# (It replaced _forget_unprefixed_updates, which did the reverse for 183's
+# own switch: it forgot the old plain names where a z_ record stood.)
+#   staging  path    a staging folder (its *.sql are the names)
 #   db       string  the database its updater rows live in
-_forget_unprefixed_updates() {
+_forget_z_prefixed_updates() {
     local staging=$1 db=$2
     local MYSQL_DIR="${DIR}/mysql/installed-files"
     local MYSQL_SOCKET="${DIR}/mysql/databases/mysql.sock"
     local names="" f
     for f in "${staging}"/*.sql; do
         [[ -f "${f}" ]] || continue
-        names+="${names:+,}'$(basename "${f}")'"
+        names+="${names:+,}'z_$(basename "${f}")'"
     done
     [[ -n "${names}" ]] || return 0
+    # MySQL down: an error, not a notice. The SQL stage comes after gate
+    # 2000, where the server has just started against these databases, so
+    # MySQL is up unless something broke in between.
     if [[ ! -S "${MYSQL_SOCKET}" ]]; then
-        echo "    NOTICE: MySQL not running: old update names in ${db} not tidied (the next install will)"
-        return 0
+        echo "    ERROR: MySQL is not running, so the z_ records in ${db} could not be forgotten (${staging#${DIR}/})"
+        return 1
     fi
     local gone
     gone="$("${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" -u ritz -pmenardi -N "${db}" -e \
-        "DELETE o FROM updates o JOIN updates z ON z.name = CONCAT('z_', o.name) WHERE o.name IN (${names}); SELECT ROW_COUNT();" 2>/dev/null)" ||
-        { echo "    ERROR: could not tidy the old update names in ${db} (${staging#${DIR}/})"; return 1; }
-    [[ "${gone}" == "0" ]] || echo "    ${db}: ${gone} old update name(s) forgotten (their z_ records stay)"
+        "DELETE FROM updates WHERE name IN (${names}); SELECT ROW_COUNT();" 2> >(grep -v "Using a password on the command line" >&2))" ||
+        { echo "    ERROR: could not forget the z_ update records in ${db} (${staging#${DIR}/})"; return 1; }
+    [[ "${gone}" == "0" ]] || echo "    ${db}: ${gone} z_ update record(s) forgotten; those files apply again under their own names at the next start (issue 189d)"
 }
 # -- }}}
 

@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E032
 # profiles:   basic
-# priority:   1620
-# kind:       install
+# priority:   2620
+# kind:       sql
 # about:      Outland world levels (issue 155k): Outland's open-world monsters +4, the
 # ==== end of header ====
 # E032-basic-outland-world-levels.sh - one install step, loaded by patches/E-patches.sh

@@ -84,6 +84,9 @@ check '[[ "${out}" == *"left alone"* ]] && [[ $(grep -c "==== header" "${P}/patc
 printf '%s\n' "x" > "${P}/patches/notapatch.sh"
 check '! "${DIR}/scripts/add-patch-header" "${P}" patches/notapatch.sh --profiles one > /dev/null 2>&1' "a file not named as a patch is refused"
 rm -f "${P}/patches/notapatch.sh"
+pretend "patches/E030-s.sh" "E030"
+"${DIR}/scripts/add-patch-header" "${P}" patches/E030-s.sh --profiles none --kind sql > /dev/null 2>&1
+check 'grep -qx "# kind:       sql" "${P}/patches/E030-s.sh" && grep -qx "# priority:   2600" "${P}/patches/E030-s.sh"' "an SQL step (--kind sql) after gate 2000 by the rule (E030: 2600)"
 check '"${DIR}/scripts/check-patch-headers" "${P}" --quiet > /dev/null 2>&1' "the checker finds every header whole"
 # }}}
 
@@ -143,10 +146,26 @@ check '[[ -n "${gathered}" && "${gathered}" == "${marked}" ]]' "the quick tests 
 not_runnable=""
 while IFS= read -r t; do [[ -x "${DIR}/scripts/${t}" ]] || not_runnable+=" ${t}"; done <<< "${gathered}"
 check '[[ -z "${not_runnable}" ]]' "each can be run${not_runnable:+ (not:${not_runnable})}"
+# our SQL comes after gate 2000 (issue 189d): every step that hands SQL to
+# the server's updater (it calls the registering helper, or the two-side
+# helper that does) is kind sql at a priority between 2000 and 8999, and
+# every kind-sql patch is there; one left in the install stage would have
+# its SQL placed before the gate's start, and applied with upstream's
+misplaced=""
+for f in "${DIR}"/patches/E[0-9][0-9][0-9]-*.sh; do
+    hands_sql=no
+    grep -vE '^\s*#' "${f}" | grep -qE '_register_with_updatefetcher |_beta_two_side_step ' && hands_sql=yes
+    prio="$(sed -n 's/^# priority: *//p' "${f}" | head -1)"
+    kind="$(sed -n 's/^# kind: *//p' "${f}" | head -1)"
+    in_stage=no
+    [[ "${kind}" == "sql" && "${prio}" -ge 2000 && "${prio}" -lt 9000 ]] && in_stage=yes
+    [[ "${hands_sql}" == "${in_stage}" ]] || misplaced+=" ${f##*/}"
+done
+check '[[ -z "${misplaced}" ]]' "every step handing SQL to the updater is in the SQL stage, and only those${misplaced:+ (not:${misplaced})}"
 # }}}
 
 echo "${checks} checks, ${fails} failed"
 [[ ${fails} -eq 0 ]]
 # ==== footer of test-patch-plan ====
-# lines:      152
+# lines:      171
 # ==== end of footer ====

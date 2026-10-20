@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E028
 # profiles:   basic
-# priority:   1580
-# kind:       install
+# priority:   2580
+# kind:       sql
 # about:      Outland without quests (issue 155l): every Outland, Shattrath, Isle and
 # ==== end of header ====
 # E028-basic-outland-without-quests.sh - one install step, loaded by patches/E-patches.sh

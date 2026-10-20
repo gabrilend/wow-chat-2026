@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E062
 # profiles:   beta
-# priority:   1920
-# kind:       install
+# priority:   2920
+# kind:       sql
 # about:      Beta: trade with the other faction (permission 51), every account, beta's realm.
 # ==== end of header ====
 # E062-beta-two-side-trade.sh - one install step, loaded by patches/E-patches.sh

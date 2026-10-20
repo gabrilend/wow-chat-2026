@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E013
 # profiles:   beta
-# priority:   1430
-# kind:       install
+# priority:   2430
+# kind:       sql
 # about:      Adds quest-learned class abilities to the class trainers' lists (issue
 # ==== end of header ====
 # E013-beta-quest-spells-to-trainers.sh - one install step, loaded by patches/E-patches.sh

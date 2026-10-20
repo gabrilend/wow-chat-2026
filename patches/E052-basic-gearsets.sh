@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E052
 # profiles:   buddy-set
-# priority:   1820
-# kind:       install
+# priority:   2820
+# kind:       sql
 # about:      Every gearset profile (issue 617r: src/lua-basic/data/gearsets/*.lua) as
 # ==== end of header ====
 # E052-basic-gearsets.sh - one install step, loaded by patches/E-patches.sh

@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E046
 # profiles:   basic
-# priority:   1760
-# kind:       install
+# priority:   2760
+# kind:       sql
 # about:      The world bosses' respawn taken off the server's timer (issue 155j): the
 # ==== end of header ====
 # E046-basic-world-bosses.sh - one install step, loaded by patches/E-patches.sh.

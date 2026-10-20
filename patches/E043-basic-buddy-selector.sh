@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E043
 # profiles:   basic
-# priority:   1730
-# kind:       install
+# priority:   2730
+# kind:       sql
 # about:      Sargobras, the buddy selector (issue 617b): his two creatures (the valley
 # ==== end of header ====
 # E043-basic-buddy-selector.sh - one install step, loaded by patches/E-patches.sh

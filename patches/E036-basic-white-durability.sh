@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E036
 # profiles:   basic
-# priority:   1660
-# kind:       install
+# priority:   2660
+# kind:       sql
 # about:      White gear durability (issue 155p): white weapons and armor last twice as
 # ==== end of header ====
 # E036-basic-white-durability.sh - one install step, loaded by patches/E-patches.sh

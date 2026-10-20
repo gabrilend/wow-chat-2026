@@ -855,6 +855,24 @@ do_build() {
     # release/alpha it does the rest of their PHASE_END (E004 logs,
     # E006 configs, etc.) without touching lua_scripts/.
     apply_patches_end
+
+    # Gate 2000 (patches/gates, issue 189d): the shadow server is started
+    # once, so the server's own updater brings every database to
+    # upstream's state (the owner: "let's start the server and let them
+    # apply naturally"), and only then is our SQL handed to it, in the SQL
+    # stage. The validation start after the compile applies ours, so
+    # upstream's always come first. It needs MySQL, as the quick tests do;
+    # a start that does not reach "World initialized" stops the compile
+    # here, before our SQL is placed (its log names why).
+    echo ""
+    echo "Gate 2000: starting the shadow server once, so the databases reach upstream's state..."
+    if ! "${DIR}/scripts/validate" --profile "${PROFILE}" --no-promote; then
+        echo "ERROR: gate 2000 failed: the shadow server did not finish starting, so our SQL was not placed"
+        echo "       (the install stage's work is in the shadow folder; nothing was promoted)"
+        FAILURE_ALREADY_EXPLAINED=true
+        return 1
+    fi
+    apply_patches_sql
     unset TARGET_INSTALL_DIR
 
     # Stamp the shadow install with the build type. promote carries this file to

@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E025
 # profiles:   basic
-# priority:   1550
-# kind:       install
+# priority:   2550
+# kind:       sql
 # about:      One "Visiting Mentor" per starting valley that teaches exactly the classes
 # ==== end of header ====
 # E025-basic-valley-universal-trainers.sh - one install step, loaded by patches/E-patches.sh

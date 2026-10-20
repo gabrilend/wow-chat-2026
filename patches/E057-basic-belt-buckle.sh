@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E057
 # profiles:   basic
-# priority:   1870
-# kind:       install
+# priority:   2870
+# kind:       sql
 # about:      The Eternal Belt Buckle usable from level 60 (issue 624): one item's
 # ==== end of header ====
 # E057-basic-belt-buckle.sh - one install step, loaded by patches/E-patches.sh

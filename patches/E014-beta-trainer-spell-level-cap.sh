@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E014
 # profiles:   beta
-# priority:   1440
-# kind:       install
+# priority:   2440
+# kind:       sql
 # about:      Caps each travelling class trainer to the top of its level slice (issue
 # ==== end of header ====
 # E014-beta-trainer-spell-level-cap.sh - one install step, loaded by patches/E-patches.sh

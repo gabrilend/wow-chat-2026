@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E027
 # profiles:   basic
-# priority:   1570
-# kind:       install
+# priority:   2570
+# kind:       sql
 # about:      Outland without tradeskills (issue 155n): its herb, ore, gas and fishing
 # ==== end of header ====
 # E027-basic-outland-without-tradeskills.sh - one install step, loaded by patches/E-patches.sh

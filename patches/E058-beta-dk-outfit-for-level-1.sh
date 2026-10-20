@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E058
 # profiles:   beta
-# priority:   1880
-# kind:       install
+# priority:   2880
+# kind:       sql
 # about:      Beta's death knights start at level 1 (issue 206), but the game hands
 # ==== end of header ====
 # E058-beta-dk-outfit-for-level-1.sh - one install step, loaded by patches/E-patches.sh

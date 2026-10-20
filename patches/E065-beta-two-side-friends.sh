@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E065
 # profiles:   beta
-# priority:   1950
-# kind:       install
+# priority:   2950
+# kind:       sql
 # about:      Beta: friends of the other faction (permission 29), every account, beta's realm.
 # ==== end of header ====
 # E065-beta-two-side-friends.sh - one install step, loaded by patches/E-patches.sh

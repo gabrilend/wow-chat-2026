@@ -10,9 +10,11 @@
 --
 --   id        from the file name (B058, E066, C040, or a test's name)
 --   kind      from the folder: patches/B* source, patches/E* install,
---             config/patches/C* settings, scripts/test-* test
+--             config/patches/C* settings, scripts/test-* test; an E step
+--             that hands SQL to the server's updater says --kind sql
 --   priority  given, or the rule the numbering follows (patches/gates):
 --             source 100 + 10 x number, install 1300 + 10 x number,
+--             sql 2300 + 10 x number (after gate 2000, issue 189d),
 --             settings 5 above the highest settings patch now, test 10
 --   profiles  given (profile names, groups from patches/groups, all, none)
 --   about     given, or the file's own "# ID - ..." line
@@ -23,12 +25,12 @@
 -- scripts/plan-patches, which refuses a profile name that is nothing known.
 --
 -- Usage: scripts/add-patch-header [PROJECT_DIR] FILE --profiles "NAMES"
---                                 [--priority N] [--about "TEXT"] [--quick-test]
+--                                 [--priority N] [--about "TEXT"] [--quick-test] [--kind sql]
 --   FILE is relative to PROJECT_DIR (patches/B058-something.sh).
 --------------------------------------------------------------------------------
 
 local DIR = "/mnt/kaun/wow-chat-2026"
-local FILE, PROFILES, PRIORITY, ABOUT, QUICK
+local FILE, PROFILES, PRIORITY, ABOUT, QUICK, KIND
 do
     local pos, i = {}, 1
     while i <= #arg do
@@ -37,6 +39,7 @@ do
         elseif a == "--priority"   then i = i + 1; PRIORITY = tonumber(arg[i])
         elseif a == "--about"      then i = i + 1; ABOUT    = arg[i]
         elseif a == "--quick-test" then QUICK = true
+        elseif a == "--kind"       then i = i + 1; KIND = arg[i]
         else pos[#pos + 1] = a end
         i = i + 1
     end
@@ -83,6 +86,12 @@ local entry
 for _, k in ipairs(KINDS) do
     local id = FILE:match(k.pattern)
     if id then entry = { kind = k.kind, id = id, priority = PRIORITY or k.priority(id) } end
+end
+-- an install step that hands SQL to the updater runs after gate 2000
+if entry and KIND then
+    if KIND ~= "sql" or entry.kind ~= "install" then die("--kind sql is for an install step (patches/E###-*.sh), the only kind given by hand") end
+    entry.kind = "sql"
+    entry.priority = PRIORITY or (2300 + 10 * tonumber(entry.id:sub(2)))
 end
 if not entry then
     die(FILE .. " is not where a patch lives (patches/B###-*.sh, patches/E###-*.sh, config/patches/C###-*.sh, scripts/test-*)")

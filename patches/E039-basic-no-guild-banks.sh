@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E039
 # profiles:   basic
-# priority:   1690
-# kind:       install
+# priority:   2690
+# kind:       sql
 # about:      No guild banks (issue 617l): every Guild Vault spawn removed. Same
 # ==== end of header ====
 # E039-basic-no-guild-banks.sh - one install step, loaded by patches/E-patches.sh

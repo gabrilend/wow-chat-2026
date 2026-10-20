@@ -87,8 +87,10 @@ build, in order (`scripts/compile`, `patches/patches.sh`):
    updater remembers files by name, so a rename leaves two records, which
    `_forget_unprefixed_updates` removes (the symptom, not the cause).
 
-Not yet: gate 2000's action (step 6 still happens at the server's start,
-189d) and carried files (189e).
+Since 189d (built, not yet compiled), step 6 is split by gate 2000: the
+compile starts the shadow server once after step 4, so upstream's updates
+are applied; then the SQL steps place ours under their own names, and the
+validation start applies them. Not yet: carried files (189e).
 
 ## Intended Behavior
 
@@ -109,8 +111,8 @@ should have with the newly numbered system"):
 | gate | action when reached | patches below it |
 |---:|---|---|
 | 1000 | compile and install | source patches (they come off again once the compile is through) |
-| 2000 | the databases brought to upstream's state (the server's updater, run by `dbimport`, without starting the server) | settings, links, files |
-| 9000 | the server may start | our SQL, by priority, recorded in a table of ours |
+| 2000 | the databases brought to upstream's state (the shadow server started once, its own updater running; 189d) | settings, links, files |
+| 9000 | the server may start | the steps handing our SQL to that updater, by priority |
 
 **Undo is the exact reverse**: last priority first, back through the
 gates, a source patch's undo after the compile gate as today.
@@ -126,11 +128,12 @@ a priority, so which lies over which is never left to chance.
 git, placed into each taking profile's install when applied and removed
 when undone.
 
-**Our SQL as patches, by priority.** Each SQL patch runs after the gate
-where upstream's are applied, in priority order, and is recorded by its
-id in a table of ours; a change is an undo of the old and an apply of the
-new, never an edit of the updater's records. The `z_` names, the
-registrations with the updater and `_forget_unprefixed_updates` go.
+**Our SQL after upstream's, by time.** The SQL steps run after the gate
+where upstream's are applied, in priority order, and hand our files to the
+server's own updater, which applies them at the next start (the owner,
+2026-10-20: "we should use their updater since I think they're quite
+proud of it"; this replaced a first plan of our own record table). The
+`z_` names and `_forget_unprefixed_updates` go (189d).
 
 **Lists made from the headers.** The quick tests are gathered from their
 headers; the English lists that can drift today (`docs/patches/patch-registry.md`,

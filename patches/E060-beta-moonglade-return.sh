@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E060
 # profiles:   beta
-# priority:   1900
-# kind:       install
+# priority:   2900
+# kind:       sql
 # about:      Each druid's way back from Moonglade, and the visitors they brought there
 # ==== end of header ====
 # E060-beta-moonglade-return.sh - one install step, loaded by patches/E-patches.sh

@@ -75,7 +75,8 @@ The keystone. Every later build/profile decision derives from 136.
 | 189a | the-header-and-its-reader | Completed | 2026-10-20: the header's reader and checker. |
 | 189b | headers-on-every-patch | Completed | 2026-10-20: headers on every patch and quick test, written from the lists; a test that they agree. |
 | 189c | the-runner-by-gates | Built | 2026-10-20: each profile's patches planned from the headers, through the gates; settings in the install stage; the layering check. Waits on the owner's compile. |
-| 189d-e | SQL as patches, carried files | Open | Our SQL after upstream's, recorded by us; files a patch carries. |
+| 189d | sql-as-patches | Built | 2026-10-20: a server start (gate 2000) applies upstream's SQL first; our SQL steps then place theirs for the same updater, under their own names; the z_ switch-over on the next install. Waits on the owner's compile. |
+| 189e | carried-files | Open | Files a patch carries, placed per profile. |
 | 189f | lists-from-headers | Completed | 2026-10-20: the quick tests gathered from their headers; the registry and profile pages' patch lists written from them. |
 
 ### Act 7 — Networking & ops

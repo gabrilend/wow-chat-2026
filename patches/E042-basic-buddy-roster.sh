@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E042
 # profiles:   buddy-set
-# priority:   1720
-# kind:       install
+# priority:   2720
+# kind:       sql
 # about:      The buddy clan and roster tables (issue 617a1): each owner's companion
 # ==== end of header ====
 # E042-basic-buddy-roster.sh - one install step, loaded by patches/E-patches.sh

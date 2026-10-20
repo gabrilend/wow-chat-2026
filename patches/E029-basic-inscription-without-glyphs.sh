@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E029
 # profiles:   basic
-# priority:   1590
-# kind:       install
+# priority:   2590
+# kind:       sql
 # about:      Inscription without glyphs (issue 155o): glyph recipes off the trainers,
 # ==== end of header ====
 # E029-basic-inscription-without-glyphs.sh - one install step, loaded by patches/E-patches.sh

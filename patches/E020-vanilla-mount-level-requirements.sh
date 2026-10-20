@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E020
 # profiles:   basic vanilla
-# priority:   1500
-# kind:       install
+# priority:   2500
+# kind:       sql
 # about:      Push the two ground riding skills to Classic level gates (148l): Apprentice
 # ==== end of header ====
 # E020-vanilla-mount-level-requirements.sh - one install step, loaded by patches/E-patches.sh

@@ -38,12 +38,13 @@ export DIR PROFILE=undo-order-test
 source "${DIR}/patches/patches.sh" > /dev/null 2>&1
 _snapshot_dirty_state() { cat "${LOG}"; }        # each undo "changes" the log, so it is reported
 _mirror_staged_sql() { :; }
-for id in B901 B902 B903 E901 E902 E903; do
+for id in B901 B902 B903 E901 E902 E903 E951 E952 E953; do
     eval "patch_${id}_test()   { echo \"apply ${id}\" >> '${LOG}'; }"
     eval "unpatch_${id}_test() { echo \"undo ${id}\"  >> '${LOG}'; }"
 done
 PHASE_BEGIN_PATCHES[undo-order-test]="B901 B902 B903"
 PHASE_END_PATCHES[undo-order-test]="E901 E902 E903"
+PHASE_SQL_PATCHES[undo-order-test]="E951 E952 E953"
 
 echo "the list helper"
 check '[[ "$(_reversed_list B1 B2 B3)" == "B3 B2 B1" && "$(_reversed_list)" == "" && "$(_reversed_list B1)" == "B1" ]]' \
@@ -61,9 +62,22 @@ unapply_patches_end > /dev/null 2>&1
 check '[[ "$(grep "^undo E" "${LOG}" | tr "\n" " ")" == "undo E903 undo E902 undo E901 " ]]' \
       "applied E901 E902 E903, undone E903 E902 E901 ($(grep "^undo E" "${LOG}" | tr "\n" " "))"
 
+echo "the SQL stage (issue 189d), then the install stage, as apply-patches --revert does"
+: > "${LOG}"
+for id in ${PHASE_END_PATCHES[undo-order-test]} ${PHASE_SQL_PATCHES[undo-order-test]}; do "patch_${id}_test"; done
+unapply_patches_sql > /dev/null 2>&1
+unapply_patches_end > /dev/null 2>&1
+check '[[ "$(grep "^undo E" "${LOG}" | tr "\n" " ")" == "undo E953 undo E952 undo E951 undo E903 undo E902 undo E901 " ]]' \
+      "applied E901-E903 then E951-E953, undone E953 first, E901 last ($(grep "^undo E" "${LOG}" | tr "\n" " "))"
+: > "${LOG}"
+apply_patches_end > /dev/null 2>&1
+apply_patches_sql > /dev/null 2>&1
+check '[[ "$(grep "^apply E" "${LOG}" | tr "\n" " ")" == "apply E901 apply E902 apply E903 apply E951 apply E952 apply E953 " ]]' \
+      "the runner applies the install stage, then the SQL stage, each in order"
+
 rm -f "${LOG}"
 echo "${checks} checks, ${fails} failed"
 [[ ${fails} -eq 0 ]]
 # ==== footer of test-patch-undo-order ====
-# lines:      69
+# lines:      83
 # ==== end of footer ====

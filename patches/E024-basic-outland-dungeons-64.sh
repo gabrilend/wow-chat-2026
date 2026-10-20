@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E024
 # profiles:   basic
-# priority:   1540
-# kind:       install
+# priority:   2540
+# kind:       sql
 # about:      Basic's Outland dungeon ladder (issue 155f): sixteen dungeons open at 60,
 # ==== end of header ====
 # E024-basic-outland-dungeons-64.sh - one install step, loaded by patches/E-patches.sh

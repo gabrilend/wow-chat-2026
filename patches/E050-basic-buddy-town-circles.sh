@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E050
 # profiles:   buddy-set
-# priority:   1800
-# kind:       install
+# priority:   2800
+# kind:       sql
 # about:      The world's little towns as circles (issue 617e4a): every cluster of
 # ==== end of header ====
 # E050-basic-buddy-town-circles.sh - one install step, loaded by patches/E-patches.sh

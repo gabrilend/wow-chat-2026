@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E015
 # profiles:   beta
-# priority:   1450
-# kind:       install
+# priority:   2450
+# kind:       sql
 # about:      Race-specific selector NPCs for the custom class selection system
 # ==== end of header ====
 # E015-beta-class-selector-npcs.sh - one install step, loaded by patches/E-patches.sh

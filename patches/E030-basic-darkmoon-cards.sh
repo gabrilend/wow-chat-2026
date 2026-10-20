@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E030
 # profiles:   basic
-# priority:   1600
-# kind:       install
+# priority:   2600
+# kind:       sql
 # about:      Darkmoon cards (issue 155o): nothing from a Darkmoon deck binds, and the
 # ==== end of header ====
 # E030-basic-darkmoon-cards.sh - one install step, loaded by patches/E-patches.sh

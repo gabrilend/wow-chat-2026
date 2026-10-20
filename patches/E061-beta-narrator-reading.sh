@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E061
 # profiles:   beta
-# priority:   1910
-# kind:       install
+# priority:   2910
+# kind:       sql
 # about:      Where each narrator is in its book (issue 910a): one row per narrator bot,
 # ==== end of header ====
 # E061-beta-narrator-reading.sh - one install step, loaded by patches/E-patches.sh

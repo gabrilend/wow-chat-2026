@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E044
 # profiles:   buddy-set
-# priority:   1740
-# kind:       install
+# priority:   2740
+# kind:       sql
 # about:      Every named area's borders and middle (issue 617e2), for the buddies'
 # ==== end of header ====
 # E044-basic-buddy-area-centres.sh - one install step, loaded by patches/E-patches.sh

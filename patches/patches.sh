@@ -646,45 +646,50 @@ patches_need_applying() {
 }
 # }}}
 
-# {{{ apply_patches_end
-# PHASE_END: Post-compile setup (config files, symlinks, database)
-# Run after successful build and atomic swap
-apply_patches_end() {
-    local patches="${PHASE_END_PATCHES[$PROFILE]:-}"
+# {{{ _apply_stage
+# Run one stage's patches for the current profile, in the plan's order
+# (lowest priority first). Shared by the install stage (between gates 1000
+# and 2000: install steps and settings) and the SQL stage (between gates
+# 2000 and 9000: the steps that hand our SQL to the server's updater).
+#
+# Stop at the first step that is missing or fails, and say which steps
+# ran. Earlier this printed a WARNING for a missing function, ignored a
+# step's failing return code, and always ended with "PHASE_END complete",
+# so a half-installed profile (say, a world SQL source file missing)
+# looked finished. Later steps can depend on earlier ones (E001's Lua
+# link, E006's configs), so continuing past a failure is not safe.
+#   $1 = the stage's name in the report (PHASE_END, SQL)
+#   $2 = its ids, in order
+_apply_stage() {
+    local stage="$1" patches="$2"
 
     if [[ -z "${patches}" ]]; then
         echo ""
-        echo "PHASE_END: No patches for profile '${PROFILE}'"
+        echo "${stage}: No patches for profile '${PROFILE}'"
         return 0
     fi
 
     echo ""
-    echo "Applying PHASE_END patches for profile '${PROFILE}'..."
-    # Stop at the first step that is missing or fails, and say which steps
-    # ran. Earlier this printed a WARNING for a missing function, ignored a
-    # step's failing return code, and always ended with "PHASE_END complete",
-    # so a half-installed profile (say, a world SQL source file missing)
-    # looked finished. Later steps can depend on earlier ones (E001's Lua
-    # link, E006's configs), so continuing past a failure is not safe.
+    echo "Applying ${stage} patches for profile '${PROFILE}'..."
     local done_ids=""
     for patch_id in ${patches}; do
         # A settings patch (C...) is run by its own runner (E-helpers.sh),
-        # which finds its function from its file's name; an install step
-        # (E...) by its patch_<id>_ function, below.
+        # which finds its function from its file's name; an install or SQL
+        # step (E...) by its patch_<id>_ function, below.
         if [[ "${patch_id}" == C* ]]; then
             if apply_settings_patch "${patch_id}"; then
                 done_ids+="${patch_id} "
                 continue
             fi
-            _report_patches_end_stop "${patch_id}" "${done_ids}" "${patches}"
+            _report_stage_stop "${stage}" "${patch_id}" "${done_ids}" "${patches}"
             return 1
         fi
         # Find the patch function (e.g., patch_E001_lua_script_symlinks)
         local patch_func=$(declare -F | grep "^declare -f patch_${patch_id}_" | sed 's/declare -f //')
         if [[ -z "${patch_func}" ]]; then
-            # No function: the profile's list names a step that does not exist.
+            # No function: the profile's plan names a step that does not exist.
             echo "  [${patch_id}] ERROR: no function patch_${patch_id}_* is defined"
-            _report_patches_end_stop "${patch_id}" "${done_ids}" "${patches}"
+            _report_stage_stop "${stage}" "${patch_id}" "${done_ids}" "${patches}"
             return 1
         fi
         # Run inside `if` so a failing step is caught here (and reported)
@@ -693,49 +698,47 @@ apply_patches_end() {
             done_ids+="${patch_id} "
         else
             echo "  [${patch_id}] ERROR: ${patch_func} returned failure"
-            _report_patches_end_stop "${patch_id}" "${done_ids}" "${patches}"
+            _report_stage_stop "${stage}" "${patch_id}" "${done_ids}" "${patches}"
             return 1
         fi
     done
-    # what the steps staged, into the folders the updater scans (issue 183)
-    _mirror_staged_sql || { echo "  ERROR: mirroring the staged SQL for the updater failed (issue 183)"; return 1; }
-    echo "  PHASE_END complete (${done_ids% })"
+    echo "  ${stage} complete (${done_ids% })"
 }
 
-# Print where the PHASE_END pipeline stopped: what completed, what failed,
-# what never ran. Args: failed id, completed ids, full list.
-_report_patches_end_stop() {
-    local failed="$1" done_ids="$2" all_ids="$3" skipped="" seen=0
+# Print where a stage stopped: what completed, what failed, what never ran.
+# Args: stage name, failed id, completed ids, full list.
+_report_stage_stop() {
+    local stage="$1" failed="$2" done_ids="$3" all_ids="$4" skipped="" seen=0
     for id in ${all_ids}; do
         [[ "${seen}" -eq 1 ]] && skipped+="${id} "
         [[ "${id}" == "${failed}" ]] && seen=1
     done
-    echo "  PHASE_END STOPPED for profile '${PROFILE}'"
+    echo "  ${stage} STOPPED for profile '${PROFILE}'"
     echo "    completed: ${done_ids:-none}"
     echo "    failed:    ${failed}"
     echo "    not run:   ${skipped:-none}"
 }
 # }}}
 
-# {{{ unapply_patches_end
-# Reverse all PHASE_END patches (remove configs, symlinks, database entries)
-# Used by apply-patches --revert
-unapply_patches_end() {
-    # Back to front, as unapply_patches_begin and for the same reason.
-    local patches
-    patches="$(_reversed_list ${PHASE_END_PATCHES[$PROFILE]:-})"
+# {{{ _unapply_stage
+# Reverse one stage's patches for the current profile, last first (a step
+# laid over another's output comes off before the one beneath it).
+# A settings patch has no undo of its own: it edits the config files, and
+# E006's undo, later in the install stage's walk, removes those files whole.
+#   $1 = the stage's name in the report, $2 = its ids, in apply order
+_unapply_stage() {
+    local stage="$1" patches
+    patches="$(_reversed_list $2)"
 
     if [[ -z "${patches}" ]]; then
         echo ""
-        echo "PHASE_END: No patches to revert for profile '${PROFILE}'"
+        echo "${stage}: No patches to revert for profile '${PROFILE}'"
         return 0
     fi
 
     echo ""
-    echo "Reverting PHASE_END patches for profile '${PROFILE}'..."
+    echo "Reverting ${stage} patches for profile '${PROFILE}'..."
     for patch_id in ${patches}; do
-        # A settings patch has no undo of its own: it edits the config files,
-        # and E006's undo, later in this walk, removes those files whole.
         [[ "${patch_id}" == C* ]] && continue
         local unpatch_func=$(declare -F | grep "^declare -f unpatch_${patch_id}_" | sed 's/declare -f //')
         if [[ -n "${unpatch_func}" ]]; then
@@ -744,7 +747,50 @@ unapply_patches_end() {
             echo "  [${patch_id}] No unpatch function (skipping)"
         fi
     done
+    echo "  ${stage} revert complete"
+}
+# }}}
+
+# {{{ apply_patches_end
+# The install stage (between gates 1000 and 2000): config files, symlinks,
+# settings, after the compile's install into the shadow folder. Our SQL is
+# not here since issue 189d: it is the SQL stage's, after gate 2000.
+apply_patches_end() {
+    _apply_stage PHASE_END "${PHASE_END_PATCHES[$PROFILE]:-}"
+}
+# }}}
+
+# {{{ apply_patches_sql
+# The SQL stage (between gates 2000 and 9000, issue 189d): the steps that
+# hand our SQL to the server's own updater (the owner, 2026-10-20: "we
+# should use their updater since I think they're quite proud of it"), then
+# the mirror into the folders the updater scans. Run after gate 2000, where
+# the compile starts the server once so the updater has brought every
+# database to upstream's state (scripts/compile, the gate's step); the
+# server's next start, the build's validation, applies ours after them. So
+# upstream's updates come first by time, which the z_ names of issue 183
+# used to do by sorting.
+apply_patches_sql() {
+    _apply_stage SQL "${PHASE_SQL_PATCHES[$PROFILE]:-}" || return 1
+    # what the steps staged, into the folders the updater scans (issue 183)
+    _mirror_staged_sql || { echo "  ERROR: mirroring the staged SQL for the updater failed (issue 183)"; return 1; }
+}
+# }}}
+
+# {{{ unapply_patches_sql
+# Reverse the SQL stage: each step writes its revert form, and the mirror
+# hands those to the updater, which runs them at the server's next start.
+# Undone before the install stage, the reverse of the order applied.
+unapply_patches_sql() {
+    _unapply_stage SQL "${PHASE_SQL_PATCHES[$PROFILE]:-}"
     _mirror_staged_sql                          # the reverts' SQL, into the updater's folders (issue 183)
-    echo "  PHASE_END revert complete"
+}
+# }}}
+
+# {{{ unapply_patches_end
+# Reverse the install stage (remove configs, symlinks), last first.
+# Used by apply-patches --revert, after unapply_patches_sql.
+unapply_patches_end() {
+    _unapply_stage PHASE_END "${PHASE_END_PATCHES[$PROFILE]:-}"
 }
 # }}}

@@ -2,6 +2,14 @@
 # scripts/validate - Validate shadow worldserver build
 # Starts worldserver from shadow directory to verify it initializes correctly
 # Part of shadow-run-promote workflow: compile -> validate -> promote
+#
+# With --no-promote it is the build's gate 2000 (issue 189d, patches/gates):
+# the compile starts the shadow server once after the install stage, so the
+# server's own updater brings every database (the bot module's too) to
+# upstream's state, before our SQL is handed to it. The owner, 2026-10-20:
+# "let's start the server and let them apply naturally. We already do this
+# for the validation step." The start must reach "World initialized", as in
+# validation; it then stops, and nothing is promoted.
 
 DIR="/mnt/kaun/wow-chat-2026"
 
@@ -46,6 +54,10 @@ parse_args() {
                 fi
                 shift
                 ;;
+            --no-promote)
+                NO_PROMOTE=true
+                shift
+                ;;
             --help|-h)
                 show_help
                 exit 0
@@ -69,6 +81,8 @@ show_help() {
     echo ""
     echo "Options:"
     echo "  --profile <name>   Use specific profile (default: ${DEFAULT_PROFILE})"
+    echo "  --no-promote       Start and stop only (the build's gate 2000: the"
+    echo "                     databases brought to upstream's state); no promotion"
     echo "  --help             Show this help message"
     echo ""
     echo "Workflow:"
@@ -123,6 +137,7 @@ validate_shadow_worldserver() {
     # Start in background, redirect output to validation log
     # Use /dev/null for stdin to prevent blocking on input
     local VALIDATION_LOG="${DIR}/tmp/shadow-validation-${PROFILE}.log"
+    [[ "${NO_PROMOTE}" == "true" ]] && VALIDATION_LOG="${DIR}/tmp/shadow-gate-2000-${PROFILE}.log"
     mkdir -p "${DIR}/tmp"
     > "${VALIDATION_LOG}"  # Truncate log
     # Explicit -c and -C flags: with CONF_DIR baked into the binary
@@ -229,11 +244,19 @@ validate_shadow_worldserver() {
 # Main
 # =============================================================================
 
+NO_PROMOTE=false
 parse_args "$@"
 get_profile_paths
 
 if ! validate_shadow_worldserver; then
     exit 1
+fi
+
+# The gate's start: the databases are at upstream's state; the compile goes
+# on with the SQL stage, then validates again (which does promote).
+if [[ "${NO_PROMOTE}" == "true" ]]; then
+    echo "  Gate 2000 passed: every database is at upstream's state (the server's updater ran)"
+    exit 0
 fi
 
 # Auto-promote on successful validation

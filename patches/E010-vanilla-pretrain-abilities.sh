@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E010
 # profiles:   vanilla
-# priority:   1400
-# kind:       install
+# priority:   2400
+# kind:       sql
 # about:      Grant every newly-created vanilla character the full set of
 # ==== end of header ====
 # E010-vanilla-pretrain-abilities.sh - one install step, loaded by patches/E-patches.sh

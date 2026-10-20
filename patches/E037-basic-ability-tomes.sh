@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E037
 # profiles:   basic
-# priority:   1670
-# kind:       install
+# priority:   2670
+# kind:       sql
 # about:      Class books for the level 61-80 abilities (issue 155q): one stock-style
 # ==== end of header ====
 # E037-basic-ability-tomes.sh - one install step, loaded by patches/E-patches.sh

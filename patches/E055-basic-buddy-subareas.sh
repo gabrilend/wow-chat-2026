@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E055
 # profiles:   basic
-# priority:   1850
-# kind:       install
+# priority:   2850
+# kind:       sql
 # about:      The smaller places buddies roam (issue 617e12, the first cut): every named
 # ==== end of header ====
 # E055-basic-buddy-subareas.sh - one install step, loaded by patches/E-patches.sh

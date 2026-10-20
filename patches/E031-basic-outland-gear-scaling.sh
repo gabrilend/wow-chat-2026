@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E031
 # profiles:   basic
-# priority:   1610
-# kind:       install
+# priority:   2610
+# kind:       sql
 # about:      Outland gear scaling (issue 155k, with 155f's dungeon ladder): Outland's
 # ==== end of header ====
 # E031-basic-outland-gear-scaling.sh - one install step, loaded by patches/E-patches.sh

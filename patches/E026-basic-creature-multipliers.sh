@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E026
 # profiles:   basic
-# priority:   1560
-# kind:       install
+# priority:   2560
+# kind:       sql
 # about:      The table of per-creature (and per-map) damage, healing and health
 # ==== end of header ====
 # E026-basic-creature-multipliers.sh - one install step, loaded by patches/E-patches.sh

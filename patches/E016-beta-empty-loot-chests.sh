@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E016
 # profiles:   beta
-# priority:   1460
-# kind:       install
+# priority:   2460
+# kind:       sql
 # about:      Custom gameobject templates for empty-loot treasure chests (issue
 # ==== end of header ====
 # E016-beta-empty-loot-chests.sh - one install step, loaded by patches/E-patches.sh

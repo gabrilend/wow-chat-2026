@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E063
 # profiles:   beta
-# priority:   1930
-# kind:       install
+# priority:   2930
+# kind:       sql
 # about:      Beta: mail to the other faction (permission 27), every account, beta's realm.
 # ==== end of header ====
 # E063-beta-two-side-mail.sh - one install step, loaded by patches/E-patches.sh

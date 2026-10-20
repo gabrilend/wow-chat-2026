@@ -116,15 +116,18 @@ lowest priority first, each line its header's own (`scripts/plan-patches cc-test
 |     1280 | C033 | settings | cc-test: Warden Kicks on a Failed Check                                    |
 |     1285 | C034 | settings | No Faster Healing Below Level 15, on Every Server                          |
 |     1310 | C039 | settings | Instances and Battlegrounds: See as Far as the Server Allows               |
-|     1720 | E042 | install  | The buddy clan and roster tables (issue 617a1): each owner's companion     |
-|     1740 | E044 | install  | Every named area's borders and middle (issue 617e2), for the buddies'      |
-|     1750 | E045 | install  | The beds buddies sleep on in towns (issue 617e4), placed by hand in game   |
-|     1800 | E050 | install  | The world's little towns as circles (issue 617e4a): every cluster of       |
-|     1820 | E052 | install  | Every gearset profile (issue 617r: src/lua-basic/data/gearsets/*.lua) as   |
-|     1830 | E053 | install  | The `command` rows for the game master commands the project compiles in    |
-|     1860 | E056 | install  | The kept stand-ins (issue 617t1): one row per stand-in character the buddy |
 
-**After the databases are brought to upstream's state (our SQL):** none.
+**After the databases are brought to upstream's state (our SQL):**
+
+| priority | id   | kind | about                                                                      |
+| -------: | ---- | ---- | -------------------------------------------------------------------------- |
+|     2720 | E042 | sql  | The buddy clan and roster tables (issue 617a1): each owner's companion     |
+|     2740 | E044 | sql  | Every named area's borders and middle (issue 617e2), for the buddies'      |
+|     2750 | E045 | sql  | The beds buddies sleep on in towns (issue 617e4), placed by hand in game   |
+|     2800 | E050 | sql  | The world's little towns as circles (issue 617e4a): every cluster of       |
+|     2820 | E052 | sql  | Every gearset profile (issue 617r: src/lua-basic/data/gearsets/*.lua) as   |
+|     2830 | E053 | sql  | The `command` rows for the game master commands the project compiles in    |
+|     2860 | E056 | sql  | The kept stand-ins (issue 617t1): one row per stand-in character the buddy |
 <!-- patch-lists: end -->
 
 ## Related

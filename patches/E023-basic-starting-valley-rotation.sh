@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E023
 # profiles:   basic
-# priority:   1530
-# kind:       install
+# priority:   2530
+# kind:       sql
 # about:      Create and seed the rotation-state table the basic profile's
 # ==== end of header ====
 # E023-basic-starting-valley-rotation.sh - one install step, loaded by patches/E-patches.sh

@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E040
 # profiles:   basic
-# priority:   1700
-# kind:       install
+# priority:   2700
+# kind:       sql
 # about:      Sargobras at the gate of Acherus (issue 718): the gossip NPC in the Ebon
 # ==== end of header ====
 # E040-basic-death-knight-story-at-acherus.sh - one install step, loaded by patches/E-patches.sh.

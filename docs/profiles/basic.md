@@ -174,41 +174,44 @@ lowest priority first, each line its header's own (`scripts/plan-patches basic`)
 |     1285 | C034  | settings | No Faster Healing Below Level 15, on Every Server                                       |
 |     1305 | C038  | settings | No Quest Sparkles, Object Quest Marks or Map Points                                     |
 |     1310 | C039  | settings | Instances and Battlegrounds: See as Far as the Server Allows                            |
-|     1380 | E008  | install  | Clear the flightmaster bit network-wide and replace gossip with                         |
-|     1490 | E019  | install  | Installs a BEFORE INSERT trigger on acore_characters_vanilla.characters                 |
-|     1500 | E020  | install  | Push the two ground riding skills to Classic level gates (148l): Apprentice             |
-|     1520 | E022  | install  | Open every quest to its whole faction on the basic profile (issue 155e):                |
-|     1530 | E023  | install  | Create and seed the rotation-state table the basic profile's                            |
-|     1540 | E024  | install  | Basic's Outland dungeon ladder (issue 155f): sixteen dungeons open at 60,               |
-|     1550 | E025  | install  | One "Visiting Mentor" per starting valley that teaches exactly the classes              |
-|     1560 | E026  | install  | The table of per-creature (and per-map) damage, healing and health                      |
-|     1570 | E027  | install  | Outland without tradeskills (issue 155n): its herb, ore, gas and fishing                |
-|     1580 | E028  | install  | Outland without quests (issue 155l): every Outland, Shattrath, Isle and                 |
-|     1590 | E029  | install  | Inscription without glyphs (issue 155o): glyph recipes off the trainers,                |
-|     1600 | E030  | install  | Darkmoon cards (issue 155o): nothing from a Darkmoon deck binds, and the                |
-|     1610 | E031  | install  | Outland gear scaling (issue 155k, with 155f's dungeon ladder): Outland's                |
-|     1620 | E032  | install  | Outland world levels (issue 155k): Outland's open-world monsters +4, the                |
-|     1630 | E033  | install  | Gem supply (issue 155p, stage 1): prospecting yields, Wrath and epic gem                |
-|     1660 | E036  | install  | White gear durability (issue 155p): white weapons and armor last twice as               |
-|     1670 | E037  | install  | Class books for the level 61-80 abilities (issue 155q): one stock-style                 |
-|     1680 | E038  | install  | The Dark Portal as the only door into Outland (issue 155l): Shattrath's                 |
-|     1690 | E039  | install  | No guild banks (issue 617l): every Guild Vault spawn removed. Same                      |
-|     1700 | E040  | install  | Sargobras at the gate of Acherus (issue 718): the gossip NPC in the Ebon                |
-|     1720 | E042  | install  | The buddy clan and roster tables (issue 617a1): each owner's companion                  |
-|     1730 | E043  | install  | Sargobras, the buddy selector (issue 617b): his two creatures (the valley               |
-|     1740 | E044  | install  | Every named area's borders and middle (issue 617e2), for the buddies'                   |
-|     1750 | E045  | install  | The beds buddies sleep on in towns (issue 617e4), placed by hand in game                |
-|     1760 | E046  | install  | The world bosses' respawn taken off the server's timer (issue 155j): the                |
 |     1790 | E049  | install  | Every town's exploring grid baked ahead of time (issue 617o3), so buddies               |
-|     1800 | E050  | install  | The world's little towns as circles (issue 617e4a): every cluster of                    |
-|     1820 | E052  | install  | Every gearset profile (issue 617r: src/lua-basic/data/gearsets/*.lua) as                |
-|     1830 | E053  | install  | The `command` rows for the game master commands the project compiles in                 |
-|     1840 | E054  | install  | The game's legendaries as level-60 raid drops (issue 182): level-60 copies              |
-|     1850 | E055  | install  | The smaller places buddies roam (issue 617e12, the first cut): every named              |
-|     1860 | E056  | install  | The kept stand-ins (issue 617t1): one row per stand-in character the buddy              |
-|     1870 | E057  | install  | The Eternal Belt Buckle usable from level 60 (issue 624): one item's                    |
 
-**After the databases are brought to upstream's state (our SQL):** none.
+**After the databases are brought to upstream's state (our SQL):**
+
+| priority | id   | kind | about                                                                       |
+| -------: | ---- | ---- | --------------------------------------------------------------------------- |
+|     2380 | E008 | sql  | Clear the flightmaster bit network-wide and replace gossip with             |
+|     2490 | E019 | sql  | Installs a BEFORE INSERT trigger on acore_characters_vanilla.characters     |
+|     2500 | E020 | sql  | Push the two ground riding skills to Classic level gates (148l): Apprentice |
+|     2520 | E022 | sql  | Open every quest to its whole faction on the basic profile (issue 155e):    |
+|     2530 | E023 | sql  | Create and seed the rotation-state table the basic profile's                |
+|     2540 | E024 | sql  | Basic's Outland dungeon ladder (issue 155f): sixteen dungeons open at 60,   |
+|     2550 | E025 | sql  | One "Visiting Mentor" per starting valley that teaches exactly the classes  |
+|     2560 | E026 | sql  | The table of per-creature (and per-map) damage, healing and health          |
+|     2570 | E027 | sql  | Outland without tradeskills (issue 155n): its herb, ore, gas and fishing    |
+|     2580 | E028 | sql  | Outland without quests (issue 155l): every Outland, Shattrath, Isle and     |
+|     2590 | E029 | sql  | Inscription without glyphs (issue 155o): glyph recipes off the trainers,    |
+|     2600 | E030 | sql  | Darkmoon cards (issue 155o): nothing from a Darkmoon deck binds, and the    |
+|     2610 | E031 | sql  | Outland gear scaling (issue 155k, with 155f's dungeon ladder): Outland's    |
+|     2620 | E032 | sql  | Outland world levels (issue 155k): Outland's open-world monsters +4, the    |
+|     2630 | E033 | sql  | Gem supply (issue 155p, stage 1): prospecting yields, Wrath and epic gem    |
+|     2660 | E036 | sql  | White gear durability (issue 155p): white weapons and armor last twice as   |
+|     2670 | E037 | sql  | Class books for the level 61-80 abilities (issue 155q): one stock-style     |
+|     2680 | E038 | sql  | The Dark Portal as the only door into Outland (issue 155l): Shattrath's     |
+|     2690 | E039 | sql  | No guild banks (issue 617l): every Guild Vault spawn removed. Same          |
+|     2700 | E040 | sql  | Sargobras at the gate of Acherus (issue 718): the gossip NPC in the Ebon    |
+|     2720 | E042 | sql  | The buddy clan and roster tables (issue 617a1): each owner's companion      |
+|     2730 | E043 | sql  | Sargobras, the buddy selector (issue 617b): his two creatures (the valley   |
+|     2740 | E044 | sql  | Every named area's borders and middle (issue 617e2), for the buddies'       |
+|     2750 | E045 | sql  | The beds buddies sleep on in towns (issue 617e4), placed by hand in game    |
+|     2760 | E046 | sql  | The world bosses' respawn taken off the server's timer (issue 155j): the    |
+|     2800 | E050 | sql  | The world's little towns as circles (issue 617e4a): every cluster of        |
+|     2820 | E052 | sql  | Every gearset profile (issue 617r: src/lua-basic/data/gearsets/*.lua) as    |
+|     2830 | E053 | sql  | The `command` rows for the game master commands the project compiles in     |
+|     2840 | E054 | sql  | The game's legendaries as level-60 raid drops (issue 182): level-60 copies  |
+|     2850 | E055 | sql  | The smaller places buddies roam (issue 617e12, the first cut): every named  |
+|     2860 | E056 | sql  | The kept stand-ins (issue 617t1): one row per stand-in character the buddy  |
+|     2870 | E057 | sql  | The Eternal Belt Buckle usable from level 60 (issue 624): one item's        |
 <!-- patch-lists: end -->
 
 ## How to switch to basic

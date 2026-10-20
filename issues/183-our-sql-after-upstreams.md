@@ -23,6 +23,18 @@ resolved this by putting our SQL updates after the upstream's?" and:
 
 ## Current Behavior
 
+**Since issue 189d (2026-10-20, not yet compiled):** the order comes from
+time, not names. The compile starts the shadow server once after the
+install stage (gate 2000, `scripts/validate --no-promote`), so the
+updater applies upstream's updates first; only then do the SQL steps
+(priorities 2000-8999) place our files, and the validation start applies
+them. The mirror keeps each file's own name (no `z_`) and keeps the stamp,
+so a pin move still runs ours again, after upstream's. The `z_` records
+are forgotten by `_forget_z_prefixed_updates` in every SQL stage (the
+switch-over, on the next install; `scripts/test-forget-z-prefixed-updates`),
+which replaced `_forget_unprefixed_updates`. What follows is the `z_`
+design as it was built and run.
+
 In progress (2026-10-09): built and checked without a server
 (`scripts/test-sql-mirror`, 8 checks, in the compile's quick tests).
 **Run through an install and a boot on 2026-10-18** (basic, at

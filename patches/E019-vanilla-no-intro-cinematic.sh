@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E019
 # profiles:   basic vanilla
-# priority:   1490
-# kind:       install
+# priority:   2490
+# kind:       sql
 # about:      Installs a BEFORE INSERT trigger on acore_characters_vanilla.characters
 # ==== end of header ====
 # E019-vanilla-no-intro-cinematic.sh - one install step, loaded by patches/E-patches.sh

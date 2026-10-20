@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E064
 # profiles:   beta
-# priority:   1940
-# kind:       install
+# priority:   2940
+# kind:       sql
 # about:      Beta: the other faction in the /who list (permission 28), every account, beta's realm.
 # ==== end of header ====
 # E064-beta-two-side-who.sh - one install step, loaded by patches/E-patches.sh

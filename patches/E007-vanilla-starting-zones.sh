@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E007
 # profiles:   vanilla
-# priority:   1370
-# kind:       install
+# priority:   2370
+# kind:       sql
 # about:      Override playercreateinfo so vanilla characters spawn at the
 # ==== end of header ====
 # E007-vanilla-starting-zones.sh - one install step, loaded by patches/E-patches.sh

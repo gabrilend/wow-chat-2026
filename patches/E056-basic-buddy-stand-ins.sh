@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E056
 # profiles:   buddy-set
-# priority:   1860
-# kind:       install
+# priority:   2860
+# kind:       sql
 # about:      The kept stand-ins (issue 617t1): one row per stand-in character the buddy
 # ==== end of header ====
 # E056-basic-buddy-stand-ins.sh - one install step, loaded by patches/E-patches.sh

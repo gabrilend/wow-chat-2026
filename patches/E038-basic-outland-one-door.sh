@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E038
 # profiles:   basic
-# priority:   1680
-# kind:       install
+# priority:   2680
+# kind:       sql
 # about:      The Dark Portal as the only door into Outland (issue 155l): Shattrath's
 # ==== end of header ====
 # E038-basic-outland-one-door.sh - one install step, loaded by patches/E-patches.sh

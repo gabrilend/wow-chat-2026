@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E008
 # profiles:   basic vanilla
-# priority:   1380
-# kind:       install
+# priority:   2380
+# kind:       sql
 # about:      Clear the flightmaster bit network-wide and replace gossip with
 # ==== end of header ====
 # E008-vanilla-remove-flight-paths.sh - one install step, loaded by patches/E-patches.sh

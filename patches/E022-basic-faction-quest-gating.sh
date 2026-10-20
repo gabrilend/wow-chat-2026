@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E022
 # profiles:   basic
-# priority:   1520
-# kind:       install
+# priority:   2520
+# kind:       sql
 # about:      Open every quest to its whole faction on the basic profile (issue 155e):
 # ==== end of header ====
 # E022-basic-faction-quest-gating.sh - one install step, loaded by patches/E-patches.sh

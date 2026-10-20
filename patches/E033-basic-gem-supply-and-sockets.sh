@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E033
 # profiles:   basic
-# priority:   1630
-# kind:       install
+# priority:   2630
+# kind:       sql
 # about:      Gem supply (issue 155p, stage 1): prospecting yields, Wrath and epic gem
 # ==== end of header ====
 # E033-basic-gem-supply-and-sockets.sh - one install step, loaded by patches/E-patches.sh.

@@ -2,8 +2,8 @@
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E053
 # profiles:   buddy-set
-# priority:   1830
-# kind:       install
+# priority:   2830
+# kind:       sql
 # about:      The `command` rows for the game master commands the project compiles in
 # ==== end of header ====
 # E053-custom-command-help.sh - one install step, loaded by patches/E-patches.sh

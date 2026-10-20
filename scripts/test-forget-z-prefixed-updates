@@ -1,0 +1,78 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-forget-z-prefixed-updates
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      The SQL stage forgets our files' z_ update records, and nothing else (189d)
+# quick-test: yes
+# ==== end of header ====
+# test-forget-z-prefixed-updates - checks the SQL stage's switch-over from
+# issue 183's z_ names to each file's own (issue 189d).
+#
+# For a general audience: the database remembers every update file it has
+# applied, by name. From issue 183 to 189d our files were applied under a
+# "z_" name (z_04-buddy-roster.sql); since 189d, under their own. A z_
+# record left behind would make the server warn at every start that a file
+# it applied is missing, so the SQL stage forgets the z_ record of each of
+# our own files (they apply again under their own names at the next start),
+# and touches nothing else. This gives the real step a pretend database
+# table and folder and checks it removes exactly those records, and
+# nothing on a second run. (Until 189d this tested the reverse tidy-up,
+# _forget_unprefixed_updates, which 189d replaced.)
+#
+# Usage: scripts/test-forget-z-prefixed-updates [PROJECT_DIR]
+# Needs the project's MySQL (it works in the _smoke_test database).
+# Exit status: 0 when every check passes, 1 otherwise.
+
+DIR="/mnt/kaun/wow-chat-2026"
+if [[ -n "$1" ]]; then
+    DIR="$1"
+fi
+MYSQL="${DIR}/mysql/installed-files/bin/mysql --no-defaults --socket=${DIR}/mysql/databases/mysql.sock -uritz -pmenardi -N _smoke_test"
+
+source /home/ritz/programming/ai-stuff/scripts/libs/ensure-ram-tiers
+ensure_ram_tiers "${DIR}" || exit 1
+WORK="$(mktemp -d "${DIR}/tmp/shared-memory/forget-updates-test.XXXXXX")"
+TABLE_MADE=false
+cleanup() { rm -rf "${WORK}"; [[ "${TABLE_MADE}" == "true" ]] && ${MYSQL} -e "DROP TABLE IF EXISTS updates" 2>/dev/null; }
+trap cleanup EXIT
+
+# the step under test, lifted out of patches/E-helpers.sh as it is (the
+# install steps' shared helpers; in patches/E-patches.sh until issue 150's
+# split, 2026-10-20)
+eval "$(sed -n '/^_forget_z_prefixed_updates() {/,/^}/p' "${DIR}/patches/E-helpers.sh")"
+declare -F _forget_z_prefixed_updates > /dev/null || { echo "FAIL: _forget_z_prefixed_updates not found in patches/E-helpers.sh"; exit 1; }
+
+if ${MYSQL} -e "SHOW TABLES LIKE 'updates'" 2>/dev/null | grep -q .; then
+    echo "FAIL: _smoke_test already has an updates table; not touching it"; exit 1
+fi
+${MYSQL} -e "CREATE TABLE updates (name VARCHAR(200) PRIMARY KEY, hash CHAR(40), state VARCHAR(20), timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, speed INT DEFAULT 0)" 2>/dev/null ||
+    { echo "FAIL: could not make a scratch table in _smoke_test (is the project's MySQL running?)"; exit 1; }
+TABLE_MADE=true
+
+# our folder holds a.sql and b.sql; the records:
+#   z_a.sql + a.sql   z_a.sql must go (the leftover), a.sql stay
+#   z_b.sql alone     must go: b.sql applies under its own name next start
+#   c.sql + z_c.sql   not our file (not in the folder): both stay
+#   2026_01_01_00_world.sql  upstream's: stays
+mkdir -p "${WORK}/staging"
+touch "${WORK}/staging/a.sql" "${WORK}/staging/b.sql"
+${MYSQL} -e "INSERT INTO updates (name, hash, state) VALUES ('a.sql','h','CUSTOM'), ('z_a.sql','h','CUSTOM'), ('z_b.sql','h','CUSTOM'), ('c.sql','h','CUSTOM'), ('z_c.sql','h','CUSTOM'), ('2026_01_01_00_world.sql','h','RELEASED')" 2>/dev/null
+
+FAILS=0
+check() { if [[ "$2" == "$3" ]]; then echo "  ok    $1"; else FAILS=$((FAILS + 1)); echo "  FAIL  $1: got '$2', wanted '$3'"; fi; }
+names() { ${MYSQL} -e "SELECT GROUP_CONCAT(name ORDER BY name) FROM updates" 2>/dev/null; }
+
+echo "test-forget-z-prefixed-updates"
+out="$(_forget_z_prefixed_updates "${WORK}/staging" _smoke_test)"
+check "our files' z_ records are forgotten, everything else kept" "$(names)" "2026_01_01_00_world.sql,a.sql,c.sql,z_c.sql"
+check "it says how many it forgot" "$(grep -o '[0-9]* z_ update record' <<< "${out}")" "2 z_ update record"
+out="$(_forget_z_prefixed_updates "${WORK}/staging" _smoke_test)"
+check "a second run changes nothing and says nothing" "$(names)|${out}" "2026_01_01_00_world.sql,a.sql,c.sql,z_c.sql|"
+
+echo "$(( FAILS == 0 ? 3 : 3 - FAILS )) of 3 checks passed"
+exit $(( FAILS > 0 ))
+# ==== footer of test-forget-z-prefixed-updates ====
+# lines:      78
+# ==== end of footer ====
