@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C036
+# profiles:   beta
+# priority:   1295
+# kind:       settings
+# about:      Beta: Death Knights for Everyone
+# ==== end of header ====
 # C036 - Beta: Death Knights for Everyone
 # Any beta account may make a death knight, without first having a
 # level-55 character.
@@ -24,3 +31,6 @@ config_beta_death_knights_for_everyone() {
 CONFIG_PROFILES[config_beta_death_knights_for_everyone]="beta"
 CONFIG_DESCRIPTIONS[config_beta_death_knights_for_everyone]="Death knights need no level-55 character first (beta)"
 # -- }}}
+# ==== footer of C036 ====
+# lines:      36
+# ==== end of footer ====

@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E011
+# profiles:   beta
+# priority:   1410
+# kind:       install
+# about:      Death Knight class system for beta profile (issue 206/167). Wires DK
+# ==== end of header ====
 # E011-beta-dk-class-system.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -45,3 +52,6 @@ unpatch_E011_beta_dk_class_system() {
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
+# ==== footer of E011 ====
+# lines:      57
+# ==== end of footer ====

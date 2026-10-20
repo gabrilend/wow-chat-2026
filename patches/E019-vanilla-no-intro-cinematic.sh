@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E019
+# profiles:   basic vanilla
+# priority:   1490
+# kind:       install
+# about:      Installs a BEFORE INSERT trigger on acore_characters_vanilla.characters
+# ==== end of header ====
 # E019-vanilla-no-intro-cinematic.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -59,3 +66,6 @@ DROP TRIGGER IF EXISTS `tr_no_intro_cinematic`;
 SQL
 }
 # -- }}}
+# ==== footer of E019 ====
+# lines:      71
+# ==== end of footer ====

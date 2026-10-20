@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C009
+# profiles:   beta
+# priority:   1165
+# kind:       settings
+# about:      Instant Teleport (Beta)
+# ==== end of header ====
 # C009 - Instant Teleport (Beta)
 # Instant teleport cooldowns for beta testing
 # Profiles: beta
@@ -19,3 +26,6 @@ config_instant_teleport_beta() {
 CONFIG_PROFILES[config_instant_teleport_beta]="beta"
 CONFIG_DESCRIPTIONS[config_instant_teleport_beta]="Instant taxi travel"
 # -- }}}
+# ==== footer of C009 ====
+# lines:      31
+# ==== end of footer ====

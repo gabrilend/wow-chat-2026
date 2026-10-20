@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-gems
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      checks that a buddy's starting gear can always be fully
+# quick-test: yes
+# ==== end of header ====
 # test-buddy-gems - checks that a buddy's starting gear can always be fully
 # gemmed (issue 617j2).
 #
@@ -82,3 +90,6 @@ else
     echo "test-buddy-gems: FAILED"
 fi
 exit ${failed}
+# ==== footer of test-buddy-gems ====
+# lines:      95
+# ==== end of footer ====

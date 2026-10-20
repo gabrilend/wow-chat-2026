@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C007c
+# profiles:   vanilla
+# priority:   1155
+# kind:       settings
+# about:      Starting Level 20 (Vanilla)
+# ==== end of header ====
 # C007c - Starting Level 20 (Vanilla)
 # Set starting level to 20 for the vanilla profile so new characters
 # spawn at the midpoint of the vanilla 1..40 spread (decision pinned in 148).
@@ -14,3 +21,6 @@ config_starting_level_20() {
 CONFIG_PROFILES[config_starting_level_20]="vanilla"
 CONFIG_DESCRIPTIONS[config_starting_level_20]="Starting level 20"
 # -- }}}
+# ==== footer of C007c ====
+# lines:      26
+# ==== end of footer ====

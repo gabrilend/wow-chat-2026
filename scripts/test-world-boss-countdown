@@ -1,4 +1,12 @@
 #!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-world-boss-countdown
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      checks the world bosses' respawn countdown
+-- quick-test: yes
+-- ==== end of header ====
 -- test-world-boss-countdown - checks the world bosses' respawn countdown
 -- (issue 155j) without a server.
 --
@@ -135,3 +143,6 @@ end
 
 print(string.format("test-world-boss-countdown: %d passed, %d failed", passed, failed))
 os.exit(failed == 0 and 0 or 1)
+-- ==== footer of test-world-boss-countdown ====
+-- lines:      148
+-- ==== end of footer ====

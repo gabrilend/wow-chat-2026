@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C008
+# profiles:   all
+# priority:   1160
+# kind:       settings
+# about:      GM Login State
+# ==== end of header ====
 # C008 - GM Login State
 # Set GM level on login (0 = player, 3 = admin)
 # Profiles: all (vanilla=3, basic=3, beta=3, release=0, alpha=0, cc-test=0)
@@ -28,3 +35,6 @@ config_gm_login_state() {
 CONFIG_PROFILES[config_gm_login_state]="all"
 CONFIG_DESCRIPTIONS[config_gm_login_state]="GM login state (vanilla/basic/beta=admin, release/alpha/cc-test=player)"
 # -- }}}
+# ==== footer of C008 ====
+# lines:      40
+# ==== end of footer ====

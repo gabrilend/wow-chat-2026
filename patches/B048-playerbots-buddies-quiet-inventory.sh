@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B048
+# profiles:   buddy-set
+# priority:   580
+# kind:       source
+# about:      Buddies don't whisper their owner about failed item moves
+# ==== end of header ====
 # B048 - Buddies don't whisper their owner about failed item moves
 # Issue 617h1 (basic, 2026-10-03).
 #
@@ -75,3 +82,6 @@ unpatch_B048_playerbots_buddies_quiet_inventory() {
     return 0
 }
 # }}}
+# ==== footer of B048 ====
+# lines:      87
+# ==== end of footer ====

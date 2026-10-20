@@ -1,4 +1,12 @@
 #!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-buddy-talents
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      level every class's buddy through every talent
+-- quick-test: yes
+-- ==== end of header ====
 -- test-buddy-talents - level every class's buddy through every talent
 -- shape, many times with different dice, and check each talent it learns
 -- against the server's own rules (issue 617g).
@@ -339,3 +347,6 @@ for _, r in ipairs(reports) do print("  " .. r) end
 print(failures == 0 and "Result: all checks passed." or ("Result: " .. failures .. " failure(s)."))
 os.exit(failures == 0 and 0 or 1)
 -- }}}
+-- ==== footer of test-buddy-talents ====
+-- lines:      352
+-- ==== end of footer ====

@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-acherus-vendors
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      test-acherus-vendors
+# quick-test: yes
+# ==== end of header ====
 # test-acherus-vendors
 #
 # What it is: a check that the Acherus vendors install step (E051, issue
@@ -77,3 +85,6 @@ check "reverted: the flags, rows and prices are stock again" "$([[ "${before}" =
 
 echo ""
 if [[ ${fails} -eq 0 ]]; then echo "All 4 checks passed (rolled back; nothing changed)"; else echo "${fails} of 4 checks failed"; exit 1; fi
+# ==== footer of test-acherus-vendors ====
+# lines:      90
+# ==== end of footer ====

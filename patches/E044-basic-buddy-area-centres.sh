@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E044
+# profiles:   buddy-set
+# priority:   1740
+# kind:       install
+# about:      Every named area's borders and middle (issue 617e2), for the buddies'
+# ==== end of header ====
 # E044-basic-buddy-area-centres.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -43,3 +50,6 @@ unpatch_E044_basic_buddy_area_centres() {
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
+# ==== footer of E044 ====
+# lines:      55
+# ==== end of footer ====

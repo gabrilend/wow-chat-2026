@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B056
+# profiles:   basic beta cc-test release vanilla
+# priority:   660
+# kind:       source
+# about:      Bots see only as far as they act
+# ==== end of header ====
 # B056 - Bots see only as far as they act
 # Issue 194 (2026-10-20): every profile built from source-beta (basic,
 # vanilla, release, beta, cc-test); alpha's older server has other code.
@@ -63,3 +70,6 @@ unpatch_B056_bots_see_only_as_far_as_they_act() {
     line_edits_revert B056 <<< "${B056_EDITS}"
 }
 # }}}
+# ==== footer of B056 ====
+# lines:      75
+# ==== end of footer ====

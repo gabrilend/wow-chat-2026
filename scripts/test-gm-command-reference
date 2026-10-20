@@ -1,4 +1,12 @@
 #!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-gm-command-reference
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      the project's game master commands, their one
+-- quick-test: yes
+-- ==== end of header ====
 --------------------------------------------------------------------------------
 -- test-gm-command-reference - the project's game master commands, their one
 -- written description, and the files made from it, all agree
@@ -117,3 +125,6 @@ end
 print("")
 print(fails == 0 and ("All " .. checks .. " checks passed") or (fails .. " of " .. checks .. " checks failed"))
 os.exit(fails == 0 and 0 or 1)
+-- ==== footer of test-gm-command-reference ====
+-- lines:      130
+-- ==== end of footer ====

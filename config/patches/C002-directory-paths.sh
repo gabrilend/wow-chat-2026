@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C002
+# profiles:   all
+# priority:   1105
+# kind:       settings
+# about:      Directory Paths
+# ==== end of header ====
 # C002 - Directory Paths
 # Set project directory paths (DataDir, LogsDir, SourceDirectory, etc.)
 # Profiles: all
@@ -47,3 +54,6 @@ config_directory_paths() {
 CONFIG_PROFILES[config_directory_paths]="all"
 CONFIG_DESCRIPTIONS[config_directory_paths]="Directory paths (DataDir, LogsDir, Source)"
 # -- }}}
+# ==== footer of C002 ====
+# lines:      59
+# ==== end of footer ====

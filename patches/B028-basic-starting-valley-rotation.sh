@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B028
+# profiles:   basic
+# priority:   380
+# kind:       source
+# about:      Basic: new characters spawn in their faction's rotating starting valley
+# ==== end of header ====
 # B028 - Basic: new characters spawn in their faction's rotating starting valley
 # Issue 155d.
 #
@@ -277,3 +284,6 @@ unpatch_B028_basic_starting_valley_rotation() {
     echo "  [B028] Reverted basic starting-valley rotation"
 }
 # }}}
+# ==== footer of B028 ====
+# lines:      289
+# ==== end of footer ====

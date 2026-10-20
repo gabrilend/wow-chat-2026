@@ -1,4 +1,12 @@
 #!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-buddy-arc
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      checks where a partner's buddies are placed when a game
+-- quick-test: yes
+-- ==== end of header ====
 -- test-buddy-arc - checks where a partner's buddies are placed when a game
 -- master brings or revives them all at once (src/lua-basic/lib/buddy-arc.lua).
 --
@@ -63,3 +71,6 @@ check(Arc.pick_shape("centre", 0) == "centre" and Arc.pick_shape("ring", 0.99) =
 
 print(fails == 0 and ("All " .. checks .. " checks passed") or (fails .. " of " .. checks .. " checks failed"))
 os.exit(fails == 0 and 0 or 1)
+-- ==== footer of test-buddy-arc ====
+-- lines:      76
+-- ==== end of footer ====

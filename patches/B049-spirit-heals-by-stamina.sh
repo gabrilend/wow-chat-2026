@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B049
+# profiles:   basic
+# priority:   590
+# kind:       source
+# about:      Spirit heals by stamina, in combat too
+# ==== end of header ====
 # B049 - Spirit heals by stamina, in combat too
 # Issue 167 (basic, 2026-10-04).
 #
@@ -172,3 +179,6 @@ unpatch_B049_spirit_heals_by_stamina() {
     return 0
 }
 # }}}
+# ==== footer of B049 ====
+# lines:      184
+# ==== end of footer ====

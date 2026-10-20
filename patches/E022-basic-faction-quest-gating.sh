@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E022
+# profiles:   basic
+# priority:   1520
+# kind:       install
+# about:      Open every quest to its whole faction on the basic profile (issue 155e):
+# ==== end of header ====
 # E022-basic-faction-quest-gating.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -56,3 +63,6 @@ unpatch_E022_basic_faction_quest_gating() {
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
+# ==== footer of E022 ====
+# lines:      68
+# ==== end of footer ====

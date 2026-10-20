@@ -1,4 +1,12 @@
 #!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-sargobras-follow
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      test-sargobras-follow
+-- quick-test: yes
+-- ==== end of header ====
 -- test-sargobras-follow
 -- Checks how the wandering Sargobras keeps near his owner, without a
 -- server. The real Sargobras script is loaded into a stand-in world: a fake
@@ -341,3 +349,6 @@ check("someone 5 yards off doesn't", outside == nil)
 print("")
 if fails == 0 then print("All " .. checks .. " checks passed") else print(fails .. " of " .. checks .. " checks failed") end
 os.exit(fails == 0 and 0 or 1)
+-- ==== footer of test-sargobras-follow ====
+-- lines:      354
+-- ==== end of footer ====

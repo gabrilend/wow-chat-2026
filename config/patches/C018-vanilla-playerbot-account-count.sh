@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C018
+# profiles:   vanilla
+# priority:   1205
+# kind:       settings
+# about:      Vanilla Playerbot Account Count
+# ==== end of header ====
 # C018 - Vanilla Playerbot Account Count
 # Pin AiPlayerbot.RandomBotAccountCount to a value above the auto-mode
 # threshold so the bot factory provisions enough accounts to host all
@@ -35,3 +42,6 @@ config_vanilla_playerbot_account_count() {
 CONFIG_PROFILES[config_vanilla_playerbot_account_count]="vanilla"
 CONFIG_DESCRIPTIONS[config_vanilla_playerbot_account_count]="Playerbot RandomBotAccountCount = 110 (cold-boot pre-provision)"
 # -- }}}
+# ==== footer of C018 ====
+# lines:      47
+# ==== end of footer ====

@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E021
+# profiles:   vanilla
+# priority:   1510
+# kind:       install
+# about:      Grant every level-20 vanilla character a gathering + a production profession
+# ==== end of header ====
 # E021-vanilla-starting-professions.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -44,3 +51,6 @@ unpatch_E021_vanilla_starting_professions() {
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
+# ==== footer of E021 ====
+# lines:      56
+# ==== end of footer ====

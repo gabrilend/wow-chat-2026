@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C017
+# profiles:   basic beta release vanilla
+# priority:   1200
+# kind:       settings
+# about:      Level-correlated caps
+# ==== end of header ====
 # C017 - Level-correlated caps
 # Two worldserver knobs are validated against CONFIG_MAX_PLAYER_LEVEL at
 # boot and both ship with values (55, 60) tuned for the upstream max
@@ -73,3 +80,6 @@ config_level_correlated_caps() {
 CONFIG_PROFILES[config_level_correlated_caps]="release beta vanilla basic"
 CONFIG_DESCRIPTIONS[config_level_correlated_caps]="Death knights start at 55 (or the cap if lower; beta: 1); RecruitAFriend.MaxLevel pinned to MaxPlayerLevel"
 # -- }}}
+# ==== footer of C017 ====
+# lines:      85
+# ==== end of footer ====

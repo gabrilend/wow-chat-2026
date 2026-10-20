@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C001
+# profiles:   all
+# priority:   1100
+# kind:       settings
+# about:      Database Connections
+# ==== end of header ====
 # C001 - Database Connections
 # Set database connection strings (project-specific)
 # Profiles: all
@@ -121,3 +128,6 @@ config_database_connections() {
 CONFIG_PROFILES[config_database_connections]="all"
 CONFIG_DESCRIPTIONS[config_database_connections]="Database connections (MySQL credentials)"
 # -- }}}
+# ==== footer of C001 ====
+# lines:      133
+# ==== end of footer ====

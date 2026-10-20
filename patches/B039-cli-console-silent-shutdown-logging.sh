@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B039
+# profiles:   basic
+# priority:   490
+# kind:       source
+# about:      Log why the console thread shuts the world down (issue 163)
+# ==== end of header ====
 # B039 - Log why the console thread shuts the world down (issue 163)
 #
 # CliRunnable.cpp calls World::StopNow() from two places when it decides
@@ -46,3 +53,6 @@ unpatch_B039_cli_console_silent_shutdown_logging() {
     sed -i '/console input closed (stdin at EOF)/d' "${FILE}"
 }
 # }}}
+# ==== footer of B039 ====
+# lines:      58
+# ==== end of footer ====

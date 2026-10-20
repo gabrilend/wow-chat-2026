@@ -1,4 +1,12 @@
 #!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-hearthstone
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      runs beta's group hearthstone (src/lua-beta/hearthstone.lua)
+-- quick-test: yes
+-- ==== end of header ====
 -- test-hearthstone - runs beta's group hearthstone (src/lua-beta/hearthstone.lua)
 -- in the pretend world and checks what it does, without a game server.
 --
@@ -221,3 +229,6 @@ end
 
 print(string.format("%d checks, %d failed", checks, fails))
 os.exit(fails == 0 and 0 or 1)
+-- ==== footer of test-hearthstone ====
+-- lines:      234
+-- ==== end of footer ====

@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B043
+# profiles:   basic
+# priority:   530
+# kind:       source
+# about:      The world says who stopped it
+# ==== end of header ====
 # B043 - The world says who stopped it
 # Issue 163 (2026-09-29).
 #
@@ -201,3 +208,6 @@ unpatch_B043_say_why_the_world_stopped() {
     return 0
 }
 # }}}
+# ==== footer of B043 ====
+# lines:      213
+# ==== end of footer ====

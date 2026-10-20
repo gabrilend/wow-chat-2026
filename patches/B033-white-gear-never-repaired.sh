@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B033
+# profiles:   basic
+# priority:   430
+# kind:       source
+# about:      White (common-quality) gear is never repaired
+# ==== end of header ====
 # B033 - White (common-quality) gear is never repaired
 # Issue 155p (basic, 2026-09-25).
 #
@@ -65,3 +72,6 @@ unpatch_B033_white_gear_never_repaired() {
     return 0
 }
 # }}}
+# ==== footer of B033 ====
+# lines:      77
+# ==== end of footer ====

@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B052
+# profiles:   buddy-set
+# priority:   620
+# kind:       source
+# about:      Playerbots: a buddy's long walk never ends in a teleport
+# ==== end of header ====
 # B052 - Playerbots: a buddy's long walk never ends in a teleport
 # Issue 617e4 (basic, 2026-10-12).
 #
@@ -93,3 +100,6 @@ unpatch_B052_playerbots_buddies_never_teleport_to_owner() {
     return 0
 }
 # }}}
+# ==== footer of B052 ====
+# lines:      105
+# ==== end of footer ====

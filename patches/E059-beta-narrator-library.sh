@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E059
+# profiles:   beta
+# priority:   1890
+# kind:       install
+# about:      The narrators' books (issue 909): every book on the shelf
+# ==== end of header ====
 # E059-beta-narrator-library.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -42,3 +49,6 @@ unpatch_E059_beta_narrator_library() {
     rm -rf "${TEXTS}"
 }
 # -- }}}
+# ==== footer of E059 ====
+# lines:      54
+# ==== end of footer ====

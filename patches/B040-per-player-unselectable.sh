@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B040
+# profiles:   basic
+# priority:   500
+# kind:       source
+# about:      Creatures one player cannot select
+# ==== end of header ====
 # B040 - Creatures one player cannot select
 # Issue 164 (2026-09-29).
 #
@@ -329,3 +336,6 @@ unpatch_B040_per_player_unselectable() {
     return 0
 }
 # }}}
+# ==== footer of B040 ====
+# lines:      341
+# ==== end of footer ====

@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B029
+# profiles:   basic
+# priority:   390
+# kind:       source
+# about:      A trainer gossip option can name which trainer list it opens
+# ==== end of header ====
 # B029 - A trainer gossip option can name which trainer list it opens
 # Issue 155e (the per-class Visiting Mentors).
 #
@@ -192,3 +199,6 @@ unpatch_B029_gossip_option_trainer_list() {
     return 0
 }
 # }}}
+# ==== footer of B029 ====
+# lines:      204
+# ==== end of footer ====

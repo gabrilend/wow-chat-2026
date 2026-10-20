@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-profile-tables-agree
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      checks that every script holding a copy of a
+# quick-test: yes
+# ==== end of header ====
 # test-profile-tables-agree - checks that every script holding a copy of a
 # profile table holds the same copy.
 #
@@ -93,3 +101,6 @@ else
     echo "${FAILS} disagreement(s): a profile would build from one value and install or update with another"
 fi
 [[ "${FAILS}" -eq 0 ]]
+# ==== footer of test-profile-tables-agree ====
+# lines:      106
+# ==== end of footer ====

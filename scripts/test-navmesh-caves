@@ -1,4 +1,12 @@
 #!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-navmesh-caves
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      the walking mesh and the terrain together find a
+-- quick-test: yes
+-- ==== end of header ====
 --------------------------------------------------------------------------------
 -- test-navmesh-caves - the walking mesh and the terrain together find a
 -- cave (issue 617e12)
@@ -73,3 +81,6 @@ check(best.mouths == 1, string.format("joined to open floor at one place: a cave
 print("")
 print(fails == 0 and ("All " .. checks .. " checks passed") or (fails .. " of " .. checks .. " checks failed"))
 os.exit(fails == 0 and 0 or 1)
+-- ==== footer of test-navmesh-caves ====
+-- lines:      86
+-- ==== end of footer ====

@@ -4,7 +4,7 @@ Reads the header and footer every patch and quick test carries (issue
 189a): its id, profiles, priority, kind and a line about it at the top;
 the id and the file's line count at the bottom. Returns its table:
 `local Header = dofile(".../patch-header.lua")`. The shape is written out
-at the top of the source and in `issues/189a-the-header-and-its-reader.md`.
+at the top of the source and in `issues/completed/189a-the-header-and-its-reader.md`.
 
 | Function | Takes | Gives |
 |---|---|---|

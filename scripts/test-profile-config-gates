@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-profile-config-gates
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      run a profile's config patches on scratch
+# quick-test: yes
+# ==== end of header ====
 # test-profile-config-gates - run a profile's config patches on scratch
 # copies of the config files and check every value that came out.
 #
@@ -322,3 +330,6 @@ echo "Edited keys missing from stock configs: ${missing}"
 # }}}
 
 [[ "${failed}" -eq 0 && "${fail}" -eq 0 && "${missing}" -eq 0 && "${db_fail}" -eq 0 ]]
+# ==== footer of test-profile-config-gates ====
+# lines:      335
+# ==== end of footer ====

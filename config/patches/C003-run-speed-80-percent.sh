@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C003
+# profiles:   alpha basic beta release vanilla
+# priority:   1110
+# kind:       settings
+# about:      Run Speed 85% (named for its first value, 80%)
+# ==== end of header ====
 # C003 - Run Speed 85% (named for its first value, 80%)
 # Set player run speed below stock (slower, more deliberate exploration).
 # 0.85 since 2026-10-12 (owner: "Sure, 0.85 for everyone, let's see how it
@@ -51,3 +58,6 @@ config_run_speed_80_percent() {
 CONFIG_PROFILES[config_run_speed_80_percent]="release beta vanilla basic alpha"
 CONFIG_DESCRIPTIONS[config_run_speed_80_percent]="Run speed 85% (slower exploration)"
 # -- }}}
+# ==== footer of C003 ====
+# lines:      63
+# ==== end of footer ====

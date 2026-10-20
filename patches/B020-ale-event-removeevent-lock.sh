@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B020
+# profiles:   basic beta cc-test release vanilla
+# priority:   300
+# kind:       source
+# about:      Add LOCK_ALE to ALEEventProcessor::RemoveEvent
+# ==== end of header ====
 # B020 - Add LOCK_ALE to ALEEventProcessor::RemoveEvent
 # Issue 208: ALE registry corruption crash
 #
@@ -64,3 +71,6 @@ unpatch_B020_ale_event_removeevent_lock() {
     sed -i '/^        LOCK_ALE;$/{N;/\n        \/\/ Free lua function ref$/{s/^        LOCK_ALE;\n//}}' "${FILE}"
 }
 # }}}
+# ==== footer of B020 ====
+# lines:      76
+# ==== end of footer ====

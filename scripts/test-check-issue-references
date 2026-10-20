@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-check-issue-references
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      checks the issue reference checker against
+# quick-test: yes
+# ==== end of header ====
 # test-check-issue-references - checks the issue reference checker against
 # a made-up issue whose every reference has a known right answer.
 #
@@ -144,3 +152,6 @@ else
     echo "${FAILS} verdict(s) wrong; the checker's output is in ${SCRATCH}/checker-output.txt"
 fi
 [[ "${FAILS}" -eq 0 ]]
+# ==== footer of test-check-issue-references ====
+# lines:      157
+# ==== end of footer ====

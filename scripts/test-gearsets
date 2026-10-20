@@ -1,4 +1,12 @@
 #!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-gearsets
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      holds the gearset profiles (issue 617r) to their rules,
+-- quick-test: yes
+-- ==== end of header ====
 -- test-gearsets - holds the gearset profiles (issue 617r) to their rules,
 -- against the world database, and runs the gearset command offline.
 --
@@ -454,3 +462,6 @@ print("")
 if fails == 0 then print(string.format("All %d checks passed (%d elite records, %d items)", checks, #names, #ids))
 else print(string.format("%d of %d checks failed", fails, checks)) end
 os.exit(fails == 0 and 0 or 1)
+-- ==== footer of test-gearsets ====
+-- lines:      467
+-- ==== end of footer ====

@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E027
+# profiles:   basic
+# priority:   1570
+# kind:       install
+# about:      Outland without tradeskills (issue 155n): its herb, ore, gas and fishing
+# ==== end of header ====
 # E027-basic-outland-without-tradeskills.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -44,3 +51,6 @@ unpatch_E027_basic_outland_without_tradeskills() {
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
+# ==== footer of E027 ====
+# lines:      56
+# ==== end of footer ====

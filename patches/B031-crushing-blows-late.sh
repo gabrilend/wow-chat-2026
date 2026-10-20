@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B031
+# profiles:   basic
+# priority:   410
+# kind:       source
+# about:      Crushing blows start 4 levels later and ramp in over 4 more
+# ==== end of header ====
 # B031 - Crushing blows start 4 levels later and ramp in over 4 more
 # Issue 803 (extension 2026-09-24, retargeted 2026-09-27), basic profile.
 #
@@ -108,3 +115,6 @@ unpatch_B031_crushing_blows_late() {
     return 0
 }
 # }}}
+# ==== footer of B031 ====
+# lines:      120
+# ==== end of footer ====

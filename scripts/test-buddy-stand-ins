@@ -1,4 +1,12 @@
 #!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-stand-ins
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      checks the stand-in maker's choices (issue 617t1):
+# quick-test: yes
+# ==== end of header ====
 # test-buddy-stand-ins - checks the stand-in maker's choices (issue 617t1):
 # which talent shape a stand-in takes (one of its role, checked against the
 # buddy talent data), which race and class it may be, and which kept stand-in
@@ -55,3 +63,6 @@ else
     echo "${RESULT}"
     exit 1
 fi
+# ==== footer of test-buddy-stand-ins ====
+# lines:      68
+# ==== end of footer ====

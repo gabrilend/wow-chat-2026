@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E025
+# profiles:   basic
+# priority:   1550
+# kind:       install
+# about:      One "Visiting Mentor" per starting valley that teaches exactly the classes
+# ==== end of header ====
 # E025-basic-valley-universal-trainers.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -44,3 +51,6 @@ unpatch_E025_basic_valley_universal_trainers() {
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
+# ==== footer of E025 ====
+# lines:      56
+# ==== end of footer ====

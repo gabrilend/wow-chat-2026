@@ -1,4 +1,12 @@
 #!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-sql-mirror
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      checks that the project's SQL reaches the core's updater
+# quick-test: yes
+# ==== end of header ====
 # test-sql-mirror - checks that the project's SQL reaches the core's updater
 # after upstream's, and runs again after a pin move (issue 183).
 #
@@ -66,3 +74,6 @@ check "a staged file removed leaves the mirror too" "$([[ "${out}" == *"1 remove
 rm -rf "${WORK}"
 echo ""
 if [[ ${fails} -eq 0 ]]; then echo "All 8 checks passed"; else echo "${fails} of 8 checks failed"; exit 1; fi
+# ==== footer of test-sql-mirror ====
+# lines:      79
+# ==== end of footer ====

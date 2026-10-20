@@ -1,4 +1,12 @@
 #!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-roam-core
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      holds the server's C++ roaming core to the Lua model
+# quick-test: yes
+# ==== end of header ====
 # test-buddy-roam-core - holds the server's C++ roaming core to the Lua model
 # the owner designed buddy roaming with (issue 617e2).
 #
@@ -107,3 +115,6 @@ else
     echo "FAIL: the C++ cores and the Lua model disagree (data kept in ${DATA_DIR})"
 fi
 exit ${STATUS}
+# ==== footer of test-buddy-roam-core ====
+# lines:      120
+# ==== end of footer ====

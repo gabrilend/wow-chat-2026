@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E001
+# profiles:   basic beta cc-test vanilla
+# priority:   1010
+# kind:       install
+# about:      Create symlinks from install dir to the profile-specific Lua source
+# ==== end of header ====
 # E001-lua-script-symlinks.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -96,3 +103,6 @@ unpatch_E001_lua_script_symlinks() {
     echo "  [E001] Removed Lua script symlinks"
 }
 # -- }}}
+# ==== footer of E001 ====
+# lines:      108
+# ==== end of footer ====

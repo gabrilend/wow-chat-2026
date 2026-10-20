@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C038
+# profiles:   basic beta release vanilla
+# priority:   1305
+# kind:       settings
+# about:      No Quest Sparkles, Object Quest Marks or Map Points
+# ==== end of header ====
 # C038 - No Quest Sparkles, Object Quest Marks or Map Points
 # Stock AzerothCore makes objects a player's quests need sparkle, puts the
 # quest-giver's "!" and "?" over objects too, and marks quest places on the
@@ -38,3 +45,6 @@ config_no_quest_sparkles_or_map_points() {
 CONFIG_PROFILES[config_no_quest_sparkles_or_map_points]="basic vanilla release beta"
 CONFIG_DESCRIPTIONS[config_no_quest_sparkles_or_map_points]="No quest sparkles, object quest marks or map points"
 # -- }}}
+# ==== footer of C038 ====
+# lines:      50
+# ==== end of footer ====

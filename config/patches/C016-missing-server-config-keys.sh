@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C016
+# profiles:   basic beta cc-test release vanilla
+# priority:   1195
+# kind:       settings
+# about:      Missing server config keys
+# ==== end of header ====
 # C016 - Missing server config keys
 # The installed worldserver.conf.dist snapshot is older than the binary
 # expects: five keys the binary reads at boot are absent from .dist, so
@@ -66,3 +73,6 @@ EOF
 CONFIG_PROFILES[config_missing_server_config_keys]="release beta vanilla basic cc-test"
 CONFIG_DESCRIPTIONS[config_missing_server_config_keys]="Backfill 5 server-config keys missing from stale .dist"
 # -- }}}
+# ==== footer of C016 ====
+# lines:      78
+# ==== end of footer ====

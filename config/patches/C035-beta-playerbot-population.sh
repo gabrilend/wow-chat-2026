@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C035
+# profiles:   beta
+# priority:   1290
+# kind:       settings
+# about:      Beta Playerbot Population (200 random bots)
+# ==== end of header ====
 # C035 - Beta Playerbot Population (200 random bots)
 # How many random bots beta keeps in the world: 200, floor and ceiling
 # alike, in place of the module's stock 500.
@@ -35,3 +42,6 @@ config_beta_playerbot_population() {
 CONFIG_PROFILES[config_beta_playerbot_population]="beta"
 CONFIG_DESCRIPTIONS[config_beta_playerbot_population]="Playerbot population 200 (beta)"
 # -- }}}
+# ==== footer of C035 ====
+# lines:      47
+# ==== end of footer ====

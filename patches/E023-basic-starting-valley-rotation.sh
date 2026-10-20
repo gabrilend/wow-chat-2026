@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E023
+# profiles:   basic
+# priority:   1530
+# kind:       install
+# about:      Create and seed the rotation-state table the basic profile's
+# ==== end of header ====
 # E023-basic-starting-valley-rotation.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -51,3 +58,6 @@ unpatch_E023_basic_starting_valley_rotation() {
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
+# ==== footer of E023 ====
+# lines:      63
+# ==== end of footer ====

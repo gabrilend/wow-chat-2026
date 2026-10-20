@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B007
+# profiles:   beta
+# priority:   170
+# kind:       source
+# about:      Add SetWalk, IsWalking, IsHostileTo, IsFriendlyTo to ALE Unit methods
+# ==== end of header ====
 # B007 - Add SetWalk, IsWalking, IsHostileTo, IsFriendlyTo to ALE Unit methods
 # Issue 332: ALE unit methods patch
 # Parallelizable: Yes (unique files)
@@ -131,3 +138,6 @@ unpatch_B007_ale_unit_methods() {
     fi
 }
 # }}}
+# ==== footer of B007 ====
+# lines:      143
+# ==== end of footer ====

@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C026
+# profiles:   basic
+# priority:   1245
+# kind:       settings
+# about:      Basic: No Dual Spec
+# ==== end of header ====
 # C026 - Basic: No Dual Spec
 # The basic profile (issue 155r) has no dual talent specialization. Ritz,
 # 2026-09-25: "we should remove dual spec from the game."
@@ -24,3 +31,6 @@ config_basic_no_dual_spec() {
 CONFIG_PROFILES[config_basic_no_dual_spec]="basic"
 CONFIG_DESCRIPTIONS[config_basic_no_dual_spec]="No dual spec: MinDualSpecLevel above the level cap"
 # -- }}}
+# ==== footer of C026 ====
+# lines:      36
+# ==== end of footer ====

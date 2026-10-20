@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E020
+# profiles:   basic vanilla
+# priority:   1500
+# kind:       install
+# about:      Push the two ground riding skills to Classic level gates (148l): Apprentice
+# ==== end of header ====
 # E020-vanilla-mount-level-requirements.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -56,3 +63,6 @@ unpatch_E020_vanilla_mount_level_requirements() {
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
+# ==== footer of E020 ====
+# lines:      68
+# ==== end of footer ====

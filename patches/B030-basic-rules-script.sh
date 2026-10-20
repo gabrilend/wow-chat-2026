@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B030
+# profiles:   basic
+# priority:   400
+# kind:       source
+# about:      Build the basic profile's own server rules into the worldserver
+# ==== end of header ====
 # B030 - Build the basic profile's own server rules into the worldserver
 # Issue 155g (talent cap); the home for basic's later compiled rules.
 #
@@ -74,3 +81,6 @@ unpatch_B030_basic_rules_script() {
     return 0
 }
 # }}}
+# ==== footer of B030 ====
+# lines:      86
+# ==== end of footer ====

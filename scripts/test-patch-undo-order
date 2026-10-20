@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-patch-undo-order
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      patches come off last first (issue 189)
+# quick-test: yes
+# ==== end of header ====
 # test-patch-undo-order - patches come off last first (issue 189)
 #
 # For a general audience: a profile's patches are applied in its list's
@@ -56,3 +64,6 @@ check '[[ "$(grep "^undo E" "${LOG}" | tr "\n" " ")" == "undo E903 undo E902 und
 rm -f "${LOG}"
 echo "${checks} checks, ${fails} failed"
 [[ ${fails} -eq 0 ]]
+# ==== footer of test-patch-undo-order ====
+# lines:      69
+# ==== end of footer ====

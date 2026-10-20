@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-line-edits
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      check that the source patches' whole-line edits apply
+# quick-test: yes
+# ==== end of header ====
 # test-line-edits - check that the source patches' whole-line edits apply
 # and revert under the build's stop-on-any-failure rule.
 #
@@ -75,3 +83,6 @@ check "the other reverts still run"            "yes"            "$([[ -f "${SCRA
 rm -rf "${SCRATCH}"
 [[ ${FAILED} -eq 0 ]] && echo "all passed" || echo "FAILED"
 exit ${FAILED}
+# ==== footer of test-line-edits ====
+# lines:      88
+# ==== end of footer ====

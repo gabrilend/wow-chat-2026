@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C012
+# profiles:   beta release
+# priority:   1180
+# kind:       settings
+# about:      Playerbot Level Cap (Beta/Release)
+# ==== end of header ====
 # C012 - Playerbot Level Cap (Beta/Release)
 # Pin random-bot level range to match the player level cap (1..20).
 # The .dist default is 1..80; without this, randombots would still try to
@@ -21,3 +28,6 @@ config_playerbot_level_cap() {
 CONFIG_PROFILES[config_playerbot_level_cap]="beta release"
 CONFIG_DESCRIPTIONS[config_playerbot_level_cap]="Playerbot level cap 1..20"
 # -- }}}
+# ==== footer of C012 ====
+# lines:      33
+# ==== end of footer ====

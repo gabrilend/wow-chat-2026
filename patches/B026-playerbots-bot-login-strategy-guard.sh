@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B026
+# profiles:   basic beta cc-test release vanilla
+# priority:   360
+# kind:       source
+# about:      Fix the bot-login Engine::Init crash (dangling strategy on duplicate add)
+# ==== end of header ====
 # B026 - Fix the bot-login Engine::Init crash (dangling strategy on duplicate add)
 #
 # Symptom: worldserver segfaults shortly after startup on the queued bot-login
@@ -94,3 +101,6 @@ unpatch_B026_playerbots_bot_login_strategy_guard() {
             _playerbotsAIMap.erase(itr);' "${MGR}"
 }
 # }}}
+# ==== footer of B026 ====
+# lines:      106
+# ==== end of footer ====

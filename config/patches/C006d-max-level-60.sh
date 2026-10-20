@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C006d
+# profiles:   basic
+# priority:   1140
+# kind:       settings
+# about:      Max Level 60 (Basic)
+# ==== end of header ====
 # C006d - Max Level 60 (Basic)
 # Set maximum player level to 60 for the basic profile (issue 155): the
 # classic 1-60 ladder, with Outland open at the cap (Dark Portal at 58).
@@ -14,3 +21,6 @@ config_max_level_60() {
 CONFIG_PROFILES[config_max_level_60]="basic"
 CONFIG_DESCRIPTIONS[config_max_level_60]="Max level 60"
 # -- }}}
+# ==== footer of C006d ====
+# lines:      26
+# ==== end of footer ====

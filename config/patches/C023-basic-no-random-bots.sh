@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C023
+# profiles:   buddy-set
+# priority:   1230
+# kind:       settings
+# about:      Basic: No Random Bots
+# ==== end of header ====
 # C023 - Basic: No Random Bots
 # The basic profile (issue 155) has no ambient bot population: the only bots
 # in the world are each player's own buddies (issue 617), which are ordinary
@@ -39,3 +46,6 @@ config_basic_no_random_bots() {
 CONFIG_PROFILES[config_basic_no_random_bots]="basic cc-test"
 CONFIG_DESCRIPTIONS[config_basic_no_random_bots]="No random bots (buddies only): autologin off, population 0"
 # -- }}}
+# ==== footer of C023 ====
+# lines:      51
+# ==== end of footer ====

@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B041
+# profiles:   basic
+# priority:   510
+# kind:       source
+# about:      Lua calls for creatures one player cannot select
+# ==== end of header ====
 # B041 - Lua calls for creatures one player cannot select
 # Issue 164 (2026-09-29). Needs B040, which makes PerPlayerCreatures.h.
 #
@@ -141,3 +148,6 @@ unpatch_B041_ale_per_player_unselectable() {
     return 0
 }
 # }}}
+# ==== footer of B041 ====
+# lines:      153
+# ==== end of footer ====

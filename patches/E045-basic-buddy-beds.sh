@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E045
+# profiles:   buddy-set
+# priority:   1750
+# kind:       install
+# about:      The beds buddies sleep on in towns (issue 617e4), placed by hand in game
+# ==== end of header ====
 # E045-basic-buddy-beds.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -44,3 +51,6 @@ unpatch_E045_basic_buddy_beds() {
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
+# ==== footer of E045 ====
+# lines:      56
+# ==== end of footer ====

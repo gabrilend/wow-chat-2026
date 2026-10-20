@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E010
+# profiles:   vanilla
+# priority:   1400
+# kind:       install
+# about:      Grant every newly-created vanilla character the full set of
+# ==== end of header ====
 # E010-vanilla-pretrain-abilities.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -60,3 +67,6 @@ DELETE FROM `playercreateinfo_spell_custom` WHERE `Note` LIKE 'vanilla-148j-%';
 SQL
 }
 # -- }}}
+# ==== footer of E010 ====
+# lines:      72
+# ==== end of footer ====

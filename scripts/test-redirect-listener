@@ -1,4 +1,12 @@
 #!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-redirect-listener
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      test-redirect-listener
+# quick-test: yes
+# ==== end of header ====
 # test-redirect-listener
 # Checks the redirect experiment's "pretend second server" without starting
 # the game. It starts the listener on a spare port, sends a pretend client
@@ -49,3 +57,6 @@ if [[ ${FAILED} -ne 0 ]]; then
 fi
 echo "test-redirect-listener: passed"
 # }}}
+# ==== footer of test-redirect-listener ====
+# lines:      62
+# ==== end of footer ====

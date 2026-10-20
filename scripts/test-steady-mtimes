@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-steady-mtimes
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      the compile script gives patched files back their
+# quick-test: yes
+# ==== end of header ====
 # test-steady-mtimes - the compile script gives patched files back their
 # last build's timestamps only when their content is what that build saw
 #
@@ -96,3 +104,6 @@ rm -rf "${WORK}"
 echo ""
 [[ ${fails} -eq 0 ]] && echo "All ${checks} checks passed" || echo "${fails} of ${checks} checks failed"
 [[ ${fails} -eq 0 ]]
+# ==== footer of test-steady-mtimes ====
+# lines:      109
+# ==== end of footer ====

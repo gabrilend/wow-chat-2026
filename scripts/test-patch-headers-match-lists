@@ -1,0 +1,144 @@
+#!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-patch-headers-match-lists
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      the headers say what the lists say (issue 189b)
+-- quick-test: yes
+-- ==== end of header ====
+--------------------------------------------------------------------------------
+-- test-patch-headers-match-lists - the headers say what the lists say (issue 189b)
+--
+-- For a general audience: every patch and quick test now says in its own
+-- header which profiles take it and its priority, while the build still
+-- runs from the lists (each profile's lists in patches/patches.sh, each
+-- settings patch's CONFIG_PROFILES line, the compile's QUICK_TESTS) until
+-- issue 189c switches it to the headers. Two records of one thing drift
+-- apart unless something checks them, so this does: for every profile, the
+-- source patches and the install steps whose headers name it (directly, by
+-- a group, or as "all"), sorted by priority, must be exactly that profile's
+-- list in its order; every settings patch's header must name the profiles
+-- its CONFIG_PROFILES line does; the tests whose headers say "quick-test:
+-- yes" must be exactly the compile's list; and every one of those files
+-- must have a whole header.
+--
+-- Usage: scripts/test-patch-headers-match-lists [PROJECT_DIR]
+--------------------------------------------------------------------------------
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local HERE   = debug.getinfo(1, "S").source:match("^@(.*/)") or "./"
+local Header = dofile(HERE .. "lib/patch-header.lua")
+
+local checks, fails = 0, 0
+local function check(ok, what)
+    checks = checks + 1
+    if ok then print("  ok:   " .. what) else print("  FAIL: " .. what); fails = fails + 1 end
+end
+local function q(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
+local function run(cmd) local h = io.popen(cmd); local s = h:read("*a"); h:close(); return s end
+local function slurp(p) local f = io.open(p, "rb"); if not f then return nil end local s = f:read("*a"); f:close(); return s end
+
+-- {{{ the lists
+local lists, profiles = { B = {}, E = {} }, {}
+local out = run("bash -c " .. q("export DIR=" .. q(DIR) .. "; source " .. q(DIR .. "/patches/patches.sh") ..
+    " >/dev/null 2>&1; for p in \"${!PHASE_BEGIN_PATCHES[@]}\"; do echo \"B|$p|${PHASE_BEGIN_PATCHES[$p]}\"; done;" ..
+    " for p in \"${!PHASE_END_PATCHES[@]}\"; do echo \"E|$p|${PHASE_END_PATCHES[$p]}\"; done"))
+for kind, prof, list in out:gmatch("(%u)|([%w%-]+)|([^\n]*)") do
+    profiles[prof] = true
+    lists[kind][prof] = (list:gsub("%s+", " "):gsub("^ ", ""):gsub(" $", ""))
+end
+local quick = {}
+for name in ((slurp(DIR .. "/scripts/compile") or ""):match("QUICK_TESTS=%((.-)\n%)") or ""):gmatch("test%-[%w%-]+") do quick[name] = true end
+local groups = {}
+for line in (slurp(DIR .. "/patches/groups") or ""):gmatch("[^\n]+") do
+    local name, members = line:match("^([%w%-]+):%s*(.+)$")
+    if name then groups[name] = {}; for p in members:gmatch("%S+") do groups[name][p] = true end end
+end
+-- }}}
+
+-- {{{ the headers
+local function ls(pattern)
+    local t = {}
+    for l in run("cd " .. q(DIR) .. " && ls -1d " .. pattern .. " 2>/dev/null"):gmatch("[^\n]+") do t[#t + 1] = l end
+    return t
+end
+-- a header's profiles, as a set: names, groups expanded, "all" as every profile
+local function taken_by(text)
+    local set = {}
+    for name in text:gmatch("%S+") do
+        if name == "all" then for p in pairs(profiles) do set[p] = true end
+        elseif groups[name] then for p in pairs(groups[name]) do set[p] = true end
+        elseif name ~= "none" then set[name] = true end
+    end
+    return set
+end
+local heads, broken = {}, {}
+local files = {}
+for _, p in ipairs(ls("patches/B[0-9][0-9][0-9]-*.sh")) do files[#files + 1] = p end
+for _, p in ipairs(ls("patches/E[0-9][0-9][0-9]-*.sh")) do files[#files + 1] = p end
+for _, p in ipairs(ls("config/patches/C[0-9]*.sh")) do files[#files + 1] = p end
+for name in pairs(quick) do files[#files + 1] = "scripts/" .. name end
+for _, p in ipairs(files) do
+    local r = Header.read(DIR .. "/" .. p)
+    if r.state ~= "whole" then broken[#broken + 1] = p .. " (" .. r.state .. ")" else
+        r.rel, r.set = p, taken_by(r.fields.profiles)
+        heads[#heads + 1] = r
+    end
+end
+-- }}}
+
+print("every patch and quick test has a whole header")
+check(#broken == 0, #files .. " files read, " .. #broken .. " without a whole header" .. (#broken > 0 and (": " .. table.concat(broken, ", ")) or ""))
+
+print("each profile's lists, from the headers")
+local names = {}
+for p in pairs(profiles) do names[#names + 1] = p end
+table.sort(names)
+for _, kind in ipairs({ { "B", "source" }, { "E", "install" } }) do
+    for _, prof in ipairs(names) do
+        local mine = {}
+        for _, r in ipairs(heads) do
+            if r.fields.kind == kind[2] and r.set[prof] then mine[#mine + 1] = r end
+        end
+        table.sort(mine, function(a, b) local pa, pb = tonumber(a.fields.priority), tonumber(b.fields.priority)
+            return pa < pb or (pa == pb and a.fields.id < b.fields.id) end)
+        local ids = {}
+        for _, r in ipairs(mine) do ids[#ids + 1] = r.fields.id end
+        local got, want = table.concat(ids, " "), lists[kind[1]][prof] or ""
+        check(got == want, string.format("%s %s patches: %s", prof, kind[2], got == want and ("the same " .. #ids) or
+              ("headers say \"" .. got .. "\", list says \"" .. want .. "\"")))
+    end
+end
+
+print("settings patches name the profiles their CONFIG_PROFILES line does")
+local bad = {}
+for _, r in ipairs(heads) do
+    if r.fields.kind == "settings" then
+        local src = slurp(DIR .. "/" .. r.rel)
+        local cp = src:match("CONFIG_PROFILES%[[%w_]+%]=\"([^\"]*)\"") or ""
+        local a, b = taken_by(cp), r.set
+        local same = true
+        for p in pairs(a) do if not b[p] then same = false end end
+        for p in pairs(b) do if not a[p] then same = false end end
+        if not same then bad[#bad + 1] = r.fields.id end
+    end
+end
+check(#bad == 0, "every settings patch agrees" .. (#bad > 0 and (" except " .. table.concat(bad, ", ")) or ""))
+
+print("the quick tests")
+local marked = {}
+for _, r in ipairs(heads) do if r.fields["quick-test"] == "yes" then marked[r.fields.id] = true end end
+local missing, extra = {}, {}
+for n in pairs(quick) do if not marked[n] then missing[#missing + 1] = n end end
+for n in pairs(marked) do if not quick[n] then extra[#extra + 1] = n end end
+check(#missing == 0 and #extra == 0, "the tests marked quick are the compile's list" ..
+      (#missing > 0 and (" (not marked: " .. table.concat(missing, ", ") .. ")") or "") ..
+      (#extra > 0 and (" (marked, not listed: " .. table.concat(extra, ", ") .. ")") or ""))
+
+print(checks .. " checks, " .. fails .. " failed")
+os.exit(fails == 0 and 0 or 1)
+-- ==== footer of test-patch-headers-match-lists ====
+-- lines:      144
+-- ==== end of footer ====

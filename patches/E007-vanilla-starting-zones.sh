@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E007
+# profiles:   vanilla
+# priority:   1370
+# kind:       install
+# about:      Override playercreateinfo so vanilla characters spawn at the
+# ==== end of header ====
 # E007-vanilla-starting-zones.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -99,3 +106,6 @@ UPDATE `playercreateinfo` SET `map`=530, `zone`=3526, `position_x`=-3961.64, `po
 SQL
 }
 # -- }}}
+# ==== footer of E007 ====
+# lines:      111
+# ==== end of footer ====

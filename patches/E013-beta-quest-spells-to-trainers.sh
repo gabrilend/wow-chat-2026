@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E013
+# profiles:   beta
+# priority:   1430
+# kind:       install
+# about:      Adds quest-learned class abilities to the class trainers' lists (issue
+# ==== end of header ====
 # E013-beta-quest-spells-to-trainers.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -46,3 +53,6 @@ unpatch_E013_beta_quest_spells_to_trainers() {
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
+# ==== footer of E013 ====
+# lines:      58
+# ==== end of footer ====

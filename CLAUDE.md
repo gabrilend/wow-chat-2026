@@ -429,6 +429,15 @@ HEAD:
   share, and `patches/E-patches.sh` loads both (issue 150).
 - `patches/patches.sh` — the per-profile patch lists and the runner.
 
+Every patch and quick test carries a header and footer (issue 189: id,
+profiles, priority, kind, a line about it; the id again and the file's
+line count). **After editing one, run `scripts/check-patch-headers
+--fix-lines`**: the footer's line count changes with every edit (that is
+how a file cut short is caught), and the compile's quick tests fail until
+it is mended. A new patch gets its header from `scripts/write-patch-headers`
+once it is on a profile's list (while the lists still drive the build;
+189c moves the build to the headers).
+
 Built with the **`upstream-patch-system` skill** at
 `/home/ritz/programming/ai-stuff/skills/`. Read it before adding, removing, or
 retargeting a patch: its apply/unapply, idempotency, and marker conventions are

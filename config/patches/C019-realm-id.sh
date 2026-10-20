@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C019
+# profiles:   all
+# priority:   1210
+# kind:       settings
+# about:      RealmID per profile
+# ==== end of header ====
 # C019 - RealmID per profile
 # Each profile owns one row in the unified acore_auth.realmlist table
 # (issue 136a). The worldserver picks "its" row by matching
@@ -40,3 +47,6 @@ config_realm_id() {
 CONFIG_PROFILES[config_realm_id]="all"
 CONFIG_DESCRIPTIONS[config_realm_id]="RealmID per profile (1=release, 2=beta, 3=vanilla, 4=alpha, 5=basic, 6=cc-test)"
 # -- }}}
+# ==== footer of C019 ====
+# lines:      52
+# ==== end of footer ====

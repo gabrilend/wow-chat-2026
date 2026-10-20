@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E052
+# profiles:   buddy-set
+# priority:   1820
+# kind:       install
+# about:      Every gearset profile (issue 617r: src/lua-basic/data/gearsets/*.lua) as
+# ==== end of header ====
 # E052-basic-gearsets.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -44,3 +51,6 @@ unpatch_E052_basic_gearsets() {
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
+# ==== footer of E052 ====
+# lines:      56
+# ==== end of footer ====

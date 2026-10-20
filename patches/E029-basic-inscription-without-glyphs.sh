@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E029
+# profiles:   basic
+# priority:   1590
+# kind:       install
+# about:      Inscription without glyphs (issue 155o): glyph recipes off the trainers,
+# ==== end of header ====
 # E029-basic-inscription-without-glyphs.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -44,3 +51,6 @@ unpatch_E029_basic_inscription_without_glyphs() {
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
+# ==== footer of E029 ====
+# lines:      56
+# ==== end of footer ====

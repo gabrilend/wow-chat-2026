@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C004
+# profiles:   basic beta release vanilla
+# priority:   1115
+# kind:       settings
+# about:      Fall Damage 10x
+# ==== end of header ====
 # C004 - Fall Damage 10x
 # Increase fall damage to 10x (encourages careful movement)
 # Profiles: beta release vanilla basic (basic per issue 155, user decision 2026-09-23)
@@ -15,3 +22,6 @@ config_fall_damage_10x() {
 CONFIG_PROFILES[config_fall_damage_10x]="beta release vanilla basic"
 CONFIG_DESCRIPTIONS[config_fall_damage_10x]="Fall damage 10x (careful movement)"
 # -- }}}
+# ==== footer of C004 ====
+# lines:      27
+# ==== end of footer ====

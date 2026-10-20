@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E016
+# profiles:   beta
+# priority:   1460
+# kind:       install
+# about:      Custom gameobject templates for empty-loot treasure chests (issue
+# ==== end of header ====
 # E016-beta-empty-loot-chests.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -45,3 +52,6 @@ DELETE FROM `gameobject_template` WHERE `entry` BETWEEN 900001 AND 900037;
 SQL
 }
 # -- }}}
+# ==== footer of E016 ====
+# lines:      57
+# ==== end of footer ====

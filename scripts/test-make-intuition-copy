@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-make-intuition-copy
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      checks the comment-free copy's maker (issue 190)
+# quick-test: yes
+# ==== end of header ====
 # test-make-intuition-copy - checks the comment-free copy's maker (issue 190)
 #
 # For a general audience: scripts/make-intuition-copy makes a copy of the
@@ -192,3 +200,6 @@ check '[[ "${again}" == "0" ]]' "stripping the copy again removes nothing more (
 rm -rf "${WORK}" "${SHM}"
 echo "${checks} checks, ${fails} failed"
 [[ ${fails} -eq 0 ]]
+# ==== footer of test-make-intuition-copy ====
+# lines:      205
+# ==== end of footer ====

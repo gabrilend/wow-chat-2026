@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E014
+# profiles:   beta
+# priority:   1440
+# kind:       install
+# about:      Caps each travelling class trainer to the top of its level slice (issue
+# ==== end of header ====
 # E014-beta-trainer-spell-level-cap.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -47,3 +54,6 @@ unpatch_E014_beta_trainer_spell_level_cap() {
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
+# ==== footer of E014 ====
+# lines:      59
+# ==== end of footer ====

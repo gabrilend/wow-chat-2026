@@ -1,4 +1,12 @@
 #!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-dk-buddies-by-level
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      a death knight player's buddies come by level
+-- quick-test: yes
+-- ==== end of header ====
 -- test-dk-buddies-by-level - a death knight player's buddies come by level
 -- (src/lua-basic/sargobras.lua, issues 718 and 617b), without a server.
 --
@@ -152,3 +160,6 @@ check("nothing", inserted() == "" and called_back() == "")
 print("")
 print(fails == 0 and ("All " .. checks .. " checks passed") or (fails .. " of " .. checks .. " checks failed"))
 os.exit(fails == 0 and 0 or 1)
+-- ==== footer of test-dk-buddies-by-level ====
+-- lines:      165
+-- ==== end of footer ====

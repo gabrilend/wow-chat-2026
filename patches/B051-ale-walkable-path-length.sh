@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B051
+# profiles:   basic
+# priority:   610
+# kind:       source
+# about:      a Lua call that asks the navigation mesh how far a walk is
+# ==== end of header ====
 # B051 - a Lua call that asks the navigation mesh how far a walk is
 # Issue 617b (2026-10-12).
 #
@@ -115,3 +122,6 @@ unpatch_B051_ale_walkable_path_length() {
     return 0
 }
 # }}}
+# ==== footer of B051 ====
+# lines:      127
+# ==== end of footer ====

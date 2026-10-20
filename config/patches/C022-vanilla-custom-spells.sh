@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C022
+# profiles:   vanilla
+# priority:   1225
+# kind:       settings
+# about:      Enable Custom Starting Spells (Vanilla)
+# ==== end of header ====
 # C022 - Enable Custom Starting Spells (Vanilla)
 # Set PlayerStart.CustomSpells to 1 so the engine actually reads the
 # playercreateinfo_spell_custom table at character creation.
@@ -106,3 +113,6 @@ config_vanilla_custom_spells() {
 CONFIG_PROFILES[config_vanilla_custom_spells]="vanilla"
 CONFIG_DESCRIPTIONS[config_vanilla_custom_spells]="Enable custom starting spells (reads 148j pretrain table)"
 # -- }}}
+# ==== footer of C022 ====
+# lines:      118
+# ==== end of footer ====

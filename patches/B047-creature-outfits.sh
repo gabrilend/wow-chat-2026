@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B047
+# profiles:   buddy-set
+# priority:   570
+# kind:       source
+# about:      Creature outfits: a creature can look like a dressed player character
+# ==== end of header ====
 # B047 - Creature outfits: a creature can look like a dressed player character
 # Issue 617f (basic, 2026-10-03).
 #
@@ -160,3 +167,6 @@ unpatch_B047_creature_outfits() {
     return 0
 }
 # }}}
+# ==== footer of B047 ====
+# lines:      172
+# ==== end of footer ====

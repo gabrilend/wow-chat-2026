@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B035
+# profiles:   basic
+# priority:   450
+# kind:       source
+# about:      Respec cost: no cap, and it falls on the weekly reset
+# ==== end of header ====
 # B035 - Respec cost: no cap, and it falls on the weekly reset
 # Issue 155r (basic, 2026-09-25).
 #
@@ -87,3 +94,6 @@ unpatch_B035_respec_cost_weekly() {
     return 0
 }
 # }}}
+# ==== footer of B035 ====
+# lines:      99
+# ==== end of footer ====

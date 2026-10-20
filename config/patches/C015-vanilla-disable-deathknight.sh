@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C015
+# profiles:   vanilla
+# priority:   1190
+# kind:       settings
+# about:      Disable Death Knight (Vanilla)
+# ==== end of header ====
 # C015 - Disable Death Knight (Vanilla)
 # Set CharacterCreating.Disabled.ClassMask to 32 (bit 5 = Death Knight) so
 # DK characters cannot be created on vanilla. AzerothCore ships with this
@@ -28,3 +35,6 @@ config_vanilla_disable_deathknight() {
 CONFIG_PROFILES[config_vanilla_disable_deathknight]="vanilla"
 CONFIG_DESCRIPTIONS[config_vanilla_disable_deathknight]="Disable Death Knight creation (ClassMask 32)"
 # -- }}}
+# ==== footer of C015 ====
+# lines:      40
+# ==== end of footer ====

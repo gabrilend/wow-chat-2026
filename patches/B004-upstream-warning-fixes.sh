@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B004
+# profiles:   basic beta cc-test release vanilla
+# priority:   140
+# kind:       source
+# about:      Fix ~695 compiler warnings in upstream modules
+# ==== end of header ====
 # B004 - Fix ~695 compiler warnings in upstream modules
 # Issue 333: Clean build improves code quality
 # Parallelizable: Yes (no conflicts with B001-B003)
@@ -48,3 +55,6 @@ unpatch_B004_upstream_warning_fixes() {
     line_edits_revert B004 <<< "${B004_EDITS}"
 }
 # }}}
+# ==== footer of B004 ====
+# lines:      60
+# ==== end of footer ====

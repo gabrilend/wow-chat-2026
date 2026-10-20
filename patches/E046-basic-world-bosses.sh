@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E046
+# profiles:   basic
+# priority:   1760
+# kind:       install
+# about:      The world bosses' respawn taken off the server's timer (issue 155j): the
+# ==== end of header ====
 # E046-basic-world-bosses.sh - one install step, loaded by patches/E-patches.sh.
 # Joined by scripts/merge-install-steps (2026-10-20) from steps that were always
 # taken together: E046, E047 (the owner: "sure that's fine I guess. We
@@ -100,3 +107,6 @@ unpatch_E046_basic_world_bosses() {
     _E046_basic_world_boss_respawn_revert || return 1
 }
 # -- }}}
+# ==== footer of E046 ====
+# lines:      112
+# ==== end of footer ====

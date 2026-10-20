@@ -1,4 +1,12 @@
 #!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-roam-pattern
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      hold both implementations of the roaming pattern to
+# quick-test: yes
+# ==== end of header ====
 # test-roam-pattern - hold both implementations of the roaming pattern to
 # the pattern (docs/roaming-pattern.md).
 #
@@ -28,3 +36,6 @@ else
     echo "FAIL: the implementations disagree (listed above)"
     exit 1
 fi
+# ==== footer of test-roam-pattern ====
+# lines:      41
+# ==== end of footer ====

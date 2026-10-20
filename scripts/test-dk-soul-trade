@@ -1,4 +1,12 @@
 #!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-dk-soul-trade
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      a death knight gives a soul to the Lich King at
+-- quick-test: yes
+-- ==== end of header ====
 -- test-dk-soul-trade - a death knight gives a soul to the Lich King at
 -- Sargobras (src/lua-basic/death-knight-souls.lua, issue 718), in a
 -- stand-in world whose console works the way the real one does.
@@ -164,3 +172,6 @@ check(#W.queue == 1, "a second try is allowed")
 print("")
 print(fails == 0 and ("All " .. checks .. " checks passed") or (fails .. " of " .. checks .. " checks failed"))
 os.exit(fails == 0 and 0 or 1)
+-- ==== footer of test-dk-soul-trade ====
+-- lines:      177
+-- ==== end of footer ====

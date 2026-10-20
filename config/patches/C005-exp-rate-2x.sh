@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C005
+# profiles:   release
+# priority:   1120
+# kind:       settings
+# about:      Experience Rate 2x
+# ==== end of header ====
 # C005 - Experience Rate 2x
 # Double experience rate (faster testing/iteration)
 # Profiles: release. Beta had it too until 2026-10-20; beta has no quests
@@ -17,3 +24,6 @@ config_exp_rate_2x() {
 CONFIG_PROFILES[config_exp_rate_2x]="release"
 CONFIG_DESCRIPTIONS[config_exp_rate_2x]="Experience rate 2x"
 # -- }}}
+# ==== footer of C005 ====
+# lines:      29
+# ==== end of footer ====

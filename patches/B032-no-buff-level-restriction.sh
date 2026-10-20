@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B032
+# profiles:   basic
+# priority:   420
+# kind:       source
+# about:      A buff can be cast on anyone, whatever the gap between its level and theirs
+# ==== end of header ====
 # B032 - A buff can be cast on anyone, whatever the gap between its level and theirs
 # Issue 155o (Inscription's scrolls), basic profile.
 #
@@ -66,3 +73,6 @@ unpatch_B032_no_buff_level_restriction() {
     return 0
 }
 # }}}
+# ==== footer of B032 ====
+# lines:      78
+# ==== end of footer ====

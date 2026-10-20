@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B046
+# profiles:   buddy-set
+# priority:   560
+# kind:       source
+# about:      Playerbots: buddies judge gear by their own talent plan and roll
+# ==== end of header ====
 # B046 - Playerbots: buddies judge gear by their own talent plan and roll
 # by their clan's rules
 # Issue 617j (basic, 2026-10-02).
@@ -199,3 +206,6 @@ unpatch_B046_playerbots_buddy_loot_judgement() {
     return 0
 }
 # }}}
+# ==== footer of B046 ====
+# lines:      211
+# ==== end of footer ====

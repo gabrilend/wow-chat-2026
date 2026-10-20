@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E054
+# profiles:   basic
+# priority:   1840
+# kind:       install
+# about:      The game's legendaries as level-60 raid drops (issue 182): level-60 copies
+# ==== end of header ====
 # E054-basic-legendaries.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -47,3 +54,6 @@ unpatch_E054_basic_legendaries() {
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
+# ==== footer of E054 ====
+# lines:      59
+# ==== end of footer ====

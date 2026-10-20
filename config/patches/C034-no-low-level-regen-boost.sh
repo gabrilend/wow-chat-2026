@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C034
+# profiles:   all
+# priority:   1285
+# kind:       settings
+# about:      No Faster Healing Below Level 15, on Every Server
+# ==== end of header ====
 # C034 - No Faster Healing Below Level 15, on Every Server
 # Stock AzerothCore heals characters under level 15 faster out of combat,
 # health and mana both (EnableLowLevelRegenBoost, on by default; Player.cpp
@@ -29,3 +36,6 @@ config_no_low_level_regen_boost() {
 CONFIG_PROFILES[config_no_low_level_regen_boost]="all"
 CONFIG_DESCRIPTIONS[config_no_low_level_regen_boost]="No faster healing below level 15 (EnableLowLevelRegenBoost off)"
 # -- }}}
+# ==== footer of C034 ====
+# lines:      41
+# ==== end of footer ====

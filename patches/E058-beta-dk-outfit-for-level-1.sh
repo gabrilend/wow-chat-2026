@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E058
+# profiles:   beta
+# priority:   1880
+# kind:       install
+# about:      Beta's death knights start at level 1 (issue 206), but the game hands
+# ==== end of header ====
 # E058-beta-dk-outfit-for-level-1.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -46,3 +53,6 @@ unpatch_E058_beta_dk_outfit_for_level_1() {
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
+# ==== footer of E058 ====
+# lines:      58
+# ==== end of footer ====

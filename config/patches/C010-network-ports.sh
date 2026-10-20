@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C010
+# profiles:   all
+# priority:   1170
+# kind:       settings
+# about:      Network Ports
+# ==== end of header ====
 # C010 - Network Ports
 # Set custom server ports (non-default to avoid conflicts)
 # Profiles: all
@@ -37,3 +44,6 @@ config_network_ports() {
 CONFIG_PROFILES[config_network_ports]="all"
 CONFIG_DESCRIPTIONS[config_network_ports]="Network ports (4362/4462)"
 # -- }}}
+# ==== footer of C010 ====
+# lines:      49
+# ==== end of footer ====

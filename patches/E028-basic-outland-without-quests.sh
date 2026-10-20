@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E028
+# profiles:   basic
+# priority:   1580
+# kind:       install
+# about:      Outland without quests (issue 155l): every Outland, Shattrath, Isle and
+# ==== end of header ====
 # E028-basic-outland-without-quests.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -44,3 +51,6 @@ unpatch_E028_basic_outland_without_quests() {
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
+# ==== footer of E028 ====
+# lines:      56
+# ==== end of footer ====

@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E008
+# profiles:   basic vanilla
+# priority:   1380
+# kind:       install
+# about:      Clear the flightmaster bit network-wide and replace gossip with
+# ==== end of header ====
 # E008-vanilla-remove-flight-paths.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -103,3 +110,6 @@ DELETE FROM `npc_text`    WHERE `ID`     BETWEEN 90000 AND 90999;
 SQL
 }
 # -- }}}
+# ==== footer of E008 ====
+# lines:      115
+# ==== end of footer ====

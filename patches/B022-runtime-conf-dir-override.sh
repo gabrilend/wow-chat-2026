@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B022
+# profiles:   basic beta cc-test release vanilla
+# priority:   320
+# kind:       source
+# about:      B022
+# ==== end of header ====
 # B022-runtime-conf-dir-override.sh
 # Adds a runtime --conf-dir / -C CLI argument to authserver, worldserver,
 # and dbimport that overrides the cmake-baked _CONF_DIR for module config
@@ -148,3 +155,6 @@ unpatch_B022_runtime_conf_dir_override() {
     done
 }
 # }}}
+# ==== footer of B022 ====
+# lines:      160
+# ==== end of footer ====

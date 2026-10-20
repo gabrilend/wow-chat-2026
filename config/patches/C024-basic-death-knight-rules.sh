@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C024
+# profiles:   basic
+# priority:   1235
+# kind:       settings
+# about:      Basic Death Knight Rules (interim, until issue 718)
+# ==== end of header ====
 # C024 - Basic Death Knight Rules (interim, until issue 718)
 # The user's rule for death knights on basic (2026-09-23): "allow stock
 # DKs, but there are no bot DKs allowed and level 55 is required."
@@ -29,3 +36,6 @@ config_basic_death_knight_rules() {
 CONFIG_PROFILES[config_basic_death_knight_rules]="basic"
 CONFIG_DESCRIPTIONS[config_basic_death_knight_rules]="Death knights: need a level-55 character; no DK bots"
 # -- }}}
+# ==== footer of C024 ====
+# lines:      41
+# ==== end of footer ====

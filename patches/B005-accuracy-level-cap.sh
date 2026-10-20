@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B005
+# profiles:   basic beta
+# priority:   150
+# kind:       source
+# about:      Cap level difference impact on hit/miss at ±3 levels
+# ==== end of header ====
 # B005 - Cap level difference impact on hit/miss at ±3 levels
 # Issue 803 (legacy number 156): Monster accuracy level cap. The "(Issue 156)"
 # text inside the injected C++ comments below is kept as-is: the revert
@@ -94,3 +101,6 @@ unpatch_B005_accuracy_level_cap() {
     fi
 }
 # }}}
+# ==== footer of B005 ====
+# lines:      106
+# ==== end of footer ====

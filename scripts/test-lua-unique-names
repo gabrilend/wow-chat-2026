@@ -1,4 +1,12 @@
 #!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-lua-unique-names
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      checks the files a profile's Lua engine will load:
+# quick-test: yes
+# ==== end of header ====
 # test-lua-unique-names - checks the files a profile's Lua engine will load:
 # no two share a name, and none sits in a folder meant to be switched off.
 #
@@ -68,3 +76,6 @@ else
     echo "${FAILS} finding(s): the server loads only the first file of each name, and every file in a folder without a leading dot"
 fi
 [[ "${FAILS}" -eq 0 ]]
+# ==== footer of test-lua-unique-names ====
+# lines:      81
+# ==== end of footer ====

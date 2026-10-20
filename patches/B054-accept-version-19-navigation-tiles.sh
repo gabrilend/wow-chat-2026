@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B054
+# profiles:   buddy-set
+# priority:   640
+# kind:       source
+# about:      The server accepts navigation tiles built by version 19 of the
+# ==== end of header ====
 # B054 - The server accepts navigation tiles built by version 19 of the
 # tile generator as well as version 20
 # 2026-10-15 (found reading the world server's log for Felicity's group).
@@ -45,3 +52,6 @@ unpatch_B054_accept_version_19_navigation_tiles() {
     line_edits_revert B054 <<< "${B054_EDITS}"
 }
 # }}}
+# ==== footer of B054 ====
+# lines:      57
+# ==== end of footer ====

@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C006c
+# profiles:   vanilla
+# priority:   1135
+# kind:       settings
+# about:      Max Level 40 (Vanilla)
+# ==== end of header ====
 # C006c - Max Level 40 (Vanilla)
 # Set maximum player level to 40 for the vanilla profile.
 # Halfway between retail vanilla (60) and the wow-chat custom 20, picked
@@ -14,3 +21,6 @@ config_max_level_40() {
 CONFIG_PROFILES[config_max_level_40]="vanilla"
 CONFIG_DESCRIPTIONS[config_max_level_40]="Max level 40"
 # -- }}}
+# ==== footer of C006c ====
+# lines:      26
+# ==== end of footer ====

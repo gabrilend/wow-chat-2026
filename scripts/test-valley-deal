@@ -1,4 +1,12 @@
 #!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-valley-deal
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      test-valley-deal
+-- quick-test: yes
+-- ==== end of header ====
 -- test-valley-deal
 -- Checks "Actually, can I go somewhere else?" (issue 155d1) without a
 -- server. Part 1 checks the deck alone: every character's order is the same
@@ -196,3 +204,6 @@ check("the Lua list matches the creation patch's table", ok == 0 or ok == true)
 print("")
 print(string.format("%d checks, %d failed", checks, fails))
 os.exit(fails == 0 and 0 or 1)
+-- ==== footer of test-valley-deal ====
+-- lines:      209
+-- ==== end of footer ====

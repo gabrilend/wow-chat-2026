@@ -1,4 +1,12 @@
 #!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-gear-designs
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      check the gear design loop without a picture
+-- quick-test: yes
+-- ==== end of header ====
 -- test-gear-designs - check the gear design loop without a picture
 -- generator (issues 506a, 506b, 506c, 506d).
 --
@@ -269,3 +277,6 @@ end
 
 print(string.format("test-gear-designs: %d passed, %d failed", passed, failed))
 os.exit(failed == 0 and 0 or 1)
+-- ==== footer of test-gear-designs ====
+-- lines:      282
+-- ==== end of footer ====

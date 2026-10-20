@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E043
+# profiles:   basic
+# priority:   1730
+# kind:       install
+# about:      Sargobras, the buddy selector (issue 617b): his two creatures (the valley
+# ==== end of header ====
 # E043-basic-buddy-selector.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -43,3 +50,6 @@ unpatch_E043_basic_buddy_selector() {
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
+# ==== footer of E043 ====
+# lines:      55
+# ==== end of footer ====

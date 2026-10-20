@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C029
+# profiles:   buddy-set
+# priority:   1260
+# kind:       settings
+# about:      Basic: Buddies Keep Their Own Parties
+# ==== end of header ====
 # C029 - Basic: Buddies Keep Their Own Parties
 # On basic, buddies group by distance from their owner (issue 617c2): near
 # ones in the owner's party, far ones in parties of their own, led by a
@@ -23,3 +30,6 @@ config_basic_buddies_keep_own_parties() {
 CONFIG_PROFILES[config_basic_buddies_keep_own_parties]="basic cc-test"
 CONFIG_DESCRIPTIONS[config_basic_buddies_keep_own_parties]="Buddies' far parties survive a login: the bot module keeps a bot in a group of alts"
 # -- }}}
+# ==== footer of C029 ====
+# lines:      35
+# ==== end of footer ====

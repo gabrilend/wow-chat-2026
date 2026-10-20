@@ -1,4 +1,12 @@
 #!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-dk-buddy-gear
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      what a death knight player's buddies wear
+-- quick-test: yes
+-- ==== end of header ====
 -- test-dk-buddy-gear - what a death knight player's buddies wear
 -- (src/lua-basic/death-knight-buddy-gear.lua, issues 718 and 617r), in a
 -- stand-in world.
@@ -176,3 +184,6 @@ check(s.worn[15].entry == 38707 and s.worn[1] == nil and s.worn[14] == nil, "the
 print("")
 print(fails == 0 and ("All " .. checks .. " checks passed") or (fails .. " of " .. checks .. " checks failed"))
 os.exit(fails == 0 and 0 or 1)
+-- ==== footer of test-dk-buddy-gear ====
+-- lines:      189
+-- ==== end of footer ====

@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C033
+# profiles:   cc-test
+# priority:   1280
+# kind:       settings
+# about:      cc-test: Warden Kicks on a Failed Check
+# ==== end of header ====
 # C033 - cc-test: Warden Kicks on a Failed Check
 # For a general audience: Warden is the server's way of asking the game
 # client small questions (what is in a piece of its memory, what a
@@ -41,3 +48,6 @@ config_cc_test_warden_kicks() {
 CONFIG_PROFILES[config_cc_test_warden_kicks]="cc-test"
 CONFIG_DESCRIPTIONS[config_cc_test_warden_kicks]="Warden failures logged (kicks once the custom client answers Warden)"
 # -- }}}
+# ==== footer of C033 ====
+# lines:      53
+# ==== end of footer ====

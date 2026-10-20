@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-compile-module-set
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      check which modules the compile script builds
+# quick-test: yes
+# ==== end of header ====
 # test-compile-module-set - check which modules the compile script builds
 # for each profile, without compiling anything.
 #
@@ -104,3 +112,6 @@ echo "Profiles with the wrong module set: ${fail}"
 # }}}
 
 [[ "${fail}" -eq 0 ]]
+# ==== footer of test-compile-module-set ====
+# lines:      117
+# ==== end of footer ====

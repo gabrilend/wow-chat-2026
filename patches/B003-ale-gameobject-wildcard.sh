@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B003
+# profiles:   beta
+# priority:   130
+# kind:       source
+# about:      Enable entry 0 as wildcard for RegisterGameObjectEvent
+# ==== end of header ====
 # B003 - Enable entry 0 as wildcard for RegisterGameObjectEvent
 # Issue 307 (was 325): ALE doesn't support entry 0 wildcard for gameobject events
 # Parallelizable: Yes (unique file)
@@ -30,3 +37,6 @@ unpatch_B003_ale_gameobject_wildcard() {
     fi
 }
 # }}}
+# ==== footer of B003 ====
+# lines:      42
+# ==== end of footer ====

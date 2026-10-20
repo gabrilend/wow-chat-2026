@@ -1,4 +1,12 @@
 #!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-validate-needs-world-up
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      checks that a build is only called good when
+# quick-test: yes
+# ==== end of header ====
 # test-validate-needs-world-up - checks that a build is only called good when
 # its worldserver has really finished starting.
 #
@@ -76,3 +84,6 @@ run_case "fatal-error" fail \
 
 echo "${CHECKS} cases, ${FAILS} failed"
 exit $(( FAILS > 0 ))
+# ==== footer of test-validate-needs-world-up ====
+# lines:      89
+# ==== end of footer ====

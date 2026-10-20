@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B006
+# profiles:   beta
+# priority:   160
+# kind:       source
+# about:      Add PLAYER_EVENT_ON_SELL_ITEM to ALE
+# ==== end of header ====
 # B006 - Add PLAYER_EVENT_ON_SELL_ITEM to ALE
 # Issue 403 (was 150): ALE sell item hook
 # Parallelizable: Yes (unique files)
@@ -116,3 +123,6 @@ unpatch_B006_ale_sell_item_hook() {
     return 0
 }
 # }}}
+# ==== footer of B006 ====
+# lines:      128
+# ==== end of footer ====

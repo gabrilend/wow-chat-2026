@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E004
+# profiles:   alpha basic beta cc-test release vanilla
+# priority:   1040
+# kind:       install
+# about:      Create RAM-backed log directory symlink
+# ==== end of header ====
 # E004-log-directory-setup.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -23,3 +30,6 @@ unpatch_E004_log_directory_setup() {
     echo "  [E004] Removed log directory symlinks"
 }
 # -- }}}
+# ==== footer of E004 ====
+# lines:      35
+# ==== end of footer ====

@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C025
+# profiles:   all
+# priority:   1240
+# kind:       settings
+# about:      Client cache version follows the profile's content (issue 160)
+# ==== end of header ====
 # C025 - Client cache version follows the profile's content (issue 160)
 #
 # For a general audience: the game client keeps a local cache of what the
@@ -70,3 +77,6 @@ config_client_cache_version() {
 CONFIG_PROFILES[config_client_cache_version]="all"
 CONFIG_DESCRIPTIONS[config_client_cache_version]="ClientCacheVersion = fingerprint of profile + source commit + its SQL edits"
 # -- }}}
+# ==== footer of C025 ====
+# lines:      82
+# ==== end of footer ====

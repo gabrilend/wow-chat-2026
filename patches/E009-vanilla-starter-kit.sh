@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E009
+# profiles:   vanilla
+# priority:   1390
+# kind:       install
+# about:      Apply vanilla profile's class-specific starting equipment kit
+# ==== end of header ====
 # E009-vanilla-starter-kit.sh - one install step, loaded by patches/E-patches.sh.
 # Joined by scripts/merge-install-steps (2026-10-20) from steps that were always
 # taken together: E009, E018 (the owner: "sure that's fine I guess. We
@@ -147,3 +154,6 @@ unpatch_E009_vanilla_starter_kit() {
     _E009_vanilla_starting_equipment_revert || return 1
 }
 # -- }}}
+# ==== footer of E009 ====
+# lines:      159
+# ==== end of footer ====

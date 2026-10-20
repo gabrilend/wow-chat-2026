@@ -1,4 +1,12 @@
 #!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-ale-method-names
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      checks that every method the server-side Lua
+-- quick-test: yes
+-- ==== end of header ====
 -- test-ale-method-names - checks that every method the server-side Lua
 -- scripts call on a game object, and every engine function they call by
 -- name, is one the Lua engine really has.
@@ -215,3 +223,6 @@ end
 print(string.format("\n%d unknown in loaded scripts, %d in switched-off ones", #unknown, #offUnknown))
 os.exit(#unknown == 0 and 0 or 1)
 -- }}}
+-- ==== footer of test-ale-method-names ====
+-- lines:      228
+-- ==== end of footer ====

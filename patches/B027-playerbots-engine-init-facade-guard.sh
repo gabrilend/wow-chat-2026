@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B027
+# profiles:   basic beta cc-test release vanilla
+# priority:   370
+# kind:       source
+# about:      Guard Engine::Init against a strategy with a stale/foreign bot facade
+# ==== end of header ====
 # B027 - Guard Engine::Init against a strategy with a stale/foreign bot facade
 # Issue 308: worldserver segfaults during the first random-bot login burst.
 #
@@ -110,3 +117,6 @@ unpatch_B027_playerbots_engine_init_facade_guard() {
     [[ -f "${ENGINE}" ]] && sed -i '/>>> B027 stale-facade guard BEGIN/,/<<< B027 stale-facade guard END/d' "${ENGINE}"
 }
 # }}}
+# ==== footer of B027 ====
+# lines:      122
+# ==== end of footer ====

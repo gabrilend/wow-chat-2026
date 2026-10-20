@@ -1,4 +1,12 @@
 #!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-watch-compile
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      checks scripts/watch-compile's verdicts on made-up
+# quick-test: yes
+# ==== end of header ====
 # test-watch-compile - checks scripts/watch-compile's verdicts on made-up
 # compile runs, today's false success first.
 #
@@ -67,3 +75,6 @@ run_case "compile-failed" 1 "the compile itself failed" \
 
 echo "${CHECKS} cases, ${FAILS} failed"
 exit $(( FAILS > 0 ))
+# ==== footer of test-watch-compile ====
+# lines:      80
+# ==== end of footer ====

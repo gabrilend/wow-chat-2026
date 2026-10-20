@@ -1,0 +1,181 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- write-patch-headers - put the header and footer on every patch (issue 189b)
+--
+-- For a general audience: every patch and quick test will say what it is in
+-- a header at its top and a footer at its bottom (issue 189a's shape: id,
+-- profiles, priority, kind, a line about it; the id again and the file's
+-- line count). Today that knowledge is in lists elsewhere: each profile's
+-- lists in patches/patches.sh, each settings patch's CONFIG_PROFILES line,
+-- the compile's QUICK_TESTS. This reads those lists and writes the header
+-- and footer into each file, so nothing has to be typed by hand, and run
+-- again it rewrites them (a whole header is replaced, never doubled; a
+-- broken one stops the tool, naming it).
+--
+-- The priorities keep today's order exactly (every profile's lists are in
+-- ascending id order, so the id gives the order):
+--   quick tests        10            all at once, as the compile runs them
+--   source patches     100 + 10 x n  (B056: 660), below the compile gate, 1000
+--   E001, E004, E006   1010, 1040, 1060   the links, logs, config files
+--   settings patches   1100 + 5 x i  in today's file order (they run inside
+--                                    E006 today, so after it)
+--   other install steps 1300 + 10 x n (E065: 1950), below the next gate, 2000
+-- Profiles: the profiles whose lists name the patch, written as the group
+-- name when they are exactly one of the groups in patches/groups; "all" as
+-- a settings patch says it; "none" for a patch on no list.
+--
+-- Usage: scripts/write-patch-headers [PROJECT_DIR] [--dry-run]
+--------------------------------------------------------------------------------
+
+local DIR, DRY = "/mnt/kaun/wow-chat-2026", false
+for _, a in ipairs(arg) do if a == "--dry-run" then DRY = true elseif a ~= "" then DIR = a end end
+local HERE   = debug.getinfo(1, "S").source:match("^@(.*/)") or "./"
+local Header = dofile(HERE .. "lib/patch-header.lua")
+
+-- {{{ local helpers
+local function q(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
+local function slurp(p) local f = io.open(p, "rb"); if not f then return nil end local s = f:read("*a"); f:close(); return s end
+local function spit(p, s) local f = assert(io.open(p, "wb")); f:write(s); f:close() end
+local function run(cmd) local h = io.popen(cmd); local s = h:read("*a"); h:close(); return s end
+local function ls(pattern)
+    local t = {}
+    for l in run("cd " .. q(DIR) .. " && ls -1d " .. pattern .. " 2>/dev/null"):gmatch("[^\n]+") do t[#t + 1] = l end
+    return t
+end
+local function one_line(s, max)
+    s = (s or ""):gsub("%s+", " "):gsub("^ ", ""):gsub(" $", "")
+    if #s <= max then return s end
+    local cut = s:sub(1, max):match("^(.*%S)%s") or s:sub(1, max)
+    return cut .. " ..."
+end
+-- }}}
+
+-- {{{ the lists, as the runner holds them
+local lists = run("bash -c " .. q("export DIR=" .. q(DIR) .. "; source " .. q(DIR .. "/patches/patches.sh") ..
+    " >/dev/null 2>&1; for p in \"${!PHASE_BEGIN_PATCHES[@]}\"; do echo \"B|$p|${PHASE_BEGIN_PATCHES[$p]}\"; done;" ..
+    " for p in \"${!PHASE_END_PATCHES[@]}\"; do echo \"E|$p|${PHASE_END_PATCHES[$p]}\"; done"))
+local takers, profiles = {}, {}            -- takers[id] = { profile = true }
+for kind, prof, list in lists:gmatch("(%u)|([%w%-]+)|([^\n]*)") do
+    profiles[prof] = true
+    for id in list:gmatch("%S+") do takers[id] = takers[id] or {}; takers[id][prof] = true end
+end
+local quick = {}
+local compile = slurp(DIR .. "/scripts/compile")
+for name in (compile:match("QUICK_TESTS=%((.-)\n%)") or ""):gmatch("test%-[%w%-]+") do quick[name] = true end
+-- }}}
+
+-- {{{ the groups: name -> set of profiles (patches/groups: "name: profile profile ...")
+local groups = {}
+for line in (slurp(DIR .. "/patches/groups") or ""):gmatch("[^\n]+") do
+    local name, members = line:match("^([%w%-]+):%s*(.+)$")
+    if name and not line:match("^#") then
+        groups[name] = {}
+        for p in members:gmatch("%S+") do groups[name][p] = true end
+    end
+end
+local function profiles_text(set)
+    local names = {}
+    for p in pairs(set) do names[#names + 1] = p end
+    if #names == 0 then return "none" end
+    table.sort(names)
+    for g, members in pairs(groups) do
+        local same = true
+        for p in pairs(members) do if not set[p] then same = false end end
+        for p in pairs(set) do if not members[p] then same = false end end
+        if same then return g end
+    end
+    return table.concat(names, " ")
+end
+-- }}}
+
+-- {{{ each file's facts: id, kind, priority, profiles, about, marker
+local entries = {}
+for _, path in ipairs(ls("patches/B[0-9][0-9][0-9]-*.sh")) do
+    local id = path:match("(B%d%d%d)")
+    local src = slurp(DIR .. "/" .. path)
+    entries[#entries + 1] = { path = path, id = id, kind = "source", marker = "#",
+        priority = 100 + 10 * tonumber(id:sub(2)), profiles = profiles_text(takers[id] or {}),
+        about = src:match("\n# " .. id .. " %- ([^\n]+)") }
+end
+local SETUP = { E001 = 1010, E004 = 1040, E006 = 1060 }
+for _, path in ipairs(ls("patches/E[0-9][0-9][0-9]-*.sh")) do
+    local id = path:match("(E%d%d%d)")
+    local src = slurp(DIR .. "/" .. path)
+    entries[#entries + 1] = { path = path, id = id, kind = "install", marker = "#",
+        priority = SETUP[id] or (1300 + 10 * tonumber(id:sub(2))), profiles = profiles_text(takers[id] or {}),
+        about = src:match("\n# %-%- {{{ [^\n]+\n# ([^\n]+)") }
+end
+for i, path in ipairs(ls("config/patches/C[0-9]*.sh")) do
+    local src = slurp(DIR .. "/" .. path)
+    local id = path:match("(C%d%d%d%a?)")
+    local cp = src:match("CONFIG_PROFILES%[[%w_]+%]=\"([^\"]*)\"") or ""
+    local set = {}
+    local prof = "none"
+    if cp:match("^%s*all%s*$") then prof = "all"
+    else for p in cp:gmatch("%S+") do set[p] = true end; prof = profiles_text(set) end
+    entries[#entries + 1] = { path = path, id = id, kind = "settings", marker = "#",
+        priority = 1100 + 5 * (i - 1), profiles = prof,
+        about = src:match("\n# " .. id .. " %- ([^\n]+)") }
+end
+for name in pairs(quick) do
+    local path = "scripts/" .. name
+    local src = slurp(DIR .. "/" .. path)
+    if not src then error("write-patch-headers: the compile's quick test " .. name .. " is not in scripts/") end
+    local lua = src:match("^#![^\n]*lua") ~= nil
+    local m = lua and "%-%-" or "#"
+    entries[#entries + 1] = { path = path, id = name, kind = "test", marker = lua and "--" or "#",
+        priority = 10, profiles = "all", quick = true,
+        about = src:match("\n" .. m .. " " .. name:gsub("%-", "%%-") .. " %- ([^\n]+)") }
+end
+table.sort(entries, function(a, b) return a.path < b.path end)
+-- }}}
+
+-- {{{ write each header and footer
+local function strip_whole(text, r)
+    -- the lines without the old header and footer
+    local lines = {}
+    for l in (text .. (text:sub(-1) == "\n" and "" or "\n")):gmatch("([^\n]*)\n") do lines[#lines + 1] = l end
+    local out = {}
+    for i, l in ipairs(lines) do
+        local in_header = i >= r.header_first and i < r.header_first + r.header_len
+        local in_footer = i > #lines - r.footer_len
+        if not in_header and not in_footer then out[#out + 1] = l end
+    end
+    return table.concat(out, "\n") .. "\n"
+end
+
+local written, unchanged = 0, 0
+for _, e in ipairs(entries) do
+    local full = DIR .. "/" .. e.path
+    local text = slurp(full)
+    local r = Header.parse(text)
+    if r.state == "broken" then
+        error("write-patch-headers: " .. e.path .. " has a broken header; mend or remove it first:\n  " .. table.concat(r.problems, "\n  "))
+    end
+    if r.state == "whole" then text = strip_whole(text, r) end
+    if text:sub(-1) ~= "\n" then text = text .. "\n" end
+    local c = e.marker
+    local fields = {
+        c .. " id:         " .. e.id,
+        c .. " profiles:   " .. e.profiles,
+        c .. " priority:   " .. e.priority,
+        c .. " kind:       " .. e.kind,
+        c .. " about:      " .. one_line(e.about or e.id, 100),
+    }
+    if e.quick then fields[#fields + 1] = c .. " quick-test: yes" end
+    local header = { c .. " ==== header: " .. (#fields + 2) .. " lines, footer: 3 lines ====" }
+    for _, f in ipairs(fields) do header[#header + 1] = f end
+    header[#header + 1] = c .. " ==== end of header ===="
+    local shebang, rest = text:match("^(#![^\n]*\n)(.*)$")
+    local body = shebang and rest or text
+    local new = (shebang or "") .. table.concat(header, "\n") .. "\n" .. body ..
+                c .. " ==== footer of " .. e.id .. " ====\n" .. c .. " lines:      0\n" .. c .. " ==== end of footer ====\n"
+    local count = select(2, new:gsub("\n", "\n"))
+    new = new:gsub("\n" .. (c:gsub("%-", "%%-")) .. " lines:      0\n", "\n" .. c .. " lines:      " .. count .. "\n")
+    if new ~= slurp(full) then
+        if not DRY then spit(full, new) end
+        written = written + 1
+    else unchanged = unchanged + 1 end
+end
+print(string.format("%s %d files, %d already current", DRY and "would write" or "wrote", written, unchanged))
+-- }}}

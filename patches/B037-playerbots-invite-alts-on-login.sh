@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B037
+# profiles:   buddy-set
+# priority:   470
+# kind:       source
+# about:      Playerbots: a switch for the group invite at a bot's login
+# ==== end of header ====
 # B037 - Playerbots: a switch for the group invite at a bot's login
 # Issue 617c2 (basic, 2026-09-27).
 #
@@ -125,3 +132,6 @@ unpatch_B037_playerbots_invite_alts_on_login() {
     return 0
 }
 # }}}
+# ==== footer of B037 ====
+# lines:      137
+# ==== end of footer ====

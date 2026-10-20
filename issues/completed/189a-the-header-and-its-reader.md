@@ -5,8 +5,7 @@
 - Phase: 1 (Foundation & Tooling)
 - Parent: 189
 - Blocks: 189b
-- State: built 2026-10-20; completed when 189b puts headers on the
-  patches and the checker finds them all whole
+- State: completed 2026-10-20 (189b put headers on every patch, all whole)
 
 ## Current Behavior
 

@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E012
+# profiles:   beta
+# priority:   1420
+# kind:       install
+# about:      Removes all creature spawns except critters and spirit healers
+# ==== end of header ====
 # E012-beta-drop-creatures-keep-essential.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -57,3 +64,6 @@ DROP TABLE IF EXISTS `_keep_guids`;
 SQL
 }
 # -- }}}
+# ==== footer of E012 ====
+# lines:      69
+# ==== end of footer ====

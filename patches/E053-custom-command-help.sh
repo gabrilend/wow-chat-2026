@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E053
+# profiles:   buddy-set
+# priority:   1830
+# kind:       install
+# about:      The `command` rows for the game master commands the project compiles in
+# ==== end of header ====
 # E053-custom-command-help.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -48,3 +55,6 @@ unpatch_E053_custom_command_help() {
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
+# ==== footer of E053 ====
+# lines:      60
+# ==== end of footer ====

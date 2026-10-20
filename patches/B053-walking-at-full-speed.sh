@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B053
+# profiles:   basic
+# priority:   630
+# kind:       source
+# about:      Players walk at the full stock speed; only running and the rest
+# ==== end of header ====
 # B053 - Players walk at the full stock speed; only running and the rest
 # take the player move-speed rate
 # Issue 166 (basic, 2026-10-12).
@@ -36,3 +43,6 @@ unpatch_B053_walking_at_full_speed() {
     line_edits_revert B053 <<< "${B053_EDITS}"
 }
 # }}}
+# ==== footer of B053 ====
+# lines:      48
+# ==== end of footer ====

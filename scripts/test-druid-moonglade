@@ -1,4 +1,12 @@
 #!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-druid-moonglade
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      plays the druids' Moonglade return (issue 211a) in
+-- quick-test: yes
+-- ==== end of header ====
 -- test-druid-moonglade - plays the druids' Moonglade return (issue 211a) in
 -- the pretend world, with beta's real script.
 --
@@ -459,3 +467,6 @@ check(gave_up.Dot, "an arrival that never reaches the glade says so in the serve
 
 quiet(string.format("%d checks, %d failed", checks, fails))
 os.exit(fails == 0 and 0 or 1)
+-- ==== footer of test-druid-moonglade ====
+-- lines:      472
+-- ==== end of footer ====

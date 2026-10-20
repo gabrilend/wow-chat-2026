@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C030
+# profiles:   buddy-set
+# priority:   1265
+# kind:       settings
+# about:      Basic: No Group Invite at a Buddy's Login
+# ==== end of header ====
 # C030 - Basic: No Group Invite at a Buddy's Login
 # On basic, buddies are grouped by their distance from the owner (issue
 # 617c2, modules/mod-buddies/src/buddies_party.cpp). The bot module would
@@ -37,3 +44,6 @@ config_basic_buddies_no_login_invite() {
 CONFIG_PROFILES[config_basic_buddies_no_login_invite]="basic cc-test"
 CONFIG_DESCRIPTIONS[config_basic_buddies_no_login_invite]="No group invite at a buddy's login: buddies are grouped by distance (switch from B037)"
 # -- }}}
+# ==== footer of C030 ====
+# lines:      49
+# ==== end of footer ====

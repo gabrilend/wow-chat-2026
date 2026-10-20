@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C039
+# profiles:   basic beta cc-test release vanilla
+# priority:   1310
+# kind:       settings
+# about:      Instances and Battlegrounds: See as Far as the Server Allows
+# ==== end of header ====
 # C039 - Instances and Battlegrounds: See as Far as the Server Allows
 # The owner, 2026-10-20: "how about for battlegrounds and instances we just
 # have 100% view distance for all players and bots, always? That way we can
@@ -39,3 +46,6 @@ config_instances_and_battlegrounds_see_all() {
 CONFIG_PROFILES[config_instances_and_battlegrounds_see_all]="basic vanilla release beta cc-test"
 CONFIG_DESCRIPTIONS[config_instances_and_battlegrounds_see_all]="Instances and battlegrounds seen to 250 yards, the server's most"
 # -- }}}
+# ==== footer of C039 ====
+# lines:      51
+# ==== end of footer ====

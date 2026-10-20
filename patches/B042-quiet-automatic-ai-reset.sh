@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B042
+# profiles:   buddy-set
+# priority:   520
+# kind:       source
+# about:      A bot says "AI was reset to defaults" only when asked to reset
+# ==== end of header ====
 # B042 - A bot says "AI was reset to defaults" only when asked to reset
 # Issue 617c2 (buddies grouped by distance), 2026-09-29.
 #
@@ -65,3 +72,6 @@ unpatch_B042_quiet_automatic_ai_reset() {
     return 0
 }
 # }}}
+# ==== footer of B042 ====
+# lines:      77
+# ==== end of footer ====

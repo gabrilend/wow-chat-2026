@@ -1,4 +1,12 @@
 #!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-treasure
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      runs beta's treasure script (src/lua-beta/treasure.lua.disabled)
+-- quick-test: yes
+-- ==== end of header ====
 -- test-treasure - runs beta's treasure script (src/lua-beta/treasure.lua.disabled)
 -- in a small pretend world and checks how items circulate, without a server.
 --
@@ -259,3 +267,6 @@ check(queued(low, 8401) == 1 and queued(high, 8401) == 0,
 
 print(string.format("test-treasure: %d of %d checks passed", checks - fails, checks))
 os.exit(fails == 0 and 0 or 1)
+-- ==== footer of test-treasure ====
+-- lines:      272
+-- ==== end of footer ====

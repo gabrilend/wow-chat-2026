@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B011
+# profiles:   none
+# priority:   210
+# kind:       source
+# about:      B011
+# ==== end of header ====
 # B011-ale-resurrect-signature.sh
 #
 # DEPRECATED 2026-05-19 — removed from PHASE_BEGIN_PATCHES for all profiles.
@@ -49,3 +56,6 @@ unpatch_B011_ale_resurrect_signature() {
     sed -i 's/OnPlayerResurrect(Player\* player, float \/\*restore_percent\*\/, bool \/\*applySickness\*\/)/OnPlayerResurrect(Player* player, float \/*restore_percent*\/, bool\& \/*applySickness*\/)/' "${FILE}"
 }
 # }}}
+# ==== footer of B011 ====
+# lines:      61
+# ==== end of footer ====

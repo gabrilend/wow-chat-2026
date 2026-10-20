@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B025
+# profiles:   vanilla
+# priority:   350
+# kind:       source
+# about:      Vanilla playerbots start in the 148h starter kit (issue 148s)
+# ==== end of header ====
 # B025 - Vanilla playerbots start in the 148h starter kit (issue 148s)
 #
 # When a random bot is first geared at the vanilla start level (20), equip it
@@ -81,3 +88,6 @@ unpatch_B025_playerbots_vanilla_starter_kit() {
     sed -i "/>>> B025-vanilla-starter-kit (148s) BEGIN/,/<<< B025-vanilla-starter-kit (148s) END/d" "${FILE}"
 }
 # }}}
+# ==== footer of B025 ====
+# lines:      93
+# ==== end of footer ====

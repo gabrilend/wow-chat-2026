@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B050
+# profiles:   buddy-set
+# priority:   600
+# kind:       source
+# about:      Playerbots: a buddy weighs spirit by what it heals
+# ==== end of header ====
 # B050 - Playerbots: a buddy weighs spirit by what it heals
 # Issue 617j3 (basic, 2026-10-04).
 #
@@ -81,3 +88,6 @@ unpatch_B050_playerbots_buddy_spirit_worth() {
     return 0
 }
 # }}}
+# ==== footer of B050 ====
+# lines:      93
+# ==== end of footer ====

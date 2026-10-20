@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C020
+# profiles:   vanilla
+# priority:   1215
+# kind:       settings
+# about:      Vanilla Playerbot Population Band (hold 128–256 active bots)
+# ==== end of header ====
 # C020 - Vanilla Playerbot Population Band (hold 128–256 active bots)
 # Bound the ambient random-bot fleet to a floor of 128 and a ceiling of 256
 # simultaneously-online bots, replacing the upstream .dist default of
@@ -43,3 +50,6 @@ config_vanilla_playerbot_population() {
 CONFIG_PROFILES[config_vanilla_playerbot_population]="vanilla"
 CONFIG_DESCRIPTIONS[config_vanilla_playerbot_population]="Playerbot population band 128–256 active"
 # -- }}}
+# ==== footer of C020 ====
+# lines:      55
+# ==== end of footer ====

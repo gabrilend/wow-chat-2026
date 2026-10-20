@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-patch-headers
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      the patch header's reader and checker (issue 189a)
+# quick-test: yes
+# ==== end of header ====
 # test-patch-headers - the patch header's reader and checker (issue 189a)
 #
 # For a general audience: every patch and quick test says what it is in a
@@ -122,3 +130,6 @@ check '[[ ${rc} -eq 0 ]]' "with nothing broken, the checker passes"
 rm -rf "${WORK}"
 echo "${checks} checks, ${fails} failed"
 [[ ${fails} -eq 0 ]]
+# ==== footer of test-patch-headers ====
+# lines:      135
+# ==== end of footer ====

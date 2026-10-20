@@ -1,4 +1,12 @@
 #!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-movement
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      checks beta's shared geometry helpers
+-- quick-test: yes
+-- ==== end of header ====
 -- test-movement - checks beta's shared geometry helpers
 -- (src/lua-beta/movement.lua) without a game server.
 --
@@ -100,3 +108,6 @@ check(#leaked == 0, "helpers wrote into the global space: " .. table.concat(leak
 
 print(string.format("%d checks, %d failed", checks, fails))
 os.exit(fails == 0 and 0 or 1)
+-- ==== footer of test-movement ====
+-- lines:      113
+-- ==== end of footer ====

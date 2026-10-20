@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C032
+# profiles:   all
+# priority:   1275
+# kind:       settings
+# about:      Preserve Custom Channels (so a script can tell one channel from another)
+# ==== end of header ====
 # C032 - Preserve Custom Channels (so a script can tell one channel from another)
 # Keep player-made chat channels in the characters database, which is what
 # gives each one an id and a row naming it. The first user is neuron's in-game
@@ -31,3 +38,6 @@ config_preserve_custom_channels() {
 CONFIG_PROFILES[config_preserve_custom_channels]="all"
 CONFIG_DESCRIPTIONS[config_preserve_custom_channels]="Keep custom chat channels, so they have ids (neuron's channel)"
 # -- }}}
+# ==== footer of C032 ====
+# lines:      43
+# ==== end of footer ====

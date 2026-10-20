@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E032
+# profiles:   basic
+# priority:   1620
+# kind:       install
+# about:      Outland world levels (issue 155k): Outland's open-world monsters +4, the
+# ==== end of header ====
 # E032-basic-outland-world-levels.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -44,3 +51,6 @@ unpatch_E032_basic_outland_world_levels() {
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
+# ==== footer of E032 ====
+# lines:      56
+# ==== end of footer ====

@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B002
+# profiles:   basic beta cc-test vanilla
+# priority:   120
+# kind:       source
+# about:      Add ALE OnLogin hook to playerbots bot login
+# ==== end of header ====
 # B002 - Add ALE OnLogin hook to playerbots bot login
 # Issue 306 (was 324): playerbots don't trigger PLAYER_EVENT_ON_LOGIN
 #
@@ -107,3 +114,6 @@ unpatch_B002_playerbots_ale_login_hook() {
     fi
 }
 # }}}
+# ==== footer of B002 ====
+# lines:      119
+# ==== end of footer ====

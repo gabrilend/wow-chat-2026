@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B036
+# profiles:   buddy-set
+# priority:   460
+# kind:       source
+# about:      Build the project's buddy module (mod-buddies) into the worldserver
+# ==== end of header ====
 # B036 - Build the project's buddy module (mod-buddies) into the worldserver
 # Issue 617a1 (buddy roster); the home of every buddy part written in C++.
 #
@@ -53,3 +60,6 @@ unpatch_B036_mod_buddies() {
     return 0
 }
 # }}}
+# ==== footer of B036 ====
+# lines:      65
+# ==== end of footer ====

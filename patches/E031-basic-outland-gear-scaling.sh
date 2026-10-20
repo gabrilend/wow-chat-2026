@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E031
+# profiles:   basic
+# priority:   1610
+# kind:       install
+# about:      Outland gear scaling (issue 155k, with 155f's dungeon ladder): Outland's
+# ==== end of header ====
 # E031-basic-outland-gear-scaling.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -45,3 +52,6 @@ unpatch_E031_basic_outland_gear_scaling() {
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
+# ==== footer of E031 ====
+# lines:      57
+# ==== end of footer ====

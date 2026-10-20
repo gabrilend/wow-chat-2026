@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C014
+# profiles:   vanilla
+# priority:   1185
+# kind:       settings
+# about:      Vanilla Playerbot Progression (enter at 20, climb to the 40 cap)
+# ==== end of header ====
 # C014 - Vanilla Playerbot Progression (enter at 20, climb to the 40 cap)
 # The random-bot fleet enters at level 20 — the same place players start
 # — and levels up the way a player does: earning XP through play and
@@ -59,3 +66,6 @@ config_vanilla_playerbot_level_cap() {
 CONFIG_PROFILES[config_vanilla_playerbot_level_cap]="vanilla"
 CONFIG_DESCRIPTIONS[config_vanilla_playerbot_level_cap]="Playerbot progression 20→40 (organic XP leveling)"
 # -- }}}
+# ==== footer of C014 ====
+# lines:      71
+# ==== end of footer ====

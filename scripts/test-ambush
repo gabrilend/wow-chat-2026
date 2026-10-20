@@ -1,4 +1,12 @@
 #!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-ambush
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      runs beta's ambush script (src/lua-beta/ambush.lua) in a
+-- quick-test: yes
+-- ==== end of header ====
 -- test-ambush - runs beta's ambush script (src/lua-beta/ambush.lua) in a
 -- small pretend world and checks what it does, without a game server.
 --
@@ -389,3 +397,6 @@ end
 
 print(string.format("%d checks, %d failed", checks, fails))
 os.exit(fails == 0 and 0 or 1)
+-- ==== footer of test-ambush ====
+-- lines:      402
+-- ==== end of footer ====

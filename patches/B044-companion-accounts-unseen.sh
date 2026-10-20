@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B044
+# profiles:   buddy-set
+# priority:   540
+# kind:       source
+# about:      Companion accounts: their characters are not in /who and can't be friended
+# ==== end of header ====
 # B044 - Companion accounts: their characters are not in /who and can't be friended
 # Issue 617a5 (basic, 2026-10-02).
 #
@@ -180,3 +187,6 @@ unpatch_B044_companion_accounts_unseen() {
     return 0
 }
 # }}}
+# ==== footer of B044 ====
+# lines:      192
+# ==== end of footer ====

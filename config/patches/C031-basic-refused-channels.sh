@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C031
+# profiles:   basic
+# priority:   1270
+# kind:       settings
+# about:      Basic: No World Channels (General, Trade, the Defense channels, LFG, Guild Recruitment)
+# ==== end of header ====
 # C031 - Basic: No World Channels (General, Trade, the Defense channels, LFG, Guild Recruitment)
 # On basic nobody joins the world's shared chat channels, to keep news from
 # spreading (issue 155x, the owner, 2026-09-27). The refusal itself is
@@ -32,3 +39,6 @@ config_basic_refused_channels() {
 CONFIG_PROFILES[config_basic_refused_channels]="basic"
 CONFIG_DESCRIPTIONS[config_basic_refused_channels]="No General, Trade, LocalDefense, WorldDefense, GuildRecruitment or LookingForGroup channels (read by B038)"
 # -- }}}
+# ==== footer of C031 ====
+# lines:      44
+# ==== end of footer ====

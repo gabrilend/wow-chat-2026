@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E026
+# profiles:   basic
+# priority:   1560
+# kind:       install
+# about:      The table of per-creature (and per-map) damage, healing and health
+# ==== end of header ====
 # E026-basic-creature-multipliers.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -43,3 +50,6 @@ unpatch_E026_basic_creature_multipliers() {
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
+# ==== footer of E026 ====
+# lines:      55
+# ==== end of footer ====

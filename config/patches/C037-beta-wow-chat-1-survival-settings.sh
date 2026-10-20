@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C037
+# profiles:   beta
+# priority:   1300
+# kind:       settings
+# about:      Beta: wow-chat-1's Survival Settings
+# ==== end of header ====
 # C037 - Beta: wow-chat-1's Survival Settings
 # wow-chat-1 ran with about a hundred server settings tuned by hand; they
 # were found in its old server folder on 2026-10-19 and laid out with the
@@ -154,3 +161,6 @@ config_beta_wow_chat_1_survival_settings() {
 CONFIG_PROFILES[config_beta_wow_chat_1_survival_settings]="beta"
 CONFIG_DESCRIPTIONS[config_beta_wow_chat_1_survival_settings]="wow-chat-1's survival settings (${#C037_SETTINGS[@]} values; docs/wow-chat-1-settings.md)"
 # -- }}}
+# ==== footer of C037 ====
+# lines:      166
+# ==== end of footer ====

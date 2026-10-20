@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E040
+# profiles:   basic
+# priority:   1700
+# kind:       install
+# about:      Sargobras at the gate of Acherus (issue 718): the gossip NPC in the Ebon
+# ==== end of header ====
 # E040-basic-death-knight-story-at-acherus.sh - one install step, loaded by patches/E-patches.sh.
 # Joined by scripts/merge-install-steps (2026-10-20) from steps that were always
 # taken together: E040, E041, E051 (the owner: "sure that's fine I guess. We
@@ -145,3 +152,6 @@ unpatch_E040_basic_death_knight_story_at_acherus() {
     _E040_basic_death_knight_sargobras_revert || return 1
 }
 # -- }}}
+# ==== footer of E040 ====
+# lines:      157
+# ==== end of footer ====

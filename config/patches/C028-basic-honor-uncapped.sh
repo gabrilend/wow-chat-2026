@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C028
+# profiles:   basic
+# priority:   1255
+# kind:       settings
+# about:      Basic: Honor Without a Cap
+# ==== end of header ====
 # C028 - Basic: Honor Without a Cap
 # On basic, honor is the currency gems are sold for at the goblin auction
 # houses and glyphs are bought with (issue 155t: a major glyph costs 77,777,
@@ -24,3 +31,6 @@ config_basic_honor_uncapped() {
 CONFIG_PROFILES[config_basic_honor_uncapped]="basic"
 CONFIG_DESCRIPTIONS[config_basic_honor_uncapped]="Honor effectively uncapped (glyphs cost more than the stock 75,000)"
 # -- }}}
+# ==== footer of C028 ====
+# lines:      36
+# ==== end of footer ====

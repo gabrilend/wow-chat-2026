@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B038
+# profiles:   basic
+# priority:   480
+# kind:       source
+# about:      Built-in chat channels a profile refuses
+# ==== end of header ====
 # B038 - Built-in chat channels a profile refuses
 # Issue 155x (basic, 2026-09-27).
 #
@@ -99,3 +106,6 @@ unpatch_B038_refused_channels() {
     return 0
 }
 # }}}
+# ==== footer of B038 ====
+# lines:      111
+# ==== end of footer ====

@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C011
+# profiles:   all
+# priority:   1175
+# kind:       settings
+# about:      Realmlist Setup
+# ==== end of header ====
 # C011 - Realmlist Setup
 # Configure realm entry in database (address, port, flags)
 # Profiles: all
@@ -95,3 +102,6 @@ EOF
 CONFIG_PROFILES[config_realmlist_setup]="all"
 CONFIG_DESCRIPTIONS[config_realmlist_setup]="Realmlist (name, address, port)"
 # -- }}}
+# ==== footer of C011 ====
+# lines:      107
+# ==== end of footer ====

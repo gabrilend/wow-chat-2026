@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C027
+# profiles:   buddy-set
+# priority:   1250
+# kind:       settings
+# about:      Basic: Buddies Spend Their Own Talents
+# ==== end of header ====
 # C027 - Basic: Buddies Spend Their Own Talents
 # On basic, a buddy's talents are chosen by the project's own script
 # (src/lua-basic/buddy-talents.lua, issue 617g): a fixed shape per buddy,
@@ -27,3 +34,6 @@ config_basic_buddy_own_talents() {
 CONFIG_PROFILES[config_basic_buddy_own_talents]="basic cc-test"
 CONFIG_DESCRIPTIONS[config_basic_buddy_own_talents]="Buddies' talents by the project's script: bot maintenance leaves talents alone"
 # -- }}}
+# ==== footer of C027 ====
+# lines:      39
+# ==== end of footer ====

@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E024
+# profiles:   basic
+# priority:   1540
+# kind:       install
+# about:      Basic's Outland dungeon ladder (issue 155f): sixteen dungeons open at 60,
+# ==== end of header ====
 # E024-basic-outland-dungeons-64.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -45,3 +52,6 @@ unpatch_E024_basic_outland_dungeons_64() {
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
+# ==== footer of E024 ====
+# lines:      57
+# ==== end of footer ====

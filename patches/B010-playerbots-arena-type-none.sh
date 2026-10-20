@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B010
+# profiles:   none
+# priority:   200
+# kind:       source
+# about:      B010
+# ==== end of header ====
 # B010-playerbots-arena-type-none.sh
 # Adds ARENA_TYPE_NONE constant required by mod-playerbots
 #
@@ -32,3 +39,6 @@ unpatch_B010_playerbots_arena_type_none() {
     sed -i '/ARENA_TYPE_NONE.*= 0,/d' "${FILE}"
 }
 # }}}
+# ==== footer of B010 ====
+# lines:      44
+# ==== end of footer ====

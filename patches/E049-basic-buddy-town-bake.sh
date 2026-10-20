@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E049
+# profiles:   basic
+# priority:   1790
+# kind:       install
+# about:      Every town's exploring grid baked ahead of time (issue 617o3), so buddies
+# ==== end of header ====
 # E049-basic-buddy-town-bake.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -37,3 +44,6 @@ unpatch_E049_basic_buddy_town_bake() {
     rm -rf "${DATA}/buddy-towns"
 }
 # -- }}}
+# ==== footer of E049 ====
+# lines:      49
+# ==== end of footer ====

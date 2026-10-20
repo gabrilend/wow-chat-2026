@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         C021
+# profiles:   all
+# priority:   1220
+# kind:       settings
+# about:      SOAP Loopback Console (remote command channel for local scripts)
+# ==== end of header ====
 # C021 - SOAP Loopback Console (remote command channel for local scripts)
 # Enable the worldserver's built-in SOAP endpoint, bound to loopback only,
 # so project scripts (first user: scripts/bot-governor, issue 151) can send
@@ -34,3 +41,6 @@ config_soap_loopback_console() {
 CONFIG_PROFILES[config_soap_loopback_console]="all"
 CONFIG_DESCRIPTIONS[config_soap_loopback_console]="SOAP console on loopback 127.0.0.1:7878"
 # -- }}}
+# ==== footer of C021 ====
+# lines:      46
+# ==== end of footer ====

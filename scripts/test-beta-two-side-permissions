@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-beta-two-side-permissions
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      beta's four cross-faction permissions (issue 193)
+# quick-test: yes
+# ==== end of header ====
 # test-beta-two-side-permissions - beta's four cross-faction permissions (issue 193)
 #
 # For a general audience: on beta, trading, mail, the /who list and adding
@@ -82,3 +90,6 @@ sql "DROP TABLE ${SCRATCH_DB}.rbac_default_permissions;"
 rm -rf "${WORK}"
 echo "${checks} checks, ${fails} failed"
 [[ ${fails} -eq 0 ]]
+# ==== footer of test-beta-two-side-permissions ====
+# lines:      95
+# ==== end of footer ====

@@ -1,4 +1,12 @@
 #!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-info-files-match-source
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      checks that each Lua file's ".info.md"
+-- quick-test: yes
+-- ==== end of header ====
 -- test-info-files-match-source - checks that each Lua file's ".info.md"
 -- summary still names the functions the file defines, and only those.
 --
@@ -193,3 +201,6 @@ end
 
 print(string.format("%d pair(s) checked; %d disagreement(s)", checked, problems))
 os.exit(problems == 0 and 0 or 1)
+-- ==== footer of test-info-files-match-source ====
+-- lines:      206
+-- ==== end of footer ====

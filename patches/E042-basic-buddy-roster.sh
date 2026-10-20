@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E042
+# profiles:   buddy-set
+# priority:   1720
+# kind:       install
+# about:      The buddy clan and roster tables (issue 617a1): each owner's companion
+# ==== end of header ====
 # E042-basic-buddy-roster.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -45,3 +52,6 @@ unpatch_E042_basic_buddy_roster() {
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
+# ==== footer of E042 ====
+# lines:      57
+# ==== end of footer ====

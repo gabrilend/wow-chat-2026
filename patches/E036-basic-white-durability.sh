@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E036
+# profiles:   basic
+# priority:   1660
+# kind:       install
+# about:      White gear durability (issue 155p): white weapons and armor last twice as
+# ==== end of header ====
 # E036-basic-white-durability.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -43,3 +50,6 @@ unpatch_E036_basic_white_durability() {
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
+# ==== footer of E036 ====
+# lines:      55
+# ==== end of footer ====

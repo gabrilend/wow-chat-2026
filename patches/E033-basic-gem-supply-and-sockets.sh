@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E033
+# profiles:   basic
+# priority:   1630
+# kind:       install
+# about:      Gem supply (issue 155p, stage 1): prospecting yields, Wrath and epic gem
+# ==== end of header ====
 # E033-basic-gem-supply-and-sockets.sh - one install step, loaded by patches/E-patches.sh.
 # Joined by scripts/merge-install-steps (2026-10-20) from steps that were always
 # taken together: E033, E034, E035 (the owner: "sure that's fine I guess. We
@@ -144,3 +151,6 @@ unpatch_E033_basic_gem_supply_and_sockets() {
     _E033_basic_gem_supply_revert || return 1
 }
 # -- }}}
+# ==== footer of E033 ====
+# lines:      156
+# ==== end of footer ====

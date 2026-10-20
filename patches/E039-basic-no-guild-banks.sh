@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E039
+# profiles:   basic
+# priority:   1690
+# kind:       install
+# about:      No guild banks (issue 617l): every Guild Vault spawn removed. Same
+# ==== end of header ====
 # E039-basic-no-guild-banks.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -42,3 +49,6 @@ unpatch_E039_basic_no_guild_banks() {
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
+# ==== footer of E039 ====
+# lines:      54
+# ==== end of footer ====

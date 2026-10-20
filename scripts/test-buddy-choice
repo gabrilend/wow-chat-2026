@@ -1,4 +1,12 @@
 #!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-buddy-choice
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      play thousands of buddy picks at Sargobras and check
+-- quick-test: yes
+-- ==== end of header ====
 -- test-buddy-choice - play thousands of buddy picks at Sargobras and check
 -- each result against the owner's rules (issue 617b).
 --
@@ -166,3 +174,6 @@ print(string.format("test-buddy-choice: %d checks over %d clans per faction and 
 for _, f in ipairs(fails) do print("FAIL " .. f) end
 print(#fails == 0 and "Result: all checks passed." or ("Result: " .. #fails .. " failure(s) shown."))
 os.exit(#fails == 0 and 0 or 1)
+-- ==== footer of test-buddy-choice ====
+-- lines:      179
+-- ==== end of footer ====

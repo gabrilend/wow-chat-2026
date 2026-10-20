@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         E050
+# profiles:   buddy-set
+# priority:   1800
+# kind:       install
+# about:      The world's little towns as circles (issue 617e4a): every cluster of
+# ==== end of header ====
 # E050-basic-buddy-town-circles.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
@@ -43,3 +50,6 @@ unpatch_E050_basic_buddy_town_circles() {
     cp "${SRC_FILE}" "${SQL_FILE}"
 }
 # -- }}}
+# ==== footer of E050 ====
+# lines:      55
+# ==== end of footer ====

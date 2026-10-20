@@ -1,4 +1,12 @@
 #!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-beta-lua-load
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      loads every Lua file the beta server would load, in
+-- quick-test: yes
+-- ==== end of header ====
 -- test-beta-lua-load - loads every Lua file the beta server would load, in
 -- the order it would load them, and reports any file that fails.
 --
@@ -185,3 +193,6 @@ end
 
 realprint(string.format("%d file(s) in src/lua-%s/, %d failed to load (%d engine functions stood in)", total, PROFILE, fails, engineGlobals))
 os.exit(fails == 0 and 0 or 1)
+-- ==== footer of test-beta-lua-load ====
+-- lines:      198
+-- ==== end of footer ====

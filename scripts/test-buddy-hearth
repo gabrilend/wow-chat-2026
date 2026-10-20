@@ -1,4 +1,12 @@
 #!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-buddy-hearth
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      buddies follow their partner's hearthstone
+-- quick-test: yes
+-- ==== end of header ====
 -- test-buddy-hearth - buddies follow their partner's hearthstone
 -- (src/lua-basic/buddy-hearth.lua), in a stand-in world, without a server.
 --
@@ -92,3 +100,6 @@ check(#events == 0, "other spells, and players without buddies, schedule nothing
 
 print(fails == 0 and ("All " .. checks .. " checks passed") or (fails .. " of " .. checks .. " checks failed"))
 os.exit(fails == 0 and 0 or 1)
+-- ==== footer of test-buddy-hearth ====
+-- lines:      105
+-- ==== end of footer ====

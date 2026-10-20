@@ -1,4 +1,12 @@
 #!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-lua-globals
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      checks that the game's Lua scripts do not step on each
+-- quick-test: yes
+-- ==== end of header ====
 -- test-lua-globals - checks that the game's Lua scripts do not step on each
 -- other's global names.
 --
@@ -105,3 +113,6 @@ end
 
 print(string.format("%d script(s) read; %d break(s)", files_read, breaks))
 os.exit(breaks == 0 and 0 or 1)
+-- ==== footer of test-lua-globals ====
+-- lines:      118
+-- ==== end of footer ====

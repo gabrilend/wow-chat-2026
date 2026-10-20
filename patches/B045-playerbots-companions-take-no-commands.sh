@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ==== header: 7 lines, footer: 3 lines ====
+# id:         B045
+# profiles:   buddy-set
+# priority:   550
+# kind:       source
+# about:      Playerbots: a bot on a companion account takes no chat commands
+# ==== end of header ====
 # B045 - Playerbots: a bot on a companion account takes no chat commands
 # Issue 617a5 (basic, 2026-10-02).
 #
@@ -97,3 +104,6 @@ unpatch_B045_playerbots_companions_take_no_commands() {
     return 0
 }
 # }}}
+# ==== footer of B045 ====
+# lines:      109
+# ==== end of footer ====

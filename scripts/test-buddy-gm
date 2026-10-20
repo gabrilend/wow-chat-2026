@@ -1,4 +1,12 @@
 #!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-buddy-gm
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      runs the game masters' buddy commands
+-- quick-test: yes
+-- ==== end of header ====
 -- test-buddy-gm - runs the game masters' buddy commands
 -- (src/lua-basic/buddy-gm.lua) in a stand-in world, without a server.
 --
@@ -112,3 +120,6 @@ check(handler(42, gm, "something else") == nil, "other commands are not taken")
 
 print(fails == 0 and ("All " .. checks .. " checks passed") or (fails .. " of " .. checks .. " checks failed"))
 os.exit(fails == 0 and 0 or 1)
+-- ==== footer of test-buddy-gm ====
+-- lines:      125
+-- ==== end of footer ====
