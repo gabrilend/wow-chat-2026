@@ -1,15 +1,21 @@
 #!/usr/bin/env bash
-# ==== header: 7 lines, footer: 3 lines ====
+# ==== header: 8 lines, footer: 3 lines ====
 # id:         E045
 # profiles:   buddy-set
 # priority:   2750
 # kind:       sql
 # about:      The beds buddies sleep on in towns (issue 617e4), placed by hand in game
+# carries:    28-buddy-beds.apply.sql 28-buddy-beds.revert.sql
 # ==== end of header ====
 # E045-basic-buddy-beds.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
 # patches/E-helpers.sh, loaded first.
+
+# Its SQL is carried beside this file (issue 189e), for every profile that
+# takes it (basic and cc-test, the buddy set); until then cc-test read it
+# from basic's folders.
+E045_DIR="${BASH_SOURCE[0]%/*}"
 
 # -- {{{ patch_E045_basic_buddy_beds
 # The beds buddies sleep on in towns (issue 617e4), placed by hand in game
@@ -19,7 +25,7 @@
 # cp-revert idiom as E040.
 patch_E045_basic_buddy_beds() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/28-buddy-beds.sql"
-    local SRC_FILE="$(_buddy_sql_src db_world)/28-buddy-beds.apply.sql"
+    local SRC_FILE="${E045_DIR}/28-buddy-beds.apply.sql"
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E045] Apply source missing: ${SRC_FILE}"; return 1; }
 
@@ -36,7 +42,7 @@ patch_E045_basic_buddy_beds() {
 
 unpatch_E045_basic_buddy_beds() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/28-buddy-beds.sql"
-    local SRC_FILE="$(_buddy_sql_src db_world)/28-buddy-beds.revert.sql"
+    local SRC_FILE="${E045_DIR}/28-buddy-beds.revert.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E045_REVERT" "${SQL_FILE}"; then
         echo "  [E045] Active file already holds revert-form content"
@@ -52,5 +58,5 @@ unpatch_E045_basic_buddy_beds() {
 }
 # -- }}}
 # ==== footer of E045 ====
-# lines:      56
+# lines:      62
 # ==== end of footer ====

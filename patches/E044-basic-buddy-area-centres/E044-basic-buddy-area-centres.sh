@@ -1,15 +1,21 @@
 #!/usr/bin/env bash
-# ==== header: 7 lines, footer: 3 lines ====
+# ==== header: 8 lines, footer: 3 lines ====
 # id:         E044
 # profiles:   buddy-set
 # priority:   2740
 # kind:       sql
 # about:      Every named area's borders and middle (issue 617e2), for the buddies'
+# carries:    27-buddy-area-centres.apply.sql 27-buddy-area-centres.revert.sql
 # ==== end of header ====
 # E044-basic-buddy-area-centres.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
 # patches/E-helpers.sh, loaded first.
+
+# Its SQL is carried beside this file (issue 189e), for every profile that
+# takes it (basic and cc-test, the buddy set); until then cc-test read it
+# from basic's folders.
+E044_DIR="${BASH_SOURCE[0]%/*}"
 
 # -- {{{ patch_E044_basic_buddy_area_centres
 # Every named area's borders and middle (issue 617e2), for the buddies'
@@ -18,7 +24,7 @@
 # scripts/generate-buddy-area-centres. Same cp-apply / cp-revert idiom as E040.
 patch_E044_basic_buddy_area_centres() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/27-buddy-area-centres.sql"
-    local SRC_FILE="$(_buddy_sql_src db_world)/27-buddy-area-centres.apply.sql"
+    local SRC_FILE="${E044_DIR}/27-buddy-area-centres.apply.sql"
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E044] Apply source missing: ${SRC_FILE} (run scripts/generate-buddy-area-centres)"; return 1; }
 
@@ -35,7 +41,7 @@ patch_E044_basic_buddy_area_centres() {
 
 unpatch_E044_basic_buddy_area_centres() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/27-buddy-area-centres.sql"
-    local SRC_FILE="$(_buddy_sql_src db_world)/27-buddy-area-centres.revert.sql"
+    local SRC_FILE="${E044_DIR}/27-buddy-area-centres.revert.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E044_REVERT" "${SQL_FILE}"; then
         echo "  [E044] Active file already holds revert-form content"
@@ -51,5 +57,5 @@ unpatch_E044_basic_buddy_area_centres() {
 }
 # -- }}}
 # ==== footer of E044 ====
-# lines:      55
+# lines:      61
 # ==== end of footer ====

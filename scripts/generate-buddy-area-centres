@@ -26,8 +26,8 @@
 -- Usage: scripts/generate-buddy-area-centres [PROJECT_DIR]
 --   Reads   data-files/maps/*.map (the server's map files)
 --           data-files/dbc/AreaTable.dbc (area names, for the comments)
---   Writes  sql/basic/db_world.src/27-buddy-area-centres.apply.sql
---           sql/basic/db_world.src/27-buddy-area-centres.revert.sql
+--   Writes  patches/E044-basic-buddy-area-centres/27-buddy-area-centres.apply.sql
+--           patches/E044-basic-buddy-area-centres/27-buddy-area-centres.revert.sql
 --   (internally: --worker DIR MAPID... reads those maps and prints rows)
 
 local ffi = require("ffi")
@@ -42,8 +42,8 @@ elseif arg[1] then
     DIR = arg[1]
 end
 local MAPS_DIR = DIR .. "/data-files/maps"
-local OUT_APPLY  = DIR .. "/sql/basic/db_world.src/27-buddy-area-centres.apply.sql"
-local OUT_REVERT = DIR .. "/sql/basic/db_world.src/27-buddy-area-centres.revert.sql"
+local OUT_APPLY  = DIR .. "/patches/E044-basic-buddy-area-centres/27-buddy-area-centres.apply.sql"
+local OUT_REVERT = DIR .. "/patches/E044-basic-buddy-area-centres/27-buddy-area-centres.revert.sql"
 
 -- {{{ the map file format
 -- As the server reads it (source-beta: src/server/game/Grids/GridTerrainData

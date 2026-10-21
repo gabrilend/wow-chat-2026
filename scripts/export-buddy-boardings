@@ -6,19 +6,19 @@
 -- boat or zeppelin by walking aboard while ".buddy record start" /
 -- ".buddy record stop" records it; the recording lands in the live server's
 -- database. This tool reads every recording and its steps and writes them
--- into the install file sql/basic/db_world.src/28-buddy-beds.apply.sql,
+-- into the install file patches/E045-basic-buddy-beds/28-buddy-beds.apply.sql,
 -- between its BOARDINGS markers, so every fresh install gets the same
 -- recordings and they are kept in git with the rest of the project.
 --
 -- Usage: scripts/export-buddy-boardings [PROJECT_DIR]
 --   Reads   the live tables acore_world_basic.buddy_boarding and
 --           buddy_boarding_step (project MySQL, port 3307)
---   Writes  sql/basic/db_world.src/28-buddy-beds.apply.sql (the rows only)
+--   Writes  patches/E045-basic-buddy-beds/28-buddy-beds.apply.sql (the rows only)
 
 local DIR   = arg[1] or "/mnt/kaun/wow-chat-2026"
 local MYSQL = DIR .. "/mysql/installed-files/bin/mysql"
 local DB    = "acore_world_basic"
-local FILE  = DIR .. "/sql/basic/db_world.src/28-buddy-beds.apply.sql"
+local FILE  = DIR .. "/patches/E045-basic-buddy-beds/28-buddy-beds.apply.sql"
 local BEGIN_MARK = "-- >>> BOARDINGS BEGIN"
 local END_MARK   = "-- <<< BOARDINGS END"
 local NUM        = "([-%d%.e]+)"

@@ -1,26 +1,32 @@
 #!/usr/bin/env bash
-# ==== header: 7 lines, footer: 3 lines ====
+# ==== header: 8 lines, footer: 3 lines ====
 # id:         E056
 # profiles:   buddy-set
 # priority:   2860
 # kind:       sql
 # about:      The kept stand-ins (issue 617t1): one row per stand-in character the buddy
+# carries:    06-buddy-stand-ins.apply.sql 06-buddy-stand-ins.revert.sql
 # ==== end of header ====
 # E056-basic-buddy-stand-ins.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
 # patches/E-helpers.sh, loaded first.
 
+# Its SQL is carried beside this file (issue 189e), for every profile that
+# takes it (basic and cc-test, the buddy set); until then cc-test read it
+# from basic's folders.
+E056_DIR="${BASH_SOURCE[0]%/*}"
+
 # -- {{{ patch_E056_basic_buddy_stand_ins
 # The kept stand-ins (issue 617t1): one row per stand-in character the buddy
 # module has made for a scene, a dungeon or a game master, kept for the next
-# asker. Characters database, per-realm runtime state (as E042). cc-test
-# reads basic's file (_buddy_sql_src). The revert drops the table; the
+# asker. Characters database, per-realm runtime state (as E042). Its SQL
+# is beside this file, for basic and cc-test alike. The revert drops the table; the
 # stand-in characters and their STANDIN<n> accounts are left alone. Same
 # cp-apply / cp-revert idiom as E042.
 patch_E056_basic_buddy_stand_ins() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/06-buddy-stand-ins.sql"
-    local SRC_FILE="$(_buddy_sql_src db_characters)/06-buddy-stand-ins.apply.sql"
+    local SRC_FILE="${E056_DIR}/06-buddy-stand-ins.apply.sql"
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E056] Apply source missing: ${SRC_FILE}"; return 1; }
 
@@ -39,7 +45,7 @@ patch_E056_basic_buddy_stand_ins() {
 
 unpatch_E056_basic_buddy_stand_ins() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/06-buddy-stand-ins.sql"
-    local SRC_FILE="$(_buddy_sql_src db_characters)/06-buddy-stand-ins.revert.sql"
+    local SRC_FILE="${E056_DIR}/06-buddy-stand-ins.revert.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E056_REVERT" "${SQL_FILE}"; then
         echo "  [E056] Active file already holds revert-form content"
@@ -55,5 +61,5 @@ unpatch_E056_basic_buddy_stand_ins() {
 }
 # -- }}}
 # ==== footer of E056 ====
-# lines:      59
+# lines:      65
 # ==== end of footer ====

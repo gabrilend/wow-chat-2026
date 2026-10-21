@@ -46,7 +46,7 @@ local function spit(p, s) local f = assert(io.open(p, "w")); f:write(s); f:close
 local function q(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
 local function run(cmd) local h = io.popen(cmd .. " 2>&1"); local out = h:read("*a"); local ok = h:close(); return out, ok end
 local function one_file(id)
-    local h = io.popen("ls -1 " .. q(P) .. id .. "-*.sh 2>/dev/null")
+    local h = io.popen("ls -1 " .. q(P) .. id .. "-*.sh " .. q(P) .. id .. "-*/" .. id .. "-*.sh 2>/dev/null")   -- one file, or a directory (189e)
     local list = {}
     for l in h:lines() do list[#list + 1] = l end
     h:close()

@@ -153,7 +153,7 @@ do
         if profile then
             patchNames[profile] = {}
             for id in ids:gmatch("B%d+") do
-                for _, file in ipairs(lines_of("ls '" .. DIR .. "/patches/'" .. id .. "-*.sh 2>/dev/null")) do
+                for _, file in ipairs(lines_of("ls '" .. DIR .. "/patches/'" .. id .. "-*.sh '" .. DIR .. "/patches/'" .. id .. "-*/" .. id .. "-*.sh 2>/dev/null")) do
                     -- a patch writes the registration inside a sed or a here-document,
                     -- so the quotes may be escaped (\") and so may the & (\&, as
                     -- B007 writes it; missing that made B007's IsHostileTo look

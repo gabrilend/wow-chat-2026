@@ -315,23 +315,6 @@ _shared_sql_src() {
 }
 # -- }}}
 
-# -- {{{ _buddy_sql_src
-# Folder holding the source SQL of the buddy module's data steps (E042 roster
-# tables, E044 area centres, E045 beds and boardings, E050 town circles, E052
-# gearsets). basic owns these files; cc-test (issue 176) builds the buddy
-# module too (owner, 2026-10-08: "cc-test should include it", for the Alterac
-# Valley stand-ins) and reads basic's sources rather than keeping copies, so a
-# change to a bed or a gearset lands on both. The active copy each step writes
-# stays in the profile's own sql/<profile>/db_*/ folder, registered against
-# the profile's own database. Every other profile reads its own folder.
-# Args: $1 = database folder name (db_world, db_characters)
-_buddy_sql_src() {
-    local -A BUDDY_SQL_FROM=( [cc-test]="basic" )
-    local from="${BUDDY_SQL_FROM[${PROFILE}]:-${PROFILE}}"
-    echo "${DIR}/sql/${from}/${1}.src"
-}
-# -- }}}
-
 # -- {{{ apply_settings_patch
 # One settings patch (config/patches/C*.sh, issue 119) into the installed
 # server's config files: the install stage runs these at their own

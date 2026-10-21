@@ -44,7 +44,7 @@ fi
 # create; nothing else uses it), so the real characters databases are never
 # touched. Each step's count of the table is printed and compared.
 MYSQL=("${DIR}/mysql/installed-files/bin/mysql" --no-defaults --socket="${DIR}/mysql/databases/mysql.sock" -uritz -pmenardi -N -B)
-SRC="${DIR}/sql/basic/db_characters.src"
+SRC="${DIR}/patches/E056-basic-buddy-stand-ins"   # carried by its step since issue 189e
 COUNT="SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '_smoke_test' AND table_name = 'buddy_stand_in';"
 SQL_SCRIPT="CREATE DATABASE IF NOT EXISTS _smoke_test; USE _smoke_test; ${COUNT}
 $(cat "${SRC}/06-buddy-stand-ins.apply.sql")

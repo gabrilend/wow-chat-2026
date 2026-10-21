@@ -152,7 +152,7 @@ check '[[ -z "${not_runnable}" ]]' "each can be run${not_runnable:+ (not:${not_r
 # every kind-sql patch is there; one left in the install stage would have
 # its SQL placed before the gate's start, and applied with upstream's
 misplaced=""
-for f in "${DIR}"/patches/E[0-9][0-9][0-9]-*.sh; do
+for f in "${DIR}"/patches/E[0-9][0-9][0-9]-*.sh "${DIR}"/patches/E[0-9][0-9][0-9]-*/E[0-9][0-9][0-9]-*.sh; do   # one file, or a directory (189e)
     hands_sql=no
     grep -vE '^\s*#' "${f}" | grep -qE '_register_with_updatefetcher |_beta_two_side_step ' && hands_sql=yes
     prio="$(sed -n 's/^# priority: *//p' "${f}" | head -1)"

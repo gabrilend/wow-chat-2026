@@ -1,15 +1,21 @@
 #!/usr/bin/env bash
-# ==== header: 7 lines, footer: 3 lines ====
+# ==== header: 8 lines, footer: 3 lines ====
 # id:         E050
 # profiles:   buddy-set
 # priority:   2800
 # kind:       sql
 # about:      The world's little towns as circles (issue 617e4a): every cluster of
+# carries:    31-buddy-town-circles.apply.sql 31-buddy-town-circles.revert.sql
 # ==== end of header ====
 # E050-basic-buddy-town-circles.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
 # patches/E-helpers.sh, loaded first.
+
+# Its SQL is carried beside this file (issue 189e), for every profile that
+# takes it (basic and cc-test, the buddy set); until then cc-test read it
+# from basic's folders.
+E050_DIR="${BASH_SOURCE[0]%/*}"
 
 # -- {{{ patch_E050_basic_buddy_town_circles
 # The world's little towns as circles (issue 617e4a): every cluster of
@@ -18,7 +24,7 @@
 # database. Same cp-apply / cp-revert idiom as E048.
 patch_E050_basic_buddy_town_circles() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/31-buddy-town-circles.sql"
-    local SRC_FILE="$(_buddy_sql_src db_world)/31-buddy-town-circles.apply.sql"
+    local SRC_FILE="${E050_DIR}/31-buddy-town-circles.apply.sql"
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E050] Apply source missing: ${SRC_FILE}"; return 1; }
 
@@ -35,7 +41,7 @@ patch_E050_basic_buddy_town_circles() {
 
 unpatch_E050_basic_buddy_town_circles() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/31-buddy-town-circles.sql"
-    local SRC_FILE="$(_buddy_sql_src db_world)/31-buddy-town-circles.revert.sql"
+    local SRC_FILE="${E050_DIR}/31-buddy-town-circles.revert.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E050_REVERT" "${SQL_FILE}"; then
         echo "  [E050] Active file already holds revert-form content"
@@ -51,5 +57,5 @@ unpatch_E050_basic_buddy_town_circles() {
 }
 # -- }}}
 # ==== footer of E050 ====
-# lines:      55
+# lines:      61
 # ==== end of footer ====

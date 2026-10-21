@@ -412,7 +412,7 @@ do
     check(bad == 0, "every item is white and sold by a vendor, or gray armour, wearable at its record's level (from 2 for armour, 1 for weapons), fits its slot and suits its class")
     local pipe = io.popen(DIR .. "/scripts/generate-gearset-sql " .. DIR .. " --stdout")
     local made = pipe:read("*a"); pipe:close()
-    local f = io.open(DIR .. "/sql/basic/db_world.src/33-gearsets.apply.sql")
+    local f = io.open(DIR .. "/patches/E052-basic-gearsets/33-gearsets.apply.sql")
     local disk = f and f:read("*a"); if f then f:close() end
     check(made == disk, "the gearset SQL on disk (install step E052) is exactly what the profiles make")
 end

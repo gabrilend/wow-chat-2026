@@ -1,15 +1,21 @@
 #!/usr/bin/env bash
-# ==== header: 7 lines, footer: 3 lines ====
+# ==== header: 8 lines, footer: 3 lines ====
 # id:         E052
 # profiles:   buddy-set
 # priority:   2820
 # kind:       sql
 # about:      Every gearset profile (issue 617r: src/lua-basic/data/gearsets/*.lua) as
+# carries:    33-gearsets.apply.sql 33-gearsets.revert.sql
 # ==== end of header ====
 # E052-basic-gearsets.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
 # patches/E-helpers.sh, loaded first.
+
+# Its SQL is carried beside this file (issue 189e), for every profile that
+# takes it (basic and cc-test, the buddy set); until then cc-test read it
+# from basic's folders.
+E052_DIR="${BASH_SOURCE[0]%/*}"
 
 # -- {{{ patch_E052_basic_gearsets
 # Every gearset profile (issue 617r: src/lua-basic/data/gearsets/*.lua) as
@@ -19,7 +25,7 @@
 # cp-apply / cp-revert idiom as E050.
 patch_E052_basic_gearsets() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/33-gearsets.sql"
-    local SRC_FILE="$(_buddy_sql_src db_world)/33-gearsets.apply.sql"
+    local SRC_FILE="${E052_DIR}/33-gearsets.apply.sql"
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E052] Apply source missing: ${SRC_FILE}"; return 1; }
 
@@ -36,7 +42,7 @@ patch_E052_basic_gearsets() {
 
 unpatch_E052_basic_gearsets() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/33-gearsets.sql"
-    local SRC_FILE="$(_buddy_sql_src db_world)/33-gearsets.revert.sql"
+    local SRC_FILE="${E052_DIR}/33-gearsets.revert.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E052_REVERT" "${SQL_FILE}"; then
         echo "  [E052] Active file already holds revert-form content"
@@ -52,5 +58,5 @@ unpatch_E052_basic_gearsets() {
 }
 # -- }}}
 # ==== footer of E052 ====
-# lines:      56
+# lines:      62
 # ==== end of footer ====

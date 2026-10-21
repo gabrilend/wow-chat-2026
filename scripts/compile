@@ -1075,7 +1075,7 @@ trap 'compile_status=$?; unapply_patches_begin || compile_status=1; leave_source
 # in the compilation script, and write some output about it's location in
 # the logs"). Three steps, each a script of its own:
 #   scripts/translate-buddy-kit-to-gearset  the rules -> src/lua-basic/data/gearsets/buddy-white-*.lua
-#   scripts/generate-gearset-sql            those lists -> sql/basic/db_world.src/33-gearsets.apply.sql
+#   scripts/generate-gearset-sql            those lists -> patches/E052-basic-gearsets/33-gearsets.apply.sql
 #                                           (loaded by install step E052)
 #   scripts/generate-buddy-gear-gallery     the lists + item data -> docs/HTML/buddy-gear-gallery.html
 # Only for the profiles that have buddies (basic, cc-test). They read the

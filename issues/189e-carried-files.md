@@ -8,7 +8,8 @@
 - Blocks: 192
 - Related: 189g (a guard reviews each patch, since a patch may now carry
   anything), 630 (Sargobras the guild master)
-- State: in progress
+- State: built 2026-10-20; waits on the owner's compile of basic and
+  cc-test (the moves change what the build copies and from where)
 
 ## Origin
 
@@ -32,7 +33,7 @@ rest of that answer, a guard reviewing each patch, is 189g.)
 
 ## Current Behavior
 
-In progress. Built 2026-10-20 (steps 1-5 and 7, not yet compiled):
+Built 2026-10-20, every step, not yet compiled:
 
 - **A patch may be a directory**, `patches/<ID>-<name>/<ID>-<name>.sh`
   beside what it carries. The loaders, the planner, the header checker,
@@ -71,16 +72,29 @@ In progress. Built 2026-10-20 (steps 1-5 and 7, not yet compiled):
   path name the new one; completed issues and the append-only balance log
   keep the path of their time.
 
-Checked: `scripts/test-carried-files` (12 checks: each directory patch
-names what it holds; Sargobras placed byte for byte, the engine loading
-only his script, no name clashing with basic's, twice the same, undone to
-nothing, his helper copies basic's); the three Sargobras tests; the module
-set test (the compile still finds mod-buddies for basic and cc-test);
-the source patches round-trip on basic and cc-test with B036 from its new
-home; all 52 quick tests.
+- **The buddy SQL is its steps'**: E042 (roster), E044 (area centres),
+  E045 (beds), E050 (town circles), E052 (gearsets) and E056 (stand-ins)
+  are each a directory carrying its apply and revert SQL, moved with git
+  from `sql/basic/db_*.src/` by a temporary tool
+  (`/tmp/wow-chat-2/move-buddy-sql.lua`, not kept). Each step reads its SQL
+  from beside itself, for basic and cc-test alike, so `_buddy_sql_src`
+  (cc-test reaching into basic's folders) is gone. The generators that
+  write those files (area centres, town circles, gearsets, and the bed and
+  boarding exports) and the tests that read them (basic's database in RAM,
+  the gearsets, the stand-ins) use the new paths.
 
-Still to do: step 6, the buddy SQL cc-test reads from basic's folders
-(`_buddy_sql_src`).
+Checked: `scripts/test-carried-files` (24 checks: each of the eight
+directory patches names exactly what it holds; Sargobras placed byte for
+byte, the engine loading only his script, no name clashing with basic's,
+twice the same, undone to nothing, his helper copies basic's); the three
+Sargobras tests; the module-set test (the compile still finds mod-buddies
+for basic and cc-test); the source patches round-trip on basic and cc-test
+with B036 from its new home; `scripts/test-basic-sql-in-ram` (basic's
+whole database built in RAM, every SQL step and its checks passing, with
+the buddy SQL from its new place); all 52 quick tests.
+
+The same reaching-in remains in one more place: `_shared_sql_src`, by which
+basic reads vanilla's SQL for the steps the two share (open question 1).
 
 ## Intended Behavior
 
@@ -116,3 +130,11 @@ basic's. Then the buddy module (B036) and the buddy SQL.
 6. The buddy SQL into its steps' directories, so cc-test no longer reads
    basic's folders (34 scripts, mostly generators, write those folders).
 7. Tests: placed on apply, removed on undo, nothing left behind.
+
+## Open Questions
+
+1. **basic reads vanilla's SQL** (`_shared_sql_src` in
+   `patches/E-helpers.sh`) for the steps both take, the same reaching-in
+   the buddy SQL had. The owner, 2026-10-20, of carrying files: "This is a
+   pattern we should examine for other applications in our patches." Make
+   those steps directories carrying their SQL too?
