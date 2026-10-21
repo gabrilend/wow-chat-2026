@@ -7,7 +7,10 @@
   (whisper Sargobras), 189e (Sargobras his own patch), 192 (econ, which
   takes Sargobras too)
 - Priority: Medium
-- State: planned; nothing built
+- State: a design reference, not built for any current profile (the
+  owner, 2026-10-20: "the current design doesn't have space for it, so
+  alas we cannot include it"); the standard future profiles design toward
+  (`docs/roadmap.md`, Project-wide decisions)
 
 ## Origin
 
@@ -23,6 +26,39 @@ his patch (189e), verbatim:
 > they're the only guild member online. Yes, this means we'll need a patch
 > that allows players to be in as many guilds or clans as they'd like,
 > viewable and selectable through the UI.
+
+Asked whether he shows only when you're the only member online, and how
+the clan relates to many guilds, the owner, 2026-10-20, verbatim:
+
+> only online when you're the only player online, right? Note this
+> behavior is impossible with buddy-bots because players are given a clan
+> for them that cannot include other players. HAHAHA TRICKED YOU SARGOBRAS
+> let it be known that in future profiles this behavior might be allowed
+> to occur, structurally as a mechanic. But, the current design doesn't
+> have space for it, so alas we cannot include it. However in the future,
+> we should have this be the standard, and each design should reference
+> it. (lawyer giving case studies)
+
+> yes the clan is all of them. the tribe of tribes, one for each half of
+> the life. Horde vs Alliance, Rando vs Stranger.
+
+## Why no current profile can build it
+
+The line appears only when the character is the only member of the guild
+online. In basic (and cc-test, and econ as planned), a player's guild is
+their clan: themselves and their buddies (617l), and no other player can
+join it. So "the only member online" is always true and the moment means
+nothing: there is no one else whose absence makes his leaving felt.
+Sargobras outwits the design, as the owner put it. A profile whose guilds
+hold several players, or whose player belongs to several guilds (step 3),
+makes room for it.
+
+## As a design reference
+
+Every new profile's design says how it would make room for the unseen guild
+master, or why it cannot, citing this issue the way a case is cited. The
+clan, when there are many guilds, is all of them: "the tribe of tribes, one
+for each half of the life. Horde vs Alliance, Rando vs Stranger."
 
 ## Current Behavior
 
@@ -66,10 +102,14 @@ no roster.
 ## Open Questions
 
 1. **How often "sometimes"?** Each lone login, one in a few, or once a
-   day per character?
+   day per character? (Asked again when a profile first makes room for it.)
 2. **Many guilds in the stock client**: the 3.3.5a client shows one
    guild; is switching which one is shown (step 1) what "viewable and
    selectable through the UI" means, or is it the custom client's to
-   show them all at once?
-3. **Clans and guilds**: is a clan (617l) one of the guilds a player
-   belongs to, so their own clan is always among them?
+   show them all at once? (The same.)
+3. **Clans and guilds.** Answered 2026-10-20: the clan is all of them
+   ("the tribe of tribes").
+4. **"one for each half of the life. Horde vs Alliance, Rando vs
+   Stranger"**: two tribes, one on each side of a divide, so a player
+   belongs to one per half? What is the Rando and Stranger divide: the
+   players one plays with by chance, and those never met?

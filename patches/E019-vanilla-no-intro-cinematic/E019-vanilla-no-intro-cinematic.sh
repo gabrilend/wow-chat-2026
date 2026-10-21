@@ -1,15 +1,20 @@
 #!/usr/bin/env bash
-# ==== header: 7 lines, footer: 3 lines ====
+# ==== header: 8 lines, footer: 3 lines ====
 # id:         E019
 # profiles:   basic vanilla
 # priority:   2490
 # kind:       sql
 # about:      Installs a BEFORE INSERT trigger on acore_characters_vanilla.characters
+# carries:    01-no-intro-cinematic.apply.sql
 # ==== end of header ====
 # E019-vanilla-no-intro-cinematic.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
 # patches/E-helpers.sh, loaded first.
+
+# Its SQL is carried beside this file (issue 189e), for both profiles that
+# take it (basic and vanilla); until then basic read it from vanilla's folders.
+E019_DIR="${BASH_SOURCE[0]%/*}"
 
 # -- {{{ patch_E019_vanilla_no_intro_cinematic
 # Installs a BEFORE INSERT trigger on acore_characters_vanilla.characters
@@ -24,7 +29,7 @@
 # SUPER (project-local MySQL is set that way).
 patch_E019_vanilla_no_intro_cinematic() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_characters/01-no-intro-cinematic.sql"
-    local SRC_FILE="$(_shared_sql_src db_characters)/01-no-intro-cinematic.apply.sql"
+    local SRC_FILE="${E019_DIR}/01-no-intro-cinematic.apply.sql"
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E019] Apply source missing: ${SRC_FILE}"; return 1; }
 
@@ -67,5 +72,5 @@ SQL
 }
 # -- }}}
 # ==== footer of E019 ====
-# lines:      71
+# lines:      76
 # ==== end of footer ====

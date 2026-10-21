@@ -29,6 +29,15 @@ Everland Ghostsong is a WoW 3.3.5a private server with roguelike survival mechan
   they like; no feature may depend on one (including a plain addon talking
   over the client's addon-message channel, what AIO is built on), until the
   project ships its own client.
+- **Sargobras, the unseen guild master, is the standard to design toward**
+  (2026-10-20, issue 630). The owner: "in the future, we should have this
+  be the standard, and each design should reference it." He is in every
+  guild's roster, never seen online; "Sargobras has logged off." sometimes
+  appears when you log in as the only member online. Today's buddy clans
+  leave no room for it (a clan holds one player and their buddies, so a
+  lone member is always alone), so no current profile builds it. A new
+  profile's design says how it would make room for him, or why it cannot,
+  citing 630 as a case is cited.
 
 ---
 

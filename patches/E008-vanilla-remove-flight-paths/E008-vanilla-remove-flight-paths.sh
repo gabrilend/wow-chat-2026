@@ -1,15 +1,20 @@
 #!/usr/bin/env bash
-# ==== header: 7 lines, footer: 3 lines ====
+# ==== header: 8 lines, footer: 3 lines ====
 # id:         E008
 # profiles:   basic vanilla
 # priority:   2380
 # kind:       sql
 # about:      Clear the flightmaster bit network-wide and replace gossip with
+# carries:    03-remove-flight-paths.apply.sql
 # ==== end of header ====
 # E008-vanilla-remove-flight-paths.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
 # patches/E-helpers.sh, loaded first.
+
+# Its SQL is carried beside this file (issue 189e), for both profiles that
+# take it (basic and vanilla); until then basic read it from vanilla's folders.
+E008_DIR="${BASH_SOURCE[0]%/*}"
 
 # -- {{{ patch_E008_vanilla_remove_flight_paths
 # Clear the flightmaster bit network-wide and replace gossip with
@@ -39,7 +44,7 @@
 # flightmasters have a confirmed hybrid role.
 patch_E008_vanilla_remove_flight_paths() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/03-remove-flight-paths.sql"
-    local SRC_FILE="$(_shared_sql_src db_world)/03-remove-flight-paths.apply.sql"
+    local SRC_FILE="${E008_DIR}/03-remove-flight-paths.apply.sql"
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E008] Apply source missing: ${SRC_FILE}"; return 1; }
 
@@ -111,5 +116,5 @@ SQL
 }
 # -- }}}
 # ==== footer of E008 ====
-# lines:      115
+# lines:      120
 # ==== end of footer ====

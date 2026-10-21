@@ -101,7 +101,7 @@ else
     -- and the same file into Sargobras's own copy (issue 189e: his patch,
     -- patches/E066-sargobras/, carries its own copies of what he loads, which
     -- must never drift from basic's; scripts/test-carried-files checks it)
-    local OWN = DIR .. "/patches/E066-sargobras/.own/data/starting-valleys.lua"
+    local OWN = DIR .. "/patches/E066-sargobras/helpers/data/sargobras-starting-valleys.lua"
     f = assert(io.open(OWN, "w"))
     f:write(text)
     f:close()

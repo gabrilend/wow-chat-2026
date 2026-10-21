@@ -14,11 +14,14 @@
 # script and his own copies of what it loads). This checks, for every
 # such patch, that its header's "carries:" names only things in its
 # directory and that nothing else is there unnamed (so the guard of issue
-# 189g, reading the header, sees the whole patch). Then it runs
-# Sargobras's patch on a pretend install folder: every carried file
-# placed, byte for byte; none of the files the Lua engine would load
-# (it skips names starting with a dot) sharing a name with basic's own
-# scripts; a second run the same; and the undo leaving nothing behind.
+# 189g, reading the header, sees the whole patch), and that nothing in it
+# is hidden behind a name starting with a dot (the owner: "we shouldn't
+# hide source-code from the developer"). Then it runs Sargobras's patch on
+# a pretend install folder: every carried file placed, byte for byte; no
+# file the Lua engine would load sharing a name with basic's own scripts
+# (the engine refuses a second of one name); a second run the same; the
+# undo leaving nothing behind; and his copies of the shared helpers the
+# same as basic's.
 #
 # Usage: scripts/test-carried-files [PROJECT_DIR]
 
@@ -54,6 +57,8 @@ for d in "${DIR}"/patches/[BE][0-9][0-9][0-9]-*/; do
     done < <(find "${d}" -mindepth 1 -maxdepth 1 -printf '%f\n')
     check '[[ -n "${carries}" && -z "${missing}" && -z "${unnamed}" ]]' \
           "${name}: carries ${carries:-nothing named}${missing:+ (missing:${missing})}${unnamed:+ (there, not named:${unnamed})}"
+    hidden="$(find "${d}" -mindepth 1 -name '.*' -printf '%P ')"
+    check '[[ -z "${hidden}" ]]' "${name}: nothing hidden${hidden:+ (hidden: ${hidden})}"
 done
 check '[[ ${dirs} -gt 0 ]]' "${dirs} found"
 # }}}
@@ -66,16 +71,16 @@ INSTALL_DIR="${WORK}/install"
 PLACED="${WORK}/install/bin/lua_scripts/sargobras"
 SRC="${DIR}/patches/E066-sargobras"
 patch_E066_sargobras > "${WORK}/apply.log" 2>&1
-check '[[ $? -eq 0 && -f "${PLACED}/sargobras.lua" && -d "${PLACED}/.own" ]]' "applied: his script and .own/ placed"
-check 'diff -r "${SRC}/sargobras.lua" "${PLACED}/sargobras.lua" > /dev/null && diff -r "${SRC}/.own" "${PLACED}/.own" > /dev/null' "every carried file placed byte for byte"
-# the names the Lua engine would load (no dot anywhere in the path below
-# lua_scripts/), against basic's own scripts', which load beside them
+check '[[ $? -eq 0 && -f "${PLACED}/sargobras.lua" && -d "${PLACED}/helpers" ]]' "applied: his script and helpers/ placed"
+check 'diff -r "${SRC}/sargobras.lua" "${PLACED}/sargobras.lua" > /dev/null && diff -r "${SRC}/helpers" "${PLACED}/helpers" > /dev/null' "every carried file placed byte for byte"
+# the names the Lua engine would load (every script file, the engine skips
+# only dot-names), against basic's own scripts', which load beside them
 loaded="$(cd "${PLACED}" && find . -type f \( -name '*.lua' -o -name '*.ext' \) ! -path '*/.*' -printf '%f\n' | sed 's/\.[^.]*$//' | sort)"
 basics="$(find "${DIR}/src/lua-basic" -type f \( -name '*.lua' -o -name '*.ext' \) ! -path '*/.*' -printf '%f\n' | sed 's/\.[^.]*$//' | sort)"
 clash="$(comm -12 <(echo "${loaded}") <(echo "${basics}") | tr '\n' ' ')"
-check '[[ "${loaded}" == "sargobras" && -z "${clash}" ]]' "the engine loads only his script from it, and no name clashes with basic's${clash:+ (clash: ${clash})}"
+check '[[ -n "${loaded}" && -z "${clash}" ]]' "no file the engine loads from his folder shares a name with basic's ($(wc -l <<< "${loaded}") files)${clash:+ (clash: ${clash})}"
 patch_E066_sargobras > /dev/null 2>&1
-check 'diff -r "${SRC}/.own" "${PLACED}/.own" > /dev/null && [[ $(find "${PLACED}" -type f | wc -l) -eq $(( $(find "${SRC}/.own" -type f | wc -l) + 1 )) ]]' "applied twice: the same files, nothing doubled"
+check 'diff -r "${SRC}/helpers" "${PLACED}/helpers" > /dev/null && [[ $(find "${PLACED}" -type f | wc -l) -eq $(( $(find "${SRC}/helpers" -type f | wc -l) + 1 )) ]]' "applied twice: the same files, nothing doubled"
 unpatch_E066_sargobras > /dev/null 2>&1
 check '[[ ! -e "${PLACED}" && -d "${WORK}/install/bin/lua_scripts" ]]' "undone: his folder gone, the install's own folder kept"
 check '[[ -f "${SRC}/sargobras.lua" ]]' "the template stays in the patch"
@@ -83,9 +88,10 @@ check '[[ -f "${SRC}/sargobras.lua" ]]' "the template stays in the patch"
 # files as basic's (the generators write both; a hand edit must too)
 drift=""
 while IFS= read -r rel; do
-    [[ -f "${DIR}/src/lua-basic/${rel}" ]] || continue          # only his (the jokes)
-    cmp -s "${SRC}/.own/${rel}" "${DIR}/src/lua-basic/${rel}" || drift+=" ${rel}"
-done < <(cd "${SRC}/.own" && find . -type f -printf '%P\n')
+    basic_rel="$(dirname "${rel}")/$(basename "${rel}" | sed 's/^sargobras-//')"   # his name, less his prefix
+    [[ -f "${DIR}/src/lua-basic/${basic_rel}" ]] || continue    # only his (the jokes)
+    cmp -s "${SRC}/helpers/${rel}" "${DIR}/src/lua-basic/${basic_rel}" || drift+=" ${rel}"
+done < <(cd "${SRC}/helpers" && find . -type f -printf '%P\n')
 check '[[ -z "${drift}" ]]' "his copies of the shared helpers are basic's, byte for byte${drift:+ (differ:${drift})}"
 # }}}
 
@@ -93,5 +99,5 @@ rm -rf "${WORK}"
 echo "${checks} checks, ${fails} failed"
 [[ ${fails} -eq 0 ]]
 # ==== footer of test-carried-files ====
-# lines:      97
+# lines:      103
 # ==== end of footer ====

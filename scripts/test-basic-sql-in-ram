@@ -124,8 +124,8 @@ load_db "${CHARS}" db_characters
 V="${DIR}/sql/vanilla"
 B="${DIR}/sql/basic"
 apply_all() {
-    step "E008 flight paths removed (vanilla's, shared)"  "${WORLD}" "${V}/db_world.src/03-remove-flight-paths.apply.sql"
-    step "E020 riding levels (vanilla's, shared)"         "${WORLD}" "${V}/db_world.src/05-mount-level-requirements.apply.sql"
+    step "E008 flight paths removed (vanilla's, shared)"  "${WORLD}" "${DIR}/patches/E008-vanilla-remove-flight-paths/03-remove-flight-paths.apply.sql"
+    step "E020 riding levels (vanilla's, shared)"         "${WORLD}" "${DIR}/patches/E020-vanilla-mount-level-requirements/05-mount-level-requirements.apply.sql"
     step "E022 quests open to the whole faction"          "${WORLD}" "${B}/db_world.src/08-faction-quest-gating.apply.sql"
     step "E024 Outland dungeons (level ladder, open at 60)" "${WORLD}" "${B}/db_world.src/09-outland-dungeons-64.apply.sql"
     step "E025 Visiting Mentors"                          "${WORLD}" "${B}/db_world.src/10-valley-universal-trainers.apply.sql"
@@ -160,7 +160,7 @@ apply_all() {
     step "E053 the project's commands' help"              "${WORLD}" "${B}/db_world.src/34-custom-command-help.apply.sql"
     step "E054 legendaries as level-60 raid drops"        "${WORLD}" "${B}/db_world.src/35-legendaries.apply.sql"
     step "E055 the smaller roaming places"                "${WORLD}" "${B}/db_world.src/36-buddy-subareas.apply.sql"
-    step "E019 no intro cinematic (vanilla's, shared)"    "${CHARS}" "${V}/db_characters.src/01-no-intro-cinematic.apply.sql"
+    step "E019 no intro cinematic (vanilla's, shared)"    "${CHARS}" "${DIR}/patches/E019-vanilla-no-intro-cinematic/01-no-intro-cinematic.apply.sql"
     step "E023 starting-valley rotation table"            "${CHARS}" "${B}/db_characters.src/02-starting-valley-rotation.apply.sql"
     step "E041 death knight soul ledger"                  "${CHARS}" "${B}/db_characters.src/03-death-knight-souls.apply.sql"
     step "E042 buddy clan and roster tables"              "${CHARS}" "${DIR}/patches/E042-basic-buddy-roster/04-buddy-roster.apply.sql"
@@ -198,7 +198,7 @@ revert_all() {
     step "E025 revert" "${WORLD}" "${B}/db_world.src/10-valley-universal-trainers.revert.sql"
     step "E024 revert" "${WORLD}" "${B}/db_world.src/09-outland-dungeons-64.revert.sql"
     step "E022 revert" "${WORLD}" "${B}/db_world.src/08-faction-quest-gating.revert.sql"
-    step "E020 revert" "${WORLD}" "${V}/db_world.src/05-mount-level-requirements.revert.sql"
+    step "E020 revert" "${WORLD}" "${DIR}/patches/E020-vanilla-mount-level-requirements/05-mount-level-requirements.revert.sql"
     step "E047 revert" "${CHARS}" "${B}/db_characters.src/05-world-boss-timers.revert.sql"
     step "E042 revert" "${CHARS}" "${DIR}/patches/E042-basic-buddy-roster/04-buddy-roster.revert.sql"
     step "E041 revert" "${CHARS}" "${B}/db_characters.src/03-death-knight-souls.revert.sql"
@@ -211,7 +211,7 @@ revert_all() {
 # the snapshot is taken after it.
 TOUCHED="creature_template, creature_template_model, creature_model_info, creature_default_trainer, trainer, game_event, game_event_creature, item_template, prospecting_loot_template, dungeon_access_template, dungeon_access_requirements, quest_template, creature, gossip_menu, npc_text, gameobject, pool_template, pool_pool, pool_gameobject, pool_creature, skill_fishing_base_level, fishing_loot_template, trainer_spell, creature_loot_template, reference_loot_template, gameobject_loot_template, item_loot_template, npc_vendor, disables, spell_group"
 echo "Before the snapshot:"
-step "E008 flight paths removed (vanilla's, shared)"  "${WORLD}" "${V}/db_world.src/03-remove-flight-paths.apply.sql"
+step "E008 flight paths removed (vanilla's, shared)"  "${WORLD}" "${DIR}/patches/E008-vanilla-remove-flight-paths/03-remove-flight-paths.apply.sql"
 stock_sum=$(echo "CHECKSUM TABLE ${TOUCHED};" | mysql_run "${WORLD}" -N 2>>"${LOG}")
 echo "Apply:";          apply_all
 echo "Apply again (must be re-applicable):"; apply_all

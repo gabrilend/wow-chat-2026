@@ -21,7 +21,11 @@ do this for the validation step." On the bot module's database, which
 No sense having two mechanisms for the same action." (A server start
 prepares that database too, so with a start as the gate there is one
 mechanism and `dbimport` is not needed.) On the switch from the `z_`
-names: on the next install, by itself.
+names: on the next install, by itself. Told the gate is an extra start,
+the owner: "we need the double startup first to test without the SQL,
+then with. If it passes both then it's 100% validly applied." So the two
+starts are two tests: the server reaches "World initialized" on
+upstream's databases alone, then again with ours applied.
 
 ## Current Behavior
 
@@ -73,8 +77,8 @@ go; all 51 quick tests pass. Not run here: the SQL stage against the real
 databases, which is the switch-over itself; it first runs in the owner's
 compile.
 
-**Things to watch in that compile:** the gate's start is an extra server
-start (about as long as the validation's); on a brand-new database, code
+**Things to watch in that compile:** the gate's start is the first of
+two tests (without our SQL, then with it, at validation); on a brand-new database, code
 or scripts that read our own tables at start would find them missing at
 the gate's start (the start still counts if the world initializes), and
 have them after the validation start. E049 (the buddy towns' bake) still

@@ -1,15 +1,20 @@
 #!/usr/bin/env bash
-# ==== header: 7 lines, footer: 3 lines ====
+# ==== header: 8 lines, footer: 3 lines ====
 # id:         E020
 # profiles:   basic vanilla
 # priority:   2500
 # kind:       sql
 # about:      Push the two ground riding skills to Classic level gates (148l): Apprentice
+# carries:    05-mount-level-requirements.apply.sql 05-mount-level-requirements.revert.sql
 # ==== end of header ====
 # E020-vanilla-mount-level-requirements.sh - one install step, loaded by patches/E-patches.sh
 # (split out of that file by scripts/split-install-steps, issue 150). Its
 # helpers (_register_with_updatefetcher, _profile_db_name, ...) are in
 # patches/E-helpers.sh, loaded first.
+
+# Its SQL is carried beside this file (issue 189e), for both profiles that
+# take it (basic and vanilla); until then basic read it from vanilla's folders.
+E020_DIR="${BASH_SOURCE[0]%/*}"
 
 # -- {{{ patch_E020_vanilla_mount_level_requirements
 # Push the two ground riding skills to Classic level gates (148l): Apprentice
@@ -23,7 +28,7 @@
 # the legacy npc_trainer table so the two never disagree.
 patch_E020_vanilla_mount_level_requirements() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/05-mount-level-requirements.sql"
-    local SRC_FILE="$(_shared_sql_src db_world)/05-mount-level-requirements.apply.sql"
+    local SRC_FILE="${E020_DIR}/05-mount-level-requirements.apply.sql"
 
     [[ ! -f "${SRC_FILE}" ]] && { echo "  [E020] Apply source missing: ${SRC_FILE}"; return 1; }
 
@@ -48,7 +53,7 @@ patch_E020_vanilla_mount_level_requirements() {
 
 unpatch_E020_vanilla_mount_level_requirements() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/05-mount-level-requirements.sql"
-    local SRC_FILE="$(_shared_sql_src db_world)/05-mount-level-requirements.revert.sql"
+    local SRC_FILE="${E020_DIR}/05-mount-level-requirements.revert.sql"
 
     if [[ -f "${SQL_FILE}" ]] && grep -q "^-- MARKER_E020_REVERT" "${SQL_FILE}"; then
         echo "  [E020] Active file already holds revert-form content"
@@ -64,5 +69,5 @@ unpatch_E020_vanilla_mount_level_requirements() {
 }
 # -- }}}
 # ==== footer of E020 ====
-# lines:      68
+# lines:      73
 # ==== end of footer ====

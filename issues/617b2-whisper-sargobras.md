@@ -78,6 +78,41 @@ the invisible one answers by whisper.
 A whisperer owed nothing gets his usual "nothing owed" answer. A
 whisper he does not understand gets a joke and the help line.
 
+**In the friends list, by choice only.** The owner, 2026-10-20 (while
+designing the legendary friends, 920):
+
+> Sargobras is also an option that never is included with new
+> character's friends list. But players can add him, and he'll always be
+> offline unless he's currently spawned for a player. If players send him
+> any message at all (while he's online of course) it'll open his dialogue
+> menu. Even though they're potentially very far away. This is to prevent
+> him getting lost on zeppelins causing a problem.
+
+- He is never among 920's two random legends; a player adds him by name
+  (`/friend Sargobras`), and B044's add-friend hiding must let his name
+  through.
+- **Online only while a Sargobras is spawned for that player.** The
+  whisperable character is in the world all the time (whispers need it),
+  but what each player's friends list shows is sent to that player alone:
+  the server's friend-status message (the one it sends when a friend logs
+  in or out) is sent per player, "online" while that player has a wandering
+  or valley Sargobras present for them, "offline" otherwise. A whisper
+  from a player for whom he is "offline" is answered with the client's
+  usual "No player named 'Sargobras' is currently playing."
+- **Any message opens his dialogue, from any distance.** While he is
+  online for a player, any whisper (not only the commands above) opens his
+  dialogue menu on that player's screen, built as a menu the player
+  object itself sends (ALE's player-sent menus are not refused for
+  distance, as a creature's would be), with the same lines as the creature
+  beside them. The commands above still work as shortcuts. A Sargobras
+  left behind when his owner rode a zeppelin is still reachable this way.
+- **Not now:** a way for a separated wandering Sargobras to catch up by
+  walking the path his owner took (nearest point on the owner's recorded
+  route, then along it), instead of appearing beside them, possibly inside
+  the zeppelin. Proposed and set aside by the owner the same day ("actually
+  nvm let's skip that for now"); it would suit `docs/roaming-pattern.md` as
+  a pattern for other projects when it comes back.
+
 **A dialogue option.** Each Sargobras creature gets one more line,
 "Can I call on you from afar?", whose answer explains the whispers.
 

@@ -297,24 +297,6 @@ _profile_db_name() {
 }
 # -- }}}
 
-# -- {{{ _shared_sql_src
-# Folder holding a profile's source SQL for the steps it shares with another
-# profile. basic (issue 155) runs vanilla's flight-path removal (E008), skipped
-# intro cinematic (E019) and riding levels (E020) with exactly vanilla's
-# content, so it reads vanilla's source files instead of keeping copies (one
-# source of truth: a tuning change lands on both). Only those three steps use
-# this; everything basic owns lives in sql/basic/.
-# (Symbolic links under sql/basic/ did the same job first; they were replaced
-# by this table so the sharing is visible in code and the links do not have
-# to survive every tool that copies or commits the tree.)
-# Args: $1 = database folder name (db_world, db_characters)
-_shared_sql_src() {
-    local -A SHARED_SQL_FROM=( [basic]="vanilla" )
-    local from="${SHARED_SQL_FROM[${PROFILE}]:-${PROFILE}}"
-    echo "${DIR}/sql/${from}/${1}.src"
-}
-# -- }}}
-
 # -- {{{ apply_settings_patch
 # One settings patch (config/patches/C*.sh, issue 119) into the installed
 # server's config files: the install stage runs these at their own

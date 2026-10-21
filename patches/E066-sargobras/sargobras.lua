@@ -55,19 +55,22 @@ local function script_dir()
 end
 -- }}}
 
--- His own copies of what he loads, beside him in ".own/" (issue 189e: he
--- is his own patch, E066, which places this folder into each taking
--- profile's install). The leading dot keeps the Lua engine from loading
--- them as scripts of their own, so they never clash by name with basic's
--- copies, which basic's other scripts load.
-local OWN     = script_dir() .. ".own/"
-local RC      = dofile(OWN .. "data/race-class-data.lua")
-local TD      = dofile(OWN .. "data/buddy-talent-data.lua")
+-- His own copies of what he loads, beside him in "helpers/" (issue 189e:
+-- he is his own patch, E066, which places this folder into each taking
+-- profile's install). In plain sight, never hidden (the owner: "we
+-- shouldn't hide source-code from the developer"); each is named
+-- sargobras-<name> because the Lua engine loads every script under its
+-- folder and refuses a second of one name, and basic's other scripts load
+-- basic's copies under the plain names. Loaded as scripts too, they only
+-- build their tables, as basic's do.
+local OWN     = script_dir() .. "helpers/"
+local RC      = dofile(OWN .. "data/sargobras-race-class-data.lua")
+local TD      = dofile(OWN .. "data/sargobras-buddy-talent-data.lua")
 local JOKES   = dofile(OWN .. "data/sargobras-jokes.lua")
-local Spender = dofile(OWN .. "lib/buddy-talent-spender.lua")
-local Choice  = dofile(OWN .. "lib/buddy-choice.lua")
-local Valleys = dofile(OWN .. "data/starting-valleys.lua")
-local Deck    = dofile(OWN .. "lib/valley-deck.lua")
+local Spender = dofile(OWN .. "lib/sargobras-buddy-talent-spender.lua")
+local Choice  = dofile(OWN .. "lib/sargobras-buddy-choice.lua")
+local Valleys = dofile(OWN .. "data/sargobras-starting-valleys.lua")
+local Deck    = dofile(OWN .. "lib/sargobras-valley-deck.lua")
 
 local VALLEY, WANDERER                   = 6170001, 6170002
 -- the wanderer in Don Rigoberto's Lost Hat, one time in ten (owner,

@@ -47,10 +47,15 @@ Built 2026-10-20, every step, not yet compiled:
   whole, and remove it on undo.
 - **Sargobras is E066**, `patches/E066-sargobras/`, basic's, at 1960 in the
   install stage: `sargobras.lua` (moved from `src/lua-basic/` with git, his
-  jokes with him) and `.own/`, his own copies of the six helpers he loads
-  that basic's other scripts also load. He loads them from `.own/`. The
-  step places both into `bin/lua_scripts/sargobras/`; the undo removes the
-  folder. The three generators that write those helpers write his copies
+  jokes with him) and `helpers/`, his own copies of the six helpers he
+  loads that basic's other scripts also load, each named
+  `sargobras-<name>.lua` so the Lua engine (which loads every script and
+  refuses two of one name) never sees a clash with basic's. They were
+  first in a dot-folder the engine skips; the owner: "we shouldn't hide
+  source-code from the developer. It is meant to be as conspicuous and
+  honest as it is deserving." So nothing in a patch is hidden, and the
+  test fails on any dot-name. The step places both into
+  `bin/lua_scripts/sargobras/`; the undo removes the folder. The three generators that write those helpers write his copies
   too, and the test fails if his copies and basic's ever differ. The tests
   that load him (`test-sargobras-follow`, `test-valley-deal`,
   `test-dk-buddies-by-level`) read his patch. `scripts/test-ale-method-names`
@@ -93,8 +98,11 @@ with B036 from its new home; `scripts/test-basic-sql-in-ram` (basic's
 whole database built in RAM, every SQL step and its checks passing, with
 the buddy SQL from its new place); all 52 quick tests.
 
-The same reaching-in remains in one more place: `_shared_sql_src`, by which
-basic reads vanilla's SQL for the steps the two share (open question 1).
+- **Profiles never read each other's folders.** The three steps basic and
+  vanilla both take (E008 flight paths, E019 no intro cinematic, E020
+  riding levels) read vanilla's SQL for basic (`_shared_sql_src`); they
+  are now directories carrying it, taken by both through their headers,
+  and the helper is gone (open question 1).
 
 ## Intended Behavior
 
@@ -133,8 +141,8 @@ basic's. Then the buddy module (B036) and the buddy SQL.
 
 ## Open Questions
 
-1. **basic reads vanilla's SQL** (`_shared_sql_src` in
-   `patches/E-helpers.sh`) for the steps both take, the same reaching-in
-   the buddy SQL had. The owner, 2026-10-20, of carrying files: "This is a
-   pattern we should examine for other applications in our patches." Make
-   those steps directories carrying their SQL too?
+1. **basic reads vanilla's SQL** (`_shared_sql_src`) for the steps both
+   take. Answered 2026-10-20: "oh that seems wrong, profiles should have no
+   contact with one another. We should simply apply the same relevant
+   patches. They should be pared to be sized enough to suit the space that
+   is relegated for them." Done: those steps carry their own SQL.
