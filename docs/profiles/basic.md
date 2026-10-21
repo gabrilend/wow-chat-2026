@@ -143,38 +143,39 @@ lowest priority first, each line its header's own (`scripts/plan-patches basic`)
 
 **After the compile and install (install steps and settings, mixed by priority):**
 
-| priority | id    | kind     | about                                                                                   |
-| -------: | ----- | -------- | --------------------------------------------------------------------------------------- |
-|     1010 | E001  | install  | Create symlinks from install dir to the profile-specific Lua source                     |
-|     1040 | E004  | install  | Create RAM-backed log directory symlink                                                 |
-|     1060 | E006  | install  | Initialize config files (.dist -> .conf) and apply profile-specific values              |
-|     1100 | C001  | settings | Database Connections                                                                    |
-|     1105 | C002  | settings | Directory Paths                                                                         |
-|     1110 | C003  | settings | Run Speed 85% (named for its first value, 80%)                                          |
-|     1115 | C004  | settings | Fall Damage 10x                                                                         |
-|     1140 | C006d | settings | Max Level 60 (Basic)                                                                    |
-|     1150 | C007b | settings | Starting Level 1 (Beta/Release/Basic)                                                   |
-|     1160 | C008  | settings | GM Login State                                                                          |
-|     1170 | C010  | settings | Network Ports                                                                           |
-|     1175 | C011  | settings | Realmlist Setup                                                                         |
-|     1195 | C016  | settings | Missing server config keys                                                              |
-|     1200 | C017  | settings | Level-correlated caps                                                                   |
-|     1210 | C019  | settings | RealmID per profile                                                                     |
-|     1220 | C021  | settings | SOAP Loopback Console (remote command channel for local scripts)                        |
-|     1230 | C023  | settings | Basic: No Random Bots                                                                   |
-|     1235 | C024  | settings | Basic Death Knight Rules (interim, until issue 718)                                     |
-|     1240 | C025  | settings | Client cache version follows the profile's content (issue 160)                          |
-|     1245 | C026  | settings | Basic: No Dual Spec                                                                     |
-|     1250 | C027  | settings | Basic: Buddies Spend Their Own Talents                                                  |
-|     1255 | C028  | settings | Basic: Honor Without a Cap                                                              |
-|     1260 | C029  | settings | Basic: Buddies Keep Their Own Parties                                                   |
-|     1265 | C030  | settings | Basic: No Group Invite at a Buddy's Login                                               |
-|     1270 | C031  | settings | Basic: No World Channels (General, Trade, the Defense channels, LFG, Guild Recruitment) |
-|     1275 | C032  | settings | Preserve Custom Channels (so a script can tell one channel from another)                |
-|     1285 | C034  | settings | No Faster Healing Below Level 15, on Every Server                                       |
-|     1305 | C038  | settings | No Quest Sparkles, Object Quest Marks or Map Points                                     |
-|     1310 | C039  | settings | Instances and Battlegrounds: See as Far as the Server Allows                            |
-|     1790 | E049  | install  | Every town's exploring grid baked ahead of time (issue 617o3), so buddies               |
+| priority | id    | kind     | about                                                                                        |
+| -------: | ----- | -------- | -------------------------------------------------------------------------------------------- |
+|     1010 | E001  | install  | Create symlinks from install dir to the profile-specific Lua source                          |
+|     1040 | E004  | install  | Create RAM-backed log directory symlink                                                      |
+|     1060 | E006  | install  | Initialize config files (.dist -> .conf) and apply profile-specific values                   |
+|     1100 | C001  | settings | Database Connections                                                                         |
+|     1105 | C002  | settings | Directory Paths                                                                              |
+|     1110 | C003  | settings | Run Speed 85% (named for its first value, 80%)                                               |
+|     1115 | C004  | settings | Fall Damage 10x                                                                              |
+|     1140 | C006d | settings | Max Level 60 (Basic)                                                                         |
+|     1150 | C007b | settings | Starting Level 1 (Beta/Release/Basic)                                                        |
+|     1160 | C008  | settings | GM Login State                                                                               |
+|     1170 | C010  | settings | Network Ports                                                                                |
+|     1175 | C011  | settings | Realmlist Setup                                                                              |
+|     1195 | C016  | settings | Missing server config keys                                                                   |
+|     1200 | C017  | settings | Level-correlated caps                                                                        |
+|     1210 | C019  | settings | RealmID per profile                                                                          |
+|     1220 | C021  | settings | SOAP Loopback Console (remote command channel for local scripts)                             |
+|     1230 | C023  | settings | Basic: No Random Bots                                                                        |
+|     1235 | C024  | settings | Basic Death Knight Rules (interim, until issue 718)                                          |
+|     1240 | C025  | settings | Client cache version follows the profile's content (issue 160)                               |
+|     1245 | C026  | settings | Basic: No Dual Spec                                                                          |
+|     1250 | C027  | settings | Basic: Buddies Spend Their Own Talents                                                       |
+|     1255 | C028  | settings | Basic: Honor Without a Cap                                                                   |
+|     1260 | C029  | settings | Basic: Buddies Keep Their Own Parties                                                        |
+|     1265 | C030  | settings | Basic: No Group Invite at a Buddy's Login                                                    |
+|     1270 | C031  | settings | Basic: No World Channels (General, Trade, the Defense channels, LFG, Guild Recruitment)      |
+|     1275 | C032  | settings | Preserve Custom Channels (so a script can tell one channel from another)                     |
+|     1285 | C034  | settings | No Faster Healing Below Level 15, on Every Server                                            |
+|     1305 | C038  | settings | No Quest Sparkles, Object Quest Marks or Map Points                                          |
+|     1310 | C039  | settings | Instances and Battlegrounds: See as Far as the Server Allows                                 |
+|     1790 | E049  | install  | Every town's exploring grid baked ahead of time (issue 617o3), so buddies                    |
+|     1960 | E066  | install  | Sargobras, his own patch: his script and his own copies of what it loads, placed per profile |
 
 **After the databases are brought to upstream's state (our SQL):**
 

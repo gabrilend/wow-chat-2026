@@ -255,7 +255,7 @@ stack size is a world-database change to the gem items. All possible.
   (not its buddies), in the soul trade's pop-up. A buddy joins the clan 5
   seconds after it appears (owner, 2026-09-26, "apply one, then the other
   some time later"), and says nothing ("nothing needs to be said, it's
-  assumed that it is"), built in `src/lua-basic/sargobras.lua`; the
+  assumed that it is"), built in `patches/E066-sargobras/sargobras.lua`; the
   buddy module no longer adds it at creation.
 - **Longer clan names, dashes and underscores** (owner, 2026-10-08: "can
   we enable dashes and underscores in names? Also, can we increase the cap

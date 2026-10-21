@@ -429,7 +429,13 @@ HEAD:
   `.conf` files at install time, each in its turn among the install steps.
 - `patches/E0NN-<name>.sh` — install-time setup (config init, SQL,
   symlinks), one file per step; `patches/E-helpers.sh` holds what they
-  share, and `patches/E-patches.sh` loads both (issue 150).
+  share, and `patches/E-patches.sh` loads both (issue 150). The steps that
+  hand our SQL to the server's updater run after gate 2000, a server start
+  that applies upstream's first (issue 189d).
+- `patches/<ID>-<name>/` — a patch that carries files: its bash file
+  `<ID>-<name>.sh` beside the files it places (its header's `carries:`
+  names them; issue 189e). Sargobras is one (`patches/E066-sargobras/`);
+  his Lua is no longer in `src/lua-basic/`.
 - `patches/patches.sh` — the runner. Each profile's lists are built
   when it loads, from the patches' headers, by `scripts/plan-patches`
   (issue 189c); nobody writes them by hand any more (the old lists and

@@ -8,7 +8,7 @@
 -- quick-test: yes
 -- ==== end of header ====
 -- test-dk-buddies-by-level - a death knight player's buddies come by level
--- (src/lua-basic/sargobras.lua, issues 718 and 617b), without a server.
+-- (patches/E066-sargobras/sargobras.lua, issues 718 and 617b), without a server.
 --
 -- For a general audience: a death knight player gets four buddies in all,
 -- and since 2026-10-12 one at a time: "55 = 1 buddy-bot, 57 = 2, 59 = 3,
@@ -28,7 +28,7 @@
 -- {{{ configuration
 local DIR = "/mnt/kaun/wow-chat-2026"
 if arg[1] and arg[1] ~= "" then DIR = arg[1] end
-local SCRIPT = DIR .. "/src/lua-basic/sargobras.lua"
+local SCRIPT = DIR .. "/patches/E066-sargobras/sargobras.lua"   -- his own patch since issue 189e
 -- }}}
 
 local fails, checks = 0, 0

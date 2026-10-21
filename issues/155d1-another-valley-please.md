@@ -7,7 +7,7 @@
 - Blocked by: 155d
 - Related: 617b (Sargobras; the valley Sargobras stands in every starting
   valley)
-- Related files: `src/lua-basic/sargobras.lua`,
+- Related files: `patches/E066-sargobras/sargobras.lua`,
   `patches/B028-basic-starting-valley-rotation.sh` (holds the eight valleys'
   positions today)
 

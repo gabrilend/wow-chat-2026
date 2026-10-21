@@ -105,7 +105,10 @@ local function takes(text, rel, profile)
     return yes
 end
 local files = {}
-for _, p in ipairs({ "patches/B[0-9][0-9][0-9]-*.sh", "patches/E[0-9][0-9][0-9]-*.sh", "config/patches/C[0-9]*.sh" }) do
+-- a patch is one bash file, or a directory holding its bash file and the
+-- files it carries (issue 189e): patches/E066-sargobras/E066-sargobras.sh
+for _, p in ipairs({ "patches/B[0-9][0-9][0-9]-*.sh", "patches/E[0-9][0-9][0-9]-*.sh", "config/patches/C[0-9]*.sh",
+                     "patches/B[0-9][0-9][0-9]-*/B[0-9][0-9][0-9]-*.sh", "patches/E[0-9][0-9][0-9]-*/E[0-9][0-9][0-9]-*.sh" }) do
     for _, f in ipairs(ls(p)) do files[#files + 1] = f end
 end
 -- the quick tests: every test in scripts/ with a whole header saying so. A

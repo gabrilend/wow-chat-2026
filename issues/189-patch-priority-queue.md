@@ -8,7 +8,7 @@
   steps, one file each since 2026-10-20), `patches/patches.sh` (the
   per-profile lists this replaces)
 - Blocks: 192 (the econ profile layers its patches on basic's)
-- Sub-issues: 189a-189f (below)
+- Sub-issues: 189a-189g (below)
 - Priority: Medium
 - State: in progress (2026-10-20); the undo order is fixed, 189a under way
 
@@ -90,7 +90,10 @@ build, in order (`scripts/compile`, `patches/patches.sh`):
 Since 189d (built, not yet compiled), step 6 is split by gate 2000: the
 compile starts the shadow server once after step 4, so upstream's updates
 are applied; then the SQL steps place ours under their own names, and the
-validation start applies them. Not yet: carried files (189e).
+validation start applies them. Since 189e (in progress), a patch may be a
+directory carrying the files it applies; Sargobras is the first (E066).
+Not yet: the buddy module and the buddy SQL carried (189e), and the guard
+that reviews each patch before it is first applied (189g).
 
 ## Intended Behavior
 
@@ -150,6 +153,7 @@ independent second statement the test checks the patches against.
 | 189c | the-runner-by-gates | 189b | The runner reads headers instead of lists, runs by priority through the gates, same priority in any order, undo exactly reversed, the layering check; the lists are removed |
 | 189d | sql-as-patches | 189c | Our SQL run by our runner after upstream's, by priority, recorded in our table; the registrations, `z_` names and the old-names tidy-up removed |
 | 189e | carried-files | 189c | Patches carry files (Sargobras's Lua, the buddy SQL, the buddy module) and place and remove them per profile |
+| 189g | a-guard-reviews-each-patch | 189e | An LLM caretaker examines each patch before it is first applied, so none can run anything arbitrary; checked in the release compile |
 | 189f | lists-from-headers | 189b | The quick tests gathered by header; the patch registry and the profile pages' patch lists written from the headers |
 
 Order: 189a → 189b → 189c → 189d, 189e (either order), with 189f any

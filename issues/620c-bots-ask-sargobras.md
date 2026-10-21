@@ -17,7 +17,7 @@ The owner, 2026-10-14: "making the playerbots interact with Sargobras
 
 ## Current Behavior
 
-Sargobras (`src/lua-basic/sargobras.lua`) is driven entirely by dialogue
+Sargobras (`patches/E066-sargobras/sargobras.lua`) is driven entirely by dialogue
 (gossip) menus written in Lua, which the bot module never opens:
 
 - **The valley Sargobras** (creature 6170001) stands in every starting

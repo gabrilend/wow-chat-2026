@@ -123,6 +123,12 @@ w("    },")
 w("}")
 local f = io.open(OUT, "w") or die("cannot write " .. OUT)
 f:write(table.concat(out, "\n"), "\n")
+f:close()-- and the same file into Sargobras's own copy (issue 189e: his patch,
+-- patches/E066-sargobras/, carries its own copies of what he loads, which
+-- must never drift from basic's; scripts/test-carried-files checks it)
+local OWN = DIR .. "/patches/E066-sargobras/.own/data/race-class-data.lua"
+f = io.open(OWN, "w") or die("cannot write " .. OWN)
+f:write(table.concat(out, "\n"), "\n")
 f:close()
 print(string.format("generate-basic-race-class-data: %d races, %d classes -> %s", #rids, #cids, OUT))
 -- }}}

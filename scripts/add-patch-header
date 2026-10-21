@@ -26,11 +26,14 @@
 --
 -- Usage: scripts/add-patch-header [PROJECT_DIR] FILE --profiles "NAMES"
 --                                 [--priority N] [--about "TEXT"] [--quick-test] [--kind sql]
+--                                 [--carries "PATHS"]
+--   --carries  for a patch that is a directory (issue 189e): the files and
+--              folders beside its bash file that it places, space between
 --   FILE is relative to PROJECT_DIR (patches/B058-something.sh).
 --------------------------------------------------------------------------------
 
 local DIR = "/mnt/kaun/wow-chat-2026"
-local FILE, PROFILES, PRIORITY, ABOUT, QUICK, KIND
+local FILE, PROFILES, PRIORITY, ABOUT, QUICK, KIND, CARRIES
 do
     local pos, i = {}, 1
     while i <= #arg do
@@ -40,6 +43,7 @@ do
         elseif a == "--about"      then i = i + 1; ABOUT    = arg[i]
         elseif a == "--quick-test" then QUICK = true
         elseif a == "--kind"       then i = i + 1; KIND = arg[i]
+        elseif a == "--carries"    then i = i + 1; CARRIES = arg[i]
         else pos[#pos + 1] = a end
         i = i + 1
     end
@@ -62,6 +66,11 @@ local function q(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
 -- one row per kind of patch: where it lives, how its id is read from the
 -- name, and its priority when none is given
 local KINDS = {
+    -- a patch that is a directory (189e): its bash file inside, same name
+    { kind = "source",   pattern = "^patches/(B%d%d%d)%-[^/]+/%1%-[^/]+%.sh$",
+      priority = function(id) return 100 + 10 * tonumber(id:sub(2)) end },
+    { kind = "install",  pattern = "^patches/(E%d%d%d)%-[^/]+/%1%-[^/]+%.sh$",
+      priority = function(id) return 1300 + 10 * tonumber(id:sub(2)) end },
     { kind = "source",   pattern = "^patches/(B%d%d%d)%-[^/]+%.sh$",
       priority = function(id) return 100 + 10 * tonumber(id:sub(2)) end },
     { kind = "install",  pattern = "^patches/(E%d%d%d)%-[^/]+%.sh$",
@@ -117,6 +126,16 @@ local fields = {
     c .. " kind:       " .. entry.kind,
     c .. " about:      " .. about,
 }
+if CARRIES then
+    if not FILE:match("^patches/[BE]%d%d%d%-[^/]+/") then die("--carries is for a patch that is a directory (patches/<ID>-<name>/<ID>-<name>.sh)") end
+    local here = FILE:match("^(.*)/")
+    for p in CARRIES:gmatch("%S+") do
+        local fh = io.open(DIR .. "/" .. here .. "/" .. p)
+        if not fh then die("--carries names " .. p .. ", which is not in " .. here .. "/") end
+        fh:close()
+    end
+    fields[#fields + 1] = c .. " carries:    " .. CARRIES
+end
 if QUICK then fields[#fields + 1] = c .. " quick-test: yes" end
 local header = { c .. " ==== header: " .. (#fields + 2) .. " lines, footer: 3 lines ====" }
 for _, f in ipairs(fields) do header[#header + 1] = f end

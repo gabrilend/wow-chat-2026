@@ -21,7 +21,7 @@ Verbatim, 2026-09-23 (the full answer is in 617):
 
 His name is **Sargobras** (Ritz, 2026-09-23). His jokes "should come from a
 written list, but we have to add to it every once in a while": the list is
-`src/lua-basic/data/sargobras-jokes.lua`, plain data, one joke per entry,
+`patches/E066-sargobras/.own/data/sargobras-jokes.lua`, plain data, one joke per entry,
 meant to grow.
 
 And his life cycle, verbatim, 2026-09-23:
@@ -66,7 +66,7 @@ break once it is chosen. The owner's own Sargobras don't count toward the
 crowding rule.
 
 **2026-09-29:** the menu is one page: every class, then every people, each
-with its own icon (a table at the top of `src/lua-basic/sargobras.lua`,
+with its own icon (a table at the top of `patches/E066-sargobras/sargobras.lua`,
 first pass, by feel). His three texts (6170001-6170003) are one pool of
 eight cryptic lines, three of them the owner's own ("You know why you
 are here.", "Justice is always forgiven eventually.", "The kind mind, to
@@ -94,7 +94,7 @@ and install).
   summoned by the script. Both Lord Gregor Lescovar's stand-in look (617f).
   Tested in `scripts/test-basic-sql-in-ram` (apply, re-apply, exact revert)
   and `scripts/validate-basic-state`.
-- **His behaviour** (`src/lua-basic/sargobras.lua`):
+- **His behaviour** (`patches/E066-sargobras/sargobras.lua`):
   - menu: "I know what kind of fighter I want" (the classes) or "... which
     people" (the races); the pick fills the owner's lowest owed slot, and he
     says what was chosen ("An Undead Mage. They'll find you soon.");

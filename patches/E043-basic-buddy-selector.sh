@@ -15,7 +15,7 @@
 # Sargobras, the buddy selector (issue 617b): his two creatures (the valley
 # one and the wandering one), their texts, and one valley Sargobras per
 # starting valley. World database. His menu and wandering are Lua
-# (src/lua-basic/sargobras.lua). Same cp-apply / cp-revert idiom as E040.
+# (patches/E066-sargobras/sargobras.lua). Same cp-apply / cp-revert idiom as E040.
 patch_E043_basic_buddy_selector() {
     local SQL_FILE="${DIR}/sql/${PROFILE}/db_world/26-buddy-selector.sql"
     local SRC_FILE="${DIR}/sql/${PROFILE}/db_world.src/26-buddy-selector.apply.sql"

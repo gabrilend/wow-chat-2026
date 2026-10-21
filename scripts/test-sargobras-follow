@@ -41,7 +41,7 @@
 -- {{{ configuration
 local DIR = "/mnt/kaun/wow-chat-2026"
 if arg[1] and arg[1] ~= "" then DIR = arg[1] end
-local SCRIPT = DIR .. "/src/lua-basic/sargobras.lua"
+local SCRIPT = DIR .. "/patches/E066-sargobras/sargobras.lua"   -- his own patch since issue 189e
 -- }}}
 
 local fails, checks = 0, 0

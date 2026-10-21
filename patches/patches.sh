@@ -12,7 +12,8 @@
 PATCHES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Source all B### patch files (PHASE_BEGIN - source code modifications)
-for patch_file in "${PATCHES_DIR}"/B[0-9][0-9][0-9]-*.sh; do
+# (and the bash file of a patch that is a directory, issue 189e)
+for patch_file in "${PATCHES_DIR}"/B[0-9][0-9][0-9]-*.sh "${PATCHES_DIR}"/B[0-9][0-9][0-9]-*/B[0-9][0-9][0-9]-*.sh; do
     [[ -f "${patch_file}" ]] && source "${patch_file}"
 done
 

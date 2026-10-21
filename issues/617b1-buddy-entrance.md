@@ -93,7 +93,7 @@ appearance, and nothing is remembered about it.
 ## Related Documents
 
 - `modules/mod-buddies/src/buddies_login.cpp`
-- `src/lua-basic/sargobras.lua` (where the pick is made)
+- `patches/E066-sargobras/sargobras.lua` (where the pick is made)
 
 ## Open Questions
 

@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-carried-files
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      a patch that is a directory carries exactly what it says (issue 189e)
+# quick-test: yes
+# ==== end of header ====
+# test-carried-files - a patch that is a directory carries exactly what it says (issue 189e)
+#
+# For a general audience: since issue 189e a patch may be a directory, its
+# bash file beside the files it applies (Sargobras's patch carries his
+# script and his own copies of what it loads). This checks, for every
+# such patch, that its header's "carries:" names only things in its
+# directory and that nothing else is there unnamed (so the guard of issue
+# 189g, reading the header, sees the whole patch). Then it runs
+# Sargobras's patch on a pretend install folder: every carried file
+# placed, byte for byte; none of the files the Lua engine would load
+# (it skips names starting with a dot) sharing a name with basic's own
+# scripts; a second run the same; and the undo leaving nothing behind.
+#
+# Usage: scripts/test-carried-files [PROJECT_DIR]
+
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+WORK="${DIR}/tmp/shared-memory/test-carried-files"
+rm -rf "${WORK}"
+mkdir -p "${WORK}/install/bin/lua_scripts"
+
+fails=0
+checks=0
+check() {
+    checks=$((checks + 1))
+    if eval "$1"; then echo "  ok:   $2"; else echo "  FAIL: $2"; fails=$((fails + 1)); fi
+}
+
+# {{{ every patch that is a directory
+echo "every patch that is a directory"
+dirs=0
+for d in "${DIR}"/patches/[BE][0-9][0-9][0-9]-*/; do
+    [[ -d "${d}" ]] || continue
+    dirs=$((dirs + 1))
+    name="$(basename "${d}")"
+    bash_file="${d}${name}.sh"
+    carries="$(sed -n 's/^# carries: *//p' "${bash_file}" 2>/dev/null | head -1)"
+    check '[[ -f "${bash_file}" ]]' "${name}: its bash file is ${name}.sh"
+    missing="" unnamed=""
+    for p in ${carries}; do [[ -e "${d}${p}" ]] || missing+=" ${p}"; done
+    # each top-level thing in the directory, the bash file aside, is named
+    while IFS= read -r top; do
+        [[ "${top}" == "${name}.sh" ]] && continue
+        [[ " ${carries} " == *" ${top} "* ]] || unnamed+=" ${top}"
+    done < <(find "${d}" -mindepth 1 -maxdepth 1 -printf '%f\n')
+    check '[[ -n "${carries}" && -z "${missing}" && -z "${unnamed}" ]]' \
+          "${name}: carries ${carries:-nothing named}${missing:+ (missing:${missing})}${unnamed:+ (there, not named:${unnamed})}"
+done
+check '[[ ${dirs} -gt 0 ]]' "${dirs} found"
+# }}}
+
+# {{{ Sargobras's patch on a pretend install
+echo "Sargobras's patch, on a pretend install"
+export DIR
+source "${DIR}/patches/E-patches.sh" > /dev/null || { echo "FAIL: patches/E-patches.sh did not load"; exit 1; }
+INSTALL_DIR="${WORK}/install"
+PLACED="${WORK}/install/bin/lua_scripts/sargobras"
+SRC="${DIR}/patches/E066-sargobras"
+patch_E066_sargobras > "${WORK}/apply.log" 2>&1
+check '[[ $? -eq 0 && -f "${PLACED}/sargobras.lua" && -d "${PLACED}/.own" ]]' "applied: his script and .own/ placed"
+check 'diff -r "${SRC}/sargobras.lua" "${PLACED}/sargobras.lua" > /dev/null && diff -r "${SRC}/.own" "${PLACED}/.own" > /dev/null' "every carried file placed byte for byte"
+# the names the Lua engine would load (no dot anywhere in the path below
+# lua_scripts/), against basic's own scripts', which load beside them
+loaded="$(cd "${PLACED}" && find . -type f \( -name '*.lua' -o -name '*.ext' \) ! -path '*/.*' -printf '%f\n' | sed 's/\.[^.]*$//' | sort)"
+basics="$(find "${DIR}/src/lua-basic" -type f \( -name '*.lua' -o -name '*.ext' \) ! -path '*/.*' -printf '%f\n' | sed 's/\.[^.]*$//' | sort)"
+clash="$(comm -12 <(echo "${loaded}") <(echo "${basics}") | tr '\n' ' ')"
+check '[[ "${loaded}" == "sargobras" && -z "${clash}" ]]' "the engine loads only his script from it, and no name clashes with basic's${clash:+ (clash: ${clash})}"
+patch_E066_sargobras > /dev/null 2>&1
+check 'diff -r "${SRC}/.own" "${PLACED}/.own" > /dev/null && [[ $(find "${PLACED}" -type f | wc -l) -eq $(( $(find "${SRC}/.own" -type f | wc -l) + 1 )) ]]' "applied twice: the same files, nothing doubled"
+unpatch_E066_sargobras > /dev/null 2>&1
+check '[[ ! -e "${PLACED}" && -d "${WORK}/install/bin/lua_scripts" ]]' "undone: his folder gone, the install's own folder kept"
+check '[[ -f "${SRC}/sargobras.lua" ]]' "the template stays in the patch"
+# his copies of the helpers basic's other scripts also load are the same
+# files as basic's (the generators write both; a hand edit must too)
+drift=""
+while IFS= read -r rel; do
+    [[ -f "${DIR}/src/lua-basic/${rel}" ]] || continue          # only his (the jokes)
+    cmp -s "${SRC}/.own/${rel}" "${DIR}/src/lua-basic/${rel}" || drift+=" ${rel}"
+done < <(cd "${SRC}/.own" && find . -type f -printf '%P\n')
+check '[[ -z "${drift}" ]]' "his copies of the shared helpers are basic's, byte for byte${drift:+ (differ:${drift})}"
+# }}}
+
+rm -rf "${WORK}"
+echo "${checks} checks, ${fails} failed"
+[[ ${fails} -eq 0 ]]
+# ==== footer of test-carried-files ====
+# lines:      97
+# ==== end of footer ====

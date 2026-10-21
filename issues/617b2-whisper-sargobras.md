@@ -30,7 +30,7 @@ The owner, 2026-10-14:
 
 Not built. Sargobras exists only as creatures (the valley one, 6170001;
 the wandering one, 6170002 and 6170003 with his hat), driven by dialogue
-menus in `src/lua-basic/sargobras.lua`. A whisper can only be sent to a
+menus in `patches/E066-sargobras/sargobras.lua`. A whisper can only be sent to a
 logged-in character, so today "/whisper Sargobras" answers "No player
 named 'Sargobras' is currently playing." Choosing a buddy means walking up
 to one of the creatures and clicking a dialogue line.

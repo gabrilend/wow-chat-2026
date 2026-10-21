@@ -239,6 +239,33 @@ _unregister_one() {
 }
 # -- }}}
 
+# -- {{{ place_carried
+# A patch that is a directory (issue 189e) carries the files it applies;
+# its bash file places them with this when applied. The templates stay in
+# the patch's directory in git; the placed copies, in the install (or the
+# source tree), never are. A copy already there is replaced whole, so an
+# edited template, or a file taken out of the patch, is never left stale.
+#   $1 = what is placed: a file or folder inside the patch's directory
+#   $2 = where it goes: the full path of the copy
+place_carried() {
+    local from="$1" to="$2"
+    [[ -e "${from}" ]] || { echo "    ERROR: the carried ${from} is missing (is it in the patch's directory, and in git?)"; return 1; }
+    # the copy's folder must exist (the install's lua_scripts/, say): a
+    # missing one means the step runs too early, or the path is wrong
+    [[ -d "$(dirname "${to}")" ]] || { echo "    ERROR: ${to%/*}/ does not exist, so ${from##*/} has nowhere to go"; return 1; }
+    rm -rf "${to:?}"
+    cp -r "${from}" "${to}" || { echo "    ERROR: could not copy ${from} to ${to}"; return 1; }
+}
+# -- }}}
+
+# -- {{{ remove_carried
+# The undo of place_carried: the placed copy goes; the template stays.
+#   $1 = the full path of the copy
+remove_carried() {
+    rm -rf "${1:?}"
+}
+# -- }}}
+
 # -- {{{ _profile_db_name
 # Compose a profile-suffixed database name. Mirrors the database
 # isolation policy in config/patches/C001-database-connections.sh:

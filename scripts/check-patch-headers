@@ -31,7 +31,8 @@ local Table  = dofile(HERE .. "lib/aligned-table.lua")
 -- {{{ where patches and tests live
 -- the patterns are the shell's, given to ls, so a folder that is missing
 -- simply adds nothing
-local PLACES = { "patches/*.sh", "patches/gates", "patches/groups", "config/patches/C*.sh",
+-- patches/*/*.sh: a patch that is a directory, its bash file inside (189e)
+local PLACES = { "patches/*.sh", "patches/*/*.sh", "patches/gates", "patches/groups", "config/patches/C*.sh",
                  "sql/*/*.src/*.sql", "scripts/test-*" }
 local files = {}
 for _, p in ipairs(PLACES) do

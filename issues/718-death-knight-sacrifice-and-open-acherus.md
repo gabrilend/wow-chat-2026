@@ -188,7 +188,7 @@ Two layers, one per half of the user's design.
   one the death knight already had and is below the level of again waits
   aside ("set aside", roster stage 5, which the buddy module neither logs
   in nor re-stages) and comes back at its level, made again at the owner's
-  level. Built in `src/lua-basic/sargobras.lua`, called from the trade in
+  level. Built in `patches/E066-sargobras/sargobras.lua`, called from the trade in
   `death-knight-souls.lua` and at every level. Taking the soul back
   erases the death knight with a command that fires no character-delete
   event, so the take-back also deletes its companion account (and with it

@@ -130,7 +130,7 @@ the moment the cast begins):
 2. The pop-up: a player-sent gossip menu (`player:GossipMenuAddItem` with
    the confirm-box arguments, `player:GossipSendMenu` with the player as
    sender, `RegisterPlayerGossipEvent` for the answer), modelled on
-   `src/lua-basic/sargobras.lua`'s clan-name pop-up. Withdraw with
+   `patches/E066-sargobras/sargobras.lua`'s clan-name pop-up. Withdraw with
    `player:GossipComplete()`.
 3. The circle: run basic's `lib/buddy-arc.lua` in place (as
    `src/lua-cc-test/buddy-talents.lua` runs basic's file, so the two never

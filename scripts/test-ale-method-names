@@ -166,6 +166,22 @@ do
         end
     end
 end
+-- the Lua that patches carry (issue 189e: a patch that is a directory, as
+-- Sargobras's, patches/E066-sargobras/) is a profile's scripts too, once
+-- placed: read for what it defines and checked for what it calls, with
+-- the source patches' names of the one profile its header names (a
+-- carried folder taken by several profiles is checked against none of
+-- theirs, so a name only a patch adds would show as unknown)
+for _, d in ipairs(lines_of("cd '" .. DIR .. "' && ls -1d patches/[BE][0-9][0-9][0-9]-*/ 2>/dev/null")) do
+    d = d:gsub("/$", "")
+    if #lines_of("find '" .. DIR .. "/" .. d .. "' -name '*.lua' 2>/dev/null") > 0 then
+        SCRIPT_DIRS[#SCRIPT_DIRS + 1] = d
+        local name = d:match("^patches/(.*)$")
+        local head = read(DIR .. "/" .. d .. "/" .. name .. ".sh") or ""
+        local one = head:match("\n# profiles:%s+([%w%-]+)%s*\n")
+        if one then profileOf[d] = one end
+    end
+end
 local defined = lines_of("find '" .. ALE .. "/extensions' -type f 2>/dev/null")
 for _, d in ipairs(SCRIPT_DIRS) do
     for _, p in ipairs(lines_of("find '" .. DIR .. "/" .. d .. "' -type f \\( -name '*.lua' -o -name '*.lua.disabled' -o -name '*.ext' \\) 2>/dev/null | sort")) do
@@ -189,7 +205,7 @@ end
 for _, path in ipairs(scripts) do
     local rel = path:sub(#DIR + 2)
     local off = rel:match("%.disabled$") ~= nil or rel:match("/%.[^/]+/") ~= nil
-    local patched = patchNames[profileOf[rel:match("^(src/lua%-[%w]+)")] or ""] or {}
+    local patched = patchNames[profileOf[rel:match("^(src/lua%-[%w]+)") or rel:match("^(patches/[^/]+)")] or ""] or {}
     local n = 0
     for line in (strip(read(path) or "") .. "\n"):gmatch("([^\n]*)\n") do
         n = n + 1
@@ -231,5 +247,5 @@ print(string.format("\n%d unknown in loaded scripts, %d in switched-off ones", #
 os.exit(#unknown == 0 and 0 or 1)
 -- }}}
 -- ==== footer of test-ale-method-names ====
--- lines:      235
+-- lines:      251
 -- ==== end of footer ====

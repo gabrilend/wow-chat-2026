@@ -55,13 +55,19 @@ local function script_dir()
 end
 -- }}}
 
-local RC      = dofile(script_dir() .. "data/race-class-data.lua")
-local TD      = dofile(script_dir() .. "data/buddy-talent-data.lua")
-local JOKES   = dofile(script_dir() .. "data/sargobras-jokes.lua")
-local Spender = dofile(script_dir() .. "lib/buddy-talent-spender.lua")
-local Choice  = dofile(script_dir() .. "lib/buddy-choice.lua")
-local Valleys = dofile(script_dir() .. "data/starting-valleys.lua")
-local Deck    = dofile(script_dir() .. "lib/valley-deck.lua")
+-- His own copies of what he loads, beside him in ".own/" (issue 189e: he
+-- is his own patch, E066, which places this folder into each taking
+-- profile's install). The leading dot keeps the Lua engine from loading
+-- them as scripts of their own, so they never clash by name with basic's
+-- copies, which basic's other scripts load.
+local OWN     = script_dir() .. ".own/"
+local RC      = dofile(OWN .. "data/race-class-data.lua")
+local TD      = dofile(OWN .. "data/buddy-talent-data.lua")
+local JOKES   = dofile(OWN .. "data/sargobras-jokes.lua")
+local Spender = dofile(OWN .. "lib/buddy-talent-spender.lua")
+local Choice  = dofile(OWN .. "lib/buddy-choice.lua")
+local Valleys = dofile(OWN .. "data/starting-valleys.lua")
+local Deck    = dofile(OWN .. "lib/valley-deck.lua")
 
 local VALLEY, WANDERER                   = 6170001, 6170002
 -- the wanderer in Don Rigoberto's Lost Hat, one time in ten (owner,

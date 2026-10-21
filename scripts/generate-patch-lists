@@ -72,7 +72,7 @@ local function cell(s) return (((s or ""):gsub("|", "\\|"))) end   -- one value:
 -- }}}
 
 -- {{{ every header
-local files = lines_of("cd " .. q(DIR) .. " && ls -1d patches/B[0-9][0-9][0-9]-*.sh patches/E[0-9][0-9][0-9]-*.sh config/patches/C[0-9]*.sh scripts/test-* 2>/dev/null")
+local files = lines_of("cd " .. q(DIR) .. " && ls -1d patches/B[0-9][0-9][0-9]-*.sh patches/E[0-9][0-9][0-9]-*.sh config/patches/C[0-9]*.sh patches/[BE][0-9][0-9][0-9]-*/[BE][0-9][0-9][0-9]-*.sh scripts/test-* 2>/dev/null")
 local every, about = {}, {}
 for _, rel in ipairs(files) do
     if not rel:match("%-done$") then
