@@ -5,7 +5,7 @@
 - Phase: 6
 - Parent of: 629a, 629b, 629c, 629d
 - Blocked by: 617i (buddies in battlegrounds), 617t (stand-ins)
-- Related: 176a1 (Alterac Valley, always running, fought by stand-ins),
+- Related: 630 (randos and strangers; the medi-porters), 176a1 (Alterac Valley, always running, fought by stand-ins),
   176a2 and 176a2c (Arathi Basin: squads, and roads taken in turn at
   each crossing), 155z2 (front lanes at the Dark Portal), 619 (combat
   footwork: the pack retreat), 617s5 (sidesteps in a fight), 617o (the
@@ -57,6 +57,18 @@ Said by the owner later the same day, while these rules were being drawn
 on paper (verbatim, 2026-10-17):
 
 > human brains cannot compute recursion
+
+The owner, 2026-10-20, on the two halves of a player's life (issue 630:
+"Horde vs Alliance, Rando vs Stranger"), verbatim: "characters can't talk
+to the other faction, they are the strangers. Your faction is the randos.
+As determined by tabard, or at a glance, race." And: "this belongs in the
+team-sport based battlegrounds, which is certainly an option, especially
+if we combine with City of Heroes and use their medi-porters... Then we
+can heal and rewind the rest. [of the creatures, when their corpse_fade()
+distance expires.]" A medi-porter (City of Heroes) carries a defeated
+character out of the fight to be healed instead of leaving them dead
+where they fell; here, the creatures left once their corpses fade out of
+range would be healed and rewound too (open question below).
 
 ## Current Behavior
 
@@ -164,6 +176,11 @@ Order: 629a and 629b (parallel foundations) → 629c (needs both) → 629d
   **155z2**, **619**, **617s5**, **617o**, **617e7**
 
 ## Open Questions
+
+0. **Medi-porters** (2026-10-20, from 630): a fallen player or bot carried
+   back to be healed rather than released as a ghost; and "heal and rewind
+   the rest", the creatures, when their corpses fade: reset to where and
+   how they stood before the fight? Which battlegrounds first?
 
 1. **Who follows the front?** "Buddy-bot behavior", then "the stand-ins
    have to fight for every inch": buddies and stand-ins both? What about

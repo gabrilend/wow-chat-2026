@@ -53,6 +53,18 @@ Sargobras outwits the design, as the owner put it. A profile whose guilds
 hold several players, or whose player belongs to several guilds (step 3),
 makes room for it.
 
+Told no current profile can build it, the owner, 2026-10-20, verbatim:
+
+> the good news is, you can still walk around with other players. It's
+> just, the combined groups will always have two of each character, and
+> they'll be the ones who are in combat the most (targets, to bring
+> people toward AoE opportunities, rewarded on dps meters)
+
+So players still travel together: two clans walking as one group hold
+two of each character (each player's own, side by side), and those pairs
+are the ones most in the fight, the targets that draw everyone toward
+area-damage chances, and rewarded for it on the damage meters.
+
 ## As a design reference
 
 Every new profile's design says how it would make room for the unseen guild
@@ -110,6 +122,16 @@ no roster.
 3. **Clans and guilds.** Answered 2026-10-20: the clan is all of them
    ("the tribe of tribes").
 4. **"one for each half of the life. Horde vs Alliance, Rando vs
-   Stranger"**: two tribes, one on each side of a divide, so a player
-   belongs to one per half? What is the Rando and Stranger divide: the
-   players one plays with by chance, and those never met?
+   Stranger"**. Answered 2026-10-20, verbatim: "no it just means...
+   characters can't talk to the other faction, they are the strangers.
+   Your faction is the randos. As determined by tabard, or at a glance,
+   race." And where it belongs: "this belongs in the team-sport based
+   battlegrounds, which is certainly an option, especially if we combine
+   with City of Heroes and use their medi-porters... Then we can heal and
+   rewind the rest. [of the creatures, when their corpse_fade() distance
+   expires.]" (written into 629, battleground fronts).
+5. **"two of each character"**: when two players' groups walk together,
+   is it each player's character beside its buddy twin (the same
+   character twice), or two players' characters of each class? And are
+   the pairs what the enemy aims at by design (a rule), or simply the ones
+   most often in the fight?

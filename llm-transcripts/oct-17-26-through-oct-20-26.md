@@ -1,6 +1,6 @@
 # Conversation Summary: 90bf80e4-2922-4058-918c-551568e85c2a
 
-Generated on: 2026-10-20 20:31:52
+Generated on: 2026-10-20 21:33:57
 Models: claude-opus-5-5
 
 ## Contents
@@ -71,6 +71,10 @@ Models: claude-opus-5-5
     every patch carries a header and runs by priority through gates. Headers are
     done on all 190 files. Next is 189c: the runner that reads those headers
     instead of the lists.
+17. 2026-10-20 20:34, after Request 75 - Goal: finish issue 189, the
+    header-driven patch system. Every part is built and committed, and parts c,
+    d and e wait on your compile. Next: answer whether basic's steps that read
+    vanilla's SQL folders should carry their own SQL too.
 
 --------------------------------------------------------------------------------
 
@@ -11946,6 +11950,153 @@ one of those guilds).
 
 Reminder (issue 191): both disks are ext4, which doesn't check file contents for
 corruption, so bit rot goes unnoticed. That needs guarding when you get to it.
+
+--------------------------------------------------------------------------------
+
+### User Request 76
+
+<pasted_content id="ee2b">
+> - 189c, the runner: nobody writes a profile's patch list by hand any more.
+> Each patch's header says which profiles take it and its priority, and the
+> build orders everything from
+>     that. Settings now run in their own turn after the config files exist. Before, a failing setting was silently ignored; now it stops the install. Every profile's config files come
+>     out identical to the old runner's.
+</pasted_content id="ee2b">
+
+
+we should include that header in the patch file, each of them, as well. They can
+be dynamically generated, but the idea is to give them an option to say "hey
+wait a minute this seems unreliable"
+
+>     - Sargobras is his own patch, with his own copies of the helper files he loads. They sit in a folder whose name starts with a dot, so the Lua engine doesn't load them as separate
+>       scripts and they never clash with basic's copies.
+
+we shouldn't hide source-code from the developer. It is meant to be as
+conspicuous and honest as it is deserving.
+
+>   - There's an extra server start (the gate), about as long as validation's.
+
+we need the double startup first to test without the SQL, then with. If it
+passes both then it's 100% validly applied.
+
+> - On the first build, every SQL file of ours is applied once more under its
+> own name. Each is written to be safe to re-run.
+
+question... will this wear out the SSD hard drive if it's done every startup? Oh
+every build is... probably fine, right?
+
+> New issues from your answers: 630 (Sargobras as the unseen guild master, plus
+> belonging to many guilds), with your words kept verbatim, and 189g (the guard
+> that reviews each patch
+>   before it's first applied).
+
+only online when you're the only player online, right? Note this behavior is
+impossible with buddy-bots because players are given a clan for them that cannot
+include other players. HAHAHA TRICKED YOU SARGOBRAS let it be known that in
+future profiles this behavior might be allowed to occur, structurally as a
+mechanic. But, the current design doesn't have space for it, so alas we cannot
+include it. However in the future, we should have this be the standard, and each
+design should reference it. (lawyer giving case studies)
+
+> Open questions, one at a time — the first: basic still reads vanilla's SQL
+> folders for the steps both profiles take. That's the same reaching-in the
+> buddy SQL had. Should those
+>   steps also become folders that carry their own SQL?
+
+oh that seems wrong, profiles should have no contact with one another. We should
+simply apply the same relevant patches. They should be pared to be sized enough
+to suit the space that is relegated for them.
+
+> Still waiting after that: 189g (which compile counts as "for release", who may
+> review, and when the existing patches get reviewed) and 630 (how often
+> Sargobras "logs off", what
+> "many guilds" means in the stock client, and whether a clan is one of those
+> guilds).
+
+yes the clan is all of them. the tribe of tribes, one for each half of the life.
+Horde vs Alliance, Rando vs Stranger.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 76
+
+> Going through your notes: three things to build (Sargobras's helpers made
+> visible, basic and vanilla stopped from sharing folders, your answers written
+> into 630 and 189d), one answer (the SSD), and one question back (the header).
+> Starting with what reads vanilla's folders:
+
+> Adapting the earlier move tool for these three (some carry only an apply
+> file):
+
+> The SQL files' own comments still describe the sharing. Reading one:
+
+> Now everything that names them: his script, his step, the generators, the
+> test.
+
+> Every check passes, including the new "nothing hidden" check across all eleven
+> directory patches. For the SSD question, measuring how much SQL we actually
+> have:
+
+> Writing your Sargobras answers into 630, verbatim:
+
+> Now 189d (your double-start reasoning) and 189e (the closed question, the
+> visible helpers):
+
+> The issue-reference checker finds live install steps by reading
+> `patches/E*.sh` files, so it misses the directory ones. Reading it:
+
+> 52/52. Claiming and committing:
+
+*[commit] ab8f48cb8 - Keep every profile out of every other's folders, and Sargobras's helpers in plain sight (issues 189e, 630)*
+
+Done and committed (ab8f48c). All 52 quick tests pass, and basic's whole
+database still builds in RAM.
+
+**Profiles no longer touch each other.** Basic used to read vanilla's SQL
+folders for the three steps both profiles take: flight paths, the skipped intro,
+and riding levels. Each of those steps is now a folder carrying its own SQL, and
+both profiles take it through its header. The code that pointed basic at vanilla
+is gone.
+
+**Nothing hidden.** Sargobras's helpers now sit in a plain `helpers/` folder.
+Each is named `sargobras-<name>.lua`, because the Lua engine refuses to load two
+scripts with the same name and basic's own copies use the plain names. The
+carried-files test now fails if anything in a patch folder starts with a dot.
+
+**Two server starts.** Your reasoning is now in 189d: the first start tests
+upstream's databases alone, and the second tests them with ours applied.
+
+**SSD wear:** not a concern.
+- Our databases aren't on an SSD. `/mnt/kaun` is a Seagate spinning disk, and
+  spinning disks don't wear out from writes the way SSDs do.
+- Our SQL isn't re-run at every start. The updater re-runs a file only when its
+  contents or the source-commit stamp change, so at most once per build that
+  changes something.
+- All 56 of our SQL files together are 6.4 MB. Even with MySQL writing that
+  several times over, and even on your NVMe SSD, a few hundred MB per build is
+  tiny next to the hundreds of terabytes such drives are typically rated for.
+
+**Sargobras (630):** your answers are in verbatim. Yes, he only appears when
+you're the only member online. Today's buddy clans hold one player and their
+buddies, so you're always alone and the moment means nothing — he tricked us.
+So no current profile builds it. It's now a project-wide decision in the
+roadmap: each new profile's design has to say how it would make room for him, or
+why it can't, citing 630 like a case.
+
+Your header note is first. Every patch file already starts with its header (id,
+profiles, priority, kind, about), and the plan is built only from those lines.
+Did you mean a new field in that header, say `doubts:`, where a reader or the
+guard from 189g writes "this seems unreliable, because…"? If so, should a
+patch with a doubt stop the build until someone answers it, or only print a
+warning?
+
+Still open:
+- **630:** "one for each half of the life. Horde vs Alliance, Rando vs
+  Stranger": is that two tribes per player, one on each side of a divide? And is
+  Rando vs Stranger the people you play with by chance against the ones you've
+  never met?
+- **189g:** which compile counts as "for release", who may review a patch, and
+  when the existing ones get reviewed.
 
 --------------------------------------------------------------------------------
 

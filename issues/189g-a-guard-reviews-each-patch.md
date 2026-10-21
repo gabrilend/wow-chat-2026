@@ -63,9 +63,11 @@ the compiles leading up to one.
 
 ## Open Questions
 
-1. **Which compile is "for release"?** A flag on `scripts/compile`, the
-   release profile, or promotion to release?
-2. **Who may review?** A separate session than the one that wrote the
-   patch (as step 3 assumes), or any session, so long as it is recorded?
-3. **The patches that exist today** (191 of them): reviewed all at once
-   before the first release compile, or each as it is next changed?
+Asked which compile is for release, who may review, and when today's
+patches are reviewed, the owner, 2026-10-20: "trust me, you'll know." So
+these are left to the caretaker's judgment when the time comes, and are
+answered then, in this file:
+
+1. **Which compile is "for release"?**
+2. **Who may review?**
+3. **The patches that exist today**: all at once, or each as it changes?
