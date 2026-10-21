@@ -28,7 +28,7 @@ deck spot some player has shown it since the server started:
 ## Current Behavior
 
 **Built 2026-10-02, syntax-checked with the build's flags, not yet
-compiled or tried in game** (`modules/mod-buddies/src/buddies_recorder.cpp`
+compiled or tried in game** (`patches/B036-mod-buddies/mod-buddies/src/buddies_recorder.cpp`
 and `.h`; used by `buddies_crossing.cpp`; tables in
 `sql/basic/db_world.src/28-buddy-beds.apply.sql`, installed by E045;
 `scripts/export-buddy-boardings`).

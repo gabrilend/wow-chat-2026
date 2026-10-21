@@ -10,7 +10,7 @@
 ## Current Behavior
 
 **Built 2026-09-26; compile-checked, not yet run.**
-`modules/mod-buddies/src/buddies_create.cpp`:
+`patches/B036-mod-buddies/mod-buddies/src/buddies_create.cpp`:
 
 - Every 5 seconds, up to 5 chosen rows (class and race set, no buddy yet)
   become characters on the owner's companion account: the row's race and

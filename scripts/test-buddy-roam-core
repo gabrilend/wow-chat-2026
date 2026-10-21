@@ -12,7 +12,7 @@
 #
 # For a general audience: buddy roaming was designed by watching animations
 # drawn from a Lua model (src/lua-basic/lib/buddy-roam.lua). The server runs
-# the same design written again in C++ (modules/mod-buddies/src/roam/). This
+# the same design written again in C++ (patches/B036-mod-buddies/mod-buddies/src/roam/). This
 # test makes a few thousand situations on the animations' two drawn maps (a
 # cluttered mine-sized area and a chamber with a side tunnel), asks both
 # versions what the buddy does next with the very same random numbers, and
@@ -41,7 +41,7 @@ DIR="/mnt/kaun/wow-chat-2026"
 [[ -n "${1:-}" ]] && DIR="$1"
 PER_MAP="${2:-600}"
 
-CORE="${DIR}/modules/mod-buddies/src/roam"
+CORE="${DIR}/patches/B036-mod-buddies/mod-buddies/src/roam"
 TESTS="${DIR}/tests/buddy-roam-core"
 EXEC_DIR="${DIR}/tmp/tmp"
 DATA_DIR="${DIR}/tmp/shared-memory/test-buddy-roam-core"

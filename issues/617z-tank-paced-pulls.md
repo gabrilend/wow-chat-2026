@@ -38,7 +38,7 @@ Nothing paces a dungeon but the player. Inside a dungeon each buddy follows
 its owner (the bot module's own following), and when the owner comes
 within a little more than a monster's notice range, the owner's buddies
 not yet fighting go at the nearest hostile monster the owner can see
-(`AggroPass`, `modules/mod-buddies/src/buddies_roam_strategy.cpp`). So
+(`AggroPass`, `patches/B036-mod-buddies/mod-buddies/src/buddies_roam_strategy.cpp`). So
 the player is always the one who pulls, by walking forward; no buddy
 decides to move ahead, and no buddy looks at anyone's mana.
 

@@ -49,7 +49,7 @@ going into the bags in town too: "good."
 - The `buddy_stowed_weapon` table and its startup check are gone.
 
 **First version, 2026-10-15 (replaced as above)**
-(`modules/mod-buddies/src/buddies_arms.cpp`): every two seconds each
+(`patches/B036-mod-buddies/mod-buddies/src/buddies_arms.cpp`): every two seconds each
 online buddy is looked at.
 - In a town, out of a fight: main hand, off hand and ranged weapon go
   into its bags, each written into the characters table

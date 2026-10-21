@@ -23,7 +23,7 @@ the player can do certain things".
 The player a buddy belongs to is called its "owner" everywhere: the
 roster's column (`buddy_roster.owner`, `buddy_clan.owner`,
 `buddy_draw.owner`), the module's code and comments
-(`modules/mod-buddies/src/`, about 1,400 uses of words starting "owner"
+(`patches/B036-mod-buddies/mod-buddies/src/`, about 1,400 uses of words starting "owner"
 there and in `src/lua-basic/`, counted 2026-10-04 with `grep -rho
 "\bowner\w*"`), the log lines, the issue files and the docs. From
 2026-10-04 the conversation with the project's owner says "partner"

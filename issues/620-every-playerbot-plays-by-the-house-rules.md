@@ -35,7 +35,7 @@ feature then lists its own exceptions.
 
 Every custom feature on basic was designed for two kinds of character:
 human players, and the buddies that serve them (plus stand-ins, 617t). The
-buddy module (`modules/mod-buddies/`) sorts every character that logs in by
+buddy module (`patches/B036-mod-buddies/mod-buddies/`) sorts every character that logs in by
 its **account**, in this order:
 
 1. on the stand-in account → a stand-in (no owner, no placement);

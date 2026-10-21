@@ -28,7 +28,7 @@ meal's start.
 - **The model**: `src/lua-basic/lib/buddy-roam.lua` (the "waypoints"
   reading, the owner's settings), drawn and measured by
   `scripts/generate-buddy-roaming-gifs` (`docs/HTML/buddy-roaming.html`).
-- **The core**: `modules/mod-buddies/src/roam/buddy_roam_core.h` and
+- **The core**: `patches/B036-mod-buddies/mod-buddies/src/roam/buddy_roam_core.h` and
   `.cpp`. Plain C++17 with no server headers; its functions and
   structures are listed in `buddy_roam_core.info.md`.
   - The world is reached through four ground questions (`Ground`: the
@@ -179,7 +179,7 @@ over the real world:
 
 ## Suggested Implementation Steps
 
-1. `modules/mod-buddies/src/roam/`: the core as plain C++ with no server
+1. `patches/B036-mod-buddies/mod-buddies/src/roam/`: the core as plain C++ with no server
    headers (points, the waypoint pick, the planner), taking the ground as
    two callbacks (height at a point, area id at a point).
 2. The server side: the callbacks over `Map::GetHeight` (with a z) and
@@ -188,7 +188,7 @@ over the real world:
    the cluttered map of the gallery, compared with the Lua model's output.
 4. The rest chance on arrival (playerbots' food / drink actions, or a sit
    emote and the regeneration of sitting).
-5. The movement trace: `modules/mod-buddies/src/buddies_trace.cpp` (the
+5. The movement trace: `patches/B036-mod-buddies/mod-buddies/src/buddies_trace.cpp` (the
    command, the set of traced buddies, the half-second sampler on each
    player update) and its one call for other files (`BuddyTrace`, in
    `buddies.h`), called from the roam action at the waypoint pick, the

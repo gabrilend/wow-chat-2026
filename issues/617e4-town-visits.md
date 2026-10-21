@@ -32,7 +32,7 @@ Only an indoor place out in the country explores by rooms (617e6). Not
 yet compiled or seen in game.
 
 **Built 2026-09-27; compile-checked against the last beta build's
-settings, not yet run** (`modules/mod-buddies/src/buddies_town.cpp`,
+settings, not yet run** (`patches/B036-mod-buddies/mod-buddies/src/buddies_town.cpp`,
 `buddies_town.h`; wired in `buddies_roam_strategy.cpp` and
 `buddies_party.cpp`).
 

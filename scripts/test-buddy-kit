@@ -14,7 +14,7 @@
 DIR="${1:-/mnt/kaun/wow-chat-2026}"
 OUT="${DIR}/tmp/tmp"
 mkdir -p "${OUT}"
-g++ -std=c++17 -O1 -Wall -Wextra -Werror -I"${DIR}/modules/mod-buddies/src" \
+g++ -std=c++17 -O1 -Wall -Wextra -Werror -I"${DIR}/patches/B036-mod-buddies/mod-buddies/src" \
     "${DIR}/tests/buddy-kit/bag-split.cpp" -o "${OUT}/buddy-kit-bag-split" || exit 1
 nice -n 19 "${OUT}/buddy-kit-bag-split"
 # ==== footer of test-buddy-kit ====

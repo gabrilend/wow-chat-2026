@@ -16,7 +16,7 @@ complete it automatically whenever you do."
 
 **Built 2026-09-29, not yet compiled or tried in game** (owner: "we're
 going to auto-complete buddy quests to ensure they level up alongside
-you"): `modules/mod-buddies/src/buddies_xp.cpp`, at its end. On the
+you"): `patches/B036-mod-buddies/mod-buddies/src/buddies_xp.cpp`, at its end. On the
 server's quest-reward hook for an owner, each of the owner's buddies in
 the world is given the quest, has it completed and rewarded in one step
 (skipped if done before and not repeatable; a full quest log is logged as

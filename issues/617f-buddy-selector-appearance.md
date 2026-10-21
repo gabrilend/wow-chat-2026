@@ -49,7 +49,7 @@ copy, not yet built or run.**
   from it before the stock "is it a mage's copy" check. Applying twice
   and reverting twice on a copy of the handler left it byte for byte as
   it was.
-- `modules/mod-buddies/src/buddies_outfits.cpp`: at startup lists the
+- `patches/B036-mod-buddies/mod-buddies/src/buddies_outfits.cpp`: at startup lists the
   look for the three Sargobras (6170001, 6170002, 7180001): human man
   (body 49), skin 7, face 8, hair colour 1, the five items' pictures read
   from the world database; each Sargobras entering the world gets that

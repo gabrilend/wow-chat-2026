@@ -79,7 +79,7 @@ reverted in the `_smoke_test` database). Nothing reads the tables yet.
 **Seeing the cut in game (2026-10-09, written, compile-checked, not yet
 built):** the owner asked for a game-master command to see the areas and
 another for a creature's spawn points, in wisps ("Usually we can use an
-un-interactable wisp unit"). `modules/mod-buddies/src/buddies_show.cpp`:
+un-interactable wisp unit"). `patches/B036-mod-buddies/mod-buddies/src/buddies_show.cpp`:
 `.buddy area show` names the part the game master stands in (named area,
 its parts, levels, leading monsters, squares) and draws its border in
 wisps for 30 seconds, along every square edge it shares with another

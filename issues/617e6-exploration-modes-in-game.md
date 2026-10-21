@@ -42,7 +42,7 @@ entered, dead-end visits, time to both far rooms, picks by sensing.
 **Built 2026-09-27; compile-checked, cross-checked against the model, not
 yet run in game.**
 
-- **The core** (`modules/mod-buddies/src/roam/buddy_explore_core.*`, no
+- **The core** (`patches/B036-mod-buddies/mod-buddies/src/roam/buddy_explore_core.*`, no
   server headers; see its `.info.md`): the ground grid, paint (16-bit
   counts that wrap, noted), the wall pulse, rooms and tunnels, the squished
   circle, the three choosers (least paint, room orbit, squished circle) and
@@ -61,7 +61,7 @@ yet run in game.**
   traced border never folds (every little square of cells keeps its
   turning direction). Planted bugs (the room orbit turning the wrong way;
   paint without its falloff) each fail it.
-- **In game** (`modules/mod-buddies/src/buddies_explore.*`):
+- **In game** (`patches/B036-mod-buddies/mod-buddies/src/buddies_explore.*`):
   - **The setting**: ".buddy explore <pinwheel|paint|rooms|disc|mixed>",
     any player for their own buddies (in the "buddy" command table of
     `buddies_beds.cpp`), kept for the session; mixed gives the four out in

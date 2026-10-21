@@ -73,7 +73,7 @@ rather than walk in town; the town visit walks, the walk between areas
 runs. To check after promotion, with `.buddy trace <name>`.
 
 **"My bags are full" and "go sell", 2026-10-12, syntax-checked, not yet
-built** (`modules/mod-buddies/src/buddies_orders.cpp`; the selling trip's
+built** (`patches/B036-mod-buddies/mod-buddies/src/buddies_orders.cpp`; the selling trip's
 start in `buddies_roam_strategy.cpp`):
 - a buddy whose bags reach full says "My bags are full." once (again only
   after they have had room and filled again), where its owner sees it:

@@ -70,7 +70,7 @@ the owner asked for.
 ## Suggested Implementation Steps
 
 1. One small file of mesh questions for the module
-   (`modules/mod-buddies/src/buddies_navmesh.cpp`): the nearest point on
+   (`patches/B036-mod-buddies/mod-buddies/src/buddies_navmesh.cpp`): the nearest point on
    the mesh, whether a straight line stays on the mesh, a full route and
    whether it is complete. Each bot thread keeps its own mesh-query
    object (the server's notes say a query object is not safe to share

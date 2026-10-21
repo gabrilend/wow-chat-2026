@@ -133,7 +133,7 @@ neuron's `docs/shared-with-wow-chat-2026.md`, pass 1. neuron's issue **708**
 resident scripts it installs. Built once, used by both; neither waits for the
 other.
 
-- **Likely no B-patch.** `modules/mod-buddies/src/buddies_roam_strategy.cpp`
+- **Likely no B-patch.** `patches/B036-mod-buddies/mod-buddies/src/buddies_roam_strategy.cpp`
   already adds strategies to the engine's shared tables from a separate module
   at world start (`Ctx::sharedStrategyContexts.Add`) and switches bots with
   `ai->ChangeStrategy`. The bindings can live in a module the same way, which

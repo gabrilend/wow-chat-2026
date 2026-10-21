@@ -9,18 +9,18 @@
 -- the quest-reward spells and pet spells and such to the list of spells we
 -- teach to each class." This reads every quest that only one class may
 -- take and that rewards a spell, from the world database, and writes
--- modules/mod-buddies/src/buddies_quest_spells.h: class, which races, the
+-- patches/B036-mod-buddies/mod-buddies/src/buddies_quest_spells.h: class, which races, the
 -- level the quest can first be taken at, the spell learned, the quest's
 -- name. A spell taught by several quests (one per starting city) is one
 -- row: the lowest level, every race that can get it.
 --
 -- Usage: scripts/generate-buddy-quest-spells [PROJECT_DIR] [WORLD_DB]
 --   Reads   WORLD_DB (default acore_world_basic), read-only
---   Writes  modules/mod-buddies/src/buddies_quest_spells.h
+--   Writes  patches/B036-mod-buddies/mod-buddies/src/buddies_quest_spells.h
 
 local DIR   = arg[1] or "/mnt/kaun/wow-chat-2026"
 local DB    = arg[2] or "acore_world_basic"
-local OUT   = DIR .. "/modules/mod-buddies/src/buddies_quest_spells.h"
+local OUT   = DIR .. "/patches/B036-mod-buddies/mod-buddies/src/buddies_quest_spells.h"
 local MYSQL = DIR .. "/mysql/installed-files/bin/mysql -h127.0.0.1 -P3307 -uritz -pmenardi -N --batch " .. DB
 
 -- {{{ the query

@@ -24,7 +24,7 @@ bot manager ignores a request for a buddy already loading or online).
 
 Before this:
 **Built 2026-09-27; compile-checked, not yet run.**
-`modules/mod-buddies/src/buddies_login.cpp`:
+`patches/B036-mod-buddies/mod-buddies/src/buddies_login.cpp`:
 
 - At an owner's login, the owner is queued; 3 seconds later (tried every
   half second for up to 10 seconds while the owner's bot manager or the
@@ -69,7 +69,7 @@ seconds later (617l); the owner logs out and they go.
 
 ## Suggested Implementation Steps
 
-1. `modules/mod-buddies/src/buddies_login.cpp`: at the owner's login,
+1. `patches/B036-mod-buddies/mod-buddies/src/buddies_login.cpp`: at the owner's login,
    queue the owner; a world-update pass a few seconds later writes the
    link and asks the owner's bot manager to log in each made buddy.
 2. At a buddy's login, queue it; the pass places it near its owner.

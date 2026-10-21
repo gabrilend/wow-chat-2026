@@ -22,7 +22,7 @@ In progress: written and compile-checked against the new pins
 (2026-10-09); not yet built into a server or tried in game. Every question
 below is answered; what is left is building it and trying it in game.
 
-- `modules/mod-buddies/src/buddies_stand_ins.cpp`: the accounts (STANDIN<n>,
+- `patches/B036-mod-buddies/mod-buddies/src/buddies_stand_ins.cpp`: the accounts (STANDIN<n>,
   200 to an account, remembered at startup and hidden through B044's list),
   the bringing in (`BuddyBringStandIn`: race and class drawn or checked, a
   kept one picked and raised, or a new one made with a shape of its role;

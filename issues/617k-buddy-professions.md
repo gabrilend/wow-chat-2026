@@ -46,7 +46,7 @@ buddy module (the offline tool makes no items).
 ## Current Behavior
 
 **Secondary professions built 2026-09-27; compile-checked, not yet run**
-(`modules/mod-buddies/src/buddies_create.cpp`): every buddy made learns
+(`patches/B036-mod-buddies/mod-buddies/src/buddies_create.cpp`): every buddy made learns
 Cooking (spell 2550), First Aid (3273) and Fishing (7620), each its
 apprentice spell, which carries the skill itself (a "skill" effect naming
 the skill line, checked in Spell.dbc): skill 1 of 75, plus the recipes the

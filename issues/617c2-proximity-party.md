@@ -62,7 +62,7 @@ count as open country, not towns, though seven of eight carry the
 client's town flag (`buddies_roam_ground.cpp`).
 
 **Built 2026-09-27; compile-checked against the last beta build's
-settings, not yet run** (`modules/mod-buddies/src/buddies_party.cpp`,
+settings, not yet run** (`patches/B036-mod-buddies/mod-buddies/src/buddies_party.cpp`,
 `buddies_xp.cpp`; source patch `patches/B037-playerbots-invite-alts-on-login.sh`;
 config patches `C029-basic-buddies-keep-own-parties.sh`,
 `C030-basic-buddies-no-login-invite.sh`).

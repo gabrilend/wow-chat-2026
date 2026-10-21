@@ -23,7 +23,7 @@ isn't leader or assistant gets the server's own refusal.
 
 Before the override:
 **Built 2026-09-28; compiles, not yet run.** No bot-module patch was
-needed: `modules/mod-buddies/src/buddies_loyalty.cpp` reads each player's
+needed: `patches/B036-mod-buddies/mod-buddies/src/buddies_loyalty.cpp` reads each player's
 invite request before the server handles it (the incoming-request hook the
 clan lock uses). When the invited character is a buddy (on a companion
 account, with a roster row), the request goes through only if the inviter

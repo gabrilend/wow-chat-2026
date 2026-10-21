@@ -45,7 +45,8 @@ for _, c in ipairs(custom) do by_name[c.name] = c end
 
 print("1. the compiled commands")
 local files = {}
-for _, f in ipairs(Tables.files_with_tables(DIR .. "/modules")) do files[#files + 1] = f end
+-- the buddy module, carried by its source patch since issue 189e (until then modules/)
+for _, f in ipairs(Tables.files_with_tables(DIR .. "/patches/B036-mod-buddies/mod-buddies")) do files[#files + 1] = f end
 for _, f in ipairs(Tables.files_with_tables(DIR .. "/src")) do files[#files + 1] = f end
 local code, errs = Tables.read_files(files, DIR)
 check(#errs == 0, "the project's command tables read without errors" .. (#errs > 0 and (": " .. table.concat(errs, "; ")) or ""))
@@ -126,5 +127,5 @@ print("")
 print(fails == 0 and ("All " .. checks .. " checks passed") or (fails .. " of " .. checks .. " checks failed"))
 os.exit(fails == 0 and 0 or 1)
 -- ==== footer of test-gm-command-reference ====
--- lines:      130
+-- lines:      131
 -- ==== end of footer ====

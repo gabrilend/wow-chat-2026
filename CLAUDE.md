@@ -434,7 +434,8 @@ HEAD:
   that applies upstream's first (issue 189d).
 - `patches/<ID>-<name>/` — a patch that carries files: its bash file
   `<ID>-<name>.sh` beside the files it places (its header's `carries:`
-  names them; issue 189e). Sargobras is one (`patches/E066-sargobras/`);
+  names them; issue 189e). Sargobras is one (`patches/E066-sargobras/`),
+  and the buddy module is B036's (`patches/B036-mod-buddies/mod-buddies/`);
   his Lua is no longer in `src/lua-basic/`.
 - `patches/patches.sh` — the runner. Each profile's lists are built
   when it loads, from the patches' headers, by `scripts/plan-patches`

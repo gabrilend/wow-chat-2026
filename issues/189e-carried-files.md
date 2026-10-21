@@ -32,7 +32,7 @@ rest of that answer, a guard reviewing each patch, is 189g.)
 
 ## Current Behavior
 
-In progress. Built 2026-10-20 (steps 1-4 and 7, not yet compiled):
+In progress. Built 2026-10-20 (steps 1-5 and 7, not yet compiled):
 
 - **A patch may be a directory**, `patches/<ID>-<name>/<ID>-<name>.sh`
   beside what it carries. The loaders, the planner, the header checker,
@@ -56,15 +56,31 @@ In progress. Built 2026-10-20 (steps 1-4 and 7, not yet compiled):
   reads carried Lua as its profile's scripts (death-knight-souls calls two
   of his functions). The open issues naming his old path name the new one.
 
-Checked: `scripts/test-carried-files` (10 checks: placed byte for byte;
-the engine loads only his script from the folder, no name clashing with
-basic's; twice the same; undone, gone; his helper copies are basic's);
-the three Sargobras tests; all 52 quick tests.
+- **The buddy module is B036's**, `patches/B036-mod-buddies/mod-buddies/`
+  beside `B036-mod-buddies.sh` (both moved with git from `modules/` and
+  `patches/`; `modules/` at the project's top is gone). B036 keeps its own
+  copy-in with the marker file that guards the source tree's folder. The
+  compile finds a project module as any `mod-*` folder a source patch
+  carries (`patches/B###-*/mod-*/`), both where it sets each module on or
+  off and where it looks for a new source file the last configure missed;
+  the module's tests, the bake, the quest-spell generator and the lessons
+  library read the new path; the GM command descriptions name it, and the
+  command reference and the in-game help were written again from them by
+  their generators (the reference had last been written 2026-10-09, so it
+  also took in eleven days of other changes). Open issues naming the old
+  path name the new one; completed issues and the append-only balance log
+  keep the path of their time.
 
-Still to do: steps 5 and 6. The buddy module sits in `modules/mod-buddies/`,
-which B036 copies into the source tree and removes on undo (a carried
-file in all but name); the buddy SQL cc-test reads from basic's folders
-(`_buddy_sql_src`). Every other patch is one bash file.
+Checked: `scripts/test-carried-files` (12 checks: each directory patch
+names what it holds; Sargobras placed byte for byte, the engine loading
+only his script, no name clashing with basic's, twice the same, undone to
+nothing, his helper copies basic's); the three Sargobras tests; the module
+set test (the compile still finds mod-buddies for basic and cc-test);
+the source patches round-trip on basic and cc-test with B036 from its new
+home; all 52 quick tests.
+
+Still to do: step 6, the buddy SQL cc-test reads from basic's folders
+(`_buddy_sql_src`).
 
 ## Intended Behavior
 

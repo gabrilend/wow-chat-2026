@@ -1,19 +1,22 @@
 #!/usr/bin/env bash
-# ==== header: 7 lines, footer: 3 lines ====
+# ==== header: 8 lines, footer: 3 lines ====
 # id:         B036
 # profiles:   buddy-set
 # priority:   460
 # kind:       source
 # about:      Build the project's buddy module (mod-buddies) into the worldserver
+# carries:    mod-buddies
 # ==== end of header ====
 # B036 - Build the project's buddy module (mod-buddies) into the worldserver
 # Issue 617a1 (buddy roster); the home of every buddy part written in C++.
 #
 # For a general audience: the server compiles every folder it finds under
-# its own modules/ directory. The buddy module is written in the project
-# (modules/mod-buddies/), so this patch copies it in before a build and the
-# revert deletes the copy, leaving the server tree exactly as upstream has
-# it. Nothing else in the server changes.
+# its own modules/ directory. The buddy module is written in the project,
+# and this patch carries it: since issue 189e it lives beside this file, in
+# patches/B036-mod-buddies/mod-buddies/ (until then modules/mod-buddies/ at
+# the project's top; moved with git, history kept). The patch copies it in
+# before a build and the revert deletes the copy, leaving the server tree
+# exactly as upstream has it. Nothing else in the server changes.
 #
 # Mechanics: a copy, not a link (B008 links; whether the build's folder scan
 # follows a linked folder was never tested, since B008's module is absent).
@@ -23,9 +26,11 @@
 # edits in the project reach the next build.
 # Parallelizable: Yes (unique folder)
 
+B036_DIR="${BASH_SOURCE[0]%/*}"
+
 # {{{ patch_B036_mod_buddies
 patch_B036_mod_buddies() {
-    local SRC="${DIR}/modules/mod-buddies"
+    local SRC="${B036_DIR}/mod-buddies"
     local DST="${AC_CODE_DIR}/modules/mod-buddies"
     local MARK="${DST}/.installed-by-B036"
 
@@ -33,7 +38,7 @@ patch_B036_mod_buddies() {
         echo "  [B036] ERROR: module folder missing: ${SRC}/src"
         echo "         the buddy module (issue 617a1) is not in the project, so it"
         echo "         cannot be built into ${AC_CODE_DIR}/modules/."
-        echo "         to debug: was modules/mod-buddies committed (git log -- modules/mod-buddies)?"
+        echo "         to debug: is it in git (git log -- patches/B036-mod-buddies/mod-buddies)?"
         return 1
     fi
     if [[ -e "${DST}" && ! -f "${MARK}" ]]; then
@@ -61,5 +66,5 @@ unpatch_B036_mod_buddies() {
 }
 # }}}
 # ==== footer of B036 ====
-# lines:      65
+# lines:      70
 # ==== end of footer ====

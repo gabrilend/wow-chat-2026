@@ -52,7 +52,7 @@ were assigned at their creation."). Causes and changes
 Before this:
 **Built 2026-09-28; compiles, not yet run.** Right after a buddy is made
 and before its first save (`buddies_create.cpp`), `BuddyGiveStartingKit`
-(`modules/mod-buddies/src/buddies_kit.cpp`) gives it:
+(`patches/B036-mod-buddies/mod-buddies/src/buddies_kit.cpp`) gives it:
 - **bags** first: the owner's equipped bag slots (read from the characters
   database, so an offline owner works), split by
   `buddies_kit_split.h` over the lowest-quality vendor bag of each size:

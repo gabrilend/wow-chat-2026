@@ -47,7 +47,7 @@ owner's 2026-09-26 decision; the buddy module no longer adds it at
 creation), and at the owner's login any buddy outside the clan is invited
 (the founding and a creation can cross).
 
-**The lock built 2026-09-27, not yet run** (`modules/mod-buddies/src/
+**The lock built 2026-09-27, not yet run** (`patches/B036-mod-buddies/mod-buddies/src/
 buddies_clan_lock.cpp`): the five guild requests that would break a clan
 (invite, remove a member, leave, disband, hand over leadership) are turned
 back at the server's incoming-request hook, before their handlers run,

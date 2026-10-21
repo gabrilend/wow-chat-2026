@@ -10,7 +10,7 @@
 ## Current Behavior
 
 **Written 2026-10-03, syntax-checked with the build's own flags, not yet
-built or run**: `modules/mod-buddies/src/buddies_navmesh.cpp` (the
+built or run**: `patches/B036-mod-buddies/mod-buddies/src/buddies_navmesh.cpp` (the
 nearest standing spot, the straight-line test, the route and its kind;
 each bot thread keeps its own mesh query object) and, in the roam action
 (`buddies_roam_strategy.cpp`), the waypoint's snap and route check at the

@@ -58,7 +58,7 @@ human, alt bot, random bot, buddy, or stand-in.
 1. Read how the bot module records random bots (its random-bot manager
    keeps the list of random-bot accounts) and how an alt bot's session
    differs from a human's.
-2. Add the five-value kind and the function to `modules/mod-buddies/src/`
+2. Add the five-value kind and the function to `patches/B036-mod-buddies/mod-buddies/src/`
    (header `buddies.h`), replacing the stand-in/companion/else chain in
    `buddies_login.cpp` and the other places that test the companion
    account to decide "is this a player?" (`buddies_party.cpp`'s dungeon

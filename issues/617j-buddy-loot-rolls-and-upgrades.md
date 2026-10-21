@@ -51,7 +51,7 @@ not built (below), and nothing has been seen in game.
   apply idempotent, revert byte-identical. Every patched file and the new
   module file pass the compiler's syntax check with the last build's
   flags (a planted error in the same check was caught).
-- **`modules/mod-buddies/src/buddies_loot.cpp` / `.h`**:
+- **`patches/B036-mod-buddies/mod-buddies/src/buddies_loot.cpp` / `.h`**:
   - the plans: `buddy_roster.profile` 1–10 read as points per tree in
     thirds (the generator writes the ten shapes in one order for every
     class; checked 2026-10-02); each tree's kind of stats by the bot

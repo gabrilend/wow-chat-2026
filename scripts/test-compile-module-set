@@ -64,7 +64,7 @@ done
 AC_CODE_DIR="${FAKE}/source"
 # the build's memory: no cache for the first checks (a fresh build)
 BUILD_DIR_SHADOW="${FAKE}/build"
-# mod-buddies lives in the project's own modules/ folder (B036 copies it in)
+# mod-buddies lives in its patch's folder, patches/B036-mod-buddies/ (B036 copies it in; issue 189e)
 # }}}
 
 # {{{ expectations

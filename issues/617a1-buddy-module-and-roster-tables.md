@@ -13,9 +13,9 @@
 server start** (the only thing left: the startup line "roster tables
 present; buddies are ON" in the worldserver log).
 
-- `modules/mod-buddies/` (new; the project had no `modules/` folder):
-  `modules/mod-buddies/src/buddies_loader.cpp` (the module's entry point) and
-  `modules/mod-buddies/src/buddies_roster.cpp` (at startup, checks both tables exist; if
+- `patches/B036-mod-buddies/mod-buddies/` (new; the project had no `modules/` folder):
+  `patches/B036-mod-buddies/mod-buddies/src/buddies_loader.cpp` (the module's entry point) and
+  `patches/B036-mod-buddies/mod-buddies/src/buddies_roster.cpp` (at startup, checks both tables exist; if
   either is missing it logs an error naming install step E042 and keeps
   buddies off). `README.md` beside them.
 - `patches/B036-mod-buddies.sh`: copies the module into
@@ -44,7 +44,7 @@ present; buddies are ON" in the worldserver log).
 
 ## Intended Behavior
 
-- **`modules/mod-buddies/`** in the project: the C++ home of 617a (and
+- **`patches/B036-mod-buddies/mod-buddies/`** in the project: the C++ home of 617a (and
   later 617c and the rest), with the stock module layout (a loader
   function, `src/`, `conf/` if it needs config).
 - **Source patch B036** links it into `source-beta/modules/` before a
@@ -66,7 +66,7 @@ present; buddies are ON" in the worldserver log).
 
 ## Suggested Implementation Steps
 
-1. `modules/mod-buddies/` skeleton: loader registering an empty world
+1. `patches/B036-mod-buddies/mod-buddies/` skeleton: loader registering an empty world
    script; builds with nothing else.
 2. `patches/B036-mod-buddies.sh` (apply/unapply) and basic's list in
    `patches/patches.sh`; `scripts/test-source-patches <dir> basic`.

@@ -280,7 +280,7 @@ setup_log_symlinks() {
 # tree by one of the project's source patches. A profile wants such a
 # module exactly when that patch is in its source-patch list.
 declare -A PATCH_PROVIDED_MODULES=(
-    ["mod-buddies"]="B036"   # the project's buddy module (modules/mod-buddies/, issue 617a1)
+    ["mod-buddies"]="B036"   # the project's buddy module (patches/B036-mod-buddies/mod-buddies/, issue 617a1)
 )
 # }}}
 
@@ -311,15 +311,16 @@ module_wanted() {
 # "default" for a wanted module (linked as -DMODULES says, static) and
 # "disabled" for every other. Echoes "NAME=VALUE" lines, sorted.
 # Project modules copied in by a patch (mod-buddies) are listed from the
-# project's own modules/ folder too, because the copy happens after the
-# module check.
+# patch that carries them too (patches/B036-mod-buddies/mod-buddies/, issue
+# 189e; any patches/B###-*/mod-*/ folder), because the copy happens after
+# the module check.
 module_cmake_settings() {
     local -A seen=()
     local mod_dir mod_name
     # one group, sorted as a whole: the folders in the trees, then the
     # cached modules no tree holds any more
     {
-    for mod_dir in "${AC_CODE_DIR}"/modules/*/ "${DIR}"/modules/*/; do
+    for mod_dir in "${AC_CODE_DIR}"/modules/*/ "${DIR}"/patches/B[0-9][0-9][0-9]-*/mod-*/; do
         [[ -d "${mod_dir}src" ]] || continue
         mod_name=$(basename "${mod_dir}")
         [[ -n "${seen[${mod_name}]:-}" ]] && continue
@@ -493,25 +494,30 @@ check_modules_configured() {
     # the module build collects its sources by a file glob, read only when
     # cmake runs, so the build compiles the old file list and the link then
     # fails on whatever the new file defines. compile_commands.json is that
-    # file list as last configured. Project-owned modules (modules/ at the
-    # project root) are checked from their project copy, because B036-style
-    # patches copy them into the source tree only after this check.
+    # file list as last configured. Project-owned modules (each a mod-*
+    # folder a source patch carries, patches/B###-*/mod-*/, issue 189e; until
+    # then modules/ at the project root) are checked from their project copy,
+    # because B036-style patches copy them into the source tree only after
+    # this check.
     local COMMANDS_FILE="${BUILD_DIR_SHADOW}/compile_commands.json"
     [[ -f "${COMMANDS_FILE}" ]] || return 0      # no list yet: cmake runs anyway
 
     local unseen_sources=()
-    local source_file
-    while IFS= read -r source_file; do
+    local source_file carried_module project_module
+    for carried_module in "${DIR}"/patches/B[0-9][0-9][0-9]-*/mod-*/; do
+        [[ -d "${carried_module}" ]] || continue
+        carried_module="${carried_module%/}"
+        project_module="${carried_module##*/}"
         # a project module this profile doesn't build: its files are meant to be unseen
-        local project_module="${source_file#"${DIR}/modules/"}"
-        project_module="${project_module%%/*}"
         module_wanted "${project_module}" || continue
-        # path as the build sees it: project modules/ becomes the tree's modules/
-        local built_path="${AC_CODE_DIR}/modules/${source_file#"${DIR}/modules/"}"
-        if ! grep -qF "\"${built_path}\"" "${COMMANDS_FILE}"; then
-            unseen_sources+=("${built_path#"${AC_CODE_DIR}/"}")
-        fi
-    done < <(find "${DIR}/modules" -path '*/src/*' -name '*.cpp')
+        while IFS= read -r source_file; do
+            # path as the build sees it: the carried folder becomes the tree's modules/<name>/
+            local built_path="${AC_CODE_DIR}/modules/${project_module}/${source_file#"${carried_module}/"}"
+            if ! grep -qF "\"${built_path}\"" "${COMMANDS_FILE}"; then
+                unseen_sources+=("${built_path#"${AC_CODE_DIR}/"}")
+            fi
+        done < <(find "${carried_module}" -path '*/src/*' -name '*.cpp')
+    done
 
     # Any unseen file: reconfigure so the glob picks it up. None: nothing to do.
     if [[ ${#unseen_sources[@]} -gt 0 ]]; then

@@ -249,7 +249,7 @@ For 192a, the steps cc-test took:
      instead of the files sitting in one profile's folder and the others
      reaching in. The two: the buddy SQL that cc-test reads from basic's
      sources (`_buddy_sql_src` in `patches/E-patches.sh`), and the buddy
-     module (B036 copies `modules/mod-buddies` in). These are patch
+     module (B036 copies `patches/B036-mod-buddies/mod-buddies` in). These are patch
      system work and belong with 189 or their own issue when started.
 3. **What is traded, and through what?** The auction house, trades
    between bots, vendors, or a market of our own design.

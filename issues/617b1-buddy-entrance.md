@@ -49,7 +49,7 @@ Before:
 
 A buddy's every login, its first included, places it 20–30 yards from its
 owner in a random direction with ground under it, facing the owner
-(`modules/mod-buddies/src/buddies_login.cpp`, the placing step), and the
+(`patches/B036-mod-buddies/mod-buddies/src/buddies_login.cpp`, the placing step), and the
 bot module's AI takes over at once. Nothing marks a buddy's first
 appearance, and nothing is remembered about it.
 
@@ -92,7 +92,7 @@ appearance, and nothing is remembered about it.
 
 ## Related Documents
 
-- `modules/mod-buddies/src/buddies_login.cpp`
+- `patches/B036-mod-buddies/mod-buddies/src/buddies_login.cpp`
 - `patches/E066-sargobras/sargobras.lua` (where the pick is made)
 
 ## Open Questions

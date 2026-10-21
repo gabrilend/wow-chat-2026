@@ -25,7 +25,7 @@ their earliest convenience and attempt to rejoin the player."
 ## Current Behavior
 
 **Built 2026-10-02, syntax-checked, not yet compiled or tried in game**
-(`modules/mod-buddies/src/buddies_crossing.cpp` and `.h`; wired into
+(`patches/B036-mod-buddies/mod-buddies/src/buddies_crossing.cpp` and `.h`; wired into
 "buddy travel" in `buddies_town.cpp`; roaming and the town visit stand
 aside while a buddy is aboard).
 

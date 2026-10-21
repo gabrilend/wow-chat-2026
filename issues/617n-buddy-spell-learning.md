@@ -71,7 +71,7 @@ lessons (item 7 below); level-60 buddies made earlier lacked Plate Mail,
 Mail, bows and guns.
 
 **Written 2026-10-03, syntax-checked with the build's own flags, not yet
-built or run** (`modules/mod-buddies/src/buddies_spells.cpp`):
+built or run** (`patches/B036-mod-buddies/mod-buddies/src/buddies_spells.cpp`):
 - the town visit's train errand (`buddies_town.cpp`) now calls
   `BuddyTrainAtTrainer`: one lesson at a time, the cheapest it can learn
   now (equal costs: lower level first), paid with the trainer's
@@ -98,7 +98,7 @@ A buddy knows only what the game gives a new character of its class, plus
 what its town visits teach:
 
 - **In a town**, the visit's "learn at the class trainer" errand
-  (`modules/mod-buddies/src/buddies_town.cpp`, the train errand and its
+  (`patches/B036-mod-buddies/mod-buddies/src/buddies_town.cpp`, the train errand and its
   lesson list) walks to a class trainer of the town that has something to
   teach and asks for every lesson in the trainer's own list order. The
   server charges each one from the buddy's purse; a lesson it can't afford

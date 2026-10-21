@@ -51,7 +51,7 @@ the window (623, through the bot module); a buddy never opens one.
 
 Pieces that exist or are written:
 - **Dressing a creature as a player**: source patch B047 and
-  `modules/mod-buddies/src/buddies_outfits.cpp` answer the client's
+  `patches/B036-mod-buddies/mod-buddies/src/buddies_outfits.cpp` answer the client's
   mirror-image question for listed creatures (race, skin, face, hair,
   beard, item pictures). Used today only for the three Sargobras (617f).
   Written and round-trip tested, not yet run in game.

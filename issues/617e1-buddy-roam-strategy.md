@@ -10,7 +10,7 @@
 ## Current Behavior
 
 **Built 2026-09-27; compile-checked against the last beta build's
-settings, not yet run** (`modules/mod-buddies/src/buddies_roam_strategy.cpp`):
+settings, not yet run** (`patches/B036-mod-buddies/mod-buddies/src/buddies_roam_strategy.cpp`):
 - The strategy "buddy roam", its trigger "buddy roam due" (always due)
   and its action "buddy roam step" (relevance 3.0, below attacking's 4.0
   and loot's 5 to 8) are added to all ten class contexts' shared lists in
@@ -137,7 +137,7 @@ Found in the playerbots source (2026-09-27, commit 93aaea3d):
 
 ## Suggested Implementation Steps
 
-1. `modules/mod-buddies/src/buddies_roam_strategy.cpp`: a strategy "buddy
+1. `patches/B036-mod-buddies/mod-buddies/src/buddies_roam_strategy.cpp`: a strategy "buddy
    roam" (trigger: always / a short timer; action "buddy roam step"), an
    action that asks 617e2 for the buddy's next point and moves there with
    the bot's `MoveTo`, registered into all ten class contexts at the

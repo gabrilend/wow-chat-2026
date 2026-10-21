@@ -13,7 +13,7 @@
 -- another spell) adds the spell it teaches. Lessons open others (a
 -- quest's Bear Form opens Maul), so it goes round until a round adds
 -- nothing. Class quest spells (the first totems, Bear Form) come from the
--- buddy module's list (modules/mod-buddies/src/buddies_quest_spells.h), so
+-- buddy module's list (patches/B036-mod-buddies/mod-buddies/src/buddies_quest_spells.h), so
 -- the two never disagree. Pure Lua with no server calls, so the server's
 -- Lua scripts can use the same rules.
 --
@@ -130,7 +130,7 @@ end
 -- the class quest spells: { class, race mask, level, spell } rows of the
 -- buddy module's header
 local quests = {}
-for line in (io.open(DIR .. "/modules/mod-buddies/src/buddies_quest_spells.h") or die("cannot open buddies_quest_spells.h")):lines() do
+for line in (io.open(DIR .. "/patches/B036-mod-buddies/mod-buddies/src/buddies_quest_spells.h") or die("cannot open buddies_quest_spells.h")):lines() do
     local c, races, lvl, spell = line:match("^%s*{%s*(%d+),%s*(%d+),%s*(%d+),%s*(%d+)%s*}")
     if c then quests[#quests + 1] = { class = tonumber(c), races = tonumber(races), level = tonumber(lvl), spell = tonumber(spell) } end
 end

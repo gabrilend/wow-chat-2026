@@ -26,7 +26,7 @@ syntax-checked. Not yet compiled or tried in game.**
   chat-command entry points return at once for a bot on a listed account.
   Every chat path (whisper, party, guild, channel) ends in one of them.
   Chat itself still arrives.
-- **Filling the list** (`modules/mod-buddies/src/buddies_hidden.cpp`): at
+- **Filling the list** (`patches/B036-mod-buddies/mod-buddies/src/buddies_hidden.cpp`): at
   startup, every companion account in buddy_clan; an owner whose id was
   never recorded is looked up by the account's deterministic name. Also at
   a buddy's creation, and at a buddy's login, which covers accounts made
@@ -39,7 +39,7 @@ syntax-checked. Not yet compiled or tried in game.**
   from memory at every save of an online buddy (the save hook runs just
   before the character row is written). The faction and race change flags
   are cleared with it, because basic offers neither.
-- **The whispered answer** (`modules/mod-buddies/src/buddies_whisper.cpp`,
+- **The whispered answer** (`patches/B036-mod-buddies/mod-buddies/src/buddies_whisper.cpp`,
   built 2026-10-02, syntax-checked with B044's header supplied, not yet
   compiled): the private-chat hook, called inside every whisper a player
   sends (`Player::Whisper`, which the typed-whisper handler ends in), sees

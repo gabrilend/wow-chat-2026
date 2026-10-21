@@ -10,7 +10,7 @@
 ## Current Behavior
 
 **Built 2026-09-26; compile-checked, not yet run** (needs the owner's
-build and a server). `modules/mod-buddies/src/buddies_clan.cpp`, with
+build and a server). `patches/B036-mod-buddies/mod-buddies/src/buddies_clan.cpp`, with
 `buddies.h` shared across the module's files:
 
 - **Character made**: clan row, companion account `BUDDY<owner guid>`

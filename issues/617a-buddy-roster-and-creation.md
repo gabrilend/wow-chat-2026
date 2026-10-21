@@ -121,7 +121,7 @@ start once 617a1 is done.
 
 ## Suggested Implementation Steps
 
-1. Decide the module layout: `modules/mod-buddies` in the project, linked
+1. Decide the module layout: `patches/B036-mod-buddies/mod-buddies` in the project, linked
    into the source tree by a B-patch in the shape of B008, but failing
    loudly if the folder is missing (B008 silently skips; see 155c's
    findings).
