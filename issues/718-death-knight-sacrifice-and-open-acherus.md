@@ -370,6 +370,11 @@ at the start). The new skip rewards no quest, so it no longer arises.
   Death Gate, reputation), with the server's "no experience" flag held on
   for the length of it, the money put back as it was, and each quest's
   items taken back as soon as it is rewarded, so the bags never fill.
+  (Talent points: the quests' points only count inside Acherus, so a
+  skipper standing in the Plaguelands has the stock `level - 9`, 46 at
+  55, either way. Issue 718d, planned 2026-10-22, hands a death knight
+  the 51 points of level 60 over levels 55 to 60 instead (11 at 55,
+  then 8 a level), the same whether the story was skipped or played.)
 - **Level 55, in the Plaguelands.** No experience is given, so the death
   knight leaves at the level it was made at.
 - **The fall stays.** The skip places the death knight at the Ebon Hold's
@@ -455,6 +460,20 @@ death knights), talents are reset at next login, its buddies are set
 aside, and it stands where new death knights appear in Acherus. Run with
 the server up (the account move goes through the server's console) and
 with the death knight logged out.
+
+**Which state a pass is in: `scripts/dk-story-state <name>`** (2026-10-21;
+owner: "so long as it's kept for when we need to do that sort of thing
+again"). Reads only. Names the state the death knight is in: owes a soul,
+asked to skip, skipped, or playing the story. Owing and asked-to-skip look
+the same to it, because the ask is kept only in the Lua's memory
+(`skip_wanted`). It then checks what that state should show: level, money,
+the race's story quests rewarded (46 for an orc: 45 shared plus its "A
+Special Surprise"), the runeblade, the story's four spells, buddies in and
+set aside, clan. It exits 1 on any mismatch. The four states, their in-game
+checks and how to build each:
+https://claude.ai/artifact/1MW1WRXxqnNgcvngKKrgGC. The owner thinks it
+may belong to neuron (a read-the-world-and-check operation); a note asking
+neuron to consider taking it is left in neuron's `input/`.
 
 The story's quests come from `scripts/generate-basic-dk-skip-quests`
 (writes `src/lua-basic/data/death-knight-skip-quests.lua`): every quest

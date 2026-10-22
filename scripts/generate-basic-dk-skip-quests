@@ -9,7 +9,8 @@
 -- experience) the server's own way. This reads which quests make up the
 -- story out of the world database (every quest given by a creature or an
 -- object standing in Acherus, map 609, plus the story's last quest, given
--- outside it), orders them so each comes after the quest it follows on
+-- outside it, and the faction pledge after it), orders them so each comes
+-- after the quest it follows on
 -- from, and writes them, with the races each is for, as plain data:
 -- src/lua-basic/data/death-knight-skip-quests.lua. Re-run after the world
 -- database changes.
@@ -22,6 +23,17 @@ local OUT   = DIR .. "/src/lua-basic/data/death-knight-skip-quests.lua"
 local MYSQL = DIR .. "/mysql/installed-files/bin/mysql"
 local ACHERUS_MAP     = 609
 local LAST_QUEST      = 13166            -- The Battle For The Ebon Hold, given outside Acherus
+-- The pledge that follows it, one per faction (their races come from the
+-- quests' own race masks): Where Kings Walk (Alliance) and Warchief's
+-- Blessing (Horde), given by Darion Mograine in the Ebon Hold and turned in
+-- to the faction's king or warchief. Until one is rewarded the Ebon Hold on
+-- the Plaguelands map stays in its story phase (spell_area: aura 58354 from
+-- The Light of Dawn until the pledge), where its runeforges can't be
+-- reached. The owner, 2026-10-22, after the first skip: "they should
+-- already have pledged to the Horde or Alliance as appropriate ... I
+-- noticed that I can't access the runeforge there. Acherus should be in
+-- it's standard, post-story state."
+local PLEDGE_QUESTS   = { 13188, 13189 }
 local CLASS_DK_MASK   = 32
 
 -- {{{ local function query
@@ -48,6 +60,7 @@ local ids = {}
 for _, r in ipairs(query("SELECT DISTINCT qs.quest FROM creature c JOIN creature_queststarter qs ON qs.id = c.id WHERE c.map = " .. ACHERUS_MAP)) do ids[tonumber(r[1])] = true end
 for _, r in ipairs(query("SELECT DISTINCT gs.quest FROM gameobject g JOIN gameobject_queststarter gs ON gs.id = g.id WHERE g.map = " .. ACHERUS_MAP)) do ids[tonumber(r[1])] = true end
 ids[LAST_QUEST] = true
+for _, id in ipairs(PLEDGE_QUESTS) do ids[id] = true end
 local list = {}
 for id in pairs(ids) do list[#list + 1] = id end
 table.sort(list)

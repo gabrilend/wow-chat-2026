@@ -58,4 +58,6 @@ return {
     { 12849,    0 },   -- The Power Of Blood, Frost And Unholy
     { 13165,    0 },   -- Taking Back Acherus
     { 13166,    0 },   -- The Battle For The Ebon Hold
+    { 13188, 1101 },   -- Where Kings Walk
+    { 13189,  690 },   -- Warchief's Blessing
 }
