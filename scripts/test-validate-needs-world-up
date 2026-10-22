@@ -19,6 +19,9 @@
 # behave in the ways that matter: one that starts slowly with long silences
 # and then says "World initialized", one that goes quiet and never finishes,
 # one that crashes, one that prints a fatal error. Only the first may pass.
+# Since 2026-10-22 two more: one whose log stays quiet past the limit while
+# its database updates keep finishing (it must pass: it is still starting),
+# and one whose updates stop and then nothing happens (it must fail).
 #
 # Usage: scripts/test-validate-needs-world-up [PROJECT_DIR]
 #   VALIDATE_UNDER_TEST=<file> checks another copy of scripts/validate (an
@@ -43,6 +46,10 @@ FUNCTION="$(sed -n '/^validate_shadow_worldserver() {/,/^}/p' "${VALIDATE_UNDER_
 [[ -n "${FUNCTION}" ]] || { echo "FAIL: validate_shadow_worldserver not found in scripts/validate"; exit 1; }
 eval "${FUNCTION}"
 export VALIDATE_MAX_TIMEOUT=15
+# The count of applied database updates, which validation watches besides
+# the log (2026-10-22): here a file each pretend server writes into its
+# own install folder (it runs in bin/, so ../progress); none written is 0.
+export VALIDATE_PROGRESS_CMD='cat "${INSTALL_DIR_SHADOW}/progress" 2>/dev/null || echo 0'
 # }}}
 
 FAILS=0
@@ -81,9 +88,17 @@ run_case "crashes" fail \
     'echo "Loading..."; exit 1'
 run_case "fatal-error" fail \
     'echo "Loading..."; echo "FATAL: database missing"; sleep 60'
+# 2026-10-22: a long backlog of database updates, the log quiet throughout
+# (as on 2026-10-21) for longer than the limit: updates keep finishing, so
+# it is still starting, and it comes up after 28 s
+run_case "quiet-log-updates-going-on" pass \
+    'echo ">> Applying update \"08-facti"; for n in 1 2 3 4 5 6 7; do sleep 4; echo $n > ../progress; done; echo "World initialized in 28 sec"; sleep 60'
+# the updates stop and nothing else happens: stuck, so it fails
+run_case "updates-stop-then-nothing" fail \
+    'echo ">> Applying update"; for n in 1 2; do sleep 4; echo $n > ../progress; done; sleep 60'
 
 echo "${CHECKS} cases, ${FAILS} failed"
 exit $(( FAILS > 0 ))
 # ==== footer of test-validate-needs-world-up ====
-# lines:      89
+# lines:      104
 # ==== end of footer ====

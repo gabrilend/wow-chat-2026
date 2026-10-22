@@ -106,12 +106,51 @@ get_profile_paths() {
 # {{{ validate_shadow_worldserver
 # Starts the shadow worldserver and passes only when it says "World
 # initialized in" (the core's own last line of a finished startup). Fails
-# when it crashes, prints FATAL or "Failed to initialize World", or has not
-# finished within MAX_TIMEOUT seconds; the timeout message says how long it
+# when it crashes, prints FATAL or "Failed to initialize World", or makes no
+# progress for MAX_TIMEOUT seconds; the timeout message says how long it
 # had been quiet, which tells a stuck startup from a slow one.
+#
+# Progress is a new line in its log, or a new database update applied.
+# Until 2026-10-22 the limit counted from the start, and a compile whose
+# server had a backlog of our own SQL updates to apply (one took 112 s,
+# about 30 took 5 minutes together) was stopped part way through them,
+# its build fine. The log can't show that work: the server's output
+# reaches the file in delayed chunks, and the 2026-10-21 run's log sat on
+# a half-written "Applying update" line for 297 s while the updates went
+# on. So the rows of every database's `updates` table (one per update the
+# server's updater has finished) are counted too. The owner, asked whether
+# the start should wait while updates are still being applied and time out
+# only once it goes quiet: "yes". A hard limit (HARD_LIMIT) still ends a
+# start that keeps making progress and never finishes.
 validate_shadow_worldserver() {
-    # seconds; VALIDATE_MAX_TIMEOUT shortens it for scripts/test-validate-needs-world-up
+    # seconds without progress; VALIDATE_MAX_TIMEOUT shortens it for scripts/test-validate-needs-world-up
     local MAX_TIMEOUT=${VALIDATE_MAX_TIMEOUT:-300}
+    local HARD_LIMIT=${VALIDATE_HARD_LIMIT:-3600}   # seconds in all, progress or not
+    local PROBE_EVERY=5                             # seconds between counts of applied updates
+    # How many database updates are applied so far: one number, or nothing
+    # when the database can't be read. The test replaces it
+    # (VALIDATE_PROGRESS_CMD) with a file its pretend servers write.
+    local PROGRESS_CMD="${VALIDATE_PROGRESS_CMD:-}"
+    if [[ -z "${PROGRESS_CMD}" ]]; then
+        local MYSQL_CALL="\"${MYSQL_DIR}/bin/mysql\" -h127.0.0.1 -P3307 -uritz -pmenardi -N -B"
+        # every database with an updates table (each profile's, and acore_auth)
+        local SCHEMAS
+        SCHEMAS="$(eval "${MYSQL_CALL}" -e "\"SELECT table_schema FROM information_schema.tables WHERE table_name = 'updates' AND table_schema LIKE 'acore%'\"" 2>&1 | grep -v "Using a password")"
+        if [[ -n "${SCHEMAS}" && "${SCHEMAS}" != *ERROR* ]]; then
+            local SUM="" s
+            # no backquotes around the names: the command is run through eval,
+            # inside double quotes, where a backquote would run a command
+            # (the names are plain: letters, digits, underscores)
+            for s in ${SCHEMAS}; do SUM="${SUM:+${SUM} + }(SELECT COUNT(*) FROM ${s}.updates)"; done
+            PROGRESS_CMD="${MYSQL_CALL} -e \"SELECT ${SUM}\" 2>&1 | grep -v 'Using a password'"
+        else
+            # a fallback: the start is then timed by its log alone, which can
+            # stop it while it is still applying updates (as on 2026-10-21)
+            echo "  WARNING (fallback): can't read the databases' update records, so progress is judged by the log alone."
+            echo "    The database said: ${SCHEMAS:-nothing}"
+            echo "    To debug: is MySQL running (scripts/start-mysql)? does ${MYSQL_DIR}/bin/mysql exist?"
+        fi
+    fi
 
     echo ""
     echo "Validating shadow worldserver..."
@@ -154,7 +193,7 @@ validate_shadow_worldserver() {
     local WS_PID=$!
 
     echo "  Worldserver started (PID ${WS_PID})"
-    echo "  Waiting for \"World initialized\" (up to ${MAX_TIMEOUT}s)..."
+    echo "  Waiting for \"World initialized\" (until ${MAX_TIMEOUT}s pass with no new log line and no update applied, ${HARD_LIMIT}s at most)..."
 
     # Smart detection variables
     local elapsed=0
@@ -162,8 +201,15 @@ validate_shadow_worldserver() {
     local silence_count=0
     local success=false
     local unique_count=0
+    local quiet=0                                   # seconds since the last progress of either kind
+    local applied="" applied_now="" applied_first=""
 
-    while [[ ${elapsed} -lt ${MAX_TIMEOUT} ]]; do
+    if [[ -n "${PROGRESS_CMD}" ]]; then
+        applied="$(eval "${PROGRESS_CMD}")"
+        applied_first="${applied}"
+    fi
+
+    while [[ ${quiet} -lt ${MAX_TIMEOUT} && ${elapsed} -lt ${HARD_LIMIT} ]]; do
         # Check for success FIRST (before checking if process died)
         # This handles the case where server initializes and exits cleanly
         if grep -qi "World initialized in" "${VALIDATION_LOG}" 2>/dev/null; then
@@ -207,10 +253,21 @@ validate_shadow_worldserver() {
         # still counted, to say in the timeout message where it went quiet.
         if [[ ${current_line_count} -eq ${last_line_count} ]]; then
             ((silence_count++))
+            ((quiet++))
         else
             silence_count=0
+            quiet=0
             unique_count=${current_line_count}
             last_line_count=${current_line_count}
+        fi
+
+        # an update finished since the last count: progress, even with the log quiet
+        if [[ -n "${PROGRESS_CMD}" ]] && (( elapsed % PROBE_EVERY == 0 )); then
+            applied_now="$(eval "${PROGRESS_CMD}")"
+            if [[ "${applied_now}" =~ ^[0-9]+$ && "${applied}" =~ ^[0-9]+$ && ${applied_now} -gt ${applied} ]]; then
+                quiet=0
+            fi
+            [[ "${applied_now}" =~ ^[0-9]+$ ]] && applied="${applied_now}"
         fi
 
         sleep 1
@@ -227,12 +284,22 @@ validate_shadow_worldserver() {
     fi
     wait ${WS_PID} 2>/dev/null
 
+    # how many database updates the start applied, when they could be counted
+    local applied_note=""
+    if [[ "${applied}" =~ ^[0-9]+$ && "${applied_first}" =~ ^[0-9]+$ ]]; then
+        applied_note=", $(( applied - applied_first )) database updates applied"
+    fi
+
     if [[ "${success}" == "true" ]]; then
-        echo "  Validation successful (${elapsed}s, ${unique_count} lines)"
+        echo "  Validation successful (${elapsed}s, ${unique_count} lines${applied_note})"
         return 0
     else
-        echo "  ERROR: Validation timeout (${MAX_TIMEOUT}s)"
-        echo "  It never said \"World initialized\"; ${unique_count} lines logged, the last ${silence_count}s silent."
+        if [[ ${elapsed} -ge ${HARD_LIMIT} ]]; then
+            echo "  ERROR: Validation timeout (${HARD_LIMIT}s in all, the hard limit, though it was still making progress)"
+        else
+            echo "  ERROR: Validation timeout (${MAX_TIMEOUT}s with no new log line and no update applied, after ${elapsed}s)"
+        fi
+        echo "  It never said \"World initialized\"; ${unique_count} lines logged${applied_note}, the log's last ${silence_count}s silent."
         echo "  Last line: $(tail -1 "${VALIDATION_LOG}" 2>/dev/null | cut -c1-120)"
         echo "  Check log: ${VALIDATION_LOG}"
         return 1
