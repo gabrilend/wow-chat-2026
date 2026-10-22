@@ -32,6 +32,7 @@
 
 #include "buddies.h"
 #include "buddies_roam.h"          // BuddyRosterPairs
+#include "DatabaseEnv.h"
 #include "DBCStores.h"
 #include "Formulas.h"
 #include "Group.h"
@@ -39,6 +40,7 @@
 #include "ItemUsageValue.h"
 #include "Map.h"
 #include "ObjectAccessor.h"
+#include "ObjectMgr.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
 #include "Playerbots.h"
@@ -48,6 +50,8 @@
 #include "SpellInfo.h"
 #include "SpellMgr.h"
 #include "WorldSession.h"
+#include <string>
+#include <vector>
 
 class buddies_xp_player : public PlayerScript
 {
@@ -154,7 +158,7 @@ static uint32 ChooseQuestReward(Player* buddy, Quest const* quest)
 // }}}
 
 // {{{ GiveCompletedQuest
-static void GiveCompletedQuest(Player* buddy, Player* owner, Quest const* quest)
+static void GiveCompletedQuest(Player* buddy, std::string const& ownerName, Quest const* quest)
 {
     uint32 id = quest->GetQuestId();
     if (buddy->GetQuestRewardStatus(id) && !quest->IsRepeatable())
@@ -203,7 +207,7 @@ static void GiveCompletedQuest(Player* buddy, Player* owner, Quest const* quest)
     if (!spellInfo)
     {
         LOG_ERROR("module", "mod-buddies: quest {} ({}) rewards spell {}, which the server doesn't know; buddy {} of {} got the rest of the reward",
-            quest->GetQuestId(), quest->GetTitle(), spellId, buddy->GetName(), owner->GetName());
+            quest->GetQuestId(), quest->GetTitle(), spellId, buddy->GetName(), ownerName);
         return;
     }
     if (spellInfo->HasEffect(SPELL_EFFECT_LEARN_SPELL) || spellInfo->HasEffect(SPELL_EFFECT_CREATE_ITEM) || spellInfo->IsSelfCast())
@@ -212,10 +216,98 @@ static void GiveCompletedQuest(Player* buddy, Player* owner, Quest const* quest)
 }
 // }}}
 
+// {{{ CatchUpQuests
+// At a buddy's login: its finished quests made its owner's (617d; the
+// owner, 2026-10-22: "buddies should never have quests. They should have
+// perfectly synced quest progress with the player"). A buddy offline when
+// its owner turned a quest in (set aside, logged out, still arriving) has
+// it marked finished now: progress only, no reward (no items, money,
+// experience or blessing). Why not the rewards: a buddy made today, at its
+// owner's level, logs in lacking every quest its owner ever did, and paying
+// them all would flood it with mail and gold, and experience past its
+// owner (a buddy's level is the buddy module's own matter, 617a6). A
+// buddy in the world at the turn-in still gets the reward (above). Open in
+// 617d: whether a buddy that was only briefly away should be paid. A quest
+// the buddy has finished and the owner hasn't (from before this rule)
+// stays: a reward can't be taken back cleanly. And any quest in the
+// buddy's log is dropped: a buddy never holds one.
+static void CatchUpQuests(Player* buddy, uint32 ownerGuid)
+{
+    // the owner's finished quests: from the owner itself when it is online
+    // (the database only has them as of its last save), else the database
+    std::vector<uint32> ownerQuests;
+    std::string ownerName = "owner " + std::to_string(ownerGuid);
+    if (Player* owner = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(ownerGuid)))
+    {
+        ownerName = owner->GetName();
+        ownerQuests.assign(owner->getRewardedQuests().begin(), owner->getRewardedQuests().end());
+    }
+    else if (QueryResult rows = CharacterDatabase.Query("SELECT quest FROM character_queststatus_rewarded WHERE guid = {} AND active = 1", ownerGuid))
+    {
+        do
+            ownerQuests.push_back(rows->Fetch()[0].Get<uint32>());
+        while (rows->NextRow());
+    }
+
+    // a buddy never holds a quest: anything in its log goes (no reward)
+    uint32 dropped = 0;
+    for (uint16 slot = 0; slot < MAX_QUEST_LOG_SIZE; ++slot)
+    {
+        uint32 id = buddy->GetQuestSlotQuestId(slot);
+        if (!id)
+            continue;
+        buddy->SetQuestSlot(slot, 0);
+        buddy->RemoveActiveQuest(id, false);
+        ++dropped;
+    }
+
+    // the owner's quests it lacks, marked finished (saved with the buddy's
+    // next save, as any finished quest)
+    uint32 given = 0, unknown = 0;
+    for (uint32 id : ownerQuests)
+    {
+        if (buddy->GetQuestRewardStatus(id))
+            continue;                                  // finished already
+        if (!sObjectMgr->GetQuestTemplate(id))
+        {
+            ++unknown;                                 // a quest the server no longer has (a removed custom one)
+            continue;
+        }
+        buddy->SetRewardedQuest(id);
+        ++given;
+    }
+
+    if (given || dropped)
+        LOG_INFO("module", "mod-buddies: {} caught up with {}'s quests at login: {} marked finished (progress only, no reward), {} dropped from its log",
+            buddy->GetName(), ownerName, given, dropped);
+    if (unknown)
+        LOG_ERROR("module", "mod-buddies: {} catching up with {}: {} of the owner's finished quests are not in the world database's "
+            "quest list (removed custom quests?); passed over", buddy->GetName(), ownerName, unknown);
+}
+// }}}
+
 class buddies_quests_player : public PlayerScript
 {
 public:
-    buddies_quests_player() : PlayerScript("buddies_quests_player", { PLAYERHOOK_ON_PLAYER_COMPLETE_QUEST }) { }
+    buddies_quests_player() : PlayerScript("buddies_quests_player", { PLAYERHOOK_ON_PLAYER_COMPLETE_QUEST, PLAYERHOOK_ON_LOGIN }) { }
+
+    // A buddy logging in catches up with its owner's quests (617d).
+    void OnPlayerLogin(Player* player) override
+    {
+        if (!BuddiesEnabled())
+            return;
+        if (!BuddyIsNotAPlayer(player->GetSession()->GetAccountId()))
+            return;                                    // a player, not a buddy
+        uint32 guid = player->GetGUID().GetCounter();
+        for (auto const& pair : BuddyRosterPairs())
+            if (pair.first == guid)
+            {
+                CatchUpQuests(player, pair.second);
+                return;
+            }
+        // a buddy account's character with no roster row (a stand-in, or a
+        // bot of another kind): nothing to catch up with
+    }
 
     // Called at the end of the server's quest reward step, for anyone.
     void OnPlayerCompleteQuest(Player* owner, Quest const* quest) override
@@ -231,8 +323,8 @@ public:
                 continue;
             Player* buddy = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(pair.first));
             if (!buddy || !buddy->IsInWorld())
-                continue;                              // buddies log in with their owner (617c1); one still arriving misses it
-            GiveCompletedQuest(buddy, owner, quest);
+                continue;                              // not in the world: it catches up at its login (CatchUpQuests)
+            GiveCompletedQuest(buddy, owner->GetName(), quest);
         }
     }
 };

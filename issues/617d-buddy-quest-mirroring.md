@@ -29,10 +29,19 @@ their mail"; `buddies_town.cpp`, the mail errand). Choice rewards by the bot
 module's own rule, written out there (its function is private).
 Requirements are not checked. A buddy's own reward is never passed on.
 
-**A buddy offline misses it.** Only buddies in the world at that moment
-get the quest; one set aside (roster stage 5), not yet logged in, or
-still arriving misses it for good. The owner, 2026-10-22: "it should give
-the reward to each buddy in your clan unconditionally."
+**A buddy offline catches up at its login** (built 2026-10-22, waiting
+for a compile; `buddies_xp.cpp`, the catch-up). At a buddy's login (a
+buddy account's character named in the roster), every quest its owner has
+finished and it hasn't is marked finished: progress only, no reward (no
+items, money, experience or blessing), because a buddy made today logs in
+lacking every quest its owner ever did, and paying them all would flood it
+with mail and gold and level it past its owner. The owner's quests are
+read from the owner itself when online (the database only has them as of
+its last save), else from the database. Any quest in the buddy's log is
+dropped. A quest the buddy has and the owner doesn't stays. The login
+line in the server log says how many were marked and dropped; quests the
+server no longer knows are logged as an error and passed over. Before
+2026-10-22 a buddy offline at the turn-in missed the quest for good.
 
 **Fixed 2026-10-22, the crash.** Until then the reward step was called
 with no quest giver, and the server reads the giver unchecked in two
@@ -70,15 +79,17 @@ ordinary quest logs.
     if there is one, `Player::RewardQuest`), so a full log can't stop it
     and no buddy ever shows a quest;
   - at each buddy's login (set aside and back, or simply logged out), any
-    quest its owner has finished and it hasn't is rewarded the same way,
-    so one offline at the turn-in catches up; a quest it has that the
+    quest its owner has finished and it hasn't is marked finished, as
+    progress only (open: should a buddy that was only briefly away, say
+    logged out a few minutes, be paid the rewards it missed?), so one
+    offline at the turn-in catches up; a quest it has that the
     owner doesn't (from before this rule) stays, as it can't be taken
     back cleanly;
   - quests a buddy somehow holds in its log (the bot module's own quest
     taking, if any) are dropped at login.
-  Rewards caught up at login come as at a turn-in (items, money, a
+  (Superseded the same day: rewards caught up at login were to come as at a turn-in (items, money, a
   giver's blessing; experience is the buddy module's own matter, 617a6's
-  levelling with the owner).
+  levelling with the owner). Progress only, as above.)
 - *(Superseded 2026-09-27)* When the owner accepts a quest, every buddy
   (grouped or not) gets it, regardless of whether they could have picked
   it up themselves.

@@ -72,6 +72,15 @@ many pieces each needs) is read for the abilities it affects (its spell
 class mask, as a talent's is). Re-read when the buddy's equipment
 changes, not every moment.
 
+**Not planned: weighting by how many talents mention an ability**
+(2026-10-22). The owner asked whether abilities named by more of a
+buddy's talents should be chosen even more often, then leaned away: "We
+might wind up in a situation where druids only cast Healing Touch for
+example, because it's mentioned in the most resto talents by number."
+Counting mentions favours whatever the tree's designers wrote most
+about, not what plays best. So the weight is by talent points spent on
+talents that touch an ability (above), not by how many talents name it.
+
 ## Sub-issues
 
 - 625a: what each talent (and set bonus) touches, read from the game's
