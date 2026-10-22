@@ -60,10 +60,28 @@ buddy chooses what to do: the more talent points spent on it, the more
 it is favoured. Abilities its talents never mention keep their ordinary
 weight, and an ability it does not know is never asked for.
 
+**Set bonuses count too** (owner, 2026-10-22: "in the issue files where
+we make bots more likely to use abilities that are mentioned in the
+talents that they picked, can we also do that for set bonuses on items?
+It's rare, but a bot should be more likely to use an ability if it's
+specifically mentioned on their super special useful gear."). An item
+set bonus the buddy has earned (enough pieces worn) that names or changes
+an ability favours that ability the same way a talent does: the bonus's
+spell (the client's ItemSet.dbc lists each set's bonus spells and how
+many pieces each needs) is read for the abilities it affects (its spell
+class mask, as a talent's is). Re-read when the buddy's equipment
+changes, not every moment.
+
+## Sub-issues
+
+- 625a: what each talent (and set bonus) touches, read from the game's
+  own tables (step 2 below).
+- 625b: buddies wear the weapons their talents are for.
+
 ## Suggested Implementation Steps
 
 1. Answer the open questions.
-2. From the client's tables, for each talent, the abilities it affects
+2. (625a) From the client's tables, for each talent, the abilities it affects
    (its spell's effects that modify another spell's family flags, or that
    teach one), gathered once.
 3. For a buddy, a weight per ability from the talent points it has in

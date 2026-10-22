@@ -163,3 +163,16 @@ so links to it stay valid.)
   named "Sigil of …".
 - (Answered 2026-09-25) The 25-person Naxxramas drops about 2.5 times the
   10-person's books ("About 2.5x as many."): 25% per boss against 10%.
+
+- (2026-10-22) **A book whose ability says level 70.** Growth (a level 60
+  druid) found a Book of the Wild that read as needing level 70. The
+  books themselves require 60 (`RequiredLevel`, every one); the 70 is the
+  taught ability's own level, which the game client shows. The owner:
+  "can we replace the spell that it teaches or modify it's required level
+  haha because if I can learn a spell that I can't cast then that's not
+  very useful..." To try first, in game, with one book: whether a level
+  60 can cast a level-70 ability once learned (the server doesn't check
+  an ability's level when it is cast; the client may). If it can't:
+  the ability's level lives in the client's own spell table, which the
+  server can't change for the client; then the choice is a custom client
+  change (the W client) or books only for abilities a level 60 can cast.
