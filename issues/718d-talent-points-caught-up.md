@@ -110,6 +110,28 @@ from level 1 are not wanted). Death knights:
 At 58 a death knight has what everyone has, whether it skipped or played
 the story, and from then on it never differs.
 
+**Buddies follow their owner's path** (the owner, 2026-10-22: "for the
+DKs, make sure the buddy-bot's quest rewards also reward talent points to
+the buddy"). A skipper's death knight buddies take the table. A story
+player's buddies are given each story quest their owner turns in
+(617d), and count those quests' points like a story player, plus one a
+level past 55, never more than everyone's count, but wherever they stand
+(stock counts them only inside Acherus). The rule adds up the points of
+the quests the buddy has finished, as the server itself does when it
+loads a character.
+
+Gabrubre and her buddies, set right by hand on 2026-10-22 (all offline,
+the worldserver down): Gabrubre's skip ran before the story list ended
+with the pledge, so she was given Warchief's Blessing (13189) directly,
+which ends the Ebon Hold's story phase (spell_area: aura 58354 lasts
+until the pledge; the attack phase, 58361, only while The Battle For The
+Ebon Hold is unfinished). Her four buddies (Throszurg in the world,
+Ginerice, Satith and Izre set aside) had no finished quests, the skip's
+quests having been rewarded before they arrived; each was given her 47.
+Their talent points need nothing stored: the rule counts them at every
+login and level change, so a set-aside buddy returning at 57, 59 or 60
+has the table's count for its level then.
+
 No sudden 49 for a story player (the owner, 2026-10-22: "make sure at 58
 we aren't just, dumping 49 talent points onto them"): inside Acherus the
 stock rule counts the story's points quest by quest (each quest that

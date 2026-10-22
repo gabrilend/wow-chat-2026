@@ -10,9 +10,10 @@
  *
  * Current rules:
  *   - Death knight talent points (issue 718d): a death knight that skipped
- *     the story (or a death knight buddy) gets 11 at 55, 24, 37, then 49 at
- *     58, where a story player and everyone else are; one a level after.
- *     Story players keep the stock rule.
+ *     the story (and its death knight buddies) gets 11 at 55, 24, 37, then
+ *     49 at 58, where a story player and everyone else are; one a level
+ *     after. Story players keep the stock rule; their buddies count the
+ *     story's quest points wherever they stand.
  *   - Talent cap (issue 155g): tier 6 (30 points in the tree) keeps only its
  *     "capstones", the talents that cost a single point (fire mage
  *     Combustion, retribution Repentance); the multi-rank talents beside
@@ -137,11 +138,13 @@ public:
 //     the table below: 11 at 55 ("So they can have an extra ability to play
 //     with"), rising to meet the story player and everyone at 58, then one
 //     a level. Stock would give it 46 at once on landing.
-//   - A death knight buddy (no ledger row: buddies owe no soul) gets the
-//     table too. Stock would give a buddy
-//     that logged in inside Acherus 0 until its next login (the story
-//     points are counted only there, and leaving Acherus recounts nothing):
-//     Throszurg, 2026-10-22.
+//   - A death knight buddy (no ledger row: buddies owe no soul) follows its
+//     owner's path: a skipper's buddies the table; a story player's buddies
+//     the story's quest points (given them with each quest their owner
+//     turns in) plus one a level past 55, wherever they stand. Stock would
+//     give a buddy that logged in inside Acherus 0 until its next login (the
+//     story points are counted only there, and leaving Acherus recounts
+//     nothing): Throszurg, 2026-10-22.
 // A row that says the story is being played (skipped 0) keeps stock.
 //
 // Why a table, not a formula: the first level is deliberately richer than
@@ -202,12 +205,39 @@ public:
                 if (row->Fetch()[0].Get<uint8>() == 0)
                     return;                                // plays the story: stock (49 at 58, as everyone)
             }
-            // No row: a buddy (named in the buddy roster) takes the table.
-            // Anyone else keeps stock: a death knight made before the rule,
-            // and a brand-new one at its very first count, which runs while
-            // it loads, before the Lua writes its row (it would otherwise
-            // see 11 points it loses at its first quest).
-            else if (!CharacterDatabase.Query("SELECT 1 FROM buddy_roster WHERE buddy = {} LIMIT 1", guid))
+            // No row and not a buddy: stock. That is a death knight made
+            // before the rule, or a brand-new one at its very first count,
+            // which runs while it loads, before the Lua writes its row (it
+            // would otherwise see 11 points it loses at its first quest).
+            else if (QueryResult owner = CharacterDatabase.Query("SELECT owner FROM buddy_roster WHERE buddy = {} LIMIT 1", guid))
+            {
+                // A buddy follows its owner's path (the owner, 2026-10-22:
+                // "make sure the buddy-bot's quest rewards also reward
+                // talent points to the buddy"). An owner that plays the
+                // story: the buddy is given each story quest its owner
+                // turns in (buddies_xp.cpp), and counts their points like
+                // a story player, but wherever it stands: its quests'
+                // points plus one a level past 55, never more than
+                // everyone's count (stock counts quest points only inside
+                // Acherus, which is how Throszurg sat on 0). An owner that
+                // skipped, or isn't a death knight with a ledger row: the
+                // table below.
+                uint32 ownerGuid = owner->Fetch()[0].Get<uint32>();
+                QueryResult ownerRow = CharacterDatabase.Query("SELECT skipped FROM basic_718_souls WHERE dk = {}", ownerGuid);
+                if (ownerRow && ownerRow->Fetch()[0].Get<uint8>() == 0)
+                {
+                    uint32 questPoints = 0;
+                    for (uint32 questId : player->getRewardedQuests())
+                        if (Quest const* quest = sObjectMgr->GetQuestTemplate(questId))
+                            questPoints += quest->GetBonusTalents();
+                    uint32 level    = player->GetLevel();
+                    uint32 everyone = level > 9 ? level - 9 : 0;
+                    uint32 points   = questPoints + (level > BASIC_DK_FIRST_LEVEL ? level - BASIC_DK_FIRST_LEVEL : 0);
+                    talentPointsForLevel = std::min(points, everyone) + const_cast<Player*>(player)->GetBonusTalentCount();
+                    return;
+                }
+            }
+            else
                 return;
         }
 

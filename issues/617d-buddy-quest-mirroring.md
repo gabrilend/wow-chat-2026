@@ -80,8 +80,8 @@ ordinary quest logs.
     and no buddy ever shows a quest;
   - at each buddy's login (set aside and back, or simply logged out), any
     quest its owner has finished and it hasn't is marked finished, as
-    progress only (open: should a buddy that was only briefly away, say
-    logged out a few minutes, be paid the rewards it missed?), so one
+    progress only (answered 2026-10-22: a buddy only briefly away is
+    treated the same, "I don't see this being a common situation"), so one
     offline at the turn-in catches up; a quest it has that the
     owner doesn't (from before this rule) stays, as it can't be taken
     back cleanly;

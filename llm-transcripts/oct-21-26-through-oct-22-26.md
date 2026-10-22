@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-22 11:33:07
+Generated on: 2026-10-22 11:49:43
 Models: claude-opus-5-5
 
 ## Contents
@@ -1796,6 +1796,173 @@ That's planned in issue 617d.
 Should I build the login catch-up for offline buddies next? It needs a check at
 each buddy's login that compares its finished quests with yours and rewards
 what's missing.
+
+--------------------------------------------------------------------------------
+
+### User Request 18
+
+<pasted_content id="583a">
+  ┌───────────────────────────┬─────┬─────┬─────┬─────┬─────┬─────┐
+  │ Level │ 55 │ 56 │ 57 │ 58 │ 59 │ 60 │
+  ├───────────────────────────┼─────┼─────┼─────┼─────┼─────┼─────┤
+  │ Skipper or buddy │ 11 │ 24 │ 37 │ 49 │ 50 │ 51 │
+  ├───────────────────────────┼─────┼─────┼─────┼─────┼─────┼─────┤
+  │ Story player and everyone │ — │ — │ — │ 49 │ 50 │ 51 │
+  └───────────────────────────┴─────┴─────┴─────┴─────┴─────┴─────┘
+</pasted_content id="583a">
+
+
+technically the story-player is going to have a certain amount of story-based
+talent points from level 55, 56, and 57. So make sure at 58 we aren't just,
+dumping 49 talent points onto them.
+
+> - A brand-new death knight's first count happens before its ledger entry
+> exists. It keeps the
+>     stock rule there, so a story player never briefly sees 11 points it would then lose.
+
+and we don't apply the level 55 talent points for skippers until they sacrifice
+a soul correct?
+
+
+
+<pasted_content id="583a">
+> Buddies and quests. A buddy is now rewarded your quest directly and never
+> holds it in its quest
+> log. The server's reward step works without the quest in the log, so a full
+> log no longer blocks
+> the reward. Still not built: a buddy that was offline when you turned the
+> quest in should catch
+>   up at its next login. That's planned in issue 617d.
+</pasted_content id="583a">
+
+
+let's implement 617d.
+
+> - Its weapon-type talents follow the preference, the same number of points.
+> For rogues, Improved
+>     Poisons and Hemorrhage count as dagger talents.
+
+I changed my mind, let's just say that only the weapon specific talents follow
+the preference. It's simpler, and allows for stranger builds.
+
+> - It equips only weapons that match. A rogue may still keep a dagger in its
+> off hand.
+
+only if it doesn't have one of the talents that restrict weapon types. Also the
+rogue dagger talent also allows for fist weapons. I think the warrior axe talent
+allows for polearms too.
+
+can we update the plan to also pick talents with higher or lower priority if
+other talents they've picked have also mentioned or affect that type of ability?
+Or do you think that'll specialize them too much? We might wind up in a
+situation where druids only cast Healing Touch for example, because it's
+mentioned in the most resto talents by number. So... maybe I'm leaning away from
+this one tbh.
+
+Gah! Weapon types are hard! How do you encourage buddy-bots to pick correctly
+suitable weapons, when some talent points scale with fast weapons, and others
+scale with slow? Maybe... Maybe we could like, cache some simulations or
+something, or each possible combination, that could maybe help them pick the
+right talents or gear somehow? What do you think?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 18
+
+> Several answers depend on code, so checking first. Your question about
+> skippers' points before the sacrifice: reading the skip's order of steps.
+
+> First the skip fix, in `death-knight-souls.lua`: the skip mark is now written,
+> waiting for the database, before any story quest is rewarded.
+
+> The Lua engine's synchronous query waits for the database, and an update
+> through it works. Editing:
+
+> The soul trade test passes (14 checks). Now 617d's login catch-up. Checking
+> the rewarded-quests table and the roster helpers:
+
+> All public. Writing the catch-up: the reward function now takes the owner's
+> name as text, so it works when the owner is offline, and the buddy's login
+> runs the catch-up.
+
+> Catch-up becomes progress only: each missing quest is marked finished, with no
+> items, money or experience. Rewriting that part:
+
+> Before handing this to your compile, I'd like a syntax check of the changed
+> C++. Looking for the build's compile commands:
+
+> Now 625b. Rewriting its talent list and intended behavior with your
+> corrections:
+
+> Recording the "weight by how many talents mention it" decision in 625, and the
+> two talent answers in 718d:
+
+*[commit] 292457683 in wow-chat-2026 - Mark a death knight as a skipper before its story is told, so it gets the skipper's talent points (issue 718d)*
+
+*[commit] b4473cec0 in wow-chat-2026 - Bring a buddy's finished quests up to its owner's at login (issue 617d); weapon talents follow a preference (625b)*
+
+617d is built, and I fixed a bug your skipper question uncovered. The C++
+changes haven't been through a compiler yet (there's no build setup here), so
+your next compile is their first check. Everything is committed.
+
+**Story players aren't handed 49 at 58.** Inside Acherus the stock rule adds
+points quest by quest as the story grants them, plus one a level past 55. They
+build up along the way and reach 49 as the story ends. The only way a story
+player could jump is reaching the Plaguelands map before finishing, where stock
+is level − 9. As far as I know, the story's map has no way out before the end
+except a game master's teleport. Worth confirming once in game.
+
+**Skippers before the soul is given: correct, nothing.** Until the trade the
+death knight keeps the stock rule: 0 points in Acherus, where the Lich King
+withholds the first quest. But your question turned up a bug. The skip rewarded
+the story's quests first and only marked the death knight as "skipped" at the
+end. Each of those quests makes the server recount talent points, so during the
+skip it still counted as a story player and got the stock 46. Nothing recounts
+after it lands, so it would have kept 46 until its next login. The skip now
+writes the "skipped" mark first, and waits for the database to save it, so the
+11 points arrive with the skip. The soul trade test still passes.
+
+**617d, built:**
+- A buddy never holds a quest. When you turn one in, every buddy in the world
+  gets the reward directly, whatever its quest log holds.
+- At each buddy's login, every quest you've finished and it hasn't is marked
+  finished, and anything in its quest log is dropped.
+- The login catch-up is progress only, with no rewards. A brand-new buddy would
+  otherwise be paid every quest you've ever done: a mail flood, a pile of gold,
+  and levels past yours.
+- The server log reports how many quests each login marked and dropped.
+
+**625b, rewritten with your rules:**
+- Only weapon-type talents follow the weapon preference; every other talent is
+  taken as the plan says.
+- A rogue keeps an off-hand dagger only if it has no weapon-type talent.
+- Talent names corrected to this game version: Close Quarters Combat covers
+  daggers and fist weapons, as you said. Hack and Slash covers swords and axes.
+  Poleaxe Specialization covers axes and polearms. I had listed older names
+  before.
+
+**Weighting by how many talents mention an ability:** I agree with leaning away.
+Counting mentions rewards whatever the tree's designers wrote most about, which
+is how you'd end up with the Healing Touch druid. Issue 625 keeps the weight on
+talent points spent instead.
+
+**Fast versus slow weapons:** a full combat simulation per class, talent plan
+and weapon would be heavy. A middle path:
+- A small offline calculator. For each buddy shape and each weapon speed band,
+  it adds up the expected damage of that shape's own abilities: which ones add
+  weapon damage, which use a fixed "normalized" weapon speed, which proc on
+  every hit like poisons.
+- It writes a table: shape → best speed band for each hand. Buddies read the
+  table and nothing runs in game.
+
+I think it's worth building after 625a, because 625a's spell data supplies most
+of what the calculator needs. It's open question 3 in 625b.
+
+**Commits:** the skip-mark fix; the 617d catch-up together with the 625 and 625b
+updates.
+
+One question: should a buddy that was only briefly away (logged out a few
+minutes) be paid the quest rewards it missed, rather than just the progress?
 
 --------------------------------------------------------------------------------
 

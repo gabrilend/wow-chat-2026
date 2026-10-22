@@ -226,8 +226,11 @@ static void GiveCompletedQuest(Player* buddy, std::string const& ownerName, Ques
 // owner's level, logs in lacking every quest its owner ever did, and paying
 // them all would flood it with mail and gold, and experience past its
 // owner (a buddy's level is the buddy module's own matter, 617a6). A
-// buddy in the world at the turn-in still gets the reward (above). Open in
-// 617d: whether a buddy that was only briefly away should be paid. A quest
+// buddy in the world at the turn-in still gets the reward (above). A buddy
+// only briefly away is treated the same (the owner, 2026-10-22: "I don't
+// see this being a common situation"). The quests' talent points do count:
+// the server adds them up from finished quests when it loads a character,
+// and basic's death knight rule adds them up the same way (718d). A quest
 // the buddy has finished and the owner hasn't (from before this rule)
 // stays: a reward can't be taken back cleanly. And any quest in the
 // buddy's log is dropped: a buddy never holds one.
