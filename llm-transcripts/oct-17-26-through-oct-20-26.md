@@ -1,6 +1,6 @@
 # Conversation Summary: 90bf80e4-2922-4058-918c-551568e85c2a
 
-Generated on: 2026-10-20 21:33:57
+Generated on: 2026-10-20 22:18:17
 Models: claude-opus-5-5
 
 ## Contents
@@ -75,6 +75,10 @@ Models: claude-opus-5-5
     header-driven patch system. Every part is built and committed, and parts c,
     d and e wait on your compile. Next: answer whether basic's steps that read
     vanilla's SQL folders should carry their own SQL too.
+18. 2026-10-20 21:37, after Request 76 - We're finishing issue 189, the patch
+    system rebuild, which is all committed and waiting on your compile. Next:
+    tell me whether the header's new "doubts" field should stop the build, or
+    only warn.
 
 --------------------------------------------------------------------------------
 
@@ -12097,6 +12101,105 @@ Still open:
   never met?
 - **189g:** which compile counts as "for release", who may review a patch, and
   when the existing ones get reviewed.
+
+--------------------------------------------------------------------------------
+
+### User Request 77
+
+<pasted_content id="ee2b">
+> Sargobras (630): your answers are in verbatim. Yes, he only appears when
+> you're the only member online. Today's buddy clans hold one player and their
+> buddies, so you're always alone
+> and the moment means nothing — he tricked us. So no current profile builds
+> it. It's now a project-wide decision in the roadmap: each new profile's design
+> has to say how it would
+>   make room for him, or why it can't, citing 630 like a case.
+</pasted_content id="ee2b">
+
+
+the good news is, you can still walk around with other players. It's just, the
+combined groups will always have two of each character, and they'll be the ones
+who are in combat the most (targets, to bring people toward AoE opportunities,
+rewarded on dps meters)
+
+can we write that into issues?
+
+
+
+<pasted_content id="ee2b">
+> Your header note is first. Every patch file already starts with its header
+> (id, profiles, priority, kind, about), and the plan is built only from those
+> lines. Did you mean a new
+> field in that header, say doubts:, where a reader or the guard from 189g
+> writes "this seems unreliable, because…"? If so, should a patch with a doubt
+> stop the build until someone
+>   answers it, or only print a warning?
+</pasted_content id="ee2b">
+
+
+I don't remember what I mean, can you read me back my sentences? I need to give
+you an opportunity to change them or reflect on them.
+
+> - 630: "one for each half of the life. Horde vs Alliance, Rando vs Stranger":
+> is that two tribes per player, one on each side of a divide? And is Rando vs
+> Stranger the people you
+>     play with by chance against the ones you've never met?
+
+no it just means... characters can't talk to the other faction, they are the
+strangers. Your faction is the randos. As determined by tabard, or at a glance,
+race.
+
+this belongs in the team-sport based battlegrounds, which is certainly an
+option, especially if we combine with City of Heroes and use their
+medi-porters... Then we can heal and rewind the rest. [of the creatures, when
+their corpse_fade() distance expires.]
+
+> - 189g: which compile counts as "for release", who may review a patch, and
+> when the existing ones get reviewed.
+
+trust me, you'll know.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 77
+
+> Writing all three into the issues, verbatim:
+
+*[commit] e9ee6724e - Record the owner's answers on travelling together, the two halves of a player's life, and the patch guard (issues 630, 629, 189g)*
+
+Written in and committed:
+- **630:** walking together, two of each character, and who the strangers are.
+- **629 (battleground fronts):** the randos-and-strangers note and the
+  medi-porters, with a new question about them.
+- **189g:** "trust me, you'll know." The three questions are left for the guard
+  to answer when the time comes.
+
+Your sentences on the header, read back exactly as you wrote them. You were
+replying to this line of my summary:
+
+> 189c, the runner: nobody writes a profile's patch list by hand any more. Each
+> patch's header says which profiles take it and its priority, and the build
+> orders everything from that. …
+
+And you wrote:
+
+> we should include that header in the patch file, each of them, as well. They
+> can be dynamically generated, but the idea is to give them an option to say
+> "hey wait a minute this seems unreliable"
+
+Two things that might help you reflect on it:
+- "That header" is already in every patch file: the lines at the top saying
+  which profiles take it, its priority, its kind and what it's about. Nothing
+  else lists them.
+- "Them" is open. It could mean a person reading the patch, the guard from 189g,
+  or the patch itself.
+
+Would you like to keep the sentence as it is, change it, or drop it? Nothing has
+been built from it.
+
+One new question from your note, now in 630: "two of each character" when two
+players' groups walk together. Is it each player's character beside its own
+buddy twin? Or two characters of each class across both players?
 
 --------------------------------------------------------------------------------
 

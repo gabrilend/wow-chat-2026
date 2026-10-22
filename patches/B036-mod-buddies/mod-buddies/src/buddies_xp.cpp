@@ -45,6 +45,8 @@
 #include "QuestDef.h"
 #include "StatsWeightCalculator.h"
 #include "ScriptMgr.h"
+#include "SpellInfo.h"
+#include "SpellMgr.h"
 #include "WorldSession.h"
 
 class buddies_xp_player : public PlayerScript
@@ -173,7 +175,43 @@ static void GiveCompletedQuest(Player* buddy, Player* owner, Quest const* quest)
     // collects it at a mailbox on its next town visit (buddies_town.cpp,
     // the mail errand; owner, 2026-09-29: "for full bags, can you mail
     // them the item instead? make sure they actually check their mail").
-    buddy->RewardQuest(quest, ChooseQuestReward(buddy, quest), nullptr, false);
+    //
+    // The quest giver passed is the buddy itself, never nothing: the
+    // server's reward step reads the quest giver without checking it when
+    // the quest's reward includes a spell (PlayerQuest.cpp, the reward-spell
+    // step, "questGiver->IsUnit()"). Until 2026-10-22 this passed nothing,
+    // and the worldserver crashed the moment an owner turned in such a quest
+    // with a buddy beside it (Glowsticks, "A Fistful of Slivers", reward
+    // spell 24829: "I was just completing a quest on Glowsticks and the
+    // server crashed").
+    // The reward step uses the giver in three places (checked 2026-10-22,
+    // PlayerQuest.cpp): a quest's follow-up letter names it as the sender
+    // (Mail.cpp builds a sender from a player too, as from a creature: the
+    // letter reads as from the buddy; with nothing passed, that crashed as
+    // well), and the two reward-spell paths. The Lua engine's own "reward
+    // quest" passes the player itself the same way (PlayerMethods.h), and the
+    // death knight skip rewarded 46 quests on Gabrubre through it.
+    // With the buddy as giver, the step's two spell paths go:
+    //   - a spell that teaches or makes something, or is cast on oneself:
+    //     the buddy casts it on itself, as for a player;
+    //   - any other (a quest giver's blessing on the hero): the step looks
+    //     for a creature with the buddy's id, finds none, and casts nothing,
+    //     so the buddy casts it on itself just below.
+    buddy->RewardQuest(quest, ChooseQuestReward(buddy, quest), buddy, false);
+
+    uint32 spellId = quest->GetRewSpellCast() > 0 ? uint32(quest->GetRewSpellCast()) : quest->GetRewSpell();
+    if (!spellId)
+        return;                                        // no reward spell
+    SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
+    if (!spellInfo)
+    {
+        LOG_ERROR("module", "mod-buddies: quest {} ({}) rewards spell {}, which the server doesn't know; buddy {} of {} got the rest of the reward",
+            quest->GetQuestId(), quest->GetTitle(), spellId, buddy->GetName(), owner->GetName());
+        return;
+    }
+    if (spellInfo->HasEffect(SPELL_EFFECT_LEARN_SPELL) || spellInfo->HasEffect(SPELL_EFFECT_CREATE_ITEM) || spellInfo->IsSelfCast())
+        return;                                        // the reward step cast it already (the first path above)
+    buddy->CastSpell(buddy, spellId, true);            // the giver's blessing, from itself
 }
 // }}}
 

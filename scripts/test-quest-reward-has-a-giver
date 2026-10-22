@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-quest-reward-has-a-giver
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      No project C++ hands the quest reward step no quest giver (the 2026-10-22 crash)
+# quick-test: yes
+# ==== end of header ====
+# test-quest-reward-has-a-giver
+#
+# What it is: a check that none of the project's own C++ hands the
+# server's quest reward step "no quest giver".
+#
+# For a general audience: when a quest's reward includes a spell (a
+# blessing, a buff), the server's reward step looks at the quest giver to
+# decide who casts it, without first checking there is one. Our buddy
+# module shares each quest an owner turns in with its buddies, and until
+# 2026-10-22 it named no quest giver; the first such quest turned in with a
+# buddy beside the owner crashed the whole worldserver (Glowsticks, "A
+# Fistful of Slivers": "I was just completing a quest on Glowsticks and the
+# server crashed"). The fix names the buddy itself as the giver. This test
+# reads every C++ file the project carries (its patches and its compiled
+# rules) and fails if any reward call names no giver ("nullptr" or "NULL"
+# as the third value), so the crash can't come back unnoticed.
+#
+# Usage: scripts/test-quest-reward-has-a-giver [PROJECT_DIR]
+# Exit status: 0 when no call names no giver, 1 otherwise (each named).
+
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+
+# {{{ the check
+# Where our C++ lives: the source patches' carried files, and each
+# profile's compiled rules. The server's own tree is upstream's and not
+# ours to judge.
+FILES="$(find "${DIR}/patches" "${DIR}"/src/cpp-* -name '*.cpp' -o -name '*.h' 2>&1)"
+[[ -n "${FILES}" ]] || { echo "FAIL: no C++ files found under ${DIR}/patches or ${DIR}/src/cpp-*"; exit 1; }
+
+# a reward call naming "nothing" anywhere among its values. Counting commas
+# to find the third value fails: the second is often itself a call with
+# commas inside it (the buddy module's reward choice), which is how the
+# first version of this test missed the very line that crashed. No other
+# value of the reward step is ever nothing, so any nullptr or NULL on a
+# reward call's line is the giver.
+BAD="$(grep -Hn 'RewardQuest(' ${FILES} | grep -v 'CanRewardQuest' | grep -E '[(,][[:space:]]*(nullptr|NULL)[[:space:]]*[,)]')"
+CALLS="$(grep -Hn 'RewardQuest(' ${FILES} | grep -cv 'CanRewardQuest\|//')"
+# }}}
+
+if [[ -n "${BAD}" ]]; then
+    echo "FAIL: a quest reward names no quest giver; the server crashes on such a call when the quest rewards a spell:"
+    echo "${BAD}" | sed 's/^/  /'
+    echo "  to fix: pass the rewarded character itself as the giver (see buddies_xp.cpp, GiveCompletedQuest)"
+    exit 1
+fi
+echo "ok: ${CALLS} quest reward call(s) in the project's C++, each names a giver"
+# ==== footer of test-quest-reward-has-a-giver ====
+# lines:      59
+# ==== end of footer ====

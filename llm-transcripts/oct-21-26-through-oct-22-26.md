@@ -1,0 +1,1362 @@
+# Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
+
+Generated on: 2026-10-22 10:38:24
+Models: claude-opus-5-5
+
+## Contents
+
+1. 2026-10-21 21:41, after Request 1 - You're setting up a test of the death
+   knight story skip, and the four-state checklist page is published. Next: log
+   Gabrubre out and tell me, and I'll run the reset that brings Karson back.
+2. 2026-10-21 23:09, after Request 2 - You're re-testing the death knight story
+   skip. Gabrubre is reset to owing a soul, with Karson back on your account and
+   no clan. Next, log in and name her clan with Sargobras.
+3. 2026-10-21 23:14, after Request 3 - You're retesting the death knight story
+   skip with Gabrubre: Karson is back on your account and she owes a soul again.
+   Next, run scripts/compile and restart the worldserver so Sargobras can hear
+   your clan name.
+
+--------------------------------------------------------------------------------
+
+### User Request 1
+
+Hi, I logged in to Gabrubre, but I don't see Sargobras. Did I already sacrifice
+Kaarson? if so, can you restore it? I want to test the "story skip" mechanics.
+To make sure that they're alright, can you create a chart of the 3-4 states that
+we'll need to validate for that mechanic? And the setup for how they can be
+easily constructed or attempt-maintained?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 1
+
+> Yes — Gabrubre gave Karson on 2026-10-12 (he's on the holding account now).
+> Reading the skip code to build the state chart.
+
+> Chart written; fixing one ambiguous line, then publishing.
+
+Yes, you already sacrificed Karson. Gabrubre gave him on 2026-10-12, chose to
+play the story, and has done its first quest. Karson is now on the hidden
+holding account (SOULS101). Sargobras is missing because he only appears to a
+death knight that still owes a soul. That's working as designed.
+
+**Restoring Karson:** I haven't done it yet. The reset tool won't run while
+Gabrubre is online, and the database shows her logged in now. Log her out, wait
+for her one buddy to leave the world, and tell me. I'll run a dry run first,
+then the real reset. The reset does more than bring Karson back:
+- Gabrubre goes back to owing a soul.
+- The story's quests, spells, reputation and achievements come off.
+- She drops to level 55 with 2000 copper and stands at the death knight start
+  point.
+- Her buddies are set aside until she earns them by level again.
+
+You can also test the skip without restoring Karson: Growth (level 60) and
+Feldowinn (55) are both on her account and can be given. Either way, Gabrubre
+has to owe a soul again before Sargobras shows up, so the reset is needed.
+
+**The chart:** https://claude.ai/artifact/1MW1WRXxqnNgcvngKKrgGC
+- **1, owes a soul:** Sargobras is visible and the Lich King refuses to give a
+  quest. The reset tool gets you here from state 3 or 4.
+- **2, asked to skip:** the menu changes to the "…and skip the story" wording.
+  This is kept only in the server's memory, so the database can't tell it apart
+  from state 1, and a relog goes back to state 1. The menu text is the only
+  proof.
+- **3, skipped:** 46 story quests rewarded, only the Runed Soulblade, still
+  level 55 with the same money. Then the fall, the rise, and one buddy after the
+  rise.
+- **4, played the story:** the comparison case, and Gabrubre's state today. The
+  Lich King offers the first quest and the buddy arrives at once.
+
+The page also has:
+- a six-step run through all four states
+- a read-only database query that shows which state she's in, with the values
+  each state should return
+- the things that must be true first (she's in the "ma feld" guild, there's a
+  hero to give, a free bag slot)
+- four edge cases worth one try each (already holding the runeblade, full bags,
+  releasing the spirit during the rise, surviving the fall)
+
+**Open questions:**
+1. Should I write a small script that runs that query and prints which of the
+   four states Gabrubre is in? It would make checking each step quicker.
+2. If you land alive after the skip, the log shows an error. That's tied to the
+   unexplained missing Ebon Hold floor. What do you think makes the client drop
+   through a floor the server's own creatures stand on?
+
+Reminder: the disks still have no protection against bit rot (issue 191). Both
+are ext4, which doesn't checksum file contents.
+
+--------------------------------------------------------------------------------
+
+### User Request 2
+
+> 1. Should I write a small script that runs that query and prints which of the
+> four states
+>      Gabrubre is in? It would make checking each step quicker.
+
+sure, so long as it's kept for when we need to do that sort of thing again.
+Sounds like a neuron thing, maybe make a note that neuron should notice it when
+it comes along and maybe take ownership?
+
+then, let's restore Karson and set Gabrubre back as if she just created her
+character. I want to go through the motions again.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 2
+
+> Writing the state probe script, then a note in neuron's input folder, then the
+> reset.
+
+> Probe works (state 4, as expected). Dry run of the reset:
+
+> Dry run is clean. Running it for real:
+
+> State 1 confirmed. Now the note for neuron and a line in issue 718:
+
+> **[Asked the user]**
+>
+> *Q1 — Outside:* Allow a write outside this session's folder, to
+> /mnt/kaun/wow-chat-neuron/input/from-wow-chat-2026-dk-story-state.md?
+> [outside-write 9dccea87]
+> - Yes — Allow this one write.
+> - This time — Allow any write inside /mnt/kaun/wow-chat-neuron/input until
+>   this session ends.
+> - Always — Allow any write inside /mnt/kaun/wow-chat-neuron/input from now
+>   on, for sessions working in /mnt/kaun/wow-chat-2026 only.
+> - No — Keep it refused.
+> → **Selected:** Yes
+
+> **[Asked the user]**
+>
+> *Q1 — How fresh:* Gabrubre now owes a soul again, but she is still in the
+> clan "ma feld" and still has her four buddies, set aside. A brand-new death
+> knight has neither: Sargobras would first ask for a clan name, and the trade
+> would draw four new buddies. As it stands, she skips the clan step and gets
+> the same four buddies back, at levels 55, 57, 59 and 60. How fresh should she
+> be?
+> - Keep clan and buddies — Leave her as she is now. You test the trade and
+>   the skip; the clan-naming step is skipped and the same four buddies come
+>   back.
+> - Remove clan, keep buddies — Take her out of "ma feld" (or disband it, if
+>   she is its only member) so Sargobras asks for a clan name first. The four
+>   buddies stay set aside.
+> - Remove both — No clan and no buddies, as if just created. Erases the four
+>   buddy characters (Throszurg, Ginerice, Satith, Izre) and their roster rows.
+>   Can't be undone.
+> → **Selected:** Remove clan, keep buddies
+
+> Checking the module's clan lock won't block disbanding "ma feld" (Gabrubre and
+> her four buddies are its only members).
+
+> Server's own guild command bypasses the lock (by design). Disbanding:
+
+> Updating the chart page so it matches her new state and mentions the script:
+
+Karson is back on your account and Gabrubre owes a soul again. You can log in
+and go through the trade from the start.
+
+**Gabrubre now:**
+- Level 55, 2000 copper, standing where new death knights appear in Acherus.
+- None of the story's quests, items or spells, and Ebon Blade reputation back to
+  zero.
+- Her talents reset when she logs in.
+- Her clan "ma feld" is disbanded. I used the server's own guild command,
+  because the buddy module's clan lock only stops requests from players, not
+  game-master commands. Sargobras will open with "First, our clan needs a name."
+  You choose that, then say the name in /say.
+- Her four buddies are kept but set aside. They come back at levels 55, 57, 59
+  and 60. As each one appears it joins whichever clan she leads, so they'll end
+  up in the new clan.
+- Her talents reset when she logs in.
+- Growth, Feldowinn and Karson will all be in Sargobras's list.
+
+**Ways she still differs from a brand-new death knight:**
+- The buddies are the same four characters, not four newly drawn ones.
+- Her empty holding account is kept and will be reused.
+- Anything she picked up outside the story stays, along with achievements from
+  before 2026-10-12.
+
+**The state checker:** `scripts/dk-story-state <name>` (in `scripts/`). It only
+reads the database. It names which of the four states a death knight is in,
+checks every value that state should show, and exits 1 on any mismatch. It
+printed state 1 with every check passing after the reset. It is listed in issue
+718 next to the reset tool, and the chart now points to it:
+https://claude.ai/artifact/1MW1WRXxqnNgcvngKKrgGC
+
+**Neuron:** I left a note at
+`/mnt/kaun/wow-chat-neuron/input/from-wow-chat-2026-dk-story-state.md`. It
+describes the checker and the reset tool, says why they fit neuron's
+read-and-check and strip-and-return operations, and asks neuron to consider
+taking them over.
+
+**Not committed:** the new script and the issue 718 edit. Your rule is to commit
+only when an issue is finished, and 718 isn't. My claim on the script stays in
+the shared file-claims list until it's committed.
+
+One question for when you play it: the skip option only appears after the clan
+is named. After you name it, does Sargobras's menu change straight away to the
+skip option and the list of heroes, or do you have to talk to him again?
+
+--------------------------------------------------------------------------------
+
+### User Request 3
+
+okay sargobras doesn't seem to want to listen to our clan name.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 3
+
+> Cause found. Looking for the lightest way to run just the install step that
+> places him:
+
+> **[Asked the user]**
+>
+> *Q1 — Install:* Sargobras's main script isn't running on basic. On
+> 2026-10-20 it moved out of basic's Lua folder into its own install step
+> (E066), which copies it into the server's Lua folder during an install. Basic
+> hasn't been installed since then, so the server never got the copy. When you
+> pick "name our clan", the death knight script calls his clan-name listener,
+> finds nothing, and errors (twice in the server log). How should it get
+> installed?
+> - You run that one step — Claude runs only the Sargobras install step
+>   (copies his script and helpers into
+>   installed-files-basic/bin/lua_scripts/sargobras/, a few seconds), then sends
+>   the server's "reload ale" console command so the Lua scripts reload without
+>   a restart.
+> - I'll run the compile — You run scripts/compile yourself, which runs every
+>   install step, E066 included, and then restart the worldserver.
+> - Step, I restart — Claude copies the files with that one step; you restart
+>   the worldserver yourself instead of using reload.
+> → **Selected:** I'll run the compile
+
+Sargobras isn't ignoring you: his main script isn't loaded on basic at all. The
+server log shows the death knight script failing twice, at line 756 of
+`death-knight-souls.lua`, on `attempt to call global 'BuddiesListenForClanName'
+(a nil value)`. That means it handed the clan name over to Sargobras's listener,
+and the listener doesn't exist.
+
+**Why:** on 2026-10-20 Sargobras's script moved out of basic's Lua folder into
+its own install step (E066, issue 189e). That step copies his script and helpers
+into `installed-files-basic/bin/lua_scripts/sargobras/` when an install runs.
+Basic hasn't been installed since the move, so that folder doesn't exist and the
+server never loaded him. The death knight script still loads from basic's own
+folder, so the Acherus Sargobras answers you and shows his menu. Everything that
+lives in his own script is missing: the clan-name listener, and also the buddy
+offers at the starting valleys.
+
+**What you do:** run `scripts/compile`, then restart the worldserver. When
+you're back:
+1. Log in as Gabrubre.
+2. Pick "First, our clan needs a name." and say the name in /say.
+3. To confirm it took, run `scripts/dk-story-state Gabrubre`. It should say "in
+   a clan: yes".
+
+Gabrubre's reset is stored in the database, so the restart doesn't undo any of
+it.
+
+Open questions:
+1. The failure only showed up as a raw Lua error in the log, and in game
+   Sargobras just went quiet. Should I make the death knight script check for
+   his listener when it loads? If it's missing, it would print an error naming
+   the missing install step, and Sargobras would say in game that he can't hear
+   names yet.
+2. Any profile that takes Sargobras has been without him since 2026-10-20, until
+   its next install. Is basic the only one you've been playing, or did another
+   profile lose him too?
+
+--------------------------------------------------------------------------------
+
+### User Request 4
+
+okay compile completed, server restarting.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 4
+
+> The compile didn't place him: the `sargobras/` folder still doesn't exist.
+> Finding out why.
+
+> The compile put the new build into the shadow install, and validation then
+> failed, so nothing was promoted to `installed-files-basic`. Reading the
+> validation log:
+
+> The live server got past its database updates. Checking whether the validation
+> run, stopped part way through the faction-quest update, left that update half
+> applied:
+
+Sargobras still isn't installed, and the server that's starting now is the old
+build. The compile doesn't install into `installed-files-basic` directly: it
+builds into a separate shadow copy (`installed-files-shadow`) and only copies
+that over after a test start passes. Sargobras was placed in the shadow copy
+(compile log line 2194: "Sargobras placed in
+installed-files-shadow/bin/lua_scripts/sargobras/ (8 files)"). Then the test
+start timed out, so the shadow copy was never promoted.
+`installed-files-basic/bin/lua_scripts/sargobras/` still doesn't exist.
+
+**Why the test start timed out, as far as I can tell:** it waits 300 seconds for
+"World initialized". This time it also had to apply the backlog of your own SQL
+updates to the basic databases, and that ran long. One update alone
+(`09-outland-dungeons-64.sql`) took 32 seconds. Its log stops in the middle of
+the line for `08-faction-quest-gating.sql`. That update is recorded as applied
+in 132 milliseconds, so I think the log simply stopped being written out, not
+that the server hung there. The live server you just started applied the last
+two (`36-buddy-subareas`, `37-belt-buckle`) and got past every database update.
+I haven't confirmed the real cause of the timeout.
+
+**What you do:** the databases are caught up now, so a second test start should
+be quick.
+1. Stop the worldserver.
+2. Run `scripts/validate` (the test start on the shadow build).
+3. If it passes, run `scripts/promote` (copies the shadow build into
+   `installed-files-basic`, Sargobras included).
+4. Start the worldserver again.
+
+Tell me when it's up. I'll check that his folder exists and that the log has no
+errors from Sargobras or the death knight script before you try naming the clan.
+
+Open questions:
+1. The 300-second limit doesn't allow for a run where the server also has to
+   apply a backlog of database updates. Should the test start allow more time
+   when updates are pending, or keep the limit and treat a slow start as an
+   error?
+2. The test start wrote its updates into the same databases the live server uses
+   (`acore_world_basic`), and it was stopped part way through. This time the
+   updates look whole, but a test start is meant to try a build before it
+   touches anything live. Is it intended that the test start changes the live
+   databases?
+
+--------------------------------------------------------------------------------
+
+### User Request 5
+
+<pasted_content id="583a">
+NOTE: Binaries are in shadow directory and have NOT been promoted yet.
+Run validation before promoting to main installation.
+
+Reverting PHASE_BEGIN patches for profile 'basic'...
+  [B057] Reverted
+  [B054] Reverted
+  [B052] Reverted
+  [B051] Reverted
+  [B048] Reverted
+  [B047] Reverted
+  [B046] Reverted
+  [B045] Reverted
+  [B044] Reverted
+  [B043] Reverted
+  [B042] Reverted
+  [B041] Reverted
+  [B040] Reverted
+  [B039] Reverted
+  [B038] Reverted
+  [B037] Reverted
+  [B033] Reverted
+  [B032] Reverted
+  [B030] Reverted
+  [B029] Reverted
+  [B028] Reverted basic starting-valley rotation
+  [B028] Reverted
+  [B027] Reverted
+  [B026] Reverted
+  [B022] Reverted
+  [B020] Reverted
+  [B005] Reverted
+  [B004] Reverted
+  [B002] Reverted
+  (28 reverted, 7 no-op)
+
+===============================================================================
+COMPILE SUCCEEDED (RelWithDebInfo build). The new build is in the
+shadow install, not yet promoted.
+===============================================================================
+
+Starting validation...
+
+Validating shadow worldserver...
+  Shadow: /mnt/kaun/wow-chat-2026/installed-files-shadow/bin/worldserver
+  Starting worldserver from shadow (validation run)...
+  Worldserver started (PID 13162)
+  Waiting for "World initialized" (up to 300s)...
+  Stopping validation worldserver...
+  ERROR: Validation timeout (300s)
+  It never said "World initialized"; 60 lines logged, the last 297s silent.
+  Last line: >> Applying update "08-facti
+  Check log: /mnt/kaun/wow-chat-2026/tmp/shadow-validation-basic.log
+</pasted_content id="583a">
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 5
+
+That's the same compile output I read earlier, and the cause is clear now: the
+build is fine. The test start ran out of time because it was busy applying your
+own SQL updates to the basic world database.
+
+- The updates the test start applied between 23:43 and 23:48 took about 5
+  minutes in all. The slow ones were `20-sockets.sql` (112 s),
+  `12-outland-without-tradeskills.sql` (79 s), `09-outland-dungeons-64.sql` (32
+  s) and `33-gearsets.sql` (22 s).
+- Its log stopped being written at 23:43:09, in the middle of the
+  `08-faction-quest-gating` line. The database shows the server kept working
+  after that.
+- At 300 seconds it was still on those updates and was stopped. The live server
+  you started at 23:54 applied the last two (`36-buddy-subareas`,
+  `37-belt-buckle`) and started normally.
+
+Those updates only run once, so a second test start will skip them and should
+finish well inside the limit.
+
+**What you do:**
+1. Stop the worldserver. It's running the old build, without Sargobras.
+2. Run `scripts/validate`.
+3. If it passes, run `scripts/promote`. That copies the new build into
+   `installed-files-basic`, including Sargobras's folder.
+4. Start the worldserver.
+
+Tell me when it's up. I'll check that his folder is there and that the log has
+no Sargobras or death knight script errors before you name the clan.
+
+Open question: one big batch of new SQL updates can push the test start past 300
+seconds on its own. Should the test start wait longer while the server is still
+logging "Applying update", and only time out once it goes quiet?
+
+--------------------------------------------------------------------------------
+
+### User Request 6
+
+okay validated and promoted, rebooting worldserver now
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 6
+
+> Sargobras's folder is in place. Checking the startup log:
+
+Sargobras is installed and the server is up.
+
+**What I checked:**
+- His script and helpers are now in
+  `installed-files-basic/bin/lua_scripts/sargobras/`.
+- The server reported ready at 23:58.
+- The log has no Lua errors: nothing from Sargobras or the death knight script,
+  and no "two scripts of one name" refusal. Last time, the missing listener
+  showed up in this log as a Lua error, so a script that failed to load should
+  show here too.
+- One thing I couldn't confirm from logs: the Lua engine doesn't print which
+  scripts it loaded. The real proof is in game.
+
+**Try it:**
+1. Log in as Gabrubre.
+2. Talk to Sargobras and pick "First, our clan needs a name."
+3. Say the name in /say. He listens only for a short time after the pick.
+4. Talk to him again. You should see "I'd rather skip the story." and Growth,
+   Feldowinn and Karson in his list.
+
+Run `scripts/dk-story-state Gabrubre` after naming the clan. It should say "in a
+clan: yes", and still state 1 with every check "ok".
+
+If he still doesn't take the name, tell me the time you tried and I'll read the
+log from that point.
+
+--------------------------------------------------------------------------------
+
+### User Request 7
+
+<pasted_content id="583a">
+> Open question: one big batch of new SQL updates can push the test start past
+> 300 seconds on its
+> own. Should the test start wait longer while the server is still logging
+> "Applying update", and
+>   only time out once it goes quiet?
+</pasted_content id="583a">
+
+
+yes
+
+okay can we make issue files to reward 60/5 talent points to DKs at each level?
+It should actually be 6 I think, so 10 talent points per level, because it's 55,
+56, 57, 58, 59, and 60, which is 6 times that talent points should be provided.
+There should be the correct total amount applied but, y'know, better math haha
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 7
+
+> Starting on the death knight talent points. First I'll check how basic hands
+> out talent points now, so the issue describes the real current behavior.
+
+Facts gathered. Loading the issue workflow skill before writing anything:
+
+--------------------------------------------------------------------------------
+
+### User Request 8
+
+Base directory for this skill: /home/ritz/.claude/skills/issue-lifecycle
+
+# Issue lifecycle
+
+The owner's CLAUDE.md is the authority on what issue files are for and what
+they must contain; where it and this skill ever disagree, CLAUDE.md wins. This
+skill adds the mechanics CLAUDE.md leaves open: which tools answer which
+question, in what order, and what to do when a tool says no.
+
+All tools live in one place and are called by absolute path:
+
+| Tool | Answers |
+|---|---|
+| `/home/ritz/programming/ai-stuff/scripts/validate-issues <project>` | is the issue tree consistent; next free number per phase |
+| `validate-issues <project> --next <phase>` | the number to give a new issue |
+| `validate-issues <project> --file <issue>` | is this one issue well-formed and are its links matched |
+| `/home/ritz/programming/ai-stuff/scripts/progress-dashboard.lua <project> -m` | done/open counts per phase (for progress files and demos) |
+| `/home/ritz/programming/ai-stuff/scripts/commit-own-changes <repo> -F -` | commits exactly the lines this session wrote, plus the changed transcripts of the commit's projects (any conversation's), and runs the repository's commit hooks, without touching the shared staging area |
+| `/home/ritz/programming/ai-stuff/scripts/stage-own-changes <repo>` | previews what that commit would take; writes nothing |
+| `/home/ritz/programming/ai-stuff/scripts/claim-own-change <file>` | records lines this session changed by a route the edit ledger cannot see (see Committing) |
+| `/home/ritz/programming/ai-stuff/scripts/adopt-left-behind-changes <repo> -- <path>...` | takes ownership, line by line, of uncommitted work a finished session left, leaving lines any other session still holds (see Committing) |
+
+Each tool has a `.info.md` beside it; read that rather than the source.
+
+## Before writing a new issue
+
+1. **Search first, including `issues/completed/`.** Grep the issue tree for
+   the feature's nouns, not just the likely title. A completed issue about the
+   same machinery is reopened and extended rather than duplicated: history is
+   more useful stacked vertically in one file than spread across several.
+2. **Pick the phase by what the work builds on**, not by when it is being
+   done. Lower numbers are foundations; later issues depend on earlier ones.
+3. **Take the number from the tool:** `validate-issues <project> --next
+   <phase>`.
+   It reads the project's own naming shape (522, 1001, 9-007, A04) and never
+   reuses a number that a completed file already holds.
+4. **Write the blueprint** with the three sections CLAUDE.md requires, plus
+   link fields in the shape the project already uses (look at a neighbour).
+   Name related functions, structures and files instead of pasting code.
+5. **Check it:** `validate-issues <project> --file <new-issue>`, and fix what it
+   reports on the new file. If the new issue blocks or is blocked by others,
+   add the matching line to the other side too.
+
+## While working
+
+- Keep **Current Behavior** true. It is the only section that changes while
+  an issue is in progress; rewrite it in place rather than appending a log.
+- A question that surfaces is written into the issue (an "Open questions"
+  section) and then asked. An issue with an unanswered question is in
+  progress, not done.
+- Anything discovered that changes another issue's assumptions is written into
+  that issue now, not at completion.
+
+## Splitting into sub-issues
+
+Split when an issue holds work streams that could be built, tested or reviewed
+separately, or when it cannot be finished in one sitting. Do not split an issue
+that is already one mechanism. When splitting, produce and then write out:
+
+1. **A table** — `| ID | Name | Dependencies | Description |`, where ID is the
+   parent number plus a lower-case letter (103a, 103b), Name is dash-separated
+   lower-case words, Dependencies is "None" or sibling IDs.
+2. **The rationale** — the distinct work streams, why one issue cannot hold
+   them, what splitting buys.
+3. **The execution order** — a small dependency graph, e.g.
+   `103a (foundation) → 103b (needs 103a) → 103c (parallel with 103b)`.
+
+Each row becomes a file `{parent}{letter}-{name}.md` with the three sections.
+The parent keeps its blueprint and gains a short list of its sub-issues; the
+analysis itself is not appended to the parent (that would be worklog, not
+blueprint). Run `validate-issues` afterwards: it reports orphaned sub-issues
+and one-sided links.
+
+## Completing an issue
+
+An issue is complete only when nothing in it is deferred and no open question
+is unanswered. Then, in this order:
+
+1. **Run the project's tests.** A fixed bug gets a test that would have caught
+   it.
+2. **Rewrite the issue as the blueprint of what was built**: Current Behavior
+   states the built system; steps name the real functions and files; decisions
+   not taken are stated with their reason. Poetry the owner wrote during the
+   work goes into the issue verbatim.
+3. **Move it** into `issues/completed/` (`git mv`, so the history follows).
+4. **Update `issues/phase-<N>-progress.md`** for that phase. Take counts from
+   `progress-dashboard.lua <project> -m`, or better, name the command instead
+   of copying numbers that will go stale.
+5. **Update related issues** whose Current Behavior or assumptions changed.
+6. **Run `validate-issues <project>`** and fix new findings that the change
+   caused. Findings older than the change are reported to the owner, not
+   silently fixed in passing.
+7. **Commit** as below.
+
+## Committing
+
+The rule (CLAUDE.md): a commit carries exactly the lines this session wrote —
+never another session's work, even if it sits in the same file — and every
+changed transcript of the commit's projects rides along — the session's own
+project folder and the projects of the files it commits — this
+conversation's and any other's left behind (a session that committed, talked
+on and quit), so each project's story in git stays whole.
+
+Commit small and often: each piece as soon as it is done and checked, not a
+pile at the end.
+
+1. Optionally preview: `stage-own-changes <repo>` lists what would be taken
+   and what left out, and writes nothing.
+2. Commit: `commit-own-changes <repo> -F -` with the message on standard
+   input. It builds the commit on a private staging list from this session's
+   own lines (the edit ledger the edit hook keeps) plus those transcripts, and
+   never touches the shared staging area, so nothing another
+   session has staged can ride along. Plain `git commit` is refused by the
+   commit gate.
+3. Message style: say what the software now does, in plain English and by
+   mechanism or analogy; mention any extra changes and why. No function names.
+
+**When it stops or leaves something out.**
+
+- **A tangled ("mixed") block** means another session changed lines right
+  next to or on top of yours. Nothing is committed. Tell the owner which file
+  and line; decide together what that region should say. `--leave-mixed`
+  commits your other blocks meanwhile.
+- **Lines that are yours but were written by a route the ledger could not see**
+  (a script you ran, a generator, `sed`, a rename): record them with
+  `claim-own-change <file>` and say so in the commit message.
+- **Nothing to commit, but the work is there**: an earlier session wrote it
+  and ended, or the machine rebooted and emptied the ledgers. Look first with
+  `adopt-left-behind-changes <repo> --dry-run -- <path>...`, then adopt and
+  commit one batch at a time with `commit-own-changes <repo> -F - --
+  <path>...`. Lines reported as **held** belong to another session. Take them
+  (`--from <session>`) only if that session has finished, and ask the owner
+  if unsure. Say in the commit message that the work was adopted and from
+  whom. This is the route for a left-behind backlog, not the token.
+- **A warning about the shared staging area** means someone had staged that
+  file by hand in a way that overlaps your commit; their entry was left alone.
+  Tell the owner.
+
+The one-time permission tokens (`/tmp/claude-allow-*`) belong to the person.
+Never create one; if a gate names a token, relay the gate's message and let
+the owner decide.
+
+## Open questions
+
+- Phase ≥ 10 in compact names depends on the project's issue-number width;
+  `validate-issues` decides it from evidence (progress files, `phase-N-demo`
+  names). A project with none of those gets a warning. Should the house rule
+  fix one width (two digits, as in the 522 example) for every new project?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 8
+
+> Writing the issue as 718d, under the death knight issue:
+
+> Issue written. Now the test-start timeout ("yes"): reading the wait loop in
+> `scripts/validate`.
+
+> The update-count probe works against the real databases (16,036 applied
+> updates across them). Adding test cases for the new behavior:
+
+> Six of six pass. Checking that the new case would have caught the old
+> behavior:
+
+I wrote the talent-point issue (718d), and the test start now keeps waiting
+while the server is still applying database updates.
+
+**Issue 718d: ten talent points a level for death knights**
+(`issues/718d-ten-talent-points-a-level.md`)
+
+How it works today on basic:
+- Every class gets one point a level from 10, so 46 at 55 and 51 at 60.
+- A death knight outside Acherus follows that rule, so a story skipper lands in
+  the Plaguelands with 46.
+- Inside Acherus it starts with 0 and earns 46 from the story's quests (23 of
+  them grant points, 1 to 6 each).
+
+What the issue asks for:
+- 10 points at 55, then 10 more each level up to 60, where it has 60 in all.
+- The same wherever the death knight stands, and the same whether it skipped the
+  story or played it.
+- Built as one rule in basic's compiled server rules (patch B030), using a hook
+  the server runs whenever it recounts talent points.
+- When the count drops (for example after a reset to 55), the server already
+  resets talents that are over-spent.
+
+I also added a pointer in issue 718's story-skip section.
+
+**The test start** (`scripts/validate`)
+- It now fails only after 300 seconds with no new log line and no newly applied
+  database update. It counts the applied updates in each database every 5
+  seconds.
+- An hour in total is the hard limit, even if it is still making progress.
+- If it can't read the databases, it prints a warning that it is falling back to
+  judging by the log alone.
+- When it finishes, it says how many updates it applied.
+- I added two cases to its quick test: a quiet log while updates keep finishing
+  (must pass), and updates that stop with nothing after (must fail). All 6 cases
+  pass. The old version of `scripts/validate` fails the first new case, so the
+  test would have caught the 2026-10-21 timeout.
+- While reading it I found the answer to my earlier question: the build's gate
+  2000 starts the server on purpose so it applies database updates. So the test
+  start writing to the live databases is by design.
+
+**Not committed** (your rule is to commit when an issue is finished): issue
+718d, the edit to 718, the changes to the test start and its test, and the state
+checker from earlier. Should I commit the test-start change on its own, since
+it's finished and tested?
+
+**First open question in 718d, the total.** "There should be the correct total
+amount applied" can be read two ways:
+- **60 in all**, 10 at each of the six levels, as the issue now says. A death
+  knight then ends with 9 more points than every other class has at 60.
+- **51 in all**, what every class has at 60 on basic, with only the spreading
+  changed. 51 doesn't split evenly over six levels, so it would be something
+  like 9, 9, 9, 8, 8, 8.
+
+Which did you mean? The issue's other questions:
+- A death knight at 55 would have 10 points instead of today's 46. Is that
+  intended?
+- What happens above 60, on the planned expert profile?
+- Should this apply to basic only?
+
+--------------------------------------------------------------------------------
+
+### User Request 9
+
+hmmmm we should change where you get teleported to. Right now you are right
+underneath Acherus, but... there's no monsters to fight. I think you should fall
+into a nearby graveyard that's NOT the one at Light's Hope Chapel. Maybe one in
+the north-west of EPL? Near Stratholme, but west / south. Also, can you make
+sure that your buddy-bot spawns within ~20 yards in front of the player? And the
+player should face Sargobras. And Sargobras should face the player. Your
+buddy-bot should also face the player. But they're somewhere behind Sargobras,
+so that you don't have to move your camera to see them.
+
+>   - 10 points at 55, then 10 more each level up to 60, where it has 60 in all.
+
+starting at level 10, then going to 60 tells me that you'd have 50 talent points
+to spend, not 60. Is that correct? If so, then we need to update the math.
+Please understand it, then get back to me.
+
+we should give the death knight buddy-bots the same food that the player has.
+
+also, I think we should spawn the DK's high in the air above a random (curated)
+list of locations. So long as it has a path from ground to sky, and isn't
+obscured by any doodads, the player should fall straight down. So test for those
+and generate a map within certain estimated boundaries for areas and mountains
+to avoid and such.
+
+Throszburg the buddy-bot has no talent points currently. Can you fix his and
+Gabrubre's to the new paradigm?
+
+  First open question in 718d, the total. - 51 in all, what every class has at
+  60 on basic, with only the spreading changed. 51 doesn't
+    split evenly over six levels, so it would be something like 9, 9, 9, 8, 8, 8.
+  - A death knight at 55 would have 10 points instead of today's 46. Is that
+    intended?
+yes
+>   - What happens above 60, on the planned expert profile?
+1 per level
+  - Should this apply to basic only?
+should be part of the level setting patch. Basically it should compress the
+number of talent points you get into the
+experience-point-level-increment-tracking-progress that you use as your kit.
+Then ideally we could create lots of starting points, like a level 46 druid with
+this type of party etc in these conditions whatever.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 9
+
+> Several requests here. Gathering facts first, starting with Gabrubre's and
+> Throszurg's state and why he has no talent points.
+
+> Gathering the remaining facts: the Eastern Plaguelands graveyards, and whether
+> buddies' food is covered by an existing issue.
+
+> Facts gathered. Rewriting 718d with your answers and the corrected math:
+
+> Writing the issue for the landing (718e) and the one for buddy food (718f):
+
+> One fix to my checker from earlier: it flagged Gabrubre's experience as wrong,
+> but she's been fighting since she landed. Experience is only 0 right after the
+> skip, so it should be shown, not checked.
+
+Your arithmetic is off by one: levels 10 to 60 give 51 talent points, not 50.
+Both end levels count. Level 10 gives the first point and level 60 gives the
+last, and 10 to 60 counted inclusively is 51 levels, one point each. It's the
+fence-post count: 50 gaps between levels 10 and 60, but 51 posts. The server's
+rule is "level minus 9" (1 at 10, 46 at 55, 51 at 60), and it matches what
+happened in game: Gabrubre finished the story inside Acherus at 55 with 46
+points.
+
+So 51 is the total, spread the way you agreed:
+
+| Level | That level | In all |
+|------:|-----------:|-------:|
+|    55 |          9 |      9 |
+|    56 |          9 |     18 |
+|    57 |          9 |     27 |
+|    58 |          8 |     35 |
+|    59 |          8 |     43 |
+|    60 |          8 |     51 |
+|   61+ |          1 | level − 9 |
+
+51 shared over 6 levels is 8 each with 3 left over, and the first three levels
+take one extra each. At 60 a death knight has exactly what every class has, and
+after 60 it's the normal one a level. I rewrote 718d around this as a general
+rule for any character that starts above level 10, not just death knights. It's
+renamed to `issues/718d-talent-points-caught-up.md`.
+
+**Why Throszurg has no points:**
+- He logged in while standing in Acherus. The server's stock death knight rule
+  gives 0 points there until story quests grant them.
+- He was then brought to the Plaguelands, where he would have 46. But the server
+  only recounts talent points at login, at a level up, or when a quest grants
+  them, not when leaving Acherus.
+- The buddy talent script spends points at login and level up, so it had nothing
+  to spend.
+
+The new rule doesn't depend on where the character stands, so this can't happen
+once it exists. That rule is compiled C++, though, so I can't move Gabrubre and
+Throszurg to it until it's written and you compile. When it lands:
+- Gabrubre has 19 talents spent, more than the 9 she'll have, so the server
+  resets her talents at her next login.
+- Throszurg gets 9 at his next login and spends them himself.
+
+**New issues** (nothing implemented yet, each has open questions):
+- **718e, where the skippers fall:**
+  - fall from the sky above a spot drawn from a curated list;
+  - you face Sargobras, he faces you, and the buddies stand within about 20
+    yards in front of you, behind him, facing you;
+  - a tool samples the land on a grid, keeps spots with open sky, no water and
+    no steep slope, and draws a map of what it kept and why.
+  - The graveyard that fits "near Stratholme, but west/south" is **West GY**
+    (1,100 yards south and 300 west of Stratholme, on the western edge).
+- **718f, buddies get the food their death knight is carrying.**
+
+**Also changed:** the state checker no longer fails Gabrubre for having
+experience. She's fought since landing, so it now shows level and experience
+instead of checking them.
+
+The question that blocks fixing Gabrubre and Throszurg: where should the talent
+rule live?
+- **(a)** A new compiled patch on every profile. It reads its numbers from new
+  settings that the starting-level patches write: the level a character starts
+  at, and the level where it has caught up. This matches "part of the level
+  setting patch".
+- **(b)** Basic's own compiled rules file, for basic only, to start with.
+
+I'd pick (a). Which one do you want?
+
+--------------------------------------------------------------------------------
+
+### User Request 10
+
+okay I changed my mind, how about we have the DK's spawn underneath Acherus
+exactly as it was (except with the facing improvements mentioned) earlier today
+when I started playing with Gabrubre. then, let's have a series of signposts in
+the form of blue ethereal whisps that casually appear all throughout the zone
+and path their way through to one of it's two exits. Sargobras will say "through
+the cave to the northwest is the path of bravery. but the cowards path is not
+worse, but slow." Can you tell me the levels of all the creatures they're liable
+to pass? Tyr's Hand might have scarlet crusaders. If it does, then nix that and
+we'll have Sargobras say something else. Anyway there should be about 30 wisps
+spawned for each half of the DK starting area, and they should be roughly
+equidistantly separated, with minor variations caused by them coalescing through
+terrain chokepoints and etceteras. They walk their way to the exit.
+
+can we give DK's 11 talent points at level 55? So they can have an extra ability
+to play with.
+
+> The question that blocks fixing Gabrubre and Throszurg: where should the
+> talent rule live?
+
+it's just a pattern. It can be in a note. We'll find it if we search for that
+pattern. Every time we find it useful, we add a single-line note to the end
+"found this useful 10/26/26" or etcetera. That way we can tell when stuff grows
+stale...
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 10
+
+> Gathering the creature data first. Starting with the creatures on the
+> Plaguelands map around the landing spot below Acherus:
+
+> The creature table doesn't record areas, so I'm grouping by creature name and
+> distance from the landing instead:
+
+> Tyr's Hand does have Scarlet Crusaders, about 200 of them, all elite. Now
+> checking how basic times respawns, for the rare-timer question:
+
+> No ambush spawner on basic, so "the monster spawning timer" must be the
+> ordinary respawn, mostly 5 minutes. Now the talent rule: reading the style of
+> basic's compiled rules file.
+
+> Noted the Death Grip request; I'll write it up as its own issue. Adding the
+> talent schedule to basic's rules file:
+
+> Writing the pattern note you asked for (strategems/ is the house folder for
+> patterns that keep proving useful):
+
+> Updating 718d with the 11-at-55 table and where things live:
+
+> Rewriting 718e for your new plan: the old landing stays, plus the facings, the
+> buddies' spots and the wisps.
+
+> Writing the Death Grip issue. Checking how a death knight gets Death Grip, and
+> which taunts work without a stance or form:
+
+I wrote the 11-at-55 talent rule into basic's compiled rules. It takes effect
+after your next compile, and that will also fix Gabrubre and Throszurg. Your
+other requests are written up as issues with open questions; nothing else is
+built yet.
+
+**What the wisps would pass.** Distances are from the landing spot under
+Acherus. Levels are from the game's creature data; "elite" means a tougher,
+group-strength monster.
+
+| Direction, distance | What's there | Levels |
+|---|---|---|
+| East | The Scarlet Enclave's land on this map: no creatures at all | — |
+| West, 290–390 yd | Light's Hope Chapel, a friendly Argent Dawn town | guards 70 |
+| North-west, 320–450 yd | A Scourge camp: casters, golems, flayers | 57–60, rare Deathspeaker Selendre 56 |
+| West past Light's Hope, 510–620 yd | Pestilent Scar: plaguehounds, plaguebats, gargoyles, slimes | 54–56, rare Gish the Unmoving 56 |
+| South-west, 510–820 yd | Tyr's Hand | 53–61, nearly all elite |
+| North-west, farther, 790–980 yd | Plaguehounds, plaguebats, Scourge guards and horrors | 56–58, rare Hed'mush 57 |
+
+**Tyr's Hand:** it does hold the Scarlet Crusade, about 200 of them, nearly all
+elite, plus a rare-elite general (High General Abbendis, 59). So that path is
+out, and Sargobras needs another line.
+
+**Talent points, written:**
+- 11 at 55, then 8 a level: 19, 27, 35, 43, 51 at 60, the same 51 every class
+  has at 60.
+- After 60, one a level, like everyone.
+- The same wherever the death knight stands and whether it played the story or
+  skipped it.
+- The code refuses to compile if the table doesn't end at 51.
+- After your compile, validate and promote:
+  - Gabrubre's talents reset at her next login, because she has 19 spent and the
+    new total is 11. She then has 11 to spend.
+  - Throszurg gets 11 at his next login and spends them himself.
+- The general pattern, any character that starts above level 10 catching up over
+  its first few levels, is a note in
+  `strategems/talents-caught-up-over-first-levels.md`. It ends with a "found
+  this useful 10/22/26" line, as you described.
+- I logged the change in `docs/balance-updates.md`.
+
+**Issues written or rewritten (plans only):**
+- **718e, the fall and the wisps:**
+  - the landing stays where it was on 2026-10-21;
+  - you face Sargobras and he faces you;
+  - buddies within 20 yards in front of you, behind Sargobras, facing you;
+  - about 30 wisps per half of the land, spread evenly by a generator, each
+    walking to its exit using the server's own pathfinding, so they bunch at
+    narrow passes on their own;
+  - Sargobras's parting line.
+- **718g, no Death Grip:**
+  - each death knight gets another class's taunt, kept for life;
+  - a death knight has no stances or forms, so only the paladin's Hand of
+    Reckoning and Righteous Defense work as they are;
+  - Taunt, Growl and Mocking Blow would need their stance or form requirement
+    removed.
+- **155z8, rares on the common clock:**
+  - rares now return after about 12 hours on average and rare elites after about
+    10, while ordinary monsters mostly return after 5 minutes;
+  - 802 of the 1,064 rare and rare-elite spawns share a spot list with ordinary
+    "placeholder" monsters, so a 5-minute timer would make a rare show up every
+    few minutes, taking turns with them.
+
+**Not committed:** the talent rule in `src/cpp-basic/basic_rules.cpp`, the
+strategems note, the balance log entry, issues 718d through 718g and 155z8, the
+718 pointer, the test-start change and the state checker.
+
+Two questions that block the next steps:
+1. **Where are the land's two exits?** The database shows creatures, not caves.
+   The brave path is the cave to the north-west (the Scourge camp, 57–60, lies
+   that way). Is the slow path the road west past Light's Hope to the Pestilent
+   Scar (54–56)? If so, Sargobras could say: "Through the cave to the
+   northwest is the path of bravery. The road west, past the Argent Dawn's
+   chapel, is not worse, but slow." A `.gps` reading at each exit would let me
+   aim the wisps exactly.
+2. **Which clock for rares:** a flat 5 minutes for every rare and rare elite, or
+   each one matched to the ordinary monsters around it?
+
+--------------------------------------------------------------------------------
+
+### User Request 11
+
+what are the current DK capability for buddy-bot runeforging?
+
+  What the wisps would pass.
+
+the wisps are spawned throughout the DK starting zone area. If they are in the
+northern half of the map, they walk generally northward until they filter out of
+the zone through the cave in the north. When they do, they get to the cave mouth
+and they curve upward. Imagine if right at the cave entrance there's a radius
+point placed 20 yards above, and the circumference of that circle for the first
+maybe 20% of it's distance forms an arc that charts the path that the whisps
+will fly, through and away and then they wink out of sight as they fade into the
+color of the sky.
+
+the others will float from the east and guide through the Scarlet Citadel,
+straight to it's mouthpoint entrance. And we try to spawn them equidistantly, so
+the entire map is covered. In this way, the new player can never be lost, as
+they are guided exactly to where they need to go to be back with the rest of the
+game.
+
+
+
+<pasted_content id="583a">
+> Tyr's Hand: it does hold the Scarlet Crusade, about 200 of them, nearly all
+> elite, plus a
+> rare-elite general (High General Abbendis, 59). So that path is out, and
+> Sargobras needs another
+  line.
+</pasted_content id="583a">
+
+
+oh, in that case, let's just have them all filter to the north cave part out.
+
+--------------------------------------------------------------------------------
+
+### User Request 12
+
+[Request interrupted by user]
+
+--------------------------------------------------------------------------------
+
+### User Request 13
+
+> - The same wherever the death knight stands and whether it played the story or
+> skipped it.
+
+we will have to remove talent point rewards from DK quests then.
+
+
+
+<pasted_content id="583a">
+>     - a death knight has no stances or forms, so only the paladin's Hand of Reckoning and
+>       Righteous Defense work as they are;
+>     - Taunt, Growl and Mocking Blow would need their stance or form requirement removed.
+</pasted_content id="583a">
+
+
+okay actually how about... taunt for Alliance, Growl for Horde? Does Growl
+require bear form? If so, then taunt for both, /sigh
+
+
+
+<pasted_content id="583a">
+>     - rares now return after about 12 hours on average and rare elites after about 10, while
+>       ordinary monsters mostly return after 5 minutes;
+>     - 802 of the 1,064 rare and rare-elite spawns share a spot list with ordinary "placeholder"
+>       monsters, so a 5-minute timer would make a rare show up every few minutes, taking turns with
+      them.
+</pasted_content id="583a">
+
+
+we'll have to do the math to work through that.
+
+
+
+<pasted_content id="583a">
+> 1. Where are the land's two exits? The database shows creatures, not caves.
+> The brave path is
+>      the cave to the north-west (the Scourge camp, 57–60, lies that way). Is the slow path the
+>      road west past Light's Hope to the Pestilent Scar (54–56)? If so, Sargobras could say:
+>      "Through the cave to the northwest is the path of bravery. The road west, past the Argent
+>      Dawn's chapel, is not worse, but slow." A .gps reading at each exit would let me aim the
+>      wisps exactly.
+</pasted_content id="583a">
+
+
+okay ummmmm sorry for changing my mind so often. Tyr's hand has elites, right?
+That sounds excellent to me. So, what if we changed the starting spot again
+(sorry) and put it near the chapel down south? Where the DK in the story makes
+their choice. We can have the player phase through the doodad until they're
+exactly in the building, then we can re-enable it just in-time for fall damage
+to do the trick. And if fall damage doesn't always feel reliable, we can also
+apply it manually. Then, when Sargobras is resurrecting, we should remove the
+ability to "release spirit" because otherwise they'll get lost. He should say
+that the quick path is to the west, through the Scarlet Army. But the north has
+two caves, one of which holds a pathway out. To the north is level 58-60
+enemies, tough, but doable with a buddy-bot. To the west, level 60 elites,
+requires a party of DKs to overcome. But, with extra rewards. Can we find the
+tuning knob that calibrates how much more each tier of mob will be rewarded with
+certain quality item drops? For example, if rares get 2x the green drop rate and
+quantity, then we should be able to turn a knob that would adjust it to 3x, or 2
+rate and 3 quantity, just for greens, for that specific monster type. We can
+store it in the config file.
+
+> 2. Which clock for rares: a flat 5 minutes for every rare and rare elite, or
+> each one matched to
+>      the ordinary monsters around it?
+
+the more players are in the area, the faster they respawn. Each player gives a
+10% boost to the respawn speed, with each 10% modifying the remaining percent
+after the last one. So 100%, 90%, 81%, 72%, 63%, I think, actually no that's
+wrong, but I'm sleepy
+
+can we make issue files for a custom class that's a "death druid", part death
+knight, part druid? it should have rejuvenation and regrowth and nature's
+swiftness and thorns and entangling roots but not nature's grasp or barkskin. it
+shouldn't have any DK diseases, and no self healing from DK spells.
+
+also, the DKs aren't advanced far enough in the story - they should already have
+pledged to the Horde or Alliance as appropriate. We have a plan for that I
+think. they should be one more step in the story, I noticed that I can't access
+the runeforge there. Acherus should be in it's standard, post-story state.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 13
+
+> A lot here; investigating before writing anything. First: buddy runeforging,
+> the quests after the story's last one, and why the runeforge is out of reach.
+
+> Runeforging answer found. Now the server's existing player-scaled respawn
+> setting:
+
+> Facts gathered. Checking for an existing death druid or class-mixing issue
+> before writing a new one:
+
+Fixing the skip's missing last step now, since it's a gap in what's built: the
+story list should end with the race-appropriate pledge. Reading the generator
+that writes the story list:
+
+--------------------------------------------------------------------------------
+
+*You've hit your session limit · resets 2:30am (America/Los_Angeles)*
+
+--------------------------------------------------------------------------------
+
+### User Request 14
+
+the death druid should have death coil, but it should heal all friendly targets.
+
+also, the DK death knight is supposed to take them to/from the place where they
+cast it last, like the druid teleport moonglade spell. It should be the same.
+Also Mages should get one that's "Teleport Dalaran" and "Teleport Shattrath" oh
+wait they already do... But, critically, if they teleport to Dalaran while in
+Dalaran, or anyplace while in that place, it takes them to where they were
+before they first teleported in. Mages, DKs, and Druids, I think are the only
+ones who can do it. Buddy-bots come along, and party-members can too.
+
+--------------------------------------------------------------------------------
+
+### User Request 15
+
+the death druid should have death coil, but it should heal all friendly targets.
+
+also, the DK death knight is supposed to take them to/from the place where they
+cast it last, like the druid teleport moonglade spell. It should be the same.
+Also Mages should get one that's "Teleport Dalaran" and "Teleport Shattrath" oh
+wait they already do... But, critically, if they teleport to Dalaran while in
+Dalaran, or anyplace while in that place, it takes them to where they were
+before they first teleported in. Mages, DKs, and Druids, I think are the only
+ones who can do it. Buddy-bots come along, and party-members can too.
+
+buddy-bots in ghost-mode (after 1-10 seconds after they die they click "release
+spirit" unless there's a person nearby who maybe can rez them alive and on their
+side. If so, then they wait. Anyway once they release, they should wander back
+to revive themselves. They should use sine-wave arcs to pathfind and try to roll
+down or straight up tangent line to hills.
+
+also, my character Growth just found a book of the wild. But, it requires level
+70. The goal was to have these be learnable at level 60 wasn't it? If not,
+please let me know so we can talk about how to move forward.
+
+also, in the issue files where we make bots more likely to use abilities that
+are mentioned in the talents that they picked, can we also do that for set
+bonuses on items? It's rare, but a bot should be more likely to use an ability
+if it's specifically mentioned on their super special useful gear.
+
+we should make it so that in dungeons and raids, when the healer dies the other
+characters who are capable of healing will try to do so to keep people afloat.
+If the heals are particularly challenging after trying a fight several times and
+losing because of healing (not throughput or positioning), then characters who
+have healing abilities will be more likely to use healing spells while fighting.
+This reduces their DPS overall. When they get overheals they are less likely to
+cast healing spells, and when their healers mana is low they are more likely to.
+That's a good general rule I think.
+
+uh-oh, I just created a new character (Glowsticks) and Sargobras wasn't there.
+Can you investigate? Also, in each starting valley, there should be a trainer.
+Anywhere there are trainers in the first zone, there should be an omni trainer
+that teaches abilities to any character who has a class that isn't represented
+by that valley's race.
+
+oh wait nevermind I found her.
+
+what if we make it so that at level 60 we have 62 talent points? It'd make each
+character truly "dual spec". That could be... interesting. Maybe what, 2 points
+at level 1 or something? Or 2 at level 60, as a reward... Though it's more fun
+to have them earlier. So level 1 then. And level 2-9 each can have +1 talent
+points.
+
+
+
+<pasted_content id="583a">
+GOSSIP_OPTION_TRAINER:: Player Glowsticks (GUID: 611) requested wrong gossip
+menu: 155019 at Creature: Visiting Mentor (Entry: 1550019)
+GOSSIP_OPTION_TRAINER:: Player Glowsticks (GUID: 611) requested wrong gossip
+menu: 155019 at Creature: Visiting Mentor (Entry: 1550019)
+/home/ritz/games/azeroth-core/wow-chat-2026/scripts/worldserver: line 217: 29664
+Segmentation fault ./worldserver
+</pasted_content id="583a">
+
+
+I was just completing a quest on Glowsticks and the server crashed. Can you look
+into it? It was I think when the blood-elf was gonna cast a buff spell on her.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 15
+
+> The crash comes first. Looking for a crash report and the end of the server
+> log:
+
+> No crash dump exists (core dumps are switched off in this shell, `ulimit -c`
+> is 0). The last line before the crash is your "go sell" order to the buddy.
+> Reading the bot log for its last actions:
+
+> The buddy's last action before the crash was "apply oil" (rubbing an oil onto
+> its weapon), which matches "about to cast a buff". Reading the log's last
+> lines and that action's code:
+
+> Nothing in the logs names the crashing code, so I can't pin it down yet.
+> Narrowing it by the quest she was turning in:
+
+> That's the buff: turning in "A Fistful of Slivers" makes the quest giver,
+> Arcanist Ithanas, cast spell 24829 on the player. Checking basic's own
+> compiled spell hooks for a missing-caster case:
+
+> Confirmed: the quest giver (Arcanist Ithanas, "A Fistful of Slivers") casting
+> the reward spell on turn-in. Checking basic's multiplier lookup and everything
+> that runs on a quest reward:
+
+> The Lua engine passes the player itself, which is safe, so the death knight
+> skip isn't affected. The buddy module's call is the only one. Fixing it:
+
+> The fix is in; it takes effect at your next compile. A fixed bug gets a test
+> here, so adding a quick test that fails if any of our C++ ever passes "no
+> quest giver" to the reward step again:
+
+> The test missed the old bug: the reward's second value has its own commas
+> inside brackets. Simplifying the match to "any `nullptr` or `NULL` value on a
+> reward call's line":
+
+> The test passes on the fixed code and fails on the old line that crashed.
+> Registering it among the compile's quick tests:
+
+> The crash is handled. Next, the Book of the Wild that Growth found: checking
+> issue 155q (Outland ability tomes) and the item's required level.
+
+> Adding item set bonuses to 625 (the buddies-favour-their-talents issue):
+
+> Writing the new issues. First the death druid:
+
+> Now the talents-from-level-1 idea. Your plan gives 61 at 60, not 62: 2 at
+> level 1, then one more at every level from 2 to 60 (59 levels), makes 2 + 59 =
+> 61. Writing that into its own issue:
+
+> Recording your answers in the existing issues. Death Grip (718g):
+
+> Rares (155z8): your respawn rule, with the arithmetic:
+
+> Rewriting 718e with the latest plan: start in the southern chapel, no
+> releasing during the rise, Sargobras's new line, and the two exits with their
+> wisps.
+
+> Last check: the starting-valley trainers you asked about, and the "wrong
+> gossip menu" lines from the Visiting Mentor in your paste.
+
+The crash is found and fixed in code; it takes effect after your next compile.
+Your other requests are written up as issues, and the death knight skip now ends
+with the faction pledge.
+
+**The crash (Glowsticks, "A Fistful of Slivers"):**
+- When you turn in a quest, the buddy module gives the same quest reward to each
+  buddy beside you. It called the server's reward step with no quest giver.
+- This quest's reward includes a spell (24829, the giver's blessing). The
+  server's reward-spell step uses the quest giver without checking that there is
+  one, so it crashed.
+- It happened as Jecunsek's copy of the reward was given, not as Arcanist
+  Ithanas cast on you. That's why it looked like the blood elf's buff.
+- **Fix:** the buddy is now named as its own quest giver. Spells that teach or
+  create something it casts on itself, as the server would. A giver's blessing
+  it also casts on itself. The change is in
+  `patches/B036-mod-buddies/mod-buddies/src/buddies_xp.cpp`.
+- **Test:** `scripts/test-quest-reward-has-a-giver`, now one of the compile's
+  quick tests. It fails if any of our C++ passes "no quest giver" to the reward
+  step. It catches the old line and passes on the new one.
+- No crash dump exists, because core dumps are off (`ulimit -c` is 0). Running
+  `scripts/worldserver --debug` would capture a backtrace if anything else
+  crashes.
+- The two "requested wrong gossip menu" lines from the Visiting Mentor are not
+  the crash. They're logged each time the server hides a trainer line meant for
+  another class, which the mentor (patch B029) relies on. That's noise logged as
+  an error; I can quiet it in B029 if you want.
+
+**Buddy runeforging today: none in practice.**
+- Death knight buddies know the Runeforging spell, but nothing ever uses it.
+- The bot module has no rune-enchanting behavior, and its enchant table has no
+  death knight rows.
+- Throszurg's Runed Soulblade has no enchant.
+- The random kit enchant (from level 30) goes on the starting weapon, and the
+  death knight gear script then replaces that weapon with the runeblade and
+  destroys it.
+
+**Runeforge and the pledge:**
+- From The Light of Dawn until the faction pledge, the Ebon Hold sits in its
+  story phase, where the runeforges can't be reached. The pledge is "Where Kings
+  Walk" (Alliance) or "Warchief's Blessing" (Horde).
+- The skip stopped one quest short of the pledge. The story list now ends with
+  the race's pledge quest: 57 quests, regenerated. The next skip leaves the Ebon
+  Hold in its normal post-story state, and the reset tool removes the pledge
+  too.
+- Gabrubre doesn't have it yet. I can mark Warchief's Blessing done for her
+  while she's logged out, or you can reset her and skip again.
+
+**Book of the Wild:** our druid books are set to level 60 (`RequiredLevel` 60,
+as issue 155q designed). I think the 70 you saw is the taught spell's own level,
+which the client draws into the tooltip, not a requirement on the book. Learning
+from a book doesn't check the spell's level, but nobody has tried one in game
+yet. Can you try using it on Growth? If it refuses, that's a bug and I'll look.
+
+**The omni trainer exists:** issue 155e's Visiting Mentor stands in all 24
+starting valleys, first towns and capitals. It teaches whichever classes have no
+trainer at that spot.
+
+**Issues written or updated** (plans only, each with open questions):
+
+| Issue | What |
+|---|---|
+| 718e | Fall into the southern chapel; no releasing during the rise; Sargobras's line about the two ways out; northern wisps arc up out of the cave and fade into the sky; the rest lead through the Scarlet Citadel. Tyr's Hand's elites are mostly 53–57 today, not 60. |
+| 718g | Taunt for every death knight. It needs Defensive Stance, and the client may grey it out; test in game first. |
+| 718d | The story quests' talent rewards are already ignored by the new rule; open question on removing them so the reward window doesn't promise points. |
+| 722 | The death druid, with Death Coil healing friendly targets. A death knight has no mana, so what pays for the druid spells is the first question. |
+| 723 | Teleport there and back for Death Gate, mage teleports and Moonglade, with buddies and party along. |
+| 631 | Anyone who can heal keeps the group up. |
+| 632 | Dead buddies release after 1–10 seconds unless someone nearby can resurrect them, then walk back in sine-wave arcs, straight up or down hills. |
+| 625 | Item set bonuses favour the abilities they name, like talents. |
+| 155z8 | Rare respawns, with your player rule. |
+| 155z9 | Talent points from level 1. |
+| 155z10 | Drop knobs by monster rank and item quality, in the config file. |
+
+**Respawn arithmetic:** "10% off what's left" means the wait is 0.9 multiplied
+once per player: 90%, 81%, 72.9%, 65.6%, 59%, and 34.9% at 10 players. The 72
+and 63 in your message took 9 points off each time instead of 10% of what was
+left.
+
+**Talents from level 1:** 2 at level 1 plus one a level gives 61 at 60, not 62.
+Levels 2 to 60 are 59 levels, so 2 + 59 = 61. For 62 (two full trees of 31): 3
+at level 1, or a bonus 2 at 60. Which do you want?
+
+**Not committed:** the crash fix and its test, the talent rule, the pledge in
+the story list, the test-start change, the state checker, all the issue files
+and the registry line.
+
+--------------------------------------------------------------------------------
+

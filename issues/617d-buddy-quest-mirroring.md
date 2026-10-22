@@ -28,6 +28,23 @@ their mail"; `buddies_town.cpp`, the mail errand). Choice rewards by the bot
 module's own rule, written out there (its function is private).
 Requirements are not checked. A buddy's own reward is never passed on.
 
+**A buddy offline misses it.** Only buddies in the world at that moment
+get the quest; one set aside (roster stage 5), not yet logged in, or
+still arriving misses it for good. The owner, 2026-10-22: "it should give
+the reward to each buddy in your clan unconditionally."
+
+**Fixed 2026-10-22, the crash.** Until then the reward step was called
+with no quest giver, and the server reads the giver unchecked in two
+places: a quest whose reward includes a spell (a giver's blessing) and a
+quest that sends a follow-up letter. The first such quest turned in with
+a buddy in the world crashed the worldserver (Glowsticks, "A Fistful of
+Slivers", spell 24829). The buddy is now named as its own giver (the Lua
+engine's own reward call does the same with the player); a blessing the
+reward step then can't cast (it looks for a creature with the buddy's id)
+the buddy casts on itself. `scripts/test-quest-reward-has-a-giver` (a
+quick test) fails if any of the project's C++ names no giver again.
+Takes effect at the next compile.
+
 Before: nothing mirrored quests. The core fires `OnPlayerQuestAccept(player, quest)`
 and `OnPlayerCompleteQuest(player, quest)`
 (`src/server/game/Scripting/ScriptDefines/PlayerScript.h`). Bots keep
@@ -78,3 +95,12 @@ ordinary quest logs.
 ## Open Questions
 
 - (Answered 2026-09-23) Reward items: the stock bot rule above.
+- **Every buddy, unconditionally** (owner, 2026-10-22: "it should give the
+  reward to each buddy in your clan unconditionally"). A buddy not in the
+  world when its owner turns a quest in (set aside, not yet logged in,
+  still arriving) gets it at its next login: the turn-in is written to a
+  characters-database list of owed quests (buddy, quest), and its login
+  pays each one. A full quest log doesn't stop it either. Open: for a
+  full log, reward the quest without taking it into the log at all (the
+  server's reward step works from the quest itself; taking it into the
+  log first is what needs a free slot), or something else?

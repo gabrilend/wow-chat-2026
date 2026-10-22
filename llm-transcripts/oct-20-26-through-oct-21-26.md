@@ -1,7 +1,23 @@
 # Conversation Summary: f2b62918-7cdd-4bf7-9698-2289bbe588ad
 
-Generated on: 2026-10-20 21:16:39
+Generated on: 2026-10-21 14:24:12
 Models: claude-opus-5-5
+
+## Contents
+
+1. 2026-10-20 21:19, after Request 5 - We're writing issues for the three
+   generated worlds, the map generator, the legendary chat friends and the
+   Architect; all are written but uncommitted. Next, please decide: are Hrothgar
+   and Terokk renegades, or do they get stories that make them neutral?
+2. 2026-10-21 01:38, after Request 6 - We're designing issue files for generated
+   worlds, Blizzard-character friends (now parked) and the Architect, who builds
+   your remembered version of a place. Next: if you're second into a tile, do
+   you see your own version or the first player's?
+3. 2026-10-21 14:11, after Request 7 - We're writing design issues for generated
+   worlds, legendary chatbot friends and the Architect; I just recorded your
+   licence idea in the RGPL note. Next: should I add it to the
+   licence-development issue, and should buyers of the toy inherit Blizzard's
+   content limits?
 
 --------------------------------------------------------------------------------
 
@@ -741,6 +757,292 @@ game, so he's hostile to both factions, and Terokk is fought by the Skyguard,
 the arakkoa-hunting flyers out of Shattrath. Under the loyalty rule both would
 be renegades. Should they be renegades, or should each get a story that makes
 them neutral, such as a chieftain who has made peace?
+
+--------------------------------------------------------------------------------
+
+### User Request 6
+
+> The Architect has a new issue in the three-worlds set. You whisper him and he
+> tells you how accurate your patch of the map is. He takes your corrections and
+> photos, then rebuilds that patch.
+
+no you tell him how accurate it is. Your memory is what matters. And it's part
+of the custom client, the architect, so make sure he goes over there. Though,
+he's sort of a wow-chat-2026 specific feature, so maybe he goes here? The point
+is that you should use him as a way to say "no, for me, I want my asset
+generation to look like this" and as long as it's functionally the same, then
+it's fine I think.
+
+> On the tie between cases: favouring the aggrieved, because usually both sides
+> have lost something, makes repair the purpose rather than winning. That raises
+> a harder question for the Architect. One player reports their street is wrong,
+> another says it's right, and the map can only
+>   show one street. Who is aggrieved there? It's an open question in his issue.
+
+stays local. Whichever player entered that square first is the one who decides,
+until they leave.
+
+> Next question: Drottinn Hrothgar raids the Argent Crusade's camp in the game,
+> so he's hostile to both factions, and Terokk is fought by the Skyguard, the
+> arakkoa-hunting flyers out of Shattrath. Under the loyalty rule both would be
+> renegades. Should they be renegades, or should
+> each get a story that makes them neutral, such as a chieftain who has made
+> peace?
+
+they're not allied to the horde so they're friends to the alliance, and they
+aren't allied to the alliance, so they're friends to the horde. Also let's make
+sure they're super duper parked for now because it's blizzard's IP and we just
+want to like... describe the system, and let these issue files follow along with
+the project when we make a gift out of the design to Blizzard Entertainment corp
+incorporated.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 6
+
+> Moving the Architect's design to match: players tell him, he generates their
+> own version, and the client shows it. Parking the legends issues now.
+
+> Rewriting the Architect issue around your memory as the source.
+
+> **[Asked the user]**
+>
+> *Q1 — Outside:* Allow a write outside this session's folder, to
+> /mnt/kaun/custom-client/issues/909-the-architects-versions.md? [outside-write
+> 7a5abe55]
+> - Yes — Allow this write, this once.
+> - Always — Allow any write inside /mnt/kaun/custom-client/issues, for every
+>   session, from now on.
+> - No — Keep it refused.
+> → **Selected:** Yes
+
+All three changes are in the issue files. Nothing is committed, since the issues
+still have open questions.
+
+**The Architect** (rewritten). The player tells him how the place was, and your
+memory is what counts. He makes your own version of it: models and textures that
+look how you remember, from your words or photos.
+- **Functionally the same** is checked by a tool before he hands anything over:
+  - the ground heights stay the server's;
+  - models keep the same collision outline, doorways, walkable floors and
+    attachment points;
+  - looks, colours and textures can change freely.
+
+  A "steeper hill" is drawn steeper, not built steeper. If a version fails the
+  check, he says what failed, for example "a porch there would block the path".
+- **Who sees what:**
+  - you always see your own version;
+  - players without one see the version of whoever entered that terrain tile
+    (533 yards square) first, until that player leaves;
+  - when nobody with a version is there, everyone sees the map as generated.
+- **Where he lives is split:**
+  - here, in this project: the character, the memories, the generation and the
+    check;
+  - in the custom client, a new issue in its social phase (I wrote it there with
+    your Yes): it keeps your versions as your own asset pack, draws the tile's
+    chosen versions for everyone else, and swaps them when nobody is looking.
+
+  The custom client already ranks the player's own packs above everything else,
+  so it fits. The stock client can't show different versions to different
+  players, so only the custom client shows them.
+
+**Hrothgar and Terokk** count as neutral, by your rule: allied to neither side
+means friends to both. Only the renegades list and the raid-boss rule can make
+someone a renegade now.
+
+**Parked.** All six legend issues are marked parked, with your reason quoted:
+Blizzard's characters, a design to give to Blizzard. No character sheets or
+characters get built. Two things are the project's own and not parked: Sargobras
+in the friends list, and the Architect. Both can reuse the design from the
+parked legends issues when they're built.
+
+I didn't add the new issue to the custom client's phase 9 progress table. That's
+another write into that project; say if you want it.
+
+**Next question:** you will always see your own version of a place. Say you're
+second into a tile, and the first player there remembers your childhood street
+differently. Should you still see your own version, or theirs until they leave?
+
+--------------------------------------------------------------------------------
+
+### User Request 7
+
+> Parked. All six legend issues are marked parked, with your reason quoted:
+> Blizzard's characters, a design to give to Blizzard.
+
+this is sorta true. In the RGPL I think? we say that if you use works to create
+your work, the original authors must maintain full control over the version of
+the software that includes their work. Or something to that effect, the idea was
+that via the license, until we've generated everything to make the systems and
+product entirely our own, Blizzard would have the same rights to it that we do
+(except they can't withdraw our rights, they are equal in their integrity). The
+idea is, we'd create auto-generators (and more importantly, skill files and such
+for creating such generators) that replace all of the assets in the game. Until
+we do, anything we make (and display publically, which is everything in this
+particular project but it could theoretically be kept private) must be owned by
+Blizzard for the use with this product, project, or software system. So like, if
+I make a custom character (like Sargobras) then Blizzard in this project would
+be able to use Sargobras with this system. They could even make him do things
+that he wouldn't do, but that's on them if they want to invite his ire. But they
+wouldn't be able to use him or his likeness in for example Diablo or
+Hearthstone, and they wouldn't be able to use it in the current, live version of
+World of Warcraft either. The idea is we'd give them the development history,
+and a neat toy that is 99% of the way to a full new game (assuming we complete
+it of course) and they can sell it or whatever but they can't update or change
+it except for non-content based reasons like compatibility or security patches.
+Also they have to follow the rules of the RGPL while using it like it must be
+able to deliver its source-code over the network using r-mail (without a third
+party inbetween).
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 7
+
+> Checking whether the licence drafts already hold the "original authors keep
+> equal rights" idea you described.
+
+The RGPL draft doesn't contain that idea yet. I checked the draft at
+`ai-stuff/RGPL`: its only additions to the AGPL are §13, where anyone using the
+program with you is owed its source directly, and §14, which keeps a way open
+for reports. Nothing in it gives original authors equal rights, and nothing
+limits anyone to compatibility or security changes. The licence-development
+issue that gathers every RGPL discussion doesn't mention it either, so as far as
+I can find this is its first time written down.
+
+**What I changed:**
+- **Your words, verbatim,** are now in this project's `notes/rgpl.md`, beside
+  your fan-artist idea, marked "not yet in the draft".
+- **The Parked note in the legends issue** now says it properly. Until the
+  generators replace every Blizzard asset, everything the project makes and
+  shows publicly, Sargobras included, is Blizzard's to use with this system as
+  much as it is ours. They can't take our rights away. They can't carry what we
+  made into their other games or live WoW. They can only patch for compatibility
+  or security, and they follow the RGPL, including delivering the source over
+  r-mail. The legends stay parked because they're Blizzard's own characters.
+
+**Three problems this raises for the licence text** (engineering notes, not
+legal advice; all three are written into the note):
+1. **One party gets restricted.** The licence's core, inherited from the AGPL,
+   gives everyone the freedom to change the work. "No content changes" binds
+   only Blizzard. §7 of the same text lets recipients strip extra restrictions,
+   so the clause has to sit in the core terms, the way §13 does. Does the limit
+   also bind whoever gets the work from Blizzard?
+2. **A grant isn't a permission.** The licence can give Blizzard rights to what
+   we made. It can't make our use of Blizzard's assets allowed; only Blizzard
+   can.
+3. **When does the shared period end?** "Until we've generated everything" needs
+   a measure. The custom client already counts every asset it draws by where it
+   came from, so "zero Blizzard assets drawn" could be the line.
+
+Want me to add this as a section in the licence-development issue too? That's a
+write in another project. And on problem 1: if Blizzard sold the finished toy,
+should whoever bought it from them be free to change its content, or carry the
+same limit Blizzard does?
+
+--------------------------------------------------------------------------------
+
+### User Request 8
+
+oh um you're right we shouldn't restrict Blizzard in that way, my bad. They can
+do whatever they want with it, but they should treat it well and with respect! I
+don't get that #7 thing you said above, does that mean that someone could
+receive the software, prune out 99% of the license, and change two variables,
+then say it's theirs and anyone can use it with no restriction? That seems
+silly.
+
+> 2. A grant isn't a permission. The licence can give Blizzard rights to what we
+> made. It can't make our use of Blizzard's assets allowed; only Blizzard can.
+
+yes this is why we aren't selling the game until it's 100% our own assets.
+
+> 3. When does the shared period end? "Until we've generated everything" needs a
+> measure. The custom client already counts every asset it draws by where it
+> came from, so "zero Blizzard assets drawn" could be the line.
+
+yep, that's the line, and it includes things like patterns too so quest dialogue
+or terrain meshes. Also we have to make gameplay that is suitably distinct, such
+that the difference between 3.3.5a WotLK World of Warcraft is about as different
+to the product we're creating as, say, Wildstar, SW TOR, or some other
+contemporary game is distinct.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 8
+
+No, §7 doesn't let anyone do that. It only lets a recipient remove extra terms
+that someone attached on top of the licence. The licence's own text can't be
+removed. I checked this against the draft:
+
+- **§5(c):** a changed version must be licensed "as a whole, under this License
+  to anyone who comes into possession of a copy."
+- **§4 and §5:** every copy must "keep intact" the notices saying the licence
+  applies.
+- **§7** says that a term which is a "further restriction" (anything beyond the
+  licence's own text) "you may remove." That covers a fence a middleman bolts
+  on, like "don't share this source."
+
+So someone who changes two variables owns those two changes. They still have to
+pass the whole work on under the RGPL. This is also why your "our clause" sits
+inside the licence as §13 rather than being attached as an extra term:
+attached, it could have been stripped; built in, it can't. The confusing part
+was my mistake: I raised §7 last time because a Blizzard-only limit would have
+been an extra term of that kind.
+
+I recorded your three answers in `notes/rgpl.md`:
+
+1. **No special limit on Blizzard.** They can do what they like with it;
+   treating it well and with respect is something you ask of them, not something
+   the licence enforces. I struck the question and corrected the legends issue's
+   Parked note to match.
+2. **Not sold until it's 100% your own assets.**
+3. **The line where it becomes yours has three parts:**
+   - **No Blizzard asset drawn.** The custom client already counts assets by
+     source, so this is measurable now.
+   - **No Blizzard pattern used.** This covers quest dialogue, terrain meshes,
+     and anything else shaped from theirs. It needs its own counter on the
+     server side, tracking where each database row and map file came from.
+     Nothing counts that yet.
+   - **Gameplay distinct from WotLK** by about as much as WildStar or The Old
+     Republic is. That's a judgement rather than a count, so the note suggests
+     making it against a written list of what this project does differently.
+
+Here's a hard one about part three. WildStar and The Old Republic both kept the
+core loop: tab-target combat, quests, dungeons, raids. They feel distinct
+because of their setting, their combat feel and their side systems. If players
+here still fight with WotLK's spell and combat rules underneath the empty world
+and ambushes, is that rules layer itself a pattern that has to be replaced, the
+way quest dialogue does?
+
+--------------------------------------------------------------------------------
+
+### User Request 9
+
+> Here's a hard one about part three. WildStar and The Old Republic both kept
+> the core loop: tab-target combat, quests, dungeons, raids. They feel distinct
+> because of their setting, their combat feel and their side systems. If players
+> here still fight with WotLK's spell and combat
+> rules underneath the empty world and ambushes, is that rules layer itself a
+> pattern that has to be replaced, the way quest dialogue does?
+
+the end result has to be suitably distinct, as compared to it's contemporaries.
+That should be all we say on the matter. The judgement is in the comparison, not
+in our strict wording.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 9
+
+Done: the note now records only your rule. The finished game has to be distinct
+enough when set beside its contemporaries, and the judgement comes from that
+comparison. My suggestion of a written list of required differences is gone,
+with your words quoted in its place.
+
+Nothing from these two days is committed. Each issue still has questions you
+haven't answered yet, so none of them is finished.
+
+Here's one from the Architect issue, asked again: say you walk into the patch of
+ground where your childhood street is, and someone else got there first with
+their own memory of it. Do you see your street, or theirs until they leave?
 
 --------------------------------------------------------------------------------
 
