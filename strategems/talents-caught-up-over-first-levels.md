@@ -30,6 +30,13 @@ The shares, from plain to tuned:
   can have an extra ability to play with"), then 8 a level: 11 19 27 35
   43 51.
 
+- **Meeting another way in:** when some characters already earn the
+  points another way (a death knight that plays its story earns them from
+  quests), leave those alone and pick C where that way arrives at
+  everyone's count; the table is only for those who skip it. Death knight,
+  as built: the story arrives at 49 at 58, so the table is 11 24 37 49,
+  then 50 51 as stock.
+
 Whatever the shares, check that the running total at C is `C - 9`; the
 death knight's table checks it when it compiles.
 

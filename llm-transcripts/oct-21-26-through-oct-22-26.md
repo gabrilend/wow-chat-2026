@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-22 10:38:24
+Generated on: 2026-10-22 10:59:19
 Models: claude-opus-5-5
 
 ## Contents
@@ -1357,6 +1357,288 @@ at level 1, or a bonus 2 at 60. Which do you want?
 **Not committed:** the crash fix and its test, the talent rule, the pledge in
 the story list, the test-start change, the state checker, all the issue files
 and the registry line.
+
+--------------------------------------------------------------------------------
+
+### User Request 16
+
+> - When you turn in a quest, the buddy module gives the same quest reward to
+> each buddy beside
+>     you. It called the server's reward step with no quest giver.
+
+no it should give the reward to each buddy in your clan unconditionally.
+
+
+
+<pasted_content id="583a">
+> - Fix: the buddy is now named as its own quest giver. Spells that teach or
+> create something it
+>     casts on itself, as the server would. A giver's blessing it also casts on itself. The change
+>     is in patches/B036-mod-buddies/mod-buddies/src/buddies_xp.cpp.
+</pasted_content id="583a">
+
+
+I didn't know players could be quest givers?? Are you sure this is going to
+work?
+
+
+
+<pasted_content id="583a">
+> - The two "requested wrong gossip menu" lines from the Visiting Mentor are not
+> the crash.
+>     They're logged each time the server hides a trainer line meant for another class, which the
+>     mentor (patch B029) relies on. That's noise logged as an error; I can quiet it in B029 if you
+    want.
+</pasted_content id="583a">
+
+
+I'd rather fix it instead of quiet it.
+
+>   Buddy runeforging today: none in practice.
+
+Well we should make one. DK buddy-bots should seek to have a runeforged weapon.
+They should pick one randomly, and everytime they go to Acherus they can pick a
+new one.
+
+But, there's some that are just... worse, like for example the 1h to 2h versions
+of the same rune. So they should of course pick the best one that suits their
+gear.
+
+Where are we at with picking buddy-bot abilities depending on the contents of
+their talents? Question, can we do it mechanically by finding out exactly which
+spells the talent modifies, through sql or something? Also, can we modify it to
+also choose *gear* as well? For example, Arms Warriors should only equip items
+that correspond to the weapon type they chose in their talent tree. Death
+Knights should pick a 2h weapon unless they randomly rolled the 1h weapon
+talent, then they are two 1h weapons. Also we should ensure that if they pick
+one weapon type, like the combat rogue swords talent, then they should ONLY have
+swords. The exception is sometimes rogues want an offhand dagger? Can you give
+me a plan for this implementation?
+
+
+
+<pasted_content id="583a">
+> Book of the Wild: our druid books are set to level 60 (RequiredLevel 60, as
+> issue 155q
+> designed). I think the 70 you saw is the taught spell's own level, which the
+> client draws into
+> the tooltip, not a requirement on the book. Learning from a book doesn't check
+> the spell's
+> level, but nobody has tried one in game yet. Can you try using it on Growth?
+> If it refuses,
+>   that's a bug and I'll look.
+</pasted_content id="583a">
+
+
+can we replace the spell that it teaches or modify it's required level haha
+because if I can learn a spell that I can't cast then that's not very useful...
+
+
+
+<pasted_content id="583a">
+  ├────────┼───────────────────────────────────────────────────────────────────────────────────┤
+  │ 718g │ Taunt for every death knight. It needs Defensive Stance, and the
+  client may grey │
+  │ │ it out; test in game first. │
+  ├────────┼───────────────────────────────────────────────────────────────────────────────────┤
+</pasted_content id="583a">
+
+
+oh we need something that doesn't require defensive stance. Options? Maybe an
+NPC ability?
+
+
+
+<pasted_content id="583a">
+  ├────────┼───────────────────────────────────────────────────────────────────────────────────┤
+  │ 718d │ The story quests' talent rewards are already ignored by the new
+  rule; open │
+  │ │ question on removing them so the reward window doesn't promise points.
+  │
+  ├────────┼───────────────────────────────────────────────────────────────────────────────────┤
+</pasted_content id="583a">
+
+
+ah... I see... We should leave them are as they are in the story, and change our
+per-talent distribution to be... Sufficient so that at level 58, the player has
+as many as they would at the end of the questline, which I think is 46. That
+way, a level 58 DK has the same amount of talent points if they do the story,
+and if they don't, but if they don't, they are rewarded as if the DK got them at
+level up, instead of from quests.
+
+
+
+<pasted_content id="583a">
+  ├────────┼───────────────────────────────────────────────────────────────────────────────────┤
+  │ 722 │ The death druid, with Death Coil healing friendly targets. A death
+  knight has no │
+  │ │ mana, so what pays for the druid spells is the first question. │
+  ├────────┼───────────────────────────────────────────────────────────────────────────────────┤
+</pasted_content id="583a">
+
+
+runic power.
+
+
+
+<pasted_content id="583a">
+> Talents from level 1: 2 at level 1 plus one a level gives 61 at 60, not 62.
+> Levels 2 to 60 are
+> 59 levels, so 2 + 59 = 61. For 62 (two full trees of 31): 3 at level 1, or a
+> bonus 2 at 60.
+>   Which do you want?
+</pasted_content id="583a">
+
+
+let's try 3 at level 1.
+
+> Not committed: the crash fix and its test, the talent rule, the pledge in the
+> story list, the
+> test-start change, the state checker, all the issue files and the registry
+> line.
+
+let's stay up-to-date with git.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 16
+
+> Several of these need code reading first. Starting with your question about
+> players as quest givers: checking every use of the quest giver in the server's
+> reward step.
+
+> Testing B029's apply-and-revert round trip on a copy of the five server files
+> it edits:
+
+> The B029 fix applies and reverts cleanly. Recording your decisions: runic
+> power for the death druid, 3 points at level 1, and the new death knight
+> talent question.
+
+> Next, taunts that need no stance. Looking for the project's reader of the
+> game's spell table:
+
+> Now "every buddy in the clan, unconditionally". Today an offline buddy (one
+> set aside, or still logging in) misses the reward. Finding which issue owns
+> the quest sharing:
+
+> Issues done. Adding the sub-issue list to 625 and the book question to 155q,
+> then committing.
+
+> Previewing what a commit of this session's work would take:
+
+> Everything listed is this session's own. Committing in six groups, starting
+> with the crash fix:
+
+*[commit] 151050084 in wow-chat-2026 - Stop the worldserver crashing when a quest with a reward spell is shared with buddies (issue 617d)*
+
+*[commit] a8bec742b in wow-chat-2026 - Let a Visiting Mentor hide its other classes' lines without the server calling it an error (issue 155e)*
+
+*[commit] 496c25ffa in wow-chat-2026 - Keep the build's test start waiting while the server is still applying database updates*
+
+*[commit] c13c23dd4 in wow-chat-2026 - End a death knight's skipped story with its faction's pledge, and add a checker for the skip's test states (issue 718)*
+
+*[commit] a07df1e32 in wow-chat-2026 - Spread a death knight's talent points over its first levels (issues 718d, 155z9)*
+
+*[commit] 14de3d2f3 in wow-chat-2026 - Plan the owner's 2026-10-22 requests as issues*
+
+> All my work is committed. Whatever is still uncommitted isn't from this
+> session; the 919 and 920 issues are claimed by the "three-worlds" session.
+> Releasing my file claims:
+
+All of this session's work is now committed in six commits, and your answers are
+recorded in the issues. The crash fix, the Visiting Mentor fix and the talent
+rule take effect after your next compile.
+
+**Quest rewards for buddies:** you're right, and I described it badly. It
+already goes to every buddy in your clan, not just ones standing near you, but
+only those logged in at that moment. A set-aside buddy, or one still logging in,
+misses it for good. I wrote your rule into issue 617d: an offline buddy gets the
+reward at its next login. One question is open there: what to do when a buddy's
+quest log is full.
+
+**Players as quest givers:** yes, I'm sure. The server's reward step accepts any
+game object as the quest giver, and I checked all three places it uses one:
+- **Follow-up letters:** the letter is sent from the quest giver, and the mail
+  code builds a sender from a player as readily as from a creature. Passing no
+  giver here would also have crashed, a second crash path the old code had.
+- **The two reward-spell paths:** both work with a player giver.
+
+The Lua engine's own "reward quest" passes the player itself. The death knight
+skip used exactly that to reward 46 quests on Gabrubre without trouble.
+
+**Visiting Mentor:** fixed in patch B029 rather than silenced. The patch now
+hides another class's line itself, before the server's "wrong menu" check runs,
+so only a list that truly doesn't exist is still reported. Applying and
+reverting it on copies of the five server files leaves them byte for byte.
+
+**Runeforging for death knight buddies:** issue 633.
+- A buddy without a rune heads to a runeforge.
+- It picks a rune at random among those that fit its weapon.
+- Each visit to the Ebon Hold it may pick again.
+- The issue lists the three runes that come as a one-hand/two-hand pair. A
+  two-hander never takes a one-hand rune when the two-hand twin exists, and the
+  reverse.
+
+**Abilities and gear by talents:** nothing is built yet. Doing it mechanically
+is exact, because it's how the server applies talents itself:
+- Every class spell carries a set of flags saying what kind of spell it is.
+- Each talent effect carries a mask of those flags, and it affects every spell
+  of that class whose flags overlap the mask.
+- Set bonuses are spells and can be read the same way.
+- Weapon talents name the weapon kinds they work with, so the gear rules can be
+  read from the data too.
+
+The plan:
+1. **625a:** a generator reads the game's talent, spell and item-set tables and
+   writes "talent or set bonus → abilities it changes, and how".
+2. **625b:** a buddy wears only the weapon kind its talents are for. Death
+   knights take a two-hander unless they rolled the one-hand talents, then two
+   one-handers. A rogue may keep an off-hand dagger. This applies everywhere a
+   buddy picks a weapon: its kit, loot rolls, buying and trading.
+3. **625:** abilities its talents and set bonuses touch get a higher priority.
+
+**The level-70 book:** the server can't change an ability's level as the client
+sees it, because that lives in the client's own spell table. The server doesn't
+check an ability's level when it's cast, but the client might. Please try
+casting the learned spell on Growth first. If it fails, the options are a custom
+client change, or books only for abilities a level 60 can cast. That's recorded
+in 155q.
+
+**A taunt without Defensive Stance:** the game's spell table has copies of Taunt
+(37486, 37548) and Growl (39270) that creatures use. They need no stance or
+form. So your first idea works after all: Taunt for Alliance, Growl for Horde.
+Each needs one in-game test that it shows in the spellbook and casts, since a
+creature's copy may be hidden or have a different cooldown. Issue 718g lists
+every stance-free taunt.
+
+**Recorded:** the death druid pays runic power (722). Everyone gets 3 talent
+points at level 1, so 62 at 60 (155z9).
+
+**Commits:**
+1. The buddy quest crash fix and its quick test.
+2. The Visiting Mentor fix.
+3. The build's test start waiting while database updates are still applying.
+4. The death knight skip ending with the faction pledge, plus the state checker.
+5. The death knight talent table.
+6. The new issues.
+
+Uncommitted files that remain belong to other work. Issues 919 and 920 are
+claimed by the "three-worlds" session, and the gallery page and notes edits
+aren't mine.
+
+One question blocks rewriting the death knight talent table. A death knight that
+finishes the story at 58 has **49** points, not 46: 46 from the quests plus the
+stock one per level past 55. If story players keep their quest points and
+skippers get points by level, my proposed level table meets the story at 58 and
+everyone at 60:
+
+| Level | 55 | 56 | 57 | 58 | 59 | 60 |
+|---|---:|---:|---:|---:|---:|---:|
+| Level table | 11 | 24 | 37 | 49 | 56 | 62 |
+
+Should they meet at 49, or at the 46 you remembered? And should a skipper's
+story rewards count toward that, or should it follow the level table only (11 at
+55)?
 
 --------------------------------------------------------------------------------
 

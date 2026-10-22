@@ -9,9 +9,10 @@
  * server's stock "Custom" scripts folder at build time, then removes it.
  *
  * Current rules:
- *   - Death knight talent points (issue 718d): the 51 points of level 60
- *     over levels 55 to 60 (11 at 55, then 8 a level), one a level after,
- *     wherever the death knight stands.
+ *   - Death knight talent points (issue 718d): a death knight that skipped
+ *     the story (or a death knight buddy) gets 11 at 55, 24, 37, then 49 at
+ *     58, where a story player and everyone else are; one a level after.
+ *     Story players keep the stock rule.
  *   - Talent cap (issue 155g): tier 6 (30 points in the tree) keeps only its
  *     "capstones", the talents that cost a single point (fire mage
  *     Combustion, retribution Repentance); the multi-rank talents beside
@@ -123,12 +124,25 @@ public:
 // Issue 718d. A death knight starts at 55 (StartHeroicPlayerLevel). Stock,
 // it has the 46 points of level 55 at once outside Acherus, and inside
 // Acherus 0 plus what the story's quests grant (Player::CalculateTalentsPoints).
-// On basic it gets the 51 points every class has at 60 over levels 55 to
-// 60 instead: 11 at 55 ("So they can have an extra ability to play with",
-// the owner, 2026-10-22), then 8 a level, so at 60 it has exactly what any
-// class has, and after 60 one a level like everyone ("1 per level"). The
-// same wherever it stands and whether it played the story or skipped it,
-// so the story's quest points no longer count.
+//
+// Who this changes (the owner, 2026-10-22: "The DKs should have the same
+// number of talent points at 58 if they skipped or did the story, and they
+// should have the same number of talent points as everyone else at levels
+// 58, 59, and 60"):
+//   - A death knight that plays the story keeps the stock rule. Its quests
+//     grant 46 in all and the stock rule adds one a level past 55, so it
+//     finishes the story at 58 with 49, which is everyone's count at 58
+//     (58 - 9); stock then gives it 50 and 51, as everyone. Nothing to do.
+//   - A death knight that skipped the story (its soul ledger says so) gets
+//     the table below: 11 at 55 ("So they can have an extra ability to play
+//     with"), rising to meet the story player and everyone at 58, then one
+//     a level. Stock would give it 46 at once on landing.
+//   - A death knight buddy (no ledger row: buddies owe no soul) gets the
+//     table too. Stock would give a buddy
+//     that logged in inside Acherus 0 until its next login (the story
+//     points are counted only there, and leaving Acherus recounts nothing):
+//     Throszurg, 2026-10-22.
+// A row that says the story is being played (skipped 0) keeps stock.
 //
 // Why a table, not a formula: the first level is deliberately richer than
 // an even share would make it, and six numbers read at a glance. Tuning is
@@ -138,10 +152,12 @@ public:
 //
 // Ending at 51 matters: the table's last entry must equal 60 - 9, the stock
 // count at 60, or a death knight would differ from everyone forever after.
+// (The first version, 2026-10-22, spread 11 to 51 evenly over 55-60: 11,
+// 19, 27, 35, 43, 51; replaced the same day by the meeting at 58.)
 static constexpr uint32 BASIC_DK_FIRST_LEVEL = 55;
 static constexpr uint32 BASIC_DK_TALENTS_IN_ALL[] = {
     //  55   56   57   58   59   60
-        11,  19,  27,  35,  43,  51,
+        11,  24,  37,  49,  50,  51,
 };
 static constexpr uint32 BASIC_DK_CAUGHT_UP_LEVEL =
     BASIC_DK_FIRST_LEVEL + std::size(BASIC_DK_TALENTS_IN_ALL) - 1;
@@ -162,6 +178,38 @@ public:
         // every other class: stock
         if (!player->IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_TALENT_POINT_CALC))
             return;
+
+        // The soul ledger (install step E041, `basic_718_souls`): a row that
+        // says the story is played keeps stock; a skipper, or no row at all,
+        // takes the table. Read here because the hook runs only at login, at
+        // a level change and when a quest grants points, a handful of times
+        // a session. A missing ledger is an error, said once: then nobody can
+        // be told apart, and everyone takes the table.
+        static bool ledgerChecked = false, ledgerThere = false;
+        if (!ledgerChecked)
+        {
+            ledgerChecked = true;
+            ledgerThere   = bool(CharacterDatabase.Query("SHOW TABLES LIKE 'basic_718_souls'"));
+            if (!ledgerThere)
+                LOG_ERROR("server.loading", "basic: death knight talent points (718d): the soul ledger basic_718_souls is missing "
+                    "(install step E041 not applied?); every death knight takes the skipper's table, story players included");
+        }
+        uint32 guid = player->GetGUID().GetCounter();
+        if (ledgerThere)
+        {
+            if (QueryResult row = CharacterDatabase.Query("SELECT skipped FROM basic_718_souls WHERE dk = {}", guid))
+            {
+                if (row->Fetch()[0].Get<uint8>() == 0)
+                    return;                                // plays the story: stock (49 at 58, as everyone)
+            }
+            // No row: a buddy (named in the buddy roster) takes the table.
+            // Anyone else keeps stock: a death knight made before the rule,
+            // and a brand-new one at its very first count, which runs while
+            // it loads, before the Lua writes its row (it would otherwise
+            // see 11 points it loses at its first quest).
+            else if (!CharacterDatabase.Query("SELECT 1 FROM buddy_roster WHERE buddy = {} LIMIT 1", guid))
+                return;
+        }
 
         uint32 level = player->GetLevel();
         uint32 points;

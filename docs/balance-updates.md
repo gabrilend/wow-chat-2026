@@ -561,6 +561,21 @@ points at level 55? So they can have an extra ability to play with", and
 `strategems/talents-caught-up-over-first-levels.md`. Takes effect at
 basic's next compile (B030).
 
+## 2026-10-22 — a skipper's talent points meet the story's at 58 (basic)
+
+| Knob | Value | Where |
+|---|---|---|
+| A death knight's talent points, levels 55-60, basic | skippers and buddies by the table (was 11 to 51 evenly); story players stock | `src/cpp-basic/basic_rules.cpp`, death knight talent points |
+
+Why: the owner, 2026-10-22, the same day as the entry above: "The DKs
+should have the same number of talent points at 58 if they skipped or did
+the story, and they should have the same number of talent points as
+everyone else at levels 58, 59, and 60", keeping the stock 51 at 60 for
+every class. A story player already finishes at 58 with what everyone has
+(its quests' 46 plus one a level past 55), so it keeps the stock rule and
+the table rises from 11 to meet it there. Issue 718d. Takes effect at
+basic's next compile (B030).
+
 ## How to add an entry
 
 ```markdown

@@ -51,6 +51,15 @@ point and 60 the last, and 10 to 60 counted both ends is 51 levels; the
 server's rule is `level - 9`. Confirmed in game: a death knight that
 finished the story inside Acherus at 55 had 46.
 
+Then, 2026-10-22, after the arithmetic of the story's points (46 from the
+quests plus one a level past 55: 49 at 58):
+
+> Hmmmmm I changed my mind, let's do the default of 51 talent points,
+> starting at level 10. For DKs this system looks good though. The DKs
+> should have the same number of talent points at 58 if they skipped or
+> did the story, and they should have the same number of talent points as
+> everyone else at levels 58, 59, and 60.
+
 ## Current Behavior
 
 The rule is written (2026-10-22) and not yet built: the owner compiles.
@@ -67,31 +76,41 @@ is why Throszurg (Gabrubre's buddy) had none on 2026-10-22: he logged in
 on map 609 (0 points there), was brought to the Plaguelands, and nothing
 recounted, so the buddy talent script had nothing to spend.
 
+A story player therefore already meets everyone: it finishes the story at
+about 58 with 46 + 3 = 49, everyone's count at 58, then 50 and 51 as
+everyone. Only a skipper (46 at once on landing, from its rewarded story
+quests outside Acherus) and a death knight buddy (0, or 46, depending on
+where it logged in) differ.
+
 **Written, waiting for the build:** `src/cpp-basic/basic_rules.cpp`, the
-death knight talent points (copied into the server by B030, basic only):
-a six-entry table on the server's talent-count hook. A compile-time check
-refuses a table that doesn't end at 51.
+death knight talent points (copied into the server by B030, basic only).
+On the server's talent-count hook, for a death knight: a soul-ledger row
+saying the story is played keeps stock; a skipper (the ledger's skip
+flag) or a death knight buddy (no ledger row, named in the buddy roster)
+takes the table below; anyone else (no row and not a buddy: one made
+before the rule, or a brand-new death knight at its first count, before
+the Lua writes its row) keeps stock. A missing ledger is logged once as
+an error. A compile-time check refuses a table that doesn't end at 51.
 
 ## Intended Behavior
 
-A death knight on basic has 11 points at 55, then 8 more each level to
-60, where it has the 51 every class has; after 60, one a level, like
-everyone. Wherever it stands, and whether it played the story or skipped
-it.
+Every class: the stock 51 at 60, one a level from 10 (155z9's talents
+from level 1 are not wanted). Death knights:
 
-| Level | Points that level | Points in all |
-|------:|------------------:|--------------:|
-|    55 |                11 |            11 |
-|    56 |                 8 |            19 |
-|    57 |                 8 |            27 |
-|    58 |                 8 |            35 |
-|    59 |                 8 |            43 |
-|    60 |                 8 |            51 |
-|    61 |                 1 |            52 |
-|    80 |                 1 |            71 |
+| Level | Story player (stock)  | Skipper or buddy (table) |  Everyone |
+|------:|----------------------:|-------------------------:|----------:|
+|    55 | 0 + its quests so far |                       11 |        46 |
+|    56 | 1 + its quests so far |                       24 |        47 |
+|    57 | 2 + its quests so far |                       37 |        48 |
+|    58 |                    49 |                       49 |        49 |
+|    59 |                    50 |                       50 |        50 |
+|    60 |                    51 |                       51 |        51 |
+|   61+ |             level - 9 |                level - 9 | level - 9 |
 
-Below 55 (only by a game master's hand) it has 0. Points a game master or
-script grants on top (the server's bonus talent count) stay on top.
+At 58 a death knight has what everyone has, whether it skipped or played
+the story, and from then on it never differs. Below 55 (only by a game
+master's hand) a skipper or buddy has 0. Points a game master or script
+grants on top (the server's bonus talent count) stay on top.
 
 The general version, any starting level caught up over a few levels, is
 a pattern, not a rule: `strategems/talents-caught-up-over-first-levels.md`
@@ -107,67 +126,23 @@ each time).
 3. The owner compiles, validates and promotes (`scripts/compile`,
    `scripts/validate`, `scripts/promote`), then restarts the worldserver.
 4. In game:
-   - Gabrubre (55, 19 talents spent): at her next login her talents are
-     reset (19 is more than 11) and she has 11 to spend;
-   - Throszurg: 11 at his next login, spent by the buddy talent script;
-   - `.character level Gabrubre 57`: 27;
+   - Gabrubre (a skipper, 55, 19 talents spent): at her next login her
+     talents are reset (19 is more than 11) and she has 11 to spend;
+   - Throszurg (a buddy): 11 at his next login, spent by the buddy talent
+     script;
+   - `.character level Gabrubre 58`: 49;
+   - a new death knight that plays the story: 0 in Acherus, then what its
+     quests grant;
    - another class at 55 still has 46.
 5. `scripts/dk-story-state` shows talents spent against the rule's total
    for the death knight's level (spent: `character_talent` rows of the
    active talent group, counted by rank).
-6. A line in `docs/balance-updates.md` for the table.
-7. Update 718's story skip text (done 2026-10-22: a pointer here).
+6. ~~A line in `docs/balance-updates.md`~~ (done, and a second for the
+   meeting at 58).
+7. ~~Update 718's story skip text~~ (done: a pointer here).
 
 ## Open Questions
 
-1. **The story's own points, kept** (the owner, 2026-10-22, on whether to
-   take the talent rewards out of the story quests):
-
-   > ah... I see... We should leave them are as they are in the story,
-   > and change our per-talent distribution to be... Sufficient so that at
-   > level 58, the player has as many as they would at the end of the
-   > questline, which I think is 46. That way, a level 58 DK has the same
-   > amount of talent points if they do the story, and if they don't, but
-   > if they don't, they are rewarded as if the DK got them at level up,
-   > instead of from quests.
-
-   So the story player earns its points from the quests, as stock, and
-   the skipper earns them by level, and the two meet at 58. The facts:
-   the story's quests grant 46 points in all, and the stock rule inside
-   Acherus adds one a level past 55, so a death knight that finishes the
-   story at 58 has 46 + 3 = **49**, not 46. And with 155z9 decided (3 at
-   level 1, `level + 2`), every other class has 60 at 58 and 62 at 60.
-
-   A rule that does all of it: a death knight has the larger of (a) the
-   level table and (b) what its story quests have granted plus one a
-   level past 55; never more than everyone's count. A proposed level
-   table, meeting the story at 58 and everyone at 60:
-
-   | Level | Level table | Story finisher | Everyone (155z9) |
-   |------:|------------:|---------------:|-----------------:|
-   |    55 |          11 | 0, then quests |               57 |
-   |    56 |          24 |                |               58 |
-   |    57 |          37 |                |               59 |
-   |    58 |          49 |             49 |               60 |
-   |    59 |          56 |             50 |               61 |
-   |    60 |          62 |             51 |               62 |
-
-   The story finisher's 50 and 51 at 59 and 60 would be lifted by the
-   level table (the larger of the two), so both reach 62 at 60. Is that
-   the shape? Or should the meeting point be the 46 you remembered (the
-   quests alone, without the one a level)?
-
-   Building it needs the quests' share read in the hook: the server keeps
-   that count in a field with no reader, so the rule would add up the
-   `RewardTalents` of the story quests the death knight has been
-   rewarded (the story list is `src/lua-basic/data/death-knight-skip-quests.lua`;
-   the C++ would read it from the world database at start).
-2. **The skipper's quest points.** A skipper is rewarded every story
-   quest too (that is how it gets Runeforging and the rest), so (b) gives
-   it 46 + 3 at 58 as well, and it equals the story finisher at once on
-   landing at 55 (46). Should the skip's rewards not count toward (b),
-   so a skipper follows the level table (11 at 55)? (A ledger flag says
-   who skipped.)
-
-The table as built (11, 19, 27, 35, 43, 51) predates both answers and
-changes once they are in.
+None open. (Answered 2026-10-22: the total stays the stock 51; skippers
+and story players meet at 58 and match everyone from 58 on; above 60 one
+a level; the rule lives in basic's compiled rules, the pattern in a note.)

@@ -10,7 +10,7 @@
   respec)
 - Pattern: `strategems/talents-caught-up-over-first-levels.md`
 - Priority: Medium
-- State: an idea; open questions first
+- State: will not be built (the owner, 2026-10-22: "let's do the default of 51 talent points, starting at level 10"); kept as the record of the idea
 
 ## Origin
 
