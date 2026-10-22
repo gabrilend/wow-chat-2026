@@ -1,10 +1,11 @@
-# 625b - Buddies Wear the Weapons Their Talents Are For
+# 625b - A Buddy's Weapon Preference, and the Talents That Follow It
 
 ## Status
 - Created: 2026-10-22
 - Phase: 6
 - Parent: 625 (buddies favour the abilities their talents touch)
-- Blocked by: 625a (what each talent touches)
+- Blocked by: 625a (what each talent touches, which also says which
+  talents are weapon-type talents)
 - Related: 617g (talent shapes), 617r (buddy gear), 718 (death knight
   buddies' runeblades), 633 (death knight buddies' runes)
 - Priority: Medium
@@ -12,7 +13,7 @@
 
 ## Origin
 
-Verbatim, 2026-10-22:
+Verbatim, 2026-10-22, first:
 
 > Also, can we modify it to also choose *gear* as well? For example, Arms
 > Warriors should only equip items that correspond to the weapon type they
@@ -23,78 +24,125 @@ Verbatim, 2026-10-22:
 > sometimes rogues want an offhand dagger? Can you give me a plan for this
 > implementation?
 
+Then, on the rogue and the general rule:
+
+> the rogues should take a dagger if they have certain talents, like
+> Combat Potency for 1h + offhand, or Focused Attacks for 2 daggers, which
+> is beyond this server's max talent tree depth limit. I don't know how to
+> generalize this, so let me think out loud a bit. So, poisons benefit
+> from fast attack speed. If the buddy-bot rolls poison talents, like
+> Improved Poisons, then they should prefer daggers. If they roll the
+> sword talent, they should skip Improved Poisons and the dagger talent.
+> Also Hemorrhage prefers daggers. Also some abilities like Ambush require
+> daggers, so if they are among the talent points they pick, they daggers
+> become more preferred...
+>
+> I think, maybe, instead, we should just... pick the weapon type specific
+> talents, there aren't too many, and just assign one to each buddy-bot
+> as their "weapon preference", and buddy-bots with talent profiles that
+> include one of the weapon type selectors will only select the talent
+> that corresponds to their preferred weapon type. BUT, if the buddy-bot
+> finds a cool new weapon that is better than their current one, they'll
+> update their weapon preference to use it. And, if they have one of the
+> specific weapon-type specific talents, we can automatically switch it
+> for them, applying however many talent points they had in the old one
+> to the new one. We can do that automatically whenever their weapon
+> preference is updated, and it only updates when they get a new weapon
+> type that is stronger than their current weapon, and which they get to
+> keep and can equip and use.
+
 ## Current Behavior
 
 A buddy's gear is chosen by stat weights (617r, 625's weights) and its
-kit; the weapon type its talents favour isn't considered. Death knight
-buddies carry the Runed Soulblade or the story's great weapon (718),
-whatever their talents.
+kit; its weapon kind isn't tied to its talents. Death knight buddies
+carry the Runed Soulblade or the story's great weapon (718), whatever
+their talents. A buddy's talents are spent by its shape's plan (617g,
+`src/lua-basic/buddy-talents.lua` with the talent spender library).
 
 Which talents tie to a weapon type (3.3.5a; a weapon talent's spell names
-the weapon kinds it works with in its "equipped item" fields, so this
-list too can be read mechanically by 625a's generator rather than kept by
-hand):
+the weapon kinds it works with in its "equipped item" fields, so 625a's
+generator can list them from the data rather than by hand):
 
 - **Warrior, Arms:** Poleaxe Specialization (axes and polearms), Mace
   Specialization (maces), Sword Specialization (swords); Two-Handed Weapon
   Specialization (two-handers).
-- **Warrior, Fury:** Dual Wield Specialization (two weapons), Titan's Grip
-  (two two-handers, past basic's talent cap, 155g).
+- **Warrior, Fury:** Dual Wield Specialization (two weapons).
 - **Rogue, Combat:** Sword Specialization, Mace Specialization, Fist Weapon
-  Specialization, Dagger Specialization (Combat's own), Dual Wield
-  Specialization.
+  Specialization, Dagger Specialization, Dual Wield Specialization.
 - **Death knight:** Two-Handed Weapon Specialization (Blood) against Nerves
   of Cold Steel and Threat of Thassarian (Frost: one-handers in both
   hands).
 - **Paladin:** Two-Handed Weapon Specialization (Retribution).
-- **Shaman, Enhancement:** Dual Wield (and Dual Wield Specialization).
-- **Hunter, Survival/Beast Mastery:** none by type (ranged weapon kind by
-  stats).
+- **Shaman, Enhancement:** Dual Wield, Dual Wield Specialization.
 
 ## Intended Behavior
 
-A buddy's weapon choice follows its talents:
+**A weapon preference per buddy.** Each buddy carries one weapon
+preference: a weapon kind (sword, mace, axe, polearm, dagger, fist
+weapon, staff...) and a grip (one two-hander, or two one-handers, or one
+one-hander with a shield or off-hand item). It is drawn when the buddy is
+made, from what its class and shape can use.
 
-- **A weapon-type talent taken** (Sword Specialization, Mace
-  Specialization...): the buddy wears only that kind, in every hand that
-  holds a weapon. **Rogues** may keep a dagger in the off hand whatever
-  their main-hand talent (open question 1).
-- **Two-handed against dual wield:** a buddy whose talents favour
-  two-handers wears one two-hander; one whose talents favour dual wield
-  wears two one-handers. **Death knights:** a two-hander, unless their
-  rolled talents include the one-handed talents (Nerves of Cold Steel,
-  Threat of Thassarian), then two one-handers.
-- **No weapon talent:** as now, by stats.
-- Every place a buddy picks a weapon follows the rule: its kit, loot
-  rolls and needs, buying, trading with the owner (623), and the death
-  knight runeblade rule (718), which yields to the talents.
+**The talents follow the preference.** Where a buddy's talent plan
+includes a weapon-type talent, it takes the one for its preferred kind
+and grip instead (a sword-preferring Combat rogue takes Sword
+Specialization; a mace-preferring one, Mace Specialization), the same
+number of points. Talents whose benefit depends on a weapon kind count
+as weapon-type talents too: for a rogue, Improved Poisons and Hemorrhage
+favour daggers, and a dagger preference takes them (and Dagger
+Specialization) where a sword preference skips them for its own.
+
+**It equips only its preference.** Weapons of another kind or grip are
+never equipped, needed in a loot roll or bought, with one exception: a
+rogue may hold a dagger in its off hand whatever its main-hand kind.
+
+**The preference changes when a better weapon comes.** When a buddy gets
+a weapon of another kind or grip that it can keep, can equip and use, and
+that is stronger than its current weapon (by its stat weights), its
+preference becomes that kind and grip, it equips it, and its weapon-type
+talents are switched to the new kind's, moving the points over one for
+one (a free respec of just those talents).
+
+**Death knights:** a two-hand preference unless their rolled talents
+include the one-hand ones (Nerves of Cold Steel, Threat of Thassarian),
+then two one-handers. The runeblade rule (718: the 55 and 57 buddies carry
+the Runed Soulblade) applies to two-hand preferences.
 
 ## Suggested Implementation Steps
 
 1. Answer the open questions.
-2. From 625a's generator: each talent's weapon kinds (its spell's
-   equipped item class and subclass mask), as data.
-3. A buddy's allowed weapons: from its talents (the shape's talent plan,
-   617g, so it is known before the points are spent), a set of weapon
-   kinds per hand, and one-hander pair or two-hander.
-4. Every weapon choice (the bot module's item usefulness check, the buddy
-   kit, the death knight gear script) asks "allowed?" first; a weapon not
-   allowed is never equipped, rolled need on or bought.
-5. Talent re-rolls (617g: the owner's respec re-rolls its buddies) re-check
-   the weapons: one no longer allowed is swapped at the next town visit.
-6. Tests: a sword-specialised rogue offered an axe and a sword takes the
-   sword; a frost death knight with Threat of Thassarian takes two
-   one-handers; a blood death knight a two-hander.
+2. From 625a's generator: the weapon-type talents (each talent's weapon
+   kinds and grip, from its spell's equipped item fields) and the
+   weapon-dependent ones (Improved Poisons, Hemorrhage...; a short list
+   by hand where the data doesn't say, kept beside the generated one).
+3. The preference: a column on the buddy roster (kind, grip), drawn at
+   creation.
+4. The talent spender (`buddy-talent-spender`): before spending, the
+   shape's plan is rewritten for the preference (swap each weapon-type
+   talent for the preferred kind's twin; drop the weapon-dependent ones
+   that don't suit, putting their points where the plan puts spare
+   points).
+5. Every weapon choice (the bot module's item usefulness check, the buddy
+   kit, the death knight gear script, loot rolls, buying) asks "suits the
+   preference?" first.
+6. The switch: when a buddy receives a weapon (loot, quest reward, trade,
+   mail), if it is of another kind or grip, usable, keepable and stronger,
+   update the preference, equip it, and re-spend the swapped talents.
+7. Tests: the plan rewrite (a Combat rogue shape with a mace preference
+   ends with Mace Specialization, same points); the switch (a
+   sword-preferring warrior given a stronger axe: preference axe, Poleaxe
+   Specialization with the old points); a dagger allowed in a rogue's off
+   hand.
 
 ## Open Questions
 
-1. **The rogue's off hand:** always a dagger allowed in the off hand
-   whatever the main-hand talent, or only for rogues using daggers'
-   openers (Ambush, Backstab, which need a dagger in the main hand)?
-2. **Two weapon talents taken** (a warrior with both Mace and Sword
-   Specialization, rare in a shape): either kind allowed, or the one with
-   more points?
-3. **The death knight runeblade** (718: the 55 and 57 buddies always carry
-   the Runed Soulblade, a two-hander): a dual-wield death knight buddy gets
-   two one-handers instead, and the Soulblade rule is for two-hand death
-   knights only?
+1. **Which talents depend on a weapon kind** beyond the named weapon
+   talents (Improved Poisons and Hemorrhage for daggers, as you said):
+   should the list also hold the abilities that need a kind (Ambush and
+   Backstab need a dagger) so a shape whose plan leans on them draws a
+   dagger preference from the start?
+2. **The first draw:** at random among what the class can use, or
+   weighted by the shape's talent plan (a plan with Improved Poisons
+   draws daggers more often)?
+3. **"Stronger":** by the buddy's stat weights for the item (damage per
+   second and stats together), or by weapon damage per second alone?

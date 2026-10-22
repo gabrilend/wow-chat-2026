@@ -18,9 +18,10 @@ complete it automatically whenever you do."
 going to auto-complete buddy quests to ensure they level up alongside
 you"): `patches/B036-mod-buddies/mod-buddies/src/buddies_xp.cpp`, at its end. On the
 server's quest-reward hook for an owner, each of the owner's buddies in
-the world is given the quest, has it completed and rewarded in one step
-(skipped if done before and not repeatable; a full quest log is logged as
-an error and nothing is given). A reward item that doesn't fit its bags is
+the world is rewarded the quest directly, never taking it into its log
+(since 2026-10-22, waiting for a compile; before, it was taken into the
+log and completed first, and a buddy with a full log got nothing).
+Skipped if done before and not repeatable. A reward item that doesn't fit its bags is
 mailed by the server's own reward step, and the buddy collects its mail at
 the town's nearest mailbox, first of its town errands (owner: "for full
 bags, can you mail them the item instead? make sure they actually check
@@ -58,6 +59,26 @@ ordinary quest logs.
   accept or abandon, and on the owner's turn-in each buddy is given the
   quest as completed, with its rewards. (Replaces the accept and abandon
   mirroring below.)
+- **No quests, ever; the owner's progress, exactly** (owner, 2026-10-22:
+  "it should give the reward to each buddy in your clan unconditionally",
+  then: "buddies should never have quests. They should have perfectly
+  synced quest progress with the player."). A buddy's set of finished
+  quests is always its owner's:
+  - at the owner's turn-in, every buddy in the world is rewarded the
+    quest directly, never taking it into its log (the server's reward
+    step works without the quest in the log: it only clears a log slot
+    if there is one, `Player::RewardQuest`), so a full log can't stop it
+    and no buddy ever shows a quest;
+  - at each buddy's login (set aside and back, or simply logged out), any
+    quest its owner has finished and it hasn't is rewarded the same way,
+    so one offline at the turn-in catches up; a quest it has that the
+    owner doesn't (from before this rule) stays, as it can't be taken
+    back cleanly;
+  - quests a buddy somehow holds in its log (the bot module's own quest
+    taking, if any) are dropped at login.
+  Rewards caught up at login come as at a turn-in (items, money, a
+  giver's blessing; experience is the buddy module's own matter, 617a6's
+  levelling with the owner).
 - *(Superseded 2026-09-27)* When the owner accepts a quest, every buddy
   (grouped or not) gets it, regardless of whether they could have picked
   it up themselves.
@@ -95,12 +116,3 @@ ordinary quest logs.
 ## Open Questions
 
 - (Answered 2026-09-23) Reward items: the stock bot rule above.
-- **Every buddy, unconditionally** (owner, 2026-10-22: "it should give the
-  reward to each buddy in your clan unconditionally"). A buddy not in the
-  world when its owner turns a quest in (set aside, not yet logged in,
-  still arriving) gets it at its next login: the turn-in is written to a
-  characters-database list of owed quests (buddy, quest), and its login
-  pays each one. A full quest log doesn't stop it either. Open: for a
-  full log, reward the quest without taking it into the log at all (the
-  server's reward step works from the quest itself; taking it into the
-  log first is what needs a free slot), or something else?

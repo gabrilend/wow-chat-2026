@@ -159,17 +159,14 @@ static void GiveCompletedQuest(Player* buddy, Player* owner, Quest const* quest)
     uint32 id = quest->GetQuestId();
     if (buddy->GetQuestRewardStatus(id) && !quest->IsRepeatable())
         return;                                        // done before (not a repeatable one): nothing to give
-    if (buddy->GetQuestStatus(id) == QUEST_STATUS_NONE || buddy->GetQuestStatus(id) == QUEST_STATUS_REWARDED)
-    {
-        if (buddy->FindQuestSlot(0) >= MAX_QUEST_LOG_SIZE)
-        {
-            LOG_ERROR("module", "mod-buddies: buddy {} of {} can't take quest {} ({}): its quest log is full; no reward",
-                buddy->GetName(), owner->GetName(), id, quest->GetTitle());
-            return;
-        }
-        buddy->AddQuest(quest, nullptr);
-    }
-    buddy->CompleteQuest(id);
+    // No quest log: a buddy never holds a quest (the owner, 2026-10-22:
+    // "buddies should never have quests. They should have perfectly synced
+    // quest progress with the player"). The reward step works from the
+    // quest alone: it clears a log slot only if the quest has one, and
+    // drops the quest from the active ones only if it is there
+    // (Player::RewardQuest, Player::RemoveActiveQuest). Until 2026-10-22
+    // the quest was taken into the log and completed first, and a buddy
+    // with a full log got nothing.
     // No bag check first: the server's reward step mails whatever doesn't
     // fit (its own "items that couldn't be added" mail), and the buddy
     // collects it at a mailbox on its next town visit (buddies_town.cpp,
