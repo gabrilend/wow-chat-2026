@@ -9,6 +9,9 @@
  * server's stock "Custom" scripts folder at build time, then removes it.
  *
  * Current rules:
+ *   - Death knight talent points (issue 718d): the 51 points of level 60
+ *     over levels 55 to 60 (11 at 55, then 8 a level), one a level after,
+ *     wherever the death knight stands.
  *   - Talent cap (issue 155g): tier 6 (30 points in the tree) keeps only its
  *     "capstones", the talents that cost a single point (fire mage
  *     Combustion, retribution Repentance); the multi-rank talents beside
@@ -56,6 +59,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <iterator>
 #include <map>
 #include <mutex>
 #include <set>
@@ -111,6 +115,67 @@ public:
             ChatHandler(player->GetSession()).SendSysMessage(
                 "That talent is beyond this realm's limit: past 30 points in a tree, only the single-point capstone may be learned.");
         return false;
+    }
+};
+// -- }}}
+
+// -- {{{ death knight talent points
+// Issue 718d. A death knight starts at 55 (StartHeroicPlayerLevel). Stock,
+// it has the 46 points of level 55 at once outside Acherus, and inside
+// Acherus 0 plus what the story's quests grant (Player::CalculateTalentsPoints).
+// On basic it gets the 51 points every class has at 60 over levels 55 to
+// 60 instead: 11 at 55 ("So they can have an extra ability to play with",
+// the owner, 2026-10-22), then 8 a level, so at 60 it has exactly what any
+// class has, and after 60 one a level like everyone ("1 per level"). The
+// same wherever it stands and whether it played the story or skipped it,
+// so the story's quest points no longer count.
+//
+// Why a table, not a formula: the first level is deliberately richer than
+// an even share would make it, and six numbers read at a glance. Tuning is
+// a change here, logged in docs/balance-updates.md. The general pattern
+// (any character that starts above level 10 catching up over its first
+// levels) is written down in strategems/talents-caught-up-over-first-levels.md.
+//
+// Ending at 51 matters: the table's last entry must equal 60 - 9, the stock
+// count at 60, or a death knight would differ from everyone forever after.
+static constexpr uint32 BASIC_DK_FIRST_LEVEL = 55;
+static constexpr uint32 BASIC_DK_TALENTS_IN_ALL[] = {
+    //  55   56   57   58   59   60
+        11,  19,  27,  35,  43,  51,
+};
+static constexpr uint32 BASIC_DK_CAUGHT_UP_LEVEL =
+    BASIC_DK_FIRST_LEVEL + std::size(BASIC_DK_TALENTS_IN_ALL) - 1;
+static_assert(BASIC_DK_TALENTS_IN_ALL[std::size(BASIC_DK_TALENTS_IN_ALL) - 1] == BASIC_DK_CAUGHT_UP_LEVEL - 9,
+    "the death knight talent table must end at the stock count of its last level");
+
+class basic_rules_dk_talent_points : public PlayerScript
+{
+public:
+    basic_rules_dk_talent_points() : PlayerScript("basic_rules_dk_talent_points", { PLAYERHOOK_ON_CALCULATE_TALENTS_POINTS }) { }
+
+    // Called by Player::CalculateTalentsPoints (at login, at a level change,
+    // when a quest grants points) with the stock count, bonus points already
+    // added; Rate.Talent multiplies what this leaves. If the new count is
+    // below what is spent, Player::InitTalentForLevel resets the talents.
+    void OnPlayerCalculateTalentsPoints(Player const* player, uint32& talentPointsForLevel) override
+    {
+        // every other class: stock
+        if (!player->IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_TALENT_POINT_CALC))
+            return;
+
+        uint32 level = player->GetLevel();
+        uint32 points;
+        if (level < BASIC_DK_FIRST_LEVEL)
+            points = 0;                                    // below a death knight's start: only by a game master's hand
+        else if (level <= BASIC_DK_CAUGHT_UP_LEVEL)
+            points = BASIC_DK_TALENTS_IN_ALL[level - BASIC_DK_FIRST_LEVEL];
+        else
+            points = level - 9;                            // caught up: one a level, as stock
+
+        // points a game master or script granted on top (the server's bonus
+        // talent count) stay on top; its reader isn't const, hence the cast
+        points += const_cast<Player*>(player)->GetBonusTalentCount();
+        talentPointsForLevel = points;
     }
 };
 // -- }}}
@@ -844,6 +909,7 @@ public:
 void AddSC_basic_rules()
 {
     new basic_rules_talent_cap();
+    new basic_rules_dk_talent_points();
     new basic_rules_creature_multipliers_load();
     new basic_rules_creature_multipliers_damage();
     new basic_rules_creature_multipliers_health();

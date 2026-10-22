@@ -547,6 +547,20 @@ So how about the largest size for them [buddy-bots, stand-ins] in dungeons
 and BGs and instances and such?" Takes effect at each profile's next
 compile (B056) and install (C037, C039).
 
+## 2026-10-22 — a death knight's talent points: 11 at 55, then 8 a level to 60 (basic)
+
+| Knob | Value | Where |
+|---|---|---|
+| A death knight's talent points, levels 55-60, basic | the table at the top of the rule (stock: 46 at 55 outside Acherus) | `src/cpp-basic/basic_rules.cpp`, death knight talent points |
+
+Why: the owner, 2026-10-22, wanted a death knight's points spread over its
+first levels rather than all at once, ending at the 51 every class has at
+60 ("There should be the correct total amount applied"), with "11 talent
+points at level 55? So they can have an extra ability to play with", and
+"1 per level" after 60. Issue 718d; the pattern is
+`strategems/talents-caught-up-over-first-levels.md`. Takes effect at
+basic's next compile (B030).
+
 ## How to add an entry
 
 ```markdown
