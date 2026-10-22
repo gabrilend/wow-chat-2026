@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-22 10:59:19
+Generated on: 2026-10-22 11:33:07
 Models: claude-opus-5-5
 
 ## Contents
@@ -15,6 +15,10 @@ Models: claude-opus-5-5
    skip with Gabrubre: Karson is back on your account and she owes a soul again.
    Next, run scripts/compile and restart the worldserver so Sargobras can hear
    your clan name.
+4. 2026-10-22 11:02, after Request 16 - We're testing and reshaping the death
+   knight story skip on basic, plus your other requests, all committed and
+   waiting for your next compile. Next: tell me whether death knight talent
+   points should meet the story at 49 or 46 at level 58.
 
 --------------------------------------------------------------------------------
 
@@ -1639,6 +1643,159 @@ everyone at 60:
 Should they meet at 49, or at the 46 you remembered? And should a skipper's
 story rewards count toward that, or should it follow the level table only (11 at
 55)?
+
+--------------------------------------------------------------------------------
+
+### User Request 17
+
+<pasted_content id="583a">
+> Quest rewards for buddies: you're right, and I described it badly. It already
+> goes to every
+> buddy in your clan, not just ones standing near you, but only those logged in
+> at that moment. A
+> set-aside buddy, or one still logging in, misses it for good. I wrote your
+> rule into issue 617d:
+> an offline buddy gets the reward at its next login. One question is open
+> there: what to do when
+>   a buddy's quest log is full.
+</pasted_content id="583a">
+
+
+buddies should never have quests. They should have perfectly synced quest
+progress with the player.
+
+
+
+<pasted_content id="583a">
+> 2. 625b: a buddy wears only the weapon kind its talents are for. Death knights
+> take a two-hander
+>      unless they rolled the one-hand talents, then two one-handers. A rogue may keep an off-hand
+>      dagger. This applies everywhere a buddy picks a weapon: its kit, loot rolls, buying and
+     trading.
+</pasted_content id="583a">
+
+
+the rogues should take a dagger if they have certain talents, like Combat
+Potency for 1h + offhand, or Focused Attacks for 2 daggers, which is beyond this
+server's max talent tree depth limit. I don't know how to generalize this, so
+let me think out loud a bit. So, poisons benefit from fast attack speed. If the
+buddy-bot rolls poison talents, like Improved Poisons, then they should prefer
+daggers. If they roll the sword talent, they should skip Improved Poisons and
+the dagger talent. Also Hemorrhage prefers daggers. Also some abilities like
+Ambush require daggers, so if they are among the talent points they pick, they
+daggers become more preferred...
+
+I think, maybe, instead, we should just... pick the weapon type specific
+talents, there aren't too many, and just assign one to each buddy-bot as their
+"weapon preference", and buddy-bots with talent profiles that include one of the
+weapon type selectors will only select the talent that corresponds to their
+preferred weapon type. BUT, if the buddy-bot finds a cool new weapon that is
+better than their current one, they'll update their weapon preference to use it.
+And, if they have one of the specific weapon-type specific talents, we can
+automatically switch it for them, applying however many talent points they had
+in the old one to the new one. We can do that automatically whenever their
+weapon preference is updated, and it only updates when they get a new weapon
+type that is stronger than their current weapon, and which they get to keep and
+can equip and use.
+
+> One question blocks rewriting the death knight talent table. A death knight
+> that finishes the
+> story at 58 has 49 points, not 46: 46 from the quests plus the stock one per
+> level past 55.
+
+Hmmmmm I changed my mind, let's do the default of 51 talent points, starting at
+level 10. For DKs this system looks good though. The DKs should have the same
+number of talent points at 58 if they skipped or did the story, and they should
+have the same number of talent points as everyone else at levels 58, 59, and 60.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 17
+
+> Your 58/59/60 rule lines up with the server's own numbers. A death knight that
+> plays the story has, under the stock rule, 46 points from the quests plus one
+> a level past 55: 49 at 58. That is exactly what every class has at 58 (58 −
+> 9), and stock then gives it 50 and 51 like everyone. So only skippers need a
+> table: 11, 24, 37, then 49, 50, 51. Rewriting the rule that way:
+
+> Rewriting the rule's block in place:
+
+> Now the issues. 718d first:
+
+> Re-aligning that table so the digits line up in the raw text, per the house
+> rule:
+
+> Now 617d: buddies never hold quests, and their quest progress mirrors yours
+> exactly.
+
+> The server's reward step only clears a log slot if the quest is in one, so a
+> buddy can be rewarded without ever holding the quest. Rewriting the 617d
+> bullet with that:
+
+> That bullet landed under Open Questions. Moving it into Intended Behavior
+> where it belongs:
+
+> Making the turn-in half real now, since it's small: reward without taking the
+> quest into the log. Checking that the server's "remove from active quests"
+> copes with a quest that was never there:
+
+> Both cope with a quest that was never in the log. Rewarding directly:
+
+> Updating 617d's current behavior to match:
+
+> Now 625b, rewritten around your weapon-preference design:
+
+> Adding the table change to the balance log, then committing:
+
+*[commit] dfbb95811 in wow-chat-2026 - Let death knights that skip the story meet the story players' talent points at 58 (issue 718d)*
+
+*[commit] 50a753820 in wow-chat-2026 - Reward buddies a shared quest without ever putting it in their quest log (issue 617d), and plan weapon preferences (625b)*
+
+All three changes are written and committed in two commits; the code parts take
+effect after your next compile.
+
+**Death knight talents.** Every class keeps the stock 51 at 60, one point a
+level from 10. The talents-from-level-1 idea (issue 155z9) is marked "will not
+be built" and kept as a record. A story player already lands where you wanted
+without any change: the story's quests give 46, the stock rule adds one a level
+past 55, so it finishes at 58 with 49, the same as everyone at 58. So story
+players now keep the stock rule untouched, and only skippers and death knight
+buddies follow a table that meets them at 58:
+
+| Level | 55 | 56 | 57 | 58 | 59 | 60 |
+|---|---:|---:|---:|---:|---:|---:|
+| Skipper or buddy | 11 | 24 | 37 | 49 | 50 | 51 |
+| Story player and everyone | — | — | — | 49 | 50 | 51 |
+
+- The rule tells skippers apart by the skip flag in the soul ledger, and buddies
+  by the buddy roster.
+- A brand-new death knight's first count happens before its ledger entry exists.
+  It keeps the stock rule there, so a story player never briefly sees 11 points
+  it would then lose.
+- After your compile, Gabrubre's talents reset at her next login (she has 19
+  spent, more than 11) and she has 11 to spend. Throszurg gets 11 at his next
+  login and spends them himself.
+
+**Buddies and quests.** A buddy is now rewarded your quest directly and never
+holds it in its quest log. The server's reward step works without the quest in
+the log, so a full log no longer blocks the reward. Still not built: a buddy
+that was offline when you turned the quest in should catch up at its next login.
+That's planned in issue 617d.
+
+**Weapon preference** (issue 625b, plan only):
+- Each buddy carries one weapon preference: a kind (sword, mace, dagger…) and
+  a grip (two-hander, two one-handers, or one-hander with an off-hand).
+- Its weapon-type talents follow the preference, the same number of points. For
+  rogues, Improved Poisons and Hemorrhage count as dagger talents.
+- It equips only weapons that match. A rogue may still keep a dagger in its off
+  hand.
+- If it gets a stronger weapon of another kind that it can keep and use, the
+  preference switches to that kind and the weapon talents move with it, point
+  for point.
+
+Should I build the login catch-up for offline buddies next? It needs a check at
+each buddy's login that compares its finished quests with yours and rewards
+what's missing.
 
 --------------------------------------------------------------------------------
 

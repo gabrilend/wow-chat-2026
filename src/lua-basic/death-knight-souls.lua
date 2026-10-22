@@ -674,6 +674,16 @@ end
 -- disc), then the watch for the fall. A quest that would not go through is
 -- named to the player and the log, with what did.
 local function skip_story(player)
+    -- The ledger says "skipped" before the first story quest is rewarded,
+    -- and synchronously (the query call waits for the database; the
+    -- execute call would only queue it). Each quest that grants talent
+    -- points makes the server recount them, and basic's death knight rule
+    -- (basic_rules.cpp, issue 718d) reads this flag at each recount: with
+    -- the flag on, a skipper gets the skipper's table (11 at 55); with it
+    -- still off, the stock rule inside Acherus gave it the story's 46, and
+    -- nothing recounts after the step off, so it kept 46 until its next
+    -- login (found 2026-10-22, before the rule was ever built).
+    CharDBQuery("UPDATE basic_718_souls SET skipped = 1 WHERE dk = " .. player:GetGUIDLow())
     local done, already, failed = tell_the_story(player)
     local line = string.format("Sargobras says: Your story is told: %d quests, %d already were. Keep what it taught you; the rest stays here.", done, already)
     if #failed > 0 then
@@ -690,8 +700,7 @@ local function skip_story(player)
             .. RUNEBLADE .. ") would not go in the bags (full?); done before it: the trade and the story. Give it by hand: .additem " .. RUNEBLADE)
         player:SendBroadcastMessage("Sargobras says: Your bags are full, so your runeblade stays with me. (The server log says why.)")
     end
-    CharDBExecute("UPDATE basic_718_souls SET skipped = 1 WHERE dk = " .. player:GetGUIDLow())
-    local a, r = math.random() * 2 * math.pi, SKIP_SCATTER * math.sqrt(math.random())
+    local a, r =math.random() * 2 * math.pi, SKIP_SCATTER * math.sqrt(math.random())
     local s    = SKIP_LANDING
     player:SendBroadcastMessage("Sargobras says: The living are below. Mind the first step.")
     player:Teleport(s.map, s.x + math.cos(a) * r, s.y + math.sin(a) * r, s.z, s.o)

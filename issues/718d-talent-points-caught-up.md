@@ -108,7 +108,25 @@ from level 1 are not wanted). Death knights:
 |   61+ |             level - 9 |                level - 9 | level - 9 |
 
 At 58 a death knight has what everyone has, whether it skipped or played
-the story, and from then on it never differs. Below 55 (only by a game
+the story, and from then on it never differs.
+
+No sudden 49 for a story player (the owner, 2026-10-22: "make sure at 58
+we aren't just, dumping 49 talent points onto them"): inside Acherus the
+stock rule counts the story's points quest by quest (each quest that
+grants them recounts), plus one a level past 55, so they arrive along the
+way and reach 49 as the story ends. The one way a story player could see
+a jump is reaching the Plaguelands map before finishing (stock there is
+`level - 9`); the story's map has no way out before its end except a game
+master's teleport. To confirm in game.
+
+Nothing for a skipper before the soul is given (the owner: "we don't apply
+the level 55 talent points for skippers until they sacrifice a soul
+correct?"): correct. Until the trade its ledger row says owed and not
+skipped, so it keeps the stock rule: 0 in Acherus, where the Lich King
+withholds the first quest. The skip writes "skipped" first, before it
+rewards any story quest (`death-knight-souls.lua`, the skip; until
+2026-10-22 it wrote it last, and the story's recounts gave a skipper the
+stock 46, kept until its next login), so the 11 arrive with the skip. Below 55 (only by a game
 master's hand) a skipper or buddy has 0. Points a game master or script
 grants on top (the server's bonus talent count) stay on top.
 
