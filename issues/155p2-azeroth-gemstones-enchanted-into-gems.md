@@ -64,25 +64,50 @@ jewelcrafting, and jewelcrafting and enchanting need each other.
 3. The post-install checker: every gemstone has its enchant and its cuts.
 4. Tests: the RAM database test (apply, re-apply, revert); in game: prospect
    copper, enchant the gemstone, cut it, socket the gem.
+## Answers, 2026-10-22
+
+1. **They become Outland's gems.** The enchanted gemstone is an uncut
+   Outland gem of its colour (an uncut Blood Garnet for a red stone, say),
+   cut with the existing recipes; no new gems.
+2. **Colour by its look**, and colours only merge, never split (the owner:
+   "by it's look, but if we have to change it's color (like purple can't
+   become red and blue, but red and blue can become purple if they're
+   merged together somehow) sorta like how you can't take salt out of a
+   spaghetti. then we need an extra processing step inbetween to split it
+   into two of the same type, maybe alchemy?"). A purple stone (Shadowgem)
+   makes a purple gem; a red and a blue could be merged into a purple; a
+   stone whose look doesn't give the colour wanted needs an extra step,
+   perhaps alchemy, that splits it into two of one kind.
+3. **The tier's shard, one per gemstone**: Small Glimmering for copper's
+   stones up through Large Glimmering, Small and Large Glowing, Small and
+   Large Radiant, to Small and Large Brilliant for thorium's. Never dust.
+4. **The yield** (the owner: "the rare gemstones just make one. And
+   sometimes they make chiplets which stack to 10, which can be merged
+   into a larger one - usually they make 6ish, slightly better than
+   half."). Read as: a common gemstone makes two cut gems, a rare one
+   (Star Ruby, Blue Sapphire, Large Opal, Huge Emerald, Azerothian
+   Diamond, and the like) one; and sometimes the work leaves chiplets
+   instead, a new item that stacks to 10, ten of which merge into one
+   uncut gem; a batch of chiplets is usually about 6 (slightly better than
+   half a gem). Open question 1 below checks the reading.
+5. **Chiplets come from cutting and prospecting** (2026-10-22): a cut or a
+   prospect sometimes yields chiplets (about 6, a stack holds 10), and
+   "other professions might use them for things, like engineering for
+   anything with lazers. Inscription for the most holy of paints."
+6. **Alchemy is the third craft of the gem chain**: alchemists combine ten
+   chiplets into an uncut gem of their colour, and split a mixed-colour
+   stone (purple, green, orange) into two of one colour. Jewelcrafting,
+   enchanting and alchemy need each other.
+7. **Skills by the ore:** each gemstone's enchant and cut at the skill
+   where its ore is prospected (copper 1-75, tin 50-125, iron 125-175,
+   mithril 175-250, thorium 250-300).
+8. **155p's +4 gems stay** (vendors, copper and tin): the supply for
+   players without the crafts, beside the crafters' road.
 
 ## Open Questions
 
-1. **What the cut gems are:** new gems (Azeroth's own, at 155p's +4 to +8
-   tiers, named after the gemstone: "Bold Tigerseye"), or the existing
-   Outland gems of that colour (the gemstone turning into, say, an uncut
-   Blood Garnet)?
-2. **Each gemstone's colour:** by its look (Malachite and Jade green, Star
-   Ruby red, Blue Sapphire blue, Citrine yellow, Shadowgem purple,
-   Tigerseye orange...), or another rule? Gems of a mixed colour (green,
-   orange, purple) fit two socket colours.
-3. **Which shards:** the shard of the gemstone's tier (Small Glimmering
-   for copper's gems up to Large Brilliant or Nexus Crystal for
-   thorium's), one per gemstone?
-4. **"Two cut gems, typically":** always two, or sometimes one or three
-   (a chance, like prospecting)? And is the enchanting step one gemstone
-   to one uncut gem, the cutting step one uncut gem to two cut gems?
-5. **The skill levels:** each gemstone's enchant and cut at the
-   enchanting and jewelcrafting skill where its ore is prospected (copper
-   1-75, tin 50-125, iron 125-175, mithril 175-250, thorium 250-300)?
-6. **What happens to the existing +4 cut gems from copper and tin and
-   Outland's gem vendors (155p):** kept beside this, or replaced by it?
+1. **Chiplets in other recipes** ("engineering for anything with lazers.
+   Inscription for the most holy of paints"): new recipes that use them,
+   or added as a reagent to existing ones (which engineering items count
+   as "lazers": the scopes, the death ray, the goggles)? A list to draw up
+   when the chain is built.
