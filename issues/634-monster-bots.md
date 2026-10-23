@@ -100,3 +100,8 @@ stand-ins (617t1). Nothing fights players as a character would.
    dressed character's look into a creature; it would come in only for
    the LARP style (people in costume), where a dressed human look has to
    become a creature's.
+4. **How many** (answered 2026-10-23): "one for each player in the zone."
+   So the number out in a zone at once equals the number of players in
+   that zone (zero when nobody is there), spread over the zone's dungeon
+   and raid entrances. Open: when one dies, does another come out at once
+   (keeping the count), or after a wait?

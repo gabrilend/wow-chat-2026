@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-22 22:33:41
+Generated on: 2026-10-23 11:22:14
 Models: claude-opus-5-5
 
 ## Contents
@@ -36,6 +36,15 @@ Models: claude-opus-5-5
    basic-profile features: death knight talents, professions, buddies. All work
    is committed, and the next step is your compile, then answering three open
    questions on death durability, monster bots, and glass gem sockets.
+9. 2026-10-22 22:36, after Request 26 - We're shaping the basic profile; the
+   boss enchanting scrolls and capital Profession Mentors are built and
+   committed, waiting for your compile. Next, answer my three questions:
+   rested-experience cost on death, resistance gem size, and where monster bots
+   fight first.
+10. 2026-10-23 11:01, after Request 27 - We've been planning and building basic
+    profile features (death knights, buddies, professions, monster bots), all
+    committed and waiting for your compile. Next: answer how many monster bots
+    per entrance and whether 196 becomes the general tech-debt list.
 
 --------------------------------------------------------------------------------
 
@@ -3122,6 +3131,164 @@ Questions:
 3. **Monster bots (634):** where should they fight first? A few special
    encounters (say, a rare elite that fights like a player), whole dungeons, or
    the open world?
+
+--------------------------------------------------------------------------------
+
+### User Request 27
+
+okay why the heck does 155 go all the way to Z that seems a little odd, our
+phase numbers are wayyyyyy out of order.
+
+But, let's not worry about it now, and save it for tech debt resolution tasks
+later.
+
+For 634, does that mean that since we're simulating the bots anyway, with their
+inventory and everything, there isn't really a reason to bake them for this
+purpose?
+
+> Recorded in 155p: the +1 health-every-5-seconds and +1 resilience glass gems
+> fit any socket, joined by elemental resistance gems (fire, frost, nature,
+> shadow or arcane) that also
+>   fit any socket.
+
+the elemental resist gems should be +1 in two different elements. Fire and
+frost, nature and arcane, and shadow is +2
+
+> 1. Deaths (155z12): with durability loss back, should a death still cost
+> rested experience on top (2 bars at level 1, rising to 4 at the cap), or
+> should 155z12 be dropped?
+
+it's fine let's just drop it
+
+> 2. The resistance glass gems: +1 or +2? One option is +1 on the lowest items
+> and +2 on items from level 15 or so up.
+
+the gem determines the stats, not what it's socketed in.
+
+> 3. Monster bots (634): where should they fight first? A few special encounters
+> (say, a rare elite that fights like a player), whole dungeons, or the open
+> world?
+
+they spawn from dungeons and raids and explore the world like playerbots and
+fight players when they see them. They should be level appropriate for the zone
+they spawn from. Yes, this means evil bots in the Ghostlands from Zul'Aman, but
+not in Darkshore.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 27
+
+> No tech-debt list exists yet, so I'm starting one as an issue, with the
+> numbering as its first entry. Then the rest:
+
+> The write gate refused the whole command because of a path held in a variable,
+> so nothing ran. Redoing it with paths written out:
+
+*[commit] 2223d3d33 in wow-chat-2026 - Note the issue numbering as tech debt, drop the death-cost idea, and record the resistance gems and where monster bots roam (issues 196, 155p, 155z12, 634)*
+
+All recorded and committed. I started a tech-debt record for the numbering.
+
+> why the heck does 155 go all the way to Z … our phase numbers are wayyyyyy
+> out of order
+
+155 is the basic profile's own issue, and every change to basic was filed as a
+sub-issue of it: 155a to 155z, then 155z1 to 155z13 once the alphabet ran out.
+That's 48 sub-issues about everything from plumbing to gems to deaths. Numbers
+also mostly record when an idea arrived rather than what it builds on. I've
+started issue 196 as a tech-debt record. It describes the problem, plus a plan
+for later: map every issue to a section of the software, review a renumbering
+table with you, then move files with `git mv` (keeping history) and rewrite
+every reference.
+
+> since we're simulating the bots anyway, with their inventory and everything,
+> there isn't really a reason to bake them for this purpose?
+
+Right, no baking needed, though for a slightly different reason. A monster bot
+is a creature, not a character: it has no inventory or character sheet behind
+it, and it already looks like a monster. Baking turns a dressed character's look
+into a creature, so it would only come in for the LARP style, where a human in
+costume has to become a creature. Recorded in 634.
+
+> +1 in two different elements. Fire and frost, nature and arcane, and shadow is
+> +2 … the gem determines the stats
+
+Recorded in 155p: three gems (+1 fire/+1 frost, +1 nature/+1 arcane, +2 shadow),
+each with its own stats whatever item it's in.
+
+> it's fine let's just drop it
+
+155z12 is marked "will not be built" and kept as the record of the idea. Deaths
+stay as stock.
+
+> they spawn from dungeons and raids and explore the world … level appropriate
+> for the zone they spawn from
+
+Recorded in 634. They come out of dungeon and raid entrances, roam the
+surrounding zone like bots, attack players they see, and match that zone's
+level: Ghostlands level (10–20) for those leaving Zul'Aman, not Zul'Aman's 70.
+Zones without an entrance, like Darkshore, have none.
+
+Questions:
+
+1. **Monster bots:** how many should be out at once per entrance, and how often
+   should a new one come out? My suggestion is a small number per entrance (say
+   2–3) at a time, with a new one appearing a few minutes after one dies.
+2. **Tech debt (196):** should 196 become the project's general tech-debt list,
+   collecting other cleanup items as they come up, or stay about issue numbering
+   only?
+
+--------------------------------------------------------------------------------
+
+### User Request 28
+
+> 1. Monster bots: how many should be out at once per entrance, and how often
+> should a new one come out? My suggestion is a small number per entrance (say
+> 2–3) at a time, with a new
+>      one appearing a few minutes after one dies.
+
+one for each player in the zone.
+
+> 2. Tech debt (196): should 196 become the project's general tech-debt list,
+> collecting other cleanup items as they come up, or stay about issue numbering
+> only?
+
+just issue renumbering.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 28
+
+> The commit failed: /dev/shm (the RAM disk) is full, and the commit tool keeps
+> its working files there. Finding what's filling it:
+
+I haven't deleted anything; neither of the big folders is mine. What's filling
+it:
+
+| Folder | Size | What it is |
+|---|---:|---|
+| `/dev/shm/neocities-modernization/` | 14 GB | another project's working files (word lists before and after, a site build) |
+| `/dev/shm/wow-chat-2026/test-source-patches-alpha/` | 1.4 GB | leftover scratch from a source-patch test run for the alpha profile |
+| everything else | under 0.3 GB | — |
+
+Both answers are saved in the issue files. Only the commit is waiting, because
+the commit tool needs a little room on the RAM disk.
+
+> one for each player in the zone.
+
+Recorded in 634: the number of monster bots out in a zone equals the number of
+players in it, spread over its dungeon and raid entrances.
+
+> just issue renumbering.
+
+Recorded in 196.
+
+Could you free some space? The neocities folder is the big one, but I don't know
+whether that project still needs it. The alpha test scratch is probably safe to
+remove (a test's leftover copy), but I'd rather you confirm. Once there's room,
+I'll commit.
+
+Next question: in a zone with players, when a monster bot dies, should another
+come out of an entrance at once to keep the count, or after a wait?
 
 --------------------------------------------------------------------------------
 

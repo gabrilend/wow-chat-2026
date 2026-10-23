@@ -57,3 +57,8 @@ every reference updated.
 
 1. When to take it up, and whether other tech debt joins this list (this
    issue could become the tech-debt list itself).
+
+## Answers, 2026-10-23
+
+1. **Issue renumbering only** ("just issue renumbering."): this issue
+   doesn't become a general tech-debt list.
