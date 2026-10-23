@@ -729,3 +729,10 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
   glass gems of +1: +1 weapon damage (as the early enchantments give) or
   +1 haste rating. Open: one of the two for every low glass gem, or both
   kinds (weapon damage for weapons' sockets, haste for armor's)?
+- (2026-10-22) **The Visiting Jewelcrafters fold into the Profession
+  Mentor** (155e1, install step E068): the owner chose to merge them, so
+  E068 removes their six spawns (saved; its revert restores them) and the
+  mentor, standing where each stood, teaches list 113 in the capitals
+  with no jewelcrafter. This issue's step E033 still creates them; folding
+  that part of E033 into E068 for good is left for when E033 is next
+  regenerated.

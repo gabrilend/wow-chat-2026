@@ -1,0 +1,361 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- generate-basic-profession-mentors-sql - one Profession Mentor in each of
+-- Azeroth's eight capitals, teaching the professions its city has no
+-- trainer for (issue 155e1).
+--
+-- For a general audience: on basic, a visitor from afar stands in each
+-- capital's crafting quarter and teaches whatever professions that city
+-- lacks a trainer for, one dialogue line each ("Can you teach me
+-- alchemy?"). It replaces the six Visiting Jewelcrafters (issue 155p): in a
+-- capital with no jewelcrafter, the mentor teaches jewelcrafting too. It
+-- looks like a trainer of one of the professions it teaches, borrowed from
+-- another capital of its side (so usually another race: "A tauren in
+-- Silvermoon is much easier to notice than another blood elf"). This
+-- program reads the capitals' outlines (the client's map rectangles), finds
+-- the profession trainers standing inside each in the world database,
+-- works out what each capital lacks, picks the mentor's spot (two yards to
+-- the right of the city's mining trainer, where the Visiting Jewelcrafter
+-- stood) and its borrowed look, and writes the install step's SQL and its
+-- revert. It prints a table per capital.
+--
+-- Usage: scripts/generate-basic-profession-mentors-sql [PROJECT_DIR] [WORLD_DATABASE]
+--   writes patches/E068-basic-profession-mentors/39-profession-mentors.{apply,revert}.sql
+--------------------------------------------------------------------------------
+
+local DIR   = arg[1] and arg[1] ~= "" and arg[1] or "/mnt/kaun/wow-chat-2026"
+local WORLD = arg[2] or "acore_world_basic"
+local OUT   = DIR .. "/patches/E068-basic-profession-mentors/39-profession-mentors"
+local MYSQL = DIR .. "/mysql/installed-files/bin/mysql"
+local DBC   = DIR .. "/data-files/dbc/"
+
+-- {{{ the knobs
+-- The capitals: AreaTable id -> side (1 Alliance, 2 Horde), name.
+local CAPITALS = {
+    { area = 1519, side = 1, name = "Stormwind" },
+    { area = 1537, side = 1, name = "Ironforge" },
+    { area = 1657, side = 1, name = "Darnassus" },
+    { area = 3557, side = 1, name = "The Exodar" },
+    { area = 1637, side = 2, name = "Orgrimmar" },
+    { area = 1638, side = 2, name = "Thunder Bluff" },
+    { area = 1497, side = 2, name = "Undercity" },
+    { area = 3487, side = 2, name = "Silvermoon City" },
+}
+-- The professions, in the order their list ids are numbered (155200 + n),
+-- with the name a dialogue line says. Jewelcrafting's line opens list 113,
+-- the capitals' shared jewelcrafting list (155p; each capital's own order
+-- of cuts is 155p1's, not built yet), so it gets no list of its own.
+local PROFESSIONS = {
+    { skill = 171, name = "alchemy"        }, { skill = 164, name = "blacksmithing"  },
+    { skill = 333, name = "enchanting"     }, { skill = 202, name = "engineering"    },
+    { skill = 182, name = "herbalism"      }, { skill = 773, name = "inscription"    },
+    { skill = 755, name = "jewelcrafting", list = 113 },
+    { skill = 165, name = "leatherworking" }, { skill = 186, name = "mining"         },
+    { skill = 393, name = "skinning"       }, { skill = 197, name = "tailoring"      },
+    { skill = 185, name = "cooking"        }, { skill = 129, name = "first aid"      },
+    { skill = 356, name = "fishing"        },
+}
+local LIST_BASE    = 155200     -- profession n's list: 155200 + n (155201-155214, checked free 2026-10-22)
+local MENU_BASE    = 155030     -- capital n's npc_text and gossip menu: 155030 + n (155031-155038)
+local ENTRY_BASE   = 1550030    -- capital n's creature_template: 1550030 + n (1550031-1550038)
+local GUID_BASE    = 15500030   -- capital n's spawn: 15500030 + n (15500031-15500038)
+local STOCK_BELOW  = 1000000    -- creature entries at or above this are the project's own (155p's Visiting Jewelcrafters among them)
+local VJ_FIRST, VJ_LAST = 15501001, 15501006   -- the six Visiting Jewelcrafter spawns (155p, E033), removed here
+-- }}}
+
+-- {{{ local function die
+local function die(msg)
+    io.stderr:write("generate-basic-profession-mentors-sql: " .. msg .. "\n")
+    os.exit(1)
+end
+-- }}}
+
+-- {{{ local function query
+local function query(sql)
+    local p = io.popen(string.format("MYSQL_PWD=menardi '%s' -h127.0.0.1 -P3307 -uritz -N -B %s -e \"%s\" 2>&1", MYSQL, WORLD, sql))
+    local rows = {}
+    for line in p:lines() do
+        if line:match("^ERROR") then
+            die("MySQL refused a query on " .. WORLD .. ": " .. line .. "\n  to debug: is MySQL running (scripts/start-mysql)?")
+        end
+        local r = {}
+        for v in (line .. "\t"):gmatch("([^\t]*)\t") do r[#r + 1] = tonumber(v) or v end
+        rows[#rows + 1] = r
+    end
+    p:close()
+    return rows
+end
+-- }}}
+
+-- {{{ local function capital_rects
+-- WorldMapArea.dbc: 1 map, 2 area, 4..7 the map rectangle's left, right,
+-- top and bottom as floats (left/right bound y, top/bottom bound x); the
+-- same reading as scripts/generate-basic-gem-supply-sql.
+local function capital_rects()
+    local ffi = require("ffi")
+    local f = io.open(DBC .. "WorldMapArea.dbc", "rb") or die("cannot open " .. DBC .. "WorldMapArea.dbc")
+    local d = f:read("*a")
+    f:close()
+    local function u32(o) local a, b, c, e = d:byte(o + 1, o + 4) return a + b * 256 + c * 65536 + e * 16777216 end
+    local function flt(o) local v = ffi.new("uint32_t[1]", u32(o)); return ffi.cast("float*", v)[0] end
+    local n, rs, by_area = u32(4), u32(12), {}
+    for r = 0, n - 1 do
+        local b = 20 + r * rs
+        local l, rt, t, bt = flt(b + 16), flt(b + 20), flt(b + 24), flt(b + 28)
+        by_area[u32(b + 8)] = { map = u32(b + 4), x0 = math.min(t, bt), x1 = math.max(t, bt), y0 = math.min(l, rt), y1 = math.max(l, rt) }
+    end
+    for _, c in ipairs(CAPITALS) do
+        local r = by_area[c.area] or die("no WorldMapArea.dbc rectangle for " .. c.name .. " (area " .. c.area .. ")")
+        c.map, c.x0, c.x1, c.y0, c.y1 = r.map, r.x0, r.x1, r.y0, r.y1
+    end
+end
+-- }}}
+
+capital_rects()
+
+-- each stock profession trainer spawned in any capital: its skill (the
+-- skill its general list's recipes need), level, position
+local trainers = query(
+    "SELECT c.guid, ct.entry, ct.name, ct.subname, ct.maxlevel, c.map, c.position_x, c.position_y, c.position_z, c.orientation, " ..
+    "(SELECT MAX(ts.ReqSkillLine) FROM trainer_spell ts WHERE ts.TrainerId = d.TrainerId) skill " ..
+    "FROM creature c JOIN creature_template ct ON ct.entry = c.id JOIN creature_default_trainer d ON d.CreatureId = c.id " ..
+    "JOIN trainer t ON t.Id = d.TrainerId AND t.Type = 2 AND t.Requirement = 0 " ..
+    "WHERE ct.entry < " .. STOCK_BELOW .. " AND c.map IN (0, 1, 530)")
+
+local function inside(c, t) return t[6] == c.map and t[7] >= c.x0 and t[7] <= c.x1 and t[8] >= c.y0 and t[8] <= c.y1 end
+
+-- {{{ what each capital has, and lacks
+for i, c in ipairs(CAPITALS) do
+    c.index, c.has, c.trainers = i, {}, {}
+    for _, t in ipairs(trainers) do
+        if inside(c, t) and t[11] ~= 0 then
+            c.has[t[11]] = true
+            c.trainers[#c.trainers + 1] = t
+        end
+    end
+    c.missing = {}
+    for n, p in ipairs(PROFESSIONS) do
+        if not c.has[p.skill] then c.missing[#c.missing + 1] = n end
+    end
+    if #c.trainers == 0 then die("no profession trainers found inside " .. c.name .. "'s rectangle: the outline or the spawns moved") end
+end
+-- }}}
+
+-- {{{ the spot: two yards to the right of the mining trainer (any profession trainer when none)
+for _, c in ipairs(CAPITALS) do
+    local anchor
+    for _, t in ipairs(c.trainers) do if t[11] == 186 then anchor = t break end end
+    anchor = anchor or c.trainers[1]
+    local o = anchor[10]
+    c.x, c.y, c.z, c.o = anchor[7] + 2 * math.cos(o - math.pi / 2), anchor[8] + 2 * math.sin(o - math.pi / 2), anchor[9], o
+    c.anchor = anchor[3] .. ", " .. anchor[4]
+end
+-- }}}
+
+-- {{{ the look: the highest-level trainer of a missing profession in another capital of the side
+for _, c in ipairs(CAPITALS) do
+    local want = {}
+    for _, n in ipairs(c.missing) do want[PROFESSIONS[n].skill] = true end
+    local best, fallback
+    for _, o in ipairs(CAPITALS) do
+        if o ~= c and o.side == c.side then
+            for _, t in ipairs(o.trainers) do
+                if want[t[11]] and (not best or t[5] > best[5]) then best = t end
+                if not fallback or t[5] > fallback[5] then fallback = t end
+            end
+        end
+    end
+    c.clone = best or fallback
+end
+-- }}}
+
+-- {{{ the SQL
+local apply, revert = {}, {}
+local function a(s) apply[#apply + 1] = s end
+local stamp = "-- GENERATED by scripts/generate-basic-profession-mentors-sql from " .. WORLD .. " and the client's WorldMapArea.dbc;\n" ..
+              "-- don't edit by hand (re-run the generator). Issue 155e1: a Profession Mentor in each capital."
+a("-- MARKER_E068_APPLY basic-profession-mentors\n" .. stamp)
+a([[
+-- Id ranges owned by this file (checked free 2026-10-22):
+--   trainer.Id                      155201-155214  (one list per profession)
+--   npc_text.ID, gossip_menu.MenuID 155031-155038  (one per capital)
+--   creature_template.entry         1550031-1550038
+--   creature.guid                   15500031-15500038
+-- Also removes the six Visiting Jewelcrafter spawns (155p's 15501001-15501006),
+-- saved for the revert: the mentor takes their place and their teaching.
+
+-- ---- clear everything this file owns (re-applicable) -----------------------
+DELETE FROM `creature`                WHERE `guid`       BETWEEN 15500031 AND 15500038;
+DELETE FROM `creature_template_model` WHERE `CreatureID` BETWEEN 1550031  AND 1550038;
+DELETE FROM `creature_template`       WHERE `entry`      BETWEEN 1550031  AND 1550038;
+DELETE FROM `gossip_menu_option`      WHERE `MenuID`     BETWEEN 155031   AND 155038;
+DELETE FROM `gossip_menu`             WHERE `MenuID`     BETWEEN 155031   AND 155038;
+DELETE FROM `npc_text`                WHERE `ID`         BETWEEN 155031   AND 155038;
+DELETE FROM `trainer_spell`           WHERE `TrainerId`  BETWEEN 155201   AND 155214;
+DELETE FROM `trainer`                 WHERE `Id`         BETWEEN 155201   AND 155214;
+
+-- ---- the capitals and what each lacks (generated data) ---------------------
+CREATE TABLE IF NOT EXISTS `basic_155e1_mentors` (
+  `capital`    tinyint unsigned  NOT NULL,
+  `name`       varchar(32)       NOT NULL,
+  `map`        smallint unsigned NOT NULL,
+  `x` float NOT NULL, `y` float NOT NULL, `z` float NOT NULL, `o` float NOT NULL,
+  `clone_from` int unsigned      NOT NULL,
+  `clone_note` varchar(96)       NOT NULL,
+  PRIMARY KEY (`capital`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='issue 155e1: Profession Mentor per capital';
+CREATE TABLE IF NOT EXISTS `basic_155e1_missing` (
+  `capital`    tinyint unsigned NOT NULL,
+  `profession` tinyint unsigned NOT NULL,
+  `skill`      smallint unsigned NOT NULL,
+  `list`       int unsigned     NOT NULL,
+  `name`       varchar(24)      NOT NULL,
+  PRIMARY KEY (`capital`, `profession`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='issue 155e1: professions each capital lacks';
+DELETE FROM `basic_155e1_mentors`;
+DELETE FROM `basic_155e1_missing`;]])
+
+local mrows, xrows = {}, {}
+for _, c in ipairs(CAPITALS) do
+    if #c.missing > 0 then
+        mrows[#mrows + 1] = string.format("  (%d, '%s', %d, %.3f, %.3f, %.3f, %.4f, %d, '%s')", c.index, c.name, c.map, c.x, c.y, c.z, c.o,
+            c.clone[2], (c.clone[3] .. ", " .. c.clone[4]):gsub("'", "''"):sub(1, 96))
+        for _, n in ipairs(c.missing) do
+            local p = PROFESSIONS[n]
+            xrows[#xrows + 1] = string.format("  (%d, %d, %d, %d, '%s')", c.index, n, p.skill, p.list or (LIST_BASE + n), p.name)
+        end
+    end
+end
+a("INSERT INTO `basic_155e1_mentors` (`capital`, `name`, `map`, `x`, `y`, `z`, `o`, `clone_from`, `clone_note`) VALUES\n" .. table.concat(mrows, ",\n") .. ";")
+a("INSERT INTO `basic_155e1_missing` (`capital`, `profession`, `skill`, `list`, `name`) VALUES\n" .. table.concat(xrows, ",\n") .. ";")
+
+a([[
+
+-- ---- one list per missing profession: the union of its general stock lists --
+-- A profession's general lists are the tradeskill lists (no required spell)
+-- teaching its recipes (needing the skill) from the very start (something
+-- learnable at skill 0, its first rank); specialisation lists start at 225
+-- or more and stay out. (Not "a spell needing no skill line": mining's
+-- lists name the skill on every row, so that rule found no mining list,
+-- 2026-10-22.) Stock
+-- lists stop at 300 on basic (155n). Requirement 0, so every player sees
+-- the line (a tradeskill list's requirement is a spell the player must
+-- know, Trainer::IsTrainerValidForPlayer).
+INSERT INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`)
+SELECT DISTINCT m.`list`, 2, 0, 'Here is what I can teach you. Isn''t it all wonderful?'
+FROM `basic_155e1_missing` m WHERE m.`list` BETWEEN 155201 AND 155214;
+
+INSERT INTO `trainer_spell`
+  (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`,
+   `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`)
+SELECT p.`list`, ts.`SpellId`,
+       MIN(ts.`MoneyCost`), MIN(ts.`ReqSkillLine`), MIN(ts.`ReqSkillRank`),
+       MIN(ts.`ReqAbility1`), MIN(ts.`ReqAbility2`), MIN(ts.`ReqAbility3`), MIN(ts.`ReqLevel`)
+FROM (SELECT DISTINCT `list`, `skill` FROM `basic_155e1_missing` WHERE `list` BETWEEN 155201 AND 155214) p
+JOIN `trainer` t ON t.`Type` = 2 AND t.`Requirement` = 0 AND t.`Id` NOT BETWEEN 155201 AND 155214
+JOIN `trainer_spell` ts ON ts.`TrainerId` = t.`Id`
+WHERE EXISTS (SELECT 1 FROM `trainer_spell` a WHERE a.`TrainerId` = t.`Id` AND a.`ReqSkillLine` = p.`skill`)
+  AND (SELECT MIN(b.`ReqSkillRank`) FROM `trainer_spell` b WHERE b.`TrainerId` = t.`Id`) = 0
+GROUP BY p.`list`, ts.`SpellId`;
+
+-- ---- dialogue: a greeting and one line per missing profession ---------------
+INSERT INTO `npc_text` (`ID`, `text0_0`, `lang0`, `Probability0`)
+SELECT 155030 + v.`capital`,
+       CONCAT('Oh! Hello! I came such a long way to see ', v.`name`,
+              ', and nobody here teaches everything. So I do! Well, the parts they don''t.'),
+       0, 1
+FROM `basic_155e1_mentors` v;
+
+INSERT INTO `gossip_menu` (`MenuID`, `TextID`)
+SELECT 155030 + v.`capital`, 155030 + v.`capital` FROM `basic_155e1_mentors` v;
+
+-- OptionType 5 = GOSSIP_OPTION_TRAINER, OptionNpcFlag 16 = UNIT_NPC_FLAG_TRAINER,
+-- OptionIcon 3 = trainer book. ActionMenuID = the profession's list (B029
+-- opens a named list for an NPC with no list of its own).
+INSERT INTO `gossip_menu_option`
+  (`MenuID`, `OptionID`, `OptionIcon`, `OptionText`, `OptionBroadcastTextID`,
+   `OptionType`, `OptionNpcFlag`, `ActionMenuID`, `ActionPoiID`, `BoxCoded`, `BoxMoney`, `BoxText`, `BoxBroadcastTextID`)
+SELECT 155030 + m.`capital`, m.`profession`, 3, CONCAT('Can you teach me ', m.`name`, '?'),
+       0, 5, 16, m.`list`, 0, 0, 0, '', 0
+FROM `basic_155e1_missing` m;
+
+-- ---- NPC templates: copies of each capital's borrowed look ------------------
+DROP TEMPORARY TABLE IF EXISTS `tmp_155e1_template`;
+CREATE TEMPORARY TABLE `tmp_155e1_template` AS
+SELECT v.`capital`, t.* FROM `creature_template` t JOIN `basic_155e1_mentors` v ON v.`clone_from` = t.`entry`;
+UPDATE `tmp_155e1_template` t
+SET t.`entry`              = 1550030 + t.`capital`,
+    t.`difficulty_entry_1` = 0, t.`difficulty_entry_2` = 0, t.`difficulty_entry_3` = 0,
+    t.`KillCredit1`        = 0, t.`KillCredit2` = 0,
+    t.`name`               = 'Visiting Mentor',
+    t.`subname`            = 'Profession Trainer',
+    t.`gossip_menu_id`     = 155030 + t.`capital`,
+    t.`npcflag`            = 1 | 16,           -- UNIT_NPC_FLAG_GOSSIP | UNIT_NPC_FLAG_TRAINER
+    t.`lootid`             = 0, t.`pickpocketloot` = 0, t.`skinloot` = 0,
+    t.`AIName`             = '',
+    t.`ScriptName`         = '';
+ALTER TABLE `tmp_155e1_template` DROP COLUMN `capital`;
+INSERT INTO `creature_template` SELECT * FROM `tmp_155e1_template`;
+DROP TEMPORARY TABLE `tmp_155e1_template`;
+
+DROP TEMPORARY TABLE IF EXISTS `tmp_155e1_model`;
+CREATE TEMPORARY TABLE `tmp_155e1_model` AS
+SELECT v.`capital`, m.* FROM `creature_template_model` m JOIN `basic_155e1_mentors` v ON v.`clone_from` = m.`CreatureID`;
+UPDATE `tmp_155e1_model` m SET m.`CreatureID` = 1550030 + m.`capital`;
+ALTER TABLE `tmp_155e1_model` DROP COLUMN `capital`;
+INSERT INTO `creature_template_model` SELECT * FROM `tmp_155e1_model`;
+DROP TEMPORARY TABLE `tmp_155e1_model`;
+
+-- ---- the Visiting Jewelcrafters go (saved for the revert) -------------------
+-- The mentor stands where each stood (two yards right of the mining
+-- trainer) and teaches its list 113 in the capitals with no jewelcrafter.
+CREATE TABLE IF NOT EXISTS `basic_155e1_jewelcrafter_backup` LIKE `creature`;
+INSERT IGNORE INTO `basic_155e1_jewelcrafter_backup`
+SELECT * FROM `creature` WHERE `guid` BETWEEN 15501001 AND 15501006;
+DELETE FROM `creature` WHERE `guid` BETWEEN 15501001 AND 15501006;
+
+-- ---- spawns -------------------------------------------------------------------
+INSERT INTO `creature`
+  (`guid`, `id`, `map`, `spawnMask`, `phaseMask`,
+   `position_x`, `position_y`, `position_z`, `orientation`,
+   `spawntimesecs`, `Comment`)
+SELECT 15500030 + v.`capital`, 1550030 + v.`capital`, v.`map`, 1, 1,
+       v.`x`, v.`y`, v.`z`, v.`o`,
+       300, CONCAT('issue 155e1: Profession Mentor, ', v.`name`, ' (looks like ', v.`clone_note`, ')')
+FROM `basic_155e1_mentors` v;]])
+
+revert[#revert + 1] = "-- MARKER_E068_REVERT basic-profession-mentors\n" .. stamp
+revert[#revert + 1] = [[
+-- Remove everything the apply added, and put the Visiting Jewelcrafters back.
+DELETE FROM `creature`                WHERE `guid`       BETWEEN 15500031 AND 15500038;
+DELETE FROM `creature_template_model` WHERE `CreatureID` BETWEEN 1550031  AND 1550038;
+DELETE FROM `creature_template`       WHERE `entry`      BETWEEN 1550031  AND 1550038;
+DELETE FROM `gossip_menu_option`      WHERE `MenuID`     BETWEEN 155031   AND 155038;
+DELETE FROM `gossip_menu`             WHERE `MenuID`     BETWEEN 155031   AND 155038;
+DELETE FROM `npc_text`                WHERE `ID`         BETWEEN 155031   AND 155038;
+DELETE FROM `trainer_spell`           WHERE `TrainerId`  BETWEEN 155201   AND 155214;
+DELETE FROM `trainer`                 WHERE `Id`         BETWEEN 155201   AND 155214;
+CREATE TABLE IF NOT EXISTS `basic_155e1_jewelcrafter_backup` LIKE `creature`;
+INSERT IGNORE INTO `creature` SELECT * FROM `basic_155e1_jewelcrafter_backup`;
+DROP TABLE IF EXISTS `basic_155e1_jewelcrafter_backup`;
+DROP TABLE IF EXISTS `basic_155e1_missing`;
+DROP TABLE IF EXISTS `basic_155e1_mentors`;]]
+
+local function write(path, lines)
+    local f = io.open(path, "w") or die("cannot write " .. path)
+    f:write(table.concat(lines, "\n") .. "\n")
+    f:close()
+end
+write(OUT .. ".apply.sql", apply)
+write(OUT .. ".revert.sql", revert)
+-- }}}
+
+-- the owner's table
+for _, c in ipairs(CAPITALS) do
+    local names = {}
+    for _, n in ipairs(c.missing) do names[#names + 1] = PROFESSIONS[n].name end
+    print(string.format("%-16s lacks %-60s looks like %s", c.name, #names > 0 and table.concat(names, ", ") or "(nothing: no mentor)",
+        c.clone and (c.clone[3] .. ", " .. c.clone[4]) or "-"))
+    print(string.format("%-16s       stands by %s", "", c.anchor))
+end
+print("wrote " .. OUT .. ".{apply,revert}.sql")

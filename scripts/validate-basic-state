@@ -426,8 +426,16 @@ report "Onyxia's hoard: gold bars, five coloured sacks, ten gem piles; her epic 
         UNION ALL SELECT 'gold bars', MAX(MaxCount) FROM ${WORLD}.item_loot_template WHERE Entry = 49294 AND Item = 3577 HAVING MAX(MaxCount) IS NULL OR MAX(MaxCount) <> 45
         UNION ALL SELECT 'Onyxia binding-gem rows', COUNT(*) FROM ${WORLD}.creature_loot_template c JOIN ${WORLD}.creature_template t ON t.lootid = c.Entry
           WHERE t.entry = 10184 AND c.Item BETWEEN 1550180 AND 1550183 HAVING COUNT(*) <> 4")"
-report "a Visiting Jewelcrafter (Jewelcrafting trainer list 113) stands in each of the six Azeroth capitals" \
-    "$(run_sql "SELECT 'spawns', COUNT(*) FROM ${WORLD}.creature WHERE guid BETWEEN 15501001 AND 15501006 AND id IN (1550201, 1550202) HAVING COUNT(*) <> 6
+# Since 2026-10-22 (155e1, install step E068) the Profession Mentor takes
+# the Visiting Jewelcrafters' place: E068 removes their six spawns (saving
+# them in basic_155e1_jewelcrafter_backup) and teaches list 113 itself.
+# So: six spawns standing, or none standing with all six saved.
+report "the capitals' jewelcrafting: six Visiting Jewelcrafters (list 113), or their six spawns saved and the Profession Mentors teaching it" \
+    "$(run_sql "SELECT 'spawns', COUNT(*) FROM ${WORLD}.creature WHERE guid BETWEEN 15501001 AND 15501006 AND id IN (1550201, 1550202)
+          HAVING COUNT(*) NOT IN (0, 6)
+        UNION ALL SELECT 'removed but not saved', 0 FROM DUAL
+          WHERE NOT EXISTS (SELECT 1 FROM ${WORLD}.creature WHERE guid BETWEEN 15501001 AND 15501006)
+            AND (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${WORLD}' AND table_name = 'basic_155e1_jewelcrafter_backup') = 0
         UNION ALL SELECT 'trainer lists', COUNT(*) FROM ${WORLD}.creature_default_trainer WHERE CreatureId IN (1550201, 1550202) AND TrainerId = 113 HAVING COUNT(*) <> 2")"
 report "titan sites: a crystal trader and a masterwork jewelcrafter at Uldaman and Uldum, and one pair per Un'Goro pylon event" \
     "$(run_sql "SELECT 'standing spawns', COUNT(*) FROM ${WORLD}.creature WHERE guid BETWEEN 15501011 AND 15501014 AND id IN (1550210, 1550211) HAVING COUNT(*) <> 4
@@ -498,6 +506,28 @@ report "dungeon bosses: one enchanting scroll each, from a list of six or more n
         UNION ALL SELECT CONCAT('boss loot ', l.Entry, ' points at a missing list'), l.Reference FROM ${WORLD}.creature_loot_template l
           WHERE l.Reference BETWEEN 1558000 AND 1558099
             AND NOT EXISTS (SELECT 1 FROM ${WORLD}.reference_loot_template r WHERE r.Entry = l.Reference)")"
+# }}}
+
+# {{{ E068: a Profession Mentor in each capital that lacks a profession's trainer (issue 155e1)
+# Each mentor row stands, as its own creature, with one dialogue line per
+# missing profession opening a list that teaches something; no line opens
+# a list for one profession that belongs to another; the six Visiting
+# Jewelcrafters are gone and saved. Which capitals lack what is the
+# generator's to say (scripts/generate-basic-profession-mentors-sql prints it).
+report "Profession Mentors: each stands, with a line per missing profession opening a list that teaches it" \
+    "$(run_sql "
+        SELECT 'no mentor table (E068 not applied)', 0 FROM DUAL
+          WHERE (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${WORLD}' AND table_name = 'basic_155e1_mentors') = 0
+        UNION ALL SELECT CONCAT('mentor ', v.name, ' not standing'), v.capital FROM ${WORLD}.basic_155e1_mentors v
+          WHERE NOT EXISTS (SELECT 1 FROM ${WORLD}.creature c WHERE c.guid = 15500030 + v.capital AND c.id = 1550030 + v.capital)
+        UNION ALL SELECT CONCAT('mentor ', m.capital, ' has no ', m.name, ' line'), m.list FROM ${WORLD}.basic_155e1_missing m
+          WHERE NOT EXISTS (SELECT 1 FROM ${WORLD}.gossip_menu_option o WHERE o.MenuID = 155030 + m.capital AND o.ActionMenuID = m.list AND o.OptionType = 5)
+        UNION ALL SELECT CONCAT(m.name, ' list ', m.list, ' teaches nothing'), m.capital FROM ${WORLD}.basic_155e1_missing m
+          WHERE NOT EXISTS (SELECT 1 FROM ${WORLD}.trainer_spell ts WHERE ts.TrainerId = m.list)
+        UNION ALL SELECT CONCAT(m.name, ' list ', m.list, ' holds another profession''s recipe'), ts.SpellId FROM ${WORLD}.basic_155e1_missing m
+          JOIN ${WORLD}.trainer_spell ts ON ts.TrainerId = m.list WHERE ts.ReqSkillLine NOT IN (0, m.skill)
+        UNION ALL SELECT 'a Visiting Jewelcrafter still stands', COUNT(*) FROM ${WORLD}.creature WHERE guid BETWEEN 15501001 AND 15501006
+          HAVING COUNT(*) > 0")"
 # }}}
 
 echo ""

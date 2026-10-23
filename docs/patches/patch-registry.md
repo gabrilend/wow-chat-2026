@@ -263,6 +263,7 @@ in the build's order.
 | E064                           | sql          |     2940 | beta                                     | Beta: the other faction in the /who list (permission 28), every account, beta's realm.       | `patches/E064-beta-two-side-who.sh`                                                      |
 | E065                           | sql          |     2950 | beta                                     | Beta: friends of the other faction (permission 29), every account, beta's realm.             | `patches/E065-beta-two-side-friends.sh`                                                  |
 | E067                           | sql          |     2970 | basic                                    | One enchanting scroll per classic dungeon boss kill, near the boss's level (issue 812)       | `patches/E067-basic-boss-enchant-scrolls/E067-basic-boss-enchant-scrolls.sh`             |
+| E068                           | sql          |     2980 | basic                                    | A Profession Mentor in each capital, teaching the professions its city lacks (issue 155e1)   | `patches/E068-basic-profession-mentors/E068-basic-profession-mentors.sh`                 |
 <!-- patch-lists: end -->
 
 ## Older write-ups of source patches

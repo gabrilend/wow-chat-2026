@@ -10,7 +10,7 @@
   Azeroth), B029 (the server honours a trainer list named on a gossip
   line)
 - Priority: Medium
-- State: planned; open questions first
+- State: built 2026-10-22 (install step E068); waiting for the install and an in-game look
 
 ## Origin
 
@@ -26,9 +26,47 @@ professions:
 
 ## Current Behavior
 
-Each capital has the stock one-profession trainers, scattered through
-the city, and (from 155p) a Visiting Jewelcrafter in the six capitals
-that had no jewelcrafting trainer. No trainer teaches more than one
+**Built 2026-10-22, install step E068, waiting for an install.**
+`scripts/generate-basic-profession-mentors-sql` writes
+`patches/E068-basic-profession-mentors/39-profession-mentors.{apply,revert}.sql`:
+
+- **What each capital lacks:** the stock profession trainers standing
+  inside each capital's rectangle (the client's WorldMapArea.dbc, as 155p
+  reads it), against fourteen professions (eleven primary, three
+  secondary). When built: Stormwind, Ironforge, Orgrimmar and the
+  Undercity lacked jewelcrafting; Darnassus blacksmithing, engineering,
+  jewelcrafting and mining; Thunder Bluff engineering and jewelcrafting;
+  the Exodar and Silvermoon nothing, so they get no mentor. Run the
+  generator for the current table.
+- **The lists:** one per missing profession (ids 155201-155214), the union
+  of that profession's general stock lists (those teaching its recipes
+  from skill 0; specialisation lists start at 225 and stay out), stopping
+  at 300 as basic's lists do (155n); no required spell, so every player
+  sees the line. Jewelcrafting's line opens list 113, the capitals' shared
+  list (each capital's own order is 155p1's, not built).
+- **Where:** two yards to the right of the city's mining trainer (any
+  profession trainer when there is none: Darnassus's fishing trainer),
+  where the Visiting Jewelcrafter stood. The six Visiting Jewelcrafter
+  spawns are removed and saved; the revert brings them back.
+- **The look:** a copy of the highest-level trainer of one of its missing
+  professions from another capital of its side (a draenei jewelcrafter in
+  Stormwind and Ironforge, a blood elf one in Orgrimmar and the Undercity,
+  a dwarf weaponsmith in Darnassus, a goblin engineer in Thunder Bluff),
+  named "Visiting Mentor" <Profession Trainer>, gossip and trainer flags.
+- **The dialogue:** a greeting, and one "Can you teach me alchemy?" line
+  per missing profession opening its list (B029).
+- **The dance:** `src/lua-basic/profession-mentors.lua`: each mentor waits
+  30 to 90 minutes, dances for a minute, and waits again.
+- **Checked:** applied twice and reverted on the real basic world
+  database (six mentors, ten lines, the mining list's 17 spells from skill
+  0 to 300; the revert leaves it exactly as before); the post-install
+  checker's new check passes with it and fails without it, and 155p's
+  jewelcrafter check accepts either state. The RAM database test lists the
+  step (not run: the RAM disk was too full).
+
+Before: each capital had the stock one-profession trainers, scattered
+through the city, and (from 155p) a Visiting Jewelcrafter in the six
+capitals that had no jewelcrafting trainer. No trainer taught more than one
 profession.
 
 The Visiting Mentor (155e, install step E022): one at each of 23 sites
