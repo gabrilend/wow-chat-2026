@@ -736,3 +736,7 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
   with no jewelcrafter. This issue's step E033 still creates them; folding
   that part of E033 into E068 for good is left for when E033 is next
   regenerated.
+- (Answered 2026-10-22) **Which +1 glass gem where:** "sure, but we can do
+  +weapon damage on shoulders, boots, and gloves too." So +1 weapon damage
+  in the sockets of weapons, shoulders, boots and gloves; +1 haste rating
+  in every other armor slot's sockets.

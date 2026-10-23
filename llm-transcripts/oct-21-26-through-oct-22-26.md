@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-22 18:34:52
+Generated on: 2026-10-22 19:05:39
 Models: claude-opus-5-5
 
 ## Contents
@@ -2507,6 +2507,173 @@ Next questions:
    the lowest levels (+1 or +2), which keeps a socket within your ±10%. The
    other option is keeping +4 and cutting those items' own stats to make room.
    Which?
+
+--------------------------------------------------------------------------------
+
+### User Request 22
+
+- Profession Mentor (155e1)    No open questions left.
+excellent let us implement
+
+>   - Enchanting scrolls (812): no open questions; it can be built as it stands.
+excellent. let us implement.
+
+  Next questions:
+
+  1. When do the uncommon cuts begin?
+okay level 75 works for now. be sure to update it if the 155p design changes.
+
+>   2. Do the glass recipes stay "white" all the way to 300
+no, they turn gray once the uncommon gems are common. common meaning at least
+one of each color, so no matter what gemstones the player has access to, they
+can craft something.
+
+>   3. "One orb for 10 gems or 100 chiplets"
+the orb has 10 charges, the player can carve one gem from it or 10 chiplets.
+
+>   4. Sockets on low-level vendor gear (155p)
+you're right, so how about we give +weapon damage, sorta like the early
+enchanting recipes. Or maybe something that characters at low levels would
+notice, like haste rating. but only like, 1.
+
+can we try doing our back-and-forths in this format for a little bit? I want to
+see how it works out.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 22
+
+> Recording your four answers first, then building 155e1 and 812. Reading 812's
+> full design:
+
+> Recording your answers in the issues first:
+
+> Now studying how an existing basic world-database step is built, using the
+> Acherus vendors step (E051) as the model:
+
+> No dungeon-boss flags are set in this data. Trying the dungeon encounter list
+> instead, the table the server uses to know which kills count as a dungeon's
+> bosses:
+
+> Field 2 is the map type (1 = 5-player dungeon, 2 = raid). Checking the loot
+> tables' columns and that the id range I want is free:
+
+> The range is free. Writing the generator, house style: LuaJIT, a fixed project
+> folder that an argument can override, folded functions, and a plain-language
+> header:
+
+> The generator works: 152 bosses, 33 shared lists, 122 scrolls; one boss
+> (Anger'rel) has no loot table and is skipped. Checking the low-level end:
+
+> Writing the install step around it, modelled on E056:
+
+> Adding the step to the RAM database test (apply, then revert in reverse
+> order):
+
+> The test ends by asking the post-install checker whether the world came out
+> right, so E067 needs a check there. Looking at how a step's check is written:
+
+> Apply, revert and a double apply all behave, and the rollback left the
+> database untouched. Running the checker's new query against the applied state,
+> in the same kind of rolled-back transaction:
+
+> Empty means pass. Confirming the check fails when the step isn't applied:
+
+> The check catches a missing step. Regenerating the patch lists, then writing
+> 812 up as built:
+
+> Only E067's line plus the table's re-padding to fit it. Writing 812 up as
+> built:
+
+*[commit] 8d465dfe2 in wow-chat-2026 - Record the owner's answers on glass gems and low-level sockets (issues 155p1, 155p)*
+
+*[commit] 7b5155315 in wow-chat-2026 - Let every classic dungeon boss drop one enchanting scroll near its level (issue 812)*
+
+> 812 is built and committed. Now 155e1, the Profession Mentor. Studying the
+> class mentor's generator, since this one should reuse its way of finding sites
+> and the trainers present at them:
+
+> All free. Checking two Lua engine hook numbers the dance script needs:
+
+> Writing the generator:
+
+> That's my test query: `lines` is a reserved word in MySQL. Renaming it:
+
+> Both Lua tests pass. Now the E068 install step, its header, and the test and
+> checker entries:
+
+> Fixing the copied comments so they describe the mentor:
+
+> Testing both checks on the live database: apply E068, run the checker, revert,
+> run it again:
+
+*[commit] 012660342 in wow-chat-2026 - Put a Profession Mentor in each capital that lacks a profession's trainer (issue 155e1)*
+
+Both are built and committed, and your four answers are recorded. Both steps
+take effect after your next compile, which runs the install steps.
+
+> Profession Mentor (155e1): excellent let us implement
+
+Built as install step E068. A generator works out what each capital lacks:
+
+| Capital | Lacks | Looks like |
+|---|---|---|
+| Stormwind, Ironforge | jewelcrafting | a draenei jewelcrafter |
+| Orgrimmar, Undercity | jewelcrafting | a blood elf jewelcrafter |
+| Darnassus | blacksmithing, engineering, jewelcrafting, mining | a dwarf weaponsmith |
+| Thunder Bluff | engineering, jewelcrafting | a goblin engineer |
+| The Exodar, Silvermoon | nothing, so no mentor | — |
+
+- It stands two yards to the right of the city's mining trainer, where the
+  Visiting Jewelcrafter stood, and takes over its jewelcrafting list. The six
+  jewelcrafters' spawns are removed and saved; undoing the step brings them
+  back.
+- It has one "Can you teach me …?" line per missing profession.
+- It dances for a minute every 30–90 minutes.
+- Tested by applying it twice and reverting it on the real database; the checker
+  passes with it and catches its absence.
+- One mistake on the way: my first test was meant to roll back, but creating
+  tables in MySQL commits immediately, so the step stayed applied for a few
+  minutes. The worldserver was down; I ran the step's revert and confirmed the
+  database was back as it was.
+
+> Enchanting scrolls (812): excellent. let us implement.
+
+Built as install step E067:
+- 152 bosses across the classic dungeons each drop one scroll per kill, on top
+  of their own loot.
+- Each draws from the scrolls within 3 levels of the boss, widened until there
+  are at least 6: 9 to choose from at level 16, about 25 at level 59.
+- The generator prints a per-boss table. One boss, Anger'rel, has no loot table
+  and is skipped.
+- Tested in a real rolled-back transaction (this one has no table creation); the
+  checker passes with it.
+
+The full RAM database test needs about 3 GB of RAM disk and only 1.9 GB is free,
+so I haven't run it for either step. Both are listed in it.
+
+> 1. level 75 works for now. be sure to update it if the 155p design changes.
+
+Recorded in 155p1, tied to 155p's +6 tier.
+
+> 2. they turn gray once the uncommon gems are common … at least one of each
+> color
+
+Recorded: glass recipes give skill-ups until the uncommon cuts have offered a
+red, a yellow and a blue gem.
+
+> 3. the orb has 10 charges, the player can carve one gem from it or 10
+> chiplets.
+
+Recorded.
+
+> 4. +weapon damage … or haste rating. but only like, 1.
+
+Recorded in 155p. Next question:
+
+1. **The +1 glass gems for the lowest vendor items:** one kind for every socket,
+   or weapon damage in weapons' sockets and haste in armor's? I'd pick the
+   split, because +1 weapon damage means nothing on a chest piece.
 
 --------------------------------------------------------------------------------
 

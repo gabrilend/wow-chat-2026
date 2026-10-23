@@ -246,7 +246,9 @@ now; open question 3).
    gemstones the player has access to, they can craft something." So each
    glass recipe stays a skill-up source until the skill at which the
    uncommon cuts have offered at least one gem of every colour (red,
-   yellow, blue), and goes grey there.
+   yellow, blue, and the mixed orange, green and purple too: the owner,
+   2026-10-22, "one of each color, so orange, green, and purple too"),
+   and goes grey there.
 10. **The orb has 10 charges**: "the player can carve one gem from it or
     10 chiplets." One charge makes one glass gem or 10 chiplets; an orb
     makes 10 gems, 100 chiplets, or a mix.

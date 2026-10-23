@@ -55,8 +55,13 @@ professions:
   named "Visiting Mentor" <Profession Trainer>, gossip and trainer flags.
 - **The dialogue:** a greeting, and one "Can you teach me alchemy?" line
   per missing profession opening its list (B029).
-- **The dance:** `src/lua-basic/profession-mentors.lua`: each mentor waits
-  30 to 90 minutes, dances for a minute, and waits again.
+- **The dance:** `src/lua-basic/profession-mentors.lua`: only the goblin
+  in Thunder Bluff dances (the owner, 2026-10-22: "only the goblin trainer
+  dances. And he dances for a set amount of time each time"): he waits 30
+  to 90 minutes, dances for exactly a minute, and waits again.
+- **Homes of their own:** 155e1a (the goblin's quiet tent in Thunder
+  Bluff, robes, wizard decor) and 155e1b (Geraldenge's tower in Darnassus,
+  a workshop and sparring youths), planned.
 - **Checked:** applied twice and reverted on the real basic world
   database (six mentors, ten lines, the mining list's 17 spells from skill
   0 to 300; the revert leaves it exactly as before); the post-install
