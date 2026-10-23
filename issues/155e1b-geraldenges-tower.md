@@ -77,3 +77,20 @@ blacksmithing, engineering, jewelcrafting and mining.
 3. **His workshop and the mentor's dialogue:** does he still teach from
    the tower's workshop (so players climb to him), or stay at the crafting
    quarter with the tower as his home?
+
+## Answers, 2026-10-22
+
+- **His name, said:** "Ger like Geralt from that one monster hunting game
+  I forget it's name... Monster Hunter? No, it's like, danish." (That is
+  The Witcher's Geralt; the game is Polish.) So "Ger" as in Geralt: GER-
+  ald-deen-guh.
+- **The Viridian Shore is a poem, not a place:** "it's the name of a poem
+  he wrote when first arriving there. He sang it to the court as his
+  elegance art, and they are amazed that he crafted it in so few months.
+  He says it was a burst of inspiration that secured a long-term
+  feeling, they say that it's a testament to the flexibility of the
+  eternally weaning (weird way to say it but okay) / translation is hard
+  sorry". So the tower's place is still open (question 1), and the poem
+  is part of who he is: something he might mention, or the youths ask
+  about. Open: should the poem itself be written (by you, or drafted for
+  you to change), so he can recite a line of it?

@@ -58,3 +58,19 @@ gear that can't be repaired (155p).
    (say, the experience of one bubble, a twentieth of the level)?
 3. **A character with no rested experience:** nothing more happens, or
    something else is taken?
+
+## Answers, 2026-10-22
+
+1. **Every death:** "every death." Every death costs rested experience
+   instead of durability.
+2. **How much:** "I was thinking about 2 or 4 bars, 2 at earlier levels
+   and 4 at higher levels." A bar (a bubble of the experience bar) is a
+   twentieth of the level's experience: two bubbles at the lower levels,
+   four at the higher.
+
+Still open:
+- At which level the cost goes from two bubbles to four (say 30)?
+- The spirit healer's 25% durability: gone too (no death costs
+  durability at all), or kept as the price of not walking back?
+- A character with less rested experience than the cost: it loses what
+  it has, and nothing more?

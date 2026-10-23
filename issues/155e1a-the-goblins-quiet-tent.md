@@ -63,3 +63,15 @@ minutes (`src/lua-basic/profession-mentors.lua`).
    one always, or he changes between them now and then?
 2. **Where the tent stands:** beside the mining trainer as now, or a quiet
    spot of your choosing on the bluffs (a `.gps` reading there)?
+
+## Answers, 2026-10-22
+
+1. **Both robes, equally, switched after every dance:** "he should wear
+   both of them equally, and he finds it a deeply funny personal joke to
+   say "it's in the wash." sometimes, randomly, no matter which of the
+   two he's wearing." And: "he switches everytime after he dances. he
+   keeps dancing even if a player talks to him." So: each dance ends with
+   him in the other robe; now and then, at random, he says "It's in the
+   wash." whichever he wears; talking to him doesn't stop a dance.
+2. Still open: where the tent stands (beside the mining trainer, or a
+   quiet spot on the bluffs, a `.gps` reading there).

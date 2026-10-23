@@ -93,3 +93,13 @@ experience and raise a skill.
    tier's recipes (something the game has no place for: a hidden count
    that, say, improves the chance of a better result)?
 5. **How much rested experience:** a fixed amount, or by the item's level?
+
+## Answers, 2026-10-22
+
+1. **"it's a recipe spell sorry, something in blacksmithing."** So the
+   presentation is a Blacksmithing recipe in the profession window, cast
+   on the presenter. The client shows only spells it already knows, so it
+   would be an existing spell the client files list under Blacksmithing,
+   given a new meaning on the server (its effect replaced by the scene).
+   Open: an unused or rarely used blacksmithing spell to borrow (a list
+   to draw up from the client's tables), or one you'd like it to look like?

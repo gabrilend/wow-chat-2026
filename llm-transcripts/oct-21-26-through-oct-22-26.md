@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-22 19:05:39
+Generated on: 2026-10-22 19:37:28
 Models: claude-opus-5-5
 
 ## Contents
@@ -27,6 +27,11 @@ Models: claude-opus-5-5
    story skip ready to test. Her pledge, buddy quests and the new talent rules
    are committed, so next you run the compile, then log in to check she and
    Throszurg have 11 points.
+7. 2026-10-22 19:08, after Request 22 - The goal is building out basic's
+   professions and death knight systems, and the Profession Mentor and boss
+   enchanting scrolls are now built, committed and waiting for your compile.
+   Next: choose whether low-level +1 glass gems give weapon damage, haste, or
+   one per slot type.
 
 --------------------------------------------------------------------------------
 
@@ -2674,6 +2679,162 @@ Recorded in 155p. Next question:
 1. **The +1 glass gems for the lowest vendor items:** one kind for every socket,
    or weapon damage in weapons' sockets and haste in armor's? I'd pick the
    split, because +1 weapon damage means nothing on a chest piece.
+
+--------------------------------------------------------------------------------
+
+### User Request 23
+
+<pasted_content id="583a">
+  ├────────────────────────┼───────────────────────────────────────────────────┼──────────────────────────┤
+  │ Thunder Bluff │ engineering, jewelcrafting │ a goblin engineer │
+  ├────────────────────────┼───────────────────────────────────────────────────┼──────────────────────────┤
+</pasted_content id="583a">
+
+
+they should be dressed in robes and use wizard decor in their area. Just a
+small, one person tent, with a bit of space like a living room. there's no
+typically loud goblin machines, to not disturb the peace and noble tranquility
+of blessed Mulgore. If the goblin wishes, the robes may be too large for them,
+but they will also be provided a pair that are their size.
+
+
+
+<pasted_content id="583a">
+  ├────────────────────────┼───────────────────────────────────────────────────┼──────────────────────────┤
+  │ Darnassus │ blacksmithing, engineering, jewelcrafting, mining │ a
+  dwarf weaponsmith │
+  ├────────────────────────┼───────────────────────────────────────────────────┼──────────────────────────┤
+</pasted_content id="583a">
+
+
+this dwarf would be widely respected, and thus should live in a tall tower of a
+spiralling height. It's okay if it's out of the way, so long as it is still in
+Darnassus. [the viridian shore]
+
+in this tower, he should have a workshop, the finest that they could find. It
+must have a large area for mineral storage (carts against a shelf) and plenty of
+indoor plants. Ideally, odd or a-typical to that climate ones. It should be
+mostly bare of soft things, preferring wood and workspace. Also, several
+energetic youths to spar with weapons that have been crafted by the dwarf.
+Sometimes he watches them and takes notes on the weapons qualities. Sometimes
+they just tell him how it's best used. His name is Geraldenge, "ger" like
+"scare", "ald" like "aldi's" and "deeng" like "deen-guh".
+
+blacksmith's should be able to use a spell on someone that's just /flex'd while
+targeting you which consumes one of the items they are holding. Specifically,
+the 0 durability crafted equipment that they specifically had made. Then they
+both do a long cast time animation where one of them turns to the side and
+swings it, then they make chatting gestures to each other, another one strafes a
+little with it, then swings, or perhaps jumps a half-jump to the side. they talk
+back and forth a little, and the presenter might flex while holding the weapon.
+If they're a boy, they might take their shirt off, but that behavior can be
+disabled by talking to a specific NPC who lives in capital cities.
+
+the presenter gets a little bit of rested experience from doing it. The
+blacksmith should get +skill points with that tier's equipment (meaning, the
+skill points at each tier) "how well can you make beginner recipes" ha
+
+can we make it so there's no durability damage when we die from fall damage?
+also we'll have to subtract rested experience while dying instead. Because it
+makes you stressed out.
+
+>   - It dances for a minute every 30–90 minutes.
+only the goblin trainer dances. And he dances for a set amount of time each
+time.
+
+> Recorded: glass recipes give skill-ups until the uncommon cuts have offered a
+> red, a yellow and a blue gem.
+one of each color, so orange, green, and purple too
+
+> 1. The +1 glass gems for the lowest vendor items: one kind for every socket,
+> or weapon damage in weapons' sockets and haste in armor's? I'd pick the split,
+> because +1 weapon damage means nothing on a chest piece.
+sure, but we can do +weapon damage on shoulders, boots, and gloves too.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 23
+
+> Small fix first: only the goblin in Thunder Bluff dances, so the dance script
+> should only cover that mentor. Thunder Bluff is capital 6, entry 1550036:
+
+> Checking the hooks the weapon presentation and the death change would need: an
+> event when a player uses /flex, a way to change rested experience, and the
+> server's death durability setting.
+
+*[commit] d1ab588b3 in wow-chat-2026 - Let only Thunder Bluff's goblin mentor dance, and plan the owner's next ideas for basic (issues 155e1, 155e1a, 155e1b, 155z11, 155z12)*
+
+The goblin is now the only mentor who dances. Everything else is written up as
+issues and committed; none of it is built yet.
+
+> Thunder Bluff … robes and wizard decor … a small, one person tent … no
+> loud goblin machines
+
+Issue 155e1a.
+- **Robes:** this project already dresses creatures in chosen items (the outfit
+  list that gives Sargobras the Black Baron's cape), so the goblin can wear a
+  too-large robe and also have one his size.
+- **Tent and decor:** objects the game already has (a small tent, rugs, books,
+  candles), placed by hand in game.
+
+> Darnassus … Geraldenge … a tall tower of a spiralling height … workshop
+> … youths to spar
+
+Issue 155e1b, with the name and your pronunciation guide. The workshop, ore
+carts, odd indoor plants and wood are objects placed in game. The sparring
+youths carry weapons blacksmiths make, and a small script has them spar while
+Geraldenge watches, takes notes, or gets told how a weapon is best used. The
+game can't build new structures, so the tower has to be an existing building
+model placed as an object.
+
+> blacksmiths … a spell on someone that's just /flex'd …
+
+Issue 155z11. Most of it can be done server-side:
+- The server sees every /flex and who was targeted.
+- A crafted item records who made it.
+- The scene (swings, chatting, strafing, the half-hop, the flex, the optional
+  shirt) can be played as a timeline of emotes and moves.
+- Rested experience and skill can both be granted.
+
+The catch is "a spell": the game client can't learn new spells without a client
+change.
+
+> no durability damage when we die from fall damage … subtract rested
+> experience … instead
+
+Issue 155z12. The server takes durability for a fall death in one place, so a
+small source patch can skip it and take rested experience instead. It also
+matters for the death knight skip: today its planned fall costs 10% durability
+on everything.
+
+> only the goblin trainer dances. And he dances for a set amount of time each
+> time.
+
+Done: only Thunder Bluff's mentor dances, for exactly a minute, every 30 to 90
+minutes.
+
+> one of each color, so orange, green, and purple too
+
+Recorded: the glass recipes stay a source of skill-ups until all six colours are
+offered.
+
+> +weapon damage on shoulders, boots, and gloves too.
+
+Recorded: +1 weapon damage in weapons, shoulders, boots and gloves; +1 haste
+everywhere else.
+
+Questions, most blocking first:
+
+1. **Weapon presentations:** with no new spell possible, how does the blacksmith
+   accept the /flex? My suggestion: the blacksmith answers with an emote of
+   their own (say /bow at the presenter) within 10 seconds.
+2. **Fall deaths:** do only falls cost rested experience instead of durability,
+   or every death? And how much rest does a fall take: all of it, half, or one
+   "bubble" (a twentieth of the level)?
+3. **Geraldenge's tower:** "[the viridian shore]" — is that where it stands? A
+   `.gps` reading at the spot would settle it.
+4. **The goblin's robes:** the too-large robe always, his own size always, or he
+   switches between them now and then?
 
 --------------------------------------------------------------------------------
 

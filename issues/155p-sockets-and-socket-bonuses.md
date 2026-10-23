@@ -740,3 +740,13 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
   +weapon damage on shoulders, boots, and gloves too." So +1 weapon damage
   in the sockets of weapons, shoulders, boots and gloves; +1 haste rating
   in every other armor slot's sockets.
+- (2026-10-22) **More +1 glass gem kinds:** "can also do +1 haste
+  everywhere else. Also can we add +hp5 (only like 1) and +resilience (it
+  reduces damage from crits and periodic effects)". So the low glass gems
+  are +1 weapon damage (weapons, shoulders, boots, gloves), +1 haste, +1
+  health every 5 seconds, +1 resilience. Monsters do crit (a flat 5% melee
+  chance plus their spells' and auras'), and resilience already lowers the
+  chance of being crit by them (Unit::ApplyResilience), so resilience
+  matters in the world, not only against players. Open: which slots take
+  the health and resilience gems (any armor socket, the player choosing,
+  or set per slot)? Monster stat pages: issue 155z13.
