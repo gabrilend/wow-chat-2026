@@ -94,3 +94,15 @@ blacksmithing, engineering, jewelcrafting and mining.
   is part of who he is: something he might mention, or the youths ask
   about. Open: should the poem itself be written (by you, or drafted for
   you to change), so he can recite a line of it?
+- **His name, said, corrected** (2026-10-22): "it's more like
+  GER-all-dee-uh-ng-guh and rapidly pronounced gare like chair all like
+  all of us, deemn like dream with no r". So, said quickly: GARE (as in
+  "chair") - ALL (as in "all of us") - DEEM (as in "dream" without the r)
+  - uh - ng - guh. (Replaces the GER-ald-deen-guh above.)
+- **The poem is never recited** (2026-10-22): "He never recites it.
+  Sometimes, he says snippets while in the forge. But nobody can quite
+  make out what they mean because of the specific way that the vision he
+  had inspired him to work with his tools and machinery". So no poem text
+  is written. At the forge he now and then mutters a fragment (a few
+  words, half-formed, tied to the work in his hands), and nobody,
+  players included, can tell what it means.

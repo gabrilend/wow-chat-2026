@@ -74,3 +74,7 @@ Still open:
   durability at all), or kept as the price of not walking back?
 - A character with less rested experience than the cost: it loses what
   it has, and nothing more?
+- (Answered 2026-10-22) **The level where it changes: "it's a gradient."**
+  Not a step at one level: the cost rises smoothly with level, from two
+  bubbles at level 1 to four at the cap (60 on basic), parts of a bubble
+  allowed (about three at level 30).

@@ -96,6 +96,7 @@ wow-chat-2026/
 │   ├── todo-file-asides.md        Writing preserved from the root todo/new-issue files
 │   ├── vision-enchanting-system-update.md  Layered, level-scaling enchantments; materials, sprites and crowsign (2026-09-26)
 │   ├── vision-medal-encounters.md  Optional bosses gated by marginal stats (resilience, etc.)
+│   ├── larp-renfair-visual-style.md Monsters shown as people in costume, LARP / Renaissance-fair style (2026-10-22, for 634)
 │   ├── phase-3-custom-spells.md   Custom spell system design (moved from docs/)
 │   ├── topology-behavior-system.md Behavior-graph design notes
 │   ├── wow-chat-2-ideas           Deferred feature ideas

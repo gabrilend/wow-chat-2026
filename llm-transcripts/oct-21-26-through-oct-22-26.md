@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-22 19:37:28
+Generated on: 2026-10-22 19:53:28
 Models: claude-opus-5-5
 
 ## Contents
@@ -2835,6 +2835,122 @@ Questions, most blocking first:
    `.gps` reading at the spot would settle it.
 4. **The goblin's robes:** the too-large robe always, his own size always, or he
    switches between them now and then?
+
+--------------------------------------------------------------------------------
+
+### User Request 24
+
+> - Robes: this project already dresses creatures in chosen items (the outfit
+> list that gives Sargobras the Black Baron's cape), so the goblin can wear a
+> too-large robe and also have one his size.
+
+he should wear both of them equally, and he finds it a deeply funny personal
+joke to say "it's in the wash." sometimes, randomly, no matter which of the two
+he's wearing.
+
+Oh! Ger like Geralt from that one monster hunting game I forget it's name...
+Monster Hunter? No, it's like, danish. Oh.
+
+> The catch is "a spell": the game client can't learn new spells without a
+> client change.
+
+it's a recipe spell sorry, something in blacksmithing.
+
+> Recorded: +1 weapon damage in weapons, shoulders, boots and gloves; +1 haste
+> everywhere else.
+
+can also do +1 haste everywhere else. Also can we add +hp5 (only like 1) and
++resilience (it reduces damage from crits and periodic effects) question do
+monsters crit at all or do only players? If it's only players, can we enable
+monster crits and give them stat pages too, with the "bake an NPC buddy-bot
+stand-in profile to an NPC and render that while the rest is in data" idea
+perhaps considered as inspiration?
+
+> 2. Fall deaths: do only falls cost rested experience instead of durability, or
+> every death? And how much rest does a fall take: all of it, half, or one
+> "bubble" (a twentieth of the level)?
+every death. I was thinking about 2 or 4 bars, 2 at earlier levels and 4 at
+higher levels.
+
+> 3. Geraldenge's tower: "[the viridian shore]" — is that where it stands? A
+> .gps reading at the spot would settle it.
+it's the name of a poem he wrote when first arriving there. He sang it to the
+court as his elegance art, and they are amazed that he crafted it in so few
+months. He says it was a burst of inspiration that secured a long-term feeling,
+they say that it's a testament to the flexibility of the eternally weaning
+(weird way to say it but okay)
+
+translation is hard sorry
+
+> 4. The goblin's robes: the too-large robe always, his own size always, or he
+> switches between them now and then?
+he switches everytime after he dances. he keeps dancing even if a player talks
+to him.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 24
+
+> Your question about monsters and crits needs the server code first. Checking
+> whether creatures crit and what resilience does against them:
+
+> Now the monster stat pages issue:
+
+*[commit] 1c3fdfa90 in wow-chat-2026 - Record the owner's answers on the mentors' lives, presentations, glass gems and deaths; plan monster stat pages (issues 155e1a, 155e1b, 155z11, 155p, 155z12, 155z13)*
+
+Your answers are in the issues, and monster stat pages have a new issue of their
+own (155z13). Everything is committed; nothing new is built.
+
+> he should wear both of them equally … "it's in the wash." … he switches
+> everytime after he dances. he keeps dancing even if a player talks to him.
+
+Recorded in 155e1a: each dance ends with him in the other robe, he sometimes
+says "It's in the wash." whichever one he's wearing, and talking to him doesn't
+stop a dance.
+
+> Ger like Geralt … it's like, danish.
+
+You mean Geralt from The Witcher (a Polish game). Recorded in 155e1b as
+GER-ald-deen-guh.
+
+> it's the name of a poem he wrote when first arriving there …
+
+Recorded: the Viridian Shore is the poem he sang to the court, not a place. So
+the tower's location is still open.
+
+> it's a recipe spell sorry, something in blacksmithing.
+
+Recorded in 155z11. The client only shows spells it already knows, so it would
+be an existing Blacksmithing spell given a new effect on the server: the
+presentation scene.
+
+> +hp5 (only like 1) and +resilience … do monsters crit at all or do only
+> players?
+
+Monsters already crit: a flat 5% melee chance, plus whatever their spells and
+auras add. Resilience already lowers the chance of being crit by them, so +1
+resilience is useful against monsters as things stand. Recorded in 155p: the low
+glass gems are +1 weapon damage, +1 haste, +1 health every 5 seconds and +1
+resilience. Monster stat pages are now issue 155z13, with your baked stand-in
+idea noted as inspiration.
+
+> every death. … 2 bars at earlier levels and 4 at higher levels.
+
+Recorded in 155z12: every death costs rested experience instead of durability. A
+bar is a twentieth of the level's experience.
+
+Questions, most blocking first:
+
+1. **Deaths (155z12):** at what level does the cost go from 2 bars to 4? I'd say
+   30. And does the spirit healer's 25% durability loss go too, so no death
+   costs durability at all?
+2. **Monster stat pages (155z13):** still wanted now that monsters do crit? It
+   could be just a crit chance per monster (bosses and elites higher, critters
+   none), or a full stat page.
+3. **The +1 health and resilience gems (155p):** which sockets take them? Any
+   armor socket with the player choosing, or set per slot like weapon damage?
+4. **Geraldenge's poem:** should "The Viridian Shore" exist as text, written by
+   you or drafted by me for you to change, so he can recite a line?
 
 --------------------------------------------------------------------------------
 
