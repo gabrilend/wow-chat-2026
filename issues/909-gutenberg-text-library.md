@@ -367,3 +367,7 @@ src/lua/
 4. **The rmail forwarding** ("only what you heard in person", above)
    needs a narrator speaking near a player, which is 910, and the mail
    bridge (1004). Move it into 910, so this issue is the library alone?
+- (Answered 2026-10-23) **Plain quotes and dashes:** asked whether to keep
+  the books' curly quotes if the game's font has them: "change them all
+  to regular quotes and dashes." So the conversion to plain ASCII quotes
+  and dashes stays as built. (Question 3 above.)

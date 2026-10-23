@@ -111,3 +111,6 @@ a later chore.
 2. (Answered by the same choice: only the four classic procs.)
 3. Players too, or buddies only? ("either target is fine": buddies
    built; players wait on 185 and 187.)
+- (Answered 2026-10-23) **Buddies only:** asked whether players should get
+  the strong enchant on new weapons too: "just buddies". (Question 3
+  above.)

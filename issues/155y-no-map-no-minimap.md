@@ -83,3 +83,7 @@ planning table" is expressed as the sub-zone it stands in.
 
 Answered 2026-10-04 ("nah no minimap ever"): the minimap never comes
 back, not at map places either, and nothing clustered round it stays.
+- (Answered 2026-10-23) **Dungeons and raids lose their maps too:** asked
+  whether dungeons and raids should keep a map ("a dungeon map is the most
+  "solved" way to play, and dungeons are where getting lost is part of the
+  fun"): "yes".

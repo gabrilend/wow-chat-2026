@@ -109,3 +109,6 @@ in Acherus, can still be selected.
 - "All the NPCs": only creatures, or game objects too (the teleport pads,
   the Runeforge)? Game objects have no "not selectable" bit; hiding or
   locking them would be a separate mechanism.
+- (Answered 2026-10-23) **Game master mode keeps its override:** asked
+  whether the per-player rule should win over game master mode: "no".
+  Testing the rule as a player needs `.gm off` first.

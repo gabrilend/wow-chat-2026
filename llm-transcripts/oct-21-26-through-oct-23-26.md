@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-23 11:26:30
+Generated on: 2026-10-23 12:42:00
 Models: claude-opus-5-5
 
 ## Contents
@@ -45,6 +45,14 @@ Models: claude-opus-5-5
     profile features (death knights, buddies, professions, monster bots), all
     committed and waiting for your compile. Next: answer how many monster bots
     per entrance and whether 196 becomes the general tech-debt list.
+11. 2026-10-23 11:45, after Request 29 - We're working through basic's critical
+    path: about 90 issues are built and only need checking in game, with
+    everything so far committed. Next is your compile, or I run the database
+    test first if you free about 3 GB on the RAM disk.
+12. 2026-10-23 12:00, after Request 30 - We're cutting down basic's open issues
+    so the remaining work is clear, and I just closed 39 built ones, leaving
+    466. Next, tell me whether to sort the 350 issues with no status line into
+    keep or retire.
 
 --------------------------------------------------------------------------------
 
@@ -3353,6 +3361,145 @@ during the play sessions, if that would help.
 
 Should I start stage 1 once there's room, or do you want to go straight to the
 compile?
+
+--------------------------------------------------------------------------------
+
+### User Request 30
+
+Okay let's assume that anything that should be checked in game already has been.
+I am a solo developer right now so I have less time for testing. One of the
+first people I'd hire if I had a team would be testers, who can just validate
+that things are correct when they do them in certain orders. I might have to
+find a way to automate that, because there's like zero chance that I'll be able
+to build a team otherwise.
+
+So, let's mark all the issues that are just waiting on a visual check as
+complete. What's left? Can you do the housekeeping now?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 30
+
+> Doing the housekeeping. First I need to be strict about what counts as "just
+> waiting on a visual check": built, with no unanswered open questions and
+> nothing left unbuilt. A script will sort the roughly 90 built issues on those
+> terms, and I'll review the result before moving anything:
+
+> State lines set on all 39. Moving them into `issues/completed/` with `git mv`:
+
+> All 39 moved. Now finding path references to their old locations elsewhere in
+> the project:
+
+> Four references. The one in `contributing-upstream.md` is a past instruction
+> ("Create issues/141-…"), so I'm leaving it as written. Updating the other
+> three to the new location:
+
+> References fixed. Now the phase progress files. A script will mark each closed
+> issue's row "Completed" and add a dated closing note listing them:
+
+> Both sides of each move are now included. Committing the housekeeping:
+
+*[commit] 89ccc34e6 - Close 39 issues whose only remaining step was a look in game*
+
+> The warnings are about my own `git mv`, which put the moves into the shared
+> staging area. Checking that the commit went in, then clearing those stale
+> staged entries:
+
+The housekeeping is done: 39 issues closed and committed, leaving 466 open (from
+505). The shared staging area is clean again, and the only uncommitted files
+left are the other session's 919 and 920 issues.
+
+**Closed (39):**
+- **36 built, waiting only for a look in game:** basic's world changes (starting
+  valleys, quest gating, the talent cap, dungeon multipliers, Outland without
+  tradeskills, no world channels), the custom client's early pieces, two parts
+  of the patch system, the bots' sight distance, the ambush queue, the gear
+  design tools, the buddy module's foundations, and the narrators. Each one's
+  state line records your instruction, and each moved to `issues/completed/`
+  with its history.
+- **3 settled:** the Lua query crash (fixed upstream) and the two ideas you
+  decided against (talents from level 1, deaths costing rested experience).
+- The phase progress files list the closures, and the three path references to
+  moved files now point at the new locations.
+
+**What's left (466):**
+
+| Kind | Count | What it needs |
+|---|---:|---|
+| Built, waiting for your next compile or install | 5 | The compile, then they close: buddy quest catch-up, boss scrolls, Profession Mentors, death knight talents, beta's two-faction steps |
+| Built, but with an open question or something unbuilt | about 55 | An answer from you, or the missing piece built |
+| In progress | about 7 | Finishing: the patch priority queue, the neuron bridge, beta's four behaviors |
+| Ideas with open questions | about 40 | Your answers before anything is built |
+| No state line | about 350 | Mostly plans never started; many are probably stale |
+
+The issue validator also reports older problems the moves didn't cause: missing
+sections in some files, one-sided blocker links, and duplicate numbers. I added
+the duplicates to the renumbering issue (196).
+
+On automating testers: the house rules already describe the pattern. A program
+can be driven by a script of timed inputs, take a screenshot, and write a
+"goodbye" receipt of what it did. The cc-test profile was set up for scripted
+test scenes. Turning the critical path's check tables into scripted scenes would
+be a natural way to get a robot tester.
+
+Two questions:
+1. **The ~350 issues with no state line:** should I sort them into "still
+   wanted", "probably stale" and "superseded" (by reading each one's own text),
+   so you can retire the stale ones in a batch?
+2. **Robot testing:** worth an issue of its own, a plan to turn the check tables
+   into scripted scenes on cc-test?
+
+--------------------------------------------------------------------------------
+
+### User Request 31
+
+Can you ask me 5 open questions from 5 diverse issue files?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 31
+
+> Picking five from different corners of the project, and reading each
+> question's full text first so I ask it accurately:
+
+> Two of those have clear questions. The following one (617e8) is mostly
+> answered already, so I'm swapping it out. Reading two more candidates:
+
+Five open questions from five different parts of the project, each reworded so
+it stands on its own, with my suggestion where I have one:
+
+1. **No map, no minimap (155y): what happens inside dungeons and raids?** On
+   basic the world map and minimap are taken away in the open world, so players
+   find their way by looking around. Should dungeons and raids lose their maps
+   too? My suggestion: yes. A dungeon map is the most "solved" way to play, and
+   dungeons are where getting lost is part of the fun.
+
+2. **Creatures only one player can select (164): should the rule win over game
+   master mode?** Some creatures are made unselectable for one player, such as
+   Sargobras hidden from a death knight once its soul is given. Your test
+   account is a game master, and game master mode makes everything selectable,
+   so testing means typing `.gm off` first. Should the rule apply even in game
+   master mode, so you see exactly what a player sees? My suggestion: no. Keep
+   the game master override, and I'll note `.gm off` in the test checklists.
+
+3. **A strong enchant on a new weapon (621): players too, or only buddies?**
+   Buddies already get a random permanent weapon enchant (fiery, icy,
+   lifestealing or unholy) on the weapon they're first made with, from level 30.
+   You said "either target is fine". Should players also get one on new weapons?
+   If so, when: the first weapon of each level tier, or something else?
+
+4. **The narrators' book library (909): keep the plain quotes?** The narrators
+   read aloud from public-domain books (Peter Pan, Aesop, the Odyssey and
+   others). Curly quotes and long dashes are turned into plain ones in case the
+   game's font lacks them. Should I check the font and keep the originals if it
+   has them, or leave everything plain? My suggestion: check the font once. If
+   it has them, the books read more like books.
+
+5. **Sargobras, the unseen guild master (630): what does "viewable and
+   selectable through the UI" mean for many guilds?** The standard game client
+   shows only one guild per character. Does your idea mean switching which guild
+   is shown (one at a time, chosen from a menu), or showing them all at once?
+   The second is only possible in the custom client.
 
 --------------------------------------------------------------------------------
 
