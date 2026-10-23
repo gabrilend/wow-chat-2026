@@ -282,3 +282,6 @@ they are near and you don't have a full group."
   above with "the four nearest you could help, kept until another is
   clearly nearer", once experience no longer needs the group's 74-yard
   radius. Open in 178 (question 4).
+- (Answered 2026-10-23) **Raids keep the flat bonus:** asked whether raid
+  dungeons should get the outdoor group bonus (growing to 1.4 at five
+  members) instead of the server's flat 1.0: "leave it at 1.0".

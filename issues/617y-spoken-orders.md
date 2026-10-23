@@ -144,3 +144,16 @@ speak in commands.
 4. (Answered 2026-10-12, for "follow me": said to the group's largest
    channel, the speaker's own buddies agree.) "follow <name>": the named
    one's buddies, or the speaker's?
+- (Answered 2026-10-23) **How following starts and ends:** "first of all
+  we have to say "follow me" not just follow. We should be able to say
+  "follow so-and-so" and they follow that person instead. But, a person
+  should be able to say "go away" in chat and then the bots will return
+  to their normal behavior, and if they say "go away!" then they won't
+  follow that person until they log out again." So:
+  - "follow me": the buddies follow the speaker; a bare "follow" means
+    nothing;
+  - "follow <name>": they follow that person;
+  - "go away", said by the person being followed: they stop and go back
+    to their normal behaviour;
+  - "go away!" (with the exclamation mark), said by that person: they stop,
+    and won't follow that person again until that person logs out.

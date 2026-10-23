@@ -71,3 +71,8 @@ answered then, in this file:
 1. **Which compile is "for release"?**
 2. **Who may review?**
 3. **The patches that exist today**: all at once, or each as it changes?
+- (Answered 2026-10-23) **Which compile is "for release":** "before we
+  release. Trust me, you'll know when it's time to release." So there is
+  no automatic trigger: the guard's check of every applied patch is a
+  step run when the owner declares a release (a release command or flag
+  the owner runs), not part of ordinary compiles or pushes.

@@ -133,3 +133,7 @@ chooses, at will, one of:
 5. (Answered 2026-10-12: "same faction as the DK. They can be any race
    though.") After an oath to the other faction, are its buddies drawn
    anew in the new faction, or do the old ones swear with it?
+- (Answered 2026-10-23) **Which tabards count:** "any tabard that clearly
+  has the Horde or Alliance symbols displayed." A list of such tabards is
+  drawn from the game's items (the city and faction tabards bearing the
+  Horde or Alliance crest), one list per side. (Question 2 above.)

@@ -162,3 +162,8 @@ the moment the cast begins):
    game's summon cannot be accepted by a ghost or in combat
    (`WorldSession::HandleSummonResponseOpcode`), and the bots have no code
    that answers one.
+- (Answered 2026-10-23) **Two members hearthing at once:** "handle it the
+  same way we handle multiple summons. If there's a summons pending, we
+  drop the new request." A member with an invitation already pending gets
+  no second one; the later hearther's invitation is dropped for them.
+  (Question 2 above.)

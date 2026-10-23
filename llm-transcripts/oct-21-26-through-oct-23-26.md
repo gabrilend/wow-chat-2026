@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-23 12:45:39
+Generated on: 2026-10-23 12:50:08
 Models: claude-opus-5-5
 
 ## Contents
@@ -3611,6 +3611,72 @@ hold several players.
 
 Which do you mean: (a) switching between guilds one at a time, (b) seeing them
 all at once in the custom client, or something else?
+
+--------------------------------------------------------------------------------
+
+### User Request 33
+
+Ah yes that's a custom client issue. For now, just build the server-side part,
+and then leave the client work up to the custom-client. We want Sargobras (and
+players) to be able to be in multiple guilds at once.
+
+can you ask me another 5 issue open questions, from 5 other issue files that
+seem important?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 33
+
+> Recording your decision in 630 first. Reading its build steps to see how the
+> server-side part was planned:
+
+> Committing the 630 decision, then the questions:
+
+*[commit] 90676d120 in wow-chat-2026 - Plan the server side of belonging to many guilds, and of Sargobras in every roster (issue 630)*
+
+The plan for the many-guilds server side is written into 630 and committed; the
+build itself hasn't started. What it will do:
+- **Memberships:** the stock database allows one guild per character, so a table
+  of our own holds every guild a character belongs to, with its rank in each.
+  The stock row is the active guild, the one the client shows.
+- **Switching:** a command changes the active guild quietly, so neither guild
+  sees "has left" or "has joined".
+- **Sargobras on every roster:** he can't be a real member of every guild for
+  the same reason, so the server adds him to each roster as it sends it, never
+  online.
+- **"Sargobras has logged off.":** sometimes sent when you log in as the only
+  member of your guild online.
+- The custom client gets the chooser later.
+
+I'll build it alongside your next answers. Five more questions from five other
+issues:
+
+1. **Raid experience (617c2):** outdoors, a group's kill pays experience times a
+   group bonus that grows to 1.4 at five members, shared among those nearby.
+   Inside raid dungeons the server pins that bonus at 1.0, however many are
+   there; upstream marked it as unfinished. Should raids get the same growing
+   bonus as outdoor groups, or stay at 1.0?
+
+2. **The patch guard (189g):** a patch has to pass a security review by an AI
+   "guard" before its first use, and every applied patch must have a passing
+   verdict "in the compile for release". What makes a compile a release one? A
+   flag you pass to `scripts/compile`, every compile on main, or only before
+   pushing to GitHub? My suggestion: before pushing. That's the moment the work
+   leaves your machine.
+
+3. **Spoken orders (617y):** when you tell your buddies "follow", how does
+   following end? Saying "stop", logging out, entering a town, entering a
+   dungeon, a time limit, or some mix? My suggestion: "stop" or your logout,
+   nothing else, so it never ends by surprise.
+
+4. **A death knight's oath after the story (718a):** a death knight that swears
+   to a master must wear that master's tabard. Which tabards count: any city
+   tabard of that faction (Orgrimmar, Darnassus and so on), or a special oath
+   tabard made for it?
+
+5. **Group hearthstone (211):** when you hearth, your group gets a summon-style
+   invitation to come along. If two members hearth at once, does everyone get
+   only the first hearther's invitation, or both invitations, to choose between?
 
 --------------------------------------------------------------------------------
 
