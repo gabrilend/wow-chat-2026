@@ -179,26 +179,57 @@ now; open question 3).
    evenly split; every cut taught somewhere.
 4. The Wrath gem drops moved to rare elites and bosses.
 5. In game: two capitals' jewelcrafters, side by side, at one skill.
+## Answers, 2026-10-22
+
+1. **Every trainer teaches every cut**, each in its own random order: with
+   N cuts of a quality, a new one every (that quality's skill range) / N
+   points at every trainer. Visiting another capital changes which cuts
+   come early, not which exist.
+2. (Answered 2026-10-13) The eight capital jewelcrafters: Outland's and
+   Northrend's profession trainers are removed (155n). Since 2026-10-22
+   (155e1) the six capitals without a jewelcrafter have the Profession
+   Mentor teach it, the eccentric visitor of this issue; Silvermoon and
+   the Exodar keep their stock jewelcrafters, with their own orders.
+3. **The 0.5% Wrath uncommon drop from every Outland monster ends.** Wrath
+   gems drop from Outland's rare elites and the dungeon and raid bosses.
+4. **Where the cuts come from stays as 155p built it** (the owner: "I
+   think wrath cuts come from Outland, and Outland cuts from Azeroth.
+   There's different quality levels too, so we have to keep that in
+   mind."): the trainers teach only Outland's cuts; Wrath's come from the
+   Designs dropping in Outland and its dungeons and from the Earthen
+   Gemcutter. Spreading over 1-300 keeps the qualities apart: uncommon
+   cuts over the lower part of the range, rare over the upper (open
+   question 1 below: where the split falls).
+5. **Raw gems for the low-skill cuts: Azeroth's gemstones, enchanted**
+   (the owner: "you should be able to cut the azeroth gemstones into gems
+   that suit their color. But, we'll need to enchant the gemstones,
+   otherwise they're just pretty rocks. [...] One gemstone should make two
+   cut gemstones, typically."). A mechanic of its own: issue 155p2.
+6. **The split: uncommon cuts over 1-200, rare over 201-300** (the owner,
+   2026-10-22: "I'm leaning toward 1-200 / 201-300 though. I like the
+   idea of spending more time with the lower quality gems, because it
+   means we can start with like 1 socket per item or two at level 10, then
+   one socket per item at level 20 with one item having 2, or similar.
+   Then, at the point where the player and their clan starts learning how
+   to create blue gems, they could be at the max socket count (or
+   similar, some items only have one or two sockets of course." And on
+   sockets in general: "we designed the socket count to keep the gear
+   roughly in proportion to others of it's type, maybe with a +10% margin
+   if you use the best gems and -10% if you use the worst ones [...] In
+   general the power of a socket comes from it's flexibility, not your
+   ability to put powerful gems in it, but powerful gems should still
+   exist.") Checked against 155p as built: filled dungeon blues land about
+   10% above the stock blue, whites at about the same-level green; sockets
+   start at item level 17 (one per item), with tier I +4 gems (vendors) at
+   item level 17-27, tier II +6 (uncommon cuts) at 30-45, tier III +8
+   (rare cuts) at 45-63.
 
 ## Open Questions
 
-1. The spacing: "divide 300 by N" with N the number of cuts gives one
-   recipe per step across all trainers; but with each trainer teaching a
-   different one at the same step, a step holds as many cuts as there
-   are trainers (T), so the steps are 300 / (N / T) apart. Which?
-2. Which trainers count: all seventeen or so (the three lists, Outland's
-   masters too), or only the "jewelcrafting masters ... in Azeroth" (the
-   capitals' and Silvermoon's and the Exodar's)? Outland's own masters
-   then teach what?
-3. "WotLK gems are for rare elite monsters in Outland and the dungeon
-   and raid bosses": does that end the 0.5% Wrath uncommon drop from
-   every Outland monster?
-4. "early jewelcrafters can make TBC gems while later ones can make
-   WotLK gems": Outland's cuts on the trainers from 1 to 300, and Wrath
-   cuts only from drops and the Earthen Gemcutter? Or Wrath cuts on the
-   trainers' upper steps too?
-5. Raw gems for low-skill cuts: Outland's cuts need Outland's raw gems
-   (from prospecting mithril and thorium, 155p). A jewelcrafter at skill
-   50 learning an Outland cut can't make it until then. Should the
-   low-skill cuts' raw gems come from somewhere earlier (prospecting
-   copper and tin, vendors)?
+1. **Uncommon cuts from skill 1 against 155p's tiers.** With the uncommon
+   (+6) cuts starting at skill 1, a new jewelcrafter can fill level-17
+   gear's sockets with +6 gems, where 155p planned +4 (tier I) there. Is
+   that the flexibility you want (a slight edge for jewelcrafters and
+   their clans), or should the first uncommon cuts wait for skill to
+   match item level 30 (about skill 75-100), with tier I's +4 gems (and
+   155p2's enchanted gemstones) before that?

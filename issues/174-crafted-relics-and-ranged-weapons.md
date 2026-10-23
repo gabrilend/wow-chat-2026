@@ -35,6 +35,8 @@ Engineering's; thrown weapons drop.
     (by the crafter's specialisation);
   - totems (shamans): Mining;
   - librams (paladins): Enchanting;
+  - sigils (death knights): Blacksmithing, at a runeforge (2026-10-22);
+  - recipes: common ones from trainers, the best as drops (2026-10-22);
   - ranged weapons (bows, crossbows, thrown): Blacksmithing, with twice as
     many thrown recipes as bow or crossbow ones.
 - Item levels up to 60 (as 172).
@@ -48,7 +50,9 @@ Engineering's; thrown weapons drop.
 
 ## Open Questions
 
-1. "any others?": sigils (death knights' relics) unassigned: Inscription
-   (runes) or Blacksmithing (the runeforge)? Wands are already Enchanting's;
-   guns stay Engineering's?
-2. Recipes from trainers, or as drops (812's scrolls' kind)?
+1. (Answered 2026-10-22) Sigils (death knights' relics): Blacksmithing
+   (the runeforge). Wands stay Enchanting's and guns Engineering's (not
+   contradicted).
+2. (Answered 2026-10-22) Both: trainers teach the common recipes, and the
+   best come as drops. Open: where the line falls (by quality: whites and
+   greens from trainers, blues as drops?).

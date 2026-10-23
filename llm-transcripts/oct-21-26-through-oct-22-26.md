@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-22 11:49:43
+Generated on: 2026-10-22 17:12:54
 Models: claude-opus-5-5
 
 ## Contents
@@ -19,6 +19,14 @@ Models: claude-opus-5-5
    knight story skip on basic, plus your other requests, all committed and
    waiting for your next compile. Next: tell me whether death knight talent
    points should meet the story at 49 or 46 at level 58.
+5. 2026-10-22 11:52, after Request 18 - We're getting basic's death knights and
+   buddies right; the skip fix, talent rule and buddy quest catch-up are
+   committed. Next: run your compile, then restart the server so they take
+   effect.
+6. 2026-10-22 16:56, after Request 19 - We're getting Gabrubre's death knight
+   story skip ready to test. Her pledge, buddy quests and the new talent rules
+   are committed, so next you run the compile, then log in to check she and
+   Throszurg have 11 points.
 
 --------------------------------------------------------------------------------
 
@@ -1963,6 +1971,150 @@ updates.
 
 One question: should a buddy that was only briefly away (logged out a few
 minutes) be paid the quest rewards it missed, rather than just the progress?
+
+--------------------------------------------------------------------------------
+
+### User Request 19
+
+for the DKs, make sure the buddy-bot's quest rewards also reward talent points
+to the buddy.
+
+Can you update Gabrubre and her companions? Make sure to set the ones who are
+currently "on ice" to the correct value, so that they have the right amount of
+talent points when Gabrubre levels up.
+
+Also, can you make sure Gabrubre is at the right stage in the story? Right now
+Acherus is under attack and she has to swear to the Horde or Alliance. That part
+should be skipped because it's still part of the story.
+
+> One question: should a buddy that was only briefly away (logged out a few
+> minutes) be paid the
+>   quest rewards it missed, rather than just the progress?
+
+I don't see this being a common situation, so let's just treat them the same as
+any other buddy.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 19
+
+> Checking who's online first, since changing characters' quests in the database
+> is only safe while they're logged out:
+
+> Talent rule updated. Now the database, while everyone is offline: Gabrubre
+> gets the Horde pledge, and all four buddies get her finished quests.
+
+*[commit] c300f4f56 in wow-chat-2026 - Let a death knight's buddies count talent points the way their owner does (issue 718d)*
+
+Gabrubre and her buddies are set, and buddies now count talent points the way
+their owner does. The talent changes take effect after your next compile; the
+quest changes are already in the database.
+
+**Gabrubre's story stage:** her skip ran before I added the pledge to the story
+list, so I gave her Warchief's Blessing directly. That ends the Ebon Hold's
+story phase, which only lasts until the pledge. The "under attack" phase only
+applies while The Battle For The Ebon Hold is unfinished, and she has that done
+too. Acherus should now show its normal post-story state, runeforges included.
+
+**Her companions:**
+- None of the four buddies had any finished quests, because the skip rewarded
+  the story before they arrived. Each now has Gabrubre's 47.
+- Ginerice, Satith and Izre, the three set aside, need nothing stored for
+  talents. Points are worked out at every login and level up, so each will have
+  the right count for its level when it comes back at 57, 59 or 60.
+- All five were offline and the worldserver was down, so nothing in memory could
+  overwrite these changes.
+
+**Buddy talent points follow the owner's path:**
+- A skipper's buddies use the skipper's table: 11, 24, 37, then 49 at 58.
+- A story player's buddies get each story quest their owner turns in. They count
+  those quests' talent points like a story player, plus one a level past 55,
+  wherever they stand. The stock rule only counts quest points inside Acherus,
+  which is how Throszurg sat on none.
+- The rule adds up the points of the quests the buddy has finished, the same way
+  the server does when it loads a character, so quests caught up at login count
+  too.
+
+**Briefly-away buddies:** treated the same as any other buddy, as you said.
+That's recorded in 617d.
+
+**Order matters:** compile before logging Gabrubre in. Under the current build
+the stock rule still applies:
+- Gabrubre would keep her 46 points (19 spent).
+- Throszurg would log in outside Acherus with 46 and spend them all, only to
+  have them reset to 11 after the compile.
+
+After the compile, Gabrubre's talents reset at her next login (19 is more than
+11), and she and Throszurg each have 11 to spend.
+
+Committed in one commit, which also notes the database changes. The C++ has
+still only been checked by reading, not by a compiler.
+
+--------------------------------------------------------------------------------
+
+### User Request 20
+
+<pasted_content id="583a">
+> Gabrubre's story stage: her skip ran before I added the pledge to the story
+> list, so I gave her
+> Warchief's Blessing directly. That ends the Ebon Hold's story phase, which
+> only lasts until the
+> pledge. The "under attack" phase only applies while The Battle For The Ebon
+> Hold is unfinished,
+> and she has that done too. Acherus should now show its normal post-story
+> state, runeforges
+  included.
+</pasted_content id="583a">
+
+
+we had plans for DKs being able to choose their own side, right? Is that
+implemented yet? If not, then don't worry about it for now, but if yes, please
+give me a status report.
+
+Anything else we could build for basic before the compile? Maybe something to do
+with professions?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 20
+
+DKs choosing their own side isn't implemented. Issue 718a (Horde, Alliance, or
+Acherus after the story) is still at "planned", with open questions about what
+the server can do without the custom client, and no code exists for it. So for
+now every death knight pledges to its own race's faction, which is what the skip
+now does.
+
+**Profession work that could go in before the compile**, most valuable first.
+Each needs a few answers from you before building:
+
+1. **155e1, a Visiting Profession Mentor in each capital.** One NPC whose
+   dialogue has a line per profession ("Can you teach me alchemy?"), each
+   opening that profession's trainer list. It reuses the Visiting Mentor's
+   mechanism, which was just fixed in patch B029, so it's mostly world-database
+   work and low risk. 4 open questions.
+2. **155p1, jewelcrafting cuts spread over the whole skill range.** Today the
+   trained cuts sit only in skill 150–300. This spreads them evenly from 1 to
+   300, and each capital's jewelcrafter teaches its own order of cuts. It builds
+   on the gem supply already in place. 5 open questions.
+3. **812, enchanting scrolls from low-level dungeon bosses.** Bosses also drop a
+   random enchantment scroll from around their level. The game already has 265
+   such scrolls, so it's loot-table work. 2 open questions.
+4. **172, enchanting makes staves and off-hand items.** New recipes across the
+   skill range, made from enchanting materials plus a base item. No profession
+   makes a staff today. This means new items, so it's the biggest of the four. 3
+   open questions.
+5. **174, crafted relics and ranged weapons.** Idols, totems, librams, sigils
+   and bows become craftable; today they only drop. The most unusual of the set,
+   and the least designed so far.
+
+Separately, 617k (buddy professions) has secondary professions done: every buddy
+learns Cooking, First Aid and Fishing. The crafting half isn't built: a buddy
+picking a profession, crafting upgrades for its clan and handing out
+consumables. It's bigger and lives in the buddy module's C++.
+
+My pick for before the compile is the Profession Mentor. It's small, safe, and
+the trainer machinery it needs was just fixed. Want me to bring up its four
+questions?
 
 --------------------------------------------------------------------------------
 

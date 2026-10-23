@@ -56,13 +56,46 @@ the Visiting Mentor.
 4. A check in `scripts/validate-basic-state`: one per capital, every
    profession line opening a list.
 5. In game: one capital, each line.
+## Answers, 2026-10-22
+
+1. **Only the professions with no trainer in that city** ("Only missing
+   ones"), as the class Visiting Mentor does for classes.
+2. **Capitals only**, the eight.
+3. **Jewelcrafting:** the owner: "idk about this eccentric visiting
+   jewelcrafter. Isn't that just, the profession mentor?? Also, if the
+   capital has a jewelcrafting trainer already, then the visiting mentor
+   wouldn't be able to teach anything, and no action is required. But if
+   there's no JC trainer in that capital, then the wandering trainer
+   fills that role and uses the capital's set, which... may or may not be
+   accounted for currently, so look into that please." Looked into: the
+   six Visiting Jewelcrafters (155p) don't wander, each stands in one
+   capital; all eight capital jewelcrafters teach one shared list today
+   (the per-capital orders are 155p1's, not built). Then, asked whether
+   to fold them into this mentor: **merge them**. Each capital has one
+   visitor from afar, the Profession Mentor, the eccentric one of 155p1
+   (dancing about once an hour); in the six capitals with no jewelcrafter
+   it teaches jewelcrafting too, with that capital's own order of cuts
+   (155p1). The six Visiting Jewelcrafters are removed. Silvermoon and
+   the Exodar keep their stock jewelcrafters (whose orders are 155p1's).
+4. **Its look:** "different per city, but should try and match the
+   professions that are missing. A tauren in Silvermoon is much easier to
+   notice than another blood elf." Each borrows the look of a
+   high-level trainer of one of the professions it teaches, preferring
+   one of a race other than the city's own (from the same faction), so it
+   stands out.
+
+## Intended Behavior (as answered)
+
+One Profession Mentor in each of the eight capitals, a visitor from afar
+(155p1's eccentric: about once an hour, every 30 to 90 minutes at random,
+it dances for a minute). Its dialogue has a line for each profession with
+no trainer in its city ("Can you teach me alchemy?"), each opening that
+profession's list (capped at 300, 155n); in a city with no jewelcrafter,
+a jewelcrafting line opening the city's own order of cuts. A capital that
+has every profession's trainer gets no mentor. It looks like a trainer of
+one of its professions, of another race of the faction where one exists.
 
 ## Open Questions
 
-1. Every profession, or only those with no trainer in that city?
-2. Capitals only (eight), or every site the Visiting Mentor stands at
-   (starting valleys and first towns too)?
-3. Jewelcrafting: does its line open the capital's own jewelcrafting
-   order (155p1), or is jewelcrafting left to the eccentric visitor?
-4. Its look and name: one figure everywhere, or a different look per
-   city as the mentors borrow one?
+None open (answered 2026-10-22, above). 155p1's own questions (the
+orders of cuts) still decide the jewelcrafting lists.

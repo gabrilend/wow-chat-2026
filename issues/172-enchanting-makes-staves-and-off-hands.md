@@ -62,6 +62,24 @@ plain tome or orb).
 
 1. (Answered 2026-10-04) Real recipes; the Lua menu as the fallback.
 2. (Answered 2026-10-04) Up to level 60.
-3. Which places count as "of deep spiritual value": the Altar of Storms,
-   the cathedrals of Stormwind and Light's Hope, the Temple of the Moon,
-   the Undercity's royal quarter...? A list to settle.
+3. (Answered 2026-10-22) Which places: "it's different per recipe, it
+   says per recipe, and it's at a location that a typical player
+   levelling through their professions and character level could
+   theoretically visit and not be too bothered by the monsters. The
+   highest level ones require high level areas, essentially, but the low
+   level ones might just be... like, a moonwell in Darnassus or whatever.
+   Also we should have multiple copies of the recipe with multiple
+   locations, and those recipes should drop from creatures in the area to
+   people with the profession, and not to those who don't have it." So:
+   - each recipe names its place in its text, and its finishing step
+     works only there;
+   - the place suits the recipe's level: a low recipe at a safe spot (a
+     moonwell in Darnassus), a high one in a high-level area, always one a
+     player of that level can reach without much trouble;
+   - each item has several copies of its recipe, each with its own place;
+   - a copy drops from creatures around its place, and only to characters
+     who have Enchanting (loot only those characters can see).
+   Open: are these drops in place of the trainers (answer 1 said real
+   recipes; trainers were step 3), or beside them? And the server needs a
+   way to tell "at the place" (a spell focus object there, as cooking
+   fires and forges are, or an area check).
