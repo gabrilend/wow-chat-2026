@@ -80,6 +80,7 @@ wow-chat-2026/
 │   ├── profiles/                  Per-profile reference pages (user-facing)
 │   │   ├── index.md               Overview of the profiles + how to switch
 │   │   ├── basic.md               Levels 1-60 (155)
+│   │   ├── basic-critical-path.md The critical path: compile, check the built work in game, close what passes (2026-10-23)
 │   │   ├── cc-test.md             The custom client's test server: stock + playerbots + ALE + buddies (176)
 │   │   ├── socket-bonus-catalog.md Generated: every enchantment usable as a socket bonus, by kind and size; low-level cut gems (155p)
 │   │   ├── vanilla.md             Default WotLK + playerbots, light ruleset (148)
