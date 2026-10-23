@@ -721,3 +721,11 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
   level 1 with smaller glass gems for the lowest levels (+1 or +2, so a
   socket stays within the ±10% you described), or the glass gems' +4 with
   the low items' own stats cut to make room?
+- (Answered 2026-10-22) **The lowest vendor items' sockets hold glass
+  gems with small stats:** "you're right, so how about we give +weapon
+  damage, sorta like the early enchanting recipes. Or maybe something that
+  characters at low levels would notice, like haste rating. but only like,
+  1." So below item level ~15 every vendor item gets a socket too, for
+  glass gems of +1: +1 weapon damage (as the early enchantments give) or
+  +1 haste rating. Open: one of the two for every low glass gem, or both
+  kinds (weapon damage for weapons' sockets, haste for armor's)?

@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-22 17:12:54
+Generated on: 2026-10-22 18:34:52
 Models: claude-opus-5-5
 
 ## Contents
@@ -2115,6 +2115,398 @@ consumables. It's bigger and lives in the buddy module's C++.
 My pick for before the compile is the Profession Mentor. It's small, safe, and
 the trainer machinery it needs was just fixed. Want me to bring up its four
 questions?
+
+--------------------------------------------------------------------------------
+
+### User Request 21
+
+Great. Can you ask me the open questions for these?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 21
+
+> Starting with the Profession Mentor (155e1), all four questions at once. The
+> rest follow one issue at a time.
+
+> **[Asked the user]**
+>
+> *Q1 — Which:* The Visiting Profession Mentor stands in a capital and has one
+> dialogue line per profession, each opening that profession's trainer list.
+> Which professions should it teach?
+> - Every profession (Recommended) — All primary and secondary professions in
+>   every capital, so one stop teaches anything. Simplest, and the same mentor
+>   everywhere.
+> - Only missing ones — Only professions with no trainer in that city, as the
+>   class Visiting Mentor does for classes. Keeps the city's own trainers
+>   relevant; each city's mentor differs.
+> → **Selected:** Only missing ones
+>
+> *Q2 — Where:* Where should Profession Mentors stand?
+> - Capitals only (Recommended) — The eight capitals. New characters still
+>   meet the stock trainers in their first towns.
+> - Every mentor site — All 23 sites the class Visiting Mentor uses: starting
+>   valleys, first towns and capitals. Professions available from level 1
+>   anywhere.
+> → **Selected:** Capitals only (Recommended)
+>
+> *Q3 — Jewelcraft:* Each capital's jewelcrafter is to teach its own order of
+> cuts (issue 155p1), and an eccentric visiting jewelcrafter wanders between
+> them. What should the mentor's jewelcrafting line do?
+> - Open the city's list (Recommended) — The mentor's jewelcrafting line opens
+>   that capital's own order of cuts, the same list its jewelcrafter teaches.
+> - No jewelcrafting line — Jewelcrafting is left to the capital jewelcrafters
+>   and the eccentric visitor, so finding the right teacher stays part of it.
+> → **Answered:** idk about this eccentric visiting jewelcrafter. Isn't that
+> just, the profession mentor?? Also, if the capital has a jewelcrafting trainer
+> already, then the visiting mentor wouldn't be able to teach anything, and no
+> action is required. But if there's no JC trainer in that capital, then the
+> wandering trainer fills that role and uses the capital's set, which... may or
+> may not be accounted for currently, so look into that please.
+>
+> *Q4 — Look:* How should the Profession Mentor look?
+> - Different per city (Recommended) — Each borrows the look of a high-level
+>   crafting trainer from its own city, as the class mentors borrow trainer
+>   looks. Feels local.
+> - One figure everywhere — The same model and name in every capital: a
+>   recognisable travelling teacher.
+> → **Answered:** different per city, but should try and match the professions
+> that are missing. A tauren in Silvermoon is much easier to notice than another
+> blood elf.
+
+> Looking into the jewelcrafters, as you asked. Reading what 155p built and what
+> 155p1's "eccentric visitor" is:
+
+> **[Asked the user]**
+>
+> *Q1 — Merge:* Should the six Visiting Jewelcrafters fold into the Profession
+> Mentor, so each capital has one visitor from afar teaching every profession
+> the city lacks (jewelcrafting included where the city has no jewelcrafter,
+> using that capital's own order of cuts from 155p1)?
+> - Merge them (Recommended) — One visitor per capital: the Profession Mentor,
+>   the eccentric one who dances about once an hour. It teaches jewelcrafting
+>   with the city's own order where the city has no jewelcrafter. The six
+>   Visiting Jewelcrafters are removed.
+> - Keep them separate — The eccentric jewelcrafter stays its own creature
+>   (155p1) and the Profession Mentor teaches the other missing professions. Two
+>   visitors in six capitals.
+> → **Selected:** Merge them (Recommended)
+
+> Recording the 155e1 answers and the merge:
+
+> **[Asked the user]**
+>
+> *Q1 — Spacing:* Each capital jewelcrafter teaches the cuts in its own random
+> order, spread evenly over skill 1-300. With four orders per side, each skill
+> step can hold one cut per order. How far apart should the steps be?
+> - Every trainer has all cuts (Recommended) — Each trainer teaches every cut,
+>   in its own order: with N cuts, a new cut every 300/N skill points at every
+>   trainer. Visiting another city only changes which cuts come early.
+> - Cuts shared out — The cuts are divided among a side's four trainers, so
+>   each teaches about a quarter, a step every 300/(N/4) points: you must visit
+>   all four capitals of your side to learn every cut.
+> → **Selected:** Every trainer has all cuts (Recommended)
+>
+> *Q2 — Wrath drops:* On 2026-10-13 you said Wrath of the Lich King gems are
+> for Outland's rare elite monsters and the dungeon and raid bosses. Today every
+> Outland monster has a 0.5% chance of an uncommon Wrath gem. Should that end?
+> - End it (Recommended) — Wrath gems drop only from Outland's rare elites and
+>   from dungeon and raid bosses, as you said.
+> - Keep the 0.5% — Every Outland monster keeps its small chance of an
+>   uncommon Wrath gem, besides the rare elites and bosses.
+> → **Selected:** End it (Recommended)
+>
+> *Q3 — Wrath cuts:* Early jewelcrafters cut Burning Crusade gems, later ones
+> Wrath gems. Where do the Wrath cuts come from?
+> - Drops and the Earthen Gemcutter — The trainers teach only Burning Crusade
+>   cuts, 1 to 300; Wrath cuts come only from drops and the Earthen Gemcutter.
+> - Trainers' upper steps too — Burning Crusade cuts on the lower steps and
+>   Wrath cuts on the upper steps of every trainer's order.
+> → **Answered:** we have a plan for this somewhere. I think wrath cuts come
+> from Outland, and Outland cuts from Azeroth. There's different quality levels
+> too, so we have to keep that in mind.
+>
+> *Q4 — Early gems:* A jewelcrafter at skill 50 learning a Burning Crusade cut
+> can't make it: those raw gems come only from prospecting mithril and thorium
+> (high-level ores). Where should the low-skill cuts' raw gems come from?
+> - Prospect copper and tin (Recommended) — Prospecting the low-level ores
+>   also yields the Burning Crusade raw gems the early cuts need, in proportion
+>   to the skill.
+> - A vendor — The Profession Mentor (or the jewelcrafters) sells the
+>   low-skill raw gems.
+> - Leave it — Early cuts wait until the jewelcrafter can prospect mithril and
+>   thorium.
+> → **Answered:** you should be able to cut the azeroth gemstones into gems
+> that suit their color. But, we'll need to enchant the gemstones, otherwise
+> they're just pretty rocks. So, JC prospects the ores and gets gemstones from
+> them sometimes. These go on the AH or to a clan enchanter, and then the
+> enchanter uses shards (not dust!) to enchant the gemstones and make them into
+> uncut gems, that the JC can then cut. One gemstone should make two cut
+> gemstones, typically.
+
+> Looking for the existing plan you mentioned about where each expansion's cuts
+> come from:
+
+> **[Asked the user]**
+>
+> *Q1 — Split:* 155p1: the trainers' Outland cuts are spread over skill 1-300,
+> with the two qualities kept apart (34 uncommon cuts, 36 rare). Where should
+> the split fall?
+> - 1-150 / 151-300 (Recommended) — Uncommon cuts over the first half of the
+>   skill, rare over the second half: about one new cut every 4 to 5 points at
+>   each trainer.
+> - 1-200 / 201-300 — Uncommon cuts stretched over two thirds, rare packed
+>   into the last third: rare cuts arrive quickly near the cap.
+> → **Answered:** we should look at the buddy-bot starting gear, and the
+> sockets we added to Azeroth gear. we designed the socket count to keep the
+> gear roughly in proportion to others of it's type, maybe with a +10% margin if
+> you use the best gems and -10% if you use the worst ones, but I could be wrong
+> on that. In general the power of a socket comes from it's flexibility, not
+> your ability to put powerful gems in it, but powerful gems should still exist.
+> I'm leaning toward 1-200 / 201-300 though. I like the idea of spending more
+> time with the lower quality gems, because it means we can start with like 1
+> socket per item or two at level 10, then one socket per item at level 20 with
+> one item having 2, or similar. Then, at the point where the player and their
+> clan starts learning how to create blue gems, they could be at the max socket
+> count (or similar, some items only have one or two sockets of course.
+>
+> *Q2 — Holy sites:* 172: enchanting's last step, turning an Inscription blank
+> into a finished staff or off-hand item, works only at a place of deep
+> spiritual value. Which places? (Pick all that count; 'Other' to name more.)
+> - Altar of Storms — In the Burning Steppes / Blackrock Mountain side; your
+>   own example.
+> - Capital cathedrals — The Cathedral of Light in Stormwind, and each
+>   capital's equivalent temple (Temple of the Moon in Darnassus, the Mystic
+>   Ward in Ironforge, the Undercity's royal quarter...).
+> - Light's Hope Chapel — The chapel in the Eastern Plaguelands.
+> - Moonglade's shrine — The druids' grove: Nighthaven's moonwells.
+> → **Answered:** "it's different per recipe, it says per recipe, and it's at
+> a location that a typical player levelling through their professions and
+> character level could theoretically visit and not be too bothered by the
+> monsters. The highest level ones require high level areas, essentially, but
+> the low level ones might just be... like, a moonwell in Darnassus or whatever.
+> Also we should have multiple copies of the recipe with multiple locations, and
+> those recipes should drop from creatures in the area to people with the
+> profession, and not to those who don't have it."
+>
+> *Q3 — Sigils:* 174: death knights' relics (sigils) have no profession
+> assigned yet. Which profession makes sigils?
+> - Inscription (runes) — Sigils are runes: scribes inscribe them.
+> - Blacksmithing (runeforge) — Sigils are forged: smiths make them, as they
+>   make other metal relics.
+> - Enchanting — Alongside librams, which are already Enchanting's.
+> → **Selected:** Blacksmithing (runeforge)
+>
+> *Q4 — Recipes:* 174: the new relics and ranged weapons: learned from
+> trainers, or found as recipe drops (like 812's enchanting scrolls)?
+> - Trainers (Recommended) — Each profession's trainers teach them across its
+>   skill range, like other recipes.
+> - Recipe drops — The recipes drop from monsters and dungeon bosses, rare and
+>   sought after.
+> - Both — Common ones from trainers, the best ones as drops.
+> → **Selected:** Both
+
+> Recording those. First a look at 155p's socket schedule, so the 155p1 answer
+> can be checked against the picture you described:
+
+*[commit] 6a6d4d765 in wow-chat-2026 - Record the owner's answers on the profession plans for basic (issues 155e1, 155p1, 172, 174), and plan enchanted gemstones (155p2)*
+
+> Answers recorded and committed. Next, the new gemstone issue (155p2), its
+> first four questions:
+
+> **[Asked the user]**
+>
+> *Q1 — Which gems:* 155p2: when an enchanted Azeroth gemstone is cut, what
+> gems does it become?
+> - New Azeroth gems (Recommended) — Gems of their own, named after the
+>   gemstone ("Bold Tigerseye"), at 155p's low tiers (+4 to +6), so Azeroth's
+>   stones have their own place in the ladder.
+> - Outland's gems — The enchanted gemstone becomes an uncut Outland gem of
+>   its colour (an uncut Blood Garnet, say) and is cut with the existing
+>   recipes.
+> → **Selected:** Outland's gems
+>
+> *Q2 — Colours:* How is each gemstone's socket colour decided?
+> - By its look (Recommended) — Star Ruby red, Blue Sapphire blue, Citrine
+>   yellow; mixed colours for mixed stones: Malachite and Jade green
+>   (yellow+blue), Tigerseye orange (red+yellow), Shadowgem purple (red+blue).
+> - Spread evenly — Assigned so each ore tier offers red, yellow and blue in
+>   equal measure, whatever the stone looks like.
+> → **Answered:** by it's look, but if we have to change it's color (like
+> purple can't become red and blue, but red and blue can become purple if
+> they're merged together somehow) sorta like how you can't take salt out of a
+> spaghetti. then we need an extra processing step inbetween to split it into
+> two of the same type, maybe alchemy?
+>
+> *Q3 — Shards:* Which enchanting shards does a gemstone take (never dust)?
+> - The tier's shard, one each (Recommended) — Small Glimmering for copper's
+>   stones, rising through Large Glimmering, Small/Large Glowing, Small/Large
+>   Radiant, to Small/Large Brilliant for thorium's: one shard per gemstone.
+> - Shards by gem colour — Different shards for red, yellow and blue stones at
+>   each tier, so enchanters need a spread of shards.
+> → **Selected:** The tier's shard, one each (Recommended)
+>
+> *Q4 — Yield:* "One gemstone should make two cut gemstones, typically." How
+> exactly?
+> - Always two (Recommended) — Enchanting turns one gemstone into one uncut
+>   gem; cutting that uncut gem always yields two cut gems.
+> - Usually two — Cutting yields two most of the time, sometimes one or three,
+>   like prospecting's chances.
+> → **Answered:** the rare gemstones just make one. And sometimes they make
+> chiplets which stack to 10, which can be merged into a larger one - usually
+> they make 6ish, slightly better than half.
+
+> Recording the 155p2 answers:
+
+> **[Asked the user]**
+>
+> *Q1 — Chiplets:* 155p2: where do chiplets come from? (Ten chiplets combine
+> into one uncut gem, maybe by an alchemy step, as you suggested.)
+> - From cutting (Recommended) — When a jewelcrafter cuts, it sometimes yields
+>   about 6 chiplets instead of its gems: a near miss that still pays.
+> - From enchanting — An enchant on a gemstone sometimes fails into about 6
+>   chiplets instead of an uncut gem.
+> - From prospecting — Prospecting ore sometimes yields chiplets beside or
+>   instead of a whole gemstone.
+> → **Answered:** from cutting and prospecting. Also, other professions might
+> use them for things, like engineering for anything with lazers. Inscription
+> for the most holy of paints.
+>
+> *Q2 — Alchemy:* Should alchemy be the third craft of the gem chain,
+> combining ten chiplets into an uncut gem and splitting a mixed-colour stone
+> (purple, green, orange) into two of one colour?
+> - Yes, both (Recommended) — Alchemists combine chiplets and split mixed
+>   stones; jewelcrafting, enchanting and alchemy all need each other.
+> - Combining only — Alchemy combines chiplets; mixed stones stay as they are
+>   (no splitting).
+> - Jewelcrafter does both — No alchemy step: the jewelcrafter combines
+>   chiplets and splits stones itself.
+> → **Selected:** Yes, both (Recommended)
+>
+> *Q3 — Skill:* At what skill should each gemstone's enchant and cut be
+> learned?
+> - By its ore (Recommended) — At the skill where its ore is prospected:
+>   copper 1-75, tin 50-125, iron 125-175, mithril 175-250, thorium 250-300.
+> - All early — Every gemstone's enchant and cut early, so any enchanter and
+>   jewelcrafter can work any stone they get.
+> → **Selected:** By its ore (Recommended)
+>
+> *Q4 — Tier I:* 155p's tier I gems (+4, from prospecting copper and tin and
+> from capital vendors) were the low-level supply. With enchanted gemstones,
+> what happens to them?
+> - Keep them beside it (Recommended) — Vendors still sell +4 gems for players
+>   without the crafts; enchanted gemstones are the crafters' road to better
+>   ones.
+> - Replace them — The vendor and prospected +4 gems go; all low-level gems
+>   come through the enchanting chain.
+> → **Selected:** Keep them beside it (Recommended)
+
+*[commit] 7e9d62514 in wow-chat-2026 - Record the owner's answers on enchanted gemstones (issue 155p2)*
+
+> Recorded and committed. The last open questions across these issues:
+
+> **[Asked the user]**
+>
+> *Q1 — Early +6:* 155p1: uncommon Outland cuts (+6 gems) now start at
+> jewelcrafting skill 1, but 155p planned +4 gems for level-17 to 27 gear and +6
+> from item level 30. Should a new jewelcrafter be able to cut +6 gems for
+> low-level gear?
+> - Yes, let them (Recommended) — A slight edge for jewelcrafters and their
+>   clans at low level: the flexibility you described. The +4 vendor gems remain
+>   for everyone else.
+> - Wait for skill ~75-100 — The first uncommon cuts start around skill 75-100
+>   (when gear reaches item level 30); before that, +4 gems and enchanted
+>   gemstones only.
+> → **Answered:** the +4 gems are mundane, and any jewelcrafter can cut them
+> at any level with no enchanting requirements. they need only access to
+> expensive glass. They get them up enough levels (always white difficulty,
+> requires vendor item, one orb for 10 gems or 100 chiplets) enough levels to be
+> level suitable appropriate to start using the uncommon gems. Can we make sure
+> that all the gear purchasable from vendors (stuff that a buddy-bot might spawn
+> with if we spawned them at uneven levels, like level 4 or 7) has gemstone
+> sockets? To give us something to flex early jewelcrafting onto.
+>
+> *Q2 — Trainers:* 172: staff and off-hand recipes come in several copies,
+> each finished at its own place and dropping near it, to enchanters only. Do
+> enchanting trainers still teach any of them?
+> - Drops only (Recommended) — Every staff and off-hand recipe is found near
+>   its place, never bought: finding them is the adventure.
+> - Trainers teach some — Trainers teach a few low-level ones; the rest drop
+>   near their places.
+> → **Selected:** Drops only (Recommended)
+>
+> *Q3 — At the place:* 172: how should the server tell that an enchanter
+> stands at a recipe's place?
+> - An object to work at (Recommended) — A visible object at each place (a
+>   shrine, an altar) that the recipe needs nearby, as cooking needs a fire and
+>   smithing an anvil. The player sees where to stand.
+> - Being in the area — The recipe works anywhere inside the named area (the
+>   subzone), no object needed.
+> → **Answered:** we can craft our own subzone distinctions that compare
+> coordinates.
+>
+> *Q4 — Line:* 174: relics and ranged weapons come from trainers (common ones)
+> and drops (the best). Where is the line?
+> - By quality (Recommended) — White and green recipes from trainers; blue
+>   recipes as drops.
+> - By level — Lower-level recipes from trainers; the highest-level ones (say
+>   50-60) as drops.
+> → **Selected:** By quality (Recommended)
+
+> Recording these. Your answer on the +4 gems adds a new item, "expensive glass"
+> from a vendor, and a request that collides with an existing rule in 155p. I'll
+> put that conflict to you after the edits.
+
+> Adding your vendor-gear request to 155p's open questions, with the conflict
+> spelled out:
+
+*[commit] 491f5c1b9 in wow-chat-2026 - Record mundane glass gems, sockets on low-level vendor gear, and the last profession answers (issues 155p, 155p1, 172, 174)*
+
+All your answers so far are recorded in the issues and committed; nothing new is
+built. Open questions remain in 155p1 and 155p, plus one in 155p2 that's best
+settled when the gem chain is built.
+
+What's now decided:
+- **Profession Mentor (155e1):** one visitor in each of the eight capitals. It
+  teaches only the professions its city lacks, and looks like a trainer of one
+  of them, of a different race where possible. It replaces the six Visiting
+  Jewelcrafters and becomes 155p1's dancing eccentric, teaching jewelcrafting
+  with the city's own order of cuts where the city has no jewelcrafter. No open
+  questions left.
+- **Jewelcrafting order (155p1):** every capital jewelcrafter teaches every cut,
+  each in its own order. Uncommon cuts end at skill 200 and rare cuts run
+  201–300. Wrath cuts stay with Outland's drops and the Earthen Gemcutter, and
+  the small Wrath gem drop from every Outland monster ends.
+  - **Glass gems:** before the uncommon cuts there's a new family: mundane +4
+    glass gems. Any jewelcrafter cuts them from an orb of expensive glass bought
+    from a vendor (10 gems or 100 chiplets per orb), with no enchanting needed.
+- **Gem chain (155p2):** three crafts working together. Jewelcrafters prospect
+  gemstones, which also drops chiplets. Enchanters wake each stone with its
+  tier's shard, never dust, turning it into an uncut Outland gem of its colour.
+  Alchemists combine 10 chiplets into an uncut gem and split mixed-colour
+  stones. Common stones cut into two gems, rare stones into one, and the skill
+  levels follow the ore. The vendor +4 gems stay.
+- **Staves and off-hands (172):** recipes are drops only, found near each
+  recipe's own place. That place is our own subzone, checked by coordinates.
+- **Relics and ranged weapons (174):** sigils are made by blacksmiths at a
+  runeforge. White and green recipes come from trainers, blue recipes as drops.
+- **Enchanting scrolls (812):** no open questions; it can be built as it stands.
+
+Next questions:
+
+1. **When do the uncommon cuts begin?** The glass gems carry a new jewelcrafter
+   up to them. I'd start the uncommon cuts around skill 75–100, which is where
+   gear reaches item level 30 and 155p's +6 tier begins.
+2. **Do the glass recipes stay "white" all the way to 300**, always giving a
+   chance of skill, or turn grey once the uncommon cuts begin?
+3. **"One orb for 10 gems or 100 chiplets":** two recipes on the same orb, one
+   making 10 gems and one making 100 chiplets?
+4. **Sockets on low-level vendor gear (155p).** 155p deliberately put no sockets
+   below item level ~15, because a +4 gem there is twice a green's whole stats.
+   To socket level-4 and level-7 vendor gear, I'd make smaller glass gems for
+   the lowest levels (+1 or +2), which keeps a socket within your ±10%. The
+   other option is keeping +4 and cutting those items' own stats to make room.
+   Which?
 
 --------------------------------------------------------------------------------
 

@@ -237,14 +237,20 @@ now; open question 3).
    a jewelcrafter up to where the uncommon cuts begin. The uncommon cuts
    then start later than skill 1, at the skill suiting item level 30
    gear (open question 1).
+8. **The uncommon cuts begin at skill 75** (2026-10-22: "okay level 75
+   works for now. be sure to update it if the 155p design changes"): from
+   75 to 200, where 155p's tier II (+6, item level 30) begins. If 155p's
+   tiers move, this moves with them.
+9. **The glass recipes turn grey once the uncommon gems are common**:
+   "common meaning at least one of each color, so no matter what
+   gemstones the player has access to, they can craft something." So each
+   glass recipe stays a skill-up source until the skill at which the
+   uncommon cuts have offered at least one gem of every colour (red,
+   yellow, blue), and goes grey there.
+10. **The orb has 10 charges**: "the player can carve one gem from it or
+    10 chiplets." One charge makes one glass gem or 10 chiplets; an orb
+    makes 10 gems, 100 chiplets, or a mix.
 
 ## Open Questions
 
-1. **Where the uncommon cuts begin:** at about skill 75-100 (where gear
-   reaches item level 30), spread from there to 200?
-2. **The glass recipes' range:** do they stay white all the way (a chance
-   of skill-up at every cut, to 300), or only until the uncommon cuts
-   begin, then grey?
-3. **"one orb for 10 gems or 100 chiplets":** a cut from an orb gives 10
-   gems, or, as an alternative recipe, 100 chiplets (for the other crafts
-   of 155p2)?
+None open.
