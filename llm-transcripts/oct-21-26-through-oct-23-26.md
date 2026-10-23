@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-23 12:42:00
+Generated on: 2026-10-23 12:45:39
 Models: claude-opus-5-5
 
 ## Contents
@@ -3500,6 +3500,117 @@ it stands on its own, with my suggestion where I have one:
    shows only one guild per character. Does your idea mean switching which guild
    is shown (one at a time, chosen from a menu), or showing them all at once?
    The second is only possible in the custom client.
+
+--------------------------------------------------------------------------------
+
+### User Request 32
+
+also where the heck did our issue files go? We've been working on this project
+for so long. Did any of them get deleted?
+
+> 1. No map, no minimap (155y): what happens inside dungeons and raids? On basic
+> the world map and minimap are taken away in the open world, so players find
+> their way by looking
+>      around. Should dungeons and raids lose their maps too? My suggestion: yes. A dungeon map is the most "solved" way to play, and dungeons are where getting lost is part of the fun.
+
+yes
+
+> 2. Creatures only one player can select (164): should the rule win over game
+> master mode?
+
+no
+
+>   3. A strong enchant on a new weapon (621): players too, or only buddies?
+
+just buddies
+
+>   4. The narrators' book library (909): keep the plain quotes?
+
+change them all to regular quotes and dashes.
+
+> 5. Sargobras, the unseen guild master (630): what does "viewable and
+> selectable through the UI" mean for many guilds?
+
+I don't know, gimme more context.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 32
+
+> Checking git history for any issue file that was ever deleted:
+
+> That list shows every time a path disappeared, and most of those are probably
+> moves rather than true deletions. Checking where each one went:
+
+> Most are renumbered: the April 2026 cleanup gave old issues new numbers, and
+> the files live on under them. Five aren't at their old name; searching for
+> where each went:
+
+> Nothing was lost. Every disappearance has a known destination; one I'm still
+> confirming (148 above), and I'll check it in 136 while writing the reply. Now
+> the context you asked for on question 5:
+
+> The fifth answer needs context, and I've traced the deleted issues; details
+> below. Recording answers 1 to 4:
+
+*[commit] f04df1511 in wow-chat-2026 - Record four answers: no maps in dungeons either, game master mode keeps its override, strong enchants for buddies only, plain quotes in the books (issues 155y, 164, 621, 909)*
+
+No open issue was deleted; the count only dropped because 39 moved to
+`completed/` today. Across the project's whole history I found one true
+deletion, of a completed issue, and it can be restored from git.
+
+**Where the files are now:** 466 open in `issues/`, 84 in `issues/completed/`.
+
+**What happened to the paths that disappeared:**
+- **Renumbered in April 2026:** the cleanup that merged the old `issues-beta/`
+  folder into `issues/` gave many issues new numbers. For example, 113 became
+  302 and 410 became 142. `issues/MIGRATION_MAP.md` records every old-to-new
+  number.
+- **Renamed:** 916d (the Ollama client) is now the llama.cpp model runner, 167
+  is now "spirit heals by stamina", 346 became 113, and the completed 130 became
+  202.
+- **Moved to completed:** 189b, 189f and 307, plus today's 39.
+- **Actually deleted: one.** A completed issue about the release and beta module
+  folders being redundant (old number 148) was removed in May, in the commit
+  that did its work. That commit updated issue 136 instead. Its text survives in
+  git, and I can put it back in `issues/completed/`, since issues are never
+  supposed to be deleted. Should I?
+
+**Answers recorded and committed:**
+1. Dungeons and raids lose their maps too (155y).
+2. Game master mode keeps its override, so testing as a player needs `.gm off`
+   (164).
+3. The strong weapon enchant is for buddies only (621).
+4. The books keep plain quotes and dashes, as built (909).
+
+**Question 5, with the context.** On 2026-10-20 you described Sargobras as the
+real master of every guild:
+
+> he sometimes logs on to each guild's roster, with no record of his arrival nor
+> departure … sometimes when they login it says "Sargobras has logged off."
+> … But only if they're the only guild member online. Yes, this means we'll
+> need a patch that allows players to be in as many guilds or clans as they'd
+> like, viewable and selectable through the UI.
+
+The "many guilds" part runs into a client limit: the standard game client knows
+only one guild per character. Its guild window shows that one guild's roster and
+chat. So "as many guilds as they'd like, viewable and selectable through the UI"
+can work one of two ways:
+
+- **(a) Switching:** the server remembers every guild you belong to, but the
+  client shows one at a time. You pick which one is "active" from a menu, say by
+  talking to an NPC or typing a command, and the guild window, roster and chat
+  become that guild's. Possible on the current client.
+- **(b) All at once:** every guild visible side by side in the interface. Only
+  possible in the custom client, which draws its own interface.
+
+The issue also notes why none of this fits basic today: a player's guild is
+their clan (themselves plus buddies), so "the only member online" is always true
+and Sargobras's moment means nothing. It waits for a future profile where guilds
+hold several players.
+
+Which do you mean: (a) switching between guilds one at a time, (b) seeing them
+all at once in the custom client, or something else?
 
 --------------------------------------------------------------------------------
 

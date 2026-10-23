@@ -135,3 +135,37 @@ no roster.
    character twice), or two players' characters of each class? And are
    the pairs what the enemy aims at by design (a rule), or simply the ones
    most often in the fight?
+
+## Decision, 2026-10-23: build the server side now
+
+Asked what "as many guilds or clans as they'd like, viewable and
+selectable through the UI" means, given the stock client shows one guild
+per character: "Ah yes that's a custom client issue. For now, just build
+the server-side part, and then leave the client work up to the
+custom-client. We want Sargobras (and players) to be able to be in
+multiple guilds at once."
+
+What the server side is, from the stock schema (read 2026-10-23): the
+characters database allows one guild per character (`guild_member` has a
+unique key on the character), and the client shows the guild in the
+character's own fields. So:
+
+- **Memberships:** a table of our own holds every guild a character
+  belongs to, with its rank in each. The stock `guild_member` row is the
+  active one, the one the stock client shows. Switching the active guild
+  moves the stock row quietly (a source patch, so no "has left the guild"
+  and "has joined" lines go out to either guild), keeping the rank from
+  our table. How a player switches with the stock client: a command for
+  now (the custom client draws its own chooser later).
+- **Sargobras in every roster:** he can't be a stock member of every guild
+  (the same unique key), so the server adds him to each guild's roster as
+  it is sent, never online, with no joined or left record.
+- **"Sargobras has logged off.":** at a character's login, when no other
+  member of its active guild is online, now and then the server sends the
+  guild's own signed-off event for him.
+- **Client work** (seeing every guild at once, a chooser in the guild
+  window) is the custom client's (`/mnt/kaun/custom-client/`).
+
+The profiles where it matters: none that run today (basic's guilds are
+clans, 617l); the server side is built so a profile with shared guilds
+can switch it on.
