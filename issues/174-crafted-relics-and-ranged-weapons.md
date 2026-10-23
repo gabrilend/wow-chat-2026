@@ -54,5 +54,5 @@ Engineering's; thrown weapons drop.
    (the runeforge). Wands stay Enchanting's and guns Engineering's (not
    contradicted).
 2. (Answered 2026-10-22) Both: trainers teach the common recipes, and the
-   best come as drops. Open: where the line falls (by quality: whites and
-   greens from trainers, blues as drops?).
+   best come as drops. The line is quality (2026-10-22): white and green
+   recipes from trainers, blue recipes as drops.

@@ -56,7 +56,7 @@ plain tome or orb).
    a client patch, so either reuse unused crafting spell ids the client
    already knows, or teach them from a trainer menu in Lua that makes the
    item directly (a scripted craft).
-3. Trainers: the enchanting trainers teach them.
+3. ~~Trainers: the enchanting trainers teach them.~~ Drops only (2026-10-22): each copy drops near its place, to enchanters only; the finishing step checks our own coordinate subzone.
 
 ## Open Questions
 
@@ -79,7 +79,7 @@ plain tome or orb).
    - each item has several copies of its recipe, each with its own place;
    - a copy drops from creatures around its place, and only to characters
      who have Enchanting (loot only those characters can see).
-   Open: are these drops in place of the trainers (answer 1 said real
-   recipes; trainers were step 3), or beside them? And the server needs a
-   way to tell "at the place" (a spell focus object there, as cooking
-   fires and forges are, or an area check).
+   Drops only (2026-10-22): no trainer teaches them. And "at the place"
+   is our own subzone, a stretch of coordinates the server compares (the
+   owner: "we can craft our own subzone distinctions that compare
+   coordinates"), as the town circles of 617e4 are measured.

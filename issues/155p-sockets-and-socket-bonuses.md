@@ -710,3 +710,14 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
   their raw diamonds).
 - (Answered 2026-09-25) Tooltips always honest, even on legendary items.
 - (Answered 2026-09-25) Set bonuses: leave them for now.
+- (2026-10-22) **Sockets on every vendor item, low levels included.** The
+  owner: "Can we make sure that all the gear purchasable from vendors
+  (stuff that a buddy-bot might spawn with if we spawned them at uneven
+  levels, like level 4 or 7) has gemstone sockets? To give us something to
+  flex early jewelcrafting onto." This meets the rule above: below item
+  level ~15 nothing gets a socket, because a +4 gem there would be twice
+  a green's whole stats. The new mundane glass gems (155p1, answer 7) are
+  cut from expensive glass by any jewelcrafter. Open: sockets from item
+  level 1 with smaller glass gems for the lowest levels (+1 or +2, so a
+  socket stays within the ±10% you described), or the glass gems' +4 with
+  the low items' own stats cut to make room?

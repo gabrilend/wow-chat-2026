@@ -223,13 +223,28 @@ now; open question 3).
    start at item level 17 (one per item), with tier I +4 gems (vendors) at
    item level 17-27, tier II +6 (uncommon cuts) at 30-45, tier III +8
    (rare cuts) at 45-63.
+7. **Before the uncommon cuts: mundane glass gems** (2026-10-22, asked
+   whether a new jewelcrafter should cut +6 gems for low-level gear): "the
+   +4 gems are mundane, and any jewelcrafter can cut them at any level
+   with no enchanting requirements. they need only access to expensive
+   glass. They get them up enough levels (always white difficulty,
+   requires vendor item, one orb for 10 gems or 100 chiplets) enough
+   levels to be level suitable appropriate to start using the uncommon
+   gems." So the +4 gems (155p's tier I) become a jewelcrafting recipe
+   family of their own: cut from a vendor-sold orb of expensive glass
+   (one orb makes 10 gems, or 100 chiplets), no enchanting needed, their
+   recipes staying "white" (a chance of skill at every cut) so they carry
+   a jewelcrafter up to where the uncommon cuts begin. The uncommon cuts
+   then start later than skill 1, at the skill suiting item level 30
+   gear (open question 1).
 
 ## Open Questions
 
-1. **Uncommon cuts from skill 1 against 155p's tiers.** With the uncommon
-   (+6) cuts starting at skill 1, a new jewelcrafter can fill level-17
-   gear's sockets with +6 gems, where 155p planned +4 (tier I) there. Is
-   that the flexibility you want (a slight edge for jewelcrafters and
-   their clans), or should the first uncommon cuts wait for skill to
-   match item level 30 (about skill 75-100), with tier I's +4 gems (and
-   155p2's enchanted gemstones) before that?
+1. **Where the uncommon cuts begin:** at about skill 75-100 (where gear
+   reaches item level 30), spread from there to 200?
+2. **The glass recipes' range:** do they stay white all the way (a chance
+   of skill-up at every cut, to 300), or only until the uncommon cuts
+   begin, then grey?
+3. **"one orb for 10 gems or 100 chiplets":** a cut from an orb gives 10
+   gems, or, as an alternative recipe, 100 chiplets (for the other crafts
+   of 155p2)?
