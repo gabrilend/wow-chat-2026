@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-22 19:53:28
+Generated on: 2026-10-22 20:07:54
 Models: claude-opus-5-5
 
 ## Contents
@@ -2951,6 +2951,101 @@ Questions, most blocking first:
    armor socket with the player choosing, or set per slot like weapon damage?
 4. **Geraldenge's poem:** should "The Viridian Shore" exist as text, written by
    you or drafted by me for you to change, so he can recite a line?
+
+--------------------------------------------------------------------------------
+
+### User Request 25
+
+> You mean Geralt from The Witcher (a Polish game). Recorded in 155e1b as
+> GER-ald-deen-guh.
+
+it's more like GER-all-dee-uh-ng-guh and rapidly pronounced gare like chair all
+like all of us, deemn like dream with no r
+
+  1. Deaths (155z12): at what level does the cost go from 2 bars to 4? I'd
+     say 30. And does the spirit healer's 25% durability loss go too, so no
+     death costs durability at all?
+
+it's a gradient
+
+> 2. Monster stat pages (155z13): still wanted now that monsters do crit? It
+> could be just a crit chance per monster (bosses and elites higher, critters
+> none), or a full stat page.
+
+monsters could eventually be given player pages. Like, evil playerbots that
+players have to fight. Actually, can we create issue files for that? they
+shouldn't be horde-and-alliance, but rather monster themed, with monster stats
+and only sometimes gear. Though maybe if we make a LARP style renfair themed
+version we could have them be humans with gear that corresponds to the creature
+they are standing in-for. But that's a concept for a visual style that we should
+write down somewhere.
+
+> 4. Geraldenge's poem: should "The Viridian Shore" exist as text, written by
+> you or drafted by me for you to change, so he can recite a line?
+no. He never recites it. Sometimes, he says snippets while in the forge. But
+nobody can quite make out what they mean because of the specific way that the
+vision he had inspired him to work with his tools and machinery
+
+my dream is to live in Breckenridge
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 25
+
+> Recording these. First a look at where notes and visual-style ideas live, and
+> how the table of contents lists them:
+
+> Adding the note to the table of contents (a shared file nobody has claimed):
+
+*[commit] a2aa27470 in wow-chat-2026 - Plan monster bots and write down the LARP visual style; record Geraldenge's name and poem, and the death cost's gradient (issues 634, 155e1b, 155z12)*
+
+Everything is recorded and committed, plus one new issue and one new note.
+
+> it's more like GER-all-dee-uh-ng-guh … gare like chair, all like all of us,
+> deemn like dream with no r
+
+Recorded in 155e1b as said quickly: GARE (as in chair) – ALL (as in all of us)
+– DEEM (dream without the r) – uh – ng – guh.
+
+> it's a gradient
+
+Recorded in 155z12: the cost rises smoothly with level, from 2 bars at level 1
+to 4 at the cap, so about 3 at level 30.
+
+> monsters could eventually be given player pages … evil playerbots …
+> monster themed, with monster stats and only sometimes gear
+
+New issue 634, monster bots. The LARP / Renaissance-fair version is a note,
+`notes/larp-renfair-visual-style.md`, listed in the table of contents. It
+describes monsters shown as people in costume: a wolf in furs and a wolf-head
+hood, a kobold with a candle on his helm. The project's existing way of dressing
+creatures (Sargobras's outfit, the stand-ins' baked looks) would make it
+possible.
+
+> He never recites it. Sometimes, he says snippets while in the forge …
+
+Recorded: no poem text is written. At the forge he mutters half-formed fragments
+that nobody can make out.
+
+> my dream is to live in Breckenridge
+
+I hope you get there. In case it's useful, issue 919a (another session's, so I
+haven't touched it) plans the first new map as the ground from the Colorado
+Front Range westward. Breckenridge sits just west of the Front Range. What draws
+you to it: the mountains, the town, or something else?
+
+Questions, most blocking first:
+
+1. **Deaths:** with deaths costing rested experience now, does the spirit
+   healer's 25% durability loss still apply when you choose to resurrect at the
+   graveyard, or should no death cost any durability at all?
+2. **Monster bots (634):** should they be (a) ordinary creatures given a
+   character's stats and a combat rotation, which is cheap enough for many, or
+   (b) real bot characters on a monster faction made to look like the monster,
+   which play exactly like players but each cost as much as a buddy?
+3. **The +1 health and resilience glass gems:** which sockets take them? Any
+   armor socket with the player choosing, or each kind set to particular slots,
+   as weapon damage is?
 
 --------------------------------------------------------------------------------
 

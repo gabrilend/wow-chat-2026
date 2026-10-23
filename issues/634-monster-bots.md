@@ -8,7 +8,7 @@
   creature, the rest kept as data), 620 (every playerbot plays by the house
   rules), `notes/larp-renfair-visual-style.md` (the visual idea below)
 - Priority: Low
-- State: an idea; open questions first
+- State: an idea; the shape chosen (a creature with a page), the rest open
 
 ## Origin
 
@@ -68,3 +68,17 @@ stand-ins (617t1). Nothing fights players as a character would.
    like a player), whole dungeons, or the open world?
 3. **"only sometimes gear":** gear that can drop when they die, or gear as
    part of their look only?
+
+## Answers, 2026-10-22
+
+1. **Creatures with a page, (a):** "it's easier to process NPCs is my
+   understanding so we'd create an NPC and just simulate the bot's
+   behavior based on what the NPC is positioned near and such. So we'd
+   have the bot cast a spell, and we can do it all on the server without
+   having to go back to the player for input. Should lessen our demands
+   I think." Right in effect: bots also run wholly on the server (no
+   player's game is asked anything), but each is a full character, with
+   its session, inventory and saving; a creature carries far less. So a
+   monster bot is a creature whose fighting is decided on the server by
+   bot-like rules from what is around it (who is near, its health, its
+   cooldowns), casting its spells as a bot would.

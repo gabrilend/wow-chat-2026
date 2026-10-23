@@ -78,3 +78,10 @@ Still open:
   Not a step at one level: the cost rises smoothly with level, from two
   bubbles at level 1 to four at the cap (60 on basic), parts of a bubble
   allowed (about three at level 30).
+- (Answered 2026-10-22) **Durability stays as normal:** asked whether the
+  spirit healer's 25% should go too, "oh, um, yeah, good point, we should
+  have the gear take damage as normal. Sorry I don't agree with how I felt
+  before." So gear takes durability damage on death as stock (the fall's
+  10% included, the spirit healer's 25% too); the "instead of durability"
+  above no longer holds. Open: does the rested experience cost stay, on
+  top of the normal durability loss, or does this issue fall away?

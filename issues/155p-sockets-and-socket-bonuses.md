@@ -750,3 +750,8 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
   matters in the world, not only against players. Open: which slots take
   the health and resilience gems (any armor socket, the player choosing,
   or set per slot)? Monster stat pages: issue 155z13.
+- (Answered 2026-10-22) **The +1 health and resilience glass gems go in
+  any socket.** And: "can we also give one for +resist to an element?
+  just 1 or 2 points each." So glass gems of +1 or +2 resistance to one
+  element (fire, frost, nature, shadow, arcane), also any socket. Open:
+  +1 or +2 (or +1 on the lowest items, +2 above)?
