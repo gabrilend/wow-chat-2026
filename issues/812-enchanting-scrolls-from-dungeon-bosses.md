@@ -21,7 +21,36 @@ Verbatim, 2026-10-04:
 
 ## Current Behavior
 
-Not built. Dungeon bosses drop their own items. An enchantment on
+**Built 2026-10-22, install step E067, waiting for an install** (the
+owner's compile runs the install steps). `scripts/generate-basic-boss-scrolls-sql`
+writes `patches/E067-basic-boss-enchant-scrolls/38-boss-enchant-scrolls.{apply,revert}.sql`:
+
+- **The bosses:** the server's own list of dungeon encounters
+  (`instance_encounters`, kills of a creature), kept to the maps the
+  client's Map.dbc calls five-player dungeons and to bosses of level 63
+  or less: every classic dungeon, up to the level-60 ones; raids are on
+  maps of their own and never included; Outland's dungeons are 64 and up
+  on basic. Run the generator for the current count and the per-boss
+  table (152 bosses in 151 loot tables when built; Anger'rel has no loot
+  table and is passed over).
+- **The scrolls:** every "Scroll of Enchant" item of item level 61 or
+  less. A scroll's item level is its enchantment's skill divided by five,
+  plus one (Crusader, skill 300, is 61); basic's professions stop at 300.
+- **Near the boss's level:** one shared loot list per boss level (id
+  1558000 + the level), holding the scrolls within 3 levels, widened a
+  level at a time until it has at least 6; all at equal chances in one
+  group, so exactly one comes out.
+- **One per kill, extra:** each boss's loot gains one row that always
+  drops one scroll from its level's list, on top of its own items.
+- **Revert:** deletes exactly the lists and rows in that id range.
+- **Checked:** apply, revert and a double apply on the real basic world
+  database inside rolled-back transactions (lists, rows and boss rows as
+  expected, nothing left after the revert); the post-install checker's
+  new check passes on the applied state and fails on the unapplied one.
+  `scripts/test-basic-sql-in-ram` lists the step, but wasn't run on
+  2026-10-22 (it needs about 3 GB of RAM disk; 1.9 GB were free).
+
+Before: dungeon bosses dropped their own items only. An enchantment on
 vellum is an item the game already has: an enchanter writes an
 enchantment onto Armor or Weapon Vellum and gets a "Scroll of Enchant
 ..." anyone can use (265 such scrolls in the world database). None has a

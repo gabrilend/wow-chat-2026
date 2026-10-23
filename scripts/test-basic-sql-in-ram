@@ -160,6 +160,7 @@ apply_all() {
     step "E053 the project's commands' help"              "${WORLD}" "${B}/db_world.src/34-custom-command-help.apply.sql"
     step "E054 legendaries as level-60 raid drops"        "${WORLD}" "${B}/db_world.src/35-legendaries.apply.sql"
     step "E055 the smaller roaming places"                "${WORLD}" "${B}/db_world.src/36-buddy-subareas.apply.sql"
+    step "E067 an enchanting scroll from each dungeon boss" "${WORLD}" "${DIR}/patches/E067-basic-boss-enchant-scrolls/38-boss-enchant-scrolls.apply.sql"
     step "E019 no intro cinematic (vanilla's, shared)"    "${CHARS}" "${DIR}/patches/E019-vanilla-no-intro-cinematic/01-no-intro-cinematic.apply.sql"
     step "E023 starting-valley rotation table"            "${CHARS}" "${B}/db_characters.src/02-starting-valley-rotation.apply.sql"
     step "E041 death knight soul ledger"                  "${CHARS}" "${B}/db_characters.src/03-death-knight-souls.apply.sql"
@@ -168,6 +169,7 @@ apply_all() {
     step "E056 the kept stand-ins"                        "${CHARS}" "${DIR}/patches/E056-basic-buddy-stand-ins/06-buddy-stand-ins.apply.sql"
 }
 revert_all() {
+    step "E067 revert" "${WORLD}" "${DIR}/patches/E067-basic-boss-enchant-scrolls/38-boss-enchant-scrolls.revert.sql"
     step "E056 revert" "${CHARS}" "${DIR}/patches/E056-basic-buddy-stand-ins/06-buddy-stand-ins.revert.sql"
     step "E055 revert" "${WORLD}" "${B}/db_world.src/36-buddy-subareas.revert.sql"
     step "E054 revert" "${WORLD}" "${B}/db_world.src/35-legendaries.revert.sql"

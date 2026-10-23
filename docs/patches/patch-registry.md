@@ -262,6 +262,7 @@ in the build's order.
 | E063                           | sql          |     2930 | beta                                     | Beta: mail to the other faction (permission 27), every account, beta's realm.                | `patches/E063-beta-two-side-mail.sh`                                                     |
 | E064                           | sql          |     2940 | beta                                     | Beta: the other faction in the /who list (permission 28), every account, beta's realm.       | `patches/E064-beta-two-side-who.sh`                                                      |
 | E065                           | sql          |     2950 | beta                                     | Beta: friends of the other faction (permission 29), every account, beta's realm.             | `patches/E065-beta-two-side-friends.sh`                                                  |
+| E067                           | sql          |     2970 | basic                                    | One enchanting scroll per classic dungeon boss kill, near the boss's level (issue 812)       | `patches/E067-basic-boss-enchant-scrolls/E067-basic-boss-enchant-scrolls.sh`             |
 <!-- patch-lists: end -->
 
 ## Older write-ups of source patches

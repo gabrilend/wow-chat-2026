@@ -478,6 +478,28 @@ report "class books drop: Ahn'Qiraj and the Emerald Dragons (61-70), Naxxramas (
           WHERE t.entry IN (14887, 14888, 14889, 14890) AND l.Reference = 1557901 AND l.Chance = 100 AND l.MaxCount = 3 HAVING COUNT(*) <> 4")"
 # }}}
 
+# {{{ E067: an enchanting scroll from each dungeon boss (issue 812)
+# The shared lists (1558000 + boss level) hold only enchanting scrolls of
+# item level 61 or less, at equal chances in one group, at least six each;
+# each boss row always drops exactly one, from a list that exists. How
+# many bosses and lists there are is the generator's to say
+# (scripts/generate-basic-boss-scrolls-sql prints its table), not this
+# check's.
+report "dungeon bosses: one enchanting scroll each, from a list of six or more near their level" \
+    "$(run_sql "
+        SELECT 'no scroll lists at all', 0 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM ${WORLD}.reference_loot_template WHERE Entry BETWEEN 1558000 AND 1558099)
+        UNION ALL SELECT CONCAT('list ', r.Entry, ' holds a non-scroll or too high a scroll'), r.Item FROM ${WORLD}.reference_loot_template r
+          JOIN ${WORLD}.item_template i ON i.entry = r.Item
+          WHERE r.Entry BETWEEN 1558000 AND 1558099 AND (i.name NOT LIKE 'Scroll of Enchant%' OR i.ItemLevel > 61 OR r.GroupId <> 1 OR r.Chance <> 0)
+        UNION ALL SELECT CONCAT('list ', Entry, ' has fewer than six scrolls'), COUNT(*) FROM ${WORLD}.reference_loot_template
+          WHERE Entry BETWEEN 1558000 AND 1558099 GROUP BY Entry HAVING COUNT(*) < 6
+        UNION ALL SELECT CONCAT('boss loot ', l.Entry, ' scroll row not an always-one drop'), l.Reference FROM ${WORLD}.creature_loot_template l
+          WHERE l.Reference BETWEEN 1558000 AND 1558099 AND (l.Chance <> 100 OR l.MinCount <> 1 OR l.MaxCount <> 1 OR l.GroupId <> 0)
+        UNION ALL SELECT CONCAT('boss loot ', l.Entry, ' points at a missing list'), l.Reference FROM ${WORLD}.creature_loot_template l
+          WHERE l.Reference BETWEEN 1558000 AND 1558099
+            AND NOT EXISTS (SELECT 1 FROM ${WORLD}.reference_loot_template r WHERE r.Entry = l.Reference)")"
+# }}}
+
 echo ""
 if [[ "${FAIL_COUNT}" -eq 0 ]]; then
     echo "All checks passed."
