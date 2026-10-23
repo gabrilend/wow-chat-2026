@@ -313,7 +313,7 @@ Real bug fix in mod-ale (not a warning): the sync DB query methods
 returned a `.c_str()` pointer to a destroyed `std::string` temporary
 when called with format args. Six identical call sites in
 `GlobalMethods.h`, fixed with one `sed -z` substitution using the
-marker-comment convention. See `issues/141-ale-formatquery-dangling-pointer.md`
+marker-comment convention. See `issues/completed/141-ale-formatquery-dangling-pointer.md`
 for the diagnosis and `docs/patches/contributing-upstream.md` for the
 upstream-PR workflow that should retire B023 once accepted.
 

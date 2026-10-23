@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-23 11:22:14
+Generated on: 2026-10-23 11:26:30
 Models: claude-opus-5-5
 
 ## Contents
@@ -3289,6 +3289,70 @@ I'll commit.
 
 Next question: in a zone with players, when a monster bot dies, should another
 come out of an entrance at once to keep the count, or after a wait?
+
+--------------------------------------------------------------------------------
+
+### User Request 29
+
+okay we have like, wayyyyyyy too many issue files open. Can we pick some that
+seem most *critical* and build a roadmap to completing them?
+
+I freed some space, but it might not be enough.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 29
+
+> Committing the pending answers first, then surveying the open issues:
+
+*[commit] 23ad5aeca in wow-chat-2026 - Record one monster bot per player in a zone, and keep 196 to renumbering (issues 634, 196)*
+
+> Committed (268 MB was enough). Now the survey: how many issues are open, and
+> which are built and waiting, in progress, or about crashes and broken play:
+
+> 505 open against 45 completed. Many are probably built and only waiting for an
+> in-game look, which would close cheaply. Sorting them by what their status
+> lines say:
+
+> Writing the roadmap as a doc beside beta's (`docs/basic-critical-path.md`). It
+> names each issue by what it is, with the number in brackets:
+
+> Beta's roadmap lives in `docs/profiles/`, so I'm moving this one beside it and
+> listing it under basic:
+
+*[commit] 5dc1f0f40 in wow-chat-2026 - Write basic's critical path: compile, check the built work in game, close what passes*
+
+The roadmap is written and committed as `docs/profiles/basic-critical-path.md`,
+listed in the table of contents beside beta's roadmap.
+
+Of the 505 open issues, about 90 are already built and have never been checked
+in game. The critical path is therefore not new features: it's getting the built
+work in front of a player and closing what passes. If every stage passes, about
+90 issues close, and everything left open is either in progress or not started.
+
+| Stage | Who | What | Closes |
+|---|---|---|---|
+| 1. Before the compile | me | Run the database test of every basic change, once the RAM disk has about 3 GB free | — |
+| 2. The compile | you | Compile, validate, promote, restart; then I run the post-install checker | — |
+| 3. Is it standing? (15 min) | you play, I read the log | The quest-reward crash is gone; the two bot crashes stay quiet; the Lua query crash is already fixed upstream | about 4 |
+| 4. Death knight session (30 min) | you | Gabrubre's 11 points, the pledge and runeforges, one fresh skipper, one fresh story player | death knight talents, the skip |
+| 5. Buddy session (1 hour) | you | A buddy's life from being offered to its clan: login, grouping, roaming, towns, following, talents, loot, professions | about 25 buddy issues |
+| 6. World session (1 hour) | you | Rotating valleys, talent cap, Kazzak, no map, the Profession Mentors, boss scrolls, Growth's ability book | about 15 |
+| 7. Paperwork | me | Move what passed to completed, update the progress files, close the two "will not be built" ideas | — |
+
+Each session in the doc is a table of checks, and each check names the issue it
+closes.
+
+Your space freeing left 268 MB on the RAM disk: enough for commits, not for
+stage 1's test. The biggest user is still `/dev/shm/neocities-modernization/`
+(several GB); `/dev/shm/wow-chat-2026/test-source-patches-alpha/` (1.4 GB) is a
+test's leftover copy, so clearing that alone gets close.
+
+I can also turn the critical path into a page with checkboxes you can tick
+during the play sessions, if that would help.
+
+Should I start stage 1 once there's room, or do you want to go straight to the
+compile?
 
 --------------------------------------------------------------------------------
 

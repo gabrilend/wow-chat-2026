@@ -260,3 +260,18 @@ For the full WHY behind rmail, see Phase 10's "Thoughts" sections.
 - **Phase 5** - Bots can discuss with traveler NPCs
 - **Phase 9** - Bots can discuss with narrators (rmail port 4862)
 - **Phase 10** - rmail coordination (bots as internal audience)
+
+## Closed 2026-10-23: built, in-game checks taken as done
+
+The owner, 2026-10-23: "let's assume that anything that should be checked in game already has
+been [...] let's mark all the issues that are just waiting on a visual check as complete."
+Moved to `issues/completed/` (decided ideas and fixed-upstream ones among them):
+
+- 617a1-buddy-module-and-roster-tables
+- 617a2-companion-account
+- 617a3-buddy-creation
+- 617a5-buddies-hidden-and-locked
+- 617a6-buddies-by-stage
+- 617b-buddy-class-selector-npc
+- 617e9-boarding-recordings
+- 617r1-shape-keyed-gearsets

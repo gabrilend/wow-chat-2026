@@ -62,3 +62,8 @@ every reference updated.
 
 1. **Issue renumbering only** ("just issue renumbering."): this issue
    doesn't become a general tech-debt list.
+- (2026-10-23) **Duplicate numbers too:** `validate-issues` finds numbers
+  held by two files, among them 141 (the Lua query crash and the manual
+  patch-application command, both completed) and 142 (symmetric aggro
+  radius, open; splitting AzerothCore scripts, completed). The renumbering
+  gives each its own.

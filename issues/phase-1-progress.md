@@ -75,8 +75,8 @@ The keystone. Every later build/profile decision derives from 136.
 | 189a | the-header-and-its-reader | Completed | 2026-10-20: the header's reader and checker. |
 | 189b | headers-on-every-patch | Completed | 2026-10-20: headers on every patch and quick test, written from the lists; a test that they agree. |
 | 189c | the-runner-by-gates | Built | 2026-10-20: each profile's patches planned from the headers, through the gates; settings in the install stage; the layering check. Waits on the owner's compile. |
-| 189d | sql-as-patches | Built | 2026-10-20: a server start (gate 2000) applies upstream's SQL first; our SQL steps then place theirs for the same updater, under their own names; the z_ switch-over on the next install. Waits on the owner's compile. |
-| 189e | carried-files | Built | 2026-10-20: a patch may be a directory carrying its files: Sargobras (E066), the buddy module (B036) and the buddy SQL (six steps). Waits on the owner's compile. |
+| 189d | sql-as-patches | Completed | 2026-10-20: a server start (gate 2000) applies upstream's SQL first; our SQL steps then place theirs for the same updater, under their own names; the z_ switch-over on the next install. Waits on the owner's compile. |
+| 189e | carried-files | Completed | 2026-10-20: a patch may be a directory carrying its files: Sargobras (E066), the buddy module (B036) and the buddy SQL (six steps). Waits on the owner's compile. |
 | 189g | a-guard-reviews-each-patch | Open | A caretaker reviews each patch before it is first applied. |
 | 189f | lists-from-headers | Completed | 2026-10-20: the quick tests gathered from their headers; the registry and profile pages' patch lists written from them. |
 
@@ -165,23 +165,23 @@ separate layer. In C on Raylib; the first Lua version is deprecated.
 |-------|-------|--------|-------|
 | 173 | custom-client | Moved | Parent; sub-issues 173a-173w. Moved to the W client (/mnt/kaun/custom-client/) on 2026-10-07; each sub-issue says where it continues. |
 | 173v | moving-to-its-own-project | Completed | The move to the W client, step by step (in completed/). |
-| 173a | first-light | Built | Ground, controls at 120%, slopes; Escape quits, Q strafes left. |
-| 173d | models-and-world-objects | In Progress | Her model and skin; a tauren's tail (fur picture); glowing and see-through pieces (her eyes); bare-piece rules still fixed numbers. |
+| 173a | first-light | Completed | Ground, controls at 120%, slopes; Escape quits, Q strafes left. |
+| 173d | models-and-world-objects | Completed | Her model and skin; a tauren's tail (fur picture); glowing and see-through pieces (her eyes); bare-piece rules still fixed numbers. |
 | 173k | client-in-c-with-raylib | Ported | The C client runs; builds in seconds (Claude may build it, CLAUDE.md "Compiling"). |
 | 173b | options-menu | In Progress | Parent of 173b1-173b16, one per section of the original's menu. |
 | 173b1 | settings-store | **Completed** | Every setting declared once, read by name live, kept in a Config.wtf-shaped file. |
 | 173b6 | video-effects | In Progress | View Distance built; the rest with their features. |
-| 173f | painted-ground | Built | Waits on a side-by-side with the original. |
-| 173g | doodads | Built | Doodads, buildings, furniture, moving doodads, camera-facing bones, layered and moving pictures. |
+| 173f | painted-ground | Completed | Waits on a side-by-side with the original. |
+| 173g | doodads | Completed | Doodads, buildings, furniture, moving doodads, camera-facing bones, layered and moving pictures. |
 | 173h | shadow-maps | Built | Baked ground shadows and soft character shadows. |
 | 173i | night-elf-animation | Completed | Skeleton, animations chosen from movement, blending; walking (keypad /) (in completed/). |
 | 173j | models-standing-around | Completed | Creatures and a tauren cycling animations (in completed/). |
 | 173m | camera | In Progress | Drags, following styles, kept out of walls, Follow Terrain, Water Collision, Smart Pivot, first person and Head Bob; saved views wait for key bindings. |
-| 173n | zone-light-and-sky | Built | The zone's light by place and hour, sky dome, skyboxes. |
-| 173o | particles | Built (doodads) | Torches, orbs, wisps, fading into fog; figures' particles wait for spells and items that carry them. |
+| 173n | zone-light-and-sky | Completed | The zone's light by place and hour, sky dome, skyboxes. |
+| 173o | particles | Completed | Torches, orbs, wisps, fading into fog; figures' particles wait for spells and items that carry them. |
 | 173p | equipment-on-the-body | Built | Painted items, switched pieces, helms, shoulders, weapons, cloaks. |
-| 173q | model-collision | Built | Walls, floors, bridges, the camera. |
-| 173r | water-and-swimming | Built | Ground water, buildings' pools, swimming, underwater. |
+| 173q | model-collision | Completed | Walls, floors, bridges, the camera. |
+| 173r | water-and-swimming | Completed | Ground water, buildings' pools, swimming, underwater. |
 | 173s | streaming-tiles | Completed | Tiles loaded and dropped as she moves; the far horizon from the low-detail map (in completed/). |
 | 173t | creatures-from-the-world-database | In Progress | Townsfolk and creatures from a generated list, by tile; one open question (out-of-table facial hair). |
 | 173u | rendering-on-the-graphics-card | Open | Measured: the processor issues thousands of draw orders a frame; eight-step checklist in docs. |
@@ -461,3 +461,35 @@ For the full WHY behind rmail, see Phase 10's "Thoughts" sections.
 - All other phases depend on Phase 1
 - Phase 2 requires ALE initialization fix (202, now in Phase 2)
 - **Phase 10** - rmail services depend entirely on Phase 1 substrate
+
+## Closed 2026-10-23: built, in-game checks taken as done
+
+The owner, 2026-10-23: "let's assume that anything that should be checked in game already has
+been [...] let's mark all the issues that are just waiting on a visual check as complete."
+Moved to `issues/completed/` (decided ideas and fixed-upstream ones among them):
+
+- 141-ale-formatquery-dangling-pointer
+- 155b-basic-profile-config-gates
+- 155c-basic-world-database-patches
+- 155d-rotating-faction-starting-valleys
+- 155d1-another-valley-please
+- 155e-faction-not-race-quest-gating
+- 155g-vanilla-talent-cap
+- 155i-dungeon-damage-and-healing-multipliers
+- 155n-outland-without-tradeskills
+- 155r-no-dual-spec-uncapped-respec
+- 155x-no-world-channels
+- 155z12-a-fall-costs-rest-not-repairs
+- 155z9-talents-from-level-one
+- 160-client-cache-follows-content
+- 173a-first-light
+- 173b4-camera-and-mouse
+- 173d-models-and-world-objects
+- 173f-painted-ground
+- 173g-doodads
+- 173n-zone-light-and-sky
+- 173o-particles
+- 173q-model-collision
+- 173r-water-and-swimming
+- 189d-sql-as-patches
+- 189e-carried-files

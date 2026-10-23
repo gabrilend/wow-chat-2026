@@ -133,7 +133,7 @@ in this world is part of the new design.
 
 ## Related
 
-- `issues/210-ambush-per-player-queue.md` — the per-player target
+- `issues/completed/210-ambush-per-player-queue.md` — the per-player target
   lock this patch complements
 - `issues/126-upstream-warning-fixes.md` — patch inventory + lifecycle
 - `docs/patches/contributing-upstream.md` — upstream-PR workflow

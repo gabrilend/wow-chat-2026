@@ -185,3 +185,13 @@ For the full WHY behind rmail, see Phase 10's "Thoughts" sections.
 - **Phase 7** - Trainers teach custom class abilities (rmail port 4662)
 - **Phase 9** - Narrators reuse traveler movement (rmail port 4862)
 - **Phase 10** - rmail coordination (traveler system enables services)
+
+## Closed 2026-10-23: built, in-game checks taken as done
+
+The owner, 2026-10-23: "let's assume that anything that should be checked in game already has
+been [...] let's mark all the issues that are just waiting on a visual check as complete."
+Moved to `issues/completed/` (decided ideas and fixed-upstream ones among them):
+
+- 506a-gear-design-profiles
+- 506d-gear-gallery-and-votes
+- 506h-gear-model-formats

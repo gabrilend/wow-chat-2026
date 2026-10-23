@@ -367,3 +367,11 @@ External integration (rmail) has been moved to Phase 10.
 - **Phase 6** - Narrators may be playerbots
 - **Phase 8** - Shepherds explain immortality
 - **Phase 10** - rmail integration (narrator subscriptions, external bridge)
+
+## Closed 2026-10-23: built, in-game checks taken as done
+
+The owner, 2026-10-23: "let's assume that anything that should be checked in game already has
+been [...] let's mark all the issues that are just waiting on a visual check as complete."
+Moved to `issues/completed/` (decided ideas and fixed-upstream ones among them):
+
+- 910a-narrators-read-aloud

@@ -270,3 +270,12 @@ For the full WHY behind rmail, see Phase 10's "Thoughts" sections.
 - **Phase 5** - Traveler system populates with help
 - **Phase 9** - Narrators pierce the silence (rmail port 4862)
 - **Phase 10** - rmail coordination (emptiness enables impact)
+
+## Closed 2026-10-23: built, in-game checks taken as done
+
+The owner, 2026-10-23: "let's assume that anything that should be checked in game already has
+been [...] let's mark all the issues that are just waiting on a visual check as complete."
+Moved to `issues/completed/` (decided ideas and fixed-upstream ones among them):
+
+- 194-bots-see-only-as-far-as-they-act
+- 210-ambush-per-player-queue

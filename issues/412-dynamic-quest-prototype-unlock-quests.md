@@ -214,7 +214,7 @@ place forever.
 - `issues/701-quest-spells-to-trainers.md` — the decision this reverses,
   and the authoritative table of which spells come from which quests
   at which level.
-- `issues/210-ambush-per-player-queue.md` — the blocker. Its "Why
+- `issues/completed/210-ambush-per-player-queue.md` — the blocker (completed 2026-10-23). Its "Why
   This Is a Problem" section names this feature explicitly.
 - `issues/503-dynamic-trainer-spawning.md` — the completed precedent for
   selecting a per-player NPC and inserting it into the traveler
