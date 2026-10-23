@@ -82,3 +82,21 @@ stand-ins (617t1). Nothing fights players as a character would.
    monster bot is a creature whose fighting is decided on the server by
    bot-like rules from what is around it (who is near, its health, its
    cooldowns), casting its spells as a bot would.
+2. **Where they fight:** "they spawn from dungeons and raids and explore
+   the world like playerbots and fight players when they see them. They
+   should be level appropriate for the zone they spawn from. Yes, this
+   means evil bots in the Ghostlands from Zul'Aman, but not in Darkshore."
+   So they come out of the entrances of dungeons and raids, roam the
+   zone around the entrance as bots do, and attack players they see; their
+   level is that zone's (the Ghostlands' 10-20 for those leaving Zul'Aman,
+   not Zul'Aman's 70). A zone with no dungeon or raid entrance (Darkshore)
+   has none. Open: how many at once per entrance, and how often they come
+   out?
+3. **Baking** (asked 2026-10-23: "does that mean that since we're
+   simulating the bots anyway, with their inventory and everything, there
+   isn't really a reason to bake them for this purpose?"): a monster bot
+   is a creature, so it has no inventory or character to bake from: it
+   already is a creature with a monster's look. Baking (628a) turns a
+   dressed character's look into a creature; it would come in only for
+   the LARP style (people in costume), where a dressed human look has to
+   become a creature's.

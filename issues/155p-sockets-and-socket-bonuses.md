@@ -755,3 +755,9 @@ Draft for Ritz, 2026-09-25 (Ritz's direction, verbatim):
   just 1 or 2 points each." So glass gems of +1 or +2 resistance to one
   element (fire, frost, nature, shadow, arcane), also any socket. Open:
   +1 or +2 (or +1 on the lowest items, +2 above)?
+- (Answered 2026-10-23) **The resistance glass gems:** "the elemental
+  resist gems should be +1 in two different elements. Fire and frost,
+  nature and arcane, and shadow is +2". So three gems: +1 fire and +1
+  frost; +1 nature and +1 arcane; +2 shadow. And on whether higher items
+  get stronger ones: "the gem determines the stats, not what it's
+  socketed in." Each gem's stats are its own, whatever item holds it.

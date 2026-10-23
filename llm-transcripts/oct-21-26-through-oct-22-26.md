@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-22 20:07:54
+Generated on: 2026-10-22 22:33:41
 Models: claude-opus-5-5
 
 ## Contents
@@ -32,6 +32,10 @@ Models: claude-opus-5-5
    enchanting scrolls are now built, committed and waiting for your compile.
    Next: choose whether low-level +1 glass gems give weapon damage, haste, or
    one per slot type.
+8. 2026-10-22 20:11, after Request 25 - We're planning and building
+   basic-profile features: death knight talents, professions, buddies. All work
+   is committed, and the next step is your compile, then answering three open
+   questions on death durability, monster bots, and glass gem sockets.
 
 --------------------------------------------------------------------------------
 
@@ -3046,6 +3050,78 @@ Questions, most blocking first:
 3. **The +1 health and resilience glass gems:** which sockets take them? Any
    armor socket with the player choosing, or each kind set to particular slots,
    as weapon damage is?
+
+--------------------------------------------------------------------------------
+
+### User Request 26
+
+> 1. Deaths: with deaths costing rested experience now, does the spirit healer's
+> 25% durability loss still apply when you choose to resurrect at the graveyard,
+> or should no death cost any durability at all?
+
+oh, um, yeah, good point, we should have the gear take damage as normal. Sorry I
+don't agree with how I felt before.
+
+> 2. Monster bots (634): should they be (a) ordinary creatures given a
+> character's stats and a combat rotation, which is cheap enough for many, or
+> (b) real bot characters on a monster faction made to look like the monster,
+> which play exactly like players but each cost as much as a
+     buddy?
+
+it's easier to process NPCs is my understanding so we'd create an NPC and just
+simulate the bot's behavior based on what the NPC is positioned near and such.
+So we'd have the bot cast a spell, and we can do it all on the server without
+having to go back to the player for input. Should lessen our demands I think.
+
+> 3. The +1 health and resilience glass gems: which sockets take them? Any armor
+> socket with the player choosing, or each kind set to particular slots, as
+> weapon damage is?
+
+any socket
+
+can we also give one for +resist to an element? just 1 or 2 points each.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 26
+
+*[commit] aeaaf8766 in wow-chat-2026 - Record the owner's answers: durability on death stays, monster bots are creatures, more glass gems (issues 155z12, 634, 155p)*
+
+All three answers are recorded and committed.
+
+> we should have the gear take damage as normal. Sorry I don't agree with how I
+> felt before.
+
+No need to apologise; changing your mind is what these questions are for.
+Recorded in 155z12: gear takes durability damage on death as it always has,
+including the fall's 10% and the spirit healer's 25%.
+
+> it's easier to process NPCs … simulate the bot's behavior … all on the
+> server
+
+Recorded in 634. You're right about the cost. One small correction to the
+reasoning: bots already run entirely on the server too, with no player's game
+asked for input. The difference is that each bot is a full character, with a
+connection, inventory and saving, while a creature carries far less. So a
+monster bot is a creature whose fighting is decided on the server by bot-style
+rules: who is near, its own health, and which spells are ready.
+
+> any socket … +resist to an element? just 1 or 2 points each.
+
+Recorded in 155p: the +1 health-every-5-seconds and +1 resilience glass gems fit
+any socket, joined by elemental resistance gems (fire, frost, nature, shadow or
+arcane) that also fit any socket.
+
+Questions:
+
+1. **Deaths (155z12):** with durability loss back, should a death still cost
+   rested experience on top (2 bars at level 1, rising to 4 at the cap), or
+   should 155z12 be dropped?
+2. **The resistance glass gems:** +1 or +2? One option is +1 on the lowest items
+   and +2 on items from level 15 or so up.
+3. **Monster bots (634):** where should they fight first? A few special
+   encounters (say, a rare elite that fights like a player), whole dungeons, or
+   the open world?
 
 --------------------------------------------------------------------------------
 

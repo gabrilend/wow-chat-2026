@@ -8,7 +8,7 @@
   death), 718e (the fall into the chapel), 155p (white gear never
   repaired)
 - Priority: Medium
-- State: planned; open questions first
+- State: will not be built (the owner, 2026-10-23: "it's fine let's just drop it"); kept as the record of the idea
 
 ## Origin
 
@@ -85,3 +85,6 @@ Still open:
   10% included, the spirit healer's 25% too); the "instead of durability"
   above no longer holds. Open: does the rested experience cost stay, on
   top of the normal durability loss, or does this issue fall away?
+- (Answered 2026-10-23) **Dropped:** asked whether a death should still
+  cost rested experience on top of the normal durability loss: "it's fine
+  let's just drop it." Deaths stay as stock.
