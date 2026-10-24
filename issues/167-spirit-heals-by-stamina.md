@@ -71,6 +71,27 @@ little or no spirit today. Adding it means taking budget from another
 stat, most likely stamina, keeping survivability about the same (open
 question 2).
 
+Worked example (2026-10-23), a level-60 warrior: base 1689 health, 110
+stamina and 45 spirit from the class (`player_class_stats`), plus 190
+stamina from gear (300 in all); health = base + 20 + 10 x (stamina - 20).
+Gear stamina moved to spirit one for one:
+
+| moved | stamina | spirit | health | heal / 5 s | refill | refill while hit |
+|------:|--------:|-------:|-------:|-----------:|-------:|-----------------:|
+|     0 |     300 |     45 |   4509 |      135.0 |  167 s |            334 s |
+|    50 |     250 |     95 |   4009 |      237.5 |   84 s |            169 s |
+|   100 |     200 |    145 |   3509 |      290.0 |   60 s |            121 s |
+|   150 |     150 |    195 |   3009 |      292.5 |   51 s |            103 s |
+|   190 |     110 |    235 |   2609 |      258.5 |   50 s |            101 s |
+
+With the sum fixed, healing peaks where stamina and spirit are about
+equal (their product is largest there), so one for one never reaches the
+300-and-300 example above. The exchange rate sets how much health a spirit
+build gives up; the divisor (100) sets how fast everyone heals. The owner,
+on the in-combat worry: "it's half effect in combat. For another, their
+stats will go down because we pull from stamina to provide spirit. We're
+just trying to figure out the correct ratio."
+
 ## Suggested Implementation Steps
 
 1. (Done) B049, three files, insertion only. The half rate after damage is

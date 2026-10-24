@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-23 17:59:36
+Generated on: 2026-10-23 18:20:07
 Models: claude-opus-5-5
 
 ## Contents
@@ -5058,6 +5058,163 @@ their own now and then?
 
 Reminder: the disks still have no guard against bit rot. Both are ext4, which
 doesn't check file contents for silent corruption.
+
+--------------------------------------------------------------------------------
+
+### User Request 46
+
+where is the HTML page in the project directory?
+
+> It is in the wrong place in the sense that matters: none of its work belongs
+> to this project any more. All 26 open 173 issues describe the custom client,
+> and every one already says
+> "continues in the W client" (the custom client project), naming the issue
+> there that carries it on. They are still open here only because they were
+> never moved.
+
+well let's move them.
+
+> The custom client already has its own issue for each piece, so a copy there
+> would be a second version of each.
+
+so let's delete them then?
+
+> - The box-select issue (617s7) describes work that only the custom client can
+> do. Its roadmap plans it as issue 1103, but no 1103 file exists there yet.
+> This is the one real
+>     candidate to move.
+
+let's move it then.
+
+> What counts as a boss (richer monster drops), with more context: you decided
+> that ordinary monsters drop epics five times as often and green and blue gear
+> twice as often, while
+> bosses keep their stock chances. So "boss" decides who gets left out of the
+> bigger drops.
+
+elites and rare elites. Dungeon bosses. The elites in dungeons that aren't
+bosses should have the updated rates.
+
+>   Spirit on gear (spirit heals health by stamina)
+
+so it's spirit * stamina / 100 per 5 seconds? Or spirit * stamina / 500 per
+second. And stamina is 1 stamina = 10 hp. So it's actually spirit * hp / 10 per
+5 seconds, or spirit * hp / 50 per second? And this happens during combat?
+Hmmmmm I think we will need to playtest this, but for preliminary results let's
+try weighting stamina and spirit the same.
+
+>   Hide shoulders: how, and does it work on the current client?
+
+cool. Buddies shouldn't get it.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 46
+
+> The page is at `docs/HTML/oath-tabards.html`, with its pictures beside it in
+> `docs/HTML/oath-tabards/`. Now moving the issues.
+
+> Moving the 26 issues with their dates kept, then claiming both paths for the
+> commit.
+
+> Updating the phase progress note for the move.
+
+*[commit] b6be6480b in wow-chat-2026 - Move the 26 still-open custom client issues into completed (issue 173 and its sub-issues)*
+
+> Done. Now box select: reading 617s7 and a custom client issue's format.
+
+> Writing the custom client issue 814.
+
+> Writing to the custom client needs your permission. I'll record the other
+> answers first, then ask.
+
+*[commit] 6e2d40518 in wow-chat-2026 - Record three answers: dungeon bosses keep stock loot while every other elite gets the richer drops; spirit and stamina weigh the same on gear for a first playtest; hidden shoulders for players only (issues 181, 167, 720)*
+
+> **[Asked the user]**
+>
+> *Q1 — Outside:* Allow a write outside this session's folder, to
+> /mnt/kaun/custom-client/issues/814-box-select-in-the-wow-world.md?
+> [outside-write 546556c5]
+> - Yes — Allow this one write.
+> - This time — Allow any write inside /mnt/kaun/custom-client/issues until
+>   this session ends.
+> - Always — Allow any write inside /mnt/kaun/custom-client/issues from now
+>   on, for sessions working in /mnt/kaun/wow-chat-2026 only.
+> - No — Keep it refused.
+> → **Selected:** Yes
+
+> **[Asked the user]**
+>
+> *Q1 — Outside:* Allow a write outside this session's folder, to
+> /mnt/kaun/custom-client/issues/814-box-select-in-the-wow-world.md?
+> [outside-write 645ef825]
+> - Yes — Allow this one write.
+> - This time — Allow any write inside /mnt/kaun/custom-client/issues until
+>   this session ends.
+> - Always — Allow any write inside /mnt/kaun/custom-client/issues from now
+>   on, for sessions working in /mnt/kaun/wow-chat-2026 only.
+> - No — Keep it refused.
+> → **Selected:** Yes
+
+*[commit] 82d888d02 in custom-client - Take in box selection of a server's companions, moved from wow-chat-2026 (issue 814)*
+
+> Now pointing 617s7 here at its new home and moving it to completed.
+
+*[commit] ca66dd515 in wow-chat-2026 - Move box selection of buddies to the custom client, where it continues as its issue 814 (issue 617s7)*
+
+Everything below is committed in both projects.
+
+**Where the page is:** `docs/HTML/oath-tabards.html`, with its 222 pictures
+beside it in `docs/HTML/oath-tabards/`.
+
+**The 173 issues:** all 26 that were still open are now in `issues/completed/`,
+unchanged and with their dates kept. The phase 1 progress page says so above its
+custom client table. Nothing linked to them by file path, so no links needed
+fixing.
+
+**"So let's delete them then?" No.** Your house rule is that issues are never
+deleted, only moved to completed. They are also the only record of how the
+client began here: the custom client's own issues start from 2026-10-07 and each
+one names the 173 issue it came from. Moving them to completed is what clears
+them out of the open list. I didn't copy them over, because the custom client
+already has its own issue for each one.
+
+**Box select:** it is now issue 814 in the custom client, "Box Select in the WoW
+World", rather than 1103. 1103 is the selection for Warcraft 3 map mode, which
+hasn't been written yet. 814 names it as the same machinery, so whichever is
+built first, the other reuses it.
+- 814 turns a box selection into the addressing a player could type, like
+  `@1,3`, so our server needs no change.
+- It has two new open questions:
+  - Which drag gesture? A left drag already turns the camera.
+  - How does the client learn a server's addressing?
+- Here, 617s7 points at 814 and moved to completed.
+- One link is still one-sided: the custom client's targeting issue (809) doesn't
+  list 814 under "Blocks", and adding it needs another write permission there.
+
+**What counts as a boss:** recorded. A boss is any creature on a dungeon's or
+raid's list of encounters, whatever its rank in the data, plus the world bosses.
+Bosses keep stock loot chances. Every other elite, including the trash inside
+dungeons, gets the doubled green and blue and the fivefold epic chances.
+
+**Spirit:** recorded, with spirit and stamina weighted the same on gear for a
+first playtest. Your arithmetic slipped in one step:
+- spirit × stamina / 100 per 5 seconds is the same as spirit × stamina / 500
+  per second. That part is right.
+- Since stamina ≈ health / 10, substituting gives spirit × (health / 10) /
+  100 = **spirit × health / 1000** per 5 seconds, not / 10.
+- Yes, it runs in combat, at half rate for 5 seconds after each hit.
+
+So a tank with 300 spirit and about 3000 health from stamina heals 900 every 5
+seconds standing still. That's a full refill in about 17 seconds out of combat,
+or about 33 seconds while being hit.
+
+One question for the playtest: tanks have both stats high, so their healing
+grows with the square of their gear. If spirit and stamina cost the same on
+gear, what stops a tank from stacking both and never going down?
+
+**Hide shoulders:** recorded as players only. The server-side approach is in the
+issue as accepted. Nothing is built yet.
 
 --------------------------------------------------------------------------------
 
