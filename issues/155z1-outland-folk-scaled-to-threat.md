@@ -51,3 +51,18 @@ A friendly creature with no hostile spawn within the radius is left stock.
   removed: about 1,475 service NPCs stand across its towns): "let's scale
   them all, then." Every friendly Outland creature, as the design above
   says.
+- (Answered 2026-10-23) **The rule: +4, as the monsters:** asked for a
+  radius and median-or-maximum: "just give it +4 like we do with the other
+  creatures." So no measuring of nearby threats: every friendly Outland
+  creature gets E032's step, +4, or +6 when it stands only on the Isle.
+
+**Built 2026-10-23, install step E070, waiting for an install**
+(`patches/E070-basic-outland-folk-plus-four/`): every template standing
+only in Outland or on the Isle that E032 didn't raise, apart from world
+bosses, critters, invisible triggers, 155f's dungeon templates, E069's
+four demons and the project's own creatures, raised by +4 (+6 when all
+its spawns are on the Isle). 1,391 templates when built, 45 of them on
+the Isle; the Dark Portal's defenders go from 68 to 72. Levels before are
+saved for the revert. Tested on the real world database (applied twice,
+reverted, every level back); the post-install checker has a check for it.
+This replaces the generator and radius rule sketched above.

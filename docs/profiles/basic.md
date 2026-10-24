@@ -216,6 +216,7 @@ lowest priority first, each line its header's own (`scripts/plan-patches basic`)
 |     2970 | E067 | sql  | One enchanting scroll per classic dungeon boss kill, near the boss's level (issue 812)              |
 |     2980 | E068 | sql  | A Profession Mentor in each capital, teaching the professions its city lacks (issue 155e1)          |
 |     2990 | E069 | sql  | The Dark Portal's wave demons halfway down toward level 60, a stopgap before the front (issue 155z) |
+|     3000 | E070 | sql  | Outland's friendly people +4 levels (+6 on the Isle), as its monsters (issue 155z1)                 |
 <!-- patch-lists: end -->
 
 ## How to switch to basic

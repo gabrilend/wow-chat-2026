@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-23 17:21:02
+Generated on: 2026-10-23 17:25:10
 Models: claude-opus-5-5
 
 ## Contents
@@ -4073,6 +4073,85 @@ across Outland's towns: Telaar, Garadar, Sylvanaar, Area 52 and the rest, 26
 innkeepers among them. So scaling the folk to the threat (155z1) would touch
 every Outland town. Should it cover all of them, or only Thrallmar, Honor Hold
 and Shattrath?
+
+--------------------------------------------------------------------------------
+
+### User Request 38
+
+> Yes, that's 155z2's design. Lanes are laid from the players' positions, so a
+> lane bends round a standing player, and when the player leaves it's laid
+> straight again. Open: how often
+> lanes are re-laid, every second or only when a player moves more than a few
+> yards?
+
+whenever a player moves at all, with a 0.2 second buffer
+
+> As 155z3 is written, a fighter leaves the portal on a random heading and
+> steers toward the nearest foe until it joins the lane leading there; from then
+> on the lane holds it. So the
+> randomness only covers the first few yards, a scatter out of the portal before
+> the lanes take over. Keep the scatter, or have every fighter start straight on
+> its lane?
+
+travelling through the dark portal is confusing, it makes sense that they
+wouldn't understand where they're at.
+
+
+
+<pasted_content id="583a">
+> No, they weren't removed. Earlier work removed Outland's quests (155l) and its
+> gathering and professions (155n), but about 1,475 service NPCs still stand
+> across Outland's towns:
+> Telaar, Garadar, Sylvanaar, Area 52 and the rest, 26 innkeepers among them. So
+> scaling the folk to the threat (155z1) would touch every Outland town. Should
+> it cover all of them, or
+>   only Thrallmar, Honor Hold and Shattrath?
+</pasted_content id="583a">
+
+
+let's scale them all, then.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 38
+
+> Recording the three answers, then looking at whether 155z1's design is
+> complete enough to build now:
+
+> 155z1's design is complete except one open question, so I'll record your
+> answers and ask that rather than guess:
+
+*[commit] d12768ffb in wow-chat-2026 - Record three Dark Portal answers: lanes relaid on every move with a 0.2 second buffer, the confused scatter out of the portal stays, every Outland town scaled to its threat (issues 155z2, 155z3, 155z1)*
+
+All three answers are recorded and committed.
+
+> whenever a player moves at all, with a 0.2 second buffer
+
+Recorded in 155z2: any movement re-lays the lanes around that player, at most
+once every 0.2 seconds.
+
+> travelling through the dark portal is confusing, it makes sense that they
+> wouldn't understand where they're at.
+
+Recorded in 155z3: the scatter stays. Each fighter comes out on a random heading
+and finds its bearing before a lane takes it.
+
+> let's scale them all, then.
+
+Recorded in 155z1: every friendly creature in Outland, in every town. One
+question stands between that and building it:
+
+**How does each friendly creature find "the threat near it"?** The design raises
+each one to the level of the hostile creatures spawned within some radius of
+where it stands, never below its own stock level, and leaves it unchanged if no
+hostile stands within that radius. Two numbers are needed:
+- **The radius:** 60 yards is roughly a town's edge; 100 to 150 reaches the
+  monsters just outside it.
+- **Median or maximum** of those monsters' levels: the median gives a typical
+  fight, while the maximum lets guards hold off the toughest thing nearby.
+
+My suggestion: 100 yards and the median, so a guard matches the ordinary
+monsters around its town without being able to beat everything.
 
 --------------------------------------------------------------------------------
 

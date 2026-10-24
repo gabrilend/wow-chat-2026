@@ -265,6 +265,7 @@ in the build's order.
 | E067                           | sql          |     2970 | basic                                    | One enchanting scroll per classic dungeon boss kill, near the boss's level (issue 812)              | `patches/E067-basic-boss-enchant-scrolls/E067-basic-boss-enchant-scrolls.sh`             |
 | E068                           | sql          |     2980 | basic                                    | A Profession Mentor in each capital, teaching the professions its city lacks (issue 155e1)          | `patches/E068-basic-profession-mentors/E068-basic-profession-mentors.sh`                 |
 | E069                           | sql          |     2990 | basic                                    | The Dark Portal's wave demons halfway down toward level 60, a stopgap before the front (issue 155z) | `patches/E069-basic-portal-demons-halfway/E069-basic-portal-demons-halfway.sh`           |
+| E070                           | sql          |     3000 | basic                                    | Outland's friendly people +4 levels (+6 on the Isle), as its monsters (issue 155z1)                 | `patches/E070-basic-outland-folk-plus-four/E070-basic-outland-folk-plus-four.sh`         |
 <!-- patch-lists: end -->
 
 ## Older write-ups of source patches

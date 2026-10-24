@@ -588,6 +588,19 @@ them to the player's level: "let's bring them down halfway." A stopgap
 until the front (issue 155z) replaces the stock event. Takes effect at
 basic's next install.
 
+## 2026-10-23 — Outland's friendly people +4 levels (+6 on the Isle) (basic)
+
+| Knob | Value | Where |
+|---|---|---|
+| Outland's friendly creatures' levels, basic | +4, or +6 when they stand only on the Isle (as E032's monsters) | `patches/E070-basic-outland-folk-plus-four/41-outland-folk-plus-four.apply.sql` |
+
+Why: the owner, 2026-10-04: "can you make the guards and townspeople in
+Outland be roughly scaled to the threats they are to diminish? It should
+be an even fight"; 2026-10-23: "let's scale them all, then" and "just give
+it +4 like we do with the other creatures." Issue 155z1. The Dark Portal's
+defenders go from 68 to 72, against its demons at 65 to 68 (E069). Takes
+effect at basic's next install.
+
 ## How to add an entry
 
 ```markdown
