@@ -615,6 +615,19 @@ Outland are just... really difficult? Can we remove the NPC level
 adjustment? It's okay if they die a lot. Outland is hard!" Neither step
 was ever installed, so no database changed. Issues 155z, 155z1.
 
+## 2026-10-23 — spirit's health healing halved (basic)
+
+| Knob | Value | Where |
+|---|---|---|
+| Health from spirit per 5 seconds | spirit x stamina / 200 (was / 100) | `patches/B049-spirit-heals-by-stamina.sh` |
+
+Why: a worked example (issue 167) showed a level-60 warrior who trades
+gear stamina for spirit refilling from empty in about a minute standing
+still. The owner: "we should double the divisor so the numbers are
+doubled. A full refill should take ~2 minutes I think. That's much longer
+than the 30 seconds it takes to eat / drink." Takes effect at basic's next
+compile.
+
 ## How to add an entry
 
 ```markdown

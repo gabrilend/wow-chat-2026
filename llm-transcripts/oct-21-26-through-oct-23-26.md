@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-23 18:20:07
+Generated on: 2026-10-23 18:28:16
 Models: claude-opus-5-5
 
 ## Contents
@@ -57,6 +57,10 @@ Models: claude-opus-5-5
     answering their questions and building what's ready. Next, answer the five
     waiting questions: what counts as a boss, Atiesh for non-casters,
     Zul'Aman/Zul'Gurub levels, spirit on gear, and hiding shoulders.
+14. 2026-10-23 18:23, after Request 46 - We were sorting issues and recording
+    your answers: the custom client issues are moved and committed, and box
+    select is now that project's issue 814. Next, I need your answer on whether
+    tanks stacking both spirit and stamina would never go down.
 
 --------------------------------------------------------------------------------
 
@@ -5215,6 +5219,87 @@ gear, what stops a tank from stacking both and never going down?
 
 **Hide shoulders:** recorded as players only. The server-side approach is in the
 issue as accepted. Nothing is built yet.
+
+--------------------------------------------------------------------------------
+
+### User Request 47
+
+<pasted_content id="583a">
+> "So let's delete them then?" No. Your house rule is that issues are never
+> deleted, only moved to completed. They are also the only record of how the
+> client began here: the custom
+> client's own issues start from 2026-10-07 and each one names the 173 issue it
+> came from. Moving them to completed is what clears them out of the open list.
+> I didn't copy them over,
+>   because the custom client already has its own issue for each one.
+</pasted_content id="583a">
+
+
+okay let's complete them then haha
+
+> So a tank with 300 spirit and about 3000 health from stamina heals 900 every 5
+> seconds standing still. That's a full refill in about 17 seconds out of
+> combat, or about 33 seconds
+>   while being hit.
+
+if spirit takes from stamina, and a typical max level tank has 300 stamina and
+300 str/agi, then would a typical tank that's built with a spirit build have...
+200 stamina, and 200 health? What're the numbers on those? That full refill in
+17 seconds seems too short to me.
+
+> One question for the playtest: tanks have both stats high, so their healing
+> grows with the square of their gear. If spirit and stamina cost the same on
+> gear, what stops a tank from
+>   stacking both and never going down?
+
+well for one thing it's half effect in combat. For another, their stats will go
+down because we pull from stamina to provide spirit. We're just trying to figure
+out the correct ratio.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 47
+
+*[commit] 5f500c67b in wow-chat-2026 - Work out what a spirit build costs a level-60 warrior, for choosing spirit's price on gear (issue 167)*
+
+**The 173 issues:** they're already complete. Moving an issue into
+`issues/completed/` is what completes it, and all 26 went there in the last
+round. No 173 issue is left open.
+
+**The numbers:** the 17-second refill I gave last time was wrong for a real
+build. I used 300 stamina and 300 spirit together, and you can't have both when
+spirit is paid for with stamina.
+
+These are for a level-60 warrior. From the world database, the class has 1689
+base health, 110 base stamina and 45 base spirit. Say gear adds 190 stamina, for
+300 in all. Each point of stamina past the first 20 is 10 health. Moving gear
+stamina into spirit one for one:
+
+| Stamina moved to spirit | Stamina | Spirit | Health | Healing per 5 s | Full refill, standing | Full refill, being hit |
+|---:|---:|---:|---:|---:|---:|---:|
+| 0 | 300 | 45 | 4509 | 135 | 167 s | 334 s |
+| 50 | 250 | 95 | 4009 | 238 | 84 s | 169 s |
+| 100 | 200 | 145 | 3509 | 290 | 60 s | 121 s |
+| 150 | 150 | 195 | 3009 | 293 | 51 s | 103 s |
+| 190 | 110 | 235 | 2609 | 259 | 50 s | 101 s |
+
+So your "200 stamina" tank has 200 stamina and 145 spirit, not 200 health.
+That's about 3500 health, healing 290 every 5 seconds: a full refill in a minute
+standing, about two minutes while being hit. Trading stamina for spirit at the
+same price does keep a tank from stacking both. The healing peaks once the two
+are about equal, and trading more after that loses health and healing together.
+
+The rule has two settings, and they do different jobs:
+- **The price of spirit in stamina** decides how much health a spirit build
+  gives up for its healing.
+- **The divisor**, 100 in spirit × stamina / 100, decides how fast everyone
+  heals, whatever their build.
+
+How long should a full refill take a tank who has gone all in on spirit,
+standing still? The answer sets the divisor, and the price can then be tuned for
+how much health that should cost.
+
+The table is in the spirit issue (167) and committed.
 
 --------------------------------------------------------------------------------
 

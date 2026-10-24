@@ -16,9 +16,14 @@
 # 3hp5 per spirit, so 300 spirit means 900hp per 5 seconds", and "in
 # combat too. Interrupted by taking damage, and recovers at 50%, just like
 # spirit does with mana". So: health per 5 seconds = spirit x stamina /
-# 100, given every 2-second tick as 2/5 of it, in and out of combat; for
+# 200, given every 2-second tick as 2/5 of it, in and out of combat; for
 # 5 seconds after taking damage, half. Sitting (+33%) and health
 # regeneration effects apply as before.
+#
+# The divisor was 100 until 2026-10-23; the owner,
+# after a worked example: "we should double the divisor ... A full refill
+# should take ~2 minutes I think. That's much longer than the 30 seconds
+# it takes to eat / drink." (docs/balance-updates.md)
 #
 # Mechanics, three files, every edit an insertion inside ">>> B049 ...
 # BEGIN" / "<<< B049 ... END" marker comments. The half rate after damage
@@ -123,10 +128,10 @@ patch_B049_spirit_heals_by_stamina() {
         $0 == ENVIRON["FORMULA"] {
             print "    " ENVIRON["BEGIN_M"]
             print "    // Everland Ghostsong (issue 167): every class alike, health per 5 seconds ="
-            print "    // spirit x stamina / 100, given per 2-second tick (x 2/5); half for 5 seconds"
+            print "    // spirit x stamina / 200, given per 2-second tick (x 2/5); half for 5 seconds"
             print "    // after taking damage. The stock tables below are not reached."
             print "    {"
-            print "        float perTick = GetStat(STAT_SPIRIT) * GetStat(STAT_STAMINA) / 100.0f * 2.0f / 5.0f;"
+            print "        float perTick = GetStat(STAT_SPIRIT) * GetStat(STAT_STAMINA) / 200.0f * 2.0f / 5.0f;"
             print "        if (IsUnderLastHurtEffect())"
             print "            perTick *= 0.5f;"
             print "        return perTick;"
@@ -159,7 +164,7 @@ patch_B049_spirit_heals_by_stamina() {
         }
         { print }' "${B049_P}" > "${B049_P}.b049" && mv "${B049_P}.b049" "${B049_P}"
 
-    echo "  [B049] Spirit heals by stamina (spirit x stamina / 100 per 5 s), in combat too, half for 5 s after damage"
+    echo "  [B049] Spirit heals by stamina (spirit x stamina / 200 per 5 s), in combat too, half for 5 s after damage"
 }
 # }}}
 
@@ -180,5 +185,5 @@ unpatch_B049_spirit_heals_by_stamina() {
 }
 # }}}
 # ==== footer of B049 ====
-# lines:      184
+# lines:      189
 # ==== end of footer ====

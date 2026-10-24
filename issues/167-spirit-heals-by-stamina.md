@@ -48,11 +48,11 @@ knights about 0.5 per spirit at 60, casters 0.04-0.13).
 
 ## Intended Behavior
 
-Every class alike: spirit restores health at stamina / 100 per point of
-spirit every 5 seconds, so health per 5 seconds = spirit x stamina / 100
+Every class alike: spirit restores health at stamina / 200 per point of
+spirit every 5 seconds, so health per 5 seconds = spirit x stamina / 200
 (stamina the attribute, not hit points). A tank with 300 stamina and 300
-spirit: 900 health per 5 seconds; a priest with 150 stamina and 300
-spirit: 450. Each 2-second health tick gives 2/5 of that.
+spirit: 450 health per 5 seconds; a priest with 150 stamina and 300
+spirit: 225. Each 2-second health tick gives 2/5 of that.
 
 - **In combat too**, at the same rate.
 - **Taking damage interrupts it**: for 5 seconds after the last damage
@@ -74,15 +74,15 @@ question 2).
 Worked example (2026-10-23), a level-60 warrior: base 1689 health, 110
 stamina and 45 spirit from the class (`player_class_stats`), plus 190
 stamina from gear (300 in all); health = base + 20 + 10 x (stamina - 20).
-Gear stamina moved to spirit one for one:
+Gear stamina moved to spirit one for one, at the divisor of 200:
 
 | moved | stamina | spirit | health | heal / 5 s | refill | refill while hit |
 |------:|--------:|-------:|-------:|-----------:|-------:|-----------------:|
-|     0 |     300 |     45 |   4509 |      135.0 |  167 s |            334 s |
-|    50 |     250 |     95 |   4009 |      237.5 |   84 s |            169 s |
-|   100 |     200 |    145 |   3509 |      290.0 |   60 s |            121 s |
-|   150 |     150 |    195 |   3009 |      292.5 |   51 s |            103 s |
-|   190 |     110 |    235 |   2609 |      258.5 |   50 s |            101 s |
+|     0 |     300 |     45 |   4509 |       67.5 |  334 s |            668 s |
+|    50 |     250 |     95 |   4009 |      118.8 |  169 s |            338 s |
+|   100 |     200 |    145 |   3509 |      145.0 |  121 s |            242 s |
+|   150 |     150 |    195 |   3009 |      146.3 |  103 s |            206 s |
+|   190 |     110 |    235 |   2609 |      129.3 |  101 s |            202 s |
 
 With the sum fixed, healing peaks where stamina and spirit are about
 equal (their product is largest there), so one for one never reaches the
@@ -91,6 +91,35 @@ build gives up; the divisor (100) sets how fast everyone heals. The owner,
 on the in-combat worry: "it's half effect in combat. For another, their
 stats will go down because we pull from stamina to provide spirit. We're
 just trying to figure out the correct ratio."
+
+**The divisor doubled, 2026-10-23** (from 100 to 200, in B049 and
+`docs/balance-updates.md`): at 100 a spirit build refilled in about a
+minute standing. The owner: "we should double the divisor so the numbers
+are doubled. A full refill should take ~2 minutes I think. That's much
+longer than the 30 seconds it takes to eat / drink." The owner's own
+example (300 stamina and 300 spirit, 900 per 5 seconds) is 450 now, and is
+out of reach when spirit is bought with stamina (the table).
+
+**In a raid boss fight** (2026-10-23, asked: "one that has lots of
+sustain damage", level 60). The bosses' melee from the world database
+(average hit = (base damage x 1.25 + attack power / 14) x damage modifier
+x swing seconds, the server's own formula), on a tank with 10,000 armour
+(57.9% taken off by a level-63 attacker), before dodges, parries, blocks
+and crushing blows:
+
+| boss                    | per second | per 5 s |
+|-------------------------|-----------:|--------:|
+| Ragnaros (Molten Core)  |        350 |    1749 |
+| Golemagg (Molten Core)  |        538 |    2692 |
+| Princess Huhuran (AQ40) |        673 |    3364 |
+| Chromaggus (BWL)        |        807 |    4037 |
+| Nefarian (BWL)          |        942 |    4710 |
+
+The best spirit build heals 146 per 5 seconds standing, so 73 while being
+hit: about 2 to 4 percent of what these bosses deal. Spirit does not
+keep a tank up in a raid; the healers do. What it changes is between
+pulls (two minutes to full instead of eating), and for whoever is not
+being hit, at the full rate.
 
 ## Suggested Implementation Steps
 
@@ -106,7 +135,7 @@ just trying to figure out the correct ratio."
    - `Unit.cpp`: damage dealt to any unit sets it; the check is defined
      beside the mana one.
    - `Player.cpp`: the health-per-spirit function returns spirit x stamina
-     / 100 x 2/5, halved while `IsUnderLastHurtEffect`; the 2-second tick
+     / 200 x 2/5, halved while `IsUnderLastHurtEffect`; the 2-second tick
      runs in combat too for a player the stock check would skip, and adds
      the spirit part in combat.
    `Unit.h` is included almost everywhere (as `m_lastManaUse` is), so a
@@ -115,7 +144,7 @@ just trying to figure out the correct ratio."
    .cpp files compile with the build's flags (without its precompiled
    header, which would hide the patched header), reverts byte-identical.
 2. `scripts/test-source-patches basic` once the source tree is clean.
-3. In game: the tank example's 900 per 5 seconds standing still out of
+3. In game: the tank example's 450 per 5 seconds standing still out of
    combat; half for 5 seconds after a hit; still healing mid-fight.
 
 ## Open Questions
