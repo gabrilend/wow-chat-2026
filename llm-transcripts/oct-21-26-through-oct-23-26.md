@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-23 17:13:00
+Generated on: 2026-10-23 17:21:02
 Models: claude-opus-5-5
 
 ## Contents
@@ -3968,6 +3968,111 @@ What should I do first? In order of what I'd expect to help soonest:
    tide, then combat, then elite heroes), which replaces the stock event with
    the war you described. A large build.
 3. **Both:** the quick fix now, and the front afterwards.
+
+--------------------------------------------------------------------------------
+
+### User Request 37
+
+> - Lanes (155z2): everyone moves on fixed paths (straight lines, arcs, curves)
+> running mostly straight ahead, at right angles from the portal. Paths never
+> cross, keep a minimum gap,
+>     never slow down, and step around players.
+
+so, we curve the line around the players, and when they move away we bend it
+back to straight?
+
+> - Reinforcements (155z3): as many allied fighters per second as fit across the
+> portal's width: humans, orcs and other races, sometimes murlocs and furbolgs,
+> never quilboar or
+>     qiraji. Each starts on a random heading and corrects toward a foe like a compass.
+
+what's the relationship between the random heading and the straight-always path
+system?
+
+> - Outland folk scaled to threat (155z1): guards and townspeople raised to
+> match the monsters around them.
+
+this only matters in Thrallmar, Honor Hold, and Shattrath, right? We removed all
+the Outland NPCs, right?
+
+> 1. Bring the wave demons down to the player's level (around 58–62, normal or
+> elite), so a level-60 player can fight through the stock event now. A small
+> world-database change.
+
+let's bring them down halfway. What rewards do they give?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 37
+
+> Checking the facts behind your questions: what 155z2 and 155z3 say, which
+> friendly NPCs remain in Outland, and the wave demons' stock levels and
+> rewards.
+
+> The demons drop nothing: no loot table and no gold. Checking whether they give
+> experience (the server has a "no experience" flag), and how many friendly town
+> NPCs remain in Outland:
+
+> Testing it on the real database: apply twice, check the levels, revert, check
+> they're back:
+
+> It works: 65, 68, 65 and 68 after applying twice, back to 70, 76, 70 and 75
+> after the revert, and the table is gone. Now the header, the test list, a
+> checker entry, the patch lists and the issue:
+
+> Testing the new check with E069 applied and reverted:
+
+*[commit] 4d6280f3d in wow-chat-2026 - Bring the Dark Portal's wave demons halfway down toward level 60 (issue 155z)*
+
+The demons are halfway down, built as install step E069 and committed; it takes
+effect at your next compile and install.
+
+> let's bring them down halfway. What rewards do they give?
+
+**None.** The four wave demons give no experience (the server's "no experience"
+flag is set on all four) and drop nothing (no loot table, no gold). Today
+they're pure obstacles.
+
+**What changed:** each demon moves halfway from its current level toward 60,
+rounded up, and stays elite.
+
+| Demon | Before | After |
+|---|---:|---:|
+| Fel Soldier | 70 | 65 |
+| Infernal Siegebreaker | 70 | 65 |
+| Wrath Master | 75 | 68 |
+| Pit Commander | 76 | 68 |
+
+I tested it on the real database: applying twice changes nothing more, and the
+revert brings back 70, 76, 70 and 75. The post-install checker has a check for
+it, and the change is in the balance log.
+
+> so, we curve the line around the players, and when they move away we bend it
+> back to straight?
+
+Yes, that's 155z2's design. Lanes are laid from the players' positions, so a
+lane bends round a standing player, and when the player leaves it's laid
+straight again. Open: how often lanes are re-laid, every second or only when a
+player moves more than a few yards?
+
+> what's the relationship between the random heading and the straight-always
+> path system?
+
+As 155z3 is written, a fighter leaves the portal on a random heading and steers
+toward the nearest foe until it joins the lane leading there; from then on the
+lane holds it. So the randomness only covers the first few yards, a scatter out
+of the portal before the lanes take over. Keep the scatter, or have every
+fighter start straight on its lane?
+
+> this only matters in Thrallmar, Honor Hold, and Shattrath, right? We removed
+> all the Outland NPCs, right?
+
+No, they weren't removed. Earlier work removed Outland's quests (155l) and its
+gathering and professions (155n), but about 1,475 service NPCs still stand
+across Outland's towns: Telaar, Garadar, Sylvanaar, Area 52 and the rest, 26
+innkeepers among them. So scaling the folk to the threat (155z1) would touch
+every Outland town. Should it cover all of them, or only Thrallmar, Honor Hold
+and Shattrath?
 
 --------------------------------------------------------------------------------
 

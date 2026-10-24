@@ -51,3 +51,7 @@ plus its width (number). Positions along it by distance.
 ## Open Questions
 
 1. The minimum gap between lanes, and the runners' speed.
+- (Answered 2026-10-23) **How often lanes are relaid:** "whenever a player
+  moves at all, with a 0.2 second buffer". A player's movement relays the
+  lanes round them, at most once every 0.2 seconds (moves within that
+  window gathered into one relaying).

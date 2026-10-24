@@ -39,3 +39,9 @@ look like players; stock creatures for murlocs and furbolgs.
 ## Open Questions
 
 1. Do murlocs and furbolgs fight on the allied side?
+- (Answered 2026-10-23) **The scatter out of the portal stays:** asked
+  whether fighters should start straight on their lanes instead: "travelling
+  through the dark portal is confusing, it makes sense that they wouldn't
+  understand where they're at." So each fighter leaves on a random heading
+  and finds its bearing (turning toward the nearest foe ahead) before a
+  lane takes it.

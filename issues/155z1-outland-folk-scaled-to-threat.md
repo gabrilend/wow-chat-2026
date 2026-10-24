@@ -46,3 +46,8 @@ A friendly creature with no hostile spawn within the radius is left stock.
 ## Open Questions
 
 1. The radius (say 60 yards), and median or maximum of the threats?
+- (Answered 2026-10-23) **Every Outland town:** asked whether this covers
+  only Thrallmar, Honor Hold and Shattrath (Outland's people were never
+  removed: about 1,475 service NPCs stand across its towns): "let's scale
+  them all, then." Every friendly Outland creature, as the design above
+  says.
