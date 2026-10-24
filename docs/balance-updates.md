@@ -601,6 +601,20 @@ it +4 like we do with the other creatures." Issue 155z1. The Dark Portal's
 defenders go from 68 to 72, against its demons at 65 to 68 (E069). Takes
 effect at basic's next install.
 
+## 2026-10-23 — both Outland level changes above undone before install (basic)
+
+| Knob | Value | Where |
+|---|---|---|
+| The Dark Portal's wave demons' levels | back to as before: 70 to 76 (E069 removed) | none (stock, with E032's +4) |
+| Outland's friendly people's levels | back to stock (E070 removed) | none |
+
+Why: told the portal's defenders would reach 72 against demons at 65 to
+68, the owner, the same day: "let's bump the monsters back to their normal
+level again, and nix our previous thing. Actually, maybe monsters in
+Outland are just... really difficult? Can we remove the NPC level
+adjustment? It's okay if they die a lot. Outland is hard!" Neither step
+was ever installed, so no database changed. Issues 155z, 155z1.
+
 ## How to add an entry
 
 ```markdown

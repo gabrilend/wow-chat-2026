@@ -111,3 +111,8 @@ jewelcrafting, and jewelcrafting and enchanting need each other.
    or added as a reagent to existing ones (which engineering items count
    as "lazers": the scopes, the death ray, the goggles)? A list to draw up
    when the chain is built.
+- (2026-10-23) **Chiplets into ink:** "Can we make alchemists able to
+  transmute chiplets into ink for inscription?" A use for chiplets beside
+  engineering's and inscription's own: alchemy transmutes chiplets into
+  inks, a second source to milling (155o). Open: which inks from which
+  chiplets (by colour, by the ore tier they came from)?

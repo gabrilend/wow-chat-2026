@@ -167,3 +167,10 @@ the moment the cast begins):
   drop the new request." A member with an invitation already pending gets
   no second one; the later hearther's invitation is dropped for them.
   (Question 2 above.)
+- (Answered 2026-10-23) **Bots in the group:** "always come. Only your
+  buddy-bots, not buddy-bots from another player that's in your group.
+  Think about it - buddy-bots have the same hearthstone as you, so they
+  should start using it as soon as they hit "yes" or "okay"". So the
+  hearther's own buddies always come: each accepts at once and casts its
+  own hearthstone, set to the same place as its owner's. Another player's
+  buddies in the group, and random bots, don't come. (Question 1 above.)

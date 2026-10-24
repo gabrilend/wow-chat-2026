@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-23 17:25:10
+Generated on: 2026-10-23 17:28:33
 Models: claude-opus-5-5
 
 ## Contents
@@ -4152,6 +4152,71 @@ hostile stands within that radius. Two numbers are needed:
 
 My suggestion: 100 yards and the median, so a guard matches the ordinary
 monsters around its town without being able to beat everything.
+
+--------------------------------------------------------------------------------
+
+### User Request 39
+
+just give it +4 like we do with the other creatures.
+
+can you ask 5 more questions?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 39
+
+> Building that: friendly Outland creatures get the same +4 (+6 on the Isle)
+> that hostile and neutral ones already have. First, how the existing Outland
+> level step (E032) chose its creatures, so this one covers exactly the rest:
+
+> The check passes with E070 applied and catches its absence, and the database
+> is back as it was. Writing it up and committing:
+
+*[commit] 7a4a085a0 in wow-chat-2026 - Raise Outland's friendly people four levels, as its monsters (issue 155z1)*
+
+> Committed. Reading candidates for five more questions from issues not asked
+> yet:
+
+E070 is built and committed, so friendly Outland creatures now get +4 like
+everything else. It takes effect at your next install.
+- **1,391 templates raised:** guards, vendors, townspeople and the Dark Portal's
+  defenders, all at +4, or +6 for the 45 that stand only on the Isle.
+- **At the Dark Portal:** the defenders go from 68 to 72, against demons now at
+  65 to 68, so the defenders should push the demons back.
+- **Tested** by applying it twice and reverting on the real database, with every
+  level restored.
+- The checker, the database test and the balance log know about it.
+
+Five more questions, from five other issues:
+
+1. **Aldor and Scryers by deeds (155v):** instead of quests, you earn standing
+   with one of Shattrath's two factions by killing "one of them", the other
+   faction's side. Who counts? Their guards and members in Shattrath and their
+   camps, players aligned with the other faction, or the demons and naga each
+   faction fights? My suggestion: the demons and naga each one fights. Killing
+   city guards would make Shattrath a battlefield.
+
+2. **Group hearthstone (211):** when you hearth, your group gets an invitation
+   to come along. Random bots can't press the accept button. Should they always
+   come, never come, or come only when the person hearthing leads the group? My
+   suggestion: only when the hearther leads the group, so a stranger's bot
+   doesn't follow you home.
+
+3. **Inscription without glyphs (155o):** on basic, Inscription became a
+   buff-scroll profession with no glyphs. It still has 14 recipes for off-hand
+   books, the only off-hand items any profession makes. Keep them, or trim them?
+
+4. **Things only one player can select (164):** creatures can be made
+   unselectable for one player, the way Sargobras is hidden from a death knight
+   once its soul is given. Should objects work the same way, such as Acherus's
+   teleport pads or a runeforge? Objects have no "unselectable" switch, so
+   they'd need a separate way to be hidden or locked for one player.
+
+5. **Kazzak's swarm (155j):** when Doom Lord Kazzak returns each week, one elite
+   demon pack spawns per player in his zone: a Mo'arg Overseer leading two
+   Gan'arg Peons. They never respawn and are cleared when he next returns. The
+   pack of three was a placeholder; is that the right size, or should it be
+   larger, or scale with the player's group?
 
 --------------------------------------------------------------------------------
 

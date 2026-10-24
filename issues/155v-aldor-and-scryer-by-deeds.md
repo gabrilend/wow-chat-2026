@@ -97,3 +97,7 @@ Verbatim, 2026-09-26:
 - **Rank gates**: which items at which reputation rank?
 - **Gem crates**: what's in one (Azeroth gems, Outland gems, a level
   band)?
+- (Answered 2026-10-23) **Who counts as "one of them":** asked whether it is
+  the other faction's NPCs, players, or the demons and naga each fights:
+  "this already exists." The question is closed: what the issue describes
+  is taken as already in the game.

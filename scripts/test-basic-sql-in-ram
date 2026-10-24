@@ -162,8 +162,6 @@ apply_all() {
     step "E055 the smaller roaming places"                "${WORLD}" "${B}/db_world.src/36-buddy-subareas.apply.sql"
     step "E067 an enchanting scroll from each dungeon boss" "${WORLD}" "${DIR}/patches/E067-basic-boss-enchant-scrolls/38-boss-enchant-scrolls.apply.sql"
     step "E068 a Profession Mentor in each capital"       "${WORLD}" "${DIR}/patches/E068-basic-profession-mentors/39-profession-mentors.apply.sql"
-    step "E069 the portal's demons halfway down"           "${WORLD}" "${DIR}/patches/E069-basic-portal-demons-halfway/40-portal-demons-halfway.apply.sql"
-    step "E070 Outland's friendly people +4"               "${WORLD}" "${DIR}/patches/E070-basic-outland-folk-plus-four/41-outland-folk-plus-four.apply.sql"
     step "E019 no intro cinematic (vanilla's, shared)"    "${CHARS}" "${DIR}/patches/E019-vanilla-no-intro-cinematic/01-no-intro-cinematic.apply.sql"
     step "E023 starting-valley rotation table"            "${CHARS}" "${B}/db_characters.src/02-starting-valley-rotation.apply.sql"
     step "E041 death knight soul ledger"                  "${CHARS}" "${B}/db_characters.src/03-death-knight-souls.apply.sql"
@@ -172,8 +170,6 @@ apply_all() {
     step "E056 the kept stand-ins"                        "${CHARS}" "${DIR}/patches/E056-basic-buddy-stand-ins/06-buddy-stand-ins.apply.sql"
 }
 revert_all() {
-    step "E070 revert" "${WORLD}" "${DIR}/patches/E070-basic-outland-folk-plus-four/41-outland-folk-plus-four.revert.sql"
-    step "E069 revert" "${WORLD}" "${DIR}/patches/E069-basic-portal-demons-halfway/40-portal-demons-halfway.revert.sql"
     step "E068 revert" "${WORLD}" "${DIR}/patches/E068-basic-profession-mentors/39-profession-mentors.revert.sql"
     step "E067 revert" "${WORLD}" "${DIR}/patches/E067-basic-boss-enchant-scrolls/38-boss-enchant-scrolls.revert.sql"
     step "E056 revert" "${CHARS}" "${DIR}/patches/E056-basic-buddy-stand-ins/06-buddy-stand-ins.revert.sql"

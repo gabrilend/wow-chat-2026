@@ -1,6 +1,7 @@
 # 155z1 - Outland's Folk Scaled to Their Threats
 
 ## Status
+- State: will not be built (the owner, 2026-10-23: "Can we remove the NPC level adjustment? It's okay if they die a lot. Outland is hard!"); kept as the record of the idea
 - Created: 2026-10-04
 - Phase: 1
 - Parent: 155z (the Dark Portal front)
@@ -66,3 +67,7 @@ the Isle; the Dark Portal's defenders go from 68 to 72. Levels before are
 saved for the revert. Tested on the real world database (applied twice,
 reverted, every level back); the post-install checker has a check for it.
 This replaces the generator and radius rule sketched above.
+- (2026-10-23) **Dropped the same day:** install step E070 (+4 for every
+  friendly Outland creature) was built and tested, then removed before
+  ever being installed: "Can we remove the NPC level adjustment? It's okay
+  if they die a lot. Outland is hard!"

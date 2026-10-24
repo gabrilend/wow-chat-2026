@@ -270,3 +270,12 @@ buff makes the scroll worthless.
 - (Answered 2026-09-24) Stock scroll values; 30 minutes; Vellum III at
   300; voidwalker delivery; Darkmoon items never bind; scrolls stack with
   class buffs, one per character, all ranks available and scaled.
+- (Answered 2026-10-23) **The off-hand books stay:** "keep them."
+- (2026-10-23) **Inks from chiplets?** The owner: "Where are we at with
+  Inscription btw? Can we make alchemists able to transmute chiplets into
+  ink for inscription? How do they currently get inks, from milling?"
+  Where it stands: built (above): no glyphs, stat scrolls and vellums
+  within 300, scrolls stacking once over class buffs. Inks come the stock
+  way: a scribe mills herbs into pigments and makes inks from them. A new
+  source, alchemists transmuting chiplets (155p2's gem fragments) into
+  ink, is recorded in 155p2 with the other uses of chiplets.

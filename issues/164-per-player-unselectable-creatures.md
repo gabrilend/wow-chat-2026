@@ -112,3 +112,8 @@ in Acherus, can still be selected.
 - (Answered 2026-10-23) **Game master mode keeps its override:** asked
   whether the per-player rule should win over game master mode: "no".
   Testing the rule as a player needs `.gm off` first.
+- (Answered 2026-10-23) **Objects too:** asked whether objects (teleport
+  pads, runeforges) should be hideable or lockable for one player: "I
+  mean, that's good machinery to build, but I don't know of anything that
+  requires it now. Let's say yes." So the machinery covers objects as well
+  as creatures; nothing uses it for objects yet.

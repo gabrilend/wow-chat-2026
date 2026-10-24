@@ -428,3 +428,11 @@ his own 10 items, required level 60.
   restarts. Contribution weights: by simulation, later. Doomwalker and
   Kazzak keep their own items; only the Fel Reaver gets a new table. Two
   Fel Reavers.
+- (Answered 2026-10-23) **The packs and where:** "let's say 3-5, 3 being 3
+  elites, 4 being one elite and 4 normals, and 5 being 5 normals.
+  Randomly. And make sure it's only up on his cliff, not in the rest of
+  HFP." So each player's pack is one of three, at random: three elites;
+  one elite with normals; or five normals. They stand only on Kazzak's own
+  cliff (the Throne of Kil'jaeden), never elsewhere in Hellfire Peninsula.
+  Open: "4 being one elite and 4 normals" is five bodies: one elite and
+  three normals (four in all), or one elite and four normals?

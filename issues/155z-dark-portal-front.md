@@ -163,3 +163,13 @@ post-install checker has a check for it.
   Outland's towns (26 innkeepers among them: Telaar, Garadar, Sylvanaar,
   Area 52 and the rest). So 155z1 (folk scaled to threat) touches every
   Outland town, not three. Open: all towns, or only the three?
+- (2026-10-23, the same day) **The stopgap is dropped, and Outland stays
+  hard:** told the portal's defenders would go from 68 to 72 (155z1's +4)
+  against demons at 65 to 68: "oh what that doesn't seem right, let's bump
+  the monsters back to their normal level again, and nix our previous
+  thing. Actually, maybe monsters in Outland are just... really difficult?
+  Can we remove the NPC level adjustment? It's okay if they die a lot.
+  Outland is hard!" Install steps E069 (the demons halfway down) and E070
+  (the friendly people +4) were removed before ever being installed; the
+  demons stay at 70 to 76 and the defenders at 68. The front (155z2 to
+  155z6) remains the plan.
