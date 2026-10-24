@@ -10,9 +10,10 @@
 -- ones the game marks as one side's only, and writes a page listing the
 -- eligible ones first, by side, then every other tabard, each linked to its
 -- picture on Wowhead (the project has no copy of the game's item art).
--- Which tabards show the side's own crest, rather than a city's or a
--- battleground's emblem, is a judgment about their pictures, kept in the
--- list below and marked on the page as such.
+-- Since the owner's answer of 2026-10-23, every tabard the game marks as
+-- one side's only is accepted, whatever emblem it shows; the crest list
+-- below now only adds those the data leaves unmarked and gives the
+-- crest-bearing ones their note.
 --
 -- Usage: scripts/generate-oath-tabards-page [PROJECT_DIR] [WORLD_DATABASE]
 --   writes docs/HTML/oath-tabards.html
@@ -134,17 +135,18 @@ for _, r in ipairs(rows) do
     local t = { id = tonumber(r[1]), name = r[2], quality = tonumber(r[3]), side = tonumber(r[4]), rep = tonumber(r[5]) }
     if not_players(t.name) then
         npc = npc + 1
-    elseif CREST[t.id] then
-        local side = t.side > 0 and t.side or CREST_SIDE[t.id] or 0
+    -- accepted: every tabard the game marks as one side's only (the owner,
+    -- 2026-10-23: "any of the ones that are "Horde only" or "Alliance only"
+    -- are valid"), whatever emblem it shows, and the crest tabards the data
+    -- leaves unmarked; the rest are every tabard with no side and no crest
+    elseif t.side > 0 or CREST[t.id] then
+        local side = t.side > 0 and t.side or CREST_SIDE[t.id]
         t.side = side
-        table.insert(eligible[side], row_html(t, CREST[t.id], "big"))
+        table.insert(eligible[side], row_html(t, CREST[t.id] or "marked by the game as this side's only", "big"))
     else
-        local note = t.side > 0 and "marked one side's only, but shows its own emblem (a city's, a faction's or a battleground's): check by eye"
-            or "no side marked; no side's crest"
-        table.insert(rest, { side = t.side, html = row_html(t, note, "small") })
+        table.insert(rest, { side = t.side, html = row_html(t, "no side marked; no side's crest", "small") })
     end
 end
-table.sort(rest, function(a, b) return a.side > b.side end)   -- the side-marked ones first
 local rest_html = {}
 for _, r in ipairs(rest) do rest_html[#rest_html + 1] = r.html end
 
@@ -206,8 +208,8 @@ td.worn.small img { height: 80px; width: auto; }
 <main>
   <header style="display:grid;gap:8px">
     <h1>Oath Tabards</h1>
-    <p class="lede">After its story, a death knight swears to the Horde or the Alliance for good, and must wear a tabard that clearly shows that side's symbol. These are the tabards the oath accepts, then every other tabard in the game.</p>
-    <p class="note-box">The pictures are drawn from the game's own files by the custom client: each tabard's bag icon, and a night elf wearing it from the front and from behind. Which tabards show a side's own crest was judged from those pictures and is kept in the generator's list. Each name also links to the tabard on Wowhead. Tell Claude any that belong in the other list.</p>
+    <p class="lede">After its story, a death knight swears to the Horde or the Alliance for good, and must wear a tabard that clearly shows that side's symbol. The oath accepts every tabard the game marks as Horde-only or Alliance-only, and an old Alliance tabard showing the lion that the game leaves unmarked; then every other tabard in the game.</p>
+    <p class="note-box">The pictures are drawn from the game's own files by the custom client: each tabard's bag icon, and a night elf wearing it from the front and from behind. Where a note names the crest, it was judged from those pictures; the others are accepted because the game marks them as one side's. Each name also links to the tabard on Wowhead. Tell Claude any that belong in the other list.</p>
   </header>
   <section class="sides" aria-label="Eligible tabards">
     <div class="side-col a"><h2>Alliance</h2>]] .. tbl(eligible[2]) .. [[</div>
@@ -215,7 +217,7 @@ td.worn.small img { height: 80px; width: auto; }
   </section>
   <section class="rest" aria-labelledby="rest-h">
     <h2 id="rest-h">The rest</h2>
-    <p class="lede">Not accepted for the oath. Those the game marks as one side's come first: they carry their own emblems, a city's, a faction's or a battleground's, and are worth a look by eye.</p>
+    <p class="lede">Not accepted for the oath: the game marks no side on them, and they show no side's crest.</p>
     ]] .. tbl(rest_html) .. [[
   </section>
 </main>

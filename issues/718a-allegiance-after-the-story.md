@@ -154,5 +154,15 @@ chooses, at will, one of:
   (`src/015-mpq.c`) and draws characters (`025-character`): the icons
   (each item's picture, from the game's icon files) and a character
   wearing each tabard can be made there, saved as pictures, and the page
-  generator embeds them. Work for the custom client's project, asked for
-  there.
+  generator embeds them. Done 2026-10-23 by the custom client's dressing
+  room; `scripts/make-oath-tabard-pictures` remakes the pictures and the
+  page.
+- (Answered 2026-10-23) **The game's side marker is enough:** after
+  seeing the pictures, "any of the ones that are "Horde only" or
+  "Alliance only" are valid." So the oath accepts every tabard the game
+  marks as one side's only (the item's Horde-only or Alliance-only flag),
+  whatever emblem it shows (a city's, a faction's, a battleground's), plus
+  the old Tabard of Stormwind, which shows the lion but carries no flag.
+  This replaces the crest judgment above as the rule; the crest list now
+  only adds unflagged tabards and gives the crest ones their note. The
+  page counts the accepted tabards each time it is made.
