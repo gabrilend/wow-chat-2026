@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-23 17:28:33
+Generated on: 2026-10-23 17:37:31
 Models: claude-opus-5-5
 
 ## Contents
@@ -4217,6 +4217,146 @@ Five more questions, from five other issues:
    Gan'arg Peons. They never respawn and are cleared when he next returns. The
    pack of three was a placeholder; is that the right size, or should it be
    larger, or scale with the player's group?
+
+--------------------------------------------------------------------------------
+
+### User Request 40
+
+> - At the Dark Portal: the defenders go from 68 to 72, against demons now at 65
+> to 68, so the defenders should push the demons back.
+
+oh what that doesn't seem right, let's bump the monsters back to their normal
+level again, and nix our previous thing. Actually, maybe monsters in Outland are
+just... really difficult? Can we remove the NPC level adjustment? It's okay if
+they die a lot. Outland is hard!
+
+  1. Aldor and Scryers by deeds (155v)
+
+this already exists
+
+  2. Group hearthstone (211)
+
+always come. Only your buddy-bots, not buddy-bots from another player that's in
+your group. Think about it - buddy-bots have the same hearthstone as you, so
+they should start using it as soon as they hit "yes" or "okay"
+
+  3. Inscription without glyphs (155o)
+
+keep them. Where are we at with Inscription btw? Can we make alchemists able to
+transmute chiplets into ink for inscription? How do they currently get inks,
+from milling?
+
+>   4. Things only one player can select (164)
+
+I mean, that's good machinery to build, but I don't know of anything that
+requires it now. Let's say yes.
+
+  5. Kazzak's swarm (155j)
+
+let's say 3-5, 3 being 3 elites, 4 being one elite and 4 normals, and 5 being 5
+normals. Randomly. And make sure it's only up on his cliff, not in the rest of
+HFP.
+
+Can you ask me 5 more questions? Specifically for issues with very few open
+questions remaining, to clear them up and make them able to be built.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 40
+
+> Removing both level changes. Neither was ever installed (each was tested and
+> reverted on the database), so removing the two step folders from the build is
+> enough: the demons stay at their normal 70–76 and Outland's friendly people
+> at stock. Git keeps the history.
+
+> Both checks are gone and the checker still parses. Regenerating the patch
+> lists, then reading Inscription's status for your question:
+
+> Adding a reversal entry to the balance log (it's append-only, so the earlier
+> entries stay), then committing:
+
+*[commit] f43ce5780 in wow-chat-2026 - Undo both Outland level changes before they were ever installed, and record six answers (issues 155z, 155z1, 155v, 211, 155o, 155p2, 164, 155j)*
+
+> Committed, and the staging area is clean. Confirming the removed steps are
+> gone from the commit, then finding issues with only one open question left:
+
+Both Outland level changes are gone, your answers are recorded, and everything
+is committed.
+
+> let's bump the monsters back to their normal level again, and nix our previous
+> thing … Can we remove the NPC level adjustment? … Outland is hard!
+
+Done. Neither change was ever installed, so I removed both steps, their checks
+and their test entries; no database changed. The demons stay at 70–76 and the
+defenders at 68. 155z1 (scaling Outland's people) is marked "will not be built",
+the balance log records the reversal, and the front (155z2–155z6) is still the
+plan.
+
+> 2. Group hearthstone (211)
+
+Recorded: your own buddies always come. Each accepts at once and uses its own
+hearthstone, set to the same place as yours. Other players' buddies in your
+group don't come.
+
+> 3. … Where are we at with Inscription btw? … How do they currently get
+> inks, from milling?
+
+Inscription is built (E029):
+- Glyphs are removed.
+- The stat scrolls and vellums all stop at skill 300.
+- One scroll stacks on top of class buffs.
+- Darkmoon cards give the level-60 trinkets.
+
+Inks come the stock way: a scribe mills herbs into pigments and makes ink from
+them. The off-hand books stay. Alchemists turning chiplets into ink is recorded
+in 155p2 with the other uses of chiplets. Open there: which inks come from which
+chiplets?
+
+> 4. … Let's say yes.
+
+Recorded in 164: objects can be hidden or locked for one player too, though
+nothing uses that yet.
+
+> 5. … 3-5 … only up on his cliff
+
+Recorded in 155j: random packs, only on Kazzak's cliff (the Throne of
+Kil'jaeden). One check: "4 being one elite and 4 normals" adds up to five. Did
+you mean one elite and three normals?
+
+> 1. … this already exists
+
+Recorded in 155v, and the question is closed.
+
+Five issues that are one question from buildable:
+
+1. **Richer monster drops (181): what counts as a boss?** Only creatures the
+   game ranks as "boss" (raid bosses and world bosses), or every dungeon boss
+   too? Most dungeon bosses are ranked plain elite, and the server knows them
+   only from its list of dungeon encounters, the same list the new enchanting
+   scrolls use. My suggestion: every dungeon boss too, using that list.
+
+2. **Legendary items (182): Atiesh looted by a class that can't use it.** If a
+   warrior, rogue, hunter, paladin, shaman or death knight loots the unshaped
+   Atiesh, does it (a) stay unshaped, so it can be traded to a caster and takes
+   that caster's form, (b) turn into one of the four caster versions at random,
+   or (c) never appear in their loot roll at all? My suggestion: (a), so it
+   becomes a gift between friends.
+
+3. **Zul'Aman and Zul'Gurub raid tier (809): which levels?** You described them
+   as "early 50s". Monsters at 50–54, with item levels to match, sitting below
+   Molten Core?
+
+4. **Spirit heals by stamina (167): spirit on gear.** Health regained from
+   spirit now scales with stamina. When gear has spirit, should that spirit's
+   budget be taken from the item's stamina, so total survivability stays about
+   the same? And at what rate?
+
+5. **Hide shoulders (720): a chat command for now,** with the client's checkbox
+   waiting for the custom client? And should it also work on buddies, so you can
+   hide a buddy's shoulders?
+
+Reminder: the disks still have no protection against bit rot (issue 191). Both
+are ext4, which doesn't checksum file contents.
 
 --------------------------------------------------------------------------------
 
