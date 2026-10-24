@@ -508,6 +508,19 @@ report "dungeon bosses: one enchanting scroll each, from a list of six or more n
             AND NOT EXISTS (SELECT 1 FROM ${WORLD}.reference_loot_template r WHERE r.Entry = l.Reference)")"
 # }}}
 
+# {{{ E069: the Dark Portal's wave demons halfway down toward 60 (issue 155z)
+# Each of the four stands halfway between its saved level and 60, rounded
+# up; their saved levels are kept for the revert.
+report "the Dark Portal's wave demons stand halfway between their old levels and 60" \
+    "$(run_sql "
+        SELECT 'no saved levels (E069 not applied)', 0 FROM DUAL
+          WHERE (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${WORLD}' AND table_name = 'basic_e069_levels') = 0
+        UNION ALL SELECT CONCAT(t.name, ' at ', t.minlevel, '-', t.maxlevel), b.minlevel FROM ${WORLD}.creature_template t
+          JOIN ${WORLD}.basic_e069_levels b ON b.entry = t.entry
+          WHERE t.minlevel <> CEIL((b.minlevel + 60) / 2) OR t.maxlevel <> CEIL((b.maxlevel + 60) / 2)
+        UNION ALL SELECT 'saved levels for fewer than four demons', COUNT(*) FROM ${WORLD}.basic_e069_levels HAVING COUNT(*) <> 4")"
+# }}}
+
 # {{{ E068: a Profession Mentor in each capital that lacks a profession's trainer (issue 155e1)
 # Each mentor row stands, as its own creature, with one dialogue line per
 # missing profession opening a list that teaches something; no line opens

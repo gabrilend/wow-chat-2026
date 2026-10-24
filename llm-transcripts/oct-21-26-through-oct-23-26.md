@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-23 17:07:43
+Generated on: 2026-10-23 17:13:00
 Models: claude-opus-5-5
 
 ## Contents
@@ -3875,6 +3875,99 @@ does a basic player join a second guild? A normal guild invite comes from
 another player's game client. The choices are: an invite from a member of the
 other guild as usual, a new command, or an NPC who handles memberships. My
 suggestion: the normal invite, which is the least new machinery.
+
+--------------------------------------------------------------------------------
+
+### User Request 36
+
+I will need icons on the tabard HTML page. Maybe also a render of the tabard as
+it's being worn?
+
+>   Context for the elite outfits question (617r)
+
+okay yes so we want an outfit system in general. Everything, even the starting
+gear, should flow through that outfit system. The outfits I described were
+particular tiers that we could build from, but we want some at other levels as
+well. For now, let's just say that sometimes, we need to apply an outfit to a
+player, and then restore it. Sometimes, we don't. So, to answer your question,
+we need both behaviors.
+
+> how does a basic player join a second guild?
+
+they don't. Again, we just need them to be able to mechanically in the server.
+Since Sargobras is a playerbot, or else how could he exist in their friends
+list, he needs to be able to join and leave guilds and such. But he needs to be
+able to be in essentially every guild at once. Hence why Sargobras right now is
+the only one who needs to be able to join and leave guilds.
+
+okay. I want to focus on The Dark Portal. Right now it's very difficult to get
+through the hordes of demons - we need to fight them back. Can you tell me about
+the behavior we have described for that area?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 36
+
+> Three of these just need recording; the Dark Portal needs reading first.
+> Starting with the portal's issues:
+
+*[commit] 466357133 in wow-chat-2026 - Record three answers: one outfit system that can apply or apply-and-restore, many guilds for Sargobras only, pictures for the tabard page (issues 617r, 630, 718a)*
+
+Your other answers are recorded and committed:
+- **Outfits (617r):** one outfit system that everything goes through, starting
+  gear included, able to apply an outfit for good or apply it and later restore
+  what was worn.
+- **Many guilds (630):** a server capability used only by Sargobras, so he can
+  be in every guild at once. Players never join a second guild.
+- **Tabard pictures (718a):** the icons and an "as worn" render can come from
+  the custom client, which already reads the game's art files and draws
+  characters. That work belongs to the custom client project; once it saves the
+  pictures, the page generator embeds them.
+
+**The Dark Portal: what's designed.** Your 2026-10-04 description became seven
+sub-issues under 155z, the front at the Dark Portal. **None is built.**
+
+- **The war (155z):** a battle that never stops on the Stair of Destiny. Allied
+  fighters pour out of the portal, demons climb the causeway, and they meet head
+  on. Players can join, watch or fly off at any moment.
+- **Lanes (155z2):** everyone moves on fixed paths (straight lines, arcs,
+  curves) running mostly straight ahead, at right angles from the portal. Paths
+  never cross, keep a minimum gap, never slow down, and step around players.
+- **Reinforcements (155z3):** as many allied fighters per second as fit across
+  the portal's width: humans, orcs and other races, sometimes murlocs and
+  furbolgs, never quilboar or qiraji. Each starts on a random heading and
+  corrects toward a foe like a compass.
+- **The demon tide (155z4):** endless demons in three sizes: imp-sized,
+  character-sized plus 10%, and overlords from 2 to 15 times character size.
+  Bigger demons claim lanes first, displacing only a few others.
+- **Combat (155z5):** everyone fights only what's directly ahead, then the foe
+  beside it after a kill. Casters stand back where the flow can pass them,
+  otherwise cast from the front, and clump so melee pushes forward across their
+  faces. Fight to the last.
+- **Elite heroes (155z6):** now and then a level-60 elite NPC joins as a hero
+  unit, geared slightly off-best, one ranged spell type per class, clumped on
+  one side.
+- **Outland folk scaled to threat (155z1):** guards and townspeople raised to
+  match the monsters around them.
+- **Flight at hand (155z7):** a gryphon or flying steed whenever you want. This
+  one already works: the portal's flight masters fly you to Honor Hold or
+  Thrallmar.
+
+**What's there today:** the stock event. Level-68 elite defenders hold a line,
+and the area's script sends waves of Fel Soldiers and Infernal Siegebreakers
+(70, elite), a Wrath Master (75) and the Pit Commander (76). Basic's players
+arrive at 58–60, so they face elites 10 to 16 levels above them. That's why
+getting through is so hard.
+
+What should I do first? In order of what I'd expect to help soonest:
+
+1. **Bring the wave demons down to the player's level** (around 58–62, normal
+   or elite), so a level-60 player can fight through the stock event now. A
+   small world-database change.
+2. **Build the front step by step** (lanes, then reinforcements and the demon
+   tide, then combat, then elite heroes), which replaces the stock event with
+   the war you described. A large build.
+3. **Both:** the quick fix now, and the front afterwards.
 
 --------------------------------------------------------------------------------
 

@@ -120,3 +120,46 @@ owner), with the spawn mix, sizes and tuning as data. The guards' scaling
 4. What happens to a player standing in a lane: stepped round (stated), but
    can a player be hit by, or hit, the fighters?
 5. Do kills here give experience, loot or reputation?
+
+## A stopgap, 2026-10-23: the wave demons halfway down
+
+The owner, 2026-10-23: "I want to focus on The Dark Portal. Right now it's
+very difficult to get through the hordes of demons - we need to fight
+them back." What stands there today is the stock event: level-68 elite
+defenders and scripted waves of Fel Soldiers and Infernal Siegebreakers
+(70, elite), a Wrath Master (75) and the Pit Commander (76; the last two
+raised four levels by E032), against players of 58 to 60. They give no
+experience and drop nothing (the server's "no experience" flag, no loot),
+so they are an obstacle only. Asked about bringing them to the player's
+level: "let's bring them down halfway."
+
+**Built 2026-10-23, install step E069, waiting for an install:** each of
+the four moves halfway from its level toward 60, rounded up (Fel Soldier
+and Infernal Siegebreaker 65, Wrath Master and Pit Commander 68), still
+elite; the levels before are saved for the revert. Tested on the real
+world database (applied twice, reverted, back to 70, 76, 70, 75); the
+post-install checker has a check for it.
+
+## Answers and questions, 2026-10-23
+
+- **Lanes round players** (asked: "so, we curve the line around the
+  players, and when they move away we bend it back to straight?"): yes,
+  as 155z2 has it, a player is a circle the lanes bend round, and the
+  lanes are laid from the players' positions, so when a player moves
+  away the lane is laid straight again. Open: how often lanes are relaid
+  (every second, or when a player moves more than a few yards).
+- **The random heading and the straight lanes** (asked: "what's the
+  relationship between the random heading and the straight-always path
+  system?"): in 155z3 as written, a fighter leaves the portal on a random
+  heading and turns toward the nearest foe ahead until it joins the lane
+  that leads there; from then on the lane holds it. So the randomness is
+  only the first few yards, a scatter out of the portal before the lanes
+  take over. Open: keep that scatter, or start every fighter straight on a
+  lane?
+- **Outland's people** (asked: "this only matters in Thrallmar, Honor Hold,
+  and Shattrath, right? We removed all the Outland NPCs, right?"): no,
+  they were not removed. 155l removed Outland's quests and 155n its
+  gathering and trades; about 1,475 service NPCs still stand across
+  Outland's towns (26 innkeepers among them: Telaar, Garadar, Sylvanaar,
+  Area 52 and the rest). So 155z1 (folk scaled to threat) touches every
+  Outland town, not three. Open: all towns, or only the three?

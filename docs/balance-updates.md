@@ -576,6 +576,18 @@ every class. A story player already finishes at 58 with what everyone has
 the table rises from 11 to meet it there. Issue 718d. Takes effect at
 basic's next compile (B030).
 
+## 2026-10-23 — the Dark Portal's wave demons halfway down toward level 60 (basic)
+
+| Knob | Value | Where |
+|---|---|---|
+| The four Stair of Destiny wave demons' levels, basic | halfway between their saved levels and 60, rounded up | `patches/E069-basic-portal-demons-halfway/40-portal-demons-halfway.apply.sql` |
+
+Why: the owner, 2026-10-23: "Right now it's very difficult to get through
+the hordes of demons - we need to fight them back", then, offered bringing
+them to the player's level: "let's bring them down halfway." A stopgap
+until the front (issue 155z) replaces the stock event. Takes effect at
+basic's next install.
+
 ## How to add an entry
 
 ```markdown
