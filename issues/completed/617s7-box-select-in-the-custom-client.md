@@ -19,6 +19,13 @@ to allow us to select them by clicking and dragging a box."
 
 ## Current Behavior
 
+**Moved to the custom client on 2026-10-23** (the owner: "let's move it
+then"): it continues there as issue 814, *Box Select in the WoW World*
+(`/mnt/kaun/custom-client/issues/814-box-select-in-the-wow-world.md`,
+commit 82d888d02), with two new open questions (which drag gesture, and
+how the client learns a server's addressing). This file stays as where
+the idea began.
+
 Not built. The stock 3.3.5a client selects one unit by clicking it; it
 has no box selection, and its addons can't add one over the 3D world.
 

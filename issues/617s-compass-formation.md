@@ -111,7 +111,8 @@ wherever is closest and rarely cross the ring. The tank's front slot
 - Send one buddy: "let's see both implementations to see what they each do
   differently. Try to distinguish yourself from their implementation in as
   many ways as you can, so we can see the pattern of behavior." (617s6).
-- Box selection by click-and-drag: an issue for the custom client (617s7).
+- Box selection by click-and-drag: an issue for the custom client (617s7;
+  moved there 2026-10-23 as its issue 814).
 - Sidesteps: "melee should do a larger proportion of the circle each time.
   How about 20-35% for melee and 10-20% for ranged? We can also consider
   just scaling it linearly from 0 to 40 yards away" (617s5).
