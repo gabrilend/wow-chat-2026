@@ -101,7 +101,7 @@ question 2).
 
 1. (Answered 2026-10-04) Warriors, rogues, death knights: the same rate as
    everyone; and in combat too, halved after damage.
-2. Spirit on gear: take its budget from stamina (keeping survivability
+2. (Answered 2026-10-23, preliminary, to playtest) "for preliminary results let's try weighting stamina and spirit the same." So when spirit is put on gear, each point of it costs one point of stamina from the item's budget. The owner also checked the arithmetic: spirit x stamina / 100 per 5 seconds is spirit x stamina / 500 per second; since one stamina is about 10 health (the first 20 give 1 each), that is about spirit x health / 1000 per 5 seconds; and it runs in combat, at half rate for 5 seconds after each hit. "I think we will need to playtest this." Spirit on gear: take its budget from stamina (keeping survivability
    about the same), and at what exchange (spirit's healing is worth more
    on a high-stamina character)?
 3. (Answered 2026-10-04) "no the mana regeneration should remain

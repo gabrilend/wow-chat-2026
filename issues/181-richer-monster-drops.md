@@ -66,6 +66,6 @@ more gear from the monsters players fight, above their level by choice
 2. (Answered 2026-10-08: (a), their whole loot rolled twice) **"Double the amount" for rares:** two rolls of their whole loot (two
    chances at each item), or the items that drop doubled (every drop
    comes in twos)?
-3. **What counts as a boss:** the creature's rank "boss" (raid bosses and
+3. (Answered 2026-10-23: the dungeon bosses, whatever their rank) "elites and rare elites. Dungeon bosses. The elites in dungeons that aren't bosses should have the updated rates." So a boss is a creature on a dungeon's or raid's list of encounters (most are ranked "elite" or "rare elite" in the data, a few "boss"), plus the rank-"boss" world bosses; they keep stock chances. Every other elite, the trash inside dungeons included, gets the doubled green and blue and the fivefold epic chances. **What counts as a boss:** the creature's rank "boss" (raid bosses and
    the world bosses), or also every dungeon boss (most are elite, not
    rank boss; the server marks them by their instance encounter)?

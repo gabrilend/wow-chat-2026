@@ -49,7 +49,7 @@ change, so the toggle is a chat command rather than a checkbox.
 
 ## Open Questions
 
-1. A chat command (no client change), or should a checkbox wait for the
+1. (Answered 2026-10-23: "cool") Works on the stock client: the server keeps one "what this slot looks like" value per visible slot for every player, and a source patch writes "nothing" into the shoulder value while the real shoulders stay equipped (stats unchanged; everyone, the wearer included, sees bare shoulders). The game's own hide-helm and hide-cloak are one flag each, with no shoulder flag, so this needs the patch and a chat command to switch it; a plain addon could add a checkbox that sends the command (no AIO). A chat command (no client change), or should a checkbox wait for the
    custom client?
-2. Buddies too (the owner hiding a buddy's shoulders, or buddies hiding
+2. (Answered 2026-10-23) "Buddies shouldn't get it." Players only. Buddies too (the owner hiding a buddy's shoulders, or buddies hiding
    theirs at random)?
