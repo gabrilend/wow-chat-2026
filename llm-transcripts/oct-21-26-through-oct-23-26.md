@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-23 12:55:41
+Generated on: 2026-10-23 17:07:43
 Models: claude-opus-5-5
 
 ## Contents
@@ -3767,6 +3767,114 @@ goes first.
    narrator read near you depends on the narrators (910) and the mail bridge
    (1004). Should I move it into the narrators' issue, so 909 is just the
    library? My suggestion: yes, it belongs with the narrators.
+
+--------------------------------------------------------------------------------
+
+### User Request 35
+
+> 4. Oath tabards: any tabard clearly showing the Horde or Alliance crest counts
+> for that side. I'll draw the list from the game's items.
+
+please make an HTML page that shows all eligible tabards, then below it a
+section with the rest of the tabards.
+
+>   1. Many guilds (630): which profile gets it?
+
+for now, just Sargobras realms.
+
+  2. Buddies' weapons in town (617e4b)
+
+just buddies, and yes to ranged weapons if they primarily use their ranged
+weapon as their main weapon. Right now that's just hunters.
+
+>   3. A death knight's oath (718a): can it be changed later, and how?
+
+never. the Horde and Alliance remember your character and will not tolerate
+traitors.
+
+  4. Elite outfits for buddies (617r)
+
+need more context.
+
+  5. The book library (909)
+
+yes
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 35
+
+> Recording the answers and building the tabard page. First the tabard data:
+
+> Following the house rule that things are made by tools, not by hand: a small
+> generator reads the tabards from the world database and writes the page into
+> `docs/HTML/`, and I publish that.
+
+> 9 eligible (5 Alliance, 4 Horde), 65 others, and 13 internal items left off
+> (NPC gear, test and unused tabards). Publishing:
+
+> Published. Now recording the other answers. For question 4 I need 617r's
+> context, and for 909 I need to know where the narrators' issue lives:
+
+> 910d (speech by mail) already exists and already says it took 909's question
+> 4. So 909 just needs marking. Recording all the answers:
+
+*[commit] 7caa82304 in wow-chat-2026 - Show the tabards a death knight's oath accepts, and record four answers (issues 718a, 630, 617e4b, 909)*
+
+The tabard page is published:
+**https://claude.ai/artifact/XEY85pCnBAsQEWp43NDV99**. A generator writes it
+from the world database into `docs/HTML/oath-tabards.html`, and it's listed in
+the table of contents.
+
+> please make an HTML page that shows all eligible tabards, then below it a
+> section with the rest
+
+Eligible, by side:
+- **Alliance (5):** Private's Tabard and Knight's Colors (the old honor-rank
+  tabards), the Alliance Tabard of Conquest, the Stormwind Tabard, and the old
+  Tabard of Stormwind. All show the Stormwind lion, which is the Alliance crest.
+- **Horde (4):** Scout's Tabard and Stone Guard's Herald (the old honor-rank
+  tabards), the Horde Tabard of Conquest, and the Orgrimmar Tabard (the Horde
+  emblem).
+
+Below them are the other 65. Those the game marks as one side's only come first:
+the other city tabards, the battleground tabards and Thrallmar's, for example.
+They show their own emblems rather than the faction crest. The database holds no
+pictures, so the sorting is my judgment of the art. Each name links to its
+picture on Wowhead; tell me any that belong in the other list.
+
+**Recorded and committed:**
+- **Many guilds (630):** on for the realms with Sargobras, which today means
+  basic.
+  - On basic each player's clan stays one of their guilds, still locked.
+  - Other guilds are joined beside it.
+  - Switching the active guild is done by the server, so the clan lock doesn't
+    block it, and buddies stay in the clan.
+  - Not built yet.
+- **Weapons in town (617e4b):** only buddies. A buddy's ranged weapon goes into
+  its bags in town only when ranged is its main weapon (hunters today). Your own
+  weapons are never touched.
+- **The oath (718a):** never changed.
+- **Speech by mail:** belongs with the narrators. Issue 910d already holds it,
+  so 909 is now just the library.
+
+**Context for the elite outfits question (617r).** On 2026-10-04 you asked for
+Growth's buddies to wear gear roughly equal to Growth's: Molten Core, dungeons
+and earlier, with no Onyxia, Zul'Gurub or PvP gear. You called these outfits
+"elites", the Horde's and Alliance's bannermen. Each buddy type got an outfit
+profile.
+
+The question comes from how buddies return. When a buddy is set aside and later
+brought back at a new level, it's remade from scratch: a new character at the
+new level, with a fresh starting kit. So: when a buddy that wore an elite outfit
+is remade, should it get its elite outfit again, or the ordinary kit for its
+level, making the outfit a one-time gift?
+
+One more question, because it decides how many guilds can work on basic: how
+does a basic player join a second guild? A normal guild invite comes from
+another player's game client. The choices are: an invite from a member of the
+other guild as usual, a new command, or an NPC who handles memberships. My
+suggestion: the normal invite, which is the least new machinery.
 
 --------------------------------------------------------------------------------
 

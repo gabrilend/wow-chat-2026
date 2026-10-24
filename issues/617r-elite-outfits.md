@@ -269,3 +269,16 @@ The elite profile, as first built:
    a one-time gift?
 3. Do world drops that also fall in Molten Core (Lady Maye's Pendant)
    count as Molten Core?
+- (Answered 2026-10-23) **One outfit system, both behaviours:** asked
+  whether an elite outfit comes back when a buddy is remade: "okay yes so
+  we want an outfit system in general. Everything, even the starting gear,
+  should flow through that outfit system. The outfits I described were
+  particular tiers that we could build from, but we want some at other
+  levels as well. For now, let's just say that sometimes, we need to apply
+  an outfit to a player, and then restore it. Sometimes, we don't. So, to
+  answer your question, we need both behaviors." So: every way gear is put
+  on a character (the starting kit, elite tiers, outfits at other levels,
+  Sargobras's dress) goes through one outfit system, which can apply an
+  outfit for good, or apply it and later restore what was worn before.
+  Which behaviour a remade buddy's outfit takes is chosen per use.
+  (Question 2 above.)

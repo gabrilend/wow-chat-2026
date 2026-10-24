@@ -188,3 +188,14 @@ What that means for the build:
 Open: how a basic player joins a second guild at all (the stock invite
 comes from the client: from a player of another guild, through a new
 command, or an NPC?).
+- (Answered 2026-10-23) **Players don't join a second guild:** "they don't.
+  Again, we just need them to be able to mechanically in the server. Since
+  Sargobras is a playerbot, or else how could he exist in their friends
+  list, he needs to be able to join and leave guilds and such. But he
+  needs to be able to be in essentially every guild at once. Hence why
+  Sargobras right now is the only one who needs to be able to join and
+  leave guilds." So the server side is a capability: a character can be a
+  member of many guilds at once, and Sargobras (a bot character, as he is
+  in friends lists, 920) is the one who uses it, joining every guild. No
+  player-facing way to join a second guild is built; the clan lock is
+  untouched.

@@ -147,3 +147,12 @@ chooses, at will, one of:
   Tabard of Stormwind), then every other tabard, each linked to its picture
   on Wowhead. Which show the crest is a judgment about the pictures, kept
   in the generator's list, for the owner to correct by eye.
+- (2026-10-23) **The tabard page needs pictures:** "I will need icons on
+  the tabard HTML page. Maybe also a render of the tabard as it's being
+  worn?" The project has no copy of the game's art, but the custom client
+  (`/mnt/kaun/custom-client/`) reads the game's archive files
+  (`src/015-mpq.c`) and draws characters (`025-character`): the icons
+  (each item's picture, from the game's icon files) and a character
+  wearing each tabard can be made there, saved as pictures, and the page
+  generator embeds them. Work for the custom client's project, asked for
+  there.
