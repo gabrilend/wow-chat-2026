@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-23 18:28:16
+Generated on: 2026-10-23 18:34:50
 Models: claude-opus-5-5
 
 ## Contents
@@ -5300,6 +5300,73 @@ standing still? The answer sets the divisor, and the price can then be tuned for
 how much health that should cost.
 
 The table is in the spirit issue (167) and committed.
+
+--------------------------------------------------------------------------------
+
+### User Request 48
+
+How about during a typical raid boss fight? Think specifically one that has lots
+of sustain damage. Focus on level 60 if you can. Those numbers look pretty good,
+but I think we should double the divisor so the numbers are doubled. A full
+refill should take ~2 minutes I think. That's much longer than the 30 seconds it
+takes to eat / drink.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 48
+
+> Raid numbers computed. Now changing the divisor from 100 to 200 in the spirit
+> patch.
+
+> Patch test passed. Updating the spirit issue and the balance log.
+
+*[commit] 9ef2b7e0a in wow-chat-2026 - Halve the health spirit gives back, so a full refill takes about two minutes (issue 167)*
+
+I changed the divisor from 100 to 200, so health from spirit is now spirit ×
+stamina / 200 every 5 seconds. A full refill for a spirit-heavy tank now takes
+about 2 minutes standing still. The patch changes the server's source, so it
+takes effect at your next compile. A test run of basic's source patches on a
+copy in RAM applied and reverted cleanly. The change is committed, with a
+balance log entry.
+
+**The same level-60 warrior at the new divisor:**
+
+| Stamina moved to spirit | Health | Healing per 5 s | Full refill, standing | Full refill, being hit |
+|---:|---:|---:|---:|---:|
+| 0 | 4509 | 68 | 334 s | 668 s |
+| 100 | 3509 | 145 | 121 s | 242 s |
+| 150 | 3009 | 146 | 103 s | 206 s |
+| 190 | 2609 | 129 | 101 s | 202 s |
+
+**In a raid boss fight:** I took each boss's melee damage from the world
+database and ran it through the server's own damage formula. The tank wears
+10,000 armour, which takes 57.9% off a level-63 boss's hits. Dodges, parries,
+blocks and crushing blows are left out; they roughly cancel each other.
+
+| Boss | Damage per second | Damage per 5 s |
+|---|---:|---:|
+| Ragnaros (Molten Core) | 350 | 1749 |
+| Golemagg (Molten Core) | 538 | 2692 |
+| Princess Huhuran (AQ40) | 673 | 3364 |
+| Chromaggus (BWL) | 807 | 4037 |
+| Nefarian (BWL) | 942 | 4710 |
+
+While being hit, the best spirit build heals at half rate, 73 every 5 seconds.
+That is 2 to 4% of what these bosses deal. In a raid, spirit doesn't keep a tank
+up; the healers still do. Where it matters is between pulls (2 minutes to full
+instead of eating), and for anyone not being hit, at the full rate.
+
+Two things to look for in the playtest:
+- **Which way do you want spirit to lean?** Being hit halves the healing, so in
+  fights it mostly helps whoever the boss isn't hitting. For example, a melee
+  player standing behind the boss through a long fight heals at the full rate.
+  Is that the group you want it to favour, or should a tank's spirit count for
+  more in a fight?
+- **How much damage do monsters deal?** I didn't account for this server's
+  custom monster rules (the extra levels, the 5% crits). If basic's monsters hit
+  harder than stock, spirit's share of the healing shrinks further.
+
+Both tables are in the spirit issue (167).
 
 --------------------------------------------------------------------------------
 

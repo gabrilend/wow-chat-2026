@@ -100,26 +100,49 @@ longer than the 30 seconds it takes to eat / drink." The owner's own
 example (300 stamina and 300 spirit, 900 per 5 seconds) is 450 now, and is
 out of reach when spirit is bought with stamina (the table).
 
-**In a raid boss fight** (2026-10-23, asked: "one that has lots of
-sustain damage", level 60). The bosses' melee from the world database
-(average hit = (base damage x 1.25 + attack power / 14) x damage modifier
-x swing seconds, the server's own formula), on a tank with 10,000 armour
-(57.9% taken off by a level-63 attacker), before dodges, parries, blocks
-and crushing blows:
+**In a raid boss fight, and in Outland's dungeons** (2026-10-23/24). The
+owner: "I want spirit to be useful in combat. I also want it to be useful
+for people who aren't tanks ... I mostly want to defeat those "always
+correct choices" which aren't really choices at all" (in WotLK tanks gemmed
+only stamina), and worried that basic's raised Outland dungeon bosses
+"will essentially one-shot our tanks". `scripts/tank-damage-taken
+[--divisor N] [--crushing basic|stock] ...` works it out from the world
+database with the server's own formulas (melee only; spells, blocks and
+healers left out) for the level-60 raid bosses, both Kazzaks, and every
+boss of the sixteen Outland dungeons at basic's levels (E024), Kael'thas
+in Magisters' Terrace included. What it showed, for a 4509-health,
+10,000-armour tank:
 
-| boss                    | per second | per 5 s |
-|-------------------------|-----------:|--------:|
-| Ragnaros (Molten Core)  |        350 |    1749 |
-| Golemagg (Molten Core)  |        538 |    2692 |
-| Princess Huhuran (AQ40) |        673 |    3364 |
-| Chromaggus (BWL)        |        807 |    4037 |
-| Nefarian (BWL)          |        942 |    4710 |
+- **No dungeon boss one-shots the tank.** The biggest single hits are
+  11% to 82% of its health (Exarch Maladaar the worst, 3707); with no
+  healing it lasts 4 to 26 seconds. Basic's crushing rule (B031: none
+  until 8 levels up, full at 12) is what keeps it there: from level 71
+  every swing that lands crushes, and defence above 300 cannot help at 60.
+- **Both Kazzaks do** (level 73): Lord Kazzak's hits are 97% of the tank's
+  health, Doom Lord Kazzak's 315%. World bosses fight as 3 levels above
+  their target, so neither crushes; the size is their level-73 damage.
+  They are raids (155j).
+- **Spirit's share of the damage, while being hit:** at divisor 100 the
+  best build (200 stamina, 145 spirit) heals 29 a second, 2% to 17% of a
+  boss's melee; at 200, half that.
 
-The best spirit build heals 146 per 5 seconds standing, so 73 while being
-hit: about 2 to 4 percent of what these bosses deal. Spirit does not
-keep a tank up in a raid; the healers do. What it changes is between
-pulls (two minutes to full instead of eating), and for whoever is not
-being hit, at the full rate.
+**Is spirit a choice?** With the two stats sharing one budget, the best
+split for a fight of T seconds (health plus what spirit heals over the
+fight, at rate r: 1/2 while hit, 1 otherwise) is stamina - spirit = 50 x
+divisor / (r x T). For the warrior above (345 of the two together):
+
+| fight  | divisor 100, hit | divisor 100, not hit | divisor 200, hit | divisor 200, not hit |
+|-------:|-----------------:|---------------------:|-----------------:|---------------------:|
+|   60 s |       256 / 89   |           214 / 131  |       300 / 45   |           256 / 89   |
+|  120 s |       214 / 131  |           193 / 152  |       256 / 89   |           214 / 131  |
+|  180 s |       200 / 145  |           186 / 159  |       228 / 117  |           200 / 145  |
+|  300 s |       189 / 156  |           181 / 164  |       206 / 139  |           189 / 156  |
+
+(stamina / spirit.) So the answer depends on the fight's length and on
+whether the boss is hitting you: no single build is always right, which
+is the owner's aim. The table ignores the burst limit (health must outlast
+the biggest run of hits), which pulls tanks toward stamina against bosses
+like Maladaar.
 
 ## Suggested Implementation Steps
 
@@ -157,3 +180,9 @@ being hit, at the full rate.
 3. (Answered 2026-10-04) "no the mana regeneration should remain
    unchanged": mana from spirit is untouched (B049 never changes it); the
    stamina rule is everyone's health from spirit.
+
+4. **Divisor 100 or 200**, now that the owner wants spirit useful in
+   combat and for non-tanks: 200 (in B049 since 2026-10-23) makes a full
+   refill take about two minutes standing; 100 doubles spirit's share in
+   fights (2-17% of a boss's melee while hit) and pulls the best builds
+   toward spirit (the table above).
