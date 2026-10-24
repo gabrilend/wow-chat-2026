@@ -161,6 +161,13 @@ do exist. Strengthening it is an implementation step in 148w.
 The project's own 3.3.5a game client, for any private server: rebuilt
 from the original's behaviour first, project features later in a
 separate layer. In C on Raylib; the first Lua version is deprecated.
+
+**2026-10-23: every 173 issue is in completed/.** The owner, asked
+whether the ones still open were sorted in the wrong place: "well let's
+move them." Their work continues as the W client's own issues (each file
+names which); the statuses below are where each stood when it left this
+project, kept as the record of how the client began.
+
 | Issue | Title | Status | Notes |
 |-------|-------|--------|-------|
 | 173 | custom-client | Moved | Parent; sub-issues 173a-173w. Moved to the W client (/mnt/kaun/custom-client/) on 2026-10-07; each sub-issue says where it continues. |

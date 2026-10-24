@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-23 17:37:31
+Generated on: 2026-10-23 17:59:36
 Models: claude-opus-5-5
 
 ## Contents
@@ -53,6 +53,10 @@ Models: claude-opus-5-5
     so the remaining work is clear, and I just closed 39 built ones, leaving
     466. Next, tell me whether to sort the 350 issues with no status line into
     keep or retire.
+13. 2026-10-23 17:40, after Request 40 - We're clearing basic's open issues by
+    answering their questions and building what's ready. Next, answer the five
+    waiting questions: what counts as a boss, Atiesh for non-casters,
+    Zul'Aman/Zul'Gurub levels, spirit on gear, and hiding shoulders.
 
 --------------------------------------------------------------------------------
 
@@ -4357,6 +4361,703 @@ Five issues that are one question from buildable:
 
 Reminder: the disks still have no protection against bit rot (issue 191). Both
 are ext4, which doesn't checksum file contents.
+
+--------------------------------------------------------------------------------
+
+### User Request 41
+
+<pasted_content id="583a">
+● I'm holding off on committing: your rules say a commit comes when an issue
+is completed, and this one still has open questions.
+
+  Tabard pictures: done for the other session, three questions left
+
+  The tabard page's pictures now exist. Both kinds are drawn by the custom
+  client from the game's own files:
+
+  - Icons: the game's own 64×64 bag icon for each tabard.
+  - As worn: the night elf woman wearing it, front and back, 512×640, with a
+    see-through background so the pictures sit on the page's light or dark
+    theme.
+
+  All 87 tabards in the world database take about 10 seconds: 87 icons, 172 worn
+  pictures, 1 tabard refused. I looked at each of the nine oath tabards, and
+  each shows its side's crest from the front.
+
+  The updo: I drew each of her hair styles from behind. Style 3 (swept up, neck
+  bare) is now the default, and it leaves the tabard whole from both sides.
+  Style 6, the other updo, drapes a braid over the front crest, so I passed it
+  over.
+
+  What I built (planned in a new issue, item pictures: icons and as-worn, in the
+  custom client's issues folder):
+  - A batch picture program, the "dressing room". It reads a list (one line per
+    tabard: its item number and its look number, e.g. 45574 tabard:59981) and
+    writes 45574-icon.png, 45574-front.png and 45574-back.png into a folder. It
+    doesn't load the world. It draws into an off-screen
+    picture on the graphics card, so every picture comes out the same size. The old one-shot route was slow (34 seconds a picture), took its size from the window manager (885×1410 here), and one try in three came back all black.
+  - A script to run it: scripts/item-pictures LIST [OUT_DIR]. The default folder
+    is tmp/shared-memory/item-pictures/. It can also take a different race, sex,
+    class or hair.
+  - Refusing gaps instead of hiding them. One tabard was being drawn quietly
+    blank, because two of its pictures aren't in the client's files at all.
+    Missing pictures now refuse that tabard by name, and the run ends with a
+    failure. The tabard is the "Unused Tabard of Chow", which the
+    page already leaves off.
+  - A goodbye receipt: each run writes its counts to output/goodbye.
+  - Tests: three new checks: the icon is found and is 64×64, an unknown look is
+    refused, and a tabard with missing pictures is counted. All 224 checks pass.
+
+  For the other session (wow-chat-2026): the 87 tabards' pictures are already
+  made, in /mnt/kaun/custom-client/tmp/shared-memory/item-pictures/tabards/,
+  named by item number. That folder is in RAM, so it is lost on a reboot. To
+  make them again, its page generator writes the list from
+  the same database query it already runs (each tabard's item number and look
+  number), then calls /mnt/kaun/custom-client/scripts/item-pictures LIST <its
+  own folder>. I didn't edit that project: it has uncommitted work from another
+  session.
+
+  Questions, most important first:
+  1. Who should wear the tabards? It's the night elf hunter now. The page is
+     about death knights: should the wearer be a death knight in death knight
+     armour, and of which race and sex? Or one wearer per side, say a human for
+     the Alliance and an orc for the Horde? Switching is only a
+     matter of options; the choice is yours.
+  2. Committing: should I commit now, with the issue marked in progress, or wait
+     until these questions are answered?
+  3. The receipt file output/goodbye: it changes on every run, and git neither
+     tracks nor ignores it. Should it be ignored, or committed?
+
+  Two smaller ones are written in the issue. Should a three-quarter view be
+  added? And short tabards may be drawn too long: the client always uses the
+  long tabard piece, a known gap in the equipment work.
+</pasted_content id="583a">
+
+
+
+
+<pasted_content id="583a">
+● The issue is complete and committed. All your answers are written into it:
+
+  - Wearer: the night elf hunter stays.
+  - Three-quarter view: not added; front and back only.
+  - Short tabards drawn too long: this gets fixed on its own as the client's
+    equipment rules improve.
+  - The receipt (output/goodbye): now git-ignored.
+
+  The commit holds the picture program (the "dressing room"), its run script,
+  the four new checks, the updated docs, and the two transcript files. After the
+  commit hook rebuilt the documentation site, the working tree is back to how it
+  was when I started: only the other session's
+  three files remain (a modified doc, an untracked issue file and a picture in
+  notes/). I didn't touch them.
+
+  For the other session:
+  - Where the pictures are:
+    /mnt/kaun/custom-client/tmp/shared-memory/item-pictures/tabards/. Each
+    tabard has <item number>-icon.png, -front.png and -back.png. The "Unused
+    Tabard of Chow" has only an icon, because two of its pictures aren't in the
+    game's files; the page leaves it off
+    anyway. That folder is RAM-backed, so it's gone after a reboot.
+  - How to remake them: write one line per tabard, <item number> tabard:<look
+    number>, from the database query the page generator already runs. Then run
+    /mnt/kaun/custom-client/scripts/item-pictures LIST <folder>, giving its own
+    folder.
+
+  One thing to look at when you have a moment: the issue checker reports four
+  mismatches that were there before this work. Three issues name either the
+  model-in-the-client issue (907) or the other-games'-bodies issue (409) as
+  something that blocks them, but those issues don't list
+  them back. I left them alone.
+</pasted_content id="583a">
+
+
+>   1. Richer monster drops (181): what counts as a boss?
+
+need more context
+
+>   2. Legendary items (182): Atiesh looted by a class that can't use it
+
+never appear to them at all. Legends only come to those who will use them.
+
+>   3. Zul'Aman and Zul'Gurub raid tier (809): which levels?
+
+oh, um, I don't know if we wanna do that anymore, but to answer your question,
+let's put it in the early 50s.
+
+>   4. Spirit heals by stamina (167): spirit on gear
+
+need more context
+
+>   5. Hide shoulders (720): a chat command for now
+
+how do we implement this? Is it doable on the current client?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 41
+
+> Integrating the custom client's pictures into the tabard page, which is what
+> you asked for earlier. Checking what was made and how big the files are:
+
+> Now the loop, the table header and the styles for the pictures:
+
+> Now the picture script. It needs the custom client's picture program, which
+> draws in a hidden window:
+
+> All 74 tabards on the page are pictured (222 pictures, none refused or
+> missing). Checking the folder size and one picture before publishing:
+
+The Orgrimmar tabard reads clearly, Horde emblem on red. 4.2 MB in all.
+Publishing the page with its pictures as files beside it:
+
+--------------------------------------------------------------------------------
+
+*Prompt is too long*
+
+--------------------------------------------------------------------------------
+
+### User Request 42
+
+So I was looking at 173 and I think it's sorted in the wrong place. Can you
+confirm? If so, can we move it to the custom-client directory? Any other
+similars?
+
+--------------------------------------------------------------------------------
+
+*Prompt is too long*
+
+--------------------------------------------------------------------------------
+
+### User Request 43
+
+/compact
+
+--------------------------------------------------------------------------------
+
+### Session Recap (written by the harness, not by either speaker)
+
+This session is being continued from a previous conversation that ran out of
+context. The summary below covers the earlier portion of the conversation.
+
+Summary:
+1. Primary Request and Intent:
+   - The owner (gabrilend, a solo developer of the WoW 3.3.5a AzerothCore server
+     "Everland Ghostsong", project /mnt/kaun/wow-chat-2026, profile basic)
+     worked through a long series of requests over 2026-10-21 to 2026-10-23:
+     - test the death knight story skip;
+     - reset Gabrubre;
+     - fix crashes;
+     - design talent rules;
+     - answer many open questions issue by issue, in a quote-and-answer back-and-forth format the owner asked to keep using;
+     - build install steps;
+     - do housekeeping on issues ("mark all the issues that are just waiting on a visual check as complete");
+     - make an oath tabards HTML page with icons and as-worn renders;
+     - stay up to date with git ("let's stay up-to-date with git").
+   - **Most recent request (verbatim):** "So I was looking at 173 and I think
+     it's sorted in the wrong place. Can you confirm? If so, can we move it to
+     the custom-client directory? Any other similars?"
+   - **Previous message's questions, not yet recorded or answered:**
+     - 181 "what counts as a boss": "need more context";
+     - 182 Atiesh: "never appear to them at all. Legends only come to those who will use them.";
+     - 809: "oh, um, I don't know if we wanna do that anymore, but to answer your question, let's put it in the early 50s.";
+     - 167 spirit on gear: "need more context";
+     - 720 hide shoulders: "how do we implement this? Is it doable on the current client?"
+   - **Pasted messages from the custom-client session:** the tabard pictures are
+     made, along with instructions on how to remake them. I integrated them into
+     the tabard page.
+
+2. Key Technical Concepts:
+   - **Patch system:**
+     - Install steps patches/E0NN (directory-form patches carry their apply and revert SQL);
+     - headers via scripts/add-patch-header;
+     - scripts/check-patch-headers --fix-lines;
+     - scripts/generate-patch-lists (rewrites docs/patches/patch-registry.md and docs/profiles/basic.md);
+     - priorities: an SQL step is 2300 + 10 × number;
+     - the server's updater applies SQL copied into sql/basic/db_world/.
+   - **Tests and checks:** scripts/test-basic-sql-in-ram (needs about 3 GB on
+     /dev/shm, which was mostly full) and scripts/validate-basic-state (report
+     checks).
+   - **Commit tools:**
+     - commit-own-changes, stage-own-changes, claim-own-change (all in /home/ritz/programming/ai-stuff/scripts/), plus validate-issues and progress-dashboard.lua;
+     - shared file claims live in tmp/shared-memory/file-claims;
+     - plain git commit is refused.
+   - **MySQL:** local, port 3307, user ritz, password menardi. Databases
+     acore_world_basic, acore_characters_basic, acore_auth.
+   - **Database-change lesson:** creating or dropping a table in MySQL commits
+     implicitly, so a "rolled-back transaction" test isn't valid for SQL that
+     creates tables. Test by apply, check, revert instead.
+   - **ALE Lua engine:**
+     - CharDBQuery is synchronous and CharDBExecute is queued;
+     - creature event ON_ADD = 36;
+     - text emote event = 24;
+     - Player:RewardQuest passes the player as the quest giver.
+   - **AzerothCore C++ facts:**
+     - Player::RewardQuest uses the quest giver unchecked (in the reward-spell step and in MailSender);
+     - Player::CalculateTalentsPoints has a hook OnPlayerCalculateTalentsPoints;
+     - Trainer::IsTrainerValidForPlayer (a tradeskill list's requirement is a spell);
+     - guild_member has a UNIQUE key on the character (one guild per character);
+     - creatures have a flat 5% crit chance; Unit::ApplyResilience applies to all attackers.
+   - **Custom client:** /mnt/kaun/custom-client, a separate git project. It has
+     an MPQ reader (src/015-mpq.c) and a "dressing room" picture program
+     (scripts/item-pictures LIST OUT_DIR).
+
+3. Files and Code Sections (key ones; all committed unless noted):
+   - **scripts/dk-story-state:** read-only check of a death knight's state (owes
+     a soul, asked to skip, skipped, playing the story). Level and experience
+     are only checked when experience is 0.
+   - **scripts/validate:** the test start times out only after MAX_TIMEOUT
+     seconds with no new log line and no newly applied update (it counts the
+     updates tables every 5 s), with HARD_LIMIT 3600. VALIDATE_PROGRESS_CMD
+     overrides the counting for tests. scripts/test-validate-needs-world-up has
+     6 cases.
+   - **src/cpp-basic/basic_rules.cpp:** basic_rules_dk_talent_points
+     (PLAYERHOOK_ON_CALCULATE_TALENTS_POINTS).
+     - Table BASIC_DK_TALENTS_IN_ALL = {11,24,37,49,50,51}, levels 55–60, with a static_assert that it ends at 51.
+     - A ledger row with skipped=0 keeps stock.
+     - A buddy whose owner has skipped=0 counts the quest points it has been rewarded (getRewardedQuests and GetBonusTalents), plus one per level past 55, capped at level − 9.
+     - Skippers and other buddies take the table.
+     - No row and not a buddy keeps stock.
+     - A missing ledger is logged once as an error.
+   - **src/lua-basic/death-knight-souls.lua:** skip_story calls
+     CharDBQuery("UPDATE basic_718_souls SET skipped = 1 ...") before
+     tell_the_story.
+   - **scripts/generate-basic-dk-skip-quests:** PLEDGE_QUESTS {13188, 13189}
+     added. The data file has 57 quests.
+   - **patches/B036-mod-buddies/mod-buddies/src/buddies_xp.cpp:**
+     - GiveCompletedQuest(buddy, ownerName, quest): no AddQuest/CompleteQuest; RewardQuest(quest, choice, buddy, false); casts a giver's blessing on itself;
+     - CatchUpQuests at a buddy's login: progress only via SetRewardedQuest, and drops any quests in its log;
+     - hook PLAYERHOOK_ON_LOGIN.
+   - **scripts/test-quest-reward-has-a-giver:** a quick test that fails if any
+     of the project's C++ reward calls passes nullptr or NULL.
+   - **patches/B029-gossip-option-trainer-list.sh:** a named list that is
+     invalid for the player is hidden quietly (canTalk=false; break).
+   - **patches/E067-basic-boss-enchant-scrolls/** with
+     scripts/generate-basic-boss-scrolls-sql:
+     - reference lists 1558000 + boss level;
+     - 152 bosses, 33 lists;
+     - scrolls of item level ≤ 61.
+   - **patches/E068-basic-profession-mentors/** with
+     scripts/generate-basic-profession-mentors-sql:
+     - mentors 1550031–1550038, lists 155201–155214, jewelcrafting uses list 113;
+     - removes the Visiting Jewelcrafter spawns 15501001–6, saved for the revert.
+     - src/lua-basic/profession-mentors.lua: only creature 1550036 (the Thunder Bluff goblin) dances, 60 s every 30–90 min.
+   - **E069 and E070:** created, then git rm'd before ever being installed. Also
+     removed from the RAM test and the checker; the balance log notes the
+     reversal.
+   - **validate-basic-state:** checks for E067 and E068. The 155p jewelcrafter
+     check accepts 6 jewelcrafters, or 0 with the backup saved.
+   - **docs/profiles/basic-critical-path.md:** the critical path doc; listed in
+     docs/table-of-contents.md.
+   - **docs/balance-updates.md:** entries for the death knight talents, the
+     demons halfway down (then reverted) and the reversal.
+   - **strategems/talents-caught-up-over-first-levels.md:** the talent pattern
+     note.
+   - **notes/larp-renfair-visual-style.md:** the LARP visual style note.
+   - **scripts/generate-oath-tabards-page:** UPDATED, NOT COMMITTED.
+     - Arguments [DIR] [WORLD] [--list PATH].
+     - The query includes displayid.
+     - not_players() filter.
+     - pic() embeds oath-tabards/<id>-{icon,front,back}.png and counts missing pictures; missing pictures fail the run.
+     - CREST list of 9 eligible tabards: 15196, 15198, 15197, 15199, 49052, 49054, 45574, 11364, 45581.
+     - Columns: Item, Icon, Tabard, Side in data, Worn (front, back), Why.
+   - **scripts/make-oath-tabard-pictures:** NEW, NOT COMMITTED.
+     - Writes the list to tmp/shared-memory/oath-tabards/list.txt.
+     - Runs /mnt/kaun/custom-client/scripts/item-pictures into tmp/shared-memory/oath-tabards/raw.
+     - Copies the icons and shrinks the worn pictures to 192x240 with magick into docs/HTML/oath-tabards/, and writes pictures.info.
+     - Regenerates the page.
+     - The run made 74 tabards, 222 pictures, 4.2 MB.
+   - **docs/HTML/oath-tabards.html and docs/HTML/oath-tabards/*.png (222
+     files):** published as artifact version 2 with `files` and root docs/HTML.
+     NOT COMMITTED.
+   - **Issues edited or created (committed):** 718, 718a, 718b–718g, 617d,
+     617r, 625, 625a, 625b, 630, 631–634, 155e1, 155e1a, 155e1b, 155j, 155o,
+     155p, 155p1, 155p2, 155q, 155v, 155y, 155z, 155z1 (will not be built),
+     155z2, 155z3, 155z8–155z13, 164, 167(?), 189g, 196, 211, 617c2, 617e4b,
+     617y, 621, 722, 723, 812, 909.
+   - **39 issues moved to issues/completed/ on 2026-10-23:** 141, 155b, 155c,
+     155d, 155d1, 155e, 155g, 155i, 155n, 155r, 155x, 155z9, 155z12, 160, 173a,
+     173b4, 173d, 173f, 173g, 173n, 173o, 173q, 173r, 189d, 189e, 194, 210,
+     506a, 506d, 506h, 617a1, 617a2, 617a3, 617a5, 617a6, 617b, 617e9, 617r1,
+     910a.
+
+4. Errors and fixes:
+   - **"Kaarson" not found:** the name is Karson.
+   - **Sargobras ignored the clan name:** sargobras.lua wasn't installed. The
+     owner compiled; validation then timed out on the SQL update backlog, so I
+     improved the timeout logic.
+   - **Buddy quest crash:** a segfault, nullptr questGiver in RewardQuest. Fixed
+     by passing the buddy; test added.
+   - **Skipper talents:** the skipper was getting 46 points, because "skipped"
+     was written after the story's rewards. Fixed with a synchronous write
+     first.
+   - **Test SQL alias "lines":** a reserved word; renamed.
+   - **E068 mining list empty:** changed the general-list rule to
+     MIN(ReqSkillRank)=0.
+   - **E068 test wasn't rolled back:** creating tables committed it, so the step
+     stayed applied on the live database; I reverted it immediately. Lesson
+     recorded.
+   - **Write and cd hooks:** using $F variables and cd were refused; use
+     absolute paths.
+   - **/dev/shm out of space:** a commit failed; the owner freed space.
+   - **git mv staged in the shared index:** reset the shared index for those
+     paths after committing.
+   - **Ambiguous 155z1 state line:** handled.
+   - **User feedback:**
+     - The owner reversed the demon and NPC level changes ("Outland is hard!").
+     - Asked for "follow me", not "follow".
+     - Glass gem stats belong to the gem, not to the item it's socketed in.
+     - Etc. All recorded.
+
+5. Problem Solving:
+   - Answered whether any issues were deleted: only one, the completed
+     "modules-release-beta-redundancy" (old number 148), deleted in commit
+     9061624 when it was folded into 136. I offered to restore it; there was no
+     answer.
+   - **Classification of open issues:** 466 open now, about 55 built but with
+     questions, 5 waiting for a compile (617d, 812, 155e1, 718d, 193), about 350
+     without a state line.
+   - **Validator findings:** older problems remain, including duplicate ids 141
+     and 142, noted in 196.
+
+6. All user messages (summarized in order, key verbatim):
+   - Gabrubre and Sargobras; sacrificed Kaarson?; restore; chart of 3–4
+     states.
+   - Write the checker script ("Sounds like a neuron thing... make a note that
+     neuron should notice it"); restore Karson; reset Gabrubre "as if she just
+     created her character".
+   - Option chosen: remove the clan, keep the buddies.
+   - "okay sargobras doesn't seem to want to listen to our clan name."
+   - Compile and restart messages; the pasted validation failure.
+   - "okay validated and promoted, rebooting worldserver now".
+   - "yes" (validator change) plus death knight talents 60/5 → 10 per level.
+   - Changed the landing (graveyard, sky drops), wisps, facing, buddy placement,
+     buddy food, the 50 vs 51 math, the talent questions, "should be part of the
+     level setting patch".
+   - Changed mind again (land under Acherus, wisps to the exits), 11 points at
+     55, "it's just a pattern... in a note... found this useful 10/26/26".
+   - Death druid; Death Grip → taunt; story stage pledge; buddy runeforging;
+     return teleports; ghost buddies; Book of the Wild; set bonuses; healing
+     backup; Glowsticks crash log; omni trainer; 62 talent points.
+   - "no it was a quest giver when I completed a quest".
+   - Buddies' quest rewards for all in the clan unconditionally; "are you sure
+     this is going to work?"; fix the gossip error rather than quiet it;
+     runeforging plan; talents and gear plan; Book spell level; Taunt without
+     stance; keep the death knight story points; death druid runic power; 3
+     points at level 1; "let's stay up-to-date with git".
+   - Buddies never have quests; weapon preference design; default 51; death
+     knights match at 58.
+   - Story points not dumped at 58; "we don't apply... until they sacrifice a
+     soul correct?"; "let's implement 617d"; only weapon talents follow; rogue
+     dagger rules; mention weighting; fast vs slow weapons and simulations.
+   - Death knight buddy quest talent points; update Gabrubre and companions;
+     skip the attack and pledge phase; treat briefly-away buddies the same.
+   - The death knight allegiance status; what else to build for basic,
+     professions.
+   - "Great. Can you ask me the open questions for these?" and the answers (only
+     missing professions; capitals; the jewelcrafting explanation; look matching
+     missing professions, e.g. "A tauren in Silvermoon...").
+   - Merge the jewelcrafters; 155p1 answers (all cuts at every trainer; end the
+     Wrath drops; Wrath cuts from Outland and Outland cuts from Azeroth;
+     enchanted gemstones with shards); "chiplets might need an alchemy step to
+     combine?"; chiplets from cutting and prospecting; alchemy yes; skills by
+     ore; keep +4.
+   - Split 1-200/201-300 with sockets reasoning; holy sites per recipe dropping
+     to enchanters only; sigils are blacksmithing; trainers and drops.
+   - Implement 155e1 and 812; uncommon cuts at 75; glass turns grey when common;
+     orb with 10 charges; +1 weapon damage or haste; "can we try doing our
+     back-and-forths in this format".
+   - Goblin robes and tent; Geraldenge's tower, workshop and pronunciation;
+     blacksmith presentation spell; no durability on fall (later reversed); only
+     the goblin dances for a set time; six colours; +weapon damage on shoulders,
+     boots and gloves too.
+   - Robes alternate and "it's in the wash"; Geralt pronunciation; recipe spell;
+     +1 haste, hp5, resilience; monster crits and stat pages; every death 2–4
+     bars; the Viridian Shore poem; robes switch after every dance.
+   - GER-all-dee-uh-ng-guh; gradient; monster player pages, LARP style; poem
+     never recited, mumbled at the forge; "my dream is to live in Breckenridge".
+   - Gear takes durability as normal; NPC-based monster bots; any socket;
+     elemental resist gems.
+   - 155 goes to Z (tech debt later); baking question; resist pairs fire/frost,
+     nature/arcane, +2 shadow; drop 155z12; "the gem determines the stats";
+     monster bots spawn from dungeons and raids, level of the zone.
+   - One monster bot per player in the zone; 196 is renumbering only.
+   - "okay we have like, wayyyyyyy too many issue files open... build a
+     roadmap"; "I freed some space".
+   - Assume checked; mark visual-check issues complete; housekeeping.
+   - "ask me 5 open questions from 5 diverse issue files"; "where the heck did
+     our issue files go?"; answers (yes; no; just buddies; plain quotes; need
+     context for 630).
+   - 630: "custom client issue... just build the server-side part"; ask 5 more.
+   - Answers: leave raids at 1.0; guard before release; "follow me" / "follow
+     so-and-so" / "go away" / "go away!"; tabard symbols; drop the new hearth
+     request; "confirm? validate? ask me 5 more questions?"
+   - Tabard HTML page; "for now, just Sargobras realms"; buddies' ranged weapons
+     only for hunters; oath never changes; 617r needs context; 909 yes.
+   - Icons and worn renders needed; outfit system with both behaviours;
+     Sargobras is the only one in multiple guilds; "I want to focus on The Dark
+     Portal".
+   - Lane bending; random heading; Outland NPCs removed?; demons halfway;
+     rewards?
+   - Relay on every move with a 0.2 s buffer; confusion through the portal;
+     scale them all.
+   - "just give it +4 like we do with the other creatures. can you ask 5 more
+     questions?"
+   - Reverse both ("Outland is hard!"); 155v already exists; buddies always come
+     and use their hearthstones; keep the off-hand books, Inscription status and
+     chiplets into ink; objects too; Kazzak packs 3–5 only on his cliff; ask 5
+     more for issues with few questions.
+   - The pasted custom-client session messages, plus 181 need context; 182 never
+     appears to them; 809 early 50s; 167 need context; 720 how is it implemented
+     on the current client?
+   - **LATEST:** "So I was looking at 173 and I think it's sorted in the wrong
+     place. Can you confirm? If so, can we move it to the custom-client
+     directory? Any other similars?"
+   - **Security and operational constraints to preserve:**
+     - The owner runs compile, install and update ("let me run the compilation scripts. I want to see the output.").
+     - Commit only via commit-own-changes; only this session's own lines.
+     - No cd; absolute paths.
+     - Don't touch other sessions' files: issues 919*, 920*, 617b2 (claimed by wow-chat-2026-three-worlds), docs/HTML/buddy-gear-gallery.html, notes/rgpl.md.
+     - The custom-client repo has another session's uncommitted work; that session didn't edit wow-chat-2026.
+     - Never delete issues; move them to completed.
+     - When moving files, keep both versions tracked in git and grep for references.
+     - Credentials ritz/menardi are for the local MySQL only.
+
+7. Pending Tasks:
+   - Answer the latest request about issue 173 and similar ones (confirm, move
+     to the custom-client project, find others).
+   - Record and answer the previous message:
+     - 182: Atiesh never offered to classes that can't use it;
+     - 809: early 50s, but possibly not wanted any more;
+     - give context for 181 (what counts as a boss) and 167 (spirit on gear);
+     - explain how hide-shoulders (720) could work on the current client.
+   - Commit the tabard page generator update, scripts/make-oath-tabard-pictures,
+     docs/HTML/oath-tabards.html, the 222 PNGs and pictures.info. Possibly add a
+     table-of-contents note.
+   - Earlier-offered, unanswered: restore the deleted completed issue (old 148
+     redundancy); the 155j clarification ("4 being one elite and 4 normals");
+     mark answered questions in issues whose answers were appended below them.
+   - Built and waiting for the owner's compile and install: 718d, 617d
+     (buddies_xp.cpp), B029, E067, E068, profession-mentors.lua, the skip fix.
+
+8. Current Work:
+   - Just before the summary request I had integrated the custom client's tabard
+     pictures into the oath tabards page:
+     - updated scripts/generate-oath-tabards-page (--list mode, icon and worn picture columns, failing on missing pictures);
+     - created scripts/make-oath-tabard-pictures;
+     - ran it: 74 tabards, 222 pictures, 0 missing;
+     - published artifact version 2 at https://claude.ai/artifact/XEY85pCnBAsQEWp43NDV99 with the PNGs as files (root /mnt/kaun/wow-chat-2026/docs/HTML).
+   - These changes are not yet committed, and the five answers from that message
+     are not yet recorded.
+   - Then the user asked about issue 173.
+   - What I know about 173: the 173 family is the custom client's work (173a
+     first light, 173b4, 173b5, 173d, 173f, 173g, 173h, 173m, 173n, 173o, 173p,
+     173q, 173r, 173t, 173v). The custom client moved to its own project
+     /mnt/kaun/custom-client on 2026-10-07 (issue 173v), and that project has
+     its own issues folder. Several 173 issues are in issues/completed (moved
+     today); others remain open in issues/.
+   - Likely "similars" to check: 506h (gear model formats), 907 (model in the
+     client), 409 (other games' bodies), 159 (equipment portrait grid), 617r5
+     (gearset gallery), 1010a (the neu's own client).
+
+9. Optional Next Step:
+   - Respond to the latest request: "So I was looking at 173 and I think it's
+     sorted in the wrong place. Can you confirm? If so, can we move it to the
+     custom-client directory? Any other similars?"
+   - Verify by listing the 173* issues in issues/ and issues/completed/ and
+     checking /mnt/kaun/custom-client/issues for existing copies.
+   - Grep wow-chat-2026 issues for other custom-client-only work (e.g. 907, 409,
+     159, 506h, 617r5).
+   - Then propose a move plan:
+     - copy each into the custom-client project's issues (committed there);
+     - in wow-chat-2026, replace each with a pointer or move-note via git mv/rm, keeping both tracked;
+     - fix references by grep.
+   - Confirm with the user before touching the custom-client repo, which has
+     another session's uncommitted work.
+   - Also commit the pending tabard page work, and record the five answers from
+     the previous message (181/167 context requested, 182, 809, 720), giving the
+     requested context and the hide-shoulders feasibility explanation.
+
+If you need specific details from before compaction (like exact code snippets,
+error messages, or content you generated), read the full transcript at:
+/home/ritz/.claude/projects/-mnt-kaun-wow-chat-2026/784dd9a0-35c5-40f0-a67c-730fa19764df.jsonl
+Continue the conversation from where it left off without asking the user any
+further questions. Resume directly — do not acknowledge the summary, do not
+recap what was happening, do not preface with "I'll continue" or similar. Pick
+up the last task as if the break never happened.
+
+--------------------------------------------------------------------------------
+
+`/compact` - Compacted (ctrl+o to see full summary)
+
+--------------------------------------------------------------------------------
+
+### User Request 44
+
+please continue
+
+--------------------------------------------------------------------------------
+
+### User Request 45
+
+also the tabard HTML, the night-elf models are squished, can we use the entire
+width of the screen, and if there's not a minimum amount of room, can we have
+just alliance, then just horde?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 45
+
+> Tabard page republished (full width, pictures keep their shape, sides stack
+> below ~1560px). Now checking the 173 issues against the custom client's own
+> issue list.
+
+> All 26 open 173 issues already have a "continues in the W client" line. Now
+> looking for similar client-only issues outside 173.
+
+> Now the earlier five answers — reading the questions in 181, 167, 720, 182,
+> 809.
+
+*[commit] 7d4aed90a in wow-chat-2026 - Show each oath tabard's icon and a character wearing it, front and back (issue 718a)*
+
+> The commit only took the transcript (the path filter matched nothing and
+> emptied the ledger). Re-claiming and committing again.
+
+*[commit] c78c655b2 in wow-chat-2026 - Show each oath tabard's icon and a character wearing it, front and back (issue 718a); record two answers (issues 182, 809)*
+
+> Committed. Now the tabard rule change: every tabard the game marks Horde-only
+> or Alliance-only counts.
+
+> Republishing the page, then committing.
+
+*[commit] 9efd89d6f in wow-chat-2026 - Accept every tabard the game marks Horde-only or Alliance-only for the death knight's oath (issue 718a)*
+
+The tabard page has been rebuilt and republished at the same link
+(https://claude.ai/artifact/XEY85pCnBAsQEWp43NDV99), and it's committed.
+
+## Tabard page
+
+- **Width:** the page now uses the full width of the screen.
+- **Alliance and Horde:** the two lists sit side by side only when each has
+  about 760px for its table. On a narrower screen, Alliance goes on top and
+  Horde below it.
+- **Squished pictures:** fixed. A rule was squeezing the pictures to fit a
+  narrow cell, so they lost their shape. Now they always keep their real 4:5
+  shape.
+- **Your new rule:** every tabard the game marks "Horde only" or "Alliance only"
+  is now accepted, whatever emblem it shows. The old Tabard of Stormwind shows
+  the lion but has no side mark, and it stays in. That makes 16 Alliance and 15
+  Horde tabards, and "the rest" is now only the 43 tabards with no side at all.
+  This is recorded in the death knight allegiance issue.
+- **A commit mistake:** my first commit of the pictures took only the
+  conversation transcript, because the list of files I gave the commit tool
+  matched nothing. The next commit has all the work, and its message says the
+  one before it is empty.
+
+## Issue 173 (the custom client)
+
+**It is in the wrong place in the sense that matters: none of its work belongs
+to this project any more.** All 26 open 173 issues describe the custom client,
+and every one already says "continues in the W client" (the custom client
+project), naming the issue there that carries it on. They are still open here
+only because they were never moved.
+
+The plan from 2026-10-07, when the client moved to its own project, works
+against copying them over. Your answers then:
+- The 173 issues stay in this project as the story of how the client began.
+- "W client numbers only. The letters indicate 'sub-issues' and should not be
+  altered." So a moved piece takes the custom client's own number, and the 173
+  letters are never carried across.
+
+The custom client already has its own issue for each piece, so a copy there
+would be a second version of each.
+
+**Similar issues:** I checked every open issue that mentions the custom client
+three or more times.
+- **The box-select issue (617s7)** describes work that only the custom client
+  can do. Its roadmap plans it as issue 1103, but no 1103 file exists there yet.
+  This is the one real candidate to move.
+- **Staying here:** the custom client's test server profile and its test scenes,
+  the gear gallery, the world map of what places look like, and the language
+  model runner. They are server-side work, or pages this project makes.
+
+Which way do you want it?
+1. **Recommended:** move the 26 open 173 issues into this project's completed
+   folder, unchanged. Their work continues as the custom client's own issues,
+   and they stay as the story. Write box select as a new 1103 issue in the
+   custom client, with a "came from 617s7" line.
+2. Copy all 26 into the custom client's issues under their 173 names. This goes
+   against the "W client numbers only" answer, and would make a second version
+   of each issue.
+3. A new folder here, for example `issues/moved-to-custom-client/`, so they are
+   kept apart from work that was finished here.
+
+One caution: the custom client project has another session's uncommitted work,
+so I'll only add new files there.
+
+## Your earlier answers
+
+**Recorded:**
+- **Atiesh:** "never appear to them at all." Only mages, priests, warlocks and
+  druids are offered it in the loot roll.
+- **The Zul'Gurub and Zul'Aman raid tier:** early 50s. Whether we still want
+  this raid tier at all is now written in as an open question, to ask before
+  it's built.
+
+**What counts as a boss (richer monster drops), with more context:** you decided
+that ordinary monsters drop epics five times as often and green and blue gear
+twice as often, while bosses keep their stock chances. So "boss" decides who
+gets left out of the bigger drops. Each creature carries a rank number in the
+world database:
+- Most dungeon bosses, Van Cleef for example, are rank "elite", the same rank as
+  their trash.
+- Only raid bosses (Ragnaros) and world bosses (Kazzak) are rank "boss".
+
+So the choice is:
+- **Rank "boss" only.** Every dungeon boss gets the boosted chances, which makes
+  dungeon blue items roughly twice as common.
+- **Also every dungeon boss.** The server knows them through each dungeon's list
+  of encounters.
+
+Which one keeps dungeon bosses' loot feeling special, in the way you meant?
+
+**Spirit on gear (spirit heals health by stamina), with more context:** the
+patch makes each point of spirit restore stamina ÷ 100 health every 5 seconds.
+A tank with 300 stamina and 300 spirit heals 900 every 5 seconds. Today most
+armour and weapons carry no spirit at all, so this healing mostly comes from a
+character's base spirit. The question is about later: should we put spirit on
+gear?
+
+An item has a stat budget, roughly "this many points of stats for its level".
+Adding spirit means taking points from something else, and stamina is the
+natural choice. The catch is that spirit's healing grows with stamina, so
+trading stamina away also weakens the spirit you got for it. That's why the
+exchange rate is the question: is one stamina worth one spirit, or should spirit
+cost more on gear meant for high-stamina characters? Or is base spirit enough,
+and gear stays as it is?
+
+**Hide shoulders: how, and does it work on the current client?** Yes, on the
+stock client, through a change on the server's side.
+- **How the client knows what you wear:** the server doesn't send your real
+  items to other players' clients. Each player has one "what this slot looks
+  like" value per visible slot, shoulders included, which the client uses to
+  draw the body.
+- **Hiding them:** a server patch can write "nothing" into the shoulder value
+  while the real shoulders stay equipped. Every client, yours included, then
+  draws bare shoulders, and the stats stay. Transmogrification modules use the
+  same values, to show other items instead.
+- **Why it needs a patch:** the game already does this for helms and cloaks,
+  with one flag per player, but it has no flag for shoulders. So it needs a
+  server source patch (your compile) plus a chat command to switch it on and
+  off.
+- **A checkbox:** a plain addon could put one on the character window that sends
+  that chat command. That doesn't need the AIO framework.
+
+Should buddies get it too: you hiding a buddy's shoulders, or buddies hiding
+their own now and then?
+
+Reminder: the disks still have no guard against bit rot. Both are ext4, which
+doesn't check file contents for silent corruption.
 
 --------------------------------------------------------------------------------
 
