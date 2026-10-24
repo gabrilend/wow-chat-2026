@@ -371,3 +371,9 @@ src/lua/
   the books' curly quotes if the game's font has them: "change them all
   to regular quotes and dashes." So the conversion to plain ASCII quotes
   and dashes stays as built. (Question 3 above.)
+- (Answered 2026-10-23) **The rmail forwarding moves to the narrators:**
+  asked whether mailing yourself what a narrator read near you should
+  live with the narrators, so this issue is the library alone: "yes". It
+  is 910d (speech by mail), which already holds it; the "rmail
+  Distribution" section above stays as the record of where it began.
+  (Question 4 above.)

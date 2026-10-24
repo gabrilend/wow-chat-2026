@@ -169,3 +169,22 @@ character's own fields. So:
 The profiles where it matters: none that run today (basic's guilds are
 clans, 617l); the server side is built so a profile with shared guilds
 can switch it on.
+
+## Answer, 2026-10-23: where many guilds switch on
+
+Asked which profile gets the server side: "for now, just Sargobras
+realms." The profiles that take Sargobras (install step E066's header):
+basic today. So it switches on for basic, where every player's guild is
+already their clan (617l: themselves and their buddies, locked so it can't
+be left, disbanded or opened to other players, `buddies_clan_lock.cpp`).
+What that means for the build:
+- the clan stays one of the player's guilds, always (the clan lock's
+  rules hold for it); other guilds are joined beside it;
+- switching the active guild is the server's own step, so the lock (which
+  refuses only the client's leave and invite requests) doesn't stop it,
+  and the clan membership is kept in our table while another guild is
+  active;
+- buddies stay in the clan guild whatever the player's active guild.
+Open: how a basic player joins a second guild at all (the stock invite
+comes from the client: from a player of another guild, through a new
+command, or an NPC?).

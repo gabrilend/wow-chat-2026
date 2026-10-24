@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-23 12:50:08
+Generated on: 2026-10-23 12:55:41
 Models: claude-opus-5-5
 
 ## Contents
@@ -3677,6 +3677,96 @@ issues:
 5. **Group hearthstone (211):** when you hearth, your group gets a summon-style
    invitation to come along. If two members hearth at once, does everyone get
    only the first hearther's invitation, or both invitations, to choose between?
+
+--------------------------------------------------------------------------------
+
+### User Request 34
+
+1. Raid experience (617c2)
+
+leave it at 1.0
+
+  2. The patch guard (189g)
+
+before we release. Trust me, you'll know when it's time to release.
+
+  3. Spoken orders (617y)
+
+first of all we have to say "follow me" not just follow. We should be able to
+say "follow so-and-so" and they follow that person instead. But, a person should
+be able to say "go away" in chat and then the bots will return to their normal
+behavior, and if they say "go away!" then they won't follow that person until
+they log out again.
+
+>   4. A death knight's oath after the story (718a)
+
+any tabard that clearly has the Horde or Alliance symbols displayed.
+
+  5. Group hearthstone (211)
+
+handle it the same way we handle multiple summons. If there's a summons pending,
+we drop the new request.
+
+confirm? validate? ask me 5 more questions?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 34
+
+> Recording all five answers:
+
+*[commit] afe8d2a04 in wow-chat-2026 - Record five answers: raids keep the flat bonus, the patch guard runs at release, how following starts and ends, which tabards count, one hearth invitation at a time (issues 617c2, 189g, 617y, 718a, 211)*
+
+> Picking the next questions. One comes from the many-guilds build, because it
+> changes what I build; the rest come from four other issues:
+
+All five answers are recorded and committed. Here's how I understood each, so
+you can correct anything:
+
+1. **Raid experience:** inside raid dungeons the group bonus stays flat at 1.0.
+2. **Patch guard:** no automatic trigger. The security review of every applied
+   patch is a step I run when you say it's time to release.
+3. **Following:**
+   - "follow me" makes the buddies follow you; a bare "follow" does nothing.
+   - "follow <name>" makes them follow that person.
+   - If the person being followed says "go away", they return to normal
+     behaviour.
+   - If that person says "go away!" with the exclamation mark, they won't follow
+     that person again until that person logs out.
+4. **Oath tabards:** any tabard clearly showing the Horde or Alliance crest
+   counts for that side. I'll draw the list from the game's items.
+5. **Hearth invitations:** like summons. A member with an invitation already
+   pending gets no second one.
+
+Five more. The first decides what I build for the many-guilds server side, so it
+goes first.
+
+1. **Many guilds (630): which profile gets it?** On basic every player's guild
+   is their clan (themselves plus buddies), locked so it can't be left or opened
+   to others. Should basic players be able to join other guilds as well, keeping
+   the clan as one of their guilds and switching between them? Or should many
+   guilds be built switched off, waiting for a future profile with ordinary
+   shared guilds? The first means reworking the clan lock so switching away
+   doesn't break it.
+
+2. **Buddies' weapons in town (617e4b):** buddies put all weapons away in their
+   bags when they enter a town: main hand, off hand and ranged, wands included.
+   They wear them sheathed in the wilds and draw them in danger. Is ranged right
+   to include? And should your own character follow the same rule, or only
+   buddies?
+
+3. **A death knight's oath (718a): can it be changed later, and how?** For
+   example, by talking to Darion Mograine again, once a week, at any time, or
+   never.
+
+4. **Elite outfits for buddies (617r):** when a set-aside buddy is remade at
+   your level later, should the special outfit it was given come back with it,
+   or is the outfit a one-time gift?
+
+5. **The book library (909):** the idea of mailing yourself a copy of what a
+   narrator read near you depends on the narrators (910) and the mail bridge
+   (1004). Should I move it into the narrators' issue, so 909 is just the
+   library? My suggestion: yes, it belongs with the narrators.
 
 --------------------------------------------------------------------------------
 

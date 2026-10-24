@@ -1,0 +1,168 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- generate-oath-tabards-page - the tabards a death knight's oath accepts, and
+-- the rest (issue 718a).
+--
+-- For a general audience: a death knight that swears to the Horde or the
+-- Alliance after its story must wear a tabard showing that side's symbol
+-- (the owner, 2026-10-23: "any tabard that clearly has the Horde or Alliance
+-- symbols displayed"). This reads every tabard in the world database, which
+-- ones the game marks as one side's only, and writes a page listing the
+-- eligible ones first, by side, then every other tabard, each linked to its
+-- picture on Wowhead (the project has no copy of the game's item art).
+-- Which tabards show the side's own crest, rather than a city's or a
+-- battleground's emblem, is a judgment about their pictures, kept in the
+-- list below and marked on the page as such.
+--
+-- Usage: scripts/generate-oath-tabards-page [PROJECT_DIR] [WORLD_DATABASE]
+--   writes docs/HTML/oath-tabards.html
+--------------------------------------------------------------------------------
+
+local DIR   = arg[1] and arg[1] ~= "" and arg[1] or "/mnt/kaun/wow-chat-2026"
+local WORLD = arg[2] or "acore_world_basic"
+local OUT   = DIR .. "/docs/HTML/oath-tabards.html"
+local MYSQL = DIR .. "/mysql/installed-files/bin/mysql"
+
+-- {{{ the judgment: tabards whose picture shows the side's own crest
+-- From what the tabards look like in the game (not from data: the database
+-- holds no picture). The Alliance's crest is the lion of Stormwind; the
+-- Horde's is the emblem flown over Orgrimmar. Each entry says why. A
+-- tabard the game marks as one side's that is NOT here shows a city's,
+-- a faction's or a battleground's own emblem instead (the page says so,
+-- for a check by eye).
+local CREST = {
+    [15196] = "the Alliance's old honor-rank tabard (Private), the lion on blue",
+    [15198] = "the Alliance's old honor-rank colours (Knight), the lion on blue",
+    [15197] = "the Horde's old honor-rank tabard (Scout), the Horde emblem on red",
+    [15199] = "the Horde's old honor-rank herald (Stone Guard), the Horde emblem on red",
+    [49052] = "Tabard of Conquest, the Alliance's version: the side's crest",
+    [49054] = "Tabard of Conquest, the Horde's version: the side's crest",
+    [45574] = "Stormwind's crest is the Alliance's lion",
+    [11364] = "the lion of Stormwind, the Alliance's crest (an old quest tabard, no side marked in data)",
+    [45581] = "Orgrimmar's crest is the Horde's emblem",
+}
+local CREST_SIDE = { [11364] = 2 }   -- sides for crest tabards the data leaves unmarked: 2 Alliance
+-- }}}
+
+-- {{{ local function query
+local function query(sql)
+    local p = io.popen(string.format("MYSQL_PWD=menardi '%s' -h127.0.0.1 -P3307 -uritz -N -B %s -e \"%s\" 2>&1", MYSQL, WORLD, sql))
+    local rows = {}
+    for line in p:lines() do
+        if line:match("^ERROR") then
+            io.stderr:write("generate-oath-tabards-page: MySQL refused a query: " .. line .. "\n  to debug: is MySQL running (scripts/start-mysql)?\n")
+            os.exit(1)
+        end
+        local r = {}
+        for v in (line .. "\t"):gmatch("([^\t]*)\t") do r[#r + 1] = v end
+        rows[#rows + 1] = r
+    end
+    p:close()
+    return rows
+end
+-- }}}
+
+-- every tabard (inventory type 19), its quality, its side (FlagsExtra: 1
+-- Horde only, 2 Alliance only), and the faction its reputation needs
+local rows = query("SELECT i.entry, i.name, i.Quality, (i.FlagsExtra & 3), i.RequiredReputationFaction, i.ItemLevel " ..
+    "FROM item_template i WHERE i.InventoryType = 19 ORDER BY i.name, i.entry")
+if #rows == 0 then io.stderr:write("generate-oath-tabards-page: no tabards found in " .. WORLD .. "\n"); os.exit(1) end
+
+local SIDE_NAME  = { [0] = "", [1] = "Horde", [2] = "Alliance" }
+local QUALITY    = { [0] = "poor", [1] = "common", [2] = "uncommon", [3] = "rare", [4] = "epic" }
+local function esc(s) return (s:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"):gsub('"', "&quot;")) end
+local function row_html(t, note)
+    return string.format('<tr><td class="num">%s</td><td><a class="q-%s" href="https://www.wowhead.com/wotlk/item=%s" target="_blank" rel="noopener">%s</a></td><td>%s</td><td class="note">%s</td></tr>',
+        t.id, QUALITY[t.quality] or "common", t.id, esc(t.name), t.side > 0 and ('<span class="side s' .. t.side .. '">' .. SIDE_NAME[t.side] .. '</span>') or '<span class="none">neither</span>', esc(note))
+end
+
+local eligible = { [1] = {}, [2] = {} }
+local rest, npc = {}, 0
+for _, r in ipairs(rows) do
+    local t = { id = tonumber(r[1]), name = r[2], quality = tonumber(r[3]), side = tonumber(r[4]), rep = tonumber(r[5]) }
+    if t.name:match("^NPC Equip") or t.name:match("%(Test%)") or t.name:match("DEPRECATED") or t.name:match("^Unused") or t.name:match("^Team A") or t.name:match("^Upperdeck") then
+        npc = npc + 1                                   -- not a player's item: left off the page
+    elseif CREST[t.id] then
+        local side = t.side > 0 and t.side or CREST_SIDE[t.id] or 0
+        t.side = side
+        table.insert(eligible[side], row_html(t, CREST[t.id]))
+    else
+        local note = t.side > 0 and "marked one side's only, but shows its own emblem (a city's, a faction's or a battleground's): check by eye"
+            or "no side marked; no side's crest"
+        table.insert(rest, { side = t.side, html = row_html(t, note) })
+    end
+end
+table.sort(rest, function(a, b) return a.side > b.side end)   -- the side-marked ones first
+local rest_html = {}
+for _, r in ipairs(rest) do rest_html[#rest_html + 1] = r.html end
+
+local function tbl(list)
+    return '<div class="scroll"><table><thead><tr><th class="num">Item</th><th>Tabard</th><th>Side in data</th><th>Why</th></tr></thead><tbody>\n' ..
+        table.concat(list, "\n") .. "\n</tbody></table></div>"
+end
+
+local page = [[<!-- GENERATED by scripts/generate-oath-tabards-page from ]] .. WORLD .. [[ (issue 718a); don't edit by hand: re-run the generator. -->
+<title>Oath Tabards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@500;700&family=Alegreya+Sans:wght@400;500;700&display=swap">
+<style>
+/* layout: a herald's roll, the two sides' accepted tabards side by side, then the rest as one long roll */
+:root {
+  --bg: #f3f1ec; --panel: #fbfaf7; --fg: #23211d; --muted: #6b665c; --line: #d8d3c7;
+  --alliance: #1f4f9a; --horde: #9a2a1f; --gold: #8a6a1c;
+  --q-poor: #6b6b6b; --q-common: #23211d; --q-uncommon: #1e7b12; --q-rare: #0b55a8; --q-epic: #7a2fb0;
+  --display: "Alegreya SC", Georgia, serif; --body: "Alegreya Sans", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #17161a; --panel: #1f1e23; --fg: #ece8df; --muted: #a39d90; --line: #36343b;
+  --alliance: #7fa6e8; --horde: #e8877b; --gold: #d9b45a;
+  --q-poor: #9d9d9d; --q-common: #ece8df; --q-uncommon: #52d14a; --q-rare: #4ea2ff; --q-epic: #c27cf2; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #17161a; --panel: #1f1e23; --fg: #ece8df; --muted: #a39d90; --line: #36343b;
+  --alliance: #7fa6e8; --horde: #e8877b; --gold: #d9b45a;
+  --q-poor: #9d9d9d; --q-common: #ece8df; --q-uncommon: #52d14a; --q-rare: #4ea2ff; --q-epic: #c27cf2; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font: 16px/1.5 var(--body); }
+main { max-width: 1060px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 64px; display: grid; gap: 28px; }
+h1, h2 { font-family: var(--display); margin: 0; text-wrap: balance; line-height: 1.15; }
+h1 { font-size: 2.1rem; } h2 { font-size: 1.35rem; }
+p { margin: 0; max-width: 70ch; } .lede { color: var(--muted); }
+.sides { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 20px; }
+.side-col { background: var(--panel); border: 1px solid var(--line); border-top: 4px solid var(--c); border-radius: 4px; padding: 16px; display: grid; gap: 10px; min-width: 0; }
+.side-col.a { --c: var(--alliance); } .side-col.h { --c: var(--horde); }
+.side-col h2 { color: var(--c); }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 600 .72rem/1.2 var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+td.num, th.num { text-align: right; width: 4.5em; color: var(--muted); }
+td.note { color: var(--muted); font-size: .92rem; }
+a { text-decoration: none; font-weight: 600; } a:hover, a:focus-visible { text-decoration: underline; }
+a:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.q-poor { color: var(--q-poor); } .q-common { color: var(--q-common); } .q-uncommon { color: var(--q-uncommon); } .q-rare { color: var(--q-rare); } .q-epic { color: var(--q-epic); }
+.side { font-weight: 700; } .s1 { color: var(--horde); } .s2 { color: var(--alliance); } .none { color: var(--muted); }
+.rest { display: grid; gap: 10px; }
+.note-box { border-left: 3px solid var(--gold); padding: 8px 12px; background: var(--panel); color: var(--muted); }
+</style>
+<main>
+  <header style="display:grid;gap:8px">
+    <h1>Oath Tabards</h1>
+    <p class="lede">After its story, a death knight swears to the Horde or the Alliance for good, and must wear a tabard that clearly shows that side's symbol. These are the tabards the oath accepts, then every other tabard in the game.</p>
+    <p class="note-box">Which tabards show a side's own crest is a judgment about their pictures; the database has no pictures. Each name links to the tabard on Wowhead, to check by eye. Tell Claude any that belong in the other list.</p>
+  </header>
+  <section class="sides" aria-label="Eligible tabards">
+    <div class="side-col a"><h2>Alliance</h2>]] .. tbl(eligible[2]) .. [[</div>
+    <div class="side-col h"><h2>Horde</h2>]] .. tbl(eligible[1]) .. [[</div>
+  </section>
+  <section class="rest" aria-labelledby="rest-h">
+    <h2 id="rest-h">The rest</h2>
+    <p class="lede">Not accepted for the oath. Those the game marks as one side's come first: they carry their own emblems, a city's, a faction's or a battleground's, and are worth a look by eye.</p>
+    ]] .. tbl(rest_html) .. [[
+  </section>
+</main>
+]]
+
+local f = assert(io.open(OUT, "w"))
+f:write(page)
+f:close()
+print(string.format("wrote %s: %d Alliance and %d Horde eligible, %d others, %d non-player items left off",
+    OUT, #eligible[2], #eligible[1], #rest, npc))

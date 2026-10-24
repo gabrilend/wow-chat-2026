@@ -127,3 +127,10 @@ draws them at once.
 2. Ranged weapons and wands: taken off in town too, as built. Right?
 3. Should the owner's own weapons follow the same rule (a Lua script for
    players), or only buddies?
+- (Answered 2026-10-23) **Buddies only, and ranged only for those who fight
+  with it:** "just buddies, and yes to ranged weapons if they primarily
+  use their ranged weapon as their main weapon. Right now that's just
+  hunters." So the owner's own weapons are never touched; in town a
+  buddy's main and off hand always go into its bags, and its ranged weapon
+  does too only when ranged is its main weapon (hunters today); a
+  warrior's bow or a priest's wand stays worn. (Questions 2 and 3 above.)

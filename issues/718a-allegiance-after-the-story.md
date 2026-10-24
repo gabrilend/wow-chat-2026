@@ -137,3 +137,13 @@ chooses, at will, one of:
   has the Horde or Alliance symbols displayed." A list of such tabards is
   drawn from the game's items (the city and faction tabards bearing the
   Horde or Alliance crest), one list per side. (Question 2 above.)
+- (Answered 2026-10-23) **The oath is for good:** asked whether it can be
+  changed later: "never. the Horde and Alliance remember your character
+  and will not tolerate traitors." (Question 3 above.)
+- (2026-10-23) **The eligible tabards, listed:** `scripts/generate-oath-tabards-page`
+  writes `docs/HTML/oath-tabards.html`: the tabards whose picture shows a
+  side's own crest (nine when made: the old honor-rank tabards of both
+  sides, both Tabards of Conquest, Stormwind's and Orgrimmar's, and the old
+  Tabard of Stormwind), then every other tabard, each linked to its picture
+  on Wowhead. Which show the crest is a judgment about the pictures, kept
+  in the generator's list, for the owner to correct by eye.
