@@ -209,7 +209,7 @@ own level, far above basic's 60.
    leave them out?
 5. (Answered 2026-10-08: one dummy drop, turned into the looter's
    class's version on loot) **Atiesh's four versions.**
-6. **Atiesh looted by a class it doesn't fit:** a warrior, rogue, hunter,
+6. (Answered 2026-10-23: never offered to them) "never appear to them at all. Legends only come to those who will use them." So a class Atiesh has no version for is left out of its loot roll entirely; only mages, priests, warlocks and druids are offered it. **Atiesh looted by a class it doesn't fit:** a warrior, rogue, hunter,
    paladin, shaman or death knight loots the dummy. It stays a dummy that
    can be traded to a caster (and turns when that caster takes it), or
    it turns into one of the four at random, or it isn't offered to them in

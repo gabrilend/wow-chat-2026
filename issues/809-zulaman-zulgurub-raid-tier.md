@@ -35,5 +35,5 @@ character can't reach.
 
 ## Open Questions
 
-1. Which levels exactly ("early 50s": 50-54?) and which item levels?
+1. (Answered 2026-10-23, in part) "oh, um, I don't know if we wanna do that anymore, but to answer your question, let's put it in the early 50s." The level stands at the early 50s; **whether this raid tier is still wanted at all is now open** (ask again before building). Still open: the exact levels (50-54?) and which item levels.
 2. Their sizes: Zul'Gurub twenty and Zul'Aman ten, as stock?

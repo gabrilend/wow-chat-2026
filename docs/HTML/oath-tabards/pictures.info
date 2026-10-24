@@ -1,0 +1,6 @@
+Made by scripts/make-oath-tabard-pictures (wow-chat-2026), 2026-10-23 17:50:54: each
+tabard's bag icon (64x64, as the game draws it) and a night elf woman wearing
+it from the front and from behind (shrunk to 192x240 from the custom
+client's 512x640), drawn from the game's own files by the custom client's
+dressing room (/mnt/kaun/custom-client/scripts/item-pictures). For the page
+docs/HTML/oath-tabards.html (issue 718a). Re-run the script to remake them.

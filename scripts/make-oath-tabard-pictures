@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# make-oath-tabard-pictures - draws every tabard the oath page shows, then
+# writes the page (issue 718a).
+#
+# For a general audience: the page of tabards a death knight's oath accepts
+# shows each tabard's icon and a character wearing it, front and back. The
+# project has no copy of the game's art, but the custom client (a separate
+# project, /mnt/kaun/custom-client) reads the game's own files and draws
+# items: its "dressing room" program makes the icon and the worn pictures.
+# This script asks the page generator for the list of tabards, has the
+# custom client draw them into a RAM folder, shrinks the worn pictures to a
+# page-friendly size beside the page (docs/HTML/oath-tabards/), and writes
+# the page. It stops at the first step that fails, saying which.
+#
+# Usage: scripts/make-oath-tabard-pictures [PROJECT_DIR]
+#   CUSTOM_CLIENT (environment) the custom client's folder, if not the default
+
+set -euo pipefail
+
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+CUSTOM_CLIENT="${CUSTOM_CLIENT:-/mnt/kaun/custom-client}"
+WORK="${DIR}/tmp/shared-memory/oath-tabards"         # RAM: the list and the full-size pictures
+OUT="${DIR}/docs/HTML/oath-tabards"                  # beside the page: what the page shows
+WORN_SIZE="192x240"                                  # the custom client draws 512x640; the page shows 160 and 80 high
+
+# {{{ stop
+stop() { echo "ERROR at: $1"; echo "  why: $2"; echo "  done before it: ${DONE:-nothing}"; exit 1; }
+DONE=""
+# }}}
+
+[[ -d "${DIR}/tmp/shared-memory" ]] || stop "finding the RAM folder" "${DIR}/tmp/shared-memory is missing (the project's tmp links)"
+[[ -x "${CUSTOM_CLIENT}/scripts/item-pictures" ]] || stop "finding the custom client" "${CUSTOM_CLIENT}/scripts/item-pictures is not there (set CUSTOM_CLIENT)"
+command -v magick > /dev/null || stop "finding ImageMagick" "the magick command is not installed"
+mkdir -p "${WORK}/raw" "${OUT}"
+
+# {{{ 1. the list, from the page generator's own query
+"${DIR}/scripts/generate-oath-tabards-page" "${DIR}" acore_world_basic --list "${WORK}/list.txt" \
+    || stop "writing the picture list" "the page generator failed (is MySQL running?)"
+DONE="the list (${WORK}/list.txt)"
+# }}}
+
+# {{{ 2. the custom client draws them (full size, in RAM)
+# A tabard whose pictures are missing from the game's files is refused by
+# name and the run ends with a failure; the page then shows a dash for it.
+if ! "${CUSTOM_CLIENT}/scripts/item-pictures" "${CUSTOM_CLIENT}" "${WORK}/list.txt" "${WORK}/raw"; then
+    echo "WARNING: the custom client refused some tabards (named above); the rest were drawn"
+fi
+DONE="${DONE}; the pictures (${WORK}/raw)"
+# }}}
+
+# {{{ 3. beside the page: icons as drawn, worn pictures shrunk
+n=0
+for f in "${WORK}"/raw/*-icon.png; do
+    [[ -e "${f}" ]] || stop "copying the icons" "no icons were drawn in ${WORK}/raw"
+    cp "${f}" "${OUT}/"
+    n=$((n + 1))
+done
+for f in "${WORK}"/raw/*-front.png "${WORK}"/raw/*-back.png; do
+    [[ -e "${f}" ]] || continue
+    magick "${f}" -resize "${WORN_SIZE}" -strip "${OUT}/$(basename "${f}")"
+    n=$((n + 1))
+done
+cat > "${OUT}/pictures.info" <<EOF
+Made by scripts/make-oath-tabard-pictures (wow-chat-2026), $(date '+%F %T'): each
+tabard's bag icon (64x64, as the game draws it) and a night elf woman wearing
+it from the front and from behind (shrunk to ${WORN_SIZE} from the custom
+client's 512x640), drawn from the game's own files by the custom client's
+dressing room (${CUSTOM_CLIENT}/scripts/item-pictures). For the page
+docs/HTML/oath-tabards.html (issue 718a). Re-run the script to remake them.
+EOF
+DONE="${DONE}; ${n} pictures beside the page (${OUT})"
+# }}}
+
+# {{{ 4. the page
+"${DIR}/scripts/generate-oath-tabards-page" "${DIR}" acore_world_basic || stop "writing the page" "the page generator failed (see above)"
+# }}}
+
+echo "done: ${DONE}"
