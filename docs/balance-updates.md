@@ -628,6 +628,21 @@ doubled. A full refill should take ~2 minutes I think. That's much longer
 than the 30 seconds it takes to eat / drink." Takes effect at basic's next
 compile.
 
+## 2026-10-25 — spirit's health healing back to full (basic)
+
+| Knob | Value | Where |
+|---|---|---|
+| Health from spirit per 5 seconds | spirit x stamina / 100 (was / 200 for two days) | `patches/B049-spirit-heals-by-stamina.sh` |
+
+Why: measured against the level-60 raid bosses and basic's Outland
+dungeon bosses (`scripts/tank-damage-taken`, issue 167), at 200 spirit
+healed 1 to 8 percent of a boss's melee while being hit, and the best build
+for a short fight was all stamina. The owner: "I want spirit to be useful
+in combat. I also want it to be useful for people who aren't tanks", and
+nothing should be "always right". At 100 the best split moves with the
+fight's length and with whether the boss is hitting you. Takes effect at
+basic's next compile.
+
 ## How to add an entry
 
 ```markdown

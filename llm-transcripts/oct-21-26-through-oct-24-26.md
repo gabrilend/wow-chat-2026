@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-23 18:34:50
+Generated on: 2026-10-24 13:07:53
 Models: claude-opus-5-5
 
 ## Contents
@@ -5367,6 +5367,117 @@ Two things to look for in the playtest:
   harder than stock, spirit's share of the healing shrinks further.
 
 Both tables are in the spirit issue (167).
+
+--------------------------------------------------------------------------------
+
+### User Request 49
+
+I want spirit to be useful in combat. I also want it to be useful for people who
+aren't tanks. Can you give me the same raid boss numbers but with the divisor at
+100? I remember in WotLK (which is similar to our game, but different of course)
+the tanks pretty much would ONLY gem for stamina. Everything else was wasted. I
+mostly want to defeat those "always correct choices" which aren't really choices
+at all. If you only gear for stamina, that gives the healers a lot of room to
+work with. I'm concerned that our updated Outland dungeon bosses and such will
+deal so much damage they'll essentially one-shot our tanks. Can you give me
+numbers for those bosses too? With their level adjusted stats. I'd also like
+info for Kazzak and Kael'Thas (Sunwell, not Tempest Keep).
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 49
+
+> Finding the Outland dungeon bosses through the encounter list and their spawn
+> maps.
+
+> Writing the damage model (armour by boss level, crushing blows by level gap)
+> for all three groups.
+
+> The numbers are in. Turning the calculation into a project script so the issue
+> can point at it rather than copy stale numbers.
+
+> Two corrections from the issue notes: world bosses fight as 3 levels above
+> their target, and basic changes the crushing rule (patch B031). Checking B031.
+
+> Armour uses the boss's real level, crushing uses the "level for target".
+> Updating the script with basic's crushing rule and the world boss rule.
+
+*[commit] a2f06444f in wow-chat-2026 - Measure what bosses' melee does to a level-60 tank, and what spirit heals back (issue 167)*
+
+No Outland dungeon boss one-shots a level-60 tank: the worst single hit is 82%
+of its health. Both Kazzaks do. I wrote a script for these numbers,
+`scripts/tank-damage-taken`. It reads each boss from the world database and uses
+the server's own damage, armour and crushing-blow formulas, including basic's
+later crushing blows.
+
+The tank is a level-60 warrior with 4509 health and 10,000 armour who avoids 25%
+of swings. Only melee is counted, not spells, blocks or healers. The spirit
+column is the build with 200 stamina and 145 spirit, at divisor 100. It heals 29
+health a second while being hit and 58 standing.
+
+**Level-60 raid bosses**
+
+| Boss | Biggest hit (% of health) | Damage per second | Unhealed tank lasts | Spirit heals |
+|---|---:|---:|---:|---:|
+| Ragnaros | 1117 (25%) | 262 | 17 s | 11% |
+| Golemagg | 1227 (27%) | 404 | 11 s | 7% |
+| Huhuran | 1534 (34%) | 505 | 9 s | 6% |
+| Chromaggus | 1841 (41%) | 606 | 7 s | 5% |
+| Nefarian | 2148 (48%) | 707 | 6 s | 4% |
+
+**Kazzak and Kael'thas**
+
+| Boss | Level | Biggest hit (% of health) | Damage per second | Unhealed tank lasts |
+|---|---:|---:|---:|---:|
+| Lord Kazzak (Blasted Lands) | 73 | 4375 (97%) | 3496 | 1.3 s |
+| Doom Lord Kazzak (Hellfire) | 73 | 14218 (315%) | 4544 | 1.0 s |
+| Kael'thas (Magisters' Terrace) | 78 | 1673 (37%) | 542 | 8.3 s |
+
+- **Kazzak:** world bosses fight as 3 levels above whoever they're hitting, so
+  neither Kazzak lands crushing blows on a level-60 tank. The size comes from
+  their level-73 damage numbers. Doom Lord Kazzak kills a level-60 tank in one
+  hit.
+- **Kael'thas:** his melee is mild. His danger is his spells (Pyroblast, the
+  phoenix), which live in his script and aren't in these numbers.
+
+**Outland dungeon bosses**
+
+There are 45 bosses across the 16 dungeons, at basic's levels (66 to 78).
+- Biggest hits run from 11% to 82% of the tank's health.
+- With no healing, the tank lasts 4 to 26 seconds.
+- The worst are Exarch Maladaar (3707 per hit, 3.8 s), Commander Sarannis,
+  Dalliah and Soccothrates (about 4.7 s each).
+- The reason it isn't worse is basic's crushing-blow rule: none until a boss is
+  8 levels above the tank, full strength at 12. From level 71 on, every swing
+  that lands is a crushing blow (×1.5). Defence above 300 does nothing at level
+  60, so a tank can't gear against it.
+- Spirit heals 2% to 17% of their melee while being hit.
+
+**Does spirit become a real choice?** With stamina and spirit sharing one
+budget, the best split depends on how long the fight lasts and whether the boss
+is hitting you. As a formula: stamina − spirit = 50 × divisor ÷ (rate ×
+fight seconds), where the rate is 1/2 while being hit and 1 otherwise. For this
+warrior (stamina / spirit):
+
+| Fight length | Divisor 100, being hit | Divisor 100, not hit | Divisor 200, being hit |
+|---:|---:|---:|---:|
+| 60 s | 256 / 89 | 214 / 131 | 300 / 45 (all stamina) |
+| 120 s | 214 / 131 | 193 / 152 | 256 / 89 |
+| 300 s | 189 / 156 | 181 / 164 | 206 / 139 |
+
+At divisor 100 there is no build that's always right. A tank in a long fight and
+a non-tank the boss isn't hitting both want real spirit. The one pull back
+toward stamina is the burst limit: health has to outlast the biggest run of
+hits, which matters against bosses like Maladaar. At divisor 200, short fights
+still say all stamina.
+
+The numbers, the formula and the table are in the spirit issue (167), and the
+script is committed.
+
+**Open question:** for your two goals, spirit useful in combat and useful for
+non-tanks, divisor 100 fits better. The cost is the faster refill out of combat:
+about a minute standing, which is still twice as long as eating. Should I put
+B049 back to 100?
 
 --------------------------------------------------------------------------------
 

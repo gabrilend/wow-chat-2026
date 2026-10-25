@@ -48,11 +48,11 @@ knights about 0.5 per spirit at 60, casters 0.04-0.13).
 
 ## Intended Behavior
 
-Every class alike: spirit restores health at stamina / 200 per point of
-spirit every 5 seconds, so health per 5 seconds = spirit x stamina / 200
+Every class alike: spirit restores health at stamina / 100 per point of
+spirit every 5 seconds, so health per 5 seconds = spirit x stamina / 100
 (stamina the attribute, not hit points). A tank with 300 stamina and 300
-spirit: 450 health per 5 seconds; a priest with 150 stamina and 300
-spirit: 225. Each 2-second health tick gives 2/5 of that.
+spirit: 900 health per 5 seconds; a priest with 150 stamina and 300
+spirit: 450. Each 2-second health tick gives 2/5 of that.
 
 - **In combat too**, at the same rate.
 - **Taking damage interrupts it**: for 5 seconds after the last damage
@@ -92,7 +92,7 @@ on the in-combat worry: "it's half effect in combat. For another, their
 stats will go down because we pull from stamina to provide spirit. We're
 just trying to figure out the correct ratio."
 
-**The divisor doubled, 2026-10-23** (from 100 to 200, in B049 and
+**The divisor back to 100, 2026-10-25**, after the boss numbers below ("I want spirit to be useful in combat"). Before that, **the divisor doubled, 2026-10-23** (from 100 to 200, in B049 and
 `docs/balance-updates.md`): at 100 a spirit build refilled in about a
 minute standing. The owner: "we should double the divisor so the numbers
 are doubled. A full refill should take ~2 minutes I think. That's much
@@ -158,7 +158,7 @@ like Maladaar.
    - `Unit.cpp`: damage dealt to any unit sets it; the check is defined
      beside the mana one.
    - `Player.cpp`: the health-per-spirit function returns spirit x stamina
-     / 200 x 2/5, halved while `IsUnderLastHurtEffect`; the 2-second tick
+     / 100 x 2/5, halved while `IsUnderLastHurtEffect`; the 2-second tick
      runs in combat too for a player the stock check would skip, and adds
      the spirit part in combat.
    `Unit.h` is included almost everywhere (as `m_lastManaUse` is), so a
@@ -167,7 +167,7 @@ like Maladaar.
    .cpp files compile with the build's flags (without its precompiled
    header, which would hide the patched header), reverts byte-identical.
 2. `scripts/test-source-patches basic` once the source tree is clean.
-3. In game: the tank example's 450 per 5 seconds standing still out of
+3. In game: the tank example's 900 per 5 seconds standing still out of
    combat; half for 5 seconds after a hit; still healing mid-fight.
 
 ## Open Questions
@@ -181,7 +181,7 @@ like Maladaar.
    unchanged": mana from spirit is untouched (B049 never changes it); the
    stamina rule is everyone's health from spirit.
 
-4. **Divisor 100 or 200**, now that the owner wants spirit useful in
+4. (Answered 2026-10-25: 100, "yes I think so") **Divisor 100 or 200**, now that the owner wants spirit useful in
    combat and for non-tanks: 200 (in B049 since 2026-10-23) makes a full
    refill take about two minutes standing; 100 doubles spirit's share in
    fights (2-17% of a boss's melee while hit) and pulls the best builds

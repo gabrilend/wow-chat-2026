@@ -26,7 +26,7 @@
 --               15%, from 4 levels above the tank. Basic (patch B031)
 --               starts it at 8 levels above, at 1/5 of the stock chance,
 --               ramping to the full chance at 12 (--crushing stock for the
---               stock rule). Defence above the tank's level cap (300 at 60)
+--               stock rule, --crushing none for no crushing blows at all). Defence above the tank's level cap (300 at 60)
 --               counts for nothing (Unit::RollMeleeOutcomeAgainst), so a
 --               level-60 tank cannot gear it down. Blocks come before
 --               crushes in the table and are not modelled (a shield would
@@ -41,7 +41,7 @@
 --               5 seconds after damage (patch B049)
 --
 -- Usage: scripts/tank-damage-taken [PROJECT_DIR] [options]
---   --divisor N    spirit's divisor (B049; default 200)
+--   --divisor N    spirit's divisor (B049; default 100)
 --   --health N     the tank's health (default 4509: a level-60 warrior
 --                  with 300 stamina)
 --   --stamina N    (default 200)  --spirit N  (default 145): the spirit
@@ -49,11 +49,11 @@
 --   --armour N     (default 10000)
 --   --avoid F      share of swings missed, dodged or parried (default 0.25)
 --   --database D   (default acore_world_basic)
---   --crushing R   basic (default, patch B031) or stock
+--   --crushing R   basic (default, patch B031), stock or none
 --------------------------------------------------------------------------------
 
 local DIR = "/mnt/kaun/wow-chat-2026"
-local O   = { divisor = 200, health = 4509, stamina = 200, spirit = 145, armour = 10000, avoid = 0.25, database = "acore_world_basic", crushing = "basic" }
+local O   = { divisor = 100, health = 4509, stamina = 200, spirit = 145, armour = 10000, avoid = 0.25, database = "acore_world_basic", crushing = "basic" }
 do
     local i = 1
     if arg[1] and not arg[1]:match("^%-%-") then DIR = arg[1]; i = 2 end
@@ -66,7 +66,7 @@ do
         i = i + 2
     end
 end
-if O.crushing ~= "basic" and O.crushing ~= "stock" then io.stderr:write("tank-damage-taken: --crushing is basic or stock\n"); os.exit(1) end
+if O.crushing ~= "basic" and O.crushing ~= "stock" and O.crushing ~= "none" then io.stderr:write("tank-damage-taken: --crushing is basic, stock or none\n"); os.exit(1) end
 local DEFENCE    = 300                           -- a level-60 tank's defence cap: more counts for nothing
 local TANK_LEVEL = 60
 local BOSS_DIFF  = 3                             -- WorldBossLevelDiff in worldserver.conf
@@ -127,7 +127,7 @@ for _, g in ipairs(GROUPS) do
         -- 15 skill up; basic opens it at 8 levels up at 1/5, full at 12; never more
         -- than the swings that land
         local crush = 0
-        if skill >= 15 and lgap >= (O.crushing == "basic" and 8 or 4) then
+        if O.crushing ~= "none" and skill >= 15 and lgap >= (O.crushing == "basic" and 8 or 4) then
             crush = (skill * 2 - 15) / 100
             if O.crushing == "basic" and lgap < 12 then crush = crush * (lgap - 7) / 5 end
             crush = math.min(land, crush)
