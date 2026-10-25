@@ -216,7 +216,47 @@ Nothing is tuned yet. What stands:
    multiplier in that range, so a heal must land between every two of his
    hits that connect; at 0.45 his top hit is 94% of its health, 1567
    damage a second, dead in 4.3 seconds unhealed. Asked to see 0.45
-   before choosing.
+   before choosing. **Chosen 2026-10-25: melee 0.40** ("This is a tank
+   that's in otherwise max gear, which already is a lofty target. The
+   heals will have to be geared similarly in order to keep up, and who
+   knows how long they can keep going?"). The aim: "2 or 3 healers pretty
+   consistently healing the main tank, and then another healer or few
+   working on the raid. Kazzak is a world-boss, we can put as many players
+   as we need, but being able to complete it with a single tank (or two)
+   is important."
+   **His spells hit the tank too** (`boss_doomlord_kazzak.cpp`, damage
+   from Spell.dbc): Void Bolt on his target every 15-18 s, 4394-5105
+   shadow; Cleave on his target every 8-12 s, a weapon swing that also
+   hits those beside it; Thunderclap every 10-14 s, 2344-2655 nature to
+   everyone near him, slowing their attacks and movement; Shadow Bolt
+   Volley every 4-6 s, 1488-2011 shadow to everyone in range; Mark of
+   Kazzak on a random mana user every 20 s, draining mana and exploding
+   for 5000 around them at none left; Twisted Reflection on a random
+   target every 15 s (their damage heals him); Frenzy every 30 s from the
+   first minute; Berserk at 3 minutes (75% faster attacks: the time
+   limit). Against a 6699-health tank, Void Bolt alone is 66-76% of it,
+   so his spells need their own multiplier too (open below).
+   Wowhead (the owner, 2026-10-25: "he hits between 7,000 and 11,000 on a
+   level 70 tank? What's up with that?"): the same numbers. His swing
+   before armour averages about 22,250; a level-70 tank's ~16,000 armour
+   takes off ~57% against level 73, leaving ~9,500 average, ~11,200 top.
+   A level-60 tank's ~10,000 armour takes off ~46%, so the same swing
+   lands harder on it.
+   **The healers' side** (worked out 2026-10-25 with a temporary script:
+   each class's strongest heal rank up to level 60 from Spell.dbc, its
+   coefficient from `spell_bonus_data`, and a healer's healing power as
+   the best per slot among obtainable items of the tier, any armour kind,
+   so a high estimate: about 675 at Molten Core's budget, about 875-900
+   at Blackwing Lair's to Naxxramas's): the big heals (Holy Light,
+   Greater Heal, Healing Touch, Healing Wave) land for about 3,000-3,700,
+   and about 4,500-5,600 when they crit, before talents. So 5,000 needs a
+   crit and 7,000 is out of reach for one heal; one healer on a big heal
+   every 2.5-3 seconds gives about 1,200-1,300 healing a second. Against
+   Kazzak at melee 0.40 (about 1,400 a second from melee; his spells add
+   roughly another 1,100 a second on the tank at their stock size), two
+   healers on the tank keep up with his melee alone and three with his
+   melee and spells, which is the owner's aim; mana is the limit (and Mark
+   of Kazzak drains it), and Berserk at 3 minutes the time limit.
    **Doom Lord Kazzak:** a level-60 raid boss (155j), so measured against
    a raid of forty or twenty-five, with his 14,000-per-hit melee brought
    down to what a raid tank survives?
@@ -231,3 +271,7 @@ Nothing is tuned yet. What stands:
    the 10-15 wanted. Raise their melee to meet it, or wait for their
    spells to be counted first (step 1), since spells will close part of
    the gap?
+8. **Kazzak's spells:** scale them with his melee (0.40: Void Bolt about
+   1,760-2,040, Thunderclap about 940-1,060, the volley about 600-800), or
+   another figure? Unscaled, a Void Bolt right after a top swing (66-76%
+   plus 84% of the tank's health) kills.

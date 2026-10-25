@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-25 16:08:01
+Generated on: 2026-10-25 16:15:55
 Models: claude-opus-5-5
 
 ## Contents
@@ -6138,6 +6138,91 @@ Two questions are still open:
    old gear at equal strength after a change. With class changes now using a
    buddy's gear set and mailing the old gear, is 186 only for level changes now,
    or should it be retired?
+
+--------------------------------------------------------------------------------
+
+### User Request 55
+
+> - Crits have to be gone. His tank needs 440 defence, 32 more than the
+> Naxxramas tier gives, because a single crit kills.
+
+gems should be enough to cover that pretty easily.
+
+> - Heals can't stop. The tank dies in about 4 seconds without them, against
+> 10–15 seconds in a dungeon.
+
+good
+
+> - Everything else has to hold. One unlucky top roll on top of a missed heal
+> ends the attempt.
+
+yeah that's how it was in heroic ICC if I remember correctly.
+
+> At 0.5, his ordinary top roll kills even a crit-proof tank, which is close to
+> impossible. Is 0.4 the "nearly", or would you rather start at 0.45 and
+> playtest?
+
+can I see the stats for 0.45? And any other stats you want to add to that table.
+
+> 1. The buddy reset's gear: should the old gear go to the new buddy by mail, as
+> after a de-levelling? I've written it that way, but you haven't said.
+
+sure.
+
+> 2. Gear of equal strength (186): that issue's plan is to make copies of the
+> old gear at equal strength after a change. With class changes now using a
+> buddy's gear set and mailing
+>      the old gear, is 186 only for level changes now, or should it be retired?
+
+let's add this issue file to the todo list as well.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 55
+
+*[commit] 6aa9a6dbb in wow-chat-2026 - Record the reset buddy's gear going to the new buddy by mail, and Doom Lord Kazzak's numbers from 0.35 to 0.50 (issues 617a7, 155f1)*
+
+Here's 0.45 next to its neighbours. The tank is the Naxxramas-tier tank with 32
+defence added from gems: 6,699 health, 10,263 armour, crit-proof at 440 defence,
+avoiding 42% of swings. Kazzak swings every 2 seconds. Melee only; his spells
+come on top.
+
+| Multiplier | Average hit | Top hit (% of health) | His crit, if the tank skipped the gems | Damage per second | Unhealed tank lasts | Average hits to kill |
+|---:|---:|---:|---:|---:|---:|---:|
+| 0.35 | 4,191 | 4,918 (73%) | 147% | 1,219 | 5.5 s | 1.6 |
+| 0.40 | 4,790 | 5,620 (84%) | 168% | 1,393 | 4.8 s | 1.4 |
+| **0.45** | **5,389** | **6,323 (94%)** | **189%** | **1,567** | **4.3 s** | **1.2** |
+| 0.50 | 5,988 | 7,025 (105%) | 210% | 1,741 | 3.8 s | 1.1 |
+
+The rule that defines this fight holds at every multiplier from 0.35 to 0.5:
+**any two of his swings that land, with no heal between them, kill the tank.**
+Even his two weakest hits add up to more than its health. So a healer must land
+a heal between every two connecting hits.
+
+The tank avoids 42% of swings, so two swings in a row both land about 34% of the
+time. In practice, a 4-second gap in healing kills the tank about one time in
+three.
+
+What changes from row to row is how little room is left:
+- **At 0.45**, one top hit takes the tank to 6% health. The next swing that
+  lands kills it unless a heal has landed first, and almost any heal has to be
+  big enough to cover a 94% hit.
+- **At 0.4**, a top hit leaves 16%, a little more room for a slow heal to
+  arrive.
+- **At 0.5**, his top roll kills on its own. That's where the fight becomes luck
+  rather than skill.
+
+0.45 seems to fit "nearly impossible, not impossible": every hit is close to
+lethal, but a crit-proof tank with steady healing survives every single hit.
+Your answers and these numbers are in the balancing issue (155f1). Nothing is
+applied yet; the rows for the multiplier table come once spells are counted.
+
+Also done:
+- **Buddy reset:** the old buddy's gear goes to the new buddy by mail. Recorded
+  and committed.
+- **Gear of equal strength (186):** added to the to-do list (now three tasks),
+  starting with the decision on whether it's only for level changes now or
+  retired.
 
 --------------------------------------------------------------------------------
 
