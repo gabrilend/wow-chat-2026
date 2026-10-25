@@ -1,7 +1,7 @@
 # 155i - Dungeon Damage and Healing Multipliers
 
 ## Status
-- State: completed 2026-10-23: built; its in-game check taken as done (the owner, 2026-10-23: "let's mark all the issues that are just waiting on a visual check as complete")
+- State: in progress (reopened 2026-10-25): the table and its code are built; the rows are not (155f1 writes them)
 - Created: 2026-09-24
 - Phase: 1
 - Parent: 155

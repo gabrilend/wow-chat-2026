@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-25 16:39:16
+Generated on: 2026-10-25 16:47:29
 Models: claude-opus-5-5
 
 ## Contents
@@ -77,6 +77,10 @@ Models: claude-opus-5-5
     Azeroth stays similar and Outland becomes doable; Kazzak's melee multiplier
     is waiting on your choice. Next: your pick (0.45 looks right), then I count
     bosses' spell damage.
+19. 2026-10-25 16:44, after Request 57 - We're balancing level-60 fights,
+    currently Doom Lord Kazzak, whose frenzy redesign and numbers are recorded
+    but nothing is built. Next, I need your answers: record 0.30 as his
+    multiplier, and keep, rework or remove his 3-minute Berserk?
 
 --------------------------------------------------------------------------------
 
@@ -6445,6 +6449,65 @@ Two questions:
 2. **Berserk at 3 minutes:** after 3 minutes he swings 75% faster and casts a
    volley every 2 seconds for the rest of the fight. That's a wipe, a hard time
    limit. Keep it as the limit, rework it like Frenzy, or remove it?
+
+--------------------------------------------------------------------------------
+
+### User Request 58
+
+Wowhead seems to disagree a little with your berserk interpretation:
+
+
+
+<pasted_content id="583a">
+Doom Lord Kazzak's abilities are nearly the same as those when he resided in
+Azeroth, just with higher damage.
+
+    Melee: between 7,000 to 11,000 on a decently geared tank
+    Shadow Bolt Volley: Shoots out a volley of Shadow Bolts. The bolts are not affected by line of sight, but range is limited and it can be avoided.
+    Twisted Reflection: Casts a magical and debuff on a random player in range other than the player with aggro. It will heal Lord Kazzak for a very large proportion of his health each time he deals damage to the player with this debuff. This combined with the Shadow Bolt Volley can ruin the attempt if not dispelled immediately.
+    Mark of Kazzak: Casts a non-curable debuff on a random player in range with mana. It will drain the target's mana for 5% of his total mana per second and explodes for 5,000 Area of Effect (AoE) damage when there is no more mana to drain. Lasts 8 seconds.
+    Cleave: Doom Lord Kazzak's Cleave can be avoided if the melee stand behind him. The range of the Cleave seems to be greater than the typical 5yard melee range attack, and seems to extend somewhere between 10-15 yards. The Cleave acts as a Chain Cleave and hits between 6,500-15,000.
+    Thunderclap: An AoE spell dealing high nature damage, and slowing movement and attack speed.
+    Void Bolt: A strong bolt he may cast only on the player with aggro, deals 4,000-5,000 shadow damage. Also reduces movement speed by 50%.
+    Capture Soul: When a player gets killed, Kazzak will instantly regenerate 150,000hp.
+    Enrage: After one minute, Doom Lord Kazzak will enrage, increasing his damage done by 30%. At this time, Doom Lord Kazzak will send out 6 waves of Shadowbolt Volley. The enrage will end after the 6th volley.
+</pasted_content id="583a">
+
+
+I think we should remove the Berserk you mentioned, but it's not discussed on
+wow-head so... Where did it come from? I think 0.4 is a good number for now.
+Needs playtesting of course.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 58
+
+*[commit] 6c9a0cb84 in wow-chat-2026 - Settle Doom Lord Kazzak at 0.40 for his melee and spells, and remove his three-minute Berserk (issues 155j, 155f1)*
+
+**Berserk is removed from the plan, and 0.40 is recorded for his melee and
+spells.** Both are in the Kazzak issue (155j) and the balancing issue (155f1),
+committed. Neither is built yet.
+
+**Where Berserk came from:** the server's own fight script for him,
+`boss_doomlord_kazzak.cpp`. At 3 minutes it casts spell 32965, "Berserk", once:
+75% faster attacks and a volley every 2 seconds for 10 minutes. It has been in
+AzerothCore since its first commit in 2016. AzerothCore grew out of older
+private-server projects, and the script came with it. The spell itself is in the
+game's own data, so someone took it from the real game files, but Wowhead
+doesn't list it. Whether Blizzard's Kazzak ever used it, I can't tell from here.
+On basic it can be removed by replacing the spell's database row with one that
+does nothing, or by a small change to his script.
+
+**Wowhead's "Enrage"** is the same spell the script calls Frenzy (spell 32964):
+10 seconds, a volley every 2 seconds. Wowhead counts 6 waves; I'd said 5. A
+volley at the very start would account for the difference. Your redesign
+replaces it anyway.
+
+**What 0.40 means for the playtest:** his worst two seconds, a top swing
+followed by a Void Bolt, are 114% of a tank's health at 10,000 armour (level-60
+gear alone). With 16,000 armour it's 97%. Talents and buffs land somewhere
+between, so the playtest will show whether tanks need armour buffs or a healer's
+heal already landing at the right moment.
 
 --------------------------------------------------------------------------------
 
