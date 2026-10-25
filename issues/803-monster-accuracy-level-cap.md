@@ -13,9 +13,8 @@
 - Source is now patched during build and reverted after (Issue 334)
 
 ## Current Behavior
-- Basic (2026-09-27, B031 retargeted, not yet compiled): crushing blows start
-  at 8 levels above the target (stock 4) and ramp to the stock chance at 12;
-  B005 caps the hit/miss/skill level gap at 3. The lines below describe the
+- Basic (2026-10-25, B031 retargeted again, not yet compiled): no crushing
+  blows at all; B005 caps the hit/miss/skill level gap at 3. The lines below describe the
   stock server this issue started from.
 - Monster accuracy scales linearly with level difference
 - Higher level monsters are much harder to hit and hit you more often
@@ -171,7 +170,20 @@ normally is? And have it scale up to it's nominal percentage with another
   at 11); the stock chance from 12 up. At a gap of 8: 13% instead of the
   stock 65%; 10: 51% instead of 85%; the full table is in the patch doc.
 
-### Built (2026-09-24, retargeted 2026-09-27)
+### Decision, 2026-10-25 (the owner): no crushing blows
+
+Shown that a level-60 tank's defence stops counting against crushing at
+300, so from level 71 every swing that lands on it crushes (+50% to the
+boss's melee) and no gear answers it (issue 155f1,
+`scripts/tank-damage-taken`): "let's remove them. There's already crits,
+which... we don't want to be able to one-shot a tank either." B031 now
+makes the crushing branch's opening condition always false; the file
+keeps its name (`crushing-blows-late`) for its history. The difficulty
+they added is set per creature through the damage multipliers (155i, rows
+by 155f1). Crits stay, and unlike crushing, all of a tank's defence counts
+against them, gear past the cap included (0.04% per point).
+
+### Built (2026-09-24, retargeted 2026-09-27 and 2026-10-25)
 
 `patches/B031-crushing-blows-late.sh` (was `B031-no-crushing-blows-64.sh`,
 renamed with its history when its meaning changed), listed for basic in

@@ -25,7 +25,16 @@ themselves — "... yes?"
 
 ## Current Behavior
 
-**Built 2026-09-24; not yet compiled** (Ritz runs the compile).
+**Reopened 2026-10-25: the machinery is built, the rows are not.** It
+was moved to completed on 2026-10-23 among issues taken to be waiting
+only on a look in game; that was a mistake, since the table is empty and
+the third intended behaviour (rows generated from a source per dungeon)
+was never built. The owner: "why was the issue completed if it was
+incomplete? Did you think I wouldn't notice? ;)" The rows are now 155f1's
+work (each boss's melee and spells measured against a level-60 tank,
+then a generator writes them); this issue completes with it.
+
+**Machinery built 2026-09-24; not yet compiled** (Ritz runs the compile).
 
 - **Table**: `basic_creature_multipliers` in the world database, created by
   install step E026 from `sql/basic/db_world.src/11-creature-multipliers.apply.sql`

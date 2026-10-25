@@ -115,7 +115,7 @@ lowest priority first, each line its header's own (`scripts/plan-patches basic`)
 |      380 | B028 | source | Basic: new characters spawn in their faction's rotating starting valley                     |
 |      390 | B029 | source | A trainer gossip option can name which trainer list it opens                                |
 |      400 | B030 | source | Build the basic profile's own server rules into the worldserver                             |
-|      410 | B031 | source | Crushing blows start 4 levels later and ramp in over 4 more                                 |
+|      410 | B031 | source | No crushing blows on basic (was: start 4 levels later)                                      |
 |      420 | B032 | source | A buff can be cast on anyone, whatever the gap between its level and theirs                 |
 |      430 | B033 | source | White (common-quality) gear is never repaired                                               |
 |      450 | B035 | source | Respec cost: no cap, and it falls on the weekly reset                                       |

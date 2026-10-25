@@ -23,14 +23,21 @@
 --               75% (attackers above level 59)
 --   crushing  = x1.5 damage. The stock chance is 2% per point the boss's
 --               weapon skill (level x 5) beats the tank's defence, minus
---               15%, from 4 levels above the tank. Basic (patch B031)
---               starts it at 8 levels above, at 1/5 of the stock chance,
---               ramping to the full chance at 12 (--crushing stock for the
---               stock rule, --crushing none for no crushing blows at all). Defence above the tank's level cap (300 at 60)
---               counts for nothing (Unit::RollMeleeOutcomeAgainst), so a
---               level-60 tank cannot gear it down. Blocks come before
+--               15%, from 4 levels above the tank (--crushing stock).
+--               Basic has none since 2026-10-25 (patch B031, --crushing
+--               basic, the default); from 2026-09-27 to then it started
+--               at 8 levels above, at 1/5 of the stock chance, full at 12
+--               (--crushing late). Defence above the tank's level cap (300
+--               at 60) counts for nothing against crushing
+--               (Unit::RollMeleeOutcomeAgainst). Blocks come before
 --               crushes in the table and are not modelled (a shield would
 --               lower this).
+--   crits     = x2 damage, at 5% plus 0.04% per point the boss's weapon
+--               skill beats the tank's defence (less below it): here all
+--               of the tank's defence counts, gear above the cap included
+--               (Unit::GetUnitCriticalChanceAgainst), so defence buys crits
+--               away, at 25 defence a percent. Resilience, which also
+--               lowers it, is not modelled.
 --   world bosses (the boss flag in their type flags) fight as 3 levels
 --               above their target for crushing and hit chances
 --               (Creature::getLevelForTarget, WorldBossLevelDiff = 3), so a
@@ -49,11 +56,12 @@
 --   --armour N     (default 10000)
 --   --avoid F      share of swings missed, dodged or parried (default 0.25)
 --   --database D   (default acore_world_basic)
---   --crushing R   basic (default, patch B031), stock or none
+--   --crushing R   basic (default, patch B031: none), late or stock
+--   --defence N    the tank's defence skill (default 300, the cap at 60)
 --------------------------------------------------------------------------------
 
 local DIR = "/mnt/kaun/wow-chat-2026"
-local O   = { divisor = 100, health = 4509, stamina = 200, spirit = 145, armour = 10000, avoid = 0.25, database = "acore_world_basic", crushing = "basic" }
+local O   = { divisor = 100, health = 4509, stamina = 200, spirit = 145, armour = 10000, avoid = 0.25, database = "acore_world_basic", crushing = "basic", defence = 300 }
 do
     local i = 1
     if arg[1] and not arg[1]:match("^%-%-") then DIR = arg[1]; i = 2 end
@@ -66,8 +74,8 @@ do
         i = i + 2
     end
 end
-if O.crushing ~= "basic" and O.crushing ~= "stock" and O.crushing ~= "none" then io.stderr:write("tank-damage-taken: --crushing is basic, stock or none\n"); os.exit(1) end
-local DEFENCE    = 300                           -- a level-60 tank's defence cap: more counts for nothing
+if O.crushing ~= "basic" and O.crushing ~= "stock" and O.crushing ~= "late" then io.stderr:write("tank-damage-taken: --crushing is basic, late or stock\n"); os.exit(1) end
+local DEFENCE    = math.min(O.defence, 300)      -- against crushing, defence past the level-60 cap counts for nothing
 local TANK_LEVEL = 60
 local BOSS_DIFF  = 3                             -- WorldBossLevelDiff in worldserver.conf
 local MYSQL   = DIR .. "/mysql/installed-files/bin/mysql -h127.0.0.1 -P3307 -uritz -pmenardi -N -B " .. O.database
@@ -108,10 +116,10 @@ end
 
 local heal_hit = O.spirit * O.stamina / O.divisor / 5 * 0.5   -- health per second while being hit
 print(string.format("tank: %d health, %d armour, %d%% of swings avoided, defence %d; spirit build %d stamina / %d spirit at divisor %d heals %.1f per second while hit (%.1f standing)",
-    O.health, O.armour, O.avoid * 100, DEFENCE, O.stamina, O.spirit, O.divisor, heal_hit, heal_hit * 2))
+    O.health, O.armour, O.avoid * 100, O.defence, O.stamina, O.spirit, O.divisor, heal_hit, heal_hit * 2))
 for _, g in ipairs(GROUPS) do
     print("\n" .. g[1])
-    print(string.format("%-28s %5s %7s %6s %7s %7s %6s %6s %8s %7s", "boss", "level", "armour", "crush", "avg hit", "big hit", "dps", "dead", "big/hp", "spirit"))
+    print(string.format("%-28s %5s %7s %6s %5s %7s %7s %6s %6s %8s %7s", "boss", "level", "armour", "crush", "crit", "avg hit", "big hit", "dps", "dead", "big/hp", "spirit"))
     local rows = query(g[2])
     if #rows == 0 then io.stderr:write("tank-damage-taken: no bosses found for " .. g[1] .. "\n"); os.exit(1) end
     for _, m in ipairs(rows) do
@@ -123,18 +131,21 @@ for _, g in ipairs(GROUPS) do
         local land  = 1 - O.avoid
         local lgap  = fights_as - TANK_LEVEL
         local skill = fights_as * 5 - DEFENCE
-        -- crushing: the stock chance is 2% a skill point minus 15%, from 4 levels up and
-        -- 15 skill up; basic opens it at 8 levels up at 1/5, full at 12; never more
-        -- than the swings that land
+        -- crushing: basic has none; stock is 2% a skill point minus 15%, from 4 levels up
+        -- and 15 skill up; "late" opened it at 8 levels up at 1/5, full at 12; never
+        -- more than the swings that land
         local crush = 0
-        if O.crushing ~= "none" and skill >= 15 and lgap >= (O.crushing == "basic" and 8 or 4) then
+        if O.crushing ~= "basic" and skill >= 15 and lgap >= (O.crushing == "late" and 8 or 4) then
             crush = (skill * 2 - 15) / 100
-            if O.crushing == "basic" and lgap < 12 then crush = crush * (lgap - 7) / 5 end
+            if O.crushing == "late" and lgap < 12 then crush = crush * (lgap - 7) / 5 end
             crush = math.min(land, crush)
         end
-        local dps   = avg * (1 - dr) * ((land - crush) + 1.5 * crush) / att
-        local bigh  = big * (1 - dr) * (crush > 0 and 1.5 or 1)
-        print(string.format("%-28s %5d %6.1f%% %5.0f%% %7.0f %7.0f %6.0f %5.1fs %7.0f%% %6.1f%%",
-            m[1]:sub(1, 28), lvl, dr * 100, crush * 100, avg * (1 - dr), bigh, dps, O.health / dps, bigh / O.health * 100, heal_hit / dps * 100))
+        -- crits: 5% plus 0.04% per skill point over the tank's whole defence (never
+        -- below 0), out of the landed swings left after crushing
+        local crit  = math.max(0, math.min(land - crush, (5 + (fights_as * 5 - O.defence) * 0.04) / 100))
+        local dps   = avg * (1 - dr) * ((land - crush - crit) + 1.5 * crush + 2 * crit) / att
+        local bigh  = big * (1 - dr) * ((crit > 0 and 2) or (crush > 0 and 1.5) or 1)
+        print(string.format("%-28s %5d %6.1f%% %5.0f%% %4.1f%% %7.0f %7.0f %6.0f %5.1fs %7.0f%% %6.1f%%",
+            m[1]:sub(1, 28), lvl, dr * 100, crush * 100, crit * 100, avg * (1 - dr), bigh, dps, O.health / dps, bigh / O.health * 100, heal_hit / dps * 100))
     end
 end

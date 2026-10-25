@@ -643,6 +643,18 @@ nothing should be "always right". At 100 the best split moves with the
 fight's length and with whether the boss is hitting you. Takes effect at
 basic's next compile.
 
+## 2026-10-25 — no crushing blows (basic)
+
+| Knob | Value | Where |
+|---|---|---|
+| Crushing blows (150% hits from creatures well above their target) | none (was: from 8 levels above, full at 12) | `patches/B031-crushing-blows-late.sh` |
+
+Why: a level-60 tank's defence stops counting against crushing at 300, so
+from level 71 every landed swing of Outland's raised bosses crushed, and
+no gear could answer it (`scripts/tank-damage-taken`, issue 155f1). The
+owner: "let's remove them. There's already crits". Their difficulty goes
+into per-creature multipliers (155i). Takes effect at basic's next compile.
+
 ## How to add an entry
 
 ```markdown

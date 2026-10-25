@@ -2,7 +2,15 @@
 
 ## Overview
 
-Crushing blows start 4 levels later than stock and ramp in over 4 more
+**Since 2026-10-25: no crushing blows at all on basic.** The owner, shown
+that a level-60 tank cannot raise its defence past 300 against them (issue
+155f1): "let's remove them. There's already crits". The patch makes the
+crushing branch's opening condition in `Unit::RollMeleeOutcomeAgainst`
+always false (`if (false && ...`), leaving the rest of the branch as it
+was, never entered; the revert puts the one line back. The file keeps its
+name for its history. What follows is the rule it replaced.
+
+From 2026-09-27 to 2026-10-25: crushing blows started 4 levels later than stock and ramp in over 4 more
 levels: none below a level gap of 8, part of the stock chance from 8 to 11,
 the full stock chance from 12 up. For creatures of every level. Issue 803,
 basic profile; kept apart from B005 (the accuracy cap) so a profile can take

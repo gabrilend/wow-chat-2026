@@ -4,9 +4,9 @@
 # profiles:   basic
 # priority:   410
 # kind:       source
-# about:      Crushing blows start 4 levels later and ramp in over 4 more
+# about:      No crushing blows on basic (was: start 4 levels later)
 # ==== end of header ====
-# B031 - Crushing blows start 4 levels later and ramp in over 4 more
+# B031 - No crushing blows on basic (named for its earlier rule: start late)
 # Issue 803 (extension 2026-09-24, retargeted 2026-09-27), basic profile.
 #
 # For a general audience: in the stock server, a creature 4 or more levels
@@ -23,80 +23,66 @@
 #               crushing from level 64 up; stock below.)
 #   2026-09-27  Ritz: "can we re-enable the crushing blow penalty at +4 the
 #               level it normally is? And have it scale up to it's nominal
-#               percentage with another 4 levels." (This version.)
+#               percentage with another 4 levels." (none under 8 levels up,
+#               1/5 of the stock chance at 8, full at 12.)
+#   2026-10-25  The owner, shown that a level-60 tank's defence stops
+#               counting at 300, so from level 71 every swing that lands
+#               crushes and no gear answers it (issue 155f1,
+#               scripts/tank-damage-taken): "let's remove them. There's
+#               already crits." (This version.)
 #
-# The rule now, for creatures of every level:
-#   level gap (creature over target) under 8   no crushing blows
-#   gap 8 to 11                                the stock chance x (gap - 7) / 5
-#                                              (1/5 at 8, 2/5 at 9, 3/5 at 10,
-#                                              4/5 at 11)
-#   gap 12 and up                              the stock chance
-# "+4 the level it normally is": the stock start is 4, so crushing starts
-# at 8. "scale up to it's nominal percentage with another 4 levels": full
-# strength at 12. The factor starts at 1/5 rather than 0 so that a creature
-# 8 levels up really can crush (a ramp from 0 at 8 would only start at 9).
-# A crushing blow still does 150% damage (stock, untouched).
-# docs/patches/crushing-blows-late.md has the table of chances.
+# The rule now: no creature ever lands a crushing blow on basic. The
+# difficulty they added is set per creature instead, through the damage
+# multipliers (issue 155i, rows by 155f1).
 #
 # Kept separate from B005 (the accuracy cap) on purpose, so another profile
 # can take one without the other: "they can pull from our patchlist if they
 # want. Let's keep them separate so they can be separately applied."
 #
 # Where: Unit::RollMeleeOutcomeAgainst in Unit.cpp, the crushing branch:
-#   1. its opening condition: "+ 4" levels becomes "+ 8";
-#   2. its chance line (2% per point of weapon skill over defense, minus
-#      15%, in hundredths of a percent) gains the ramp factor below a gap
-#      of 12. Players never crush (the branch already excludes them).
+# its opening condition is made always false, so the branch (and its
+# chance line, left stock) is never entered. Players never crushed anyway
+# (the branch already excluded them).
 #
-# Mechanics: each of the two lines is replaced inside ">>> B031 ... BEGIN" /
+# Mechanics: the condition line is replaced inside ">>> B031 ... BEGIN" /
 # "<<< B031 ... END" marker comments, with the original kept as
-# "//B031-ORIG:<line>"; the revert puts exactly those lines back. Each
-# anchor must occur exactly once or the patch stops with an error, having
-# changed nothing.
+# "//B031-ORIG:<line>"; the revert puts exactly that line back. The anchor
+# must occur exactly once or the patch stops with an error, having changed
+# nothing.
 # Parallelizable: Yes (unique file)
 
 B031_BEGIN='// >>> B031-crush-late BEGIN'
 B031_END='// <<< B031-crush-late END'
 B031_ORIG_COND='    if (getLevelForTarget(victim) >= victim->getLevelForTarget(this) + 4 &&'
-B031_ORIG_CHANCE='            tmp = tmp * 200 - 1500;'
 
 # {{{ patch_B031_crushing_blows_late
 patch_B031_crushing_blows_late() {
     local FILE="${AC_CODE_DIR}/src/server/game/Entities/Unit/Unit.cpp"
     [[ -f "${FILE}" ]] || { echo "  [B031] ERROR: ${FILE} missing"; return 1; }
     grep -qF "B031-crush-late" "${FILE}" && return 0          # witness guard
-    local count_cond count_chance
+    local count_cond
     count_cond=$(grep -cxF -- "${B031_ORIG_COND}" "${FILE}")
-    count_chance=$(grep -cxF -- "${B031_ORIG_CHANCE}" "${FILE}")
-    if [[ "${count_cond}" -ne 1 || "${count_chance}" -ne 1 ]]; then
-        echo "  [B031] ERROR: expected exactly one crushing-blow condition line and one chance line in ${FILE};"
-        echo "         found ${count_cond} condition line(s) and ${count_chance} chance line(s). Nothing was changed."
+    if [[ "${count_cond}" -ne 1 ]]; then
+        echo "  [B031] ERROR: expected exactly one crushing-blow condition line in ${FILE};"
+        echo "         found ${count_cond}. Nothing was changed."
         echo "         to debug: has upstream reworded Unit::RollMeleeOutcomeAgainst's crushing branch? Compare the"
-        echo "         two anchors at the top of this file with the branch under \"mobs can score crushing blows\"."
+        echo "         anchor at the top of this file with the branch under \"mobs can score crushing blows\"."
         return 1
     fi
-    COND="${B031_ORIG_COND}" CHANCE="${B031_ORIG_CHANCE}" BEGIN_M="${B031_BEGIN}" END_M="${B031_END}" awk '
+    COND="${B031_ORIG_COND}" BEGIN_M="${B031_BEGIN}" END_M="${B031_END}" awk '
         $0 == ENVIRON["COND"] && !cond_done {
             print "    " ENVIRON["BEGIN_M"]
             print "//B031-ORIG:" $0
-            print "    // Everland Ghostsong (issue 803): crushing blows start at 8 levels above the target, not 4"
-            print "    if (getLevelForTarget(victim) >= victim->getLevelForTarget(this) + 8 &&"
+            print "    // Everland Ghostsong (issues 803, 155f1): no crushing blows on basic. A level-60 tank"
+            print "    // cannot raise its defence past 300, so nothing would answer them; per-creature"
+            print "    // damage multipliers (155i) carry that difficulty instead. The rest of the branch"
+            print "    // is left as it was, never entered."
+            print "    if (false && getLevelForTarget(victim) >= victim->getLevelForTarget(this) + 4 &&"
             print "    " ENVIRON["END_M"]
             cond_done = 1; next
         }
-        $0 == ENVIRON["CHANCE"] && !chance_done {
-            print "            " ENVIRON["BEGIN_M"]
-            print "//B031-ORIG:" $0
-            print "            // Everland Ghostsong (issue 803): the stock chance, ramped in over gaps 8-11:"
-            print "            // x (gap - 7) / 5, so 1/5 at 8 up to 4/5 at 11; full from 12"
-            print "            tmp = tmp * 200 - 1500;"
-            print "            if (int32 b031Gap = int32(getLevelForTarget(victim)) - int32(victim->getLevelForTarget(this)); b031Gap < 12)"
-            print "                tmp = tmp * (b031Gap - 7) / 5;"
-            print "            " ENVIRON["END_M"]
-            chance_done = 1; next
-        }
         { print }' "${FILE}" > "${FILE}.b031" && mv "${FILE}.b031" "${FILE}"
-    echo "  [B031] Crushing blows from 8 levels above, ramping to stock at 12"
+    echo "  [B031] No crushing blows"
 }
 # }}}
 
@@ -116,5 +102,5 @@ unpatch_B031_crushing_blows_late() {
 }
 # }}}
 # ==== footer of B031 ====
-# lines:      120
+# lines:      106
 # ==== end of footer ====

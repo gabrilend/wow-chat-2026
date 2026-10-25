@@ -31,6 +31,32 @@ The owner, 2026-10-25, after the boss numbers in 167:
 > maybe we should expand the crushing blow limit? Or eliminate crushing
 > blows entirely?
 
+On crushing blows and crits, and on healing (2026-10-25):
+
+> let's remove them. There's already crits, which... we don't want to be
+> able to one-shot a tank either. Hmmm. But, I remember some really hard
+> WotLK bosses (which our system is based off of) which basically required
+> me to constantly cast Holy Light on the tank (Beacon to the off-tank
+> usually) and if I ever stopped then the tank would go down almost
+> immediately. Not ideal! I didn't like the way that WotLK felt in that
+> specific respect. I wanted to be able to beacon the main-tank and flash
+> of light others, with a spellpower/haste build, but it didn't really
+> work out that way. Increasing flexibility is good, and because of the
+> way that Blizzard split in two post WotLK, their capacity for changing
+> the game changed dramatically, as they suddenly had two teams working on
+> alternating expansions, which meant they always had to adjust their
+> gameplay to someone else's design. This sorta had the same effect as the
+> Star Wars sequels, where the first and last had one director, and the
+> middle had another for some reason? And while they perhaps were decent
+> movies on their own, the fact that they had to be one cohesive story
+> caused the wildly different visions to clash, and made the sequel
+> trilogy feel... disjointed and confused about it's narrative. Not ideal!
+
+> For a dungeon boss, that sounds about right. Like if I let the tank go
+> for ~10-15 seconds without any heals and then she dies, that makes
+> perfect sense to me. Raid bosses require raid gear, and that might
+> change the dynamic a bit.
+
 And the principle, on spirit and stamina: "this principle, that nothing is
 "always right", is what we're designing for." From 155f's origin
 (2026-09-23): "The dungeons are supposed to be as hard as raids or
@@ -46,17 +72,23 @@ Nothing is tuned yet. What stands:
 - **Outland's dungeon creatures are raised** to 66-78 (E024, installed),
   each dungeon by its own step; stats follow their new level from the
   server's per-level table.
-- **Crushing blows start late** (B031): none until a creature is 8 levels
-  above its target, 1/5 of the stock chance at 8, full at 12. Defence
-  above 300 counts for nothing at level 60, so from level 71 every swing
-  that lands on a level-60 tank crushes (x1.5).
+- **No crushing blows** (B031, since 2026-10-25, not yet compiled; before,
+  from level 71 every landed swing on a level-60 tank crushed, x1.5, and
+  defence past 300 could not stop it).
+- **Crits stay**: double damage, at 5% plus 0.04% per point a boss's weapon
+  skill (level x 5) beats the tank's defence. Against crits all of the
+  tank's defence counts, gear past the cap included, so 25 defence buys
+  away a percent (a level-63 boss's crits are gone at 440 defence, a
+  level-78's at 515). At defence 300, a maximum roll that crits is the
+  biggest single hit: 95% of the tank's health for Nefarian, 110% for
+  Exarch Maladaar (a one-shot, if rarely).
 - **The multiplier table** (`basic_creature_multipliers`, 155i: melee,
   spell, heal and health per creature or per map) exists and is empty.
 - **Measured melee**, `scripts/tank-damage-taken` (melee only, against a
-  4509-health, 10,000-armour level-60 tank, 25% avoided): the level-60
-  raid bosses' biggest hits are 25-48% of the tank's health; the 45
-  Outland dungeon bosses' 11-82% (Exarch Maladaar the worst); no dungeon
-  boss one-shots the tank. Doom Lord Kazzak's hits are 315% of it (his
+  4509-health, 10,000-armour, defence-300 level-60 tank, 25% avoided, no
+  crushing, crits counted): the level-60 raid bosses' biggest hits are
+  50-95% of the tank's health; the Outland dungeon bosses' up to 110%
+  (Maladaar); an unhealed tank lasts about 5 to 24 seconds. Doom Lord Kazzak's hits are 315% of it (his
   damage multiplier 65 and two-second swing; world bosses fight as 3
   levels above their target, so he never crushes). Lord Kazzak, the
   Blasted Lands entry (97%), is not spawned anywhere and has no script: a
@@ -78,7 +110,14 @@ Nothing is tuned yet. What stands:
 - **Outland's dungeons become doable at 60, and hard**: as hard as a
   raid, by 155f's origin, but no boss deals in one hit or one breath more
   than a geared tank can take, and the fight is long enough for healing
-  and spirit to matter.
+  and spirit to matter. **Dungeon target** (the owner, 2026-10-25): an
+  unhealed tank dies in about 10 to 15 seconds; the biggest single hit,
+  crit included, below the tank's health. Raid bosses are measured
+  against raid gear, which may change the numbers.
+- **A healer is never chained to one target.** The owner did not like
+  WotLK fights where stopping heals on the tank for a moment meant a dead
+  tank: there should be room to heal a main tank and help others, with
+  more than one healing build working. The 10-15 seconds is that room.
 - **Spells count as much as melee.** A boss's damage is its melee plus
   its spells at their cast rate; both are tuned through the multiplier
   table's melee and spell columns.
@@ -114,13 +153,12 @@ Nothing is tuned yet. What stands:
 
 ## Open Questions
 
-1. **Crushing blows** for level-60 tanks against Outland's level 71-78
-   bosses: keep basic's rule (every landed swing crushes from 71: +50% to
-   their melee), push the start further up, or remove crushing blows
-   entirely (then the multipliers carry all the difficulty)?
-2. **"Doable", in numbers:** what share of a geared tank's health may a
-   boss's biggest hit take (today up to 82% from melee alone), and how
-   long should an unhealed tank last (today 4 to 26 seconds)?
+1. (Answered 2026-10-25: removed) **Crushing blows**: "let's remove
+   them." B031 now removes them on basic.
+2. (Answered 2026-10-25: 10-15 seconds) **"Doable", in numbers**: for a
+   dungeon boss, an unhealed tank lasting about 10 to 15 seconds "makes
+   perfect sense"; no one-shots, crits included ("we don't want to be able
+   to one-shot a tank either"); raid bosses against raid gear.
 3. **The baseline tank and healer:** which gear do we measure against for
    Outland's dungeons (Azeroth's best blues and epics, or the Outland
    greens and blues scaled to 60 by E031)?
@@ -130,3 +168,7 @@ Nothing is tuned yet. What stands:
 5. **Azeroth and spirit:** if spirit's healing makes some vanilla fights
    easier, should those bosses be raised to make up for it, or is the
    easier fight acceptable as the price of spirit being worth having?
+6. **Crits and defence:** keep crits as they are, so a tank who stacks
+   defence (25 points a percent) can push them to nothing, a real choice
+   against stamina and spirit; or cap a boss's crit so even an ungeared
+   tank is never one-shot by a crit?

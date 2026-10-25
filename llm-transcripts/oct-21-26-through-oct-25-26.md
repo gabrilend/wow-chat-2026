@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-24 13:07:53
+Generated on: 2026-10-25 13:54:25
 Models: claude-opus-5-5
 
 ## Contents
@@ -61,6 +61,10 @@ Models: claude-opus-5-5
     your answers: the custom client issues are moved and committed, and box
     select is now that project's issue 814. Next, I need your answer on whether
     tanks stacking both spirit and stamina would never go down.
+15. 2026-10-24 13:10, after Request 49 - We're tuning how much health spirit
+    heals, so it matters in fights and for non-tanks. The boss damage numbers
+    are done and committed. Next is your call: put the spirit divisor back to
+    100 or keep 200?
 
 --------------------------------------------------------------------------------
 
@@ -5478,6 +5482,128 @@ script is committed.
 non-tanks, divisor 100 fits better. The cost is the faster refill out of combat:
 about a minute standing, which is still twice as long as eating. Should I put
 B049 back to 100?
+
+--------------------------------------------------------------------------------
+
+### User Request 50
+
+<pasted_content id="583a">
+├────────────────────────────────┼───────┼───────────────────────────┼───────────────────┼─────────────────────┤
+  │ Lord Kazzak (Blasted Lands) │ 73 │ 4375 (97%) │ 3496 │ 1.3 s │
+  ├────────────────────────────────┼───────┼───────────────────────────┼───────────────────┼─────────────────────┤
+  │ Doom Lord Kazzak (Hellfire) │ 73 │ 14218 (315%) │ 4544 │ 1.0 s │
+  ├────────────────────────────────┼───────┼───────────────────────────┼───────────────────┼─────────────────────┤
+</pasted_content id="583a">
+
+
+the disparity between these two bosses surprises me. They're the same level, yet
+one does more than 3x the damage of the other.
+
+> - Kael'thas: his melee is mild. His danger is his spells (Pyroblast, the
+> phoenix), which live in his script and aren't in these numbers.
+
+we are adjusting the spell values too, so we should consider them for these
+balancing purposes.
+
+  - The reason it isn't worse is basic's crushing-blow rule: none until a boss
+    is 8 levels above the tank, full strength at 12. From level 71 on, every
+    swing that lands is a crushing
+>     blow (×1.5). Defence above 300 does nothing at level 60, so a tank can't gear against it.
+
+maybe we should expand the crushing blow limit? Or eliminate crushing blows
+entirely?
+
+>   At divisor 100 there is no build that's always right.
+
+this principle, that nothing is "always right", is what we're designing for.
+
+  Should I put B049 back to 100?
+
+yes I think so. This is... a separate issue, but can we work on balancing the
+level 60+ fights now? We want to make sure that with the stamina/spirit changes,
+that the Azeroth fights remain relatively the same, and the Outland fights
+become doable.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 50
+
+> Lord Kazzak (Blasted Lands) isn't spawned anywhere and has no script; he's a
+> leftover row. Now looking for how basic adjusts creature spell damage.
+
+> Crushing blows at level 71+ add 50% to a boss's melee (Maladaar goes from 82%
+> to 55% of the tank's health per big hit). Committing the divisor change, then
+> setting up the balancing issue.
+
+*[commit] 517c7a30a in wow-chat-2026 - Put spirit's health healing back to full strength, so it counts in fights (issue 167)*
+
+> Now the balancing issue. Checking for existing ones and whether the server's
+> spell data file is readable.
+
+*[commit] 75273f1bd in wow-chat-2026 - Plan the balancing of level-60 fights: Azeroth's raids kept as they are, Outland's dungeons made doable (issue 155f1)*
+
+Spirit's divisor is back to 100, and the balancing work now has its own issue
+(155f1, under the Outland dungeons). Both are committed, and a test run of
+basic's source patches on a copy in RAM applied and reverted cleanly.
+
+**Why the two Kazzaks differ.** Their damage comes from three numbers each:
+
+| | Damage multiplier | Swing time | Average hit before armour | Damage per second |
+|---|---:|---:|---:|---:|
+| Lord Kazzak | 50 | 0.8 s | about 6,850 | about 8,560 |
+| Doom Lord Kazzak | 65 | 2.0 s | about 22,250 | about 11,130 |
+
+The server works out each swing's damage from damage per second × swing time.
+Lord Kazzak swings two and a half times as often, so each hit is smaller, and
+per second he's only about 25% weaker. Lord Kazzak doesn't matter anyway: he
+isn't spawned anywhere and has no fight script. He's a leftover row in the
+database, and Doom Lord Kazzak is the only one in the game.
+
+**Crushing blows.** A crushing blow is a hit for 150% damage that a monster can
+land when it's well above its target's level. At level 60, a tank's defence
+can't go past 300; anything more counts for nothing. So against Outland bosses
+of level 71 and up, every swing that lands is a crushing blow, and nothing the
+tank wears changes that. That makes crushing a flat +50% to those bosses' melee
+that no gear choice can answer. It's the opposite of what you're designing for.
+Removing them brings Exarch Maladaar's biggest hit from 82% to 55% of the tank's
+health, and his damage per second from 1187 to 791.
+
+My suggestion, best first:
+1. **Remove crushing blows on basic.** Set all the difficulty with the
+   per-creature multipliers instead. They do the same job, but they're visible
+   and tuned per boss.
+2. Keep crushing blows, but let defence above 300 count against them, so there's
+   a gear choice that answers them.
+3. Push the start further up, for example to 12 levels instead of 8. This only
+   delays the problem: the level 74–78 bosses would still crush on every
+   landed swing.
+
+**Spells.** The measuring can include them. The server reads the game's spell
+file (`data-files/dbc/Spell.dbc`), which holds each spell's damage. Each boss's
+fight script says which spells it casts and how often. Adding up the two gives a
+boss's spell damage per second next to its melee. That's the first step in the
+new issue. For the tuning side, the spell column of the dungeon multiplier table
+(from the completed multipliers issue, 155i) scales spell damage per creature,
+and it's still empty.
+
+**The new issue's plan:**
+1. Measure spells.
+2. Pick a baseline level-60 tank and healer.
+3. Set targets in numbers.
+4. Check Azeroth's raids with spirit's healing on and off.
+5. Generate the multiplier rows with a tool.
+6. Playtest.
+
+Two of its five open questions decide the targets, so here they are:
+
+1. **Crushing blows:** remove them, let defence count, or push the start up?
+2. **What "doable" means in numbers.** Today a boss's biggest melee hit is up to
+   82% of a geared tank's health, and an unhealed tank lasts 4 to 26 seconds.
+   What should the ceiling be for one hit, and roughly how long should a tank
+   last if the healer stops?
+
+Unless you'd rather I wait for the answers, I'll start on measuring spells next,
+since it doesn't depend on either one.
 
 --------------------------------------------------------------------------------
 
