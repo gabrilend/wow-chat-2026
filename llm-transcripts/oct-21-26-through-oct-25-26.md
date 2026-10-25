@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-25 15:31:11
+Generated on: 2026-10-25 16:08:01
 Models: claude-opus-5-5
 
 ## Contents
@@ -69,6 +69,10 @@ Models: claude-opus-5-5
     Azeroth stays about the same and Outland becomes doable; crushing blows are
     gone and spirit's divisor is back to 100. Next, you decide whether a crit
     may still one-shot a tank with no extra defence.
+17. 2026-10-25 15:34, after Request 53 - We're balancing basic's level-60 fights
+    around the new spirit and stamina rules, and the two class-tool issues are
+    now written. Next, I need your answers: reset a buddy in place or make a
+    fresh one, and which talent shape picks a player's gear.
 
 --------------------------------------------------------------------------------
 
@@ -6036,6 +6040,104 @@ Open questions, the first from each issue:
 2. **Player class change:** a player's talents are reset by the class change, so
    which talent shape should pick their gear set? The class's even spread of
    points, or one the operator names on the command line?
+
+--------------------------------------------------------------------------------
+
+### User Request 54
+
+<pasted_content id="583a">
+> It's worse than a crit. His plain top-roll hit is 210% of a Naxxramas-geared
+> tank's health (14,000). A crit would be 419%, though at 408 defence he only
+> crits 1.3% of the time. He's
+> built for a level-70 raid: damage multiplier 65, level 73. To fit a level-60
+> raid he needs his own melee multiplier, roughly 0.2. That makes his top hit
+> about 42% of the tank's
+>   health and his crit about 84%, and 32 more defence ends his crits.
+</pasted_content id="583a">
+
+
+that seems too easy. I want him to be nearly impossible to defeat. But, not
+impossible.
+
+> 1. Buddy reset: change the buddy's class in place, or delete it and make a
+> fresh one with the same name, gender and race? In place keeps its history and
+> clan rank, but the class
+>      change has to happen while the server is stopped or at the next start. A fresh one is simpler, but loses its history.
+
+we can replace it's history. The way that it functions behind the scenes
+shouldn't be relevant to the player. How do we handle buddy-bots who are
+"hidden" or "removed" when the player is de-levelled? Can we do something
+similar? How much of the machinery can we re-use?
+
+> 2. Player class change: a player's talents are reset by the class change, so
+> which talent shape should pick their gear set? The class's even spread of
+> points, or one the operator
+>      names on the command line?
+
+Okay let's pick based on a cli flag. If none is applied, then the even spread of
+points.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 54
+
+> Checking how buddies above a de-levelled owner's level are handled (buddies by
+> stage, 617a6).
+
+*[commit] 6d053caaa in wow-chat-2026 - Record three answers: a reset buddy is made fresh from existing machinery, a class change's gear follows a command-line talent shape, and Doom Lord Kazzak stays nearly impossible (issues 617a7, 197, 155f1)*
+
+All three answers are recorded in their issues and committed.
+
+**Kazzak.** Here's a proposal for "nearly impossible, but not impossible". It's
+based on a tank in Naxxramas-40-level gear, the best tier below his loot. It's
+melee only; his spells (his mark that drains mana then explodes, and the rest)
+come on top.
+
+| Melee multiplier | Top hit, no crit | Crit | Damage per second | Unhealed tank lasts |
+|---:|---:|---:|---:|---:|
+| 0.2 (my first suggestion) | 42% of health | 84% | about 760 | about 9 s |
+| **0.4 (proposed)** | **84%** | **168%, kills** | **about 1,500** | **about 4.4 s** |
+| 0.5 | 105%, kills | 210% | about 1,900 | about 3.5 s |
+
+At 0.4, three things have to go right:
+- **Crits have to be gone.** His tank needs 440 defence, 32 more than the
+  Naxxramas tier gives, because a single crit kills.
+- **Heals can't stop.** The tank dies in about 4 seconds without them, against
+  10–15 seconds in a dungeon.
+- **Everything else has to hold.** One unlucky top roll on top of a missed heal
+  ends the attempt.
+
+At 0.5, his ordinary top roll kills even a crit-proof tank, which is close to
+impossible. Is 0.4 the "nearly", or would you rather start at 0.45 and playtest?
+
+**Buddy reset.** The reset makes a fresh character with the same name, gender
+and race. Most of what it needs already exists in the "buddies by stage"
+machinery from de-levelling (617a6), which hides buddies above the owner's
+level:
+
+| What the reset needs | What already does it |
+|---|---|
+| Take the old buddy out of the world and keep it out | The roster's stage number: buddies above the owner's level leave and wait, and the login keeper only brings in buddies at stages 0 and 3 |
+| Offer the slot again | Sargobras's owed-slot conversation |
+| Make the new buddy | The buddy creation path, which already takes a fixed race |
+| Keep its belongings | The "Kept for you" mail from de-levelling, sent to the new buddy instead of to itself, so its old gear and money wait at a mailbox |
+| Remove the old character | The server's own character deletion, as when an owner is deleted |
+
+Only three things are new:
+- a "being reset" stage that the login keeper never brings in;
+- Sargobras filtering classes by the slot's race;
+- passing the name and gender to the creation path.
+
+**Player class change:** the gear set follows a talent shape given on the
+command line. With no option, it uses the class's even spread of points.
+
+Two questions are still open:
+1. **The buddy reset's gear:** should the old gear go to the new buddy by mail,
+   as after a de-levelling? I've written it that way, but you haven't said.
+2. **Gear of equal strength (186):** that issue's plan is to make copies of the
+   old gear at equal strength after a change. With class changes now using a
+   buddy's gear set and mailing the old gear, is 186 only for level changes now,
+   or should it be retired?
 
 --------------------------------------------------------------------------------
 

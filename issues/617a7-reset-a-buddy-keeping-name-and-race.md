@@ -106,7 +106,8 @@ roster, the buddy's gear, or Sargobras.
    class change applied while the server runs, or at the next start), or
    delete it and create a fresh one with the same name, gender and race
    (simpler, through the existing creation path, but loses its history)?
-2. **Its gear and money:** are the old gear and money mailed to the owner,
+2. (Answered 2026-10-25: "sure") Mailed to the new buddy, as after a
+   de-levelling ("Kept for you"). **Its gear and money:** are the old gear and money mailed to the owner,
    destroyed, or kept in the buddy's bags?
 3. **Who can run it:** only an administrator's script, or also the owner
    in game (a line in Sargobras's dialogue, "I want to choose again for

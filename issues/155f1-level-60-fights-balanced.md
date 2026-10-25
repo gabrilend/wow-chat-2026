@@ -207,7 +207,16 @@ Nothing is tuned yet. What stands:
    easy." Proposed next: about 0.4 (top hit 84% of that tank's health; a
    crit, 168%, kills, so his tank must be crit-proof at 440 defence, 32
    past the Naxxramas tier; about 1,500 damage a second, the tank dead in
-   about 4.4 seconds unhealed), before his spells are counted.
+   about 4.4 seconds unhealed), before his spells are counted. The owner
+   on that proposal: the 32 defence "gems should be enough to cover";
+   no break in healing, "good"; one unlucky top roll after a missed heal
+   ending the attempt, "that's how it was in heroic ICC". Worked out for
+   0.35 to 0.50 against a crit-proof Naxxramas-tier tank (6699 health,
+   10263 armour, 42% avoided): any two landed swings kill it at every
+   multiplier in that range, so a heal must land between every two of his
+   hits that connect; at 0.45 his top hit is 94% of its health, 1567
+   damage a second, dead in 4.3 seconds unhealed. Asked to see 0.45
+   before choosing.
    **Doom Lord Kazzak:** a level-60 raid boss (155j), so measured against
    a raid of forty or twenty-five, with his 14,000-per-hit melee brought
    down to what a raid tank survives?
