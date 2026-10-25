@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-25 13:54:25
+Generated on: 2026-10-25 14:09:19
 Models: claude-opus-5-5
 
 ## Contents
@@ -5604,6 +5604,115 @@ Two of its five open questions decide the targets, so here they are:
 
 Unless you'd rather I wait for the answers, I'll start on measuring spells next,
 since it doesn't depend on either one.
+
+--------------------------------------------------------------------------------
+
+### User Request 51
+
+> For the tuning side, the spell
+> column of the dungeon multiplier table (from the completed multipliers issue,
+> 155i) scales spell damage per creature, and it's still empty.
+
+why was the issue completed if it was incomplete? Did you think I wouldn't
+notice? ;)
+
+>   1. Crushing blows: remove them, let defence count, or push the start up?
+
+let's remove them. There's already crits, which... we don't want to be able to
+one-shot a tank either. Hmmm. But, I remember some really hard WotLK bosses
+(which our system is based off of) which basically required me to constantly
+cast Holy Light on the tank (Beacon to the off-tank usually) and if I ever
+stopped then the tank would go down almost immediately. Not ideal! I didn't like
+the way that WotLK felt in that specific respect. I wanted to be able to beacon
+the main-tank and flash of light others, with a spellpower/haste build, but it
+didn't really work out that way. Increasing flexibility is good, and because of
+the way that Blizzard split in two post WotLK, their capacity for changing the
+game changed dramatically, as they suddenly had two teams working on alternating
+expansions, which meant they always had to adjust their gameplay to someone
+else's design. This sorta had the same effect as the Star Wars sequels, where
+the first and last had one director, and the middle had another for some reason?
+And while they perhaps were decent movies on their own, the fact that they had
+to be one cohesive story caused the wildly different visions to clash, and made
+the sequel trilogy feel... disjointed and confused about it's narrative. Not
+ideal!
+
+> 2. What "doable" means in numbers. Today a boss's biggest melee hit is up to
+> 82% of a geared tank's health, and an unhealed tank lasts 4 to 26 seconds.
+> What should the ceiling be
+>      for one hit, and roughly how long should a tank last if the healer stops?
+
+For a dungeon boss, that sounds about right. Like if I let the tank go for
+~10-15 seconds without any heals and then she dies, that makes perfect sense to
+me. Raid bosses require raid gear, and that might change the dynamic a bit.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 51
+
+> Fair catch. Checking how the multipliers issue (155i) came to be marked
+> complete.
+
+> Now removing crushing blows: reading B031's patch body.
+
+> Crushing blows removed (patch round trip clean). Checking how often creatures
+> crit, to add crits to the measure.
+
+> Crits change the picture (Maladaar's biggest crit is 110% of the tank's
+> health), but gear can push crit chance down, which crushing never allowed.
+> Recording all of it.
+
+> Compiler check passed for the patched files, including the crushing change.
+> Committing.
+
+*[commit] ad032c628 in wow-chat-2026 - Remove crushing blows on basic, count crits in the boss measure, and reopen the multiplier table's issue (issues 803, 155f1, 155i)*
+
+**The multipliers issue:** no, I didn't think you wouldn't notice. I made a
+mistake. On 2026-10-23 I moved it to completed with the 39 issues that seemed to
+need only a look in game. The table and its code were built, but the rows that
+fill it never were. It's back in the open issues now, and it says why. Filling
+the rows is now the balancing issue's job (155f1), and the multipliers issue
+completes with it. Other issues in that batch of 39 may have the same problem. I
+can re-check all 39 for unfinished work if you'd like.
+
+**Crushing blows are removed.** The patch now turns off the part of the attack
+roll that produces them, so on basic no monster lands one. A test run of the
+patches on a copy in RAM applied and reverted cleanly, and the compiler accepts
+every file the patches change. It takes effect at your next compile. The balance
+log and the crushing issue (803) say why.
+
+**Crits are now in the numbers, and they make the biggest hits bigger.** A
+monster's crit does double damage. Its chance is 5%, plus 0.04% for each point
+the boss's weapon skill (5 per level) is above the tank's defence. When a crit
+lands on a top damage roll, it's the biggest single hit:
+
+| Boss | Crit chance at defence 300 | Biggest crit | Share of the tank's 4509 health |
+|---|---:|---:|---:|
+| Ragnaros | 5.6% | 2234 | 50% |
+| Nefarian | 5.6% | 4296 | 95% |
+| Exarch Maladaar | 7.2% | 4942 | 110%, a rare one-shot |
+| Commander Sarannis | 8.0% | 3952 | 88% |
+| Kael'thas (melee only) | 8.6% | 2231 | 49% |
+
+There's a difference from crushing blows here. Against crits, all of the tank's
+defence counts, including gear that pushes it past the level-60 cap of 300.
+Every 25 defence takes away 1% crit chance. A tank with 440 defence can't be
+crit by a level-63 boss, and against a level-78 boss it takes 515. Defence
+against crits is a real gear choice, where crushing blows had none.
+
+**Your dungeon target is recorded:** an unhealed tank dies in about 10 to 15
+seconds, and no single hit kills a tank outright, crits included. Raid bosses
+are measured against raid gear. Your point about the Holy Light and Beacon
+fights is in the issue in your own words, Star Wars included, as the reason for
+the 10–15 seconds: a healer should have room to help others instead of being
+stuck on the tank.
+
+**One question before I tune:** some tanks won't stack defence. Should a crit
+still be able to one-shot one of them? Two options:
+- **Leave crits as they are.** Defence is then a real choice against stamina and
+  spirit: a tank who skips it takes the risk of a rare one-shot.
+- **Make the target "no one-shot even at defence 300".** The generator then
+  lowers each boss until its biggest crit fits under an ungeared tank's health,
+  and defence only smooths out the damage.
 
 --------------------------------------------------------------------------------
 

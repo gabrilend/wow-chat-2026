@@ -93,6 +93,31 @@ Nothing is tuned yet. What stands:
   levels above their target, so he never crushes). Lord Kazzak, the
   Blasted Lands entry (97%), is not spawned anywhere and has no script: a
   leftover row.
+- **With a tank dressed for each boss's tier** (2026-10-25: the owner,
+  "Can you test with a similar gear level as the raid tier the boss is
+  from is likely to have?"; the tiers from `docs/HTML/basic-gear-ladder.html`,
+  the tank's set the best tanking items of that tier in the world database,
+  `scripts/tank-damage-taken --gear yes` lists them): tier tanks have
+  5,900 to 9,800 health and 390 to 490 defence, so most bosses can barely
+  crit them (0 to 5%). Biggest hits, a crit included: raid bosses 24-39%
+  of the tank's health, Outland dungeon bosses 7-77% (Exarch Maladaar,
+  then Quagmirran and Hellmaw near 57%); without a crit at most 38%. An
+  unhealed tank lasts 12-26 seconds in the raids and 11-66 seconds in the
+  dungeons, most dungeon bosses 18-33: from melee alone, nearly every
+  dungeon boss is easier than the owner's 10-15 seconds. Doom Lord Kazzak,
+  against a tank in Naxxramas-40-level gear, still hits for 209% of its
+  health. The defence that stops a boss's crits is its weapon skill + 125:
+  440 against level 63, 515 against level 78.
+- **Exarch Maladaar's damage is melee**, not a spell: his own damage
+  multiplier is 14, more than twice any other creature in Auchenai Crypts
+  (stock data), and E024 raised him from 67 to 71, which adds about 18% to
+  his base damage. His spells (Ribbon of Souls, Soul Scream's fear,
+  Stolen Soul) are not the big hits, so spell resistance would not help
+  against him.
+- **In basic, Outland greens out-tank vanilla raid gear**: the tier sets
+  for Blackwing Lair and Ahn'Qiraj take Outland world greens (their
+  required level lowered to 60, E031) in most slots over the raids' own
+  epics (the 155k ladder's doing; noted, not changed).
 - **Spells are not measured.** A boss's spells and their damage live in
   the game's spell data (`data-files/dbc/Spell.dbc`, the file the server
   reads) and in its script (C++ boss scripts under
@@ -155,7 +180,21 @@ Nothing is tuned yet. What stands:
 
 1. (Answered 2026-10-25: removed) **Crushing blows**: "let's remove
    them." B031 now removes them on basic.
-2. (Answered 2026-10-25: 10-15 seconds) **"Doable", in numbers**: for a
+2. (Answered 2026-10-25: 10-15 seconds; crits never one-shot a tank in
+   the tier's gear, and an ungeared tank should not survive) "no, but it's
+   okay if there's a minimum amount of defence they need to eliminate
+   crits. We should ensure that crits never kill a tank outright." "an
+   ungeared or improperly geared tank should not be able to survive a
+   boss fight. Tanks are the most important part of any raid for the
+   reason that they are the sole gate that the boss's damage must always
+   go through (aside from spells and other mechanics)." And the reason:
+   "my concern with the one-shots is that it'll require tanks to gear
+   almost exclusively for stamina, and not provide them the choice of
+   stamina / spirit that we're trying to create. Spirit should be the
+   right choice for fights where healer mana is important, and stamina
+   should be the choice for fights where tank gear avoidance is more
+   important." On Maladaar, if spells: "it's okay if tanks have to find
+   gear with spell resistances." **"Doable", in numbers**: for a
    dungeon boss, an unhealed tank lasting about 10 to 15 seconds "makes
    perfect sense"; no one-shots, crits included ("we don't want to be able
    to one-shot a tank either"); raid bosses against raid gear.
@@ -168,7 +207,11 @@ Nothing is tuned yet. What stands:
 5. **Azeroth and spirit:** if spirit's healing makes some vanilla fights
    easier, should those bosses be raised to make up for it, or is the
    easier fight acceptable as the price of spirit being worth having?
-6. **Crits and defence:** keep crits as they are, so a tank who stacks
-   defence (25 points a percent) can push them to nothing, a real choice
-   against stamina and spirit; or cap a boss's crit so even an ungeared
-   tank is never one-shot by a crit?
+6. (Answered 2026-10-25, with 2 above: keep crits; a minimum defence
+   that removes them is fine, and a tank in its tier's gear is never
+   one-shot by one) **Crits and defence.**
+7. **Dungeon bosses below the target:** from melee alone most Outland
+   dungeon bosses leave a tier-geared tank 18-33 seconds unhealed, against
+   the 10-15 wanted. Raise their melee to meet it, or wait for their
+   spells to be counted first (step 1), since spells will close part of
+   the gap?

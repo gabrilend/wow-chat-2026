@@ -1,18 +1,21 @@
 #!/usr/bin/env luajit
 --------------------------------------------------------------------------------
--- tank-damage-taken - how hard bosses' melee hits a tank, and how much of it
--- spirit heals back (issue 167).
+-- tank-damage-taken - how hard bosses' melee hits a tank geared for their
+-- tier, and how much of it spirit heals back (issues 167, 155f1).
 --
--- For a general audience: to choose how strong spirit's healing should be,
--- we need to know what it is up against. This reads each boss's numbers
--- from the world database (its level, its damage multiplier, its swing
--- time, and the server's damage table for its level and expansion) and
--- works out, with the server's own formulas, what its melee does to a
--- tank: the average and biggest hit after armour, the damage per second,
--- how long the tank lasts with no healing, and what spirit heals while
--- being hit (half rate) as a share of it. Spells are not counted (a
--- caster boss's danger is mostly spells, which live in its script), nor
--- are healers.
+-- For a general audience: to tune a fight we need to know what a boss
+-- does to the tank who would really be standing in front of it. This
+-- reads each boss's numbers from the world database (its level, damage
+-- multiplier, swing time, and the server's damage table for its level and
+-- expansion), dresses a level-60 warrior in the best tanking gear of that
+-- boss's tier (the tiers and their item levels come from the gear ladder
+-- page, docs/HTML/basic-gear-ladder.html; the items from the world
+-- database, their defence and dodge read from the game's spell file),
+-- and works out, with the server's own formulas, the boss's average and
+-- biggest hit after armour (a top roll that crits), its damage per
+-- second, how long the tank lasts unhealed, the defence that would stop
+-- the boss's crits, and what spirit heals while being hit. Spells are not
+-- counted yet (155f1's next step), nor blocks or healers.
 --
 -- The formulas, from the server's source:
 --   hit       = (weapon damage + attack power / 14) x damage multiplier
@@ -20,48 +23,57 @@
 --               for the creature's expansion, rolled between x1 and x1.5
 --               (Creature::CalculateMinMaxDamage, Creature::SelectLevel)
 --   armour    = armour / (armour + 467.5 x boss level - 22167.5), at most
---               75% (attackers above level 59)
---   crushing  = x1.5 damage. The stock chance is 2% per point the boss's
---               weapon skill (level x 5) beats the tank's defence, minus
---               15%, from 4 levels above the tank (--crushing stock).
---               Basic has none since 2026-10-25 (patch B031, --crushing
---               basic, the default); from 2026-09-27 to then it started
---               at 8 levels above, at 1/5 of the stock chance, full at 12
---               (--crushing late). Defence above the tank's level cap (300
---               at 60) counts for nothing against crushing
---               (Unit::RollMeleeOutcomeAgainst). Blocks come before
---               crushes in the table and are not modelled (a shield would
---               lower this).
+--               75% (attackers above level 59; Unit::CalcArmorReducedDamage)
+--   crushing  = x1.5 damage. Stock: 2% per point the boss's weapon skill
+--               (level x 5) beats the tank's defence, minus 15%, from 4
+--               levels up (--crushing stock); defence past the level-60
+--               cap of 300 counts for nothing against it. Basic has none
+--               since 2026-10-25 (patch B031, --crushing basic, the
+--               default); from 2026-09-27 it started at 8 levels up at 1/5
+--               of the stock chance, full at 12 (--crushing late).
 --   crits     = x2 damage, at 5% plus 0.04% per point the boss's weapon
---               skill beats the tank's defence (less below it): here all
---               of the tank's defence counts, gear above the cap included
---               (Unit::GetUnitCriticalChanceAgainst), so defence buys crits
---               away, at 25 defence a percent. Resilience, which also
---               lowers it, is not modelled.
+--               skill beats the tank's defence; here all of the tank's
+--               defence counts, gear past the cap included
+--               (Unit::GetUnitCriticalChanceAgainst), so the defence that
+--               stops a boss's crits is its weapon skill + 125. Resilience
+--               is not modelled.
 --   world bosses (the boss flag in their type flags) fight as 3 levels
---               above their target for crushing and hit chances
---               (Creature::getLevelForTarget, WorldBossLevelDiff = 3), so a
---               level-73 Kazzak crushes a level-60 tank as a level 63
---               would: never. Their damage and the armour formula still
---               use their real level.
+--               above their target for crushing, crits and hit chances
+--               (Creature::getLevelForTarget, WorldBossLevelDiff = 3);
+--               their damage and the armour formula use their real level.
 --   spirit    = spirit x stamina / DIVISOR health per 5 seconds, half for
 --               5 seconds after damage (patch B049)
 --
+-- The tank (a level-60 warrior, no talents counted): health 1689 + 20 +
+-- 10 x (stamina - 20), stamina 110 + gear; armour from gear + 2 x agility
+-- (80 + gear); defence 300 + defence rating / 1.5 (+ defence skill from
+-- equip effects); avoidance 20% + 0.12% per defence point past 300 +
+-- dodge rating / 12 + parry rating / 15 (percent) + agility / 20 x 0.05%,
+-- at most 60%. Per slot, the item with the best tanking score (stamina 1,
+-- defence rating 1, dodge 0.8, parry 0.7, agility 0.6, block rating 0.4,
+-- armour 0.05, strength 0.1) among those a level-60 warrior can wear
+-- (plate, shields, one-hand weapons) whose budget is within 12 epic item
+-- levels below the tier's middle (the ladder page's budget curves: green
+-- (ilvl - 4) / 2, blue (ilvl - 1.84) / 1.6, epic (ilvl - 1.3) / 1.3, each
+-- times 1.3 plus 1.3).
+--
 -- Usage: scripts/tank-damage-taken [PROJECT_DIR] [options]
---   --divisor N    spirit's divisor (B049; default 100)
---   --health N     the tank's health (default 4509: a level-60 warrior
---                  with 300 stamina)
---   --stamina N    (default 200)  --spirit N  (default 145): the spirit
---                  build healing is worked out for
---   --armour N     (default 10000)
---   --avoid F      share of swings missed, dodged or parried (default 0.25)
---   --database D   (default acore_world_basic)
---   --crushing R   basic (default, patch B031: none), late or stock
---   --defence N    the tank's defence skill (default 300, the cap at 60)
+--   --tiers yes|no  dress the tank for each boss's tier (default yes); no:
+--                   one tank for every boss, from the options below
+--   --health N      (default 4509: 300 stamina)  --armour N (default 10000)
+--   --defence N     (default 300)  --avoid F (default 0.25)
+--   --stamina N     (default 200)  --spirit N  (default 145): the spirit
+--                   build healing is worked out for (both modes)
+--   --divisor N     spirit's divisor (B049; default 100)
+--   --crushing R    basic (default, patch B031: none), late or stock
+--   --gear yes|no   also list each tier's tank set (default no)
+--   --database D    (default acore_world_basic)
 --------------------------------------------------------------------------------
 
 local DIR = "/mnt/kaun/wow-chat-2026"
-local O   = { divisor = 100, health = 4509, stamina = 200, spirit = 145, armour = 10000, avoid = 0.25, database = "acore_world_basic", crushing = "basic", defence = 300 }
+local O   = { tiers = "yes", health = 4509, armour = 10000, defence = 300, avoid = 0.25, stamina = 200, spirit = 145,
+              divisor = 100, crushing = "basic", gear = "no", database = "acore_world_basic" }
+local TEXT = { tiers = true, crushing = true, gear = true, database = true }
 do
     local i = 1
     if arg[1] and not arg[1]:match("^%-%-") then DIR = arg[1]; i = 2 end
@@ -70,42 +82,28 @@ do
         if not k or O[k] == nil or arg[i + 1] == nil then
             io.stderr:write("tank-damage-taken: unknown or incomplete option " .. arg[i] .. " (see the usage at the top)\n"); os.exit(1)
         end
-        O[k] = (k == "database" or k == "crushing") and arg[i + 1] or tonumber(arg[i + 1])
+        O[k] = TEXT[k] and arg[i + 1] or tonumber(arg[i + 1])
         i = i + 2
     end
 end
-if O.crushing ~= "basic" and O.crushing ~= "stock" and O.crushing ~= "late" then io.stderr:write("tank-damage-taken: --crushing is basic, late or stock\n"); os.exit(1) end
-local DEFENCE    = math.min(O.defence, 300)      -- against crushing, defence past the level-60 cap counts for nothing
+local CRUSH_RULES = { basic = true, late = true, stock = true }
+if not CRUSH_RULES[O.crushing] then io.stderr:write("tank-damage-taken: --crushing is basic, late or stock\n"); os.exit(1) end
 local TANK_LEVEL = 60
 local BOSS_DIFF  = 3                             -- WorldBossLevelDiff in worldserver.conf
-local MYSQL   = DIR .. "/mysql/installed-files/bin/mysql -h127.0.0.1 -P3307 -uritz -pmenardi -N -B " .. O.database
-
--- {{{ the bosses: groups of world database entries, or a dungeon's encounters
--- The vanilla raid bosses and world bosses are named; the Outland dungeon
--- bosses are every creature a dungeon's encounter list credits, spawned in
--- one of the sixteen dungeons basic opens at 60 (E024), at basic's levels.
-local GROUPS = {
-    { "Level-60 raid bosses",  "t.entry IN (11502, 11988, 15509, 14020, 11583)" },
-    { "World bosses",          "t.entry IN (12397, 18728)" },
-    { "Outland dungeon bosses (basic's levels)",
-      "t.entry IN (SELECT i.creditEntry FROM instance_encounters i JOIN creature c ON c.id = i.creditEntry"
-        .. " WHERE i.creditType = 0 AND c.map IN (540,542,543,545,546,547,552,553,554,555,556,557,558,560,269,585))" },
-}
--- }}}
+local MYSQL      = DIR .. "/mysql/installed-files/bin/mysql -h127.0.0.1 -P3307 -uritz -pmenardi -N -B " .. O.database
+local Spells     = dofile(DIR .. "/scripts/lib/spell-data.lua").open(DIR, MYSQL)
 
 -- {{{ local function query
-local function query(where)
-    local sql = "SELECT t.name, t.minlevel, t.DamageModifier, t.BaseAttackTime, s.attackpower, t.type_flags & 4,"
-        .. " CASE t.exp WHEN 0 THEN s.damage_base WHEN 1 THEN s.damage_exp1 ELSE s.damage_exp2 END"
-        .. " FROM creature_template t JOIN creature_classlevelstats s ON s.level = t.minlevel AND s.class = t.unit_class"
-        .. " WHERE " .. where .. " ORDER BY t.minlevel, t.name"
+-- rows of text fields; any line MySQL prints that is not a row of the
+-- expected width stops the run, saying what MySQL said
+local function query(sql, width)
     local p = io.popen(MYSQL .. ' -e "' .. sql .. '" 2>&1')
     local rows = {}
     for l in p:lines() do
         if not l:match("^mysql: %[Warning%]") then
             local m = {}
-            for v in l:gmatch("[^\t]+") do m[#m + 1] = v end
-            if #m ~= 7 then io.stderr:write("tank-damage-taken: MySQL said: " .. l .. "\n"); os.exit(1) end
+            for v in (l .. "\t"):gmatch("([^\t]*)\t") do m[#m + 1] = v end
+            if #m ~= width then io.stderr:write("tank-damage-taken: MySQL said: " .. l .. "\n"); os.exit(1) end
             rows[#rows + 1] = m
         end
     end
@@ -114,38 +112,224 @@ local function query(where)
 end
 -- }}}
 
-local heal_hit = O.spirit * O.stamina / O.divisor / 5 * 0.5   -- health per second while being hit
-print(string.format("tank: %d health, %d armour, %d%% of swings avoided, defence %d; spirit build %d stamina / %d spirit at divisor %d heals %.1f per second while hit (%.1f standing)",
-    O.health, O.armour, O.avoid * 100, O.defence, O.stamina, O.spirit, O.divisor, heal_hit, heal_hit * 2))
+-- {{{ the tiers, read from the gear ladder page
+-- Each row of the page's data is one line "{g:..,n:"name",q:Q,lo:L,hi:H,
+-- lv:"..",p:{lo:..,hi:..}}"; p holds basic's proposed values where they
+-- differ from stock, and wins. A tier's middle is the middle of its range
+-- on the page's own budget scale (about the epic item level with the
+-- same stats).
+local function budget(il, q)
+    if q == 2 then return 1.3 * ((il - 4) / 2) + 1.3 end
+    if q == 3 then return 1.3 * ((il - 1.84) / 1.6) + 1.3 end
+    return il
+end
+local TIER = {}
+do
+    local path = DIR .. "/docs/HTML/basic-gear-ladder.html"
+    local f = io.open(path)
+    if not f then io.stderr:write("tank-damage-taken: cannot open " .. path .. " (the gear ladder page)\n"); os.exit(1) end
+    for l in f:lines() do
+        local name, q, lo, hi = l:match('^%s*{g:%d+,n:"([^"]+)",q:(%d),lo:(%d+),hi:(%d+)')
+        if name then
+            local plo, phi = l:match("p:{lo:(%d+),hi:(%d+)")
+            lo, hi, q = tonumber(plo or lo), tonumber(phi or hi), tonumber(q)
+            TIER[name] = (budget(lo, q) + budget(hi, q)) / 2
+        end
+    end
+    f:close()
+end
+-- which ladder row each boss's instance belongs to (map number, or a
+-- boss's own entry for the world bosses)
+local ROW_OF_MAP = {
+    [409] = "Molten Core", [469] = "Blackwing Lair", [531] = "Ahn'Qiraj 40",
+    [543] = "Hellfire Ramparts", [542] = "Blood Furnace", [547] = "Slave Pens", [546] = "Underbog",
+    [557] = "Mana-Tombs", [558] = "Auchenai Crypts", [560] = "Old Hillsbrad", [556] = "Sethekk Halls",
+    [269] = "Black Morass", [555] = "Shadow Labyrinth", [540] = "Shattered Halls", [545] = "Steamvault",
+    [554] = "Mechanar", [553] = "Botanica", [552] = "Arcatraz", [585] = "Magisters' Terrace",
+}
+-- Bosses summoned in their fight have no spawn, so no map: Ragnaros (by
+-- Majordomo) and Nefarian (by Lord Victor Nefarius) are named here. Doom
+-- Lord Kazzak's own row is his loot (item level 120), which a raid cannot
+-- wear before killing him; his raid comes in the best tier below it.
+local ROW_OF_ENTRY = { [11502] = "Molten Core", [11583] = "Blackwing Lair",
+                       [18728] = "Naxxramas-40 (vanilla loot, 155h)" }
+local NAMED_ROWS = {}
+for _, name in pairs(ROW_OF_MAP)   do NAMED_ROWS[#NAMED_ROWS + 1] = name end
+for _, name in pairs(ROW_OF_ENTRY) do NAMED_ROWS[#NAMED_ROWS + 1] = name end
+for _, name in ipairs(NAMED_ROWS) do
+    if not TIER[name] then io.stderr:write("tank-damage-taken: the gear ladder page has no row named \"" .. name .. "\"\n"); os.exit(1) end
+end
+-- }}}
+
+-- {{{ the candidate items, with their tanking stats
+-- Item stat types: 3 agility, 4 strength, 7 stamina, 12 defence rating,
+-- 13 dodge rating, 14 parry rating, 15 block rating. Equip effects
+-- (trigger 1) add more: aura 189 (a rating) by its mask (2 defence, 4
+-- dodge, 8 parry, 16 block), aura 30 (a skill) when the skill is defence
+-- (95), worth 1.5 defence rating a point at 60.
+local SLOTS = { [1] = "head", [2] = "neck", [3] = "shoulders", [5] = "chest", [20] = "chest", [6] = "waist", [7] = "legs",
+                [8] = "feet", [9] = "wrists", [10] = "hands", [11] = "finger", [12] = "trinket", [16] = "back",
+                [13] = "weapon", [21] = "weapon", [14] = "shield", [15] = "ranged", [25] = "ranged", [26] = "ranged" }
+local SLOT_COUNT = { finger = 2, trinket = 2 }
+local SLOT_ORDER = { "head", "neck", "shoulders", "back", "chest", "wrists", "hands", "waist", "legs", "feet",
+                     "finger", "trinket", "weapon", "shield", "ranged" }
+local STAT = { [3] = "agi", [4] = "str", [7] = "sta", [12] = "def", [13] = "dodge", [14] = "parry", [15] = "block" }
+local ITEMS = {}
+if O.tiers == "yes" then
+    local cols = "entry, name, Quality, ItemLevel, InventoryType, armor, ArmorDamageModifier"
+    for k = 1, 10 do cols = cols .. ", stat_type" .. k .. ", stat_value" .. k end
+    for k = 1, 5 do cols = cols .. ", spellid_" .. k .. ", spelltrigger_" .. k end
+    -- a level-60 warrior can wear it: plate (4,4) in armour slots, shields
+    -- (4,6), jewellery and cloaks (4,0 and 4,1), one-hand weapons, ranged
+    local sql = "SELECT " .. cols .. " FROM item_template WHERE RequiredLevel <= 60 AND Quality BETWEEN 2 AND 4"
+        .. " AND (AllowableClass = -1 OR AllowableClass & 1) AND InventoryType IN (1,2,3,5,20,6,7,8,9,10,11,12,16,13,21,14,15,25,26)"
+        .. " AND ((class = 4 AND (subclass = 4 OR subclass = 6 OR (subclass IN (0,1) AND InventoryType IN (2,11,12,16))))"
+        .. "   OR (class = 2 AND InventoryType IN (13,21,15,25,26)))"
+        .. " AND name NOT LIKE '%Monster%' AND name NOT LIKE '%Deprecated%' AND name NOT LIKE '%TEST%'"
+    for _, m in ipairs(query(sql, 7 + 20 + 10)) do
+        local it = { id = tonumber(m[1]), name = m[2], q = tonumber(m[3]), il = tonumber(m[4]), slot = SLOTS[tonumber(m[5])],
+                     armour = tonumber(m[6]) + tonumber(m[7]), sta = 0, agi = 0, str = 0, def = 0, dodge = 0, parry = 0, block = 0 }
+        for k = 0, 9 do
+            local s = STAT[tonumber(m[8 + k * 2])]
+            if s then it[s] = it[s] + tonumber(m[9 + k * 2]) end
+        end
+        for k = 0, 4 do
+            local sp, trig = tonumber(m[28 + k * 2]), tonumber(m[29 + k * 2])
+            if sp > 0 and trig == 1 and Spells.exists(sp) then
+                for _, e in ipairs(Spells.effects(sp)) do
+                    -- a rating aura adds to each rating its mask names; a defence skill aura is
+                    -- 1.5 rating a point; any other equip effect is not a tanking stat here
+                    if e.effect == 6 and e.aura == 189 then
+                        if bit.band(e.misc, 2)  ~= 0 then it.def   = it.def   + e.base end
+                        if bit.band(e.misc, 4)  ~= 0 then it.dodge = it.dodge + e.base end
+                        if bit.band(e.misc, 8)  ~= 0 then it.parry = it.parry + e.base end
+                        if bit.band(e.misc, 16) ~= 0 then it.block = it.block + e.base end
+                    elseif e.effect == 6 and e.aura == 30 and e.misc == 95 then
+                        it.def = it.def + e.base * 1.5
+                    end
+                end
+            end
+        end
+        it.budget = budget(it.il, it.q)
+        it.score  = it.sta + it.def + 0.8 * it.dodge + 0.7 * it.parry + 0.6 * it.agi + 0.4 * it.block + 0.05 * it.armour + 0.1 * it.str
+        ITEMS[#ITEMS + 1] = it
+    end
+end
+-- }}}
+
+-- {{{ local function dress
+-- The tank for a tier's middle budget: per slot the best-scoring items
+-- within 12 budget points below it (two for rings and trinkets, never
+-- the same item twice); a slot with too few there takes the best below.
+local dressed = {}
+local function dress(row)
+    if dressed[row] then return dressed[row] end
+    local top = TIER[row]
+    local pick = {}
+    for _, slot in ipairs(SLOT_ORDER) do
+        local function best(lo)
+            local list = {}
+            for _, it in ipairs(ITEMS) do
+                if it.slot == slot and it.budget <= top and it.budget >= lo then list[#list + 1] = it end
+            end
+            table.sort(list, function(a, b) return a.score > b.score end)
+            return list
+        end
+        local want = SLOT_COUNT[slot] or 1
+        local list = best(top - 12)
+        if #list < want then list = best(-1e9) end
+        for n = 1, math.min(want, #list) do pick[#pick + 1] = list[n] end
+    end
+    local t = { sta = 110, agi = 80, armour = 0, def = 0, dodge = 0, parry = 0, items = pick }
+    for _, it in ipairs(pick) do
+        t.sta, t.agi, t.armour = t.sta + it.sta, t.agi + it.agi, t.armour + it.armour
+        t.def, t.dodge, t.parry = t.def + it.def, t.dodge + it.dodge, t.parry + it.parry
+    end
+    t.health  = 1689 + 20 + 10 * (t.sta - 20)
+    t.armour  = t.armour + 2 * t.agi
+    t.defence = 300 + t.def / 1.5
+    t.avoid   = math.min(0.60, 0.20 + (t.defence - 300) * 0.0012 + t.dodge / 1200 + t.parry / 1500 + t.agi / 20 * 0.0005)
+    dressed[row] = t
+    return t
+end
+-- }}}
+
+-- {{{ the bosses
+-- The level-60 raid bosses and the spawned world boss are named; the
+-- Outland dungeon bosses are every creature a dungeon's encounter list
+-- credits, spawned in one of the sixteen dungeons basic opens at 60
+-- (E024), at basic's levels. Lord Kazzak (12397) is left out: no spawn,
+-- no script, a leftover row.
+local GROUPS = {
+    { "Level-60 raid bosses",  "t.entry IN (11502, 11988, 15509, 14020, 11583)" },
+    { "World bosses",          "t.entry IN (18728)" },
+    { "Outland dungeon bosses (basic's levels)",
+      "t.entry IN (SELECT i.creditEntry FROM instance_encounters i JOIN creature c ON c.id = i.creditEntry"
+        .. " WHERE i.creditType = 0 AND c.map IN (540,542,543,545,546,547,552,553,554,555,556,557,558,560,269,585))" },
+}
+local function bosses(where)
+    return query("SELECT t.entry, t.name, t.minlevel, t.DamageModifier, t.BaseAttackTime, s.attackpower, t.type_flags & 4,"
+        .. " CASE t.exp WHEN 0 THEN s.damage_base WHEN 1 THEN s.damage_exp1 ELSE s.damage_exp2 END,"
+        .. " (SELECT MIN(c.map) FROM creature c WHERE c.id = t.entry)"
+        .. " FROM creature_template t JOIN creature_classlevelstats s ON s.level = t.minlevel AND s.class = t.unit_class"
+        .. " WHERE " .. where .. " ORDER BY t.minlevel, t.name", 9)
+end
+-- }}}
+
+local FIXED = { health = O.health, armour = O.armour, defence = O.defence, avoid = O.avoid }
+local heal_hit = O.spirit * O.stamina / O.divisor / 5 * 0.5   -- spirit's health per second while being hit
+print(string.format("spirit build %d stamina / %d spirit at divisor %d heals %.1f per second while hit (%.1f standing); crushing rule: %s",
+    O.stamina, O.spirit, O.divisor, heal_hit, heal_hit * 2, O.crushing))
+if O.tiers ~= "yes" then
+    print(string.format("one tank for every boss: %d health, %d armour, defence %d, %d%% of swings avoided", O.health, O.armour, O.defence, O.avoid * 100))
+end
+print("columns: big = a top roll that crits (or a top roll, if it can't crit); nocrit = the defence that stops its crits; nc/hp = its top roll without a crit")
+
 for _, g in ipairs(GROUPS) do
     print("\n" .. g[1])
-    print(string.format("%-28s %5s %7s %6s %5s %7s %7s %6s %6s %8s %7s", "boss", "level", "armour", "crush", "crit", "avg hit", "big hit", "dps", "dead", "big/hp", "spirit"))
-    local rows = query(g[2])
+    print(string.format("%-26s %3s %-19s %5s %6s %4s %5s %6s %5s %6s %5s %6s %6s %6s %6s",
+        "boss", "lvl", "tier (budget)", "hp", "armour", "def", "crit", "avg", "big", "big/hp", "dps", "dead", "nocrit", "nc/hp", "spirit"))
+    local rows = bosses(g[2])
     if #rows == 0 then io.stderr:write("tank-damage-taken: no bosses found for " .. g[1] .. "\n"); os.exit(1) end
     for _, m in ipairs(rows) do
-        local lvl, mod, att, ap, dmg = tonumber(m[2]), tonumber(m[3]), tonumber(m[4]) / 1000, tonumber(m[5]), tonumber(m[7])
-        local fights_as = tonumber(m[6]) > 0 and (TANK_LEVEL + BOSS_DIFF) or lvl   -- world bosses: 3 above the tank
-        local avg   = (dmg * 1.25 + ap / 14) * mod * att
-        local big   = (dmg * 1.50 + ap / 14) * mod * att
-        local dr    = math.min(0.75, O.armour / (O.armour + 467.5 * lvl - 22167.5))
-        local land  = 1 - O.avoid
-        local lgap  = fights_as - TANK_LEVEL
-        local skill = fights_as * 5 - DEFENCE
-        -- crushing: basic has none; stock is 2% a skill point minus 15%, from 4 levels up
-        -- and 15 skill up; "late" opened it at 8 levels up at 1/5, full at 12; never
-        -- more than the swings that land
+        local entry, lvl, mod = tonumber(m[1]), tonumber(m[3]), tonumber(m[4])
+        local att, ap, flag, dmg, map = tonumber(m[5]) / 1000, tonumber(m[6]), tonumber(m[7]), tonumber(m[8]), tonumber(m[9])
+        local row  = ROW_OF_ENTRY[entry] or ROW_OF_MAP[map]
+        -- the tank: dressed for the boss's tier, or the one fixed tank (--tiers no, or a
+        -- boss whose instance has no ladder row)
+        local tank = (O.tiers == "yes" and row) and dress(row) or FIXED
+        local fights_as = flag > 0 and (TANK_LEVEL + BOSS_DIFF) or lvl      -- world bosses: 3 above the tank
+        local avg  = (dmg * 1.25 + ap / 14) * mod * att
+        local big  = (dmg * 1.50 + ap / 14) * mod * att
+        local dr   = math.min(0.75, tank.armour / (tank.armour + 467.5 * lvl - 22167.5))
+        local land = 1 - tank.avoid
+        local lgap, skill = fights_as - TANK_LEVEL, fights_as * 5 - math.min(tank.defence, 300)
+        -- crushing: basic none; stock 2% a skill point minus 15% from 4 levels up and 15
+        -- skill up; "late" from 8 levels up at 1/5, full at 12; never more than what lands
         local crush = 0
         if O.crushing ~= "basic" and skill >= 15 and lgap >= (O.crushing == "late" and 8 or 4) then
             crush = (skill * 2 - 15) / 100
             if O.crushing == "late" and lgap < 12 then crush = crush * (lgap - 7) / 5 end
             crush = math.min(land, crush)
         end
-        -- crits: 5% plus 0.04% per skill point over the tank's whole defence (never
-        -- below 0), out of the landed swings left after crushing
-        local crit  = math.max(0, math.min(land - crush, (5 + (fights_as * 5 - O.defence) * 0.04) / 100))
-        local dps   = avg * (1 - dr) * ((land - crush - crit) + 1.5 * crush + 2 * crit) / att
-        local bigh  = big * (1 - dr) * ((crit > 0 and 2) or (crush > 0 and 1.5) or 1)
-        print(string.format("%-28s %5d %6.1f%% %5.0f%% %4.1f%% %7.0f %7.0f %6.0f %5.1fs %7.0f%% %6.1f%%",
-            m[1]:sub(1, 28), lvl, dr * 100, crush * 100, crit * 100, avg * (1 - dr), bigh, dps, O.health / dps, bigh / O.health * 100, heal_hit / dps * 100))
+        -- crits: 5% plus 0.04% per skill point over the tank's whole defence, never below 0
+        local crit   = math.max(0, math.min(land - crush, (5 + (fights_as * 5 - tank.defence) * 0.04) / 100))
+        local nocrit = fights_as * 5 + 125
+        local dps    = avg * (1 - dr) * ((land - crush - crit) + 1.5 * crush + 2 * crit) / att
+        local bigh   = big * (1 - dr) * ((crit > 0 and 2) or (crush > 0 and 1.5) or 1)
+        local plain  = big * (1 - dr) * (crush > 0 and 1.5 or 1)
+        local label  = row and string.format("%s (%.0f)", row:sub(1, 13), TIER[row]) or "-"
+        print(string.format("%-26s %3d %-19s %5d %6d %4d %4.1f%% %6.0f %5.0f %5.0f%% %5.0f %5.1fs %6d %5.0f%% %5.1f%%",
+            m[2]:sub(1, 26), lvl, label, tank.health, tank.armour, tank.defence, crit * 100, avg * (1 - dr), bigh,
+            bigh / tank.health * 100, dps, tank.health / dps, nocrit, plain / tank.health * 100, heal_hit / dps * 100))
+    end
+end
+
+if O.tiers == "yes" and O.gear == "yes" then
+    for row, t in pairs(dressed) do
+        print(string.format("\n%s (budget %.0f): %d health, %d armour, defence %.0f, avoidance %.0f%%", row, TIER[row], t.health, t.armour, t.defence, t.avoid * 100))
+        for _, it in ipairs(t.items) do
+            print(string.format("  %-9s %-40s ilvl %3d q%d  sta %3d  def %4.1f  armour %4d", it.slot, it.name:sub(1, 40), it.il, it.q, it.sta, it.def, it.armour))
+        end
     end
 end
