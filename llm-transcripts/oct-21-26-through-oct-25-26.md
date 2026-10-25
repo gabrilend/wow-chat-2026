@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-25 15:17:13
+Generated on: 2026-10-25 15:31:11
 Models: claude-opus-5-5
 
 ## Contents
@@ -5828,6 +5828,214 @@ a new shared spell-file reader are committed.
 unhealed, against your 10–15. Should I raise their melee now, or count their
 spells first? Spells will close part of that gap, so tuning melee first risks
 overshooting.
+
+--------------------------------------------------------------------------------
+
+### User Request 53
+
+Can we make issue files for a tool or utility that lets us "reset" a buddy-bot?
+They should keep their name and gender, but we should be able to re-pick their
+class from Sargobras. Ideally, they'd keep their race as well, and Sargobras
+would know about the next buddy in line that you're supposed to get. He'd then
+only offer the class choices (not race) and only those for that particular race.
+
+we should also have a separate tool or utility that allows us to change a
+player's class as well, while keeping their level, name, race, gender, etc. They
+should be given a set of gear that is the same set as the buddy-bots with the
+same gemming and enchanting and such rules, and their current gear should be
+mailed to them. For now, let's make it so they can't switch to DKs, neither
+players nor buddy-bots for now.
+
+Just issue files for now, but can you put down on the todo list to implement
+them, so we don't lose track of them?
+
+> What crits do now. At 390–490 defence, most bosses can barely crit at all
+> (0–5%). The defence that stops a boss's crits completely is its weapon skill
+> plus 125: 440 against a
+> level-63 boss, 515 against level 78. That's the minimum defence you said is
+> fine.
+
+how much defence would a tank have typically at each tier? Can you make a table
+with all the same entries as the HTML page we referenced earlier?
+
+
+
+<pasted_content id="583a">
+  ┌──────────────────────────────────────────────┬──────────────────────────────┬───────────────────────┐
+  │ Group │ Biggest hit, a crit included │ Unhealed tank lasts │
+  ├──────────────────────────────────────────────┼──────────────────────────────┼───────────────────────┤
+  │ Level-60 raid bosses (tank in their tier) │ 24–39% of health │
+  12–26 s │
+  ├──────────────────────────────────────────────┼──────────────────────────────┼───────────────────────┤
+  │ Outland dungeon bosses │ 7–77% │ 11–66 s, most 18–33 s │
+  ├──────────────────────────────────────────────┼──────────────────────────────┼───────────────────────┤
+  │ Doom Lord Kazzak (tank in Naxxramas-40 gear) │ 209% │ 2 s │
+  └──────────────────────────────────────────────┴──────────────────────────────┴───────────────────────┘
+</pasted_content id="583a">
+
+
+and how does this relate to the new stamina rules? The Azeroth gear isn't being
+modified because it often has spirit already, right?
+
+
+
+<pasted_content id="583a">
+  ├──────────────────────────────────────────────┼──────────────────────────────┼───────────────────────┤
+  │ Doom Lord Kazzak (tank in Naxxramas-40 gear) │ 209% │ 2 s │
+  └──────────────────────────────────────────────┴──────────────────────────────┴───────────────────────┘
+</pasted_content id="583a">
+
+
+hmmmmmmmmmmmmmmm this seems impossible. I guess we could cycle in new tanks
+every 2s, but 209% crit means we'd need like, a hundred tanks. Not ideal!
+
+
+
+<pasted_content id="583a">
+> - Outland greens outclass vanilla raid gear. In the Blackwing Lair and
+> Ahn'Qiraj sets, Outland world greens beat the raids' own epics in most slots.
+> Those greens had their required
+>     level lowered to 60 and their stats rescaled for basic. For example, one green helm has 39 stamina and 27 defence; the tier 1 Helm of Might has 35 stamina and 10 defence. I've
+>     noted it in the issue and changed nothing, since it comes from the gear ladder issue's design (155k).
+</pasted_content id="583a">
+
+
+On the HTML page, it says that Outland greens from HFP are roughly equivalent to
+level 47-53 epics. Meanwhile, Molten Core has an epic item level of 61-71 on
+that same page. So, did we not implement the scaling yet or what? Is the HTML
+page wrong?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 53
+
+> Starting with the Outland greens question, since it may mean a scaling step
+> isn't in the database.
+
+*[commit] c0e016916 in wow-chat-2026 - Dress measured tanks only in gear a basic player can get, and list every gear-ladder row's tank (issue 155f1)*
+
+> Writing the two issues.
+
+*[commit] dc2544ae9 in wow-chat-2026 - Plan two class tools: reset a buddy keeping its name and race, and change a player's class dressed like a buddy (issues 617a7, 197)*
+
+## Outland greens: the page is right, my tool was wrong
+
+The scaling is installed. It rescaled the 1,282 Outland items that drop from
+monsters and chests. The greens that seemed to beat Blackwing Lair are
+**Netherstorm quest rewards**. Basic has no quests for players, so nobody can
+get them, and the scaling skipped them, so their stats are still stock. The tank
+builder now only uses gear that drops or is sold, and the vanilla raid epics win
+their tiers again. Committed.
+
+## Defence by tier
+
+These are the tanks of every row on the gear ladder page, in its order: a
+level-60 warrior in the best tanking gear of that row. The last three columns
+are how much defence the tank is short of ending crits from a level-63, level-73
+and level-78 boss. To end crits it needs 440, 490 and 515 defence.
+
+| Tier (gear ladder row) | Budget | Health | Defence | Short vs 63 | vs 73 | vs 78 |
+|---|---:|---:|---:|---:|---:|---:|
+| Level-60 dungeons (blues) | 49 | 3969 | 373 | 67 | 117 | 142 |
+| Molten Core | 66 | 5369 | 380 | 60 | 110 | 135 |
+| Zul'Gurub | 66 | 5369 | 380 | 60 | 110 | 135 |
+| Ahn'Qiraj 20 | 69 | 5469 | 377 | 63 | 113 | 138 |
+| Emerald Dragons, Azuregos | 72 | 5579 | 365 | 75 | 125 | 150 |
+| Onyxia | 74 | 5659 | 377 | 63 | 113 | 138 |
+| Blackwing Lair | 75 | 5769 | 385 | 55 | 105 | 130 |
+| Ahn'Qiraj 40 | 80 | 6189 | 406 | 34 | 84 | 109 |
+| Naxxramas-40 | 88 | 6699 | 408 | 32 | 82 | 107 |
+| Hellfire Ramparts | 69 | 5469 | 377 | 63 | 113 | 138 |
+| Blood Furnace | 71 | 5579 | 365 | 75 | 125 | 150 |
+| Slave Pens | 74 | 5769 | 378 | 62 | 112 | 137 |
+| Underbog | 76 | 6039 | 404 | 36 | 86 | 111 |
+| Mana-Tombs | 79 | 6149 | 408 | 32 | 82 | 107 |
+| Auchenai Crypts | 81 | 6209 | 415 | 25 | 75 | 100 |
+| Old Hillsbrad | 83 | 6199 | 416 | 24 | 74 | 99 |
+| Sethekk Halls | 84 | 6509 | 440 | 0 | 50 | 75 |
+| Black Morass | 85 | 6699 | 433 | 7 | 57 | 82 |
+| Shadow Labyrinth | 86 | 6699 | 421 | 19 | 69 | 94 |
+| Shattered Halls | 87 | 6699 | 421 | 19 | 69 | 94 |
+| Steamvault | 88 | 6609 | 412 | 28 | 78 | 103 |
+| Mechanar | 89 | 6939 | 412 | 28 | 78 | 103 |
+| Botanica | 90 | 6899 | 411 | 29 | 79 | 104 |
+| Arcatraz | 91 | 6899 | 411 | 29 | 79 | 104 |
+| Magisters' Terrace | 92 | 6969 | 403 | 37 | 87 | 112 |
+| Kael'thas epics / upper-dungeon rare epics | 100 | 7099 | 393 | 47 | 97 | 122 |
+| Hellfire Peninsula greens | 50 | 4009 | 377 | 63 | 113 | 138 |
+| Zangarmarsh greens | 55 | 4379 | 375 | 65 | 115 | 140 |
+| Terokkar Forest greens | 59 | 4759 | 371 | 69 | 119 | 144 |
+| Nagrand greens | 61 | 4799 | 361 | 79 | 129 | 154 |
+| Blade's Edge greens | 63 | 4609 | 352 | 88 | 138 | 163 |
+| Netherstorm greens | 67 | 5369 | 380 | 60 | 110 | 135 |
+| Shadowmoon Valley greens | 69 | 5469 | 377 | 63 | 113 | 138 |
+| Isle of Quel'Danas greens | 71 | 5569 | 365 | 75 | 125 | 150 |
+| Hellfire Peninsula blues | 64 | 4609 | 352 | 88 | 138 | 163 |
+| Zangarmarsh blues | 67 | 5369 | 380 | 60 | 110 | 135 |
+| Terokkar Forest blues | 73 | 5399 | 371 | 69 | 119 | 144 |
+| Nagrand blues | 75 | 5829 | 366 | 74 | 124 | 149 |
+| Blade's Edge blues | 77 | 6039 | 404 | 36 | 86 | 111 |
+| Netherstorm blues | 81 | 6189 | 406 | 34 | 84 | 109 |
+| Shadowmoon Valley blues | 81 | 6209 | 415 | 25 | 75 | 100 |
+| Isle of Quel'Danas blues | 82 | 6099 | 415 | 25 | 75 | 100 |
+| Fel Reaver (Karazhan epics) | 118 | 7119 | 421 | 19 | 69 | 94 |
+| Doomwalker, Doom Lord Kazzak (their own loot) | 120 | 7119 | 421 | 19 | 69 | 94 |
+
+So a tank in its tier usually sits 0–90 defence short of crit-proof. Bosses
+crit it 1.4–4% of the time. With the corrected gear, no crit kills a
+tier-geared tank: the worst is Maladaar at 79% of its health. Unhealed, the tank
+lasts 10–21 s in the raids and 10–44 s in the dungeons, most of them 13–22
+s. That's close to your 10–15 s, and spells aren't counted yet.
+`scripts/tank-damage-taken --ladder yes` reprints this table.
+
+## The stamina rules
+
+It isn't quite that the Azeroth gear already has spirit. Spirit on gear (155k2)
+isn't built for any gear yet, Azeroth or Outland, so every number above is
+today's stock stamina. When it's built, it applies everywhere. It leaves alone
+any item that already has spirit, and changes two fifths of the items that have
+stamina:
+- on one fifth, all the stamina becomes spirit;
+- on another fifth, half of it does.
+
+A tank can still build all stamina from the untouched three fifths, or pick up
+the spirit pieces, so the choice is real. The rate is one stamina for one
+spirit, your answer from the spirit issue, and it's now recorded in 155k2 too.
+
+## Kazzak
+
+It's worse than a crit. His **plain** top-roll hit is 210% of a Naxxramas-geared
+tank's health (14,000). A crit would be 419%, though at 408 defence he only
+crits 1.3% of the time. He's built for a level-70 raid: damage multiplier 65,
+level 73. To fit a level-60 raid he needs his own melee multiplier, roughly 0.2.
+That makes his top hit about 42% of the tank's health and his crit about 84%,
+and 32 more defence ends his crits.
+
+## The two new issues
+
+Both are written and committed, and both are on the to-do list for this session.
+That list doesn't carry over to a new session, but each issue's status line says
+"planned; not built", so they stay findable.
+
+**Buddy reset (617a7):**
+- The buddy keeps its name, gender, race, level and clan.
+- Sargobras offers only classes that race can play, never death knight.
+
+**Player class change (197):**
+- It builds on the existing class-change tool.
+- It refuses death knight.
+- It dresses the character in a buddy's gear set, with the buddies' gem and
+  enchant rules.
+- It mails the old equipped gear to the character.
+
+Open questions, the first from each issue:
+1. **Buddy reset:** change the buddy's class in place, or delete it and make a
+   fresh one with the same name, gender and race? In place keeps its history and
+   clan rank, but the class change has to happen while the server is stopped or
+   at the next start. A fresh one is simpler, but loses its history.
+2. **Player class change:** a player's talents are reset by the class change, so
+   which talent shape should pick their gear set? The class's even spread of
+   points, or one the operator names on the command line?
 
 --------------------------------------------------------------------------------
 

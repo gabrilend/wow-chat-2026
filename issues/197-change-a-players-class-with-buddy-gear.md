@@ -68,7 +68,9 @@ a target.
 
 ## Open Questions
 
-1. **Which talent shape** picks the gearset for a player: the class's
+1. (Answered 2026-10-25: a command-line option, else the even shape)
+   "Okay let's pick based on a cli flag. If none is applied, then the even
+   spread of points." **Which talent shape** picks the gearset for a player: the class's
    even shape (the player re-spends their talents anyway), or one the
    operator names on the command line?
 2. **186's plan** (made copies of the old gear at equal strength) and this

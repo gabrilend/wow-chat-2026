@@ -201,7 +201,14 @@ Nothing is tuned yet. What stands:
 3. **The baseline tank and healer:** which gear do we measure against for
    Outland's dungeons (Azeroth's best blues and epics, or the Outland
    greens and blues scaled to 60 by E031)?
-4. **Doom Lord Kazzak:** a level-60 raid boss (155j), so measured against
+4. (Answered 2026-10-25, in part: "nearly impossible to defeat. But, not
+   impossible") Told that a melee multiplier of about 0.2 would leave his
+   top hit at 42% of a Naxxramas-geared tank's health: "that seems too
+   easy." Proposed next: about 0.4 (top hit 84% of that tank's health; a
+   crit, 168%, kills, so his tank must be crit-proof at 440 defence, 32
+   past the Naxxramas tier; about 1,500 damage a second, the tank dead in
+   about 4.4 seconds unhealed), before his spells are counted.
+   **Doom Lord Kazzak:** a level-60 raid boss (155j), so measured against
    a raid of forty or twenty-five, with his 14,000-per-hit melee brought
    down to what a raid tank survives?
 5. **Azeroth and spirit:** if spirit's healing makes some vanilla fights

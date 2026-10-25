@@ -79,7 +79,29 @@ roster, the buddy's gear, or Sargobras.
 
 ## Open Questions
 
-1. **Same character or a new one:** change the existing buddy's class in
+1. (Answered 2026-10-25: a new one is fine) "we can replace it's
+   history. The way that it functions behind the scenes shouldn't be
+   relevant to the player. How do we handle buddy-bots who are "hidden" or
+   "removed" when the player is de-levelled? Can we do something similar?
+   How much of the machinery can we re-use?" So the reset makes a fresh
+   character with the same name, gender and race, built mostly from
+   machinery that exists:
+   - **taking the old buddy out of the world** and keeping it out: the
+     stage system of buddies by stage (617a6, `buddies_stage.cpp`: a
+     roster row's `stage`; the keeper logs in only stages 0 and 3), with
+     a new stage, "being reset", that the keeper never brings in;
+   - **the owed slot and the choice**: Sargobras's owed-slot flow (617b),
+     filtered by the slot's kept race;
+   - **making the new buddy**: the creation path (617a3), which already
+     fixes the race, given the name and gender as well;
+   - **its belongings**: the remake's "Kept for you" mail (617a6), sent to
+     the new buddy instead of to itself, so its old gear and money wait at
+     a mailbox as after a de-levelling;
+   - **removing the old character**: the server's own character deletion,
+     as when an owner is deleted (617a).
+   New: the "being reset" stage, the race filter in Sargobras, and name
+   and gender passed to the creation path.
+   **Same character or a new one:** change the existing buddy's class in
    place (keeps its character number, history and clan rank; needs the
    class change applied while the server runs, or at the next start), or
    delete it and create a fresh one with the same name, gender and race
