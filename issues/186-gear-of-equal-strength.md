@@ -8,7 +8,10 @@
 - Related: 617x (prestige: reborn at a lower level), 617a6 (buddies by
   stage: de-levelling), 617r7 (buddies' own copies of items, the same
   copy-making), 155k (the level-60 gear ladder and its stat-budget view),
-  `scripts/change-character-class` (first user)
+  `scripts/change-character-class` (first user), 197 (2026-10-25: a
+  class change now dresses the character in a buddy's gearset and mails
+  its old gear; whether this issue stays for level changes is 197's open
+  question 2)
 - Priority: Medium
 
 ## Origin

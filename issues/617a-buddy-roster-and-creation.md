@@ -115,6 +115,7 @@ itself kept as the command's own text, proposed as JSON (open below).
 | 617a3 | buddy-creation | 617a1, 617a2 | A chosen roster row becomes a character of that race and class at the owner's level (the bot factory's parts, with the race fixed) |
 | 617a4 | buddy-starting-kit | 617a3 | White gear, level-in-silver, the owner's bag-slot total in even cheap bags |
 | 617a5 | buddies-hidden-and-locked | 617a1 | Out of /who and friend lists, deaf to bot chat commands, no renaming |
+| 617a7 | reset-a-buddy-keeping-name-and-race | 617a3, 617b | (added 2026-10-25) A buddy's slot owed again with its name, gender and race kept; Sargobras offers only that race's classes, no death knight |
 
 Execution order: `617a1 → 617a2 → 617a3 → (617a4 ∥ 617a5)`; 617a5 can
 start once 617a1 is done.

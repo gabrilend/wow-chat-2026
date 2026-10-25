@@ -75,7 +75,9 @@ Some gear trades stamina for spirit:
 
 ## Open Questions
 
-1. The points: one stamina becomes one spirit (owner, 2026-10-04: "I
+1. (Answered 2026-10-23, in 167: one for one, to playtest: "for
+   preliminary results let's try weighting stamina and spirit the same.")
+   The points: one stamina becomes one spirit (owner, 2026-10-04: "I
    dunno probably"; taken as the working rule, to be looked at again
    once it is seen in game).
    (Owner, 2026-10-04: "I think it's stamina * spirit / 100?", the healing
