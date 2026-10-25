@@ -331,7 +331,24 @@ server is restarted).
   (Capture Soul). The 3-minute Berserk stays for now: an always-on 20%
   enrage worried the owner, because Kazzak's damage is far above
   Doomwalker's.
-- **Scaling**: possibly none. Ritz: "They are raid bosses, after all."
+- **Frenzy becomes a channelled volley storm** (the owner, 2026-10-25,
+  155f1): stock Frenzy (every 30 seconds from the first minute) gives him
+  +30% damage for 10 seconds and casts Shadow Bolt Volley every 2 seconds
+  (5 volleys), which no level-60 tank survives on top of his swings. "the
+  tank won't be able to survive the enrage. Maybe we remove the enrage
+  entirely or have him stop attacking, channel for ~6 seconds, and cast
+  one shadowbolt volley per second. The 6 should be enough to deal about
+  ~140% of the raid's HP, over 6 seconds. And, remove the +30% damage
+  modifier." So: no damage bonus; he stops swinging for 6 seconds and
+  casts one volley a second, six in all, together about 140% of an
+  average raid member's health (about 4,650 buffed at the Naxxramas tier:
+  about 1,090 a volley, 23% each). Doable without his script: a replaced
+  Frenzy row in `spell_dbc` (pacify instead of +30% damage, a tick every
+  second, 6 seconds) triggering a copy of the volley sized for the channel,
+  with his creature spell multiplier (155i) taken into account.
+- **Scaling** (2026-10-25, 155f1): melee about 0.30 of stock (0.40 first
+  chosen, lowered once his spells were counted on the tank), his spells
+  scaled too. Before that: possibly none. Ritz: "They are raid bosses, after all."
   They are level 73 and built for level-70 raids; a level-60 raid's first
   attempt decides.
 - **Left unfinished for now** (Ritz: "we won't be fighting Kazzak for a

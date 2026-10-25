@@ -271,7 +271,24 @@ Nothing is tuned yet. What stands:
    the 10-15 wanted. Raise their melee to meet it, or wait for their
    spells to be counted first (step 1), since spells will close part of
    the gap?
-8. **Kazzak's spells:** scale them with his melee (0.40: Void Bolt about
+8. (Answered 2026-10-25, in part: "I think his spells will kill our
+   tanks pretty much everytime. So maybe we reduce his multiplier to 0.3
+   or something.") With melee and spells both scaled (a crit-proof
+   6,699-health tank, 42% avoided, no resistances counted): at 0.30 and
+   gear armour 10,263 he deals about 1,500 a second to the tank (melee
+   1,045, Cleave 209, Void Bolt 86, Thunderclap 62, volley 105), the tank
+   dead in 4.4 seconds unhealed, his worst two seconds (a top swing and a
+   Void Bolt) 86% of its health; at 0.40, 2,010 a second and 114%. Armour
+   is by item level and quality, not by where an item comes from (a
+   Naxxramas epic chest of item level 92 has 1,172 armour, a scaled
+   Outland blue of 112 has 1,134, a level-70 Warbringer chest 1,510), and
+   the level-70 raid gear that gives level-70 tanks ~16,000 armour is
+   not wearable at 60 yet (Kazzak's and Doomwalker's loot still requires
+   70: 155j's lowering is not built), so a tank comes in at about 10,000
+   from gear, more with talents and buffs (not counted). Raid members at
+   the Naxxramas tier (gear stamina about 130-170, weapons aside): about
+   3,100-4,500 health unbuffed, 4,050-5,550 buffed, 4,650 on average.
+   Frenzy redesigned: 155j. **Kazzak's spells:** scale them with his melee (0.40: Void Bolt about
    1,760-2,040, Thunderclap about 940-1,060, the volley about 600-800), or
    another figure? Unscaled, a Void Bolt right after a top swing (66-76%
    plus 84% of the tank's health) kills.

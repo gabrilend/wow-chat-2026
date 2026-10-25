@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-25 16:15:55
+Generated on: 2026-10-25 16:29:40
 Models: claude-opus-5-5
 
 ## Contents
@@ -73,6 +73,10 @@ Models: claude-opus-5-5
     around the new spirit and stamina rules, and the two class-tool issues are
     now written. Next, I need your answers: reset a buddy in place or make a
     fresh one, and which talent shape picks a player's gear.
+18. 2026-10-25 16:19, after Request 55 - We're balancing level-60 fights so
+    Azeroth stays similar and Outland becomes doable; Kazzak's melee multiplier
+    is waiting on your choice. Next: your pick (0.45 looks right), then I count
+    bosses' spell damage.
 
 --------------------------------------------------------------------------------
 
@@ -6223,6 +6227,100 @@ Also done:
 - **Gear of equal strength (186):** added to the to-do list (now three tasks),
   starting with the decision on whether it's only for level changes now or
   retired.
+
+--------------------------------------------------------------------------------
+
+### User Request 56
+
+> Kazzak swings every 2 seconds. Melee only; his spells come on top.
+
+do his abilities target the tanks?
+
+I think we should probably do 0.40 for the multiplier. This is a tank that's in
+otherwise max gear, which already is a lofty target. The heals will have to be
+geared similarly in order to keep up, and who knows how long they can keep
+going? Can you tell me, what are the numbers for healing? Could a healer heal
+for 5-7k or does that need a crit? The goal is to have 2 or 3 healers pretty
+consistently healing the main tank, and then another healer or few working on
+the raid. Kazzak is a world-boss, we can put as many players as we need, but
+being able to complete it with a single tank (or two) is important.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 56
+
+> Yes, he hits the tank with spells too: Void Bolt alone is 4,400–5,100 shadow
+> damage every 15–18 seconds. Now the healing side: reading level-60 heals
+> from the spell file.
+
+> While that runs, recording the 0.40 decision and Kazzak's spells.
+
+> The item query was the slow part (MySQL re-checks every loot table for each
+> item). Killing it and switching to a join.
+
+> Healing numbers are in. Recording them with the Kazzak decision.
+
+*[commit] 720f3b092 in wow-chat-2026 - Choose 0.40 for Doom Lord Kazzak's melee, list his spells, and weigh a level-60 healer against him (issue 155f1)*
+
+**0.40 is recorded.** At that multiplier, a healer can't land 5–7k with one
+ordinary heal; 5k needs a crit, and 7k is out of reach. Two or three healers on
+the tank match him, which fits your plan. Committed in the balancing issue
+(155f1).
+
+**Does he target the tank?** Yes, with most of his spells. From his fight
+script, with damage from the spell file at stock size:
+
+| Spell | How often | Who it hits | Damage |
+|---|---|---|---|
+| Void Bolt | every 15–18 s | his target (the tank) | 4,394–5,105 shadow |
+| Cleave | every 8–12 s | the tank and anyone beside it | one weapon swing |
+| Thunderclap | every 10–14 s | everyone near him | 2,344–2,655 nature, slows attacks and movement |
+| Shadow Bolt Volley | every 4–6 s | everyone in range | 1,488–2,011 shadow |
+| Mark of Kazzak | every 20 s | a random mana user | drains mana; at 0 mana, 5,000 to everyone near them |
+| Twisted Reflection | every 15 s | a random player | their damage heals him |
+| Frenzy | every 30 s after the first minute | himself | more damage |
+| Berserk | at 3 minutes | himself | 75% faster attacks: the time limit |
+
+**Wowhead's 7,000–11,000:** that matches his numbers in our database. A
+level-70 tank's ~16,000 armour takes about 57% off his swings; a level-60 tank's
+~10,000 takes about 46%, so he hits ours harder.
+
+**The healing numbers:** the strongest heal ranks up to level 60, with about 875
+healing power. That's the Naxxramas-tier figure from the best obtainable item in
+each slot, so it's a high estimate, before talents.
+
+| Heal | Cast time | Normal | Crit (×1.5) |
+|---|---:|---:|---:|
+| Holy Light | 2.5 s | 3,485–3,717 | 5,227–5,575 |
+| Greater Heal | 3.0 s | 3,374–3,602 | 5,061–5,403 |
+| Healing Touch | 3.0 s | 3,351–3,701 | 5,027–5,552 |
+| Healing Wave | 3.0 s | 3,028–3,258 | 4,542–4,887 |
+| Flash Heal | 1.5 s | 1,516–1,662 | 2,274–2,493 |
+| Lesser Healing Wave | 1.5 s | 1,536–1,632 | 2,304–2,448 |
+| Flash of Light | 1.5 s | 1,319–1,373 | 1,978–2,060 |
+| Chain Heal | 2.5 s | 1,725–1,803 | 2,587–2,704 |
+
+- **Per heal:** a normal big heal is about 3,500, so 5,000+ needs a crit.
+  Healing talents add roughly 10–20% (more on a crit), bringing big crits to
+  about 6,000.
+- **Per healer:** one healer casting big heals back to back puts out about
+  1,200–1,300 healing a second.
+- **Against Kazzak at 0.40:** his melee is about 1,400 a second; his spells add
+  roughly 1,100 a second on the tank at stock size. Two healers keep up with his
+  melee, and three with melee plus spells.
+- **What runs out:** mana, not throughput. Mark of Kazzak drains it, and Berserk
+  at 3 minutes ends long fights. That's the "who knows how long they can keep
+  going" you wanted.
+
+**Open question:** should his spells scale with his melee? Unscaled, a Void Bolt
+(66–76% of the tank's health) right after a top swing (84%) kills, whatever
+the healers do. At 0.40 too, Void Bolt would be about 1,760–2,040, Thunderclap
+about 940–1,060 and the volley about 600–800. Should spells share his 0.40,
+or get a figure of their own?
+
+These healing numbers came from a temporary script in my scratch space, not a
+project tool. I can turn it into one alongside the boss measure if you want to
+rerun it for other tiers.
 
 --------------------------------------------------------------------------------
 
