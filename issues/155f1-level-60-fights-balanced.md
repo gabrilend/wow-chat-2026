@@ -168,6 +168,14 @@ Nothing is tuned yet. What stands:
    spell) as a share of the tank's health, and the damage per second as a
    share of what the baseline healers and spirit heal (the open questions
    below).
+3a. **The stock fight beside ours** (the owner, 2026-10-25: "I'd also
+   like to know the default values, with default scaling and all that, so
+   we can compare. Ideally, we're looking for similar difficulty, but
+   ideally, a little different so it feels fresh to the players."): for
+   each Outland boss, the same measure at its stock level against a
+   level-70 tank in its stock tier's gear, next to basic's level-60 tank
+   against the raised boss, so each fight can be tuned to about the stock
+   difficulty, but not a copy of it.
 4. **Azeroth checked.** Run the measure for the level-60 raid bosses at
    divisor 100 and compare against stock spirit (B049 off), to see which
    fights spirit softens and by how much.

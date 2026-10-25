@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-25 16:47:29
+Generated on: 2026-10-25 16:51:53
 Models: claude-opus-5-5
 
 ## Contents
@@ -6508,6 +6508,64 @@ followed by a Void Bolt, are 114% of a tank's health at 10,000 armour (level-60
 gear alone). With 16,000 armour it's 97%. Talents and buffs land somewhere
 between, so the playtest will show whether tanks need armour buffs or a healer's
 heal already landing at the right moment.
+
+--------------------------------------------------------------------------------
+
+### User Request 59
+
+okay cool. What should we work on before the next rebuild? Anything to add to
+the todo list before I set you loose? More issues done, the better... We should
+try and round out any mechanics that are partially implemented.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 59
+
+> Surveying open issues for partly built work before suggesting a list.
+
+*[commit] 5fcc334ea in wow-chat-2026 - Correct the reopened multiplier issue's state line: built table and code, rows still to write (issue 155i)*
+
+The best candidates are the issues that are partly built or fully answered and
+need no new decisions from you. I've added five to the to-do list, so it now
+holds eight. In the order I'd take them:
+
+1. **Kazzak's first rows in the dungeon multiplier table.** That table and its
+   code are built but empty (which is why the multipliers issue, 155i, is
+   reopened). This writes its first rows from a generator:
+   - his melee and spells at 0.40;
+   - Berserk replaced with a spell that does nothing;
+   - Frenzy as the 6-second channelled volley storm.
+
+   These are database rows with a revert, so you won't need to compile; they
+   take effect when you install.
+2. **Measure bosses' spells.** This is the next step of the balancing issue
+   (155f1): read each boss's spells from its fight script and the spell file,
+   then write rows for the dungeon bosses toward your 10–15 seconds.
+3. **Richer monster drops (181).** All questions are answered: ordinary monsters
+   and non-boss elites drop twice the greens and blues and five times the epics,
+   bosses stay stock, and rares roll their loot twice. It's a server source
+   patch plus settings.
+4. **Spirit on gear (155k2).** All answered. A generator turns two fifths of the
+   items that have stamina into spirit items, one for one, with a backup and an
+   exact revert.
+5. **Hide shoulders (720).** All answered: a server source patch plus a chat
+   command, players only.
+6. **Player class change, dressed like a buddy (197).**
+7. **Buddy reset (617a7).** I'd build it as an administrator's script first. Its
+   last open question, whether the owner can also ask Sargobras in game, can
+   come later.
+8. **Gear of equal strength (186).** Waiting on your decision about whether it's
+   only for level changes now or retired.
+
+Items 3, 5, 6 and 7 change the server's source, so they wait for your rebuild.
+Items 1, 2 and 4 are database rows that take effect when you install.
+
+Two things I'll assume unless you say otherwise:
+- **Player class change:** gear of equal strength (186) is left alone for now;
+  it doesn't block anything.
+- **Buddy reset:** administrator's script only for now, no Sargobras option yet.
+
+Say go and I'll work through them in that order, committing each as it's done.
 
 --------------------------------------------------------------------------------
 

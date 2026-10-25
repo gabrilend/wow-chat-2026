@@ -38,6 +38,14 @@ character.
 
 ## Intended Behavior
 
+**Narrowed 2026-10-25** (the owner): "we shouldn't touch tier gear, btw.
+Also, we shouldn't touch cloth gear or mail gear. Just leather and
+plate." So only leather and plate armour change (cloth and mail never,
+nor any piece of a tier set); the fifths are drawn within leather and
+within plate. Whether weapons, rings, necklaces and cloaks still change
+(the earlier answer, "yes to the others") is asked again (open question
+4).
+
 Some gear trades stamina for spirit:
 
 - **Which items may change**: weapons, armour, rings, necklaces and cloaks
@@ -94,6 +102,9 @@ Some gear trades stamina for spirit:
    paid it back after about 10 seconds of healing at full rate, 20 at half.
    Longer fights favour the spirit, bursts the stamina.
 2. (Answered 2026-10-04) Rings, necklaces and cloaks in; trinkets out.
+4. **Weapons, rings, necklaces and cloaks**: since 2026-10-25 only
+   leather and plate armour change. Do these (no armour kind of their
+   own) still change, or nothing but leather and plate armour?
 3. (Answered 2026-10-04) World PvP rewards are out ("yes, because requires
    faction, right?": they need a faction's standing, so the faction rule
    already leaves them out).

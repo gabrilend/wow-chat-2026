@@ -109,6 +109,13 @@ roster, the buddy's gear, or Sargobras.
 2. (Answered 2026-10-25: "sure") Mailed to the new buddy, as after a
    de-levelling ("Kept for you"). **Its gear and money:** are the old gear and money mailed to the owner,
    destroyed, or kept in the buddy's bags?
-3. **Who can run it:** only an administrator's script, or also the owner
+3. (Answered 2026-10-25: game masters only) "the players cannot do
+   this. Sargobras shouldn't know about it, not really. It's for the GMs
+   to use. We should have it usable as either a GM command or a bash
+   script, if you're building the bash script anyway." So no line in
+   Sargobras's dialogue starts a reset; a game master's command (in game,
+   and through the console, which `scripts/gm-command` reaches while the
+   server runs) and a bash script do. Sargobras only ever sees the owed
+   slot that results, with its kept race. **Who can run it:** only an administrator's script, or also the owner
    in game (a line in Sargobras's dialogue, "I want to choose again for
    ...")?

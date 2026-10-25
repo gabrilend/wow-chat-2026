@@ -11,7 +11,8 @@
   `scripts/change-character-class` (first user), 197 (2026-10-25: a
   class change now dresses the character in a buddy's gearset and mails
   its old gear; whether this issue stays for level changes is 197's open
-  question 2)
+  question 2; answered 2026-10-25: "it's for level changes and class
+  changes")
 - Priority: Medium
 
 ## Origin

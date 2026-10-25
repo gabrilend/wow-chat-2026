@@ -73,6 +73,10 @@ a target.
    spread of points." **Which talent shape** picks the gearset for a player: the class's
    even shape (the player re-spends their talents anyway), or one the
    operator names on the command line?
-2. **186's plan** (made copies of the old gear at equal strength) and this
+2. (Answered 2026-10-25) 186 stays, "for level changes and class
+   changes". **186's plan** (made copies of the old gear at equal strength) and this
    one (a buddy's set, the old gear mailed): is 186 now only for level
    changes, or retired?
+3. **Which gear after a class change, then:** the buddy's gearset (this
+   issue), copies of the old gear at equal strength (186), or both, the
+   gearset first and 186's copies when it is built?
