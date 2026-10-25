@@ -285,6 +285,9 @@ server's combat code; this is why +4 is more than +4):
   that tunes these dungeons instead of more levels
 - **156** expert — at 61–80 these are ordinary levelling dungeons again;
   expert decides whether basic's level-64 version carries over
+- **155f1** (sub-issue) the level-60 fights balanced: melee and spells
+  measured against a level-60 tank, the multiplier rows generated, and
+  Azeroth's raids checked once spirit heals in combat (167)
 
 ## Open Questions
 
