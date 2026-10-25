@@ -288,7 +288,8 @@ Nothing is tuned yet. What stands:
    from gear, more with talents and buffs (not counted). Raid members at
    the Naxxramas tier (gear stamina about 130-170, weapons aside): about
    3,100-4,500 health unbuffed, 4,050-5,550 buffed, 4,650 on average.
-   Frenzy redesigned: 155j. **Kazzak's spells:** scale them with his melee (0.40: Void Bolt about
+   Frenzy redesigned: 155j. Decided 2026-10-25: **0.40, melee and spells
+   alike**, to playtest; Berserk removed (155j). **Kazzak's spells:** scale them with his melee (0.40: Void Bolt about
    1,760-2,040, Thunderclap about 940-1,060, the volley about 600-800), or
    another figure? Unscaled, a Void Bolt right after a top swing (66-76%
    plus 84% of the tank's health) kills.

@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-25 16:29:40
+Generated on: 2026-10-25 16:39:16
 Models: claude-opus-5-5
 
 ## Contents
@@ -6321,6 +6321,130 @@ or get a figure of their own?
 These healing numbers came from a temporary script in my scratch space, not a
 project tool. I can turn it into one alongside the boss measure if you want to
 rerun it for other tiers.
+
+--------------------------------------------------------------------------------
+
+### User Request 57
+
+> Wowhead's 7,000–11,000: that matches his numbers in our database. A level-70
+> tank's ~16,000 armour takes about 57% off his swings; a level-60 tank's
+> ~10,000 takes about 46%, so he
+>   hits ours harder.
+
+remember, we will be level 60 tanks in level 70 gear, so we will have 16,000
+armor as well, right?
+
+question... Does Naxxramas gear have less armor than our other gear sources from
+Outland? Or is it strictly based on iLevel?
+
+> Open question: should his spells scale with his melee? Unscaled, a Void Bolt
+> (66–76% of the tank's health) right after a top swing (84%) kills, whatever
+> the healers do. At 0.40 too,
+> Void Bolt would be about 1,760–2,040, Thunderclap about 940–1,060 and the
+> volley about 600–800. Should spells share his 0.40, or get a figure of their
+> own?
+
+well... I think his spells will kill our tanks pretty much everytime. So maybe
+we reduce his multiplier to 0.3 or something. Can you maybe give me an estimate
+for how much damage the tanks would take with the spells included? I'd also like
+to know some stats about the average raid member, like how much health they have
+and such. What we're looking for is the raid to survive his enrage (30% extra
+damage and 6 shadowbolt volleys) with strong healing. Actually, the tank won't
+be able to survive the enrage. Maybe we remove the enrage entirely or have him
+stop attacking, channel for ~6 seconds, and cast one shadowbolt volley per
+second. The 6 should be enough to deal about ~140% of the raid's HP, over 6
+seconds. And, remove the +30% damage modifier. I think that'll help.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 57
+
+> Checking what his enrage actually does in the spell file, and pulling level-60
+> class stats for the raid estimate.
+
+> Recording the enrage redesign in the Kazzak issue (155j) and the numbers in
+> the balancing issue.
+
+*[commit] b1c06c05c in wow-chat-2026 - Redesign Doom Lord Kazzak's frenzy as a six-second channelled volley storm, and weigh his spells on the tank (issues 155j, 155f1)*
+
+**The 16,000 armour:** not yet. Level-70 raid tanks get there from level-70 raid
+epics. In basic, the only source of those is Kazzak's and Doomwalker's own loot,
+and it still requires level 70: the Kazzak issue (155j) plans to lower it to 60,
+but that isn't built. So a tank arrives at Kazzak with about 10,000 armour from
+gear. Talents (Toughness, +10%) and buffs (Devotion Aura, Mark of the Wild)
+would add some on top; my numbers don't count them.
+
+**Is armour set by item level, or by where the item comes from?** Item level,
+quality and slot; the source doesn't matter. Plate chests, for example:
+
+| Item | Item level | Quality | Armour |
+|---|---:|---|---:|
+| Breastplate of Wrath (Blackwing Lair) | 76 | epic | 978 |
+| Dreadnaught Breastplate (Naxxramas) | 92 | epic | 1,172 |
+| Outland blue, rescaled for basic | 112 | blue | 1,134 |
+| Warbringer Breastplate (level 70) | 120 | epic | 1,510 |
+
+So Naxxramas gear doesn't have less armour than Outland gear of the same
+strength. Basic's rescaling barely touched armour.
+
+**Damage on the tank with his spells.** Both his melee and his spells are scaled
+by the same multiplier. The tank is crit-proof with 6,699 health and avoids 42%
+of swings. Spell resistances aren't counted.
+
+| Multiplier | Tank's armour | Damage per second (melee + spells) | Unhealed tank lasts | Worst 2 seconds (top swing + Void Bolt) |
+|---:|---:|---:|---:|---:|
+| 0.25 | 10,263 | 1,256 | 5.3 s | 71% |
+| **0.30** | **10,263** | **1,507** | **4.4 s** | **86%** |
+| 0.30 | 13,000 | 1,370 | 4.9 s | 79% |
+| 0.30 | 16,000 | 1,250 | 5.4 s | 73% |
+| 0.35 | 10,263 | 1,759 | 3.8 s | 100% |
+| 0.40 | 10,263 | 2,010 | 3.3 s | 114% |
+
+At 0.30, melee is about 1,045 of the 1,507 per second. The rest is Cleave (209),
+the volley (105), Void Bolt (86) and Thunderclap (62). His worst two seconds
+take 86% of the tank's health, so the tank survives them if healed. 1,500 per
+second is two healers' worth (about 1,250 each), or three with room for mistakes
+and mana. At 0.35 and above, a top swing plus a Void Bolt can kill the tank
+outright. **0.30 is the highest that doesn't.**
+
+**The average raid member** at the Naxxramas tier has about 130–170 stamina
+from gear. Buffed means Fortitude, Mark of the Wild and Kings.
+
+| Class | Health unbuffed | Health buffed |
+|---|---:|---:|
+| Warrior (damage) | 4,509 | 5,535 |
+| Hunter | 4,087 | 5,093 |
+| Rogue | 3,993 | 4,984 |
+| Paladin | 3,701 | 4,677 |
+| Shaman | 3,693 | 4,664 |
+| Druid | 3,503 | 4,449 |
+| Warlock | 3,384 | 4,325 |
+| Priest | 3,217 | 4,143 |
+| Mage | 3,140 | 4,061 |
+| **Average** | **3,691** | **4,659** |
+
+**The enrage, redesigned.** Stock Frenzy comes every 30 seconds after the first
+minute and lasts 10 seconds: +30% damage, and a volley every 2 seconds (5
+volleys). Your version:
+- The +30% damage is removed.
+- He stops swinging and channels for 6 seconds, casting a volley every second.
+- Together the 6 volleys deal about 140% of an average buffed raid member's
+  health. That's about 6,500, or about 1,090 per volley (23% each).
+- This can be built without touching his fight script. The database can replace
+  a spell's row (that's how basic rescales spells), so Frenzy's row becomes
+  "can't attack, tick every second, 6 seconds", and each tick casts a copy of
+  the volley sized for the channel. The new volley's size has to allow for his
+  spell multiplier.
+
+This is recorded in the Kazzak issue (155j), and the numbers are in the
+balancing issue (155f1). Nothing is built yet.
+
+Two questions:
+1. **0.30?** You said "0.3 or something". It's the highest multiplier where his
+   worst two seconds don't kill a crit-proof tank. Shall I record it as decided?
+2. **Berserk at 3 minutes:** after 3 minutes he swings 75% faster and casts a
+   volley every 2 seconds for the rest of the fight. That's a wipe, a hard time
+   limit. Keep it as the limit, rework it like Frenzy, or remove it?
 
 --------------------------------------------------------------------------------
 

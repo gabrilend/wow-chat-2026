@@ -346,9 +346,24 @@ server is restarted).
   Frenzy row in `spell_dbc` (pacify instead of +30% damage, a tick every
   second, 6 seconds) triggering a copy of the volley sized for the channel,
   with his creature spell multiplier (155i) taken into account.
-- **Scaling** (2026-10-25, 155f1): melee about 0.30 of stock (0.40 first
-  chosen, lowered once his spells were counted on the tank), his spells
-  scaled too. Before that: possibly none. Ritz: "They are raid bosses, after all."
+- **No Berserk** (the owner, 2026-10-25: "I think we should remove the
+  Berserk you mentioned, but it's not discussed on wow-head so... Where
+  did it come from?"). It is in the server's own script for him
+  (`boss_doomlord_kazzak.cpp`: at 3 minutes, once, spell 32965 "Berserk":
+  75% faster attacks and a volley every 2 seconds for 10 minutes), there
+  since AzerothCore's first commit (2016), carried over from the older
+  server projects it grew from; the spell is in the game's own data, but
+  Wowhead's page for him does not list it, so whether Blizzard's Kazzak
+  used it is not known here. Removed on basic, by a replaced row for the
+  spell or a change to the script.
+  (Wowhead's "Enrage" is the script's Frenzy, spell 32964: 10 seconds, a
+  volley every 2 seconds; Wowhead counts 6 waves.)
+- **Scaling** (2026-10-25, 155f1): **0.40** for now, his melee and spells
+  alike ("I think 0.4 is a good number for now. Needs playtesting of
+  course."), after 0.30 was weighed once his spells were counted on the
+  tank. At 0.40 his worst two seconds (a top swing and a Void Bolt) are
+  114% of a 10,000-armour tank's health and 97% of a 16,000-armour one's;
+  the playtest decides. Before that: possibly none. Ritz: "They are raid bosses, after all."
   They are level 73 and built for level-70 raids; a level-60 raid's first
   attempt decides.
 - **Left unfinished for now** (Ritz: "we won't be fighting Kazzak for a
