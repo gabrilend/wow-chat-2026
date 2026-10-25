@@ -67,13 +67,15 @@
 --   --divisor N     spirit's divisor (B049; default 100)
 --   --crushing R    basic (default, patch B031: none), late or stock
 --   --gear yes|no   also list each tier's tank set (default no)
+--   --ladder yes|no instead of the bosses, the tank of every row of the
+--                   gear ladder page, in its order (default no)
 --   --database D    (default acore_world_basic)
 --------------------------------------------------------------------------------
 
 local DIR = "/mnt/kaun/wow-chat-2026"
 local O   = { tiers = "yes", health = 4509, armour = 10000, defence = 300, avoid = 0.25, stamina = 200, spirit = 145,
-              divisor = 100, crushing = "basic", gear = "no", database = "acore_world_basic" }
-local TEXT = { tiers = true, crushing = true, gear = true, database = true }
+              divisor = 100, crushing = "basic", gear = "no", ladder = "no", database = "acore_world_basic" }
+local TEXT = { tiers = true, crushing = true, gear = true, ladder = true, database = true }
 do
     local i = 1
     if arg[1] and not arg[1]:match("^%-%-") then DIR = arg[1]; i = 2 end
@@ -123,7 +125,7 @@ local function budget(il, q)
     if q == 3 then return 1.3 * ((il - 1.84) / 1.6) + 1.3 end
     return il
 end
-local TIER = {}
+local TIER, TIER_ORDER = {}, {}
 do
     local path = DIR .. "/docs/HTML/basic-gear-ladder.html"
     local f = io.open(path)
@@ -134,6 +136,7 @@ do
             local plo, phi = l:match("p:{lo:(%d+),hi:(%d+)")
             lo, hi, q = tonumber(plo or lo), tonumber(phi or hi), tonumber(q)
             TIER[name] = (budget(lo, q) + budget(hi, q)) / 2
+            TIER_ORDER[#TIER_ORDER + 1] = name
         end
     end
     f:close()
@@ -186,6 +189,14 @@ if O.tiers == "yes" then
         .. " AND ((class = 4 AND (subclass = 4 OR subclass = 6 OR (subclass IN (0,1) AND InventoryType IN (2,11,12,16))))"
         .. "   OR (class = 2 AND InventoryType IN (13,21,15,25,26)))"
         .. " AND name NOT LIKE '%Monster%' AND name NOT LIKE '%Deprecated%' AND name NOT LIKE '%TEST%'"
+        -- only what a basic player can get: it drops (from a creature, a chest, a
+        -- container or a shared loot list) or a vendor sells it. Quest rewards are
+        -- out: basic has no quests for players (180), and the Outland scaling (E031)
+        -- skipped them, so their stock stats would make every tier look stronger
+        -- (found 2026-10-25: Netherstorm quest greens out-tanking Blackwing Lair)
+        .. " AND entry IN (SELECT Item FROM creature_loot_template UNION SELECT Item FROM reference_loot_template"
+        .. "   UNION SELECT Item FROM gameobject_loot_template UNION SELECT Item FROM item_loot_template"
+        .. "   UNION SELECT item FROM npc_vendor)"
     for _, m in ipairs(query(sql, 7 + 20 + 10)) do
         local it = { id = tonumber(m[1]), name = m[2], q = tonumber(m[3]), il = tonumber(m[4]), slot = SLOTS[tonumber(m[5])],
                      armour = tonumber(m[6]) + tonumber(m[7]), sta = 0, agi = 0, str = 0, def = 0, dodge = 0, parry = 0, block = 0 }
@@ -273,6 +284,20 @@ local function bosses(where)
         .. " (SELECT MIN(c.map) FROM creature c WHERE c.id = t.entry)"
         .. " FROM creature_template t JOIN creature_classlevelstats s ON s.level = t.minlevel AND s.class = t.unit_class"
         .. " WHERE " .. where .. " ORDER BY t.minlevel, t.name", 9)
+end
+-- }}}
+
+-- {{{ the ladder: every row's tank, and the defence that ends crits from bosses of 63, 73 and 78
+if O.ladder == "yes" then
+    print("The tank of each row of the gear ladder page (a level-60 warrior in the best tanking gear of that row's budget)")
+    print(string.format("%-44s %6s %6s %6s %7s %6s  %s", "row", "budget", "health", "armour", "defence", "avoid", "defence short of no crits vs level 63 / 73 / 78"))
+    for _, row in ipairs(TIER_ORDER) do
+        local t = dress(row)
+        local function short(level) return math.max(0, level * 5 + 125 - t.defence) end
+        print(string.format("%-44s %6.0f %6d %6d %7.0f %5.0f%%  %4.0f / %4.0f / %4.0f", row:sub(1, 44), TIER[row], t.health, t.armour,
+            t.defence, t.avoid * 100, short(63), short(73), short(78)))
+    end
+    os.exit(0)
 end
 -- }}}
 

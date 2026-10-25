@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-25 14:09:19
+Generated on: 2026-10-25 15:17:13
 Models: claude-opus-5-5
 
 ## Contents
@@ -65,6 +65,10 @@ Models: claude-opus-5-5
     heals, so it matters in fights and for non-tanks. The boss damage numbers
     are done and committed. Next is your call: put the spirit divisor back to
     100 or keep 200?
+16. 2026-10-25 14:12, after Request 51 - We're balancing level-60 fights so
+    Azeroth stays about the same and Outland becomes doable; crushing blows are
+    gone and spirit's divisor is back to 100. Next, you decide whether a crit
+    may still one-shot a tank with no extra defence.
 
 --------------------------------------------------------------------------------
 
@@ -5713,6 +5717,117 @@ still be able to one-shot one of them? Two options:
 - **Make the target "no one-shot even at defence 300".** The generator then
   lowers each boss until its biggest crit fits under an ungeared tank's health,
   and defence only smooths out the damage.
+
+--------------------------------------------------------------------------------
+
+### User Request 52
+
+> One question before I tune: some tanks won't stack defence. Should a crit
+> still be able to one-shot one of them?
+
+no, but it's okay if there's a minimum amount of defence they need to eliminate
+crits. We should ensure that crits never kill a tank outright. Can you test with
+a similar gear level as the raid tier the boss is from is likely to have? Sorry
+I phrased that weird. There's an HTML page that we built that shows the "tiers"
+of raids, can you check against that? it should be
+docs/HTML/basic-gear-ladder.html. Isn't Exarch Maladaar a dungeon boss? Why does
+he deal so much damage? Is it a spell? If so, it's okay if tanks have to find
+gear with spell resistances.
+
+my concern with the one-shots is that it'll require tanks to gear almost
+exclusively for stamina, and not provide them the choice of stamina / spirit
+that we're trying to create. Spirit should be the right choice for fights where
+healer mana is important, and stamina should be the choice for fights where tank
+gear avoidance is more important.
+
+an ungeared or improperly geared tank should not be able to survive a boss
+fight. Tanks are the most important part of any raid for the reason that they
+are the sole gate that the boss's damage must always go through (aside from
+spells and other mechanics).
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 52
+
+> The gear ladder gives each raid and dungeon an item level. To use it I need a
+> real tank set per tier, built from the database. First, Maladaar: checking his
+> data and fight script.
+
+> Maladaar's damage is melee, not a spell. Next, I'll check how tank stats are
+> stored on items, to build a tier-appropriate tank from the database.
+
+> Vanilla items carry defence as equip spells, so I need to read the game's
+> spell file. Checking the server's description of its layout.
+
+> I'll make a shared spell-file reader in `scripts/lib/` (the legendaries
+> generator has one inline) that also honours the database's spell overrides,
+> since that's where basic's spell changes live.
+
+> Unchanged since my last commit (my earlier python edit just wasn't seen by the
+> editor). Re-reading, then writing the new version.
+
+> Two bosses fell back to the fixed tank because they're summoned in their
+> fights, not spawned (Ragnaros, Nefarian). Fixing that, and dressing Kazzak's
+> raid in the best tier below his own loot.
+
+> Results are in. Writing the reader's info file and recording the findings,
+> then committing.
+
+*[commit] b6702bcc3 in wow-chat-2026 - Measure each boss against a tank dressed in its own tier's gear (issue 155f1)*
+
+With tank gear from each boss's own tier, no crit kills a tank outright, and
+most Outland dungeon bosses are easier than your 10–15 second target. That's
+melee only; spells aren't counted yet.
+
+**How the tier tanks are built.** For each boss, the measuring script takes the
+boss's tier from the gear ladder page. It then dresses a level-60 warrior in the
+best tanking items of that tier from the world database. The defence on vanilla
+items comes from their equip effects, which the script now reads from the game's
+spell file. `scripts/tank-damage-taken --gear yes` lists each set item by item.
+These tanks have 5,900 to 9,800 health and 390 to 490 defence.
+
+**What crits do now.** At 390–490 defence, most bosses can barely crit at all
+(0–5%). The defence that stops a boss's crits completely is its weapon skill
+plus 125: 440 against a level-63 boss, 515 against level 78. That's the minimum
+defence you said is fine.
+
+| Group | Biggest hit, a crit included | Unhealed tank lasts |
+|---|---:|---:|
+| Level-60 raid bosses (tank in their tier) | 24–39% of health | 12–26 s |
+| Outland dungeon bosses | 7–77% | 11–66 s, most 18–33 s |
+| Doom Lord Kazzak (tank in Naxxramas-40 gear) | 209% | 2 s |
+
+- **The ungeared tank still dies.** A tank in the wrong gear is the fixed tank
+  from before: 4,500 health, 300 defence. It still takes up to 95–110% crits,
+  so it doesn't survive a boss fight, which is what you wanted.
+- **Exarch Maladaar's damage is melee, not a spell.** His own damage multiplier
+  in the database is 14, more than twice any other creature in Auchenai Crypts.
+  Basic's dungeon level raise (67 → 71) adds about 18% more. His spells are a
+  fear, a random shadow bolt and Stolen Soul, none of them the big hits, so
+  spell resistance wouldn't help against him. With his tier's gear, his biggest
+  crit is 77% of the tank's health and the tank lasts 11 s unhealed.
+- **Doom Lord Kazzak still kills in one hit.** His own tier on the ladder is his
+  loot (item level 120), which a raid can't wear before killing him. So I
+  dressed his tank in the best tier below that, Naxxramas-40. He needs his own
+  melee multiplier, roughly 0.3, to bring his hits under about 60% of that
+  tank's health.
+- **Outland greens outclass vanilla raid gear.** In the Blackwing Lair and
+  Ahn'Qiraj sets, Outland world greens beat the raids' own epics in most slots.
+  Those greens had their required level lowered to 60 and their stats rescaled
+  for basic. For example, one green helm has 39 stamina and 27 defence; the tier
+  1 Helm of Might has 35 stamina and 10 defence. I've noted it in the issue and
+  changed nothing, since it comes from the gear ladder issue's design (155k).
+
+On stamina and spirit: with tier gear, no boss forces a tank to stack stamina
+just to survive one hit. That leaves room for the stamina-versus-spirit choice.
+
+The findings and your answers are in the balancing issue (155f1). The script and
+a new shared spell-file reader are committed.
+
+**Open question:** most dungeon bosses leave a tier-geared tank 18–33 seconds
+unhealed, against your 10–15. Should I raise their melee now, or count their
+spells first? Spells will close part of that gap, so tuning melee first risks
+overshooting.
 
 --------------------------------------------------------------------------------
 
