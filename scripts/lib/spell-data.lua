@@ -13,8 +13,9 @@
 -- number.
 --
 -- Spell.dbc fields used (3.3.5a, from the server's SpellEntry in
--- DBCStructure.h): 0 ID; 28 CastingTimeIndex; 29 RecoveryTime; 40
--- DurationIndex; 71-73 Effect; 74-76 EffectDieSides; 80-82
+-- DBCStructure.h): 0 ID; 28 CastingTimeIndex; 29 RecoveryTime; 37
+-- MaxLevel; 38 BaseLevel; 39 SpellLevel; 40 DurationIndex; 77-79
+-- EffectRealPointsPerLevel; 116-118 EffectTriggerSpell; 71-73 Effect; 74-76 EffectDieSides; 80-82
 -- EffectBasePoints (stored one less than the amount shown); 86-88
 -- EffectImplicitTargetA; 92-94 EffectRadiusIndex; 95-97
 -- EffectApplyAuraName; 98-100 EffectAmplitude (ms between ticks); 110-112
@@ -66,6 +67,9 @@ function SpellData.open(dir, mysql)
         p:close()
     end
 
+    -- durations (SpellDuration.dbc: id, ms; -1 is "until removed")
+    local durs = read_dbc(dir .. "/data-files/dbc/SpellDuration.dbc")
+
     local R = {}
     -- one field of a spell: from its replacing row when it has one, else from the file
     local function field(id, i, kind)
@@ -81,6 +85,15 @@ function SpellData.open(dir, mysql)
     function R.name(id) return field(id, 136, "s") end
     function R.school(id) return field(id, 225, "u") end      -- bit mask: 1 physical, 2 holy, 4 fire, 8 nature, 16 frost, 32 shadow, 64 arcane
     function R.replaced(id) return over[id] ~= nil end
+    -- ms the spell's aura lasts (nil without one, -1 until removed)
+    function R.duration(id)
+        local idx = field(id, 40, "u")
+        if not idx or idx == 0 then return nil end
+        local row = durs.by_id[idx]
+        return row and durs.i(row, 1) or nil
+    end
+    -- the levels its amounts grow between: { spell = SpellLevel, max = MaxLevel } (numbers)
+    function R.levels(id) return { base = field(id, 38, "u") or 0, spell = field(id, 39, "u") or 0, max = field(id, 37, "u") or 0 } end
     -- }}}
 
     -- {{{ R.effects
@@ -108,6 +121,8 @@ function SpellData.open(dir, mysql)
                     target = field(id, 86 + k, "u"),
                     radius = field(id, 92 + k, "u"),
                     period = field(id, 98 + k, "u"),
+                    per_level = field(id, 77 + k, "f"),
+                    trigger = field(id, 116 + k, "u"),
                 }
             end
         end

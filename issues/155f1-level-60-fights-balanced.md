@@ -118,7 +118,25 @@ Nothing is tuned yet. What stands:
   for Blackwing Lair and Ahn'Qiraj take Outland world greens (their
   required level lowered to 60, E031) in most slots over the raids' own
   epics (the 155k ladder's doing; noted, not changed).
-- **Spells are not measured.** A boss's spells and their damage live in
+- **Spells measured, 2026-10-25** (step 1, `scripts/tank-damage-taken
+  --spells yes` lists each boss's spells): each boss's fight script is read
+  without running it (`scripts/lib/boss-spell-schedule.lua`: the
+  scheduler and event styles, the boss's own block only, normal mode),
+  each spell's damage from the spell file (`scripts/lib/spell-data.lua`:
+  direct damage, damage over time and triggered spells counted no further
+  than the next cast, weapon strikes from the boss's swing, growth by
+  level), and the damage a second it adds on the tank and on one other
+  group member. Left out of the steady rate and listed: what only starts
+  below some health, and what first comes after 3 minutes (a time limit,
+  as Huhuran's at 5). With spells, an unhealed tier-geared tank lasts
+  7-24 seconds against most Outland dungeon bosses (most 10-18), 5.4 for
+  Dalliah, 5.8 for Murmur, 7.0 for the Black Stalker; the owner's 10-15
+  is about where most already are. Not read yet: Golemagg (timers in
+  variables), Selin Fireheart and Kael'thas (their fights run in phases
+  the reader does not follow, so their spells count 0), and nothing an
+  add or a summon does (Vexallus's energies, Kael'thas's phoenix, Laj's
+  and Freywinn's saplings, Sarannis's reinforcements).
+- **Spells were not measured before 2026-10-25.** A boss's spells and their damage live in
   the game's spell data (`data-files/dbc/Spell.dbc`, the file the server
   reads) and in its script (C++ boss scripts under
   `source-beta/src/server/scripts/`, or the world database's

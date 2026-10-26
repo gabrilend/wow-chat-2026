@@ -70,12 +70,14 @@
 --   --ladder yes|no instead of the bosses, the tank of every row of the
 --                   gear ladder page, in its order (default no)
 --   --database D    (default acore_world_basic)
+--   --spells yes|no list each boss's timed spells under it: whom, how often,
+--                   and the damage a second each adds (default no)
 --------------------------------------------------------------------------------
 
 local DIR = "/mnt/kaun/wow-chat-2026"
 local O   = { tiers = "yes", health = 4509, armour = 10000, defence = 300, avoid = 0.25, stamina = 200, spirit = 145,
-              divisor = 100, crushing = "basic", gear = "no", ladder = "no", database = "acore_world_basic" }
-local TEXT = { tiers = true, crushing = true, gear = true, ladder = true, database = true }
+              divisor = 100, crushing = "basic", gear = "no", ladder = "no", spells = "no", database = "acore_world_basic" }
+local TEXT = { tiers = true, crushing = true, gear = true, ladder = true, spells = true, database = true }
 do
     local i = 1
     if arg[1] and not arg[1]:match("^%-%-") then DIR = arg[1]; i = 2 end
@@ -94,6 +96,8 @@ local TANK_LEVEL = 60
 local BOSS_DIFF  = 3                             -- WorldBossLevelDiff in worldserver.conf
 local MYSQL      = DIR .. "/mysql/installed-files/bin/mysql -h127.0.0.1 -P3307 -uritz -pmenardi -N -B " .. O.database
 local Spells     = dofile(DIR .. "/scripts/lib/spell-data.lua").open(DIR, MYSQL)
+local Sched      = dofile(DIR .. "/scripts/lib/boss-spell-schedule.lua")
+local SCRIPTS    = DIR .. "/source-beta/src/server/scripts"
 
 -- {{{ local function query
 -- rows of text fields; any line MySQL prints that is not a row of the
@@ -184,19 +188,22 @@ if O.tiers == "yes" then
     for k = 1, 5 do cols = cols .. ", spellid_" .. k .. ", spelltrigger_" .. k end
     -- a level-60 warrior can wear it: plate (4,4) in armour slots, shields
     -- (4,6), jewellery and cloaks (4,0 and 4,1), one-hand weapons, ranged
-    local sql = "SELECT " .. cols .. " FROM item_template WHERE RequiredLevel <= 60 AND Quality BETWEEN 2 AND 4"
+    -- (the obtainable list is joined as a table made once: asked as "entry IN
+    -- (... UNION ...)", MySQL ran the union again for every item, two minutes)
+    local sql = "SELECT " .. cols .. " FROM item_template JOIN (SELECT DISTINCT u.Item AS got FROM (SELECT Item FROM creature_loot_template"
+        .. " UNION SELECT Item FROM reference_loot_template UNION SELECT Item FROM gameobject_loot_template UNION SELECT Item FROM item_loot_template"
+        .. " UNION SELECT item FROM npc_vendor) u) g ON g.got = entry"
+        .. " WHERE RequiredLevel <= 60 AND Quality BETWEEN 2 AND 4"
         .. " AND (AllowableClass = -1 OR AllowableClass & 1) AND InventoryType IN (1,2,3,5,20,6,7,8,9,10,11,12,16,13,21,14,15,25,26)"
         .. " AND ((class = 4 AND (subclass = 4 OR subclass = 6 OR (subclass IN (0,1) AND InventoryType IN (2,11,12,16))))"
         .. "   OR (class = 2 AND InventoryType IN (13,21,15,25,26)))"
         .. " AND name NOT LIKE '%Monster%' AND name NOT LIKE '%Deprecated%' AND name NOT LIKE '%TEST%'"
-        -- only what a basic player can get: it drops (from a creature, a chest, a
-        -- container or a shared loot list) or a vendor sells it. Quest rewards are
-        -- out: basic has no quests for players (180), and the Outland scaling (E031)
-        -- skipped them, so their stock stats would make every tier look stronger
-        -- (found 2026-10-25: Netherstorm quest greens out-tanking Blackwing Lair)
-        .. " AND entry IN (SELECT Item FROM creature_loot_template UNION SELECT Item FROM reference_loot_template"
-        .. "   UNION SELECT Item FROM gameobject_loot_template UNION SELECT Item FROM item_loot_template"
-        .. "   UNION SELECT item FROM npc_vendor)"
+        -- only what a basic player can get (the join above): it drops (from a
+        -- creature, a chest, a container or a shared loot list) or a vendor sells
+        -- it. Quest rewards are out: basic has no quests for players (180), and the
+        -- Outland scaling (E031) skipped them, so their stock stats would make every
+        -- tier look stronger (found 2026-10-25: Netherstorm quest greens out-tanking
+        -- Blackwing Lair)
     for _, m in ipairs(query(sql, 7 + 20 + 10)) do
         local it = { id = tonumber(m[1]), name = m[2], q = tonumber(m[3]), il = tonumber(m[4]), slot = SLOTS[tonumber(m[5])],
                      armour = tonumber(m[6]) + tonumber(m[7]), sta = 0, agi = 0, str = 0, def = 0, dodge = 0, parry = 0, block = 0 }
@@ -271,19 +278,116 @@ end
 -- credits, spawned in one of the sixteen dungeons basic opens at 60
 -- (E024), at basic's levels. Lord Kazzak (12397) is left out: no spawn,
 -- no script, a leftover row.
+-- The third field is the group's size: a spell aimed at a random player
+-- lands on any one of them as often as on the tank.
 local GROUPS = {
-    { "Level-60 raid bosses",  "t.entry IN (11502, 11988, 15509, 14020, 11583)" },
-    { "World bosses",          "t.entry IN (18728)" },
+    { "Level-60 raid bosses",  "t.entry IN (11502, 11988, 15509, 14020, 11583)", 40 },
+    { "World bosses",          "t.entry IN (18728)", 40 },
     { "Outland dungeon bosses (basic's levels)",
       "t.entry IN (SELECT i.creditEntry FROM instance_encounters i JOIN creature c ON c.id = i.creditEntry"
-        .. " WHERE i.creditType = 0 AND c.map IN (540,542,543,545,546,547,552,553,554,555,556,557,558,560,269,585))" },
+        .. " WHERE i.creditType = 0 AND c.map IN (540,542,543,545,546,547,552,553,554,555,556,557,558,560,269,585))", 5 },
 }
 local function bosses(where)
     return query("SELECT t.entry, t.name, t.minlevel, t.DamageModifier, t.BaseAttackTime, s.attackpower, t.type_flags & 4,"
         .. " CASE t.exp WHEN 0 THEN s.damage_base WHEN 1 THEN s.damage_exp1 ELSE s.damage_exp2 END,"
-        .. " (SELECT MIN(c.map) FROM creature c WHERE c.id = t.entry)"
+        .. " (SELECT MIN(c.map) FROM creature c WHERE c.id = t.entry), t.ScriptName"
         .. " FROM creature_template t JOIN creature_classlevelstats s ON s.level = t.minlevel AND s.class = t.unit_class"
-        .. " WHERE " .. where .. " ORDER BY t.minlevel, t.name", 9)
+        .. " WHERE " .. where .. " ORDER BY t.minlevel, t.name", 10)
+end
+-- }}}
+
+-- {{{ local function spell_hit
+-- What one cast of a spell does, before anyone's armour: its amount (an
+-- average), whether it reaches everyone around (any damaging effect with
+-- a radius), and whether it is physical (armour takes from it).
+--   effect 2 school damage: base + half the dice, grown by level as the
+--     server grows it (per level above the spell's own, up to its cap);
+--   aura 3 periodic damage: a tick times the ticks in its duration, but
+--     no more than fit before the next cast (window, seconds; a lasting or
+--     permanent aura would otherwise count its whole life every cast);
+--   aura 23 / 226 periodic trigger, effect 64 trigger: the spell it casts,
+--     times its ticks, the same way (one level deep below this one, two in all);
+--   weapon effects (17, 58, 121 a weapon swing plus a flat amount; 31 a
+--     share of a swing): the boss's average swing, physical.
+-- Anything else (summons, auras that are not damage) counts nothing.
+local WEAPON = { [17] = true, [58] = true, [121] = true }
+local function spell_hit(id, caster_level, swing, depth, window)
+    local effects = Spells.effects(id)
+    if not effects then return 0, false, false end
+    local lv = Spells.levels(id)
+    local lvl = caster_level
+    if lv.max > 0 and lvl > lv.max then lvl = lv.max end
+    lvl = math.max(0, lvl - math.max(lv.base, lv.spell))
+    local amount, area, physical = 0, false, Spells.school(id) == 1
+    local dur = Spells.duration(id)
+    if dur and window and (dur < 0 or dur > window * 1000) then dur = window * 1000 end
+    for _, e in ipairs(effects) do
+        local one = e.base + e.dice / 2 + e.per_level * lvl
+        local got = 0
+        if e.effect == 2 then got = one
+        elseif e.effect == 6 and e.aura == 3 and e.period > 0 and dur and dur > 0 then got = one * math.floor(dur / e.period)
+        elseif WEAPON[e.effect] then got = swing + one; physical = true
+        elseif e.effect == 31 then got = swing * one / 100; physical = true
+        elseif depth < 2 and e.trigger > 0 and e.trigger ~= id then
+            local ticks = 1
+            if e.effect == 6 and (e.aura == 23 or e.aura == 226) and e.period > 0 and dur and dur > 0 then ticks = math.floor(dur / e.period) end
+            if e.effect == 64 or (e.effect == 6 and (e.aura == 23 or e.aura == 226)) then
+                local a, ar, ph = spell_hit(e.trigger, caster_level, swing, depth + 1, window)
+                got = a * ticks; area = area or ar; physical = physical or ph
+            end
+        end
+        if got > 0 and e.radius > 0 then area = true end
+        amount = amount + got
+    end
+    return amount, area, physical
+end
+-- }}}
+
+-- {{{ local function spells_per_second
+-- A boss's spells as damage per second on its tank and on one other
+-- member of a group of n, from its fight script's schedule. Casts with no
+-- repeat (once in a fight) are left out of the rate. tank_dr is the
+-- tank's armour share; the others' armour is taken as 30%.
+local schedules = {}
+local function spells_per_second(script, level, swing, tank_dr, n)
+    if script == "" then return 0, 0, "no script" end
+    local sc = schedules[script]
+    if not sc then
+        local path = Sched.find_file(SCRIPTS, script)
+        sc = path and Sched.read(path, script) or { casts = {}, notes = { "script " .. script .. " not found" } }
+        schedules[script] = sc
+    end
+    local on_tank, on_other, lines = 0, 0, {}
+    for _, c in ipairs(sc.casts) do
+        -- not in the steady rate: what only starts below some health, and what first
+        -- comes after 3 minutes (a time limit, as Huhuran's at 5)
+        if c.every and (c.late or (c.first and c.first >= 180)) then
+            lines[#lines + 1] = string.format("      %-24s %6d  %s, every %.0fs: not in the rate", (Spells.name(c.spell) or "?"):sub(1, 24), c.spell,
+                c.late and "only below some health" or string.format("from %.0f minutes on", c.first / 60), c.every)
+        elseif c.every and c.every > 0 then
+            local amount, area, physical = spell_hit(c.spell, level, swing, 0, c.every)
+            if amount > 0 then
+                local per = amount / c.every
+                -- who it lands on: everyone around for an area spell; the tank for one
+                -- aimed at it; one of the group, by turns, for a random or other target;
+                -- a single-target spell on itself on nobody
+                local t_share, o_share
+                -- an area spell aimed at a random player reaches that player and those
+                -- beside them, taken as two of the group
+                if area and (c.target == "random" or c.target == "other") then t_share, o_share = math.min(1, 2 / n), math.min(1, 2 / n)
+                elseif area then t_share, o_share = 1, 1
+                elseif c.target == "tank" then t_share, o_share = 1, 0
+                elseif c.target == "random" or c.target == "other" then t_share, o_share = 1 / n, 1 / n
+                else t_share, o_share = 0, 0 end
+                local tk = per * t_share * (physical and (1 - tank_dr) or 1)
+                local ot = per * o_share * (physical and 0.7 or 1)
+                on_tank, on_other = on_tank + tk, on_other + ot
+                lines[#lines + 1] = string.format("      %-24s %6d  %-6s every %4.0fs  %6.0f a cast%s  -> tank %5.0f/s, other %5.0f/s",
+                    (Spells.name(c.spell) or "?"):sub(1, 24), c.spell, area and "area" or c.target, c.every, amount, physical and " (physical)" or "", tk, ot)
+            end
+        end
+    end
+    return on_tank, on_other, table.concat(sc.notes, "; "), lines
 end
 -- }}}
 
@@ -308,12 +412,14 @@ print(string.format("spirit build %d stamina / %d spirit at divisor %d heals %.1
 if O.tiers ~= "yes" then
     print(string.format("one tank for every boss: %d health, %d armour, defence %d, %d%% of swings avoided", O.health, O.armour, O.defence, O.avoid * 100))
 end
-print("columns: big = a top roll that crits (or a top roll, if it can't crit); nocrit = the defence that stops its crits; nc/hp = its top roll without a crit")
+print("columns: big = a top roll that crits (or a top roll, if it can't crit); nocrit = the defence that stops its crits; nc/hp = its top roll without a crit;")
+print("  melee, spells, all = damage a second on the tank; dead = the tank's health over all of it; others = spells a second on one other group member")
 
 for _, g in ipairs(GROUPS) do
     print("\n" .. g[1])
-    print(string.format("%-26s %3s %-19s %5s %6s %4s %5s %6s %5s %6s %5s %6s %6s %6s %6s",
-        "boss", "lvl", "tier (budget)", "hp", "armour", "def", "crit", "avg", "big", "big/hp", "dps", "dead", "nocrit", "nc/hp", "spirit"))
+    print(string.format("%-26s %3s %-19s %5s %6s %4s %5s %6s %5s %6s %5s %6s %5s %6s %6s %6s %6s",
+        "boss", "lvl", "tier (budget)", "hp", "armour", "def", "crit", "avg", "big", "big/hp", "melee", "spells", "all", "dead", "nocrit", "nc/hp", "others"))
+    local notes = {}
     local rows = bosses(g[2])
     if #rows == 0 then io.stderr:write("tank-damage-taken: no bosses found for " .. g[1] .. "\n"); os.exit(1) end
     for _, m in ipairs(rows) do
@@ -344,10 +450,15 @@ for _, g in ipairs(GROUPS) do
         local bigh   = big * (1 - dr) * ((crit > 0 and 2) or (crush > 0 and 1.5) or 1)
         local plain  = big * (1 - dr) * (crush > 0 and 1.5 or 1)
         local label  = row and string.format("%s (%.0f)", row:sub(1, 13), TIER[row]) or "-"
-        print(string.format("%-26s %3d %-19s %5d %6d %4d %4.1f%% %6.0f %5.0f %5.0f%% %5.0f %5.1fs %6d %5.0f%% %5.1f%%",
+        local sp_tank, sp_other, note, lines = spells_per_second(m[10], lvl, avg, dr, g[3])
+        if note ~= "" then notes[#notes + 1] = m[2] .. ": " .. note end
+        local all = dps + sp_tank
+        print(string.format("%-26s %3d %-19s %5d %6d %4d %4.1f%% %6.0f %5.0f %5.0f%% %5.0f %6.0f %5.0f %5.1fs %6d %5.0f%% %6.0f",
             m[2]:sub(1, 26), lvl, label, tank.health, tank.armour, tank.defence, crit * 100, avg * (1 - dr), bigh,
-            bigh / tank.health * 100, dps, tank.health / dps, nocrit, plain / tank.health * 100, heal_hit / dps * 100))
+            bigh / tank.health * 100, dps, sp_tank, all, tank.health / all, nocrit, plain / tank.health * 100, sp_other))
+        if O.spells == "yes" then for _, l in ipairs(lines) do print(l) end end
     end
+    for _, n in ipairs(notes) do print("  note: " .. n) end
 end
 
 if O.tiers == "yes" and O.gear == "yes" then

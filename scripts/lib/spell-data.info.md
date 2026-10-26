@@ -13,7 +13,9 @@ as they do in the server. Returns its table:
 | `R.name(id)` | spell number | its English name (text), or nil |
 | `R.school(id)` | spell number | its school bit mask (number: 1 physical, 2 holy, 4 fire, 8 nature, 16 frost, 32 shadow, 64 arcane), or nil |
 | `R.replaced(id)` | spell number | true when `spell_dbc` replaces its row |
-| `R.effects(id)` | spell number | list of its effects, or nil; each a table: `effect` (what it does: 2 school damage, 6 apply aura, ...), `aura` (for auras: 3 periodic damage, 30 skill, 189 rating, ...), `base` (smallest amount, as shown), `dice` (at most this much more), `misc` (the aura's which-one: a skill number, a rating mask), `target`, `radius` (radius index, 0 = one target), `period` (ms between ticks); all numbers |
+| `R.duration(id)` | spell number | how long its aura lasts in ms (number), -1 until removed, nil without one |
+| `R.levels(id)` | spell number | `{ base, spell, max }`: its amounts grow per caster level above the higher of base and spell, up to max (numbers; the server's SpellEffectInfo::CalcValue) |
+| `R.effects(id)` | spell number | list of its effects, or nil; each a table: `effect` (what it does: 2 school damage, 6 apply aura, ...), `aura` (for auras: 3 periodic damage, 30 skill, 189 rating, ...), `base` (smallest amount, as shown), `dice` (at most this much more), `misc` (the aura's which-one: a skill number, a rating mask), `target`, `radius` (radius index, 0 = one target), `period` (ms between ticks), `per_level` (amount added per caster level above the spell's), `trigger` (the spell an effect casts, 0 for none); all numbers |
 
 Used by `scripts/tank-damage-taken` (equip effects' defence, dodge and
 parry on tank gear; next, bosses' spells for issue 155f1).
