@@ -56,10 +56,21 @@ The owner, 2026-10-08:
   one-quality tables; greens, blues and epics have such tables);
   `scripts/test-patched-syntax basic` compiles the rule; the settings
   checks pass. Not yet seen in game: kill counts against the multipliers.
-- **A known gap**: 106 tables mix greens, blues or epics with whites (98
-  of them below level 58); their items mostly share one chance equally,
-  which the roll hook cannot make likelier one by one, so those greens
-  are not boosted (open question 4).
+- **Mixed tables split, 2026-10-26 (install step E073, not yet
+  installed)**, as the owner chose (open question 4):
+  `scripts/generate-basic-split-loot-sql` splits each stock shared table
+  that mixes qualities under one equal chance into one table per quality
+  (new tables 1840000 and up, the same items), and every loot entry that
+  pointed at it now points at the new ones with its chance shared out by
+  each quality's count, in one group, so unboosted the drops are exactly
+  as before. In the world now: 42 tables into 88, 1,604 loot entries
+  rewritten (each saved first, `basic_181_split_parents`, for an exact
+  revert). Left as they are: 9 mixed tables whose items carry their own
+  chances (the roll rule already reaches those item by item), 21 of
+  several groups or with nested tables, and the project's own tables
+  (Onyxia's hoard mixes on purpose, 155h). The RAM test applies,
+  re-applies and reverts it; `scripts/validate-basic-state` checks the
+  new tables are one quality each and nothing points at a split table.
 
 ## Intended Behavior
 

@@ -23,10 +23,11 @@
 --      hold one quality only, each with a chance of its own (where the
 --      multipliers apply). A mixed one (whites and greens together, 106
 --      tables in 2026-10, 98 of them below level 58) gets the multiplier
---      only on items with a chance of their own, which few have: a known
---      gap (issue 181, open question 4). The bar, 85%, is today's coverage
---      (88%), so the check fails if the layout grows worse, not for the
---      gap itself;
+--      only on items with a chance of their own, which few have. Install
+--      step E073 splits the stock ones of one group into one table per
+--      quality (issue 181), so after it most of these are gone; the bar,
+--      85%, is the coverage before it (88%), so the check fails if the
+--      layout grows worse;
 --   3. there are one-quality tables of greens, blues and epics at all.
 --
 -- Usage: scripts/test-basic-drop-layout [PROJECT_DIR] [WORLD_DATABASE]

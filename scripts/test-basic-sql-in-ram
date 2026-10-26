@@ -164,6 +164,7 @@ apply_all() {
     step "E068 a Profession Mentor in each capital"       "${WORLD}" "${DIR}/patches/E068-basic-profession-mentors/39-profession-mentors.apply.sql"
     step "E071 the fights' multipliers and boss spells"   "${WORLD}" "${DIR}/patches/E071-basic-fight-multipliers/40-fight-multipliers.apply.sql"
     step "E072 some gear trades stamina for spirit"     "${WORLD}" "${DIR}/patches/E072-basic-spirit-on-gear/41-spirit-on-gear.apply.sql"
+    step "E073 mixed loot tables split by quality"      "${WORLD}" "${DIR}/patches/E073-basic-split-loot-tables/42-split-loot-tables.apply.sql"
     step "E019 no intro cinematic (vanilla's, shared)"    "${CHARS}" "${DIR}/patches/E019-vanilla-no-intro-cinematic/01-no-intro-cinematic.apply.sql"
     step "E023 starting-valley rotation table"            "${CHARS}" "${B}/db_characters.src/02-starting-valley-rotation.apply.sql"
     step "E041 death knight soul ledger"                  "${CHARS}" "${B}/db_characters.src/03-death-knight-souls.apply.sql"
@@ -172,6 +173,7 @@ apply_all() {
     step "E056 the kept stand-ins"                        "${CHARS}" "${DIR}/patches/E056-basic-buddy-stand-ins/06-buddy-stand-ins.apply.sql"
 }
 revert_all() {
+    step "E073 revert" "${WORLD}" "${DIR}/patches/E073-basic-split-loot-tables/42-split-loot-tables.revert.sql"
     step "E072 revert" "${WORLD}" "${DIR}/patches/E072-basic-spirit-on-gear/41-spirit-on-gear.revert.sql"
     step "E071 revert" "${WORLD}" "${DIR}/patches/E071-basic-fight-multipliers/40-fight-multipliers.revert.sql"
     step "E068 revert" "${WORLD}" "${DIR}/patches/E068-basic-profession-mentors/39-profession-mentors.revert.sql"

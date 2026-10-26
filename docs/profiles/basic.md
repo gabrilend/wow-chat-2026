@@ -219,6 +219,7 @@ lowest priority first, each line its header's own (`scripts/plan-patches basic`)
 |     2980 | E068 | sql  | A Profession Mentor in each capital, teaching the professions its city lacks (issue 155e1)  |
 |     3010 | E071 | sql  | The level-60 fights' multipliers and rewritten boss spells (issues 155i, 155f1, 155j)       |
 |     3020 | E072 | sql  | Some gear trades its stamina for spirit: two fifths of each kind, all or half (issue 155k2) |
+|     3030 | E073 | sql  | Shared loot tables that mix qualities split into one table per quality (issue 181)          |
 <!-- patch-lists: end -->
 
 ## How to switch to basic

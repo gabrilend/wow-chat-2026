@@ -1,0 +1,187 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- generate-basic-split-loot-sql - writes install step E073's SQL: shared loot
+-- tables that mix qualities are split into one table per quality (issue 181).
+--
+-- For a general audience: basic makes greens, blues and epics likelier from
+-- ordinary monsters by raising the chance on loot entries that point at a
+-- table of a single quality (src/cpp-basic/basic_rules.cpp, "Richer
+-- monster drops"). Some old shared tables mix whites and greens (or blues,
+-- or epics) and give each item an equal share of one chance, so their
+-- greens could not be made likelier. This splits each such table into one
+-- table per quality holding the same items, and every entry that pointed
+-- at the old table now points at the new ones instead, each with the old
+-- chance times its quality's share of the items, all in one group so one
+-- of them is still picked as before. Unboosted, the drops are exactly what
+-- they were; boosted, the greens' table rises like any other.
+--
+-- Which tables: those holding items of more than one quality with at
+-- least one green, blue or epic, every entry an item (no nested table),
+-- all in one group sharing its chance equally (chance 0), and pointed at
+-- by some loot entry (a creature's, a chest's, an item's or another shared
+-- table's), and stock: the project's own tables (1500000 and up: Onyxia's
+-- hoard of sacks and gem piles, 155h, mixes qualities on purpose) are left
+-- as they are. Others are left as they are and counted in the report: mixed
+-- tables whose items carry their own chances (the roll rule already reaches
+-- those, item by item) and mixed tables of several groups or with nested
+-- tables.
+-- New tables: 1840000 + 10 x (the table's place in the list) + quality;
+-- the new entries in a parent are its rows 1900001 and up.
+--
+-- Usage: scripts/generate-basic-split-loot-sql [PROJECT_DIR] [WORLD_DATABASE]
+--   writes patches/E073-basic-split-loot-tables/42-split-loot-tables.{apply,revert}.sql
+--------------------------------------------------------------------------------
+
+local DIR   = arg[1] and arg[1] ~= "" and arg[1] or "/mnt/kaun/wow-chat-2026"
+local WORLD = arg[2] or "acore_world_basic"
+local HERE  = DIR .. "/patches/E073-basic-split-loot-tables/"
+local MYSQL = DIR .. "/mysql/installed-files/bin/mysql -h127.0.0.1 -P3307 -uritz -pmenardi -N -B " .. WORLD
+local BASE  = 1840000
+local PARENTS = { "creature_loot_template", "reference_loot_template", "gameobject_loot_template", "item_loot_template" }
+
+-- {{{ local function query
+local function query(sql)
+    local p = io.popen(MYSQL .. ' -e "' .. sql .. '" 2>&1')
+    local rows = {}
+    for l in p:lines() do
+        if l:match("^ERROR") then io.stderr:write("generate-basic-split-loot-sql: MySQL said: " .. l .. "\n"); os.exit(1) end
+        if not l:match("^mysql: %[Warning%]") then
+            local m = {}
+            for v in (l .. "\t"):gmatch("([^\t]*)\t") do m[#m + 1] = v end
+            rows[#rows + 1] = m
+        end
+    end
+    p:close()
+    return rows
+end
+-- }}}
+
+local installed = #query("SHOW TABLES LIKE 'basic_181_split_parents'") > 0
+local function from(tbl)
+    -- the loot as it was: after the install, the parents saved in the backup
+    -- stand in for the rewritten ones, so a run then picks the same tables
+    if not installed then return tbl end
+    return "(SELECT Entry, Item, Reference, Chance, QuestRequired, LootMode, GroupId, MinCount, MaxCount, Comment FROM " .. tbl
+        .. " WHERE NOT (Reference BETWEEN " .. BASE .. " AND " .. (BASE + 9999) .. ")"
+        .. " UNION ALL SELECT Entry, Item, Reference, Chance, QuestRequired, LootMode, GroupId, MinCount, MaxCount, Comment"
+        .. " FROM basic_181_split_parents WHERE src = '" .. tbl .. "')"
+end
+
+-- {{{ the mixed tables and their shapes
+local shapes = query("SELECT rr.Entry, COUNT(*), SUM(rr.Reference <> 0), COUNT(DISTINCT rr.GroupId), SUM(rr.Chance > 0)"
+    .. " FROM reference_loot_template rr WHERE rr.Entry < 1500000 AND rr.Entry IN"
+    .. " (SELECT r2.Entry FROM reference_loot_template r2 JOIN item_template i2 ON i2.entry = r2.Item WHERE r2.Reference = 0"
+    .. "  GROUP BY r2.Entry HAVING MIN(i2.Quality) <> MAX(i2.Quality) AND MAX(i2.Quality BETWEEN 2 AND 4) = 1)"
+    .. " GROUP BY rr.Entry ORDER BY rr.Entry")
+local used = {}
+for _, t in ipairs(PARENTS) do
+    for _, r in ipairs(query("SELECT DISTINCT ABS(Reference) FROM " .. from(t) .. " x WHERE Reference <> 0")) do used[tonumber(r[1])] = true end
+end
+local split, own_chances, other = {}, 0, 0
+for _, s in ipairs(shapes) do
+    local e, n, nref, ngroups, nchanced = tonumber(s[1]), tonumber(s[2]), tonumber(s[3]), tonumber(s[4]), tonumber(s[5])
+    if used[e] then
+        if nref == 0 and ngroups == 1 and nchanced == 0 then split[#split + 1] = e
+        elseif nref == 0 and nchanced == n then own_chances = own_chances + 1
+        else other = other + 1 end
+    end
+end
+-- }}}
+
+local function sqltext(s) return "'" .. s:gsub("\\", "\\\\"):gsub("'", "''") .. "'" end
+local apply, revert = {}, {}
+local HEAD = "-- GENERATED by scripts/generate-basic-split-loot-sql from " .. WORLD .. "; don't edit by hand (re-run the generator).\n"
+    .. "-- Issue 181: shared loot tables that mix qualities, split into one table per quality, so greens, blues and epics can be boosted.\n"
+apply[#apply + 1] = HEAD .. [[
+-- Every loot entry that pointed at a split table is saved once (INSERT
+-- IGNORE keeps the first copy) and replaced by entries pointing at the new
+-- one-quality tables; installing again rebuilds the same rows.
+CREATE TABLE IF NOT EXISTS `basic_181_split_parents` (
+  `src` varchar(32) NOT NULL, `Entry` int unsigned NOT NULL, `Item` int unsigned NOT NULL, `Reference` int NOT NULL,
+  `Chance` float NOT NULL, `QuestRequired` tinyint NOT NULL, `LootMode` smallint unsigned NOT NULL, `GroupId` tinyint unsigned NOT NULL,
+  `MinCount` tinyint unsigned NOT NULL, `MaxCount` tinyint unsigned NOT NULL, `Comment` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`src`, `Entry`, `Item`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='181: loot entries that pointed at a split table, as they were';
+DELETE FROM `reference_loot_template` WHERE `Entry` BETWEEN ]] .. BASE .. " AND " .. (BASE + 9999) .. ";"
+for _, t in ipairs(PARENTS) do
+    apply[#apply + 1] = "DELETE FROM `" .. t .. "` WHERE `Reference` BETWEEN " .. BASE .. " AND " .. (BASE + 9999) .. ";"
+end
+revert[#revert + 1] = "-- MARKER_E073_REVERT basic-split-loot-tables\n" .. HEAD .. "\n-- The new tables and the entries pointing at them removed, the saved entries put back, the copy dropped."
+
+local made, entries_rewritten = 0, 0
+-- a new entry's row number within its parent ("Item", which with the parent's
+-- number must be unique): 1900000 counting up per parent, since one parent
+-- can point at the same split table more than once
+local next_row = {}
+for idx, e in ipairs(split) do
+    local items = query("SELECT r.Item, r.QuestRequired, r.LootMode, r.GroupId, r.MinCount, r.MaxCount, i.Quality FROM reference_loot_template r"
+        .. " JOIN item_template i ON i.entry = r.Item WHERE r.Entry = " .. e .. " AND r.Reference = 0 ORDER BY r.Item")
+    local by_q, total = {}, #items
+    for _, it in ipairs(items) do
+        local q = tonumber(it[7])
+        by_q[q] = by_q[q] or {}
+        table.insert(by_q[q], it)
+    end
+    local qs = {}
+    for q in pairs(by_q) do qs[#qs + 1] = q end
+    table.sort(qs)
+    -- the new tables: the same items, one quality each, sharing one chance equally as before
+    for _, q in ipairs(qs) do
+        local id = BASE + idx * 10 + q
+        local vals = {}
+        for _, it in ipairs(by_q[q]) do
+            vals[#vals + 1] = string.format("(%d, %s, 0, 0, %s, %s, %s, %s, %s, %s)", id, it[1], it[2], it[3], it[4], it[5], it[6],
+                sqltext(string.format("181: quality %d of shared table %d", q, e)))
+        end
+        apply[#apply + 1] = "INSERT INTO `reference_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`, `Comment`) VALUES\n  "
+            .. table.concat(vals, ",\n  ") .. ";"
+        made = made + 1
+    end
+    -- every entry pointing at the old table: saved, then replaced by one entry per
+    -- quality, its chance times the quality's share, in the old entry's group (or a
+    -- new group of the parent's own when it had none, so one is still picked)
+    for _, t in ipairs(PARENTS) do
+        for _, p in ipairs(query("SELECT Entry, Item, Reference, Chance, QuestRequired, LootMode, GroupId, MinCount, MaxCount, IFNULL(Comment, '') FROM "
+            .. from(t) .. " x WHERE ABS(Reference) = " .. e)) do
+            local entry, item, ref, chance, group = p[1], p[2], p[3], tonumber(p[4]), tonumber(p[7])
+            apply[#apply + 1] = string.format("INSERT IGNORE INTO `basic_181_split_parents` VALUES ('%s', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);",
+                t, entry, item, ref, p[4], p[5], p[6], p[7], p[8], p[9], sqltext(p[10]))
+            apply[#apply + 1] = string.format("DELETE FROM `%s` WHERE `Entry` = %s AND `Item` = %s AND `Reference` = %s;", t, entry, item, ref)
+            local g = group
+            if g == 0 then
+                local mx = query("SELECT IFNULL(MAX(GroupId), 0) FROM " .. from(t) .. " x WHERE Entry = " .. entry)[1][1]
+                g = tonumber(mx) + 1
+            end
+            for _, q in ipairs(qs) do
+                local id = BASE + idx * 10 + q
+                local share = chance * #by_q[q] / total
+                local key = t .. ":" .. entry
+                next_row[key] = (next_row[key] or 1900000) + 1
+                apply[#apply + 1] = string.format("INSERT INTO `%s` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`, `Comment`)"
+                    .. " VALUES (%s, %d, %d, %.6g, %s, %s, %d, %s, %s, %s);", t, entry, next_row[key], id, share, p[5], p[6], g, p[8], p[9],
+                    sqltext(string.format("181: quality %d of %d (was %s)", q, e, p[10])))
+            end
+            entries_rewritten = entries_rewritten + 1
+        end
+    end
+end
+for _, t in ipairs(PARENTS) do
+    revert[#revert + 1] = "DELETE FROM `" .. t .. "` WHERE `Reference` BETWEEN " .. BASE .. " AND " .. (BASE + 9999) .. ";"
+end
+revert[#revert + 1] = "DELETE FROM `reference_loot_template` WHERE `Entry` BETWEEN " .. BASE .. " AND " .. (BASE + 9999) .. ";"
+for _, t in ipairs(PARENTS) do
+    revert[#revert + 1] = "INSERT IGNORE INTO `" .. t .. "` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`, `Comment`)"
+        .. " SELECT `Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`, `Comment` FROM `basic_181_split_parents` WHERE `src` = '" .. t .. "';"
+end
+revert[#revert + 1] = "DROP TABLE IF EXISTS `basic_181_split_parents`;"
+
+os.execute('mkdir -p "' .. HERE .. '"')
+for name, lines in pairs({ ["42-split-loot-tables.apply.sql"] = apply, ["42-split-loot-tables.revert.sql"] = revert }) do
+    local f = io.open(HERE .. name, "w")
+    if not f then io.stderr:write("generate-basic-split-loot-sql: cannot write " .. HERE .. name .. "\n"); os.exit(1) end
+    f:write(table.concat(lines, "\n"), "\n")
+    f:close()
+end
+print(string.format("wrote %s42-split-loot-tables.{apply,revert}.sql: %d mixed tables split into %d one-quality tables, %d loot entries rewritten;",
+    HERE, #split, made, entries_rewritten))
+print(string.format("  left as they are: %d mixed tables whose items carry their own chances (already reached item by item), %d with several groups or nested tables", own_chances, other))

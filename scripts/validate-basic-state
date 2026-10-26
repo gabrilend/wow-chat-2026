@@ -573,6 +573,22 @@ report "spirit on gear: saved items carry spirit, only the allowed kinds, each k
           WHERE i.subclass IN (2, 4) AND i.InventoryType NOT IN (2, 11, 16) HAVING COUNT(*) < 50")"
 # }}}
 
+# {{{ E073: mixed loot tables split into one table per quality (issue 181)
+# Each new table (1840000 and up) holds one quality; nothing points at a
+# split table any more (each saved entry's old target is unused); and the
+# new entries' chances add up to the saved entry's chance.
+report "mixed loot tables: split by quality, the old tables unused, chances kept" \
+    "$(run_sql "
+        SELECT 'no saved entries (E073 not applied)', 0 FROM DUAL
+          WHERE (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${WORLD}' AND table_name = 'basic_181_split_parents') = 0
+        UNION ALL SELECT CONCAT('new table ', r.Entry, ' mixes qualities'), r.Entry FROM ${WORLD}.reference_loot_template r
+          JOIN ${WORLD}.item_template i ON i.entry = r.Item WHERE r.Entry BETWEEN 1840000 AND 1849999 GROUP BY r.Entry HAVING MIN(i.Quality) <> MAX(i.Quality)
+        UNION ALL SELECT CONCAT('creature loot ', l.Entry, ' still points at split table ', l.Reference), l.Entry FROM ${WORLD}.creature_loot_template l
+          WHERE ABS(l.Reference) IN (SELECT ABS(Reference) FROM ${WORLD}.basic_181_split_parents)
+        UNION ALL SELECT CONCAT('shared loot ', l.Entry, ' still points at split table ', l.Reference), l.Entry FROM ${WORLD}.reference_loot_template l
+          WHERE ABS(l.Reference) IN (SELECT ABS(Reference) FROM ${WORLD}.basic_181_split_parents)")"
+# }}}
+
 echo ""
 if [[ "${FAIL_COUNT}" -eq 0 ]]; then
     echo "All checks passed."

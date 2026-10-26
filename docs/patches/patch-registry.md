@@ -268,6 +268,7 @@ in the build's order.
 | E068                           | sql          |     2980 | basic                                    | A Profession Mentor in each capital, teaching the professions its city lacks (issue 155e1)   | `patches/E068-basic-profession-mentors/E068-basic-profession-mentors.sh`                 |
 | E071                           | sql          |     3010 | basic                                    | The level-60 fights' multipliers and rewritten boss spells (issues 155i, 155f1, 155j)        | `patches/E071-basic-fight-multipliers/E071-basic-fight-multipliers.sh`                   |
 | E072                           | sql          |     3020 | basic                                    | Some gear trades its stamina for spirit: two fifths of each kind, all or half (issue 155k2)  | `patches/E072-basic-spirit-on-gear/E072-basic-spirit-on-gear.sh`                         |
+| E073                           | sql          |     3030 | basic                                    | Shared loot tables that mix qualities split into one table per quality (issue 181)           | `patches/E073-basic-split-loot-tables/E073-basic-split-loot-tables.sh`                   |
 <!-- patch-lists: end -->
 
 ## Older write-ups of source patches
