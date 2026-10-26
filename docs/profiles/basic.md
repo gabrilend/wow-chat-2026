@@ -215,6 +215,7 @@ lowest priority first, each line its header's own (`scripts/plan-patches basic`)
 |     2870 | E057 | sql  | The Eternal Belt Buckle usable from level 60 (issue 624): one item's                       |
 |     2970 | E067 | sql  | One enchanting scroll per classic dungeon boss kill, near the boss's level (issue 812)     |
 |     2980 | E068 | sql  | A Profession Mentor in each capital, teaching the professions its city lacks (issue 155e1) |
+|     3010 | E071 | sql  | The level-60 fights' multipliers and rewritten boss spells (issues 155i, 155f1, 155j)      |
 <!-- patch-lists: end -->
 
 ## How to switch to basic

@@ -655,6 +655,22 @@ no gear could answer it (`scripts/tank-damage-taken`, issue 155f1). The
 owner: "let's remove them. There's already crits". Their difficulty goes
 into per-creature multipliers (155i). Takes effect at basic's next compile.
 
+## 2026-10-25 — Doom Lord Kazzak tuned for level 60 (basic)
+
+| Knob | Value | Where |
+|---|---|---|
+| Kazzak's melee and spell damage | x0.40 | `patches/E071-basic-fight-multipliers/fights.lua` |
+| His Berserk at 3 minutes | removed (no effects) | the same |
+| His Frenzy | no +30% damage; stops swinging and casting for 6 s, a volley a second (about 1,090 each, six about 140% of a raid member's health) | the same |
+
+Why: built for level-70 raids, his swings were twice a level-60 tank's
+health. The owner wanted him "nearly impossible to defeat. But, not
+impossible", chose 0.40 ("Needs playtesting of course"), asked for the
+frenzy to become a channelled volley the raid survives with strong
+healing, and removed the Berserk, which comes from the server's script
+and not Wowhead's page. Issues 155j, 155f1. Takes effect at basic's next
+install and server start.
+
 ## How to add an entry
 
 ```markdown

@@ -331,6 +331,14 @@ server is restarted).
   (Capture Soul). The 3-minute Berserk stays for now: an always-on 20%
   enrage worried the owner, because Kazzak's damage is far above
   Doomwalker's.
+- **Built 2026-10-25 (install step E071, not yet installed)**: his
+  multipliers (0.40), Berserk (32965) with its effects emptied, Frenzy
+  (32964) as pacify + silence with a tick every second for 6 seconds
+  casting 59975 (an unused copy of Shadow Bolt Volley with his volley's
+  look and reach, resized to 2,500-2,949 so that after his 0.40 spell
+  multiplier a volley does about 1,000-1,180). Whether pacify and silence
+  stop his swings and scripted spells while the ticks still fire is to be
+  seen in game.
 - **Frenzy becomes a channelled volley storm** (the owner, 2026-10-25,
   155f1): stock Frenzy (every 30 seconds from the first minute) gives him
   +30% damage for 10 seconds and casts Shadow Bolt Volley every 2 seconds

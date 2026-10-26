@@ -179,7 +179,9 @@ Nothing is tuned yet. What stands:
 4. **Azeroth checked.** Run the measure for the level-60 raid bosses at
    divisor 100 and compare against stock spirit (B049 off), to see which
    fights spirit softens and by how much.
-5. **Rows generated.** A generator (`scripts/generate-basic-fight-
+5. (Begun 2026-10-25: `scripts/generate-basic-fight-multipliers-sql`
+   from `patches/E071-basic-fight-multipliers/fights.lua`, install step
+   E071; Kazzak's row first.) **Rows generated.** A generator (`scripts/generate-basic-fight-
    multipliers-sql` or similar) writes `basic_creature_multipliers` rows
    from the measure and the targets, as an install step's SQL.
 6. **Playtest**, then adjust by the balance log.

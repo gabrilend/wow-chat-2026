@@ -530,6 +530,31 @@ report "Profession Mentors: each stands, with a line per missing profession open
           HAVING COUNT(*) > 0")"
 # }}}
 
+# {{{ E071: the level-60 fights' multipliers and rewritten boss spells (issues 155i, 155f1, 155j)
+# Every multiplier is above 0 (0 would make a boss harmless or unkillable
+# by accident); every creature row names a creature that exists; Doom Lord
+# Kazzak's three rewritten spells are in place: Berserk without effects,
+# Frenzy pacifying and ticking the channel's volley every second for 6
+# seconds, the channel's volley resized. Which bosses carry which values
+# is fights.lua's to say (patches/E071-basic-fight-multipliers/), not this
+# check's.
+report "fights: multipliers above 0 on real creatures; Kazzak's Berserk gone and Frenzy a channelled volley" \
+    "$(run_sql "
+        SELECT CONCAT('multiplier row ', entry, ' has a value of 0 or less'), entry FROM ${WORLD}.basic_creature_multipliers
+          WHERE melee <= 0 OR spell <= 0 OR heal <= 0 OR health <= 0
+        UNION ALL SELECT CONCAT('multiplier row ', m.entry, ' names no creature'), m.entry FROM ${WORLD}.basic_creature_multipliers m
+          WHERE m.entry <> 0 AND NOT EXISTS (SELECT 1 FROM ${WORLD}.creature_template t WHERE t.entry = m.entry)
+        UNION ALL SELECT 'Kazzak has no multiplier row (E071 not applied)', 0 FROM DUAL
+          WHERE NOT EXISTS (SELECT 1 FROM ${WORLD}.basic_creature_multipliers WHERE entry = 18728)
+        UNION ALL SELECT 'Kazzak''s Berserk (32965) still has effects', 0 FROM DUAL
+          WHERE NOT EXISTS (SELECT 1 FROM ${WORLD}.spell_dbc WHERE ID = 32965 AND Effect_1 = 0 AND Effect_2 = 0 AND Effect_3 = 0)
+        UNION ALL SELECT 'Kazzak''s Frenzy (32964) is not the channelled volley', 0 FROM DUAL
+          WHERE NOT EXISTS (SELECT 1 FROM ${WORLD}.spell_dbc WHERE ID = 32964 AND EffectAura_1 = 25 AND EffectAuraPeriod_2 = 1000
+            AND EffectTriggerSpell_2 = 59975 AND DurationIndex = 32)
+        UNION ALL SELECT 'the channel''s volley (59975) is not resized', 0 FROM DUAL
+          WHERE NOT EXISTS (SELECT 1 FROM ${WORLD}.spell_dbc WHERE ID = 59975 AND EffectBasePoints_1 = 2499)")"
+# }}}
+
 echo ""
 if [[ "${FAIL_COUNT}" -eq 0 ]]; then
     echo "All checks passed."

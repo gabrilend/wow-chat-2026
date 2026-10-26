@@ -34,6 +34,18 @@ incomplete? Did you think I wouldn't notice? ;)" The rows are now 155f1's
 work (each boss's melee and spells measured against a level-60 tank,
 then a generator writes them); this issue completes with it.
 
+**The first rows, 2026-10-25 (install step E071, not yet installed):**
+the rows now come from one readable list with each entry's reason,
+`patches/E071-basic-fight-multipliers/fights.lua`, turned into the step's
+apply and revert SQL by `scripts/generate-basic-fight-multipliers-sql`
+(which can also rewrite a boss's spells as replaced `spell_dbc` rows,
+copied whole from the game's spell file with only the listed fields
+changed, refusing a spell another step already rewrites). First row: Doom
+Lord Kazzak, melee and spells 0.40 (155j). The RAM test applies, re-applies
+and reverts it; `scripts/validate-basic-state` checks every value is above
+0 on a real creature. The dungeon bosses' rows wait for their spells to be
+measured (155f1).
+
 **Machinery built 2026-09-24; not yet compiled** (Ritz runs the compile).
 
 - **Table**: `basic_creature_multipliers` in the world database, created by
