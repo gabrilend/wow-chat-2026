@@ -136,6 +136,23 @@ Nothing is tuned yet. What stands:
   the reader does not follow, so their spells count 0), and nothing an
   add or a summon does (Vexallus's energies, Kael'thas's phoenix, Laj's
   and Freywinn's saplings, Sarannis's reinforcements).
+- **Stock beside basic, 2026-10-25** (step 3a, `scripts/tank-damage-taken
+  --compare yes`; `--stock yes` alone for stock's table): stock is the
+  boss at its stock level (the beta world, whose Outland keeps stock
+  levels) against a level-70 warrior in the stock tier's gear (quest
+  rewards included), with stock crushing blows. For every Outland dungeon
+  boss, an unhealed tank in basic lasts 0.39-0.55 as long as in stock
+  (most near half): stock 11-57 seconds (most 20-45), basic 5-24 (most
+  10-18); the biggest single hit is 4-41% of a stock tank's health, 7-79%
+  of basic's. So basic's dungeons are about twice as hard as stock's on
+  the tank, before counting that level-60 healers heal less than
+  level-70 ones. Doom Lord Kazzak (before E071): basic 1.1 seconds against
+  stock's 3.0 (a level-70 tank in his own loot's tier). The owner's 10-15
+  seconds is where basic already is; stock's difficulty would be about
+  twice that (open question 9). The warrior's base numbers and rating
+  conversions now come from the database and the game's rating table for
+  the tank's level (dodge and parry rating at 60 are 13.8 a percent, not
+  the 12 and 15 first assumed).
 - **Spells were not measured before 2026-10-25.** A boss's spells and their damage live in
   the game's spell data (`data-files/dbc/Spell.dbc`, the file the server
   reads) and in its script (C++ boss scripts under
@@ -321,3 +338,9 @@ Nothing is tuned yet. What stands:
    1,760-2,040, Thunderclap about 940-1,060, the volley about 600-800), or
    another figure? Unscaled, a Void Bolt right after a top swing (66-76%
    plus 84% of the tank's health) kills.
+9. **Stock's difficulty or 10-15 seconds:** basic's Outland dungeon
+   bosses leave a tier-geared level-60 tank about half as long unhealed
+   as stock's leave a level-70 one (step 3a). The owner wants "similar
+   difficulty, but ... a little different". Aim each boss at about stock's
+   unhealed time (most bosses' damage roughly halved), at the 10-15
+   seconds (about where they are now), or between?

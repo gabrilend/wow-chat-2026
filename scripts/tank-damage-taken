@@ -72,12 +72,25 @@
 --   --database D    (default acore_world_basic)
 --   --spells yes|no list each boss's timed spells under it: whom, how often,
 --                   and the damage a second each adds (default no)
+--   --stock yes|no  the stock game instead of basic (default no): the stock
+--                   world (--database defaults to acore_world_beta, whose
+--                   Outland is at stock levels), a level-70 warrior in the
+--                   stock tiers' gear (quest rewards included: stock players
+--                   have quests), stock crushing blows, the level-60 raid
+--                   bosses left out
+--   --compare yes   basic and stock side by side for each Outland boss and
+--                   Kazzak: the tank's unhealed time and biggest hit in each,
+--                   from one run of each mode (155f1 step 3a)
+--   --tsv yes       one tab-separated line per boss (name, level, unhealed
+--                   seconds, biggest hit as a share of health, damage a
+--                   second), for --compare
 --------------------------------------------------------------------------------
 
 local DIR = "/mnt/kaun/wow-chat-2026"
 local O   = { tiers = "yes", health = 4509, armour = 10000, defence = 300, avoid = 0.25, stamina = 200, spirit = 145,
-              divisor = 100, crushing = "basic", gear = "no", ladder = "no", spells = "no", database = "acore_world_basic" }
-local TEXT = { tiers = true, crushing = true, gear = true, ladder = true, spells = true, database = true }
+              divisor = 100, crushing = "basic", gear = "no", ladder = "no", spells = "no", database = "",
+              stock = "no", compare = "no", tsv = "no" }
+local TEXT = { tiers = true, crushing = true, gear = true, ladder = true, spells = true, database = true, stock = true, compare = true, tsv = true }
 do
     local i = 1
     if arg[1] and not arg[1]:match("^%-%-") then DIR = arg[1]; i = 2 end
@@ -92,10 +105,79 @@ do
 end
 local CRUSH_RULES = { basic = true, late = true, stock = true }
 if not CRUSH_RULES[O.crushing] then io.stderr:write("tank-damage-taken: --crushing is basic, late or stock\n"); os.exit(1) end
-local TANK_LEVEL = 60
+-- {{{ --compare: run each mode once, machine-readable, and join them by boss
+if O.compare == "yes" then
+    local function run(extra)
+        local p = io.popen('"' .. arg[0] .. '" "' .. DIR .. '" --tsv yes ' .. extra .. ' 2>&1')
+        local t, order = {}, {}
+        for l in p:lines() do
+            local name, lvl, dead, big, all = l:match("^([^\t]+)\t(%d+)\t([%d%.]+)\t([%d%.]+)\t([%d%.]+)$")
+            if name then t[name] = { lvl = lvl, dead = tonumber(dead), big = tonumber(big), all = tonumber(all) }; order[#order + 1] = name
+            else io.stderr:write("tank-damage-taken --compare: " .. l .. "\n") end
+        end
+        p:close()
+        return t, order
+    end
+    local basic, order = run("")
+    local stock = run("--stock yes")
+    print("Basic (a level-60 tank in its tier's gear, against the raised boss) beside stock (a level-70 tank in the stock tier's gear, the boss at its stock level).")
+    print("unhealed = seconds an unhealed tank lasts against melee and spells; biggest = the biggest single hit as a share of the tank's health")
+    print(string.format("%-28s | %5s %8s %7s %6s | %5s %8s %7s %6s | %s", "boss", "lvl", "unhealed", "biggest", "dps", "lvl", "unhealed", "biggest", "dps", "basic's unhealed / stock's"))
+    for _, name in ipairs(order) do
+        local b, s = basic[name], stock[name]
+        if s then
+            print(string.format("%-28s | %5s %7.1fs %6.0f%% %6.0f | %5s %7.1fs %6.0f%% %6.0f | %5.2f", name:sub(1, 28), b.lvl, b.dead, b.big, b.all, s.lvl, s.dead, s.big, s.all, b.dead / s.dead))
+        end
+    end
+    os.exit(0)
+end
+-- }}}
+
+-- the tank's level, and the world it is measured in
+local TANK_LEVEL = O.stock == "yes" and 70 or 60
+if O.database == "" then O.database = O.stock == "yes" and "acore_world_beta" or "acore_world_basic" end
+if O.stock == "yes" and O.crushing == "basic" then O.crushing = "stock" end
 local BOSS_DIFF  = 3                             -- WorldBossLevelDiff in worldserver.conf
 local MYSQL      = DIR .. "/mysql/installed-files/bin/mysql -h127.0.0.1 -P3307 -uritz -pmenardi -N -B " .. O.database
 local Spells     = dofile(DIR .. "/scripts/lib/spell-data.lua").open(DIR, MYSQL)
+local DEF_CAP    = TANK_LEVEL * 5                -- defence past this counts for nothing against crushing
+-- the spawn table's creature column: "id" in basic's world, "id1" in the
+-- newer layout the other worlds have
+local CID
+do
+    local p = io.popen(MYSQL .. ' -e "SELECT COLUMN_NAME FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = \'creature\' AND COLUMN_NAME IN (\'id\', \'id1\')" 2>&1')
+    for l in p:lines() do if l == "id1" then CID = "id1" elseif l == "id" and not CID then CID = "id" end end
+    p:close()
+    if not CID then io.stderr:write("tank-damage-taken: " .. O.database .. ".creature has neither id nor id1\n"); os.exit(1) end
+end
+
+-- {{{ the warrior's base numbers and the rating conversions at the tank's level
+-- player_class_stats (class 1) for base health, stamina and agility; the
+-- game's rating table (gtCombatRatings.dbc: row = rating x 100 + level - 1;
+-- 1 defence, 2 dodge, 3 parry) for how much rating is a point of defence
+-- or a percent of dodge or parry.
+local BASE = {}
+do
+    local p = io.popen(MYSQL .. ' -e "SELECT BaseHP, Stamina, Agility FROM player_class_stats WHERE Class = 1 AND Level = ' .. TANK_LEVEL .. '" 2>&1')
+    for l in p:lines() do
+        local hp, sta, agi = l:match("^(%d+)\t(%d+)\t(%d+)$")
+        if hp then BASE = { hp = tonumber(hp), sta = tonumber(sta), agi = tonumber(agi) } end
+    end
+    p:close()
+    if not BASE.hp then io.stderr:write("tank-damage-taken: no warrior row for level " .. TANK_LEVEL .. " in " .. O.database .. ".player_class_stats\n"); os.exit(1) end
+end
+local RATING = {}
+do
+    local ffi = require("ffi")
+    local f = io.open(DIR .. "/data-files/dbc/gtCombatRatings.dbc", "rb")
+    if not f then io.stderr:write("tank-damage-taken: cannot open gtCombatRatings.dbc\n"); os.exit(1) end
+    local d = f:read("*a"); f:close()
+    local function u(o) local a, b, c, e = d:byte(o + 1, o + 4); return a + b * 256 + c * 65536 + e * 16777216 end
+    local size = u(12)
+    local function at(cr) local v = ffi.new("uint32_t[1]", u(20 + (cr * 100 + TANK_LEVEL - 1) * size)); return ffi.cast("float*", v)[0] end
+    RATING = { def = at(1), dodge = at(2), parry = at(3) }
+end
+-- }}}
 local Sched      = dofile(DIR .. "/scripts/lib/boss-spell-schedule.lua")
 local SCRIPTS    = DIR .. "/source-beta/src/server/scripts"
 
@@ -138,6 +220,7 @@ do
         local name, q, lo, hi = l:match('^%s*{g:%d+,n:"([^"]+)",q:(%d),lo:(%d+),hi:(%d+)')
         if name then
             local plo, phi = l:match("p:{lo:(%d+),hi:(%d+)")
+            if O.stock == "yes" then plo, phi = nil, nil end         -- stock: the stock values
             lo, hi, q = tonumber(plo or lo), tonumber(phi or hi), tonumber(q)
             TIER[name] = (budget(lo, q) + budget(hi, q)) / 2
             TIER_ORDER[#TIER_ORDER + 1] = name
@@ -160,6 +243,8 @@ local ROW_OF_MAP = {
 -- wear before killing him; his raid comes in the best tier below it.
 local ROW_OF_ENTRY = { [11502] = "Molten Core", [11583] = "Blackwing Lair",
                        [18728] = "Naxxramas-40 (vanilla loot, 155h)" }
+-- stock: a level-70 raid comes to him in level-70 raid gear, his own loot's tier
+if O.stock == "yes" then ROW_OF_ENTRY[18728] = "Doom Lord Kazzak (own 10 items)" end
 local NAMED_ROWS = {}
 for _, name in pairs(ROW_OF_MAP)   do NAMED_ROWS[#NAMED_ROWS + 1] = name end
 for _, name in pairs(ROW_OF_ENTRY) do NAMED_ROWS[#NAMED_ROWS + 1] = name end
@@ -192,8 +277,13 @@ if O.tiers == "yes" then
     -- (... UNION ...)", MySQL ran the union again for every item, two minutes)
     local sql = "SELECT " .. cols .. " FROM item_template JOIN (SELECT DISTINCT u.Item AS got FROM (SELECT Item FROM creature_loot_template"
         .. " UNION SELECT Item FROM reference_loot_template UNION SELECT Item FROM gameobject_loot_template UNION SELECT Item FROM item_loot_template"
-        .. " UNION SELECT item FROM npc_vendor) u) g ON g.got = entry"
-        .. " WHERE RequiredLevel <= 60 AND Quality BETWEEN 2 AND 4"
+        .. " UNION SELECT item FROM npc_vendor"
+        .. (O.stock == "yes" and (" UNION SELECT RewardItem1 FROM quest_template UNION SELECT RewardItem2 FROM quest_template"
+            .. " UNION SELECT RewardChoiceItemID1 FROM quest_template UNION SELECT RewardChoiceItemID2 FROM quest_template"
+            .. " UNION SELECT RewardChoiceItemID3 FROM quest_template UNION SELECT RewardChoiceItemID4 FROM quest_template"
+            .. " UNION SELECT RewardChoiceItemID5 FROM quest_template UNION SELECT RewardChoiceItemID6 FROM quest_template") or "")
+        .. ") u) g ON g.got = entry"
+        .. " WHERE RequiredLevel <= " .. TANK_LEVEL .. " AND Quality BETWEEN 2 AND 4"
         .. " AND (AllowableClass = -1 OR AllowableClass & 1) AND InventoryType IN (1,2,3,5,20,6,7,8,9,10,11,12,16,13,21,14,15,25,26)"
         .. " AND ((class = 4 AND (subclass = 4 OR subclass = 6 OR (subclass IN (0,1) AND InventoryType IN (2,11,12,16))))"
         .. "   OR (class = 2 AND InventoryType IN (13,21,15,25,26)))"
@@ -258,15 +348,15 @@ local function dress(row)
         if #list < want then list = best(-1e9) end
         for n = 1, math.min(want, #list) do pick[#pick + 1] = list[n] end
     end
-    local t = { sta = 110, agi = 80, armour = 0, def = 0, dodge = 0, parry = 0, items = pick }
+    local t = { sta = BASE.sta, agi = BASE.agi, armour = 0, def = 0, dodge = 0, parry = 0, items = pick }
     for _, it in ipairs(pick) do
         t.sta, t.agi, t.armour = t.sta + it.sta, t.agi + it.agi, t.armour + it.armour
         t.def, t.dodge, t.parry = t.def + it.def, t.dodge + it.dodge, t.parry + it.parry
     end
-    t.health  = 1689 + 20 + 10 * (t.sta - 20)
+    t.health  = BASE.hp + 20 + 10 * (t.sta - 20)
     t.armour  = t.armour + 2 * t.agi
-    t.defence = 300 + t.def / 1.5
-    t.avoid   = math.min(0.60, 0.20 + (t.defence - 300) * 0.0012 + t.dodge / 1200 + t.parry / 1500 + t.agi / 20 * 0.0005)
+    t.defence = DEF_CAP + t.def / RATING.def
+    t.avoid   = math.min(0.60, 0.20 + (t.defence - DEF_CAP) * 0.0012 + t.dodge / RATING.dodge / 100 + t.parry / RATING.parry / 100 + t.agi / 20 * 0.0005)
     dressed[row] = t
     return t
 end
@@ -284,13 +374,32 @@ local GROUPS = {
     { "Level-60 raid bosses",  "t.entry IN (11502, 11988, 15509, 14020, 11583)", 40 },
     { "World bosses",          "t.entry IN (18728)", 40 },
     { "Outland dungeon bosses (basic's levels)",
-      "t.entry IN (SELECT i.creditEntry FROM instance_encounters i JOIN creature c ON c.id = i.creditEntry"
+      "t.entry IN (SELECT i.creditEntry FROM instance_encounters i JOIN creature c ON c." .. CID .. " = i.creditEntry"
         .. " WHERE i.creditType = 0 AND c.map IN (540,542,543,545,546,547,552,553,554,555,556,557,558,560,269,585))", 5 },
 }
+-- stock: the beta world (stock levels) has almost no dungeon spawns (its
+-- profile empties the world), so which creatures are the Outland dungeon
+-- bosses, and in which dungeon, is read from basic's world; their numbers
+-- (level, damage, swing, script) still come from the stock world
+local MAP_OF = {}
+if O.stock == "yes" then
+    local BASIC = DIR .. "/mysql/installed-files/bin/mysql -h127.0.0.1 -P3307 -uritz -pmenardi -N -B acore_world_basic"
+    local p = io.popen(BASIC .. ' -e "SELECT DISTINCT i.creditEntry, c.map FROM instance_encounters i JOIN creature c ON c.id = i.creditEntry'
+        .. ' WHERE i.creditType = 0 AND c.map IN (540,542,543,545,546,547,552,553,554,555,556,557,558,560,269,585)" 2>&1')
+    local list = {}
+    for l in p:lines() do
+        local e, m = l:match("^(%d+)\t(%d+)$")
+        if e then MAP_OF[tonumber(e)] = tonumber(m); list[#list + 1] = e end
+    end
+    p:close()
+    if #list == 0 then io.stderr:write("tank-damage-taken: could not read the Outland dungeon bosses from acore_world_basic\n"); os.exit(1) end
+    GROUPS[3][2] = "t.entry IN (" .. table.concat(list, ",") .. ")"
+    GROUPS[3][1] = "Outland dungeon bosses (stock levels)"
+end
 local function bosses(where)
     return query("SELECT t.entry, t.name, t.minlevel, t.DamageModifier, t.BaseAttackTime, s.attackpower, t.type_flags & 4,"
         .. " CASE t.exp WHEN 0 THEN s.damage_base WHEN 1 THEN s.damage_exp1 ELSE s.damage_exp2 END,"
-        .. " (SELECT MIN(c.map) FROM creature c WHERE c.id = t.entry), t.ScriptName"
+        .. " (SELECT MIN(c.map) FROM creature c WHERE c." .. CID .. " = t.entry), t.ScriptName"
         .. " FROM creature_template t JOIN creature_classlevelstats s ON s.level = t.minlevel AND s.class = t.unit_class"
         .. " WHERE " .. where .. " ORDER BY t.minlevel, t.name", 10)
 end
@@ -407,24 +516,29 @@ end
 
 local FIXED = { health = O.health, armour = O.armour, defence = O.defence, avoid = O.avoid }
 local heal_hit = O.spirit * O.stamina / O.divisor / 5 * 0.5   -- spirit's health per second while being hit
-print(string.format("spirit build %d stamina / %d spirit at divisor %d heals %.1f per second while hit (%.1f standing); crushing rule: %s",
-    O.stamina, O.spirit, O.divisor, heal_hit, heal_hit * 2, O.crushing))
+local TSV = O.tsv == "yes"
+local function say(...) if not TSV then print(...) end end       -- the table's words, not in --tsv
+say(string.format("%s; a level-%d warrior; spirit build %d stamina / %d spirit at divisor %d heals %.1f per second while hit (%.1f standing); crushing rule: %s",
+    O.stock == "yes" and "stock (" .. O.database .. ")" or "basic (" .. O.database .. ")", TANK_LEVEL, O.stamina, O.spirit, O.divisor, heal_hit, heal_hit * 2, O.crushing))
 if O.tiers ~= "yes" then
-    print(string.format("one tank for every boss: %d health, %d armour, defence %d, %d%% of swings avoided", O.health, O.armour, O.defence, O.avoid * 100))
+    say(string.format("one tank for every boss: %d health, %d armour, defence %d, %d%% of swings avoided", O.health, O.armour, O.defence, O.avoid * 100))
 end
-print("columns: big = a top roll that crits (or a top roll, if it can't crit); nocrit = the defence that stops its crits; nc/hp = its top roll without a crit;")
-print("  melee, spells, all = damage a second on the tank; dead = the tank's health over all of it; others = spells a second on one other group member")
+say("columns: big = a top roll that crits (or a top roll, if it can't crit); nocrit = the defence that stops its crits; nc/hp = its top roll without a crit;")
+say("  melee, spells, all = damage a second on the tank; dead = the tank's health over all of it; others = spells a second on one other group member")
 
 for _, g in ipairs(GROUPS) do
-    print("\n" .. g[1])
-    print(string.format("%-26s %3s %-19s %5s %6s %4s %5s %6s %5s %6s %5s %6s %5s %6s %6s %6s %6s",
+  -- stock: the level-60 raids are the same fights as basic's, against a level-60
+  -- tank; a level-70 tank there would say nothing, so they are left out
+  if not (O.stock == "yes" and g[3] == 40 and g[1]:find("Level%-60")) then
+    say("\n" .. g[1])
+    say(string.format("%-26s %3s %-19s %5s %6s %4s %5s %6s %5s %6s %5s %6s %5s %6s %6s %6s %6s",
         "boss", "lvl", "tier (budget)", "hp", "armour", "def", "crit", "avg", "big", "big/hp", "melee", "spells", "all", "dead", "nocrit", "nc/hp", "others"))
     local notes = {}
     local rows = bosses(g[2])
     if #rows == 0 then io.stderr:write("tank-damage-taken: no bosses found for " .. g[1] .. "\n"); os.exit(1) end
     for _, m in ipairs(rows) do
         local entry, lvl, mod = tonumber(m[1]), tonumber(m[3]), tonumber(m[4])
-        local att, ap, flag, dmg, map = tonumber(m[5]) / 1000, tonumber(m[6]), tonumber(m[7]), tonumber(m[8]), tonumber(m[9])
+        local att, ap, flag, dmg, map = tonumber(m[5]) / 1000, tonumber(m[6]), tonumber(m[7]), tonumber(m[8]), tonumber(m[9]) or MAP_OF[tonumber(m[1])]
         local row  = ROW_OF_ENTRY[entry] or ROW_OF_MAP[map]
         -- the tank: dressed for the boss's tier, or the one fixed tank (--tiers no, or a
         -- boss whose instance has no ladder row)
@@ -434,7 +548,7 @@ for _, g in ipairs(GROUPS) do
         local big  = (dmg * 1.50 + ap / 14) * mod * att
         local dr   = math.min(0.75, tank.armour / (tank.armour + 467.5 * lvl - 22167.5))
         local land = 1 - tank.avoid
-        local lgap, skill = fights_as - TANK_LEVEL, fights_as * 5 - math.min(tank.defence, 300)
+        local lgap, skill = fights_as - TANK_LEVEL, fights_as * 5 - math.min(tank.defence, DEF_CAP)
         -- crushing: basic none; stock 2% a skill point minus 15% from 4 levels up and 15
         -- skill up; "late" from 8 levels up at 1/5, full at 12; never more than what lands
         local crush = 0
@@ -453,12 +567,14 @@ for _, g in ipairs(GROUPS) do
         local sp_tank, sp_other, note, lines = spells_per_second(m[10], lvl, avg, dr, g[3])
         if note ~= "" then notes[#notes + 1] = m[2] .. ": " .. note end
         local all = dps + sp_tank
-        print(string.format("%-26s %3d %-19s %5d %6d %4d %4.1f%% %6.0f %5.0f %5.0f%% %5.0f %6.0f %5.0f %5.1fs %6d %5.0f%% %6.0f",
+        if TSV then print(string.format("%s\t%d\t%.2f\t%.1f\t%.1f", m[2], lvl, tank.health / all, bigh / tank.health * 100, all)) end
+        say(string.format("%-26s %3d %-19s %5d %6d %4d %4.1f%% %6.0f %5.0f %5.0f%% %5.0f %6.0f %5.0f %5.1fs %6d %5.0f%% %6.0f",
             m[2]:sub(1, 26), lvl, label, tank.health, tank.armour, tank.defence, crit * 100, avg * (1 - dr), bigh,
             bigh / tank.health * 100, dps, sp_tank, all, tank.health / all, nocrit, plain / tank.health * 100, sp_other))
-        if O.spells == "yes" then for _, l in ipairs(lines) do print(l) end end
+        if O.spells == "yes" then for _, l in ipairs(lines) do say(l) end end
     end
-    for _, n in ipairs(notes) do print("  note: " .. n) end
+    for _, n in ipairs(notes) do say("  note: " .. n) end
+  end
 end
 
 if O.tiers == "yes" and O.gear == "yes" then
