@@ -671,6 +671,20 @@ healing, and removed the Berserk, which comes from the server's script
 and not Wowhead's page. Issues 155j, 155f1. Takes effect at basic's next
 install and server start.
 
+## 2026-10-25 — richer monster drops (basic)
+
+| Knob | Value | Where |
+|---|---|---|
+| Greens and blues from ordinary monsters and non-boss elites | x2 | `Basic.Drops.GreenBlueRate` (config patch C040) |
+| Epics from the same | x5 | `Basic.Drops.EpicRate` |
+| Rares' loot | rolled twice | `Basic.Drops.RareRolls` |
+| Bosses (encounter lists, world bosses) | stock | `src/cpp-basic/basic_rules.cpp` |
+
+Why: with quests gone from players (issue 180), quest reward gear is gone
+too; more gear from the monsters players fight makes up for it without
+making bosses' loot common (issue 181, the owner's answers 2026-10-08 and
+2026-10-23). Takes effect at basic's next compile.
+
 ## How to add an entry
 
 ```markdown

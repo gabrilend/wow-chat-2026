@@ -31,7 +31,12 @@
  *     calls ".basic worldboss respawn", Doom Lord Kazzak's demon swarm, and
  *     the battle bonus: +1% damage and health for every monster while any
  *     world boss lives.
- *   - Refused channels (issue 155x): nobody joins General, Trade,
+ *   - Richer monster drops (issue 181): from ordinary monsters and elites
+     that are not bosses, greens and blues drop twice as often and epics
+     five times; rares' loot is rolled twice; bosses (every creature a
+     dungeon's or raid's encounter list credits, and world bosses) keep
+     stock chances. The numbers are settings (config patch C040).
+   - Refused channels (issue 155x): nobody joins General, Trade,
  *     LocalDefense or WorldDefense. The refusal is source patch B038 (no
  *     script hook sees every join); this file reports the list at startup.
 
@@ -47,6 +52,7 @@
 #include "GameTime.h"
 #include "GridTerrainData.h"
 #include "Log.h"
+#include "LootMgr.h"
 #include "Map.h"
 #include "MapMgr.h"
 #include "ObjectAccessor.h"
@@ -69,6 +75,7 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 using namespace Acore::ChatCommands;
@@ -982,6 +989,173 @@ public:
 };
 // -- }}}
 
+// -- {{{ Richer monster drops (issue 181)
+// The owner, 2026-10-08 and 2026-10-23: green and blue drops twice as often
+// and epics five times from ordinary monsters ("elites and rare elites.
+// Dungeon bosses. The elites in dungeons that aren't bosses should have the
+// updated rates."), rares' whole loot rolled twice, bosses stock.
+//
+// How a creature's loot is laid out in this world database: the creature's
+// table points at a level band's table (often one of several, equal
+// chances in a group); the band's table points, each with its own chance,
+// at tables of one quality ("Vanilla Greens 36-40", "Vanilla Blues ...",
+// "Vanilla Purples ..."), whose items share that chance equally. So a
+// quality's chance lives on the entry that points at a one-quality table,
+// and that is where it is multiplied: the server's roll hook gives the
+// entry, its chance (changeable) and the loot, which knows its creature.
+// An entry pointing at a mixed table (a band) is left alone, so nothing is
+// multiplied twice on the way down; a plain item entry is judged by its own
+// quality. Items sharing a group's chance equally (chance 0) cannot be made
+// likelier one by one and are left as they are.
+//
+// Rares, "their whole loot rolled twice": a level band a creature's own
+// table points at (a reference table that itself points at tables) is
+// processed twice instead of once, and a plain item outside a group with
+// its own chance gets two tries (1 - (1 - p)^2). Only bands that creatures
+// point at directly are doubled, because the hook that counts a
+// reference's runs fires at every depth: 79 bands sit inside other tables,
+// and none of the 354 that creatures point at does (checked by
+// scripts/test-basic-drop-layout), so the doubling happens once on the way
+// down. (The group-amount hook was tried first: the server repeats a group
+// only when it lands on a plain item, and these creatures' groups land on
+// bands.)
+
+struct BasicDropRates
+{
+    bool   on        = false;
+    float  greenBlue = 1.0f;    // greens and blues from ordinary monsters
+    float  epic      = 1.0f;    // epics from ordinary monsters
+    uint32 rareRolls = 1;       // how many times a rare's loot is rolled
+};
+static BasicDropRates sBasicDrops;
+static std::unordered_set<uint32> sBasicBossEntries;       // encounter-list credits
+static std::unordered_map<uint32, uint32> sBasicRefQuality; // one-quality reference tables -> quality
+static std::unordered_set<uint32> sBasicBandTables;        // bands creatures point at directly
+
+// -- {{{ LoadBasicDrops
+// The settings (written by config patch C040; none set means stock drops,
+// said as an error, since the profile expects them), the bosses (every
+// creature an encounter list credits) and the one-quality reference tables.
+static void LoadBasicDrops()
+{
+    sBasicDrops = BasicDropRates();
+    sBasicBossEntries.clear();
+    sBasicRefQuality.clear();
+    sBasicBandTables.clear();
+
+    std::string gb   = sConfigMgr->GetOption<std::string>("Basic.Drops.GreenBlueRate", "", false);
+    std::string ep   = sConfigMgr->GetOption<std::string>("Basic.Drops.EpicRate", "", false);
+    std::string rr   = sConfigMgr->GetOption<std::string>("Basic.Drops.RareRolls", "", false);
+    if (gb.empty() || ep.empty() || rr.empty())
+    {
+        LOG_ERROR("server.loading", ">> basic: Basic.Drops.GreenBlueRate, EpicRate and RareRolls are not all set (config patch C040 not run?); monster drops are stock");
+        return;
+    }
+    sBasicDrops.greenBlue = std::stof(gb);
+    sBasicDrops.epic      = std::stof(ep);
+    sBasicDrops.rareRolls = uint32(std::max(1, std::stoi(rr)));
+    sBasicDrops.on        = true;
+
+    if (QueryResult r = WorldDatabase.Query("SELECT DISTINCT creditEntry FROM instance_encounters WHERE creditType = 0"))
+        do sBasicBossEntries.insert(r->Fetch()[0].Get<uint32>()); while (r->NextRow());
+    if (QueryResult r = WorldDatabase.Query("SELECT r.Entry, MIN(i.Quality), MAX(i.Quality) FROM reference_loot_template r "
+                                            "JOIN item_template i ON i.entry = r.Item WHERE r.Reference = 0 GROUP BY r.Entry"))
+        do
+        {
+            Field* f = r->Fetch();
+            // only tables whose every item is one quality (a mixed table is a band, not a quality)
+            if (f[1].Get<uint32>() == f[2].Get<uint32>())
+                sBasicRefQuality[f[0].Get<uint32>()] = f[1].Get<uint32>();
+        } while (r->NextRow());
+    if (QueryResult r = WorldDatabase.Query("SELECT DISTINCT ABS(l.Reference) FROM creature_loot_template l WHERE l.Reference <> 0 "
+                                            "AND ABS(l.Reference) IN (SELECT Entry FROM reference_loot_template WHERE Reference <> 0)"))
+        do sBasicBandTables.insert(r->Fetch()[0].Get<uint32>()); while (r->NextRow());
+
+    LOG_INFO("server.loading", ">> basic: monster drops: greens and blues x{}, epics x{}, rares' loot rolled {} times; {} bosses kept stock, {} one-quality loot tables, {} level bands",
+        sBasicDrops.greenBlue, sBasicDrops.epic, sBasicDrops.rareRolls, sBasicBossEntries.size(), sBasicRefQuality.size(), sBasicBandTables.size());
+}
+// -- }}}
+
+enum class BasicDropKind { Stock, Ordinary, Rare };
+
+// -- {{{ BasicDropKindOf
+// Whose loot this is: stock for anything but a creature's own loot (a
+// chest, skinning, pickpocketing, an item's contents) and for bosses (an
+// encounter-list credit, a world boss by rank, a boss by its type flag);
+// rare for the rare and rare-elite ranks; ordinary for the rest, normal
+// and elite monsters alike.
+static BasicDropKind BasicDropKindOf(Loot const& loot, LootStore const& store)
+{
+    if (!sBasicDrops.on || &store != &LootTemplates_Creature)
+        return BasicDropKind::Stock;
+    ObjectGuid source = loot.sourceWorldObjectGUID;
+    if (!source.IsCreature())
+        return BasicDropKind::Stock;
+    uint32 entry = source.GetEntry();
+    if (sBasicBossEntries.count(entry))
+        return BasicDropKind::Stock;
+    CreatureTemplate const* t = sObjectMgr->GetCreatureTemplate(entry);
+    if (!t || t->rank == CREATURE_ELITE_WORLDBOSS || (t->type_flags & CREATURE_TYPE_FLAG_BOSS_MOB))
+        return BasicDropKind::Stock;
+    if (t->rank == CREATURE_ELITE_RARE || t->rank == CREATURE_ELITE_RAREELITE)
+        return BasicDropKind::Rare;
+    return BasicDropKind::Ordinary;
+}
+// -- }}}
+
+class basic_rules_drops_load : public WorldScript
+{
+public:
+    basic_rules_drops_load() : WorldScript("basic_rules_drops_load", { WORLDHOOK_ON_LOAD_CUSTOM_DATABASE_TABLE }) { }
+
+    void OnLoadCustomDatabaseTable() override { LoadBasicDrops(); }
+};
+
+class basic_rules_drops_roll : public GlobalScript
+{
+public:
+    basic_rules_drops_roll() : GlobalScript("basic_rules_drops_roll", { GLOBALHOOK_ON_ITEM_ROLL, GLOBALHOOK_ON_AFTER_REF_COUNT }) { }
+
+    // One entry's chance, as it is rolled.
+    bool OnItemRoll(Player const* /*player*/, LootStoreItem const* item, float& chance, Loot& loot, LootStore const& store) override
+    {
+        BasicDropKind kind = BasicDropKindOf(loot, store);
+        if (kind == BasicDropKind::Ordinary)
+        {
+            // the quality: a one-quality table's, or a plain item's own; a mixed
+            // table (a level band) has none and is left alone
+            uint32 quality = 0;
+            if (item->reference)
+            {
+                auto q = sBasicRefQuality.find(uint32(std::abs(item->reference)));
+                if (q != sBasicRefQuality.end())
+                    quality = q->second;
+            }
+            else if (ItemTemplate const* proto = sObjectMgr->GetItemTemplate(item->itemid))
+                quality = proto->Quality;
+            if (quality == ITEM_QUALITY_UNCOMMON || quality == ITEM_QUALITY_RARE)
+                chance *= sBasicDrops.greenBlue;
+            else if (quality == ITEM_QUALITY_EPIC)
+                chance *= sBasicDrops.epic;
+        }
+        else if (kind == BasicDropKind::Rare && !item->reference && !item->groupid && chance > 0.0f && chance < 100.0f)
+        {
+            // a plain item with its own chance: one try per roll of the loot
+            float miss = std::pow(1.0f - chance / 100.0f, float(sBasicDrops.rareRolls));
+            chance = 100.0f * (1.0f - miss);
+        }
+        return true;
+    }
+
+    // A rare's level bands, processed once per roll of its loot.
+    void OnAfterRefCount(Player const* /*player*/, LootStoreItem* item, Loot& loot, bool /*canRate*/, uint16 /*lootMode*/, uint32& maxcount, LootStore const& store) override
+    {
+        if (BasicDropKindOf(loot, store) == BasicDropKind::Rare && sBasicBandTables.count(uint32(std::abs(item->reference))))
+            maxcount *= sBasicDrops.rareRolls;
+    }
+};
+// -- }}}
+
 // -- {{{ AddSC_basic_rules
 // Registered from src/server/scripts/Custom/custom_script_loader.cpp by B030.
 void AddSC_basic_rules()
@@ -997,5 +1171,7 @@ void AddSC_basic_rules()
     new basic_rules_world_boss_creature();
     new basic_rules_world_boss_command();
     new basic_rules_refused_channels_report();
+    new basic_rules_drops_load();
+    new basic_rules_drops_roll();
 }
 // -- }}}

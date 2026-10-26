@@ -174,6 +174,7 @@ lowest priority first, each line its header's own (`scripts/plan-patches basic`)
 |     1285 | C034  | settings | No Faster Healing Below Level 15, on Every Server                                            |
 |     1305 | C038  | settings | No Quest Sparkles, Object Quest Marks or Map Points                                          |
 |     1310 | C039  | settings | Instances and Battlegrounds: See as Far as the Server Allows                                 |
+|     1315 | C040  | settings | Basic: richer monster drops (greens and blues x2, epics x5, rares' loot rolled twice)        |
 |     1790 | E049  | install  | Every town's exploring grid baked ahead of time (issue 617o3), so buddies                    |
 |     1960 | E066  | install  | Sargobras, his own patch: his script and his own copies of what it loads, placed per profile |
 

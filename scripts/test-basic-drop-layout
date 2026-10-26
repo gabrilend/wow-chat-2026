@@ -1,0 +1,95 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- test-basic-drop-layout - checks that the world's loot tables are laid out
+-- the way basic's richer-drops rule expects (issue 181).
+--
+-- For a general audience: basic makes greens, blues and epics likelier from
+-- ordinary monsters, and rolls rares' loot twice, by changing the chances
+-- where the loot tables keep them (src/cpp-basic/basic_rules.cpp, "Richer
+-- monster drops"). That rule depends on how the tables are arranged: a
+-- monster's table points at a level band's table; a band points, each with
+-- its own chance, at tables of a single quality; nothing deeper. If the
+-- arrangement were different (a band inside a band, a quality's chance
+-- kept somewhere else), the rule would multiply twice or not at all,
+-- silently. This reads the tables and fails, saying where, if any of it
+-- does not hold.
+--
+-- Checks:
+--   1. no band a creature points at directly is also inside another table
+--      (those are the bands a rare's loot doubles, so each is doubled once;
+--      found 2026-10-25: 79 bands sit inside other tables, but never one a
+--      creature uses directly);
+--   2. of the tables bands point at that hold greens, blues or epics, most
+--      hold one quality only, each with a chance of its own (where the
+--      multipliers apply). A mixed one (whites and greens together, 106
+--      tables in 2026-10, 98 of them below level 58) gets the multiplier
+--      only on items with a chance of their own, which few have: a known
+--      gap (issue 181, open question 4). The bar, 85%, is today's coverage
+--      (88%), so the check fails if the layout grows worse, not for the
+--      gap itself;
+--   3. there are one-quality tables of greens, blues and epics at all.
+--
+-- Usage: scripts/test-basic-drop-layout [PROJECT_DIR] [WORLD_DATABASE]
+--------------------------------------------------------------------------------
+
+local DIR   = arg[1] and arg[1] ~= "" and arg[1] or "/mnt/kaun/wow-chat-2026"
+local WORLD = arg[2] or "acore_world_basic"
+local MYSQL = DIR .. "/mysql/installed-files/bin/mysql -h127.0.0.1 -P3307 -uritz -pmenardi -N -B " .. WORLD
+local failed = 0
+
+-- {{{ local function query
+local function query(sql)
+    local p = io.popen(MYSQL .. ' -e "' .. sql .. '" 2>&1')
+    local rows = {}
+    for l in p:lines() do
+        if l:match("^ERROR") then print("ERROR: MySQL said: " .. l); os.exit(1) end
+        if not l:match("^mysql: %[Warning%]") then
+            local m = {}
+            for v in (l .. "\t"):gmatch("([^\t]*)\t") do m[#m + 1] = v end
+            rows[#rows + 1] = m
+        end
+    end
+    p:close()
+    return rows
+end
+-- }}}
+
+-- {{{ local function check
+local function check(ok, what, detail)
+    print(string.format("  [%s] %s%s", ok and "✓" or "✗", what, ok and "" or ("\n      " .. detail)))
+    if not ok then failed = failed + 1 end
+end
+-- }}}
+
+print("Loot table layout for basic's richer drops (" .. WORLD .. ")")
+
+-- 1. the bands creatures point at directly are never inside another table
+local nested = query("SELECT DISTINCT ABS(l.Reference) FROM creature_loot_template l WHERE l.Reference <> 0"
+    .. " AND ABS(l.Reference) IN (SELECT Entry FROM reference_loot_template WHERE Reference <> 0)"
+    .. " AND ABS(l.Reference) IN (SELECT ABS(Reference) FROM reference_loot_template WHERE Reference <> 0) LIMIT 5")
+check(#nested == 0, "no band a creature points at is also inside another table",
+    #nested > 0 and ("e.g. band " .. nested[1][1] .. ": a rare's loot would be doubled twice through it") or "")
+
+-- 2. what bands point at, among tables holding greens, blues or epics: one
+-- quality each, with a chance of its own
+local into = query("SELECT COUNT(*), SUM(q.mn = q.mx), SUM(q.mn = q.mx AND r.Chance > 0) FROM reference_loot_template r"
+    .. " JOIN (SELECT rr.Entry, MIN(i.Quality) mn, MAX(i.Quality) mx FROM reference_loot_template rr JOIN item_template i ON i.entry = rr.Item"
+    .. " WHERE rr.Reference = 0 GROUP BY rr.Entry HAVING MAX(i.Quality BETWEEN 2 AND 4) = 1) q ON q.Entry = ABS(r.Reference) WHERE r.Reference <> 0")[1]
+local all, onequal, chanced = tonumber(into[1]) or 0, tonumber(into[2]) or 0, tonumber(into[3]) or 0
+check(all > 0 and onequal / all >= 0.85, "tables of greens, blues or epics that bands point at hold one quality (85% or more)",
+    string.format("%d of %d of the tables bands point at are one quality", onequal, all))
+check(onequal > 0 and chanced / onequal >= 0.95, "those entries carry a chance of their own (95% or more)",
+    string.format("%d of %d have a chance above 0 (where the multipliers apply)", chanced, onequal))
+
+-- 3. greens, blues and epics each have one-quality tables
+local q = {}
+for _, r in ipairs(query("SELECT mn, COUNT(*) FROM (SELECT rr.Entry, MIN(i.Quality) mn, MAX(i.Quality) mx FROM reference_loot_template rr"
+    .. " JOIN item_template i ON i.entry = rr.Item WHERE rr.Reference = 0 GROUP BY rr.Entry) t WHERE mn = mx GROUP BY mn")) do
+    q[tonumber(r[1])] = tonumber(r[2])
+end
+for quality, name in pairs({ [2] = "greens", [3] = "blues", [4] = "epics" }) do
+    check((q[quality] or 0) > 0, "one-quality tables of " .. name .. " exist (" .. (q[quality] or 0) .. ")", "none: their multiplier would never apply")
+end
+
+print(failed == 0 and "All checks passed." or (failed .. " check(s) failed."))
+os.exit(failed == 0 and 0 or 1)

@@ -27,9 +27,39 @@ The owner, 2026-10-08:
 
 ## Current Behavior
 
-Not built. Basic drops at stock rates (`Rate.Drop.Item.Uncommon`,
-`.Rare`, `.Epic` and the rest all 1 in `worldserver.conf`). Those settings
-scale every creature's loot alike, dungeon bosses included.
+**Built 2026-10-25, not yet compiled** (the owner runs the compile):
+- **The rule**, in basic's rules code (`src/cpp-basic/basic_rules.cpp`,
+  "Richer monster drops", copied in by B030), through two of the
+  server's loot hooks: the roll hook (each loot entry's chance, as it is
+  rolled; the loot knows its creature) and the reference-count hook (how
+  many times a shared table is processed). Whose loot it is: a creature's
+  own loot only; bosses stock (every creature a dungeon's or raid's
+  encounter list credits, world bosses by rank or type flag); rares by
+  rank (rare, rare elite); everything else ordinary, elites included.
+- **Where the chances live**: a monster's table points at a level band's
+  table; a band points, each with its own chance, at tables of one quality
+  ("Vanilla Greens 36-40", "... Blues ...", "... Purples ..."). The
+  multiplier goes on the entry pointing at a one-quality table (greens and
+  blues x2, epics x5 for ordinary monsters), or on a plain item by its own
+  quality; a band pointing at a mixed table is left alone, so nothing is
+  multiplied twice.
+- **Rares**: the bands their own table points at are processed twice
+  (only those: 79 bands sit inside other tables, none of the 354 creatures
+  use directly, so it doubles once), and a plain item with its own chance
+  outside a group gets two tries. (The group-amount hook was tried first;
+  the server repeats a group only when it lands on a plain item.)
+- **Settings**: `Basic.Drops.GreenBlueRate = 2`, `Basic.Drops.EpicRate =
+  5`, `Basic.Drops.RareRolls = 2`, written by config patch C040 (basic
+  only); missing settings are logged as an error and drops stay stock.
+- **Tests**: `scripts/test-basic-drop-layout` checks the table layout the
+  rule relies on (no band creatures use is inside another; bands point at
+  one-quality tables; greens, blues and epics have such tables);
+  `scripts/test-patched-syntax basic` compiles the rule; the settings
+  checks pass. Not yet seen in game: kill counts against the multipliers.
+- **A known gap**: 106 tables mix greens, blues or epics with whites (98
+  of them below level 58); their items mostly share one chance equally,
+  which the roll hook cannot make likelier one by one, so those greens
+  are not boosted (open question 4).
 
 ## Intended Behavior
 
@@ -69,3 +99,9 @@ more gear from the monsters players fight, above their level by choice
 3. (Answered 2026-10-23: the dungeon bosses, whatever their rank) "elites and rare elites. Dungeon bosses. The elites in dungeons that aren't bosses should have the updated rates." So a boss is a creature on a dungeon's or raid's list of encounters (most are ranked "elite" or "rare elite" in the data, a few "boss"), plus the rank-"boss" world bosses; they keep stock chances. Every other elite, the trash inside dungeons included, gets the doubled green and blue and the fivefold epic chances. **What counts as a boss:** the creature's rank "boss" (raid bosses and
    the world bosses), or also every dungeon boss (most are elite, not
    rank boss; the server marks them by their instance encounter)?
+4. **The mixed tables**: 106 shared loot tables (98 below level 58) hold
+   whites and greens (or blues, or epics) together, sharing one chance
+   equally, so their greens are not made likelier. Leave them, make the
+   whole table likelier (its whites too), or split each into one table per
+   quality with a generator (the greens' share then multiplied like the
+   rest)?
