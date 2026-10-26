@@ -99,7 +99,9 @@ more gear from the monsters players fight, above their level by choice
 3. (Answered 2026-10-23: the dungeon bosses, whatever their rank) "elites and rare elites. Dungeon bosses. The elites in dungeons that aren't bosses should have the updated rates." So a boss is a creature on a dungeon's or raid's list of encounters (most are ranked "elite" or "rare elite" in the data, a few "boss"), plus the rank-"boss" world bosses; they keep stock chances. Every other elite, the trash inside dungeons included, gets the doubled green and blue and the fivefold epic chances. **What counts as a boss:** the creature's rank "boss" (raid bosses and
    the world bosses), or also every dungeon boss (most are elite, not
    rank boss; the server marks them by their instance encounter)?
-4. **The mixed tables**: 106 shared loot tables (98 below level 58) hold
+4. (Answered 2026-10-26: split them) "have a generator split each into
+   one table per quality, so their greens are boosted like the rest."
+   **The mixed tables**: 106 shared loot tables (98 below level 58) hold
    whites and greens (or blues, or epics) together, sharing one chance
    equally, so their greens are not made likelier. Leave them, make the
    whole table likelier (its whites too), or split each into one table per

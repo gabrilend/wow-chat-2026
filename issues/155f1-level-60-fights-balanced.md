@@ -338,9 +338,29 @@ Nothing is tuned yet. What stands:
    1,760-2,040, Thunderclap about 940-1,060, the volley about 600-800), or
    another figure? Unscaled, a Void Bolt right after a top swing (66-76%
    plus 84% of the tank's health) kills.
-9. **Stock's difficulty or 10-15 seconds:** basic's Outland dungeon
+9. (Answered 2026-10-26: keep these numbers) "these numbers look good.
+   The Outland dungeons should be hard, but not impossible, and the
+   Outland world bosses should be nearly impossible, but not impossible."
+   So the dungeon bosses keep about basic's numbers now (10-18 seconds
+   unhealed for most); the world bosses are tuned like Kazzak.
+   **Stock's difficulty or 10-15 seconds:** basic's Outland dungeon
    bosses leave a tier-geared level-60 tank about half as long unhealed
    as stock's leave a level-70 one (step 3a). The owner wants "similar
    difficulty, but ... a little different". Aim each boss at about stock's
    unhealed time (most bosses' damage roughly halved), at the 10-15
    seconds (about where they are now), or between?
+10. **Doomwalker and the Fel Reaver** (measured 2026-10-26 against a
+    Naxxramas-tier tank, melee and spells): Doomwalker (73, damage
+    multiplier 33, a 3-second swing) hits for 160% of the tank's health
+    plainly, 319% on a crit, about 1,960 a second: at 0.50 his top hit
+    would be 80%, about Kazzak's 84% at 0.40. The Fel Reaver (an elite of
+    74 roaming Hellfire, no fight script) hits for 45%, 426 a second, the
+    tank lasting 15.7 seconds: dungeon-hard, not nearly impossible; about
+    x1.85 would bring his top hit to Kazzak's. Doomwalker at 0.50, and
+    the Fel Reaver raised, or left as the easier world fight (his two
+    spawns drop Karazhan epics, 155j)?
+11. **Highlord Kruul** (18338, level 63, a world-invasion boss from before
+    the Burning Crusade): no spawn and no fight script in this world, so
+    not in any tier and not measured; the owner asked whether he belongs
+    on the gear ladder page. Bring him back as a world boss (where, with
+    what loot), or leave him out?

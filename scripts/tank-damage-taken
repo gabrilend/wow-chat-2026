@@ -241,10 +241,17 @@ local ROW_OF_MAP = {
 -- Majordomo) and Nefarian (by Lord Victor Nefarius) are named here. Doom
 -- Lord Kazzak's own row is his loot (item level 120), which a raid cannot
 -- wear before killing him; his raid comes in the best tier below it.
+-- Doomwalker (17711) and the Fel Reaver (18733) likewise: their raids come in
+-- the best tier below their own loot.
 local ROW_OF_ENTRY = { [11502] = "Molten Core", [11583] = "Blackwing Lair",
-                       [18728] = "Naxxramas-40 (vanilla loot, 155h)" }
--- stock: a level-70 raid comes to him in level-70 raid gear, his own loot's tier
-if O.stock == "yes" then ROW_OF_ENTRY[18728] = "Doom Lord Kazzak (own 10 items)" end
+                       [18728] = "Naxxramas-40 (vanilla loot, 155h)", [17711] = "Naxxramas-40 (vanilla loot, 155h)",
+                       [18733] = "Naxxramas-40 (vanilla loot, 155h)" }
+-- stock: a level-70 raid comes to them in level-70 raid gear, their own loot's tier
+if O.stock == "yes" then
+    ROW_OF_ENTRY[18728] = "Doom Lord Kazzak (own 10 items)"
+    ROW_OF_ENTRY[17711] = "Doomwalker (own 10 items)"
+    ROW_OF_ENTRY[18733] = "Doomwalker (own 10 items)"
+end
 local NAMED_ROWS = {}
 for _, name in pairs(ROW_OF_MAP)   do NAMED_ROWS[#NAMED_ROWS + 1] = name end
 for _, name in pairs(ROW_OF_ENTRY) do NAMED_ROWS[#NAMED_ROWS + 1] = name end
@@ -366,13 +373,14 @@ end
 -- The level-60 raid bosses and the spawned world boss are named; the
 -- Outland dungeon bosses are every creature a dungeon's encounter list
 -- credits, spawned in one of the sixteen dungeons basic opens at 60
--- (E024), at basic's levels. Lord Kazzak (12397) is left out: no spawn,
--- no script, a leftover row.
+-- (E024), at basic's levels. Lord Kazzak (12397) and Highlord Kruul
+-- (18338, a world-invasion boss from before the Burning Crusade) are left
+-- out: no spawn, no script, leftover rows.
 -- The third field is the group's size: a spell aimed at a random player
 -- lands on any one of them as often as on the tank.
 local GROUPS = {
     { "Level-60 raid bosses",  "t.entry IN (11502, 11988, 15509, 14020, 11583)", 40 },
-    { "World bosses",          "t.entry IN (18728)", 40 },
+    { "World bosses",          "t.entry IN (18728, 17711, 18733)", 40 },
     { "Outland dungeon bosses (basic's levels)",
       "t.entry IN (SELECT i.creditEntry FROM instance_encounters i JOIN creature c ON c." .. CID .. " = i.creditEntry"
         .. " WHERE i.creditType = 0 AND c.map IN (540,542,543,545,546,547,552,553,554,555,556,557,558,560,269,585))", 5 },
@@ -459,7 +467,7 @@ end
 -- tank's armour share; the others' armour is taken as 30%.
 local schedules = {}
 local function spells_per_second(script, level, swing, tank_dr, n)
-    if script == "" then return 0, 0, "no script" end
+    if script == "" then return 0, 0, "no fight script (melee only)", {} end
     local sc = schedules[script]
     if not sc then
         local path = Sched.find_file(SCRIPTS, script)

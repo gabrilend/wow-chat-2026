@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-25 16:59:08
+Generated on: 2026-10-25 17:49:12
 Models: claude-opus-5-5
 
 ## Contents
@@ -6652,6 +6652,198 @@ Two questions before I start:
 
 Say go, and I'll start at the top of the list (Kazzak's rows, then bosses'
 spells). Neither question blocks those first items.
+
+--------------------------------------------------------------------------------
+
+### User Request 61
+
+> 1. Spirit on gear: earlier you said weapons, rings, necklaces and cloaks
+> change too ("yes to the others"). Now that only leather and plate armour
+> change, do those four still change,
+>      or nothing but leather and plate armour?
+
+no on weapons, yes on rings, necklaces, and cloaks. Also, we can do mail armor
+if it doesn't have int or mp5 or spellpower on it.
+
+> 2. Class change gear: with 186 now covering class changes too, which gear does
+> a class-changed player get?
+
+buddy gear if we go up in level, suitable copies of old gear at equal strength
+if they go down in level. Remember, we aren't using copies of the old gear, but
+rather choosing new copies of new gear - the level 4 with the level 12 weapon
+gets a level 12 weapon, not a level 60 epic weapon with reduced stats.
+
+for the class change, just the buddy-gear sets.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 61
+
+*[commit] 25a621cd5 in wow-chat-2026 - Record three answers: spirit also on mail without caster stats and on rings, necklaces and cloaks; a class change takes buddy gearsets; equal-strength gear is for going down in level, chosen from real items of the new level (issues 155k2, 197, 186)*
+
+> Answers recorded. Starting on the first to-do item, Kazzak's rows. Looking at
+> how the legendaries generator writes replaced spell rows and how a
+> directory-form install step is laid out.
+
+> Found a spare volley spell for the channel: 59975 has the same look and radius
+> as Kazzak's own volley, and nothing in the game uses it. Now reading a model
+> install step to copy its shape.
+
+> Writing the fight data and its generator.
+
+> Writing the install step's script, then its header via the tool.
+
+> The header tool doesn't take directory-form patches, so I'll write the header
+> in E067's exact shape (priority 3010 by the numbering rule).
+
+> Registered at 3010. Adding it to the RAM test and the state checker.
+
+> The RAM test applies each step twice to prove it can be re-run; my spell rows
+> used a plain insert. Switching them to replace-in-place.
+
+> That ownership check is a hack (it keys on Kazzak's row). Replacing it with a
+> real one: refuse only if another step's SQL writes the same spell.
+
+> The RAM test passes now. But my "another step writes it" check didn't catch a
+> known legendary spell row, so checking why.
+
+> The check works; 1820001 was an item, not a spell. Updating the three issues
+> and the balance log, then committing.
+
+*[commit] 23adbab79 in wow-chat-2026 - Tune Doom Lord Kazzak for level 60: his multipliers, no Berserk, Frenzy a channelled volley storm (issues 155i, 155j, 155f1)*
+
+> Kazzak's step is committed. Marking it done and moving on to measuring bosses'
+> spells.
+
+> Seeing how the dungeon bosses are scripted (C++ scripts or database scripts).
+
+> All 45 Outland dungeon bosses run on C++ fight scripts. Reading a few to see
+> the styles the parser must handle.
+
+> Most use one style: a scheduled block casting a spell and repeating on a
+> timer. Writing a reader for these schedules as a shared library.
+
+> Now adding spell damage to the measure.
+
+> The run hung. Stopping it and testing the reader on one file.
+
+> 3.6 seconds now, same results. Here's the full measure with spells:
+
+> Spells are counted now. Recording what the measure shows and what it can't
+> read yet, then committing.
+
+*[commit] 11087fc29 in wow-chat-2026 - Count bosses' spells in the boss measure, read from their fight scripts and the spell file (issue 155f1)*
+
+> Next: the stock fight beside ours. I'll check which database holds the stock
+> world and how a level-70 warrior's numbers differ.
+
+> Dodge and parry rating at 60 are 13.8 per percent, not the 12 and 15 I'd
+> assumed, so the tank avoids a little less than I modelled. I'll read them from
+> the table from now on. Now the stock mode.
+
+> The beta database's spawn table names its column differently (a newer schema).
+> Detecting it.
+
+> Basic's dungeon bosses come out about twice as hard as the same fights in
+> stock (an unhealed tank lasts 0.4–0.55 as long). Committing this, then
+> moving on while that question waits for you.
+
+*[commit] 25b4000d4 in wow-chat-2026 - Measure each Outland boss in stock beside basic: a level-70 tank against the stock boss (issue 155f1)*
+
+> Next on the list: richer monster drops (181). Reading the issue and the
+> server's loot code.
+
+> Writing the drop rule into basic's rules code.
+
+> Now the settings patch that writes the three numbers for basic.
+
+> Settings checks pass. Compiler-checking the rules code.
+
+> The test caught a real problem: some shared tables point at other tables that
+> themselves point at tables, so "double the bands" could double twice on some
+> monsters. Seeing how common that is.
+
+> About 12% of the tables bands point at mix greens, blues or epics with other
+> qualities, so they'd get no boost. Looking at what they are.
+
+*[commit] 5ad65d509 in wow-chat-2026 - Make greens, blues and epics likelier from ordinary monsters, roll rares' loot twice, keep bosses stock (issue 181)*
+
+Three of the eight to-do items are built and committed. Two of them need your
+next rebuild before they do anything, and two results need a decision from you
+before I go further.
+
+**1. Kazzak tuned for level 60.** This is a new install step for basic (E071).
+It writes database rows, so it takes effect at your next install and server
+start, with no compile.
+- His melee and spells are ×0.40.
+- His 3-minute Berserk now does nothing.
+- His Frenzy no longer adds 30% damage. Instead he stops swinging and casting
+  for 6 seconds and casts a volley every second. The volley is a spare copy of
+  his own volley spell that nothing else uses, sized so six volleys deal about
+  140% of an average raid member's health.
+- The tuning lives in one readable list with a reason for each entry
+  (`patches/E071-basic-fight-multipliers/fights.lua`). A generator turns it into
+  the step's SQL.
+- The RAM test applies it, applies it again and reverts it cleanly, and the
+  state checker now checks it.
+- I couldn't check this part without a live fight: whether stopping his swings
+  and casting still lets the volleys fire. Watch for it in game.
+
+**2. Boss spells counted, and stock measured beside basic.**
+- `scripts/tank-damage-taken` now reads each boss's fight script without running
+  it and adds its spells to the damage on the tank. `--spells yes` lists each
+  boss's spells.
+- `--compare yes` sets basic beside stock: a level-70 tank in stock gear against
+  the boss at its stock level.
+- With spells counted, most Outland dungeon bosses leave a tier-geared tank
+  10–18 seconds unhealed. The script can't read yet: Golemagg (his timers live
+  in variables), Selin's and Kael'thas's phased fights, and anything adds or
+  summons do.
+
+**Question 1:** basic's dungeon bosses are about **twice as hard as stock** on
+the tank. An unhealed tank lasts 0.4–0.55 as long as it would in stock:
+
+| | Unhealed tank lasts (most bosses) | Biggest single hit |
+|---|---:|---:|
+| Stock: level-70 tank, boss at stock level | 20–45 s | 4–41% of health |
+| Basic: level-60 tank, raised boss | 10–18 s | 7–79% of health |
+
+Your 10–15 seconds is about where basic already is; stock's difficulty would
+be about twice that. Should the dungeon bosses aim at your 10–15 seconds
+(close to no change), at stock's difficulty (roughly halving most bosses'
+damage), or somewhere between?
+
+**3. Richer monster drops (181).** This changes the server's code, so it needs
+your rebuild.
+- From ordinary monsters and non-boss elites, greens and blues drop twice as
+  often and epics five times as often.
+- Rares' loot is rolled twice.
+- Bosses keep stock chances.
+- It uses the server's own loot hooks in basic's rules code. The three numbers
+  are settings written by a new config patch (C040), so you can tune them
+  without a rebuild.
+- It compiles with basic's patches, and the settings checks pass.
+- A new test (`scripts/test-basic-drop-layout`) checks the loot table layout the
+  rule depends on. It caught something: some loot tables sit inside others, so
+  rares' doubling now applies only to the tables a monster's own loot points at.
+
+**Question 2:** 106 old loot tables mix whites with greens (or blues, or epics)
+under one shared chance, mostly below level 58. The rule can't make their greens
+likelier one item at a time, so those greens aren't boosted. Options:
+- leave them as they are;
+- boost the whole table, whites included;
+- have a generator split each into one table per quality, so their greens are
+  boosted like the rest.
+
+Also corrected along the way:
+- In my tank numbers, dodge and parry rating at level 60 is 13.8 per percent,
+  not the 12 and 15 I'd assumed. The script now reads these from the game's
+  rating table.
+- The boss measure now runs in about 4 seconds instead of 2 minutes.
+
+Next on the list: spirit on gear (155k2), hide shoulders (720), the player class
+change (197) and the buddy reset (617a7). I'll carry on with those unless you'd
+rather answer the two questions first.
 
 --------------------------------------------------------------------------------
 

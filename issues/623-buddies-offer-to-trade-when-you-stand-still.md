@@ -20,6 +20,14 @@ Verbatim, 2026-10-15:
 > buddy-bot prioritizes walking over and being ready to trade you as soon
 > as the previous one expires... whichever one's not busy or in combat.
 
+## Asked again, 2026-10-26
+
+The owner: "If I want to give an item to a buddy-bot, they currently
+won't accept a trade request. Can we make it so they do? But only if
+they're in my clan." So the first piece of this issue, on its own: a
+buddy accepts a trade opened by a player of its own clan (its owner and
+the owner's clan mates), and refuses anyone else's, saying so.
+
 ## Current Behavior
 
 - **Player to buddy: works today, through the bot module.** Opening a

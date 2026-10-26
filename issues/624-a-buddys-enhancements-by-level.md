@@ -43,6 +43,21 @@ Dragons), from Blackrock Depths' smiths (Lord Incendius, Golem Lord
 Argelmach), or from the ambush system's rarest elites; the recipe at
 blacksmithing 300 (basic's cap), the buckle at level 60.
 
+## Asked 2026-10-26: the socket recipes at 300
+
+The owner: "Can we make the level 400 blacksmithing spells "socket
+bracer" and "socket gloves" require level 300 instead? And, can we have
+them learnable at 1/3rd chance from the same place the belt buckle recipe
+drops? I forget where we assigned it to." Found: the buckle recipe was
+never given a place (open question 3's source part is still open: the
+buckle is at level 60, its recipe on no trainer). Socket Bracer (55628)
+and Socket Gloves (55641) are on no trainer in basic either, and like the
+buckle (55656) they take Northrend materials the stock client insists on
+(4 Saronite Bars and an Eternal Earth or Eternal Shadow). Plan: one
+recipe item each (taught at blacksmithing 300 by the item's own skill
+requirement), the three dropping from one place, each socket recipe at a
+third of the time; the place and the materials are open questions 5 and 6.
+
 ## Current Behavior
 
 **The buckle at 60, 2026-10-15** (install step E057,
@@ -119,3 +134,12 @@ A buddy made at 14 gets the level-10 step; at 34, the 10, 20 and 30 steps.
    buddies at 60 by the kit, sold, or a recipe lowered too?
 4. Which ring and necklace at a level: the best for the plan among those
    of its level, or random among them like the weapon enchants?
+5. **Where the three blacksmithing recipes drop** (the belt buckle's,
+   Socket Bracer's, Socket Gloves', each socket recipe at a 1-in-3
+   chance): the world bosses basic respawns (Azuregos, the Emerald
+   Dragons, Doom Lord Kazzak, Doomwalker), Blackrock Depths' smiths (Lord
+   Incendius, Golem Lord Argelmach), or the ambush system's rarest elites?
+6. **Their materials**: the stock client shows and checks Saronite Bars
+   and Eternal Earth or Shadow, which basic has none of. Make those
+   obtainable in basic (from where?), or hand out the crafted results
+   (the buckle and socketing items) instead of recipes?
