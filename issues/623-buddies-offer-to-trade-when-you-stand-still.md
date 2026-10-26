@@ -30,6 +30,21 @@ the owner's clan mates), and refuses anyone else's, saying so.
 
 ## Current Behavior
 
+**Clan trades, built 2026-10-26 (source patch B058, not yet compiled):**
+a player in a bot's own guild may now open a trade with it, and the bot
+accepts what it is given; anyone else is refused as before ("I'm kind of
+busy now"). A buddy's clan is a guild (617l), so the owner and clan mates
+can hand a buddy items even when it is out of their group (in town,
+617c2). The change: the bot module's two trade refusals ("neither master
+nor group member", "ungrouped without full security", in
+`TradeStatusAction::Execute`) each gain "and not in the bot's guild".
+Gated to the buddy profiles (basic, cc-test). Round trip and compile
+checked; not yet seen in game (whether buddies' trimmed strategies still
+react to a trade window is to be seen). The rest of this issue (buddies
+offering trades, the helper walking over) is not built.
+
+Before:
+
 - **Player to buddy: works today, through the bot module.** Opening a
   trade window with a bot makes it show its inventory and take part in
   the trade (`docs/playerbots/Playerbot-Commands.md`, Reactions: "open

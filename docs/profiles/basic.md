@@ -140,6 +140,7 @@ lowest priority first, each line its header's own (`scripts/plan-patches basic`)
 |      640 | B054 | source | The server accepts navigation tiles built by version 19 of the                              |
 |      660 | B056 | source | Bots see only as far as they act                                                            |
 |      670 | B057 | source | The most any view distance may be, as a setting                                             |
+|      680 | B058 | source | Bots trade with their own guild                                                             |
 
 **After the compile and install (install steps and settings, mixed by priority):**
 
