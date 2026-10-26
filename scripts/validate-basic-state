@@ -555,6 +555,24 @@ report "fights: multipliers above 0 on real creatures; Kazzak's Berserk gone and
           WHERE NOT EXISTS (SELECT 1 FROM ${WORLD}.spell_dbc WHERE ID = 59975 AND EffectBasePoints_1 = 2499)")"
 # }}}
 
+# {{{ E072: some gear trades its stamina for spirit (issue 155k2)
+# Every saved item now carries spirit; an "all" item has no stamina left
+# where its stamina was; no cloth armour, weapon, trinket, set piece or
+# class-limited item is among them; and each kind changed some. How many
+# is the generator's to say (scripts/generate-basic-spirit-gear-sql).
+report "spirit on gear: saved items carry spirit, only the allowed kinds, each kind some" \
+    "$(run_sql "
+        SELECT 'no saved copy (E072 not applied)', 0 FROM DUAL
+          WHERE (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${WORLD}' AND table_name = 'basic_155k2_backup') = 0
+        UNION ALL SELECT CONCAT('item ', i.entry, ' has no spirit'), i.entry FROM ${WORLD}.basic_155k2_backup b JOIN ${WORLD}.item_template i ON i.entry = b.entry
+          WHERE 6 NOT IN (i.stat_type1, i.stat_type2, i.stat_type3, i.stat_type4, i.stat_type5, i.stat_type6, i.stat_type7, i.stat_type8, i.stat_type9, i.stat_type10)
+        UNION ALL SELECT CONCAT('item ', i.entry, ' is not an allowed kind'), i.entry FROM ${WORLD}.basic_155k2_backup b JOIN ${WORLD}.item_template i ON i.entry = b.entry
+          WHERE i.class <> 4 OR i.itemset <> 0 OR i.InventoryType IN (12, 13, 14, 15, 17, 21, 22, 23)
+            OR (i.subclass = 1 AND i.InventoryType NOT IN (2, 11, 16))
+        UNION ALL SELECT 'fewer than 50 leather or plate items changed', COUNT(*) FROM ${WORLD}.basic_155k2_backup b JOIN ${WORLD}.item_template i ON i.entry = b.entry
+          WHERE i.subclass IN (2, 4) AND i.InventoryType NOT IN (2, 11, 16) HAVING COUNT(*) < 50")"
+# }}}
+
 echo ""
 if [[ "${FAIL_COUNT}" -eq 0 ]]; then
     echo "All checks passed."

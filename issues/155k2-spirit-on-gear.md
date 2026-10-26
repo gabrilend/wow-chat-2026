@@ -32,7 +32,28 @@ Verbatim, 2026-10-04:
 
 ## Current Behavior
 
-Not built. Weapons and armour carry spirit mostly on caster items; since
+**Built 2026-10-26 (install step E072, not yet installed):**
+`scripts/generate-basic-spirit-gear-sql` picks the items and writes the
+step's SQL (`patches/E072-basic-spirit-on-gear/41-spirit-on-gear.*.sql`),
+printing how many each kind changed. In the world as it is now: leather
+202 all and 202 half of 1,014; plate 238 and 238 of 1,192; mail 84 and 84
+of 422 (866 mail pieces with intellect, mana per 5 or spell power left
+out); rings 82 and 82 of 410; necklaces 71 and 71 of 358; cloaks 76 and
+76 of 382. Excluded as the owner asked: weapons, cloth armour, trinkets,
+set pieces, class- or race-limited gear, PvP gear (honor ranks,
+reputation requirements, honor or arena purchases). The draw is by a hash
+of the item number, so a rebuild picks the same items; run after the
+install, the generator reads the changed items' saved stats and draws
+the same ones. The SQL saves each item's stats first
+(`basic_155k2_backup`) and computes from the copy, so installing again
+changes nothing more and the revert is exact. "All": the stamina becomes
+spirit; "half": the stamina keeps the larger half and spirit takes the
+rest in the item's first empty stat slot. The RAM test applies,
+re-applies and reverts it; `scripts/validate-basic-state` checks the
+changed items carry spirit and are allowed kinds. Not done: step 3's
+page.
+
+Before: weapons and armour carried spirit mostly on caster items; since
 167 spirit heals every class by stamina, so it is now worth having on any
 character.
 

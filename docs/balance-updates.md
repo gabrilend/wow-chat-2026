@@ -685,6 +685,19 @@ too; more gear from the monsters players fight makes up for it without
 making bosses' loot common (issue 181, the owner's answers 2026-10-08 and
 2026-10-23). Takes effect at basic's next compile.
 
+## 2026-10-26 — spirit on gear (basic)
+
+| Knob | Value | Where |
+|---|---|---|
+| Leather, plate, mail without caster stats, rings, necklaces, cloaks with stamina and no spirit | one fifth: all stamina becomes spirit; another fifth: half | `scripts/generate-basic-spirit-gear-sql` (install step E072) |
+| Exchange | 1 stamina = 1 spirit | the same |
+
+Why: spirit heals health by stamina (issue 167), so it is worth having on
+any character, and almost no armour carried it; trading stamina for it
+makes stamina against spirit a choice of gear (issue 155k2, the owner
+2026-10-04, 2026-10-23 and 2026-10-25). Takes effect at basic's next
+install.
+
 ## How to add an entry
 
 ```markdown

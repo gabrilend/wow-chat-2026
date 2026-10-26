@@ -1,0 +1,198 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- generate-basic-spirit-gear-sql - writes install step E072's SQL: some gear
+-- trades its stamina for spirit (issue 155k2).
+--
+-- For a general audience: since spirit heals health by stamina (issue 167),
+-- spirit is worth having on any character, but almost no armour carries
+-- it. This picks, by a fixed draw, two fifths of the gear that has stamina
+-- and no spirit within each kind (leather, plate, mail without caster
+-- stats, rings, necklaces, cloaks): one fifth gives all its stamina as
+-- spirit instead, another fifth half of it. The SQL it writes saves each
+-- chosen item's stats first and works from that saved copy, so the revert
+-- puts back exactly what was there, and installing again changes nothing
+-- more. It prints how many items changed in each kind.
+--
+-- Which items (the owner, 2026-10-04 and 2026-10-25):
+--   leather and plate armour; mail armour with no intellect, mana every 5
+--   seconds or spell power (on its stats or its equip effects); rings,
+--   necklaces and cloaks. Never weapons, cloth armour, trinkets, pieces of
+--   a set (tier gear), gear limited to a class or a race, PvP gear (an
+--   honor rank, a reputation requirement, bought with honor or arena
+--   points), or an item that already has spirit or has no stamina.
+-- The draw: within a kind, the items in the order of a hash of their item
+--   number (so a rebuild draws the same ones); the first fifth all, the
+--   next fifth half (stamina rounded up stays, the rest becomes spirit in
+--   the item's first empty stat slot; an item with no empty slot is left
+--   out of the half fifth, said in the report).
+--
+-- Usage: scripts/generate-basic-spirit-gear-sql [PROJECT_DIR] [WORLD_DATABASE]
+--   writes patches/E072-basic-spirit-on-gear/41-spirit-on-gear.{apply,revert}.sql
+--------------------------------------------------------------------------------
+
+local DIR   = arg[1] and arg[1] ~= "" and arg[1] or "/mnt/kaun/wow-chat-2026"
+local WORLD = arg[2] or "acore_world_basic"
+local HERE  = DIR .. "/patches/E072-basic-spirit-on-gear/"
+local MYSQL = DIR .. "/mysql/installed-files/bin/mysql -h127.0.0.1 -P3307 -uritz -pmenardi -N -B " .. WORLD
+local Spells = dofile(DIR .. "/scripts/lib/spell-data.lua").open(DIR, MYSQL)
+
+-- {{{ local function query
+local function query(sql)
+    local p = io.popen(MYSQL .. ' -e "' .. sql .. '" 2>&1')
+    local rows = {}
+    for l in p:lines() do
+        if l:match("^ERROR") then io.stderr:write("generate-basic-spirit-gear-sql: MySQL said: " .. l .. "\n"); os.exit(1) end
+        if not l:match("^mysql: %[Warning%]") then
+            local m = {}
+            for v in (l .. "\t"):gmatch("([^\t]*)\t") do m[#m + 1] = v end
+            rows[#rows + 1] = m
+        end
+    end
+    p:close()
+    return rows
+end
+-- }}}
+
+-- {{{ the candidates
+-- kind of an item: by armour subclass in the armour slots, by slot for
+-- the jewellery and cloaks; nil for anything else
+local ARMOUR_SLOT = { [1] = true, [3] = true, [5] = true, [6] = true, [7] = true, [8] = true, [9] = true, [10] = true, [20] = true }
+local function kind_of(sub, inv)
+    if inv == 11 then return "ring" end
+    if inv == 2 then return "necklace" end
+    if inv == 16 then return "cloak" end
+    if ARMOUR_SLOT[inv] then return ({ [2] = "leather", [3] = "mail", [4] = "plate" })[sub] end
+    return nil
+end
+local CASTER_STAT = { [5] = true, [41] = true, [42] = true, [43] = true, [45] = true }   -- intellect, healing, spell damage, mana per 5, spell power
+local CASTER_AURA = { [13] = true, [85] = true, [135] = true }                        -- spell damage, mana regeneration, healing
+
+local cols = "entry, subclass, InventoryType"
+for k = 1, 10 do cols = cols .. ", stat_type" .. k .. ", stat_value" .. k end
+for k = 1, 5 do cols = cols .. ", spellid_" .. k .. ", spelltrigger_" .. k end
+local rows = query("SELECT " .. cols .. " FROM item_template WHERE class = 4 AND InventoryType IN (1,2,3,5,6,7,8,9,10,11,16,20)"
+    .. " AND AllowableClass IN (-1, 0, 32767, 1535, 2047) AND AllowableRace IN (-1, 0, 2047, 1791)"
+    .. " AND itemset = 0 AND requiredhonorrank = 0 AND RequiredReputationFaction = 0"
+    .. " AND entry NOT IN (SELECT item FROM npc_vendor WHERE ExtendedCost > 0)")
+-- already installed: the changed items' stats as they were, from the saved
+-- copy, so a run after the install draws exactly the same items (otherwise
+-- the changed items, now with spirit, would drop out of the draw)
+local saved = {}
+if #query("SHOW TABLES LIKE 'basic_155k2_backup'") > 0 then
+    local sc = "entry"
+    for k = 1, 10 do sc = sc .. ", stat_type" .. k .. ", stat_value" .. k end
+    for _, r in ipairs(query("SELECT " .. sc .. " FROM basic_155k2_backup")) do saved[tonumber(r[1])] = r end
+end
+for _, m in ipairs(rows) do
+    local s = saved[tonumber(m[1])]
+    if s then for k = 1, 20 do m[3 + k] = s[1 + k] end end
+end
+local groups, order = {}, { "leather", "plate", "mail", "ring", "necklace", "cloak" }
+for _, g in ipairs(order) do groups[g] = {} end
+local skipped_caster = 0
+for _, m in ipairs(rows) do
+    local entry, sub, inv = tonumber(m[1]), tonumber(m[2]), tonumber(m[3])
+    local kind = kind_of(sub, inv)
+    if kind then
+        local sta_slot, has_spirit, caster, empty = nil, false, false, nil
+        for k = 1, 10 do
+            local t, v = tonumber(m[2 + k * 2]), tonumber(m[3 + k * 2])
+            if t == 7 and v > 0 and not sta_slot then sta_slot = k end
+            if t == 6 and v ~= 0 then has_spirit = true end
+            if CASTER_STAT[t] and v ~= 0 then caster = true end
+            if (t == 0 or v == 0) and not empty then empty = k end
+        end
+        for k = 0, 4 do
+            local sp, trig = tonumber(m[24 + k * 2]), tonumber(m[25 + k * 2])
+            if sp > 0 and trig == 1 and Spells.exists(sp) then
+                for _, e in ipairs(Spells.effects(sp)) do if e.effect == 6 and CASTER_AURA[e.aura] then caster = true end end
+            end
+        end
+        -- mail only without caster stats; every kind needs stamina and no spirit
+        if kind == "mail" and caster then skipped_caster = skipped_caster + 1
+        elseif sta_slot and not has_spirit then
+            local h = (entry * 2654435761) % 4294967296            -- the draw's order: a hash of the item number
+            table.insert(groups[kind], { entry = entry, slot = sta_slot, empty = empty, h = h })
+        end
+    end
+end
+-- }}}
+
+-- {{{ the draw and the SQL
+local apply, revert, report = {}, {}, {}
+local HEAD = "-- GENERATED by scripts/generate-basic-spirit-gear-sql from " .. WORLD .. " and the client's Spell.dbc;\n"
+    .. "-- don't edit by hand (re-run the generator). Issue 155k2: some gear trades its stamina for spirit.\n"
+apply[#apply + 1] = HEAD .. [[
+-- The chosen items' stats are saved once (INSERT IGNORE keeps the first
+-- copy), and each change works from that saved copy, so installing again
+-- changes nothing more and the revert is exact.
+CREATE TABLE IF NOT EXISTS `basic_155k2_backup` (
+  `entry` int unsigned NOT NULL, `how` char(4) NOT NULL COMMENT 'all or half',
+  `sta_slot` tinyint unsigned NOT NULL, `spirit_slot` tinyint unsigned NOT NULL COMMENT '0 for all',
+  `stat_type1` tinyint unsigned NOT NULL, `stat_value1` int NOT NULL, `stat_type2` tinyint unsigned NOT NULL, `stat_value2` int NOT NULL,
+  `stat_type3` tinyint unsigned NOT NULL, `stat_value3` int NOT NULL, `stat_type4` tinyint unsigned NOT NULL, `stat_value4` int NOT NULL,
+  `stat_type5` tinyint unsigned NOT NULL, `stat_value5` int NOT NULL, `stat_type6` tinyint unsigned NOT NULL, `stat_value6` int NOT NULL,
+  `stat_type7` tinyint unsigned NOT NULL, `stat_value7` int NOT NULL, `stat_type8` tinyint unsigned NOT NULL, `stat_value8` int NOT NULL,
+  `stat_type9` tinyint unsigned NOT NULL, `stat_value9` int NOT NULL, `stat_type10` tinyint unsigned NOT NULL, `stat_value10` int NOT NULL,
+  PRIMARY KEY (`entry`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='155k2: stats of the items that trade stamina for spirit, as they were';]]
+revert[#revert + 1] = "-- MARKER_E072_REVERT basic-spirit-on-gear\n" .. HEAD .. "\n-- Each changed item's stats put back from the saved copy, then the copy dropped."
+local statcols = {}
+for k = 1, 10 do statcols[#statcols + 1] = "`stat_type" .. k .. "`, `stat_value" .. k .. "`" end
+statcols = table.concat(statcols, ", ")
+local all_rows, half_rows = {}, {}
+for _, g in ipairs(order) do
+    local list = groups[g]
+    table.sort(list, function(a, b) return a.h < b.h end)
+    local fifth = math.floor(#list / 5)
+    local n_all, n_half, no_room = 0, 0, 0
+    for i, it in ipairs(list) do
+        if i <= fifth then
+            all_rows[#all_rows + 1] = string.format("(%d,'all',%d,0)", it.entry, it.slot); n_all = n_all + 1
+        elseif i <= 2 * fifth then
+            if it.empty then half_rows[#half_rows + 1] = string.format("(%d,'half',%d,%d)", it.entry, it.slot, it.empty); n_half = n_half + 1
+            else no_room = no_room + 1 end
+        end
+    end
+    report[#report + 1] = string.format("%-9s %5d with stamina and no spirit: %4d all to spirit, %4d half%s", g, #list, n_all, n_half,
+        no_room > 0 and string.format(" (%d with no empty stat slot left out)", no_room) or "")
+end
+report[#report + 1] = string.format("(mail with intellect, mana per 5 or spell power, left out: %d)", skipped_caster)
+
+-- the chosen items, with how and where, into a work table; then the save and the changes
+apply[#apply + 1] = "CREATE TEMPORARY TABLE `tmp_155k2_pick` (`entry` int unsigned PRIMARY KEY, `how` char(4), `sta_slot` tinyint unsigned, `spirit_slot` tinyint unsigned);"
+for _, set in ipairs({ all_rows, half_rows }) do
+    for i = 1, #set, 400 do
+        apply[#apply + 1] = "INSERT INTO `tmp_155k2_pick` VALUES " .. table.concat(set, ",", i, math.min(#set, i + 399)) .. ";"
+    end
+end
+apply[#apply + 1] = "INSERT IGNORE INTO `basic_155k2_backup` (`entry`, `how`, `sta_slot`, `spirit_slot`, " .. statcols .. ")\n"
+    .. "  SELECT p.`entry`, p.`how`, p.`sta_slot`, p.`spirit_slot`, " .. statcols:gsub("`stat_", "i.`stat_") .. "\n"
+    .. "  FROM `tmp_155k2_pick` p JOIN `item_template` i ON i.`entry` = p.`entry`;"
+for k = 1, 10 do
+    -- all: the stamina slot becomes spirit, the same amount
+    apply[#apply + 1] = string.format("UPDATE `item_template` i JOIN `basic_155k2_backup` b ON b.`entry` = i.`entry` AND b.`how` = 'all' AND b.`sta_slot` = %d\n"
+        .. "  SET i.`stat_type%d` = 6, i.`stat_value%d` = b.`stat_value%d`;", k, k, k, k)
+    -- half: the stamina slot keeps the larger half; spirit takes the rest in the empty slot
+    apply[#apply + 1] = string.format("UPDATE `item_template` i JOIN `basic_155k2_backup` b ON b.`entry` = i.`entry` AND b.`how` = 'half' AND b.`sta_slot` = %d\n"
+        .. "  SET i.`stat_value%d` = CEIL(b.`stat_value%d` / 2);", k, k, k)
+    apply[#apply + 1] = string.format("UPDATE `item_template` i JOIN `basic_155k2_backup` b ON b.`entry` = i.`entry` AND b.`how` = 'half' AND b.`spirit_slot` = %d\n"
+        .. "  JOIN (SELECT `entry`, CASE `sta_slot` %s END AS sta FROM `basic_155k2_backup`) s ON s.`entry` = b.`entry`\n"
+        .. "  SET i.`stat_type%d` = 6, i.`stat_value%d` = FLOOR(s.sta / 2);",
+        k, (function() local w = {} for j = 1, 10 do w[#w + 1] = string.format("WHEN %d THEN `stat_value%d`", j, j) end return table.concat(w, " ") end)(), k, k)
+end
+apply[#apply + 1] = "DROP TEMPORARY TABLE `tmp_155k2_pick`;"
+revert[#revert + 1] = "UPDATE `item_template` i JOIN `basic_155k2_backup` b ON b.`entry` = i.`entry` SET "
+    .. (function() local w = {} for k = 1, 10 do w[#w + 1] = string.format("i.`stat_type%d` = b.`stat_type%d`, i.`stat_value%d` = b.`stat_value%d`", k, k, k, k) end return table.concat(w, ", ") end)() .. ";"
+revert[#revert + 1] = "DROP TABLE IF EXISTS `basic_155k2_backup`;"
+-- }}}
+
+os.execute('mkdir -p "' .. HERE .. '"')
+for name, lines in pairs({ ["41-spirit-on-gear.apply.sql"] = apply, ["41-spirit-on-gear.revert.sql"] = revert }) do
+    local f = io.open(HERE .. name, "w")
+    if not f then io.stderr:write("generate-basic-spirit-gear-sql: cannot write " .. HERE .. name .. "\n"); os.exit(1) end
+    f:write(table.concat(lines, "\n\n"), "\n")
+    f:close()
+end
+print("wrote " .. HERE .. "41-spirit-on-gear.{apply,revert}.sql")
+for _, l in ipairs(report) do print("  " .. l) end
