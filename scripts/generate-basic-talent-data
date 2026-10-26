@@ -174,5 +174,9 @@ w("}")
 local f = io.open(OUT, "w") or die("cannot write " .. OUT)
 f:write(table.concat(out, "\n"), "\n")
 f:close()
+local OWN = DIR .. "/patches/E066-sargobras/helpers/data/sargobras-buddy-talent-data.lua"
+f = io.open(OWN, "w") or die("cannot write " .. OWN)
+f:write(table.concat(out, "\n"), "\n")
+f:close()
 print(string.format("generate-basic-talent-data: %d classes, %d talents, %d shapes each -> %s",
     #CLASSES, counted, #SHAPES, OUT))

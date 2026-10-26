@@ -5,7 +5,7 @@ for _, a in ipairs(arg) do
     if a == "--stdout" then STDOUT = true elseif a ~= "" then DIR = a end
 end
 local GEARSETS = DIR .. "/src/lua-basic/data/gearsets/"
-local OUT      = DIR .. "/sql/basic/db_world.src/33-gearsets.apply.sql"
+local OUT      = DIR .. "/patches/E052-basic-gearsets/33-gearsets.apply.sql"
 local BAG_SLOT, AMMO_SLOT = 100, 200
 
 local Gearsets = dofile(DIR .. "/src/lua-basic/lib/gearsets.lua")

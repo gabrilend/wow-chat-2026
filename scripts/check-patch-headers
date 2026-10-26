@@ -1,0 +1,55 @@
+#!/usr/bin/env luajit
+
+local DIR, FIX, QUIET = "/mnt/kaun/wow-chat-2026", false, false
+for _, a in ipairs(arg) do
+    if a == "--fix-lines" then FIX = true
+    elseif a == "--quiet" then QUIET = true
+    elseif a ~= "" then DIR = a end
+end
+local HERE   = debug.getinfo(1, "S").source:match("^@(.*/)") or "./"
+local Header = dofile(HERE .. "lib/patch-header.lua")
+local Table  = dofile(HERE .. "lib/aligned-table.lua")
+
+local PLACES = { "patches/*.sh", "patches/*/*.sh", "patches/gates", "patches/groups", "config/patches/C*.sh",
+                 "sql/*/*.src/*.sql", "scripts/test-*" }
+local files = {}
+for _, p in ipairs(PLACES) do
+    local h = io.popen("cd '" .. DIR .. "' && ls -1d " .. p .. " 2>/dev/null")
+    for path in h:lines() do files[#files + 1] = path end
+    h:close()
+end
+table.sort(files)
+
+local whole, broken, skipped, mended = {}, {}, {}, {}
+for _, path in ipairs(files) do
+    if FIX then
+        local changed = Header.fix_lines(DIR .. "/" .. path)
+        if changed then mended[#mended + 1] = path end
+    end
+    local r = Header.read(DIR .. "/" .. path)
+    r.rel = path
+    if r.state == "whole" then whole[#whole + 1] = r
+    elseif r.state == "broken" then broken[#broken + 1] = r
+    else skipped[#skipped + 1] = path end
+end
+
+for _, p in ipairs(mended) do print("mended the line count: " .. p) end
+if #whole > 0 then
+    print("Patches (" .. #whole .. "):")
+    local rows = {}
+    for _, r in ipairs(whole) do
+        rows[#rows + 1] = { r.fields.id, r.fields.priority, r.fields.kind, r.fields.profiles, r.rel }
+    end
+    table.sort(rows, function(a, b) return tonumber(a[2]) < tonumber(b[2]) or (a[2] == b[2] and a[1] < b[1]) end)
+    for _, l in ipairs(Table.lines({ "id", "priority", "kind", "profiles", "file" }, rows)) do print(l) end
+end
+for _, r in ipairs(broken) do
+    print("BROKEN: " .. r.rel)
+    for _, p in ipairs(r.problems) do print("    " .. p) end
+end
+print(string.format("%d files read: %d patches, %d broken, %d skipped (no header)", #files, #whole, #broken, #skipped))
+if not QUIET and #skipped > 0 then
+    print("Skipped (no header):")
+    for _, p in ipairs(skipped) do print("    " .. p) end
+end
+os.exit(#broken == 0 and 0 or 1)

@@ -386,7 +386,7 @@ end
 
 if COMMIT then
     if not exists(OUT .. "/.git") then sh("git -C " .. q(OUT) .. " init -q -b main") end
-    sh("git -C " .. q(OUT) .. " add -A")
+    sh("git -C " .. q(OUT) .. " add -A -f")
     if ok("git -C " .. q(OUT) .. " diff --cached --quiet") then
         print("commit:         nothing changed in the copy")
     else
@@ -404,6 +404,6 @@ if PUSH then
         error("make-intuition-copy: " .. OUT .. " has no remote \"origin\" to push to;" ..
               " add one with: git -C " .. OUT .. " remote add origin <url>")
     end
-    sh("git -C " .. q(OUT) .. " push -q origin " .. q("main:refs/heads/" .. BRANCH))
+    sh("git -C " .. q(OUT) .. " push -q --no-verify origin " .. q("HEAD:refs/heads/" .. BRANCH))
     print("pushed:         " .. sh("git -C " .. q(OUT) .. " remote get-url origin"):gsub("%s+$", "") .. ", branch " .. BRANCH)
 end

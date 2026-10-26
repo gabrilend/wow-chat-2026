@@ -314,8 +314,12 @@ report "Onyxia's hoard: gold bars, five coloured sacks, ten gem piles; her epic 
         UNION ALL SELECT 'gold bars', MAX(MaxCount) FROM ${WORLD}.item_loot_template WHERE Entry = 49294 AND Item = 3577 HAVING MAX(MaxCount) IS NULL OR MAX(MaxCount) <> 45
         UNION ALL SELECT 'Onyxia binding-gem rows', COUNT(*) FROM ${WORLD}.creature_loot_template c JOIN ${WORLD}.creature_template t ON t.lootid = c.Entry
           WHERE t.entry = 10184 AND c.Item BETWEEN 1550180 AND 1550183 HAVING COUNT(*) <> 4")"
-report "a Visiting Jewelcrafter (Jewelcrafting trainer list 113) stands in each of the six Azeroth capitals" \
-    "$(run_sql "SELECT 'spawns', COUNT(*) FROM ${WORLD}.creature WHERE guid BETWEEN 15501001 AND 15501006 AND id IN (1550201, 1550202) HAVING COUNT(*) <> 6
+report "the capitals' jewelcrafting: six Visiting Jewelcrafters (list 113), or their six spawns saved and the Profession Mentors teaching it" \
+    "$(run_sql "SELECT 'spawns', COUNT(*) FROM ${WORLD}.creature WHERE guid BETWEEN 15501001 AND 15501006 AND id IN (1550201, 1550202)
+          HAVING COUNT(*) NOT IN (0, 6)
+        UNION ALL SELECT 'removed but not saved', 0 FROM DUAL
+          WHERE NOT EXISTS (SELECT 1 FROM ${WORLD}.creature WHERE guid BETWEEN 15501001 AND 15501006)
+            AND (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${WORLD}' AND table_name = 'basic_155e1_jewelcrafter_backup') = 0
         UNION ALL SELECT 'trainer lists', COUNT(*) FROM ${WORLD}.creature_default_trainer WHERE CreatureId IN (1550201, 1550202) AND TrainerId = 113 HAVING COUNT(*) <> 2")"
 report "titan sites: a crystal trader and a masterwork jewelcrafter at Uldaman and Uldum, and one pair per Un'Goro pylon event" \
     "$(run_sql "SELECT 'standing spawns', COUNT(*) FROM ${WORLD}.creature WHERE guid BETWEEN 15501011 AND 15501014 AND id IN (1550210, 1550211) HAVING COUNT(*) <> 4
@@ -359,6 +363,74 @@ report "class books drop: Ahn'Qiraj and the Emerald Dragons (61-70), Naxxramas (
           WHERE t.entry BETWEEN 29000 AND 30999 AND l.Reference = 1557902 AND l.Chance = 25 HAVING COUNT(*) <> 14
         UNION ALL SELECT 'dragons roll three', COUNT(*) FROM ${WORLD}.creature_loot_template l JOIN ${WORLD}.creature_template t ON t.lootid = l.Entry
           WHERE t.entry IN (14887, 14888, 14889, 14890) AND l.Reference = 1557901 AND l.Chance = 100 AND l.MaxCount = 3 HAVING COUNT(*) <> 4")"
+
+report "dungeon bosses: one enchanting scroll each, from a list of six or more near their level" \
+    "$(run_sql "
+        SELECT 'no scroll lists at all', 0 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM ${WORLD}.reference_loot_template WHERE Entry BETWEEN 1558000 AND 1558099)
+        UNION ALL SELECT CONCAT('list ', r.Entry, ' holds a non-scroll or too high a scroll'), r.Item FROM ${WORLD}.reference_loot_template r
+          JOIN ${WORLD}.item_template i ON i.entry = r.Item
+          WHERE r.Entry BETWEEN 1558000 AND 1558099 AND (i.name NOT LIKE 'Scroll of Enchant%' OR i.ItemLevel > 61 OR r.GroupId <> 1 OR r.Chance <> 0)
+        UNION ALL SELECT CONCAT('list ', Entry, ' has fewer than six scrolls'), COUNT(*) FROM ${WORLD}.reference_loot_template
+          WHERE Entry BETWEEN 1558000 AND 1558099 GROUP BY Entry HAVING COUNT(*) < 6
+        UNION ALL SELECT CONCAT('boss loot ', l.Entry, ' scroll row not an always-one drop'), l.Reference FROM ${WORLD}.creature_loot_template l
+          WHERE l.Reference BETWEEN 1558000 AND 1558099 AND (l.Chance <> 100 OR l.MinCount <> 1 OR l.MaxCount <> 1 OR l.GroupId <> 0)
+        UNION ALL SELECT CONCAT('boss loot ', l.Entry, ' points at a missing list'), l.Reference FROM ${WORLD}.creature_loot_template l
+          WHERE l.Reference BETWEEN 1558000 AND 1558099
+            AND NOT EXISTS (SELECT 1 FROM ${WORLD}.reference_loot_template r WHERE r.Entry = l.Reference)")"
+
+report "Profession Mentors: each stands, with a line per missing profession opening a list that teaches it" \
+    "$(run_sql "
+        SELECT 'no mentor table (E068 not applied)', 0 FROM DUAL
+          WHERE (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${WORLD}' AND table_name = 'basic_155e1_mentors') = 0
+        UNION ALL SELECT CONCAT('mentor ', v.name, ' not standing'), v.capital FROM ${WORLD}.basic_155e1_mentors v
+          WHERE NOT EXISTS (SELECT 1 FROM ${WORLD}.creature c WHERE c.guid = 15500030 + v.capital AND c.id = 1550030 + v.capital)
+        UNION ALL SELECT CONCAT('mentor ', m.capital, ' has no ', m.name, ' line'), m.list FROM ${WORLD}.basic_155e1_missing m
+          WHERE NOT EXISTS (SELECT 1 FROM ${WORLD}.gossip_menu_option o WHERE o.MenuID = 155030 + m.capital AND o.ActionMenuID = m.list AND o.OptionType = 5)
+        UNION ALL SELECT CONCAT(m.name, ' list ', m.list, ' teaches nothing'), m.capital FROM ${WORLD}.basic_155e1_missing m
+          WHERE NOT EXISTS (SELECT 1 FROM ${WORLD}.trainer_spell ts WHERE ts.TrainerId = m.list)
+        UNION ALL SELECT CONCAT(m.name, ' list ', m.list, ' holds another profession''s recipe'), ts.SpellId FROM ${WORLD}.basic_155e1_missing m
+          JOIN ${WORLD}.trainer_spell ts ON ts.TrainerId = m.list WHERE ts.ReqSkillLine NOT IN (0, m.skill)
+        UNION ALL SELECT 'a Visiting Jewelcrafter still stands', COUNT(*) FROM ${WORLD}.creature WHERE guid BETWEEN 15501001 AND 15501006
+          HAVING COUNT(*) > 0")"
+
+report "fights: multipliers above 0 on real creatures; Kazzak's Berserk gone and Frenzy a channelled volley" \
+    "$(run_sql "
+        SELECT CONCAT('multiplier row ', entry, ' has a value of 0 or less'), entry FROM ${WORLD}.basic_creature_multipliers
+          WHERE melee <= 0 OR spell <= 0 OR heal <= 0 OR health <= 0
+        UNION ALL SELECT CONCAT('multiplier row ', m.entry, ' names no creature'), m.entry FROM ${WORLD}.basic_creature_multipliers m
+          WHERE m.entry <> 0 AND NOT EXISTS (SELECT 1 FROM ${WORLD}.creature_template t WHERE t.entry = m.entry)
+        UNION ALL SELECT 'Kazzak has no multiplier row (E071 not applied)', 0 FROM DUAL
+          WHERE NOT EXISTS (SELECT 1 FROM ${WORLD}.basic_creature_multipliers WHERE entry = 18728)
+        UNION ALL SELECT 'Kazzak''s Berserk (32965) still has effects', 0 FROM DUAL
+          WHERE NOT EXISTS (SELECT 1 FROM ${WORLD}.spell_dbc WHERE ID = 32965 AND Effect_1 = 0 AND Effect_2 = 0 AND Effect_3 = 0)
+        UNION ALL SELECT 'Kazzak''s Frenzy (32964) is not the channelled volley', 0 FROM DUAL
+          WHERE NOT EXISTS (SELECT 1 FROM ${WORLD}.spell_dbc WHERE ID = 32964 AND EffectAura_1 = 25 AND EffectAuraPeriod_2 = 1000
+            AND EffectTriggerSpell_2 = 59975 AND DurationIndex = 32)
+        UNION ALL SELECT 'the channel''s volley (59975) is not resized', 0 FROM DUAL
+          WHERE NOT EXISTS (SELECT 1 FROM ${WORLD}.spell_dbc WHERE ID = 59975 AND EffectBasePoints_1 = 2499)")"
+
+report "spirit on gear: saved items carry spirit, only the allowed kinds, each kind some" \
+    "$(run_sql "
+        SELECT 'no saved copy (E072 not applied)', 0 FROM DUAL
+          WHERE (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${WORLD}' AND table_name = 'basic_155k2_backup') = 0
+        UNION ALL SELECT CONCAT('item ', i.entry, ' has no spirit'), i.entry FROM ${WORLD}.basic_155k2_backup b JOIN ${WORLD}.item_template i ON i.entry = b.entry
+          WHERE 6 NOT IN (i.stat_type1, i.stat_type2, i.stat_type3, i.stat_type4, i.stat_type5, i.stat_type6, i.stat_type7, i.stat_type8, i.stat_type9, i.stat_type10)
+        UNION ALL SELECT CONCAT('item ', i.entry, ' is not an allowed kind'), i.entry FROM ${WORLD}.basic_155k2_backup b JOIN ${WORLD}.item_template i ON i.entry = b.entry
+          WHERE i.class <> 4 OR i.itemset <> 0 OR i.InventoryType IN (12, 13, 14, 15, 17, 21, 22, 23)
+            OR (i.subclass = 1 AND i.InventoryType NOT IN (2, 11, 16))
+        UNION ALL SELECT 'fewer than 50 leather or plate items changed', COUNT(*) FROM ${WORLD}.basic_155k2_backup b JOIN ${WORLD}.item_template i ON i.entry = b.entry
+          WHERE i.subclass IN (2, 4) AND i.InventoryType NOT IN (2, 11, 16) HAVING COUNT(*) < 50")"
+
+report "mixed loot tables: split by quality, the old tables unused, chances kept" \
+    "$(run_sql "
+        SELECT 'no saved entries (E073 not applied)', 0 FROM DUAL
+          WHERE (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${WORLD}' AND table_name = 'basic_181_split_parents') = 0
+        UNION ALL SELECT CONCAT('new table ', r.Entry, ' mixes qualities'), r.Entry FROM ${WORLD}.reference_loot_template r
+          JOIN ${WORLD}.item_template i ON i.entry = r.Item WHERE r.Entry BETWEEN 1840000 AND 1849999 GROUP BY r.Entry HAVING MIN(i.Quality) <> MAX(i.Quality)
+        UNION ALL SELECT CONCAT('creature loot ', l.Entry, ' still points at split table ', l.Reference), l.Entry FROM ${WORLD}.creature_loot_template l
+          WHERE ABS(l.Reference) IN (SELECT ABS(Reference) FROM ${WORLD}.basic_181_split_parents)
+        UNION ALL SELECT CONCAT('shared loot ', l.Entry, ' still points at split table ', l.Reference), l.Entry FROM ${WORLD}.reference_loot_template l
+          WHERE ABS(l.Reference) IN (SELECT ABS(Reference) FROM ${WORLD}.basic_181_split_parents)")"
 
 echo ""
 if [[ "${FAIL_COUNT}" -eq 0 ]]; then

@@ -74,6 +74,7 @@ C037_SETTINGS=(
     "ChatFakeMessagePreventing|0"
     "ChatStrictLinkChecking.Severity|-1"
     "Visibility.GroupMode|0"
+    "Visibility.Distance.Continents|250"
 )
 
 config_beta_wow_chat_1_survival_settings() {
@@ -95,5 +96,4 @@ config_beta_wow_chat_1_survival_settings() {
         return 1
     fi
 }
-CONFIG_PROFILES[config_beta_wow_chat_1_survival_settings]="beta"
 CONFIG_DESCRIPTIONS[config_beta_wow_chat_1_survival_settings]="wow-chat-1's survival settings (${#C037_SETTINGS[@]} values; docs/wow-chat-1-settings.md)"

@@ -116,7 +116,23 @@ CPP
                     // (ActionMenuID), as vendor options already may.
                     Trainer::Trainer const* trainer = sObjectMgr->GetTrainer(creature->GetEntry());
                     if (!trainer && itr->second.ActionMenuID)
+                    {
                         trainer = sObjectMgr->GetTrainerById(itr->second.ActionMenuID);
+                        // A named list for another class (a Visiting Mentor's
+                        // druid line shown to a shaman) is hidden on purpose:
+                        // the mentor offers one line per missing class and each
+                        // player sees only its own. Hidden here, quietly, so the
+                        // stock check below doesn't log it as "requested wrong
+                        // gossip menu" (it did, twice per mentor greeting, until
+                        // 2026-10-22; the owner: "I'd rather fix it instead of
+                        // quiet it"). A list that doesn't exist still falls
+                        // through to the stock check and its error.
+                        if (trainer && !trainer->IsTrainerValidForPlayer(this))
+                        {
+                            canTalk = false;
+                            break;                  // out of the option-type switch; the line is not added
+                        }
+                    }
 CPP
     _b029_replace_line "${GOSSIP_CPP}" '                    Trainer::Trainer const* trainer = sObjectMgr->GetTrainer(creature->GetEntry());' "${T}/8" || return 1
     cat > "${T}/9" << 'CPP'

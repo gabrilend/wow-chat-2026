@@ -35,5 +35,4 @@ EOF
         fi
     done
 }
-CONFIG_PROFILES[config_missing_server_config_keys]="release beta vanilla basic cc-test"
 CONFIG_DESCRIPTIONS[config_missing_server_config_keys]="Backfill 5 server-config keys missing from stale .dist"

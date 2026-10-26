@@ -112,7 +112,7 @@ setmetatable(_G, { __index = function(_, k)
     if stubs[k] ~= nil then return stubs[k] end
     return function() return nil end
 end })
-dofile(LUA .. "sargobras.lua")
+dofile(DIR .. "/patches/E066-sargobras/sargobras.lua")
 check("the valley Sargobras's handlers registered", type(hello) == "function" and type(select_) == "function")
 if not (hello and select_) then os.exit(1) end
 

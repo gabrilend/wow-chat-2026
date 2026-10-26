@@ -51,6 +51,19 @@ source "${DIR}/patches/patches.sh" || { echo "ERROR: patches/patches.sh failed t
 LIST="${PHASE_BEGIN_PATCHES[${PROFILE}]:-}"
 [[ -n "${LIST}" ]] || { echo "ERROR: no PHASE_BEGIN_PATCHES entry for '${PROFILE}'"; exit 1; }
 
+changed_by() {
+    local id="$1" rel before
+    : > "${WORK}/${id}.changed"
+    while IFS= read -r rel; do
+        before="${WORK}/last/${rel}"
+        [[ -f "${before}" ]] || before="${WORK}/pristine/${rel}"
+        if ! cmp -s "${before}" "${WORK}/tree/${rel}"; then
+            echo "${rel}" >> "${WORK}/${id}.changed"
+            mkdir -p "$(dirname "${WORK}/last/${rel}")"
+            cp "${WORK}/tree/${rel}" "${WORK}/last/${rel}"
+        fi
+    done < <(find "${WORK}/tree" -type f -newer "${WORK}/${id}.mark" -printf '%P\n')
+}
 failed=0
 echo "Applying: ${LIST}"
 for id in ${LIST}; do
@@ -60,6 +73,7 @@ for id in ${LIST}; do
         failed=$((failed + 1))
         continue
     fi
+    touch "${WORK}/${id}.mark"
     if ${fn} > "${WORK}/${id}.apply.log" 2>&1; then
         echo "  [✓] ${id} applied"
     else
@@ -67,7 +81,32 @@ for id in ${LIST}; do
         sed 's/^/        /' "${WORK}/${id}.apply.log"
         failed=$((failed + 1))
     fi
+    changed_by "${id}"
 done
+
+declare -A PRIORITY_OF=()
+while IFS=$'\t' read -r prio _kind pid _file; do
+    PRIORITY_OF["${pid}"]="${prio}"
+done < <("${DIR}/scripts/plan-patches" "${DIR}" "${PROFILE}" --stage source)
+clashes=0
+for a in ${LIST}; do
+    for b in ${LIST}; do
+        [[ "${a}" < "${b}" ]] || continue
+        [[ "${PRIORITY_OF[${a}]:-x}" == "${PRIORITY_OF[${b}]:-y}" ]] || continue
+        both="$(comm -12 <(sort "${WORK}/${a}.changed") <(sort "${WORK}/${b}.changed"))"
+        if [[ -n "${both}" ]]; then
+            echo "  [✗] ${a} and ${b} share priority ${PRIORITY_OF[${a}]} and both change:"
+            echo "${both}" | sed 's/^/        /'
+            echo "      to fix: give the one laid over the other a higher priority (its header)"
+            clashes=$((clashes + 1))
+        fi
+    done
+done
+if [[ ${clashes} -eq 0 ]]; then
+    echo "  [✓] layering: no two patches of one priority change the same file"
+else
+    failed=$((failed + clashes))
+fi
 
 echo "Reverting (reverse order)..."
 reversed=$(echo "${LIST}" | tr ' ' '\n' | tac | tr '\n' ' ')
@@ -87,5 +126,5 @@ else
 fi
 
 echo "Result: ${failed} problem(s). Logs: ${WORK}/"
-rm -rf "${WORK}/pristine" "${WORK}/tree"
+rm -rf "${WORK}/pristine" "${WORK}/tree" "${WORK}/last"
 [[ "${failed}" -eq 0 ]]

@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+CUSTOM_CLIENT="${CUSTOM_CLIENT:-/mnt/kaun/custom-client}"
+WORK="${DIR}/tmp/shared-memory/oath-tabards"         # RAM: the list and the full-size pictures
+OUT="${DIR}/docs/HTML/oath-tabards"                  # beside the page: what the page shows
+WORN_SIZE="192x240"                                  # the custom client draws 512x640; the page shows 160 and 80 high
+
+stop() { echo "ERROR at: $1"; echo "  why: $2"; echo "  done before it: ${DONE:-nothing}"; exit 1; }
+DONE=""
+
+[[ -d "${DIR}/tmp/shared-memory" ]] || stop "finding the RAM folder" "${DIR}/tmp/shared-memory is missing (the project's tmp links)"
+[[ -x "${CUSTOM_CLIENT}/scripts/item-pictures" ]] || stop "finding the custom client" "${CUSTOM_CLIENT}/scripts/item-pictures is not there (set CUSTOM_CLIENT)"
+command -v magick > /dev/null || stop "finding ImageMagick" "the magick command is not installed"
+mkdir -p "${WORK}/raw" "${OUT}"
+
+"${DIR}/scripts/generate-oath-tabards-page" "${DIR}" acore_world_basic --list "${WORK}/list.txt" \
+    || stop "writing the picture list" "the page generator failed (is MySQL running?)"
+DONE="the list (${WORK}/list.txt)"
+
+if ! "${CUSTOM_CLIENT}/scripts/item-pictures" "${CUSTOM_CLIENT}" "${WORK}/list.txt" "${WORK}/raw"; then
+    echo "WARNING: the custom client refused some tabards (named above); the rest were drawn"
+fi
+DONE="${DONE}; the pictures (${WORK}/raw)"
+
+n=0
+for f in "${WORK}"/raw/*-icon.png; do
+    [[ -e "${f}" ]] || stop "copying the icons" "no icons were drawn in ${WORK}/raw"
+    cp "${f}" "${OUT}/"
+    n=$((n + 1))
+done
+for f in "${WORK}"/raw/*-front.png "${WORK}"/raw/*-back.png; do
+    [[ -e "${f}" ]] || continue
+    magick "${f}" -resize "${WORN_SIZE}" -strip "${OUT}/$(basename "${f}")"
+    n=$((n + 1))
+done
+cat > "${OUT}/pictures.info" <<EOF
+Made by scripts/make-oath-tabard-pictures (wow-chat-2026), $(date '+%F %T'): each
+tabard's bag icon (64x64, as the game draws it) and a night elf woman wearing
+it from the front and from behind (shrunk to ${WORN_SIZE} from the custom
+client's 512x640), drawn from the game's own files by the custom client's
+dressing room (${CUSTOM_CLIENT}/scripts/item-pictures). For the page
+docs/HTML/oath-tabards.html (issue 718a). Re-run the script to remake them.
+EOF
+DONE="${DONE}; ${n} pictures beside the page (${OUT})"
+
+"${DIR}/scripts/generate-oath-tabards-page" "${DIR}" acore_world_basic || stop "writing the page" "the page generator failed (see above)"
+
+echo "done: ${DONE}"

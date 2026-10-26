@@ -16,5 +16,4 @@ config_network_ports() {
 
     sed -i 's|^RealmServerPort.*=.*|RealmServerPort = '"${AUTHSERVER_PORT}"'|' "${conf_auth}"
 }
-CONFIG_PROFILES[config_network_ports]="all"
 CONFIG_DESCRIPTIONS[config_network_ports]="Network ports (4362/4462)"

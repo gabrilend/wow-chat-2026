@@ -3,7 +3,7 @@
 local DIR   = arg[1] or "/mnt/kaun/wow-chat-2026"
 local MYSQL = DIR .. "/mysql/installed-files/bin/mysql"
 local DB    = "acore_world_basic"
-local FILE  = DIR .. "/sql/basic/db_world.src/28-buddy-beds.apply.sql"
+local FILE  = DIR .. "/patches/E045-basic-buddy-beds/28-buddy-beds.apply.sql"
 local BEGIN_MARK = "-- >>> BEDS BEGIN"
 local END_MARK   = "-- <<< BEDS END"
 

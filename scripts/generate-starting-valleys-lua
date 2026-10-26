@@ -73,4 +73,9 @@ else
     f:write(text)
     f:close()
     print("wrote " .. OUT)
+    local OWN = DIR .. "/patches/E066-sargobras/helpers/data/sargobras-starting-valleys.lua"
+    f = assert(io.open(OWN, "w"))
+    f:write(text)
+    f:close()
+    print("wrote " .. OWN)
 end

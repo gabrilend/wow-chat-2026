@@ -1,0 +1,42 @@
+#!/bin/bash
+
+DIR="/mnt/kaun/wow-chat-2026"
+if [[ -n "$1" ]]; then
+    DIR="$1"
+fi
+MYSQL="${DIR}/mysql/installed-files/bin/mysql --no-defaults --socket=${DIR}/mysql/databases/mysql.sock -uritz -pmenardi -N _smoke_test"
+
+source /home/ritz/programming/ai-stuff/scripts/libs/ensure-ram-tiers
+ensure_ram_tiers "${DIR}" || exit 1
+WORK="$(mktemp -d "${DIR}/tmp/shared-memory/forget-updates-test.XXXXXX")"
+TABLE_MADE=false
+cleanup() { rm -rf "${WORK}"; [[ "${TABLE_MADE}" == "true" ]] && ${MYSQL} -e "DROP TABLE IF EXISTS updates" 2>/dev/null; }
+trap cleanup EXIT
+
+eval "$(sed -n '/^_forget_z_prefixed_updates() {/,/^}/p' "${DIR}/patches/E-helpers.sh")"
+declare -F _forget_z_prefixed_updates > /dev/null || { echo "FAIL: _forget_z_prefixed_updates not found in patches/E-helpers.sh"; exit 1; }
+
+if ${MYSQL} -e "SHOW TABLES LIKE 'updates'" 2>/dev/null | grep -q .; then
+    echo "FAIL: _smoke_test already has an updates table; not touching it"; exit 1
+fi
+${MYSQL} -e "CREATE TABLE updates (name VARCHAR(200) PRIMARY KEY, hash CHAR(40), state VARCHAR(20), timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, speed INT DEFAULT 0)" 2>/dev/null ||
+    { echo "FAIL: could not make a scratch table in _smoke_test (is the project's MySQL running?)"; exit 1; }
+TABLE_MADE=true
+
+mkdir -p "${WORK}/staging"
+touch "${WORK}/staging/a.sql" "${WORK}/staging/b.sql"
+${MYSQL} -e "INSERT INTO updates (name, hash, state) VALUES ('a.sql','h','CUSTOM'), ('z_a.sql','h','CUSTOM'), ('z_b.sql','h','CUSTOM'), ('c.sql','h','CUSTOM'), ('z_c.sql','h','CUSTOM'), ('2026_01_01_00_world.sql','h','RELEASED')" 2>/dev/null
+
+FAILS=0
+check() { if [[ "$2" == "$3" ]]; then echo "  ok    $1"; else FAILS=$((FAILS + 1)); echo "  FAIL  $1: got '$2', wanted '$3'"; fi; }
+names() { ${MYSQL} -e "SELECT GROUP_CONCAT(name ORDER BY name) FROM updates" 2>/dev/null; }
+
+echo "test-forget-z-prefixed-updates"
+out="$(_forget_z_prefixed_updates "${WORK}/staging" _smoke_test)"
+check "our files' z_ records are forgotten, everything else kept" "$(names)" "2026_01_01_00_world.sql,a.sql,c.sql,z_c.sql"
+check "it says how many it forgot" "$(grep -o '[0-9]* z_ update record' <<< "${out}")" "2 z_ update record"
+out="$(_forget_z_prefixed_updates "${WORK}/staging" _smoke_test)"
+check "a second run changes nothing and says nothing" "$(names)|${out}" "2026_01_01_00_world.sql,a.sql,c.sql,z_c.sql|"
+
+echo "$(( FAILS == 0 ? 3 : 3 - FAILS )) of 3 checks passed"
+exit $(( FAILS > 0 ))

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+"${DIR}/scripts/generate-patch-lists" "${DIR}" --check

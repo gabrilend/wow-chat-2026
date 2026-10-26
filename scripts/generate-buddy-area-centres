@@ -12,8 +12,8 @@ elseif arg[1] then
     DIR = arg[1]
 end
 local MAPS_DIR = DIR .. "/data-files/maps"
-local OUT_APPLY  = DIR .. "/sql/basic/db_world.src/27-buddy-area-centres.apply.sql"
-local OUT_REVERT = DIR .. "/sql/basic/db_world.src/27-buddy-area-centres.revert.sql"
+local OUT_APPLY  = DIR .. "/patches/E044-basic-buddy-area-centres/27-buddy-area-centres.apply.sql"
+local OUT_REVERT = DIR .. "/patches/E044-basic-buddy-area-centres/27-buddy-area-centres.revert.sql"
 
 local SIZE_OF_GRIDS = 533.3333
 local SQUARE        = SIZE_OF_GRIDS / 16

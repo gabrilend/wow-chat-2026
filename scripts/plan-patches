@@ -1,0 +1,128 @@
+#!/usr/bin/env luajit
+
+local DIR, PROFILE, STAGE, IDS, EVERY, QUICK = "/mnt/kaun/wow-chat-2026", nil, "all", false, false, false
+do
+    local pos, i = {}, 1
+    while i <= #arg do
+        if arg[i] == "--stage" then i = i + 1; STAGE = arg[i]
+        elseif arg[i] == "--ids" then IDS = true
+        elseif arg[i] == "--every-profile" then EVERY = true
+        elseif arg[i] == "--quick-tests" then QUICK = true
+        else pos[#pos + 1] = arg[i] end
+        i = i + 1
+    end
+    if EVERY or QUICK then DIR = pos[1] or DIR; PROFILE = "*"
+    elseif #pos == 2 then DIR, PROFILE = pos[1], pos[2] else PROFILE = pos[1] end
+end
+local HERE   = debug.getinfo(1, "S").source:match("^@(.*/)") or "./"
+local Header = dofile(HERE .. "lib/patch-header.lua")
+local function die(msg) io.stderr:write("plan-patches: " .. msg .. "\n"); os.exit(1) end
+if not PROFILE then die("usage: plan-patches [PROJECT_DIR] PROFILE [--stage source|install|sql|all] [--ids]") end
+
+local function q(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
+local function slurp(p) local f = io.open(p, "rb"); if not f then return nil end local s = f:read("*a"); f:close(); return s end
+local function ls(pattern)
+    local t, h = {}, io.popen("cd " .. q(DIR) .. " && ls -1d " .. pattern .. " 2>/dev/null")
+    for l in h:lines() do t[#t + 1] = l end
+    h:close()
+    return t
+end
+
+local profiles = {}
+for name in ((slurp(DIR .. "/scripts/profiles") or ""):match("declare %-A PROFILE_REPO=%((.-)\n%)") or ""):gmatch('%["([%w%-]+)"%]') do
+    profiles[name] = true
+end
+if not next(profiles) then die("no profiles found in scripts/profiles (its PROFILE_REPO table)") end
+if PROFILE ~= "*" and not profiles[PROFILE] then die("\"" .. PROFILE .. "\" is not a profile in scripts/profiles") end
+local groups = {}
+for line in (slurp(DIR .. "/patches/groups") or ""):gmatch("[^\n]+") do
+    local name, members = line:match("^([%w%-]+):%s*(.+)$")
+    if name and not line:match("^#") then
+        groups[name] = {}
+        for p in members:gmatch("%S+") do
+            if not profiles[p] then die("patches/groups: \"" .. p .. "\" in group " .. name .. " is not a profile") end
+            groups[name][p] = true
+        end
+    end
+end
+local gates = {}
+for line in (slurp(DIR .. "/patches/gates") or ""):gmatch("[^\n]+") do
+    local n = line:match("^(%d+):")
+    if n then gates[#gates + 1] = tonumber(n) end
+end
+table.sort(gates)
+if #gates < 3 then die("patches/gates should name three gates (it names " .. #gates .. ")") end
+local STAGES = { source = { -math.huge, gates[1] }, install = { gates[1], gates[2] },
+                 sql = { gates[2], gates[3] }, all = { -math.huge, math.huge } }
+if not STAGES[STAGE] then die("--stage is source, install, sql or all, not \"" .. tostring(STAGE) .. "\"") end
+
+local function takes(text, rel, profile)
+    local yes = false
+    for name in text:gmatch("%S+") do
+        if name == "all" then yes = true
+        elseif name == "none" then
+        elseif groups[name] then if groups[name][profile] then yes = true end
+        elseif profiles[name] then if name == profile then yes = true end
+        else die(rel .. ": \"" .. name .. "\" in its profiles is not a profile, a group, all or none") end
+    end
+    return yes
+end
+local files = {}
+for _, p in ipairs({ "patches/B[0-9][0-9][0-9]-*.sh", "patches/E[0-9][0-9][0-9]-*.sh", "config/patches/C[0-9]*.sh",
+                     "patches/B[0-9][0-9][0-9]-*/B[0-9][0-9][0-9]-*.sh", "patches/E[0-9][0-9][0-9]-*/E[0-9][0-9][0-9]-*.sh" }) do
+    for _, f in ipairs(ls(p)) do files[#files + 1] = f end
+end
+if QUICK then
+    local names, broken = {}, {}
+    for _, rel in ipairs(ls("scripts/test-*")) do
+        if not rel:match("%-done$") then
+            local r = Header.read(DIR .. "/" .. rel)
+            if r.state == "broken" then broken[#broken + 1] = rel .. ": " .. table.concat(r.problems, "; ")
+            elseif r.state == "whole" and r.fields["quick-test"] == "yes" then names[#names + 1] = rel:sub(#"scripts/" + 1) end
+        end
+    end
+    if #broken > 0 then die("tests whose headers can't be read:\n  " .. table.concat(broken, "\n  ")) end
+    table.sort(names)
+    for _, n in ipairs(names) do print(n) end
+    os.exit(0)
+end
+local patches, faults = {}, {}
+for _, rel in ipairs(files) do
+    local r = Header.read(DIR .. "/" .. rel)
+    if r.state ~= "whole" then
+        faults[#faults + 1] = rel .. ": " .. (r.state == "absent" and "no header" or table.concat(r.problems, "; "))
+    elseif r.fields.kind ~= "test" then
+        local p = tonumber(r.fields.priority)
+        for _, g in ipairs(gates) do
+            if p == g then faults[#faults + 1] = rel .. ": priority " .. p .. " is a gate; a patch runs below or above one, not on it" end
+        end
+        patches[#patches + 1] = { p = p, kind = r.fields.kind, id = r.fields.id, rel = rel, profiles = r.fields.profiles }
+    end
+end
+if #faults > 0 then die("patches whose headers can't be used:\n  " .. table.concat(faults, "\n  ")) end
+table.sort(patches, function(a, b) return a.p < b.p or (a.p == b.p and a.id < b.id) end)
+
+local function plan_for(profile, stage)
+    local lo, hi = STAGES[stage][1], STAGES[stage][2]
+    local out = {}
+    for _, e in ipairs(patches) do
+        if e.p >= lo and e.p < hi and takes(e.profiles, e.rel, profile) then out[#out + 1] = e end
+    end
+    return out
+end
+
+local function ids_of(plan) local t = {} for _, e in ipairs(plan) do t[#t + 1] = e.id end return table.concat(t, " ") end
+if EVERY then
+    local names = {}
+    for p in pairs(profiles) do names[#names + 1] = p end
+    table.sort(names)
+    for _, prof in ipairs(names) do
+        for _, stage in ipairs({ "source", "install", "sql" }) do
+            print(stage .. "|" .. prof .. "|" .. ids_of(plan_for(prof, stage)))
+        end
+    end
+elseif IDS then
+    print(ids_of(plan_for(PROFILE, STAGE)))
+else
+    for _, e in ipairs(plan_for(PROFILE, STAGE)) do print(string.format("%d\t%s\t%s\t%s", e.p, e.kind, e.id, e.rel)) end
+end

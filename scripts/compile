@@ -199,7 +199,7 @@ setup_log_symlinks() {
 }
 
 declare -A PATCH_PROVIDED_MODULES=(
-    ["mod-buddies"]="B036"   # the project's buddy module (modules/mod-buddies/, issue 617a1)
+    ["mod-buddies"]="B036"   # the project's buddy module (patches/B036-mod-buddies/mod-buddies/, issue 617a1)
 )
 
 module_wanted() {
@@ -214,7 +214,7 @@ module_cmake_settings() {
     local -A seen=()
     local mod_dir mod_name
     {
-    for mod_dir in "${AC_CODE_DIR}"/modules/*/ "${DIR}"/modules/*/; do
+    for mod_dir in "${AC_CODE_DIR}"/modules/*/ "${DIR}"/patches/B[0-9][0-9][0-9]-*/mod-*/; do
         [[ -d "${mod_dir}src" ]] || continue
         mod_name=$(basename "${mod_dir}")
         [[ -n "${seen[${mod_name}]:-}" ]] && continue
@@ -332,16 +332,19 @@ check_modules_configured() {
     [[ -f "${COMMANDS_FILE}" ]] || return 0      # no list yet: cmake runs anyway
 
     local unseen_sources=()
-    local source_file
-    while IFS= read -r source_file; do
-        local project_module="${source_file#"${DIR}/modules/"}"
-        project_module="${project_module%%/*}"
+    local source_file carried_module project_module
+    for carried_module in "${DIR}"/patches/B[0-9][0-9][0-9]-*/mod-*/; do
+        [[ -d "${carried_module}" ]] || continue
+        carried_module="${carried_module%/}"
+        project_module="${carried_module##*/}"
         module_wanted "${project_module}" || continue
-        local built_path="${AC_CODE_DIR}/modules/${source_file#"${DIR}/modules/"}"
-        if ! grep -qF "\"${built_path}\"" "${COMMANDS_FILE}"; then
-            unseen_sources+=("${built_path#"${AC_CODE_DIR}/"}")
-        fi
-    done < <(find "${DIR}/modules" -path '*/src/*' -name '*.cpp')
+        while IFS= read -r source_file; do
+            local built_path="${AC_CODE_DIR}/modules/${project_module}/${source_file#"${carried_module}/"}"
+            if ! grep -qF "\"${built_path}\"" "${COMMANDS_FILE}"; then
+                unseen_sources+=("${built_path#"${AC_CODE_DIR}/"}")
+            fi
+        done < <(find "${carried_module}" -path '*/src/*' -name '*.cpp')
+    done
 
     if [[ ${#unseen_sources[@]} -gt 0 ]]; then
         echo ""
@@ -379,19 +382,16 @@ print_build_failure() {
     echo "==============================================================================="
 }
 
-QUICK_TESTS=(
-    test-acherus-vendors test-ambush test-arathi-basin-rules test-beta-lua-load test-buddy-arc test-buddy-choice test-check-issue-references test-hearthstone test-travel
-    test-buddy-gems test-buddy-gm test-buddy-hearth test-buddy-kit test-buddy-roam-core
-    test-buddy-stand-ins test-buddy-talents test-compile-module-set test-dk-buddies-by-level test-dk-buddy-gear test-dk-skip-story
-    test-dk-soul-trade test-gear-designs test-gearsets test-gm-command-reference
-    test-line-edits test-lua-unique-names test-movement test-navmesh-caves test-profile-config-gates test-profile-tables-agree test-redirect-listener test-roam-pattern
-    test-sargobras-follow test-sql-mirror test-steady-mtimes test-valley-deal test-world-boss-countdown
-    test-treasure test-info-files-match-source test-lua-globals test-druid-moonglade
-    test-validate-needs-world-up test-watch-compile test-forget-unprefixed-updates
-    test-ale-method-names
-    test-beta-two-side-permissions test-make-intuition-copy
-)
+QUICK_TESTS=()
 run_quick_tests() {
+    local gathered
+    gathered="$("${DIR}/scripts/plan-patches" "${DIR}" --quick-tests 2>&1)" || {
+        echo "ERROR: the quick tests could not be gathered from their headers:"
+        echo "${gathered}" | sed 's/^/  /'
+        echo "  to debug: ${DIR}/scripts/check-patch-headers ${DIR}"
+        exit 1
+    }
+    mapfile -t QUICK_TESTS <<< "${gathered}"
     local out="${DIR}/tmp/shared-memory/compile-tests"
     mkdir -p "${out}" || { echo "ERROR: can't make ${out} (is tmp/shared-memory linked?)"; exit 1; }
     rm -f "${out}"/*.log "${out}"/*.ok
@@ -585,6 +585,16 @@ do_build() {
     patch_E001_lua_script_symlinks
 
     apply_patches_end
+
+    echo ""
+    echo "Gate 2000: starting the shadow server once, so the databases reach upstream's state..."
+    if ! "${DIR}/scripts/validate" --profile "${PROFILE}" --no-promote; then
+        echo "ERROR: gate 2000 failed: the shadow server did not finish starting, so our SQL was not placed"
+        echo "       (the install stage's work is in the shadow folder; nothing was promoted)"
+        FAILURE_ALREADY_EXPLAINED=true
+        return 1
+    fi
+    apply_patches_sql
     unset TARGET_INSTALL_DIR
 
     if [[ "${DEBUG_BUILD}" == "true" ]]; then

@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+
+FILES="$(find "${DIR}/patches" "${DIR}"/src/cpp-* -name '*.cpp' -o -name '*.h' 2>&1)"
+[[ -n "${FILES}" ]] || { echo "FAIL: no C++ files found under ${DIR}/patches or ${DIR}/src/cpp-*"; exit 1; }
+
+BAD="$(grep -Hn 'RewardQuest(' ${FILES} | grep -v 'CanRewardQuest' | grep -E '[(,][[:space:]]*(nullptr|NULL)[[:space:]]*[,)]')"
+CALLS="$(grep -Hn 'RewardQuest(' ${FILES} | grep -cv 'CanRewardQuest\|//')"
+
+if [[ -n "${BAD}" ]]; then
+    echo "FAIL: a quest reward names no quest giver; the server crashes on such a call when the quest rewards a spell:"
+    echo "${BAD}" | sed 's/^/  /'
+    echo "  to fix: pass the rewarded character itself as the giver (see buddies_xp.cpp, GiveCompletedQuest)"
+    exit 1
+fi
+echo "ok: ${CALLS} quest reward call(s) in the project's C++, each names a giver"

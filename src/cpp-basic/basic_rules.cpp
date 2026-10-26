@@ -9,6 +9,7 @@
 #include "GameTime.h"
 #include "GridTerrainData.h"
 #include "Log.h"
+#include "LootMgr.h"
 #include "Map.h"
 #include "MapMgr.h"
 #include "ObjectAccessor.h"
@@ -19,10 +20,13 @@
 #include "ScriptMgr.h"
 #include "SpellInfo.h"
 #include "TemporarySummon.h"
+#include "World.h"
+#include "WorldConfig.h"
 #include "WorldSession.h"
 #include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <iterator>
 #include <map>
 #include <mutex>
 #include <set>
@@ -30,6 +34,7 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 using namespace Acore::ChatCommands;
@@ -53,6 +58,77 @@ public:
             ChatHandler(player->GetSession()).SendSysMessage(
                 "That talent is beyond this realm's limit: past 30 points in a tree, only the single-point capstone may be learned.");
         return false;
+    }
+};
+
+static constexpr uint32 BASIC_DK_FIRST_LEVEL = 55;
+static constexpr uint32 BASIC_DK_TALENTS_IN_ALL[] = {
+        11,  24,  37,  49,  50,  51,
+};
+static constexpr uint32 BASIC_DK_CAUGHT_UP_LEVEL =
+    BASIC_DK_FIRST_LEVEL + std::size(BASIC_DK_TALENTS_IN_ALL) - 1;
+static_assert(BASIC_DK_TALENTS_IN_ALL[std::size(BASIC_DK_TALENTS_IN_ALL) - 1] == BASIC_DK_CAUGHT_UP_LEVEL - 9,
+    "the death knight talent table must end at the stock count of its last level");
+
+class basic_rules_dk_talent_points : public PlayerScript
+{
+public:
+    basic_rules_dk_talent_points() : PlayerScript("basic_rules_dk_talent_points", { PLAYERHOOK_ON_CALCULATE_TALENTS_POINTS }) { }
+
+    void OnPlayerCalculateTalentsPoints(Player const* player, uint32& talentPointsForLevel) override
+    {
+        if (!player->IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_TALENT_POINT_CALC))
+            return;
+
+        static bool ledgerChecked = false, ledgerThere = false;
+        if (!ledgerChecked)
+        {
+            ledgerChecked = true;
+            ledgerThere   = bool(CharacterDatabase.Query("SHOW TABLES LIKE 'basic_718_souls'"));
+            if (!ledgerThere)
+                LOG_ERROR("server.loading", "basic: death knight talent points (718d): the soul ledger basic_718_souls is missing "
+                    "(install step E041 not applied?); every death knight takes the skipper's table, story players included");
+        }
+        uint32 guid = player->GetGUID().GetCounter();
+        if (ledgerThere)
+        {
+            if (QueryResult row = CharacterDatabase.Query("SELECT skipped FROM basic_718_souls WHERE dk = {}", guid))
+            {
+                if (row->Fetch()[0].Get<uint8>() == 0)
+                    return;
+            }
+            else if (QueryResult owner = CharacterDatabase.Query("SELECT owner FROM buddy_roster WHERE buddy = {} LIMIT 1", guid))
+            {
+                uint32 ownerGuid = owner->Fetch()[0].Get<uint32>();
+                QueryResult ownerRow = CharacterDatabase.Query("SELECT skipped FROM basic_718_souls WHERE dk = {}", ownerGuid);
+                if (ownerRow && ownerRow->Fetch()[0].Get<uint8>() == 0)
+                {
+                    uint32 questPoints = 0;
+                    for (uint32 questId : player->getRewardedQuests())
+                        if (Quest const* quest = sObjectMgr->GetQuestTemplate(questId))
+                            questPoints += quest->GetBonusTalents();
+                    uint32 level    = player->GetLevel();
+                    uint32 everyone = level > 9 ? level - 9 : 0;
+                    uint32 points   = questPoints + (level > BASIC_DK_FIRST_LEVEL ? level - BASIC_DK_FIRST_LEVEL : 0);
+                    talentPointsForLevel = std::min(points, everyone) + const_cast<Player*>(player)->GetBonusTalentCount();
+                    return;
+                }
+            }
+            else
+                return;
+        }
+
+        uint32 level = player->GetLevel();
+        uint32 points;
+        if (level < BASIC_DK_FIRST_LEVEL)
+            points = 0;
+        else if (level <= BASIC_DK_CAUGHT_UP_LEVEL)
+            points = BASIC_DK_TALENTS_IN_ALL[level - BASIC_DK_FIRST_LEVEL];
+        else
+            points = level - 9;
+
+        points += const_cast<Player*>(player)->GetBonusTalentCount();
+        talentPointsForLevel = points;
     }
 };
 
@@ -635,9 +711,186 @@ public:
     }
 };
 
+
+struct BasicDropRates
+{
+    bool   on        = false;
+    float  greenBlue = 1.0f;
+    float  epic      = 1.0f;
+    uint32 rareRolls = 1;
+};
+static BasicDropRates sBasicDrops;
+static std::unordered_set<uint32> sBasicBossEntries;
+static std::unordered_map<uint32, uint32> sBasicRefQuality;
+static std::unordered_set<uint32> sBasicBandTables;
+
+static void LoadBasicDrops()
+{
+    sBasicDrops = BasicDropRates();
+    sBasicBossEntries.clear();
+    sBasicRefQuality.clear();
+    sBasicBandTables.clear();
+
+    std::string gb   = sConfigMgr->GetOption<std::string>("Basic.Drops.GreenBlueRate", "", false);
+    std::string ep   = sConfigMgr->GetOption<std::string>("Basic.Drops.EpicRate", "", false);
+    std::string rr   = sConfigMgr->GetOption<std::string>("Basic.Drops.RareRolls", "", false);
+    if (gb.empty() || ep.empty() || rr.empty())
+    {
+        LOG_ERROR("server.loading", ">> basic: Basic.Drops.GreenBlueRate, EpicRate and RareRolls are not all set (config patch C040 not run?); monster drops are stock");
+        return;
+    }
+    sBasicDrops.greenBlue = std::stof(gb);
+    sBasicDrops.epic      = std::stof(ep);
+    sBasicDrops.rareRolls = uint32(std::max(1, std::stoi(rr)));
+    sBasicDrops.on        = true;
+
+    if (QueryResult r = WorldDatabase.Query("SELECT DISTINCT creditEntry FROM instance_encounters WHERE creditType = 0"))
+        do sBasicBossEntries.insert(r->Fetch()[0].Get<uint32>()); while (r->NextRow());
+    if (QueryResult r = WorldDatabase.Query("SELECT r.Entry, MIN(i.Quality), MAX(i.Quality) FROM reference_loot_template r "
+                                            "JOIN item_template i ON i.entry = r.Item WHERE r.Reference = 0 GROUP BY r.Entry"))
+        do
+        {
+            Field* f = r->Fetch();
+            if (f[1].Get<uint32>() == f[2].Get<uint32>())
+                sBasicRefQuality[f[0].Get<uint32>()] = f[1].Get<uint32>();
+        } while (r->NextRow());
+    if (QueryResult r = WorldDatabase.Query("SELECT DISTINCT ABS(l.Reference) FROM creature_loot_template l WHERE l.Reference <> 0 "
+                                            "AND ABS(l.Reference) IN (SELECT Entry FROM reference_loot_template WHERE Reference <> 0)"))
+        do sBasicBandTables.insert(r->Fetch()[0].Get<uint32>()); while (r->NextRow());
+
+    LOG_INFO("server.loading", ">> basic: monster drops: greens and blues x{}, epics x{}, rares' loot rolled {} times; {} bosses kept stock, {} one-quality loot tables, {} level bands",
+        sBasicDrops.greenBlue, sBasicDrops.epic, sBasicDrops.rareRolls, sBasicBossEntries.size(), sBasicRefQuality.size(), sBasicBandTables.size());
+}
+
+enum class BasicDropKind { Stock, Ordinary, Rare };
+
+static BasicDropKind BasicDropKindOf(Loot const& loot, LootStore const& store)
+{
+    if (!sBasicDrops.on || &store != &LootTemplates_Creature)
+        return BasicDropKind::Stock;
+    ObjectGuid source = loot.sourceWorldObjectGUID;
+    if (!source.IsCreature())
+        return BasicDropKind::Stock;
+    uint32 entry = source.GetEntry();
+    if (sBasicBossEntries.count(entry))
+        return BasicDropKind::Stock;
+    CreatureTemplate const* t = sObjectMgr->GetCreatureTemplate(entry);
+    if (!t || t->rank == CREATURE_ELITE_WORLDBOSS || (t->type_flags & CREATURE_TYPE_FLAG_BOSS_MOB))
+        return BasicDropKind::Stock;
+    if (t->rank == CREATURE_ELITE_RARE || t->rank == CREATURE_ELITE_RAREELITE)
+        return BasicDropKind::Rare;
+    return BasicDropKind::Ordinary;
+}
+
+class basic_rules_drops_load : public WorldScript
+{
+public:
+    basic_rules_drops_load() : WorldScript("basic_rules_drops_load", { WORLDHOOK_ON_LOAD_CUSTOM_DATABASE_TABLE }) { }
+
+    void OnLoadCustomDatabaseTable() override { LoadBasicDrops(); }
+};
+
+class basic_rules_drops_roll : public GlobalScript
+{
+public:
+    basic_rules_drops_roll() : GlobalScript("basic_rules_drops_roll", { GLOBALHOOK_ON_ITEM_ROLL, GLOBALHOOK_ON_AFTER_REF_COUNT }) { }
+
+    bool OnItemRoll(Player const* , LootStoreItem const* item, float& chance, Loot& loot, LootStore const& store) override
+    {
+        BasicDropKind kind = BasicDropKindOf(loot, store);
+        if (kind == BasicDropKind::Ordinary)
+        {
+            uint32 quality = 0;
+            if (item->reference)
+            {
+                auto q = sBasicRefQuality.find(uint32(std::abs(item->reference)));
+                if (q != sBasicRefQuality.end())
+                    quality = q->second;
+            }
+            else if (ItemTemplate const* proto = sObjectMgr->GetItemTemplate(item->itemid))
+                quality = proto->Quality;
+            if (quality == ITEM_QUALITY_UNCOMMON || quality == ITEM_QUALITY_RARE)
+                chance *= sBasicDrops.greenBlue;
+            else if (quality == ITEM_QUALITY_EPIC)
+                chance *= sBasicDrops.epic;
+        }
+        else if (kind == BasicDropKind::Rare && !item->reference && !item->groupid && chance > 0.0f && chance < 100.0f)
+        {
+            float miss = std::pow(1.0f - chance / 100.0f, float(sBasicDrops.rareRolls));
+            chance = 100.0f * (1.0f - miss);
+        }
+        return true;
+    }
+
+    void OnAfterRefCount(Player const* , LootStoreItem* item, Loot& loot, bool , uint16 , uint32& maxcount, LootStore const& store) override
+    {
+        if (BasicDropKindOf(loot, store) == BasicDropKind::Rare && sBasicBandTables.count(uint32(std::abs(item->reference))))
+            maxcount *= sBasicDrops.rareRolls;
+    }
+};
+
+static char const* const BASIC_SHOULDERS_SETTING = "basic-shoulders";
+
+static bool BasicShouldersHidden(Player* player)
+{
+    return player && sWorld->getBoolConfig(CONFIG_PLAYER_SETTINGS_ENABLED)
+        && player->GetPlayerSetting(BASIC_SHOULDERS_SETTING, 0).IsEnabled();
+}
+
+class basic_rules_hide_shoulders : public PlayerScript
+{
+public:
+    basic_rules_hide_shoulders() : PlayerScript("basic_rules_hide_shoulders", { PLAYERHOOK_ON_AFTER_SET_VISIBLE_ITEM_SLOT, PLAYERHOOK_ON_LOGIN }) { }
+
+    void OnPlayerAfterSetVisibleItemSlot(Player* player, uint8 slot, Item* item) override
+    {
+        if (slot != EQUIPMENT_SLOT_SHOULDERS || !item || !BasicShouldersHidden(player))
+            return;
+        player->SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * 2), 0);
+        player->SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENCHANTMENT + (slot * 2), 0);
+    }
+
+    void OnPlayerLogin(Player* player) override
+    {
+        if (BasicShouldersHidden(player))
+            player->SetVisibleItemSlot(EQUIPMENT_SLOT_SHOULDERS, player->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_SHOULDERS));
+    }
+};
+
+class basic_rules_hide_shoulders_command : public CommandScript
+{
+public:
+    basic_rules_hide_shoulders_command() : CommandScript("basic_rules_hide_shoulders_command") { }
+
+    ChatCommandTable GetCommands() const override
+    {
+        static ChatCommandTable commandTable =
+        {
+            { "shoulders", HandleShoulders, SEC_PLAYER, Console::No },
+        };
+        return commandTable;
+    }
+
+    static bool HandleShoulders(ChatHandler* handler)
+    {
+        Player* player = handler->GetSession()->GetPlayer();
+        if (!sWorld->getBoolConfig(CONFIG_PLAYER_SETTINGS_ENABLED))
+        {
+            handler->SendSysMessage("Hiding shoulders needs EnablePlayerSettings = 1 (config patch C041); it is off on this server.");
+            return false;
+        }
+        bool hide = !BasicShouldersHidden(player);
+        player->UpdatePlayerSetting(BASIC_SHOULDERS_SETTING, 0, hide ? 1 : 0);
+        player->SetVisibleItemSlot(EQUIPMENT_SLOT_SHOULDERS, player->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_SHOULDERS));
+        handler->SendSysMessage(hide ? "Your shoulders are hidden. Type .shoulders again to show them." : "Your shoulders are shown again.");
+        return true;
+    }
+};
+
 void AddSC_basic_rules()
 {
     new basic_rules_talent_cap();
+    new basic_rules_dk_talent_points();
     new basic_rules_creature_multipliers_load();
     new basic_rules_creature_multipliers_damage();
     new basic_rules_creature_multipliers_health();
@@ -647,4 +900,8 @@ void AddSC_basic_rules()
     new basic_rules_world_boss_creature();
     new basic_rules_world_boss_command();
     new basic_rules_refused_channels_report();
+    new basic_rules_drops_load();
+    new basic_rules_drops_roll();
+    new basic_rules_hide_shoulders();
+    new basic_rules_hide_shoulders_command();
 }

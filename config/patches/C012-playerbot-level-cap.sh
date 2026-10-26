@@ -7,5 +7,4 @@ config_playerbot_level_cap() {
     sed -i 's|^AiPlayerbot\.RandomBotMinLevel[[:space:]]*=.*|AiPlayerbot.RandomBotMinLevel = '"${BOT_MIN_LEVEL}"'|' "${conf}"
     sed -i 's|^AiPlayerbot\.RandomBotMaxLevel[[:space:]]*=.*|AiPlayerbot.RandomBotMaxLevel = '"${BOT_MAX_LEVEL}"'|' "${conf}"
 }
-CONFIG_PROFILES[config_playerbot_level_cap]="beta release"
 CONFIG_DESCRIPTIONS[config_playerbot_level_cap]="Playerbot level cap 1..20"

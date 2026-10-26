@@ -17,5 +17,4 @@ config_no_quest_sparkles_or_map_points() {
         return 1
     fi
 }
-CONFIG_PROFILES[config_no_quest_sparkles_or_map_points]="basic vanilla release beta"
 CONFIG_DESCRIPTIONS[config_no_quest_sparkles_or_map_points]="No quest sparkles, object quest marks or map points"

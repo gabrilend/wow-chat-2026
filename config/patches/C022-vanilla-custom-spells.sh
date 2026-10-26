@@ -57,5 +57,4 @@ config_vanilla_custom_spells() {
 
     return 0
 }
-CONFIG_PROFILES[config_vanilla_custom_spells]="vanilla"
 CONFIG_DESCRIPTIONS[config_vanilla_custom_spells]="Enable custom starting spells (reads 148j pretrain table)"

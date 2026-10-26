@@ -83,10 +83,11 @@ end
 
 local quick, leftOut = {}, {}
 do
+    local h = io.popen("'" .. DIR .. "/scripts/plan-patches' '" .. DIR .. "' --quick-tests")
+    for name in h:lines() do quick[name] = true end
+    if not h:close() then io.stderr:write("check-issue-tests: the quick tests could not be gathered (scripts/plan-patches --quick-tests)\n"); os.exit(1) end
     local compile = read(DIR .. "/scripts/compile") or ""
-    local list = compile:match("QUICK_TESTS=%((.-)%)")
-    for name in (list or ""):gmatch("(test%-[%w%-]+)") do quick[name] = true end
-    local notes = compile:match("# Left out, and why:\n(.-)\nQUICK_TESTS")
+    local notes = compile:match("# Left out, and why:\n(.-)\n# Which tests are quick")
     local current
     for line in (notes or ""):gmatch("[^\n]+") do
         local names, why = line:match("^#%s+(test%-[%w%-, ]-):%s*(.+)$")

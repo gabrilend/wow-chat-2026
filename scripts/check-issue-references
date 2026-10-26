@@ -85,6 +85,10 @@ local patchState = {}
 for p in pairs(exists) do
     local b = p:match("^patches/(B%d%d%d%a?)%-[^/]+$")
     if b then patchState[b] = p:find("retired", 1, true) and "retired" or "live" end
+    local e = p:match("^patches/(E%d%d%d%a?)%-[^/]+%.sh$")
+    if e then patchState[e] = "live" end
+    local d = p:match("^patches/([BE]%d%d%d%a?)%-[^/]+/%1%-[^/]+%.sh$")
+    if d then patchState[d] = "live" end
     local c = p:match("^config/patches/(C%d%d%d%a?)[%-%._]")
     if c then
         patchState[c] = "live"

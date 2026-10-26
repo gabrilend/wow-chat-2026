@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+LOG="${DIR}/tmp/shared-memory/test-patch-undo-order.log"
+mkdir -p "${LOG%/*}"
+: > "${LOG}"
+
+fails=0
+checks=0
+check() {
+    checks=$((checks + 1))
+    if eval "$1"; then echo "  ok:   $2"; else echo "  FAIL: $2"; fails=$((fails + 1)); fi
+}
+
+export DIR PROFILE=undo-order-test
+source "${DIR}/patches/patches.sh" > /dev/null 2>&1
+_snapshot_dirty_state() { cat "${LOG}"; }        # each undo "changes" the log, so it is reported
+_mirror_staged_sql() { :; }
+for id in B901 B902 B903 E901 E902 E903 E951 E952 E953; do
+    eval "patch_${id}_test()   { echo \"apply ${id}\" >> '${LOG}'; }"
+    eval "unpatch_${id}_test() { echo \"undo ${id}\"  >> '${LOG}'; }"
+done
+PHASE_BEGIN_PATCHES[undo-order-test]="B901 B902 B903"
+PHASE_END_PATCHES[undo-order-test]="E901 E902 E903"
+PHASE_SQL_PATCHES[undo-order-test]="E951 E952 E953"
+
+echo "the list helper"
+check '[[ "$(_reversed_list B1 B2 B3)" == "B3 B2 B1" && "$(_reversed_list)" == "" && "$(_reversed_list B1)" == "B1" ]]' \
+      "a list comes back last first (three, none, one)"
+
+echo "source patches"
+for id in ${PHASE_BEGIN_PATCHES[undo-order-test]}; do "patch_${id}_test"; done
+unapply_patches_begin > /dev/null 2>&1
+check '[[ "$(grep "^undo B" "${LOG}" | tr "\n" " ")" == "undo B903 undo B902 undo B901 " ]]' \
+      "applied B901 B902 B903, undone B903 B902 B901 ($(grep "^undo B" "${LOG}" | tr "\n" " "))"
+
+echo "install steps"
+for id in ${PHASE_END_PATCHES[undo-order-test]}; do "patch_${id}_test"; done
+unapply_patches_end > /dev/null 2>&1
+check '[[ "$(grep "^undo E" "${LOG}" | tr "\n" " ")" == "undo E903 undo E902 undo E901 " ]]' \
+      "applied E901 E902 E903, undone E903 E902 E901 ($(grep "^undo E" "${LOG}" | tr "\n" " "))"
+
+echo "the SQL stage (issue 189d), then the install stage, as apply-patches --revert does"
+: > "${LOG}"
+for id in ${PHASE_END_PATCHES[undo-order-test]} ${PHASE_SQL_PATCHES[undo-order-test]}; do "patch_${id}_test"; done
+unapply_patches_sql > /dev/null 2>&1
+unapply_patches_end > /dev/null 2>&1
+check '[[ "$(grep "^undo E" "${LOG}" | tr "\n" " ")" == "undo E953 undo E952 undo E951 undo E903 undo E902 undo E901 " ]]' \
+      "applied E901-E903 then E951-E953, undone E953 first, E901 last ($(grep "^undo E" "${LOG}" | tr "\n" " "))"
+: > "${LOG}"
+apply_patches_end > /dev/null 2>&1
+apply_patches_sql > /dev/null 2>&1
+check '[[ "$(grep "^apply E" "${LOG}" | tr "\n" " ")" == "apply E901 apply E902 apply E903 apply E951 apply E952 apply E953 " ]]' \
+      "the runner applies the install stage, then the SQL stage, each in order"
+
+rm -f "${LOG}"
+echo "${checks} checks, ${fails} failed"
+[[ ${fails} -eq 0 ]]

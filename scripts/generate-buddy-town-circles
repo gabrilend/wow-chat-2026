@@ -3,8 +3,8 @@
 local DIR   = arg[1] or "/mnt/kaun/wow-chat-2026"
 local DB    = arg[2] or "acore_world_basic"
 local DATA  = DIR .. "/data-files"
-local OUT_APPLY  = DIR .. "/sql/basic/db_world.src/31-buddy-town-circles.apply.sql"
-local OUT_REVERT = DIR .. "/sql/basic/db_world.src/31-buddy-town-circles.revert.sql"
+local OUT_APPLY  = DIR .. "/patches/E050-basic-buddy-town-circles/31-buddy-town-circles.apply.sql"
+local OUT_REVERT = DIR .. "/patches/E050-basic-buddy-town-circles/31-buddy-town-circles.revert.sql"
 local MYSQL = DIR .. "/mysql/installed-files/bin/mysql -h127.0.0.1 -P3307 -uritz -pmenardi -N --batch " .. DB
 
 local LINK_YARDS  = 35

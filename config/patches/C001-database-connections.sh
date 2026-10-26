@@ -71,5 +71,4 @@ config_database_connections() {
         sed -i 's|^PlayerbotsDatabaseInfo.*=.*|PlayerbotsDatabaseInfo = "'"${DB_HOST}"';'"${DB_PORT}"';ritz;menardi;'"${DB_PLAYERBOTS}"'"|' "${conf_playerbots}"
     fi
 }
-CONFIG_PROFILES[config_database_connections]="all"
 CONFIG_DESCRIPTIONS[config_database_connections]="Database connections (MySQL credentials)"

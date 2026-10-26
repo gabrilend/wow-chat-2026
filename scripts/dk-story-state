@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+DIR="/mnt/kaun/wow-chat-2026"
+if [[ "${1:-}" == "--dir" ]]; then DIR="$2"; shift 2; fi
+DK_NAME="${1:-}"
+if [[ -z "${DK_NAME}" ]]; then
+    echo "Usage: $0 [--dir PROJECT_DIR] <death knight name>"
+    exit 1
+fi
+PROFILE="$(cat "${DIR}/.profile")"
+MYSQL="${DIR}/mysql/installed-files/bin/mysql"
+CHARS="acore_characters_${PROFILE}"
+STORY="${DIR}/src/lua-basic/data/death-knight-skip-quests.lua"
+WORLD_CONF="${DIR}/installed-files-${PROFILE}/etc/worldserver.conf"
+
+DK_LEVEL=55                                         # a death knight is made at 55 (stock)
+RUNEBLADE=38707                                     # Runed Soulblade: the skip's one item (death-knight-souls.lua)
+STORY_SPELLS="53428,48778,50977,33391"              # Runeforging, Deathcharger, Death Gate, Journeyman Riding (as reset-dk-soul-trade)
+ACHERUS_MAP=609
+LAST_QUEST=13166                                    # The Battle For The Ebon Hold: the story's last shared quest
+BUDDY_ASIDE=5                                       # buddy_roster stage: set aside, back at its level
+
+sql() {
+    "${MYSQL}" -h127.0.0.1 -P3307 -uritz -pmenardi -D "${CHARS}" -N -B -e "$1" 2>&1 | grep -v "Using a password" || true
+}
+
+FAILS=0
+check() {
+    local what="$1" want="$2" got="$3"
+    if [[ "${want}" == "${got}" ]]; then
+        printf "  ok     %-26s %s\n" "${what}" "${got}"
+    else
+        printf "  WRONG  %-26s wanted %s, found %s\n" "${what}" "${want}" "${got}"
+        FAILS=$(( FAILS + 1 ))
+    fi
+}
+
+ROW="$(sql "SELECT guid, race, class, level, xp, money, map, online FROM ${CHARS}.characters WHERE name = '${DK_NAME}'")"
+[[ -n "${ROW}" ]] || { echo "ERROR: no character named ${DK_NAME} in ${CHARS}"; exit 1; }
+[[ "${ROW}" != *ERROR* ]] || { echo "ERROR: reading ${DK_NAME}: ${ROW}"; exit 1; }
+read -r GUID RACE CLASS LEVEL XP MONEY MAP ONLINE <<< "${ROW}"
+[[ "${CLASS}" == "6" ]] || { echo "ERROR: ${DK_NAME} is class ${CLASS}, not a death knight (6)"; exit 1; }
+
+LEDGER="$(sql "SELECT state, skipped, soul FROM ${CHARS}.basic_718_souls WHERE dk = ${GUID}")"
+[[ -n "${LEDGER}" ]] || { echo "ERROR: ${DK_NAME} has no soul-ledger row: made before the rule, or never logged in"; exit 1; }
+read -r STATE SKIPPED SOUL <<< "${LEDGER}"
+
+MASK=$(( 1 << (RACE - 1) ))
+QUESTS="$(grep -o '{ *[0-9]\+, *[0-9]\+ *}' "${STORY}" | awk -F'[{},]' -v m="${MASK}" '$3 + 0 == 0 || $3 + 0 == m { printf "%s%d", (n++ ? "," : ""), $2 }')"
+[[ -n "${QUESTS}" ]] || { echo "ERROR: no story quests read from ${STORY}"; exit 1; }
+STORY_COUNT="$(tr ',' '\n' <<< "${QUESTS}" | wc -l)"
+
+START_MONEY="$(sed -n 's/^StartHeroicPlayerMoney[[:space:]]*=[[:space:]]*\([0-9]*\).*/\1/p' "${WORLD_CONF}" | tail -1)"
+[[ -n "${START_MONEY}" ]] || { echo "ERROR: no StartHeroicPlayerMoney in ${WORLD_CONF}"; exit 1; }
+
+COUNTS="$(sql "
+SELECT COUNT(*) FROM ${CHARS}.character_queststatus_rewarded WHERE guid = ${GUID} AND quest IN (${QUESTS});
+SELECT COUNT(*) FROM ${CHARS}.character_queststatus_rewarded WHERE guid = ${GUID} AND quest = ${LAST_QUEST};
+SELECT COUNT(*) FROM ${CHARS}.character_inventory ci JOIN ${CHARS}.item_instance ii ON ii.guid = ci.item WHERE ci.guid = ${GUID} AND ii.itemEntry = ${RUNEBLADE};
+SELECT COUNT(*) FROM ${CHARS}.character_spell WHERE guid = ${GUID} AND spell IN (${STORY_SPELLS});
+SELECT COUNT(*) FROM ${CHARS}.buddy_roster WHERE owner = ${GUID} AND buddy <> 0 AND stage <> ${BUDDY_ASIDE};
+SELECT COUNT(*) FROM ${CHARS}.buddy_roster WHERE owner = ${GUID} AND stage = ${BUDDY_ASIDE};
+SELECT COUNT(*) FROM ${CHARS}.guild_member WHERE guid = ${GUID};
+SELECT IFNULL((SELECT name FROM ${CHARS}.characters WHERE guid = ${SOUL}), '-');")"
+[[ "${COUNTS}" != *ERROR* ]] || { echo "ERROR: counting: ${COUNTS}"; exit 1; }
+read -r -d '' N_QUESTS N_LAST N_BLADES N_SPELLS N_BUDDIES N_ASIDE N_CLAN SOUL_NAME <<< "${COUNTS}" || true
+
+echo "${DK_NAME} (guid ${GUID}, profile ${PROFILE}, $([[ "${ONLINE}" == "1" ]] && echo online || echo offline))"
+echo "  ledger: state ${STATE}, skipped ${SKIPPED}, soul ${SOUL_NAME}; in a clan: $([[ "${N_CLAN}" == "1" ]] && echo yes || echo "no (Sargobras asks for a clan name first)")"
+echo "  buddies: ${N_BUDDIES} in, ${N_ASIDE} set aside"
+
+if [[ "${STATE}" == "0" ]]; then
+    echo "State 1, owes a soul (or 2, asked to skip: only Sargobras's menu tells them apart)"
+    check "level"                 "${DK_LEVEL}"    "${LEVEL}"
+    check "money (copper)"        "${START_MONEY}" "${MONEY}"
+    check "story quests rewarded" "0"              "${N_QUESTS}"
+    check "runeblades"            "0"              "${N_BLADES}"
+    check "story spells"          "0"              "${N_SPELLS}"
+    check "buddies in"            "0"              "${N_BUDDIES}"
+    check "in Acherus (map)"      "${ACHERUS_MAP}" "${MAP}"
+elif [[ "${STATE}" == "1" && "${SKIPPED}" == "1" ]]; then
+    echo "State 3, skipped the story"
+    if [[ "${XP}" == "0" ]]; then
+        check "level"             "${DK_LEVEL}"    "${LEVEL}"
+    else
+        echo "  (level ${LEVEL}, ${XP} experience: it has fought since the skip, so neither is checked)"
+    fi
+    check "story quests rewarded" "${STORY_COUNT}" "${N_QUESTS}"
+    check "runeblades"            "1"              "${N_BLADES}"
+    check "story spells"          "4"              "${N_SPELLS}"
+    check "buddies in (at 55)"    "1"              "${N_BUDDIES}"
+    echo "  (money is not checked: it should be what it was before the trade, which nothing records)"
+elif [[ "${STATE}" == "1" ]]; then
+    echo "State 4, playing the story: ${N_QUESTS} of ${STORY_COUNT} story quests rewarded$([[ "${N_LAST}" == "1" ]] && echo ", finished")"
+    check "buddies in (at least 1)" "yes" "$([[ "${N_BUDDIES}" -ge 1 ]] && echo yes || echo "${N_BUDDIES}")"
+else
+    echo "Ledger state ${STATE}: a soul being returned (the take-back is under way, or stopped part way)"
+    FAILS=$(( FAILS + 1 ))
+fi
+
+[[ "${FAILS}" == "0" ]] || { echo "${FAILS} check(s) failed"; exit 1; }

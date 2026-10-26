@@ -1,0 +1,122 @@
+-- MARKER_E068_APPLY basic-profession-mentors
+
+DELETE FROM `creature`                WHERE `guid`       BETWEEN 15500031 AND 15500038;
+DELETE FROM `creature_template_model` WHERE `CreatureID` BETWEEN 1550031  AND 1550038;
+DELETE FROM `creature_template`       WHERE `entry`      BETWEEN 1550031  AND 1550038;
+DELETE FROM `gossip_menu_option`      WHERE `MenuID`     BETWEEN 155031   AND 155038;
+DELETE FROM `gossip_menu`             WHERE `MenuID`     BETWEEN 155031   AND 155038;
+DELETE FROM `npc_text`                WHERE `ID`         BETWEEN 155031   AND 155038;
+DELETE FROM `trainer_spell`           WHERE `TrainerId`  BETWEEN 155201   AND 155214;
+DELETE FROM `trainer`                 WHERE `Id`         BETWEEN 155201   AND 155214;
+
+CREATE TABLE IF NOT EXISTS `basic_155e1_mentors` (
+  `capital`    tinyint unsigned  NOT NULL,
+  `name`       varchar(32)       NOT NULL,
+  `map`        smallint unsigned NOT NULL,
+  `x` float NOT NULL, `y` float NOT NULL, `z` float NOT NULL, `o` float NOT NULL,
+  `clone_from` int unsigned      NOT NULL,
+  `clone_note` varchar(96)       NOT NULL,
+  PRIMARY KEY (`capital`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='issue 155e1: Profession Mentor per capital';
+CREATE TABLE IF NOT EXISTS `basic_155e1_missing` (
+  `capital`    tinyint unsigned NOT NULL,
+  `profession` tinyint unsigned NOT NULL,
+  `skill`      smallint unsigned NOT NULL,
+  `list`       int unsigned     NOT NULL,
+  `name`       varchar(24)      NOT NULL,
+  PRIMARY KEY (`capital`, `profession`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='issue 155e1: professions each capital lacks';
+DELETE FROM `basic_155e1_mentors`;
+DELETE FROM `basic_155e1_missing`;
+INSERT INTO `basic_155e1_mentors` (`capital`, `name`, `map`, `x`, `y`, `z`, `o`, `clone_from`, `clone_note`) VALUES
+  (1, 'Stormwind', 0, -8432.686, 691.301, 103.364, 0.7170, 19778, 'Farii, Jewelcrafting Trainer'),
+  (2, 'Ironforge', 0, -4709.598, -1110.057, 504.529, 5.3232, 19778, 'Farii, Jewelcrafting Trainer'),
+  (3, 'Darnassus', 1, 9837.214, 2430.018, 1315.810, 5.5850, 7232, 'Borgus Steelhand, Weaponsmith Trainer'),
+  (5, 'Orgrimmar', 1, 2029.494, -4704.204, 27.130, 3.3510, 15501, 'Aleinia, Jewelcrafting Trainer'),
+  (6, 'Thunder Bluff', 1, -1253.777, 156.167, 133.630, 5.8294, 11017, 'Roxxik, Engineering Trainer'),
+  (7, 'Undercity', 0, 1639.386, 334.020, -62.100, 0.6283, 15501, 'Aleinia, Jewelcrafting Trainer');
+INSERT INTO `basic_155e1_missing` (`capital`, `profession`, `skill`, `list`, `name`) VALUES
+  (1, 7, 755, 113, 'jewelcrafting'),
+  (2, 7, 755, 113, 'jewelcrafting'),
+  (3, 2, 164, 155202, 'blacksmithing'),
+  (3, 4, 202, 155204, 'engineering'),
+  (3, 7, 755, 113, 'jewelcrafting'),
+  (3, 9, 186, 155209, 'mining'),
+  (5, 7, 755, 113, 'jewelcrafting'),
+  (6, 4, 202, 155204, 'engineering'),
+  (6, 7, 755, 113, 'jewelcrafting'),
+  (7, 7, 755, 113, 'jewelcrafting');
+
+INSERT INTO `trainer` (`Id`, `Type`, `Requirement`, `Greeting`)
+SELECT DISTINCT m.`list`, 2, 0, 'Here is what I can teach you. Isn''t it all wonderful?'
+FROM `basic_155e1_missing` m WHERE m.`list` BETWEEN 155201 AND 155214;
+
+INSERT INTO `trainer_spell`
+  (`TrainerId`, `SpellId`, `MoneyCost`, `ReqSkillLine`, `ReqSkillRank`,
+   `ReqAbility1`, `ReqAbility2`, `ReqAbility3`, `ReqLevel`)
+SELECT p.`list`, ts.`SpellId`,
+       MIN(ts.`MoneyCost`), MIN(ts.`ReqSkillLine`), MIN(ts.`ReqSkillRank`),
+       MIN(ts.`ReqAbility1`), MIN(ts.`ReqAbility2`), MIN(ts.`ReqAbility3`), MIN(ts.`ReqLevel`)
+FROM (SELECT DISTINCT `list`, `skill` FROM `basic_155e1_missing` WHERE `list` BETWEEN 155201 AND 155214) p
+JOIN `trainer` t ON t.`Type` = 2 AND t.`Requirement` = 0 AND t.`Id` NOT BETWEEN 155201 AND 155214
+JOIN `trainer_spell` ts ON ts.`TrainerId` = t.`Id`
+WHERE EXISTS (SELECT 1 FROM `trainer_spell` a WHERE a.`TrainerId` = t.`Id` AND a.`ReqSkillLine` = p.`skill`)
+  AND (SELECT MIN(b.`ReqSkillRank`) FROM `trainer_spell` b WHERE b.`TrainerId` = t.`Id`) = 0
+GROUP BY p.`list`, ts.`SpellId`;
+
+INSERT INTO `npc_text` (`ID`, `text0_0`, `lang0`, `Probability0`)
+SELECT 155030 + v.`capital`,
+       CONCAT('Oh! Hello! I came such a long way to see ', v.`name`,
+              ', and nobody here teaches everything. So I do! Well, the parts they don''t.'),
+       0, 1
+FROM `basic_155e1_mentors` v;
+
+INSERT INTO `gossip_menu` (`MenuID`, `TextID`)
+SELECT 155030 + v.`capital`, 155030 + v.`capital` FROM `basic_155e1_mentors` v;
+
+INSERT INTO `gossip_menu_option`
+  (`MenuID`, `OptionID`, `OptionIcon`, `OptionText`, `OptionBroadcastTextID`,
+   `OptionType`, `OptionNpcFlag`, `ActionMenuID`, `ActionPoiID`, `BoxCoded`, `BoxMoney`, `BoxText`, `BoxBroadcastTextID`)
+SELECT 155030 + m.`capital`, m.`profession`, 3, CONCAT('Can you teach me ', m.`name`, '?'),
+       0, 5, 16, m.`list`, 0, 0, 0, '', 0
+FROM `basic_155e1_missing` m;
+
+DROP TEMPORARY TABLE IF EXISTS `tmp_155e1_template`;
+CREATE TEMPORARY TABLE `tmp_155e1_template` AS
+SELECT v.`capital`, t.* FROM `creature_template` t JOIN `basic_155e1_mentors` v ON v.`clone_from` = t.`entry`;
+UPDATE `tmp_155e1_template` t
+SET t.`entry`              = 1550030 + t.`capital`,
+    t.`difficulty_entry_1` = 0, t.`difficulty_entry_2` = 0, t.`difficulty_entry_3` = 0,
+    t.`KillCredit1`        = 0, t.`KillCredit2` = 0,
+    t.`name`               = 'Visiting Mentor',
+    t.`subname`            = 'Profession Trainer',
+    t.`gossip_menu_id`     = 155030 + t.`capital`,
+    t.`npcflag`            = 1 | 16,           -- UNIT_NPC_FLAG_GOSSIP | UNIT_NPC_FLAG_TRAINER
+    t.`lootid`             = 0, t.`pickpocketloot` = 0, t.`skinloot` = 0,
+    t.`AIName`             = '',
+    t.`ScriptName`         = '';
+ALTER TABLE `tmp_155e1_template` DROP COLUMN `capital`;
+INSERT INTO `creature_template` SELECT * FROM `tmp_155e1_template`;
+DROP TEMPORARY TABLE `tmp_155e1_template`;
+
+DROP TEMPORARY TABLE IF EXISTS `tmp_155e1_model`;
+CREATE TEMPORARY TABLE `tmp_155e1_model` AS
+SELECT v.`capital`, m.* FROM `creature_template_model` m JOIN `basic_155e1_mentors` v ON v.`clone_from` = m.`CreatureID`;
+UPDATE `tmp_155e1_model` m SET m.`CreatureID` = 1550030 + m.`capital`;
+ALTER TABLE `tmp_155e1_model` DROP COLUMN `capital`;
+INSERT INTO `creature_template_model` SELECT * FROM `tmp_155e1_model`;
+DROP TEMPORARY TABLE `tmp_155e1_model`;
+
+CREATE TABLE IF NOT EXISTS `basic_155e1_jewelcrafter_backup` LIKE `creature`;
+INSERT IGNORE INTO `basic_155e1_jewelcrafter_backup`
+SELECT * FROM `creature` WHERE `guid` BETWEEN 15501001 AND 15501006;
+DELETE FROM `creature` WHERE `guid` BETWEEN 15501001 AND 15501006;
+
+INSERT INTO `creature`
+  (`guid`, `id`, `map`, `spawnMask`, `phaseMask`,
+   `position_x`, `position_y`, `position_z`, `orientation`,
+   `spawntimesecs`, `Comment`)
+SELECT 15500030 + v.`capital`, 1550030 + v.`capital`, v.`map`, 1, 1,
+       v.`x`, v.`y`, v.`z`, v.`o`,
+       300, CONCAT('issue 155e1: Profession Mentor, ', v.`name`, ' (looks like ', v.`clone_note`, ')')
+FROM `basic_155e1_mentors` v;

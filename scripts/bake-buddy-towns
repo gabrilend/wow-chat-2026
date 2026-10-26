@@ -10,7 +10,7 @@ MYSQL="${DIR}/mysql/installed-files/bin/mysql"
 SRC="${DIR}/source-beta"
 DETOUR="${SRC}/deps/recastnavigation/Detour"
 BAKER_SRC="${DIR}/tools/buddy-town-baker/buddy-town-baker.cpp"
-CORE="${DIR}/modules/mod-buddies/src/roam"
+CORE="${DIR}/patches/B036-mod-buddies/mod-buddies/src/roam"
 
 EXEC_DIR="${DIR}/tmp/tmp"
 SHM_DIR="${DIR}/tmp/shared-memory"

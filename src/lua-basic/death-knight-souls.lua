@@ -431,6 +431,7 @@ local function tell_the_story(player)
 end
 
 local function skip_story(player)
+    CharDBQuery("UPDATE basic_718_souls SET skipped = 1 WHERE dk = " .. player:GetGUIDLow())
     local done, already, failed = tell_the_story(player)
     local line = string.format("Sargobras says: Your story is told: %d quests, %d already were. Keep what it taught you; the rest stays here.", done, already)
     if #failed > 0 then
@@ -447,8 +448,7 @@ local function skip_story(player)
             .. RUNEBLADE .. ") would not go in the bags (full?); done before it: the trade and the story. Give it by hand: .additem " .. RUNEBLADE)
         player:SendBroadcastMessage("Sargobras says: Your bags are full, so your runeblade stays with me. (The server log says why.)")
     end
-    CharDBExecute("UPDATE basic_718_souls SET skipped = 1 WHERE dk = " .. player:GetGUIDLow())
-    local a, r = math.random() * 2 * math.pi, SKIP_SCATTER * math.sqrt(math.random())
+    local a, r =math.random() * 2 * math.pi, SKIP_SCATTER * math.sqrt(math.random())
     local s    = SKIP_LANDING
     player:SendBroadcastMessage("Sargobras says: The living are below. Mind the first step.")
     player:Teleport(s.map, s.x + math.cos(a) * r, s.y + math.sin(a) * r, s.z, s.o)

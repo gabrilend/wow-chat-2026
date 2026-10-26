@@ -6,6 +6,7 @@ local OUT   = DIR .. "/src/lua-basic/data/death-knight-skip-quests.lua"
 local MYSQL = DIR .. "/mysql/installed-files/bin/mysql"
 local ACHERUS_MAP     = 609
 local LAST_QUEST      = 13166
+local PLEDGE_QUESTS   = { 13188, 13189 }
 local CLASS_DK_MASK   = 32
 
 local function query(sql)
@@ -29,6 +30,7 @@ local ids = {}
 for _, r in ipairs(query("SELECT DISTINCT qs.quest FROM creature c JOIN creature_queststarter qs ON qs.id = c.id WHERE c.map = " .. ACHERUS_MAP)) do ids[tonumber(r[1])] = true end
 for _, r in ipairs(query("SELECT DISTINCT gs.quest FROM gameobject g JOIN gameobject_queststarter gs ON gs.id = g.id WHERE g.map = " .. ACHERUS_MAP)) do ids[tonumber(r[1])] = true end
 ids[LAST_QUEST] = true
+for _, id in ipairs(PLEDGE_QUESTS) do ids[id] = true end
 local list = {}
 for id in pairs(ids) do list[#list + 1] = id end
 table.sort(list)

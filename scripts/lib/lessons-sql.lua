@@ -76,7 +76,7 @@ for line in (io.open(REQUIRED) or die("cannot open " .. REQUIRED)):lines() do
     if s then required[tonumber(s)] = required[tonumber(s)] or {}; table.insert(required[tonumber(s)], tonumber(req)) end
 end
 local quests = {}
-for line in (io.open(DIR .. "/modules/mod-buddies/src/buddies_quest_spells.h") or die("cannot open buddies_quest_spells.h")):lines() do
+for line in (io.open(DIR .. "/patches/B036-mod-buddies/mod-buddies/src/buddies_quest_spells.h") or die("cannot open buddies_quest_spells.h")):lines() do
     local c, races, lvl, spell = line:match("^%s*{%s*(%d+),%s*(%d+),%s*(%d+),%s*(%d+)%s*}")
     if c then quests[#quests + 1] = { class = tonumber(c), races = tonumber(races), level = tonumber(lvl), spell = tonumber(spell) } end
 end

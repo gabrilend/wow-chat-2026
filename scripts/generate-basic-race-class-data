@@ -96,4 +96,8 @@ w("}")
 local f = io.open(OUT, "w") or die("cannot write " .. OUT)
 f:write(table.concat(out, "\n"), "\n")
 f:close()
+local OWN = DIR .. "/patches/E066-sargobras/helpers/data/sargobras-race-class-data.lua"
+f = io.open(OWN, "w") or die("cannot write " .. OWN)
+f:write(table.concat(out, "\n"), "\n")
+f:close()
 print(string.format("generate-basic-race-class-data: %d races, %d classes -> %s", #rids, #cids, OUT))

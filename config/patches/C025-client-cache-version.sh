@@ -39,5 +39,4 @@ config_client_cache_version() {
 
     sed -i "s|^ClientCacheVersion[[:space:]]*=.*|ClientCacheVersion = ${fingerprint}|" "${conf}"
 }
-CONFIG_PROFILES[config_client_cache_version]="all"
 CONFIG_DESCRIPTIONS[config_client_cache_version]="ClientCacheVersion = fingerprint of profile + source commit + its SQL edits"

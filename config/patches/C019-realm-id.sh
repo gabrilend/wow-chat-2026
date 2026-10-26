@@ -19,5 +19,4 @@ config_realm_id() {
 
     sed -i 's|^RealmID.*=.*|RealmID = '"${REALM_ID}"'|' "${conf_world}"
 }
-CONFIG_PROFILES[config_realm_id]="all"
 CONFIG_DESCRIPTIONS[config_realm_id]="RealmID per profile (1=release, 2=beta, 3=vanilla, 4=alpha, 5=basic, 6=cc-test)"

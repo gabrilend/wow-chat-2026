@@ -12,5 +12,4 @@ config_vanilla_playerbot_level_cap() {
     sed -i 's|^AiPlayerbot\.EquipAndSpecPersistence[[:space:]]*=.*|AiPlayerbot.EquipAndSpecPersistence = 1|' "${conf}"
     sed -i 's|^AiPlayerbot\.RandomBotMaps.*=.*|AiPlayerbot.RandomBotMaps = '"${BOT_MAPS}"'|' "${conf}"
 }
-CONFIG_PROFILES[config_vanilla_playerbot_level_cap]="vanilla"
 CONFIG_DESCRIPTIONS[config_vanilla_playerbot_level_cap]="Playerbot progression 20→40 (organic XP leveling)"

@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+WORK="${DIR}/tmp/shared-memory/test-carried-files"
+rm -rf "${WORK}"
+mkdir -p "${WORK}/install/bin/lua_scripts"
+
+fails=0
+checks=0
+check() {
+    checks=$((checks + 1))
+    if eval "$1"; then echo "  ok:   $2"; else echo "  FAIL: $2"; fails=$((fails + 1)); fi
+}
+
+echo "every patch that is a directory"
+dirs=0
+for d in "${DIR}"/patches/[BE][0-9][0-9][0-9]-*/; do
+    [[ -d "${d}" ]] || continue
+    dirs=$((dirs + 1))
+    name="$(basename "${d}")"
+    bash_file="${d}${name}.sh"
+    carries="$(sed -n 's/^# carries: *//p' "${bash_file}" 2>/dev/null | head -1)"
+    check '[[ -f "${bash_file}" ]]' "${name}: its bash file is ${name}.sh"
+    missing="" unnamed=""
+    for p in ${carries}; do [[ -e "${d}${p}" ]] || missing+=" ${p}"; done
+    while IFS= read -r top; do
+        [[ "${top}" == "${name}.sh" ]] && continue
+        [[ " ${carries} " == *" ${top} "* ]] || unnamed+=" ${top}"
+    done < <(find "${d}" -mindepth 1 -maxdepth 1 -printf '%f\n')
+    check '[[ -n "${carries}" && -z "${missing}" && -z "${unnamed}" ]]' \
+          "${name}: carries ${carries:-nothing named}${missing:+ (missing:${missing})}${unnamed:+ (there, not named:${unnamed})}"
+    hidden="$(find "${d}" -mindepth 1 -name '.*' -printf '%P ')"
+    check '[[ -z "${hidden}" ]]' "${name}: nothing hidden${hidden:+ (hidden: ${hidden})}"
+done
+check '[[ ${dirs} -gt 0 ]]' "${dirs} found"
+
+echo "Sargobras's patch, on a pretend install"
+export DIR
+source "${DIR}/patches/E-patches.sh" > /dev/null || { echo "FAIL: patches/E-patches.sh did not load"; exit 1; }
+INSTALL_DIR="${WORK}/install"
+PLACED="${WORK}/install/bin/lua_scripts/sargobras"
+SRC="${DIR}/patches/E066-sargobras"
+patch_E066_sargobras > "${WORK}/apply.log" 2>&1
+check '[[ $? -eq 0 && -f "${PLACED}/sargobras.lua" && -d "${PLACED}/helpers" ]]' "applied: his script and helpers/ placed"
+check 'diff -r "${SRC}/sargobras.lua" "${PLACED}/sargobras.lua" > /dev/null && diff -r "${SRC}/helpers" "${PLACED}/helpers" > /dev/null' "every carried file placed byte for byte"
+loaded="$(cd "${PLACED}" && find . -type f \( -name '*.lua' -o -name '*.ext' \) ! -path '*/.*' -printf '%f\n' | sed 's/\.[^.]*$//' | sort)"
+basics="$(find "${DIR}/src/lua-basic" -type f \( -name '*.lua' -o -name '*.ext' \) ! -path '*/.*' -printf '%f\n' | sed 's/\.[^.]*$//' | sort)"
+clash="$(comm -12 <(echo "${loaded}") <(echo "${basics}") | tr '\n' ' ')"
+check '[[ -n "${loaded}" && -z "${clash}" ]]' "no file the engine loads from his folder shares a name with basic's ($(wc -l <<< "${loaded}") files)${clash:+ (clash: ${clash})}"
+patch_E066_sargobras > /dev/null 2>&1
+check 'diff -r "${SRC}/helpers" "${PLACED}/helpers" > /dev/null && [[ $(find "${PLACED}" -type f | wc -l) -eq $(( $(find "${SRC}/helpers" -type f | wc -l) + 1 )) ]]' "applied twice: the same files, nothing doubled"
+unpatch_E066_sargobras > /dev/null 2>&1
+check '[[ ! -e "${PLACED}" && -d "${WORK}/install/bin/lua_scripts" ]]' "undone: his folder gone, the install's own folder kept"
+check '[[ -f "${SRC}/sargobras.lua" ]]' "the template stays in the patch"
+drift=""
+while IFS= read -r rel; do
+    basic_rel="$(dirname "${rel}")/$(basename "${rel}" | sed 's/^sargobras-//')"   # his name, less his prefix
+    [[ -f "${DIR}/src/lua-basic/${basic_rel}" ]] || continue    # only his (the jokes)
+    cmp -s "${SRC}/helpers/${rel}" "${DIR}/src/lua-basic/${basic_rel}" || drift+=" ${rel}"
+done < <(cd "${SRC}/helpers" && find . -type f -printf '%P\n')
+check '[[ -z "${drift}" ]]' "his copies of the shared helpers are basic's, byte for byte${drift:+ (differ:${drift})}"
+
+rm -rf "${WORK}"
+echo "${checks} checks, ${fails} failed"
+[[ ${fails} -eq 0 ]]

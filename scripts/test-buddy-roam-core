@@ -6,7 +6,7 @@ DIR="/mnt/kaun/wow-chat-2026"
 [[ -n "${1:-}" ]] && DIR="$1"
 PER_MAP="${2:-600}"
 
-CORE="${DIR}/modules/mod-buddies/src/roam"
+CORE="${DIR}/patches/B036-mod-buddies/mod-buddies/src/roam"
 TESTS="${DIR}/tests/buddy-roam-core"
 EXEC_DIR="${DIR}/tmp/tmp"
 DATA_DIR="${DIR}/tmp/shared-memory/test-buddy-roam-core"

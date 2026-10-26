@@ -35,6 +35,8 @@ declare -a EXPECT_basic=(
     "worldserver.conf|Visibility.ObjectQuestMarkers|0"
     "worldserver.conf|QuestPOI.Enabled|0"
     "worldserver.conf|Corpse.Decay.NORMAL|60"              # stock: wow-chat-1's corpses are beta's only
+    "worldserver.conf|Visibility.Distance.Instances|250"   # C039 (bots capped by B056)
+    "worldserver.conf|Visibility.Distance.Continents|100"  # stock: only beta's continents are raised
     "worldserver.conf|RealmID|5"
     "worldserver.conf|WorldServerPort|4462"
     "worldserver.conf|GM.LoginState|3"
@@ -63,6 +65,7 @@ declare -a EXPECT_cc_test=(
     "worldserver.conf|Rate.MoveSpeed.Player|1"            # stock speed: C003 gated away from cc-test
     "worldserver.conf|EnableLowLevelRegenBoost|0"          # C034 is every profile's since 2026-10-20
     "worldserver.conf|QuestPOI.Enabled|1"                  # stock: C038 leaves cc-test alone
+    "worldserver.conf|Visibility.Distance.Instances|250"   # C039: stand-ins and buddies are capped by B056 here too
     "worldserver.conf|Rate.Damage.Fall|1"
     "worldserver.conf|Rate.XP.Kill|1"
     "worldserver.conf|RealmID|6"
@@ -106,6 +109,9 @@ declare -a EXPECT_beta=(
     "worldserver.conf|vmap.BlizzlikePvPLOS|1"              # stock, the owner's choice
     "worldserver.conf|DBC.EnforceItemAttributes|1"         # stock, the owner's choice
     "worldserver.conf|PlayerLimit|1000"                    # stock: held for a decision (bots count)
+    "worldserver.conf|Visibility.Distance.Continents|250"  # C037: the server's most (it clamps above), B056 capping bots (issue 194)
+    "worldserver.conf|Visibility.Distance.Instances|250"   # C039, every profile
+    "worldserver.conf|Visibility.Distance.BGArenas|250"    # C039
     "worldserver.conf|Rate.Damage.Fall|10.0"               # C004
     "worldserver.conf|Rate.MoveSpeed.Player|0.85"          # C003
     "worldserver.conf|InstantFlightPaths|1"                # C009
@@ -154,7 +160,7 @@ echo "Scratch:            ${SCRATCH}"
 export INSTALL_DIR="${SCRATCH}"
 export PROJECT_DIR="${DIR}"
 export PROFILE DIR
-source "${DIR}/patches/E-patches.sh" || { echo "ERROR: patches/E-patches.sh failed to source"; exit 1; }
+source "${DIR}/patches/patches.sh" || { echo "ERROR: patches/patches.sh failed to source"; exit 1; }
 failed=0
 apply_config_values > "${SCRATCH}/apply-config-values.log" 2>&1 || failed=1
 sed -n '/Applying for profile/,$p' "${SCRATCH}/apply-config-values.log"

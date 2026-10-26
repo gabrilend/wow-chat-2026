@@ -1,0 +1,26 @@
+# patches/gates - where the build stops between its stages (issue 189)
+#
+# For a general audience: every patch has a priority, one number line for
+# all of them. A gate is a number on that line where the build does a stage
+# of its own work; nothing at or above a gate runs until everything below it
+# has finished and the gate's work is done. One gate for each stage the build
+# has (the owner, 2026-10-20: "However many sections we have now, that's how
+# many we should have with the newly numbered system").
+#
+#   below 1000      source patches: applied to the server's code, and taken
+#                   off again once the compile is through
+#   1000            the compile and the install
+#   1000 to 1999    settings and install steps, run into the installed server
+#   2000            the databases brought to upstream's state: the compile
+#                   starts the shadow server once and its own updater runs
+#                   (scripts/validate --no-promote, issue 189d)
+#   2000 to 8999    the steps that hand our SQL to that updater; the
+#                   validation's start applies them, after upstream's
+#   9000            the server may start
+#
+# One gate a line: "number: what happens there". Read by scripts/plan-patches.
+# Lines starting with "#" and blank lines are ignored.
+
+1000: compile and install
+2000: databases brought to upstream's state (a server start)
+9000: the server may start

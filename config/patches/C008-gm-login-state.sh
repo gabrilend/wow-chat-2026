@@ -16,5 +16,4 @@ config_gm_login_state() {
 
     sed -i 's|^GM\.LoginState.*=.*|GM.LoginState = '"${gm_level}"'|' "${conf}"
 }
-CONFIG_PROFILES[config_gm_login_state]="all"
 CONFIG_DESCRIPTIONS[config_gm_login_state]="GM login state (vanilla/basic/beta=admin, release/alpha/cc-test=player)"

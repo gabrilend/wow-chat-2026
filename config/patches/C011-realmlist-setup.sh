@@ -68,5 +68,4 @@ EOF
         echo "      (realmlist UPDATE warning: ${MYSQL_ERR})"
     fi
 }
-CONFIG_PROFILES[config_realmlist_setup]="all"
 CONFIG_DESCRIPTIONS[config_realmlist_setup]="Realmlist (name, address, port)"

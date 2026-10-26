@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+WORK="${DIR}/tmp/shared-memory/test-patch-headers"
+rm -rf "${WORK}"
+mkdir -p "${WORK}/p/patches" "${WORK}/p/scripts"
+
+fails=0
+checks=0
+check() {
+    checks=$((checks + 1))
+    if eval "$1"; then echo "  ok:   $2"; else echo "  FAIL: $2"; fails=$((fails + 1)); fi
+}
+cat > "${WORK}/reader.lua" <<EOF
+local H = dofile("${DIR}/scripts/lib/patch-header.lua")
+local r = H.read(arg[1])
+io.write(r.state, "|", table.concat(r.problems, "; "))
+EOF
+reader() { luajit "${WORK}/reader.lua" "$1" 2>&1; }
+
+make_patch() {
+    local file="$1" c="$2" id="$3" extra="${4:-}" shebang="${5:-}"
+    local hl=7
+    [[ -n "${extra}" ]] && hl=8
+    {
+        [[ -n "${shebang}" ]] && echo "${shebang}"
+        echo "${c} ==== header: ${hl} lines, footer: 3 lines ===="
+        echo "${c} id:        ${id}"
+        echo "${c} profiles:  beta"
+        echo "${c} priority:  1620"
+        echo "${c} kind:      install"
+        echo "${c} about:     a test patch"
+        [[ -n "${extra}" ]] && echo "${c} ${extra}"
+        echo "${c} ==== end of header ===="
+        echo "body line 1"
+        echo "body line 2"
+        echo "${c} ==== footer of ${id} ===="
+        echo "${c} lines:     0"
+        echo "${c} ==== end of footer ===="
+    } > "${file}"
+    local n; n=$(wc -l < "${file}")
+    sed -i "s/^${c} lines:     0$/${c} lines:     ${n}/" "${file}"
+}
+
+P="${WORK}/p/patches"
+echo "whole headers"
+make_patch "${P}/E901-shell.sh" "#" E901
+check '[[ "$(reader "${P}/E901-shell.sh")" == "whole|" ]]' "a shell patch's header and footer are whole"
+make_patch "${P}/E902-shebang.sh" "#" E902 "" "#!/usr/bin/env bash"
+check '[[ "$(reader "${P}/E902-shebang.sh")" == "whole|" ]]' "a header right after a #! line is whole"
+make_patch "${P}/E903-sql.sql" "--" E903
+check '[[ "$(reader "${P}/E903-sql.sql")" == "whole|" ]]' "an SQL file's header, with its -- marker, is whole"
+make_patch "${P}/E904-test.sh" "#" E904 "quick-test: yes"
+check '[[ "$(reader "${P}/E904-test.sh")" == "whole|" ]]' "an optional field (quick-test) is accepted"
+printf '#!/usr/bin/env bash\n# just a helper\nfoo() { :; }\n' > "${P}/E-helpers.sh"
+check '[[ "$(reader "${P}/E-helpers.sh")" == "absent|" ]]' "a file with no header is absent, not broken"
+
+echo "broken headers, each fault named"
+broken_case() {   # broken_case NAME SED_EXPRESSION EXPECTED_FAULT_PATTERN WHAT
+    make_patch "${P}/$1" "#" E999
+    sed -i "$2" "${P}/$1"
+    local out; out="$(reader "${P}/$1")"
+    check '[[ "${out}" == broken\|* && "${out}" == *$3* ]]' "$4 (${out#broken|})"
+}
+broken_case b1.sh 's/header: 7 lines/header: 6 lines/'          "end of header"   "a wrong stated header length"
+broken_case b2.sh '/==== end of header ====/d'                  "lines"           "a missing closing line"
+broken_case b3.sh 's/footer of E999/footer of E998/'            "footer should open" "a footer naming another id"
+broken_case b4.sh '/^body line 2$/a body line 3'                "footer says"     "a line added above the footer, its count unchanged"
+broken_case b5.sh '/^# about:/d; s/header: 7 lines/header: 6 lines/' 'missing field "about"' "a missing required field"
+broken_case b6.sh 's/^# about: /# abuot: /'                     'unknown field "abuot"' "an unknown (misspelt) field"
+broken_case b7.sh 's/priority:  1620/priority:  high/'          "not a whole number" "a priority that isn't a number"
+broken_case b8.sh 's/kind:      install/kind:      setup/'      'kind "setup"'    "a kind that doesn't exist"
+broken_case b9.sh 's/==== header: 7 lines, footer: 3 lines ====/==== header: seven lines ====/' "opening line" "an opening line out of shape"
+make_patch "${P}/b10.sh" "#" E999
+head -n -1 "${P}/b10.sh" > "${P}/b10.tmp" && mv "${P}/b10.tmp" "${P}/b10.sh"
+out="$(reader "${P}/b10.sh")"
+check '[[ "${out}" == broken\|* ]]' "a file cut short (its last line gone) is broken (${out#broken|})"
+
+echo "the checker"
+out="$("${DIR}/scripts/check-patch-headers" "${WORK}/p" 2>&1)"; rc=$?
+check '[[ ${rc} -ne 0 && "${out}" == *"BROKEN: patches/b1.sh"* ]]' "fails, naming each broken file"
+check '[[ "${out}" == *"patches/E-helpers.sh"* && "${out}" == *"skipped (no header)"* ]]' "lists the skipped file"
+check '[[ "${out}" == *"E901"*"1620"*"install"*"beta"* ]]' "lists each whole patch with its priority, kind and profiles"
+rm -f "${P}"/b*.sh
+
+echo "mending the line count"
+make_patch "${P}/E905-fix.sh" "#" E905
+sed -i '/^body line 2$/a body line 3' "${P}/E905-fix.sh"
+make_patch "${P}/E906-other.sh" "#" E906
+sed -i 's/footer of E906/footer of E000/; /^body line 2$/a body line 3' "${P}/E906-other.sh"
+cp "${P}/E906-other.sh" "${WORK}/E906.before"
+out="$("${DIR}/scripts/check-patch-headers" "${WORK}/p" --fix-lines 2>&1)"
+check '[[ "$(reader "${P}/E905-fix.sh")" == "whole|" && "${out}" == *"mended the line count: patches/E905-fix.sh"* ]]' "--fix-lines mends a file whose only fault is its count"
+check 'cmp -s "${P}/E906-other.sh" "${WORK}/E906.before"' "--fix-lines leaves a file with another fault as it was"
+rm -f "${P}/E906-other.sh"
+"${DIR}/scripts/check-patch-headers" "${WORK}/p" > /dev/null 2>&1; rc=$?
+check '[[ ${rc} -eq 0 ]]' "with nothing broken, the checker passes"
+
+rm -rf "${WORK}"
+echo "${checks} checks, ${fails} failed"
+[[ ${fails} -eq 0 ]]

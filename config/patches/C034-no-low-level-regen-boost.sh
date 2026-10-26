@@ -9,5 +9,4 @@ config_no_low_level_regen_boost() {
     fi
     sed -i "s|^EnableLowLevelRegenBoost[[:space:]]*=.*|EnableLowLevelRegenBoost = 0|" "${conf}"
 }
-CONFIG_PROFILES[config_no_low_level_regen_boost]="all"
 CONFIG_DESCRIPTIONS[config_no_low_level_regen_boost]="No faster healing below level 15 (EnableLowLevelRegenBoost off)"

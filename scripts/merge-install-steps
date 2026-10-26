@@ -1,0 +1,126 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+local args = {}
+for _, a in ipairs(arg) do args[#args + 1] = a end
+if args[1] and args[1]:sub(1, 1) == "/" then DIR = table.remove(args, 1) end
+local NAME = table.remove(args, 1)
+local IDS = args
+if not NAME or #IDS < 2 then error("usage: merge-install-steps [PROJECT_DIR] NEW-NAME E0AA E0BB [E0CC ...]") end
+local P = DIR .. "/patches/"
+local HERE   = debug.getinfo(1, "S").source:match("^@(.*/)") or "./"
+local Header = dofile(HERE .. "lib/patch-header.lua")
+
+local function slurp(p) local f = io.open(p, "r"); if not f then return nil end local s = f:read("*a"); f:close(); return s end
+local function spit(p, s) local f = assert(io.open(p, "w")); f:write(s); f:close() end
+local function q(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
+local function run(cmd) local h = io.popen(cmd .. " 2>&1"); local out = h:read("*a"); local ok = h:close(); return out, ok end
+local function one_file(id)
+    local h = io.popen("ls -1 " .. q(P) .. id .. "-*.sh " .. q(P) .. id .. "-*/" .. id .. "-*.sh 2>/dev/null")
+    local list = {}
+    for l in h:lines() do list[#list + 1] = l end
+    h:close()
+    if #list ~= 1 then error("merge-install-steps: " .. #list .. " files for " .. id .. " in patches/; wanted one") end
+    return list[1]
+end
+local function body_of(file, fn)
+    local out = run("env -i PATH=" .. q(os.getenv("PATH")) .. " DIR=" .. q(DIR) .. " bash --noprofile --norc -c " ..
+                    q("source " .. q(P .. "E-helpers.sh") .. " >/dev/null 2>&1; source " .. q(file) ..
+                      " >/dev/null 2>&1; declare -f " .. fn))
+    return out
+end
+
+local steps = {}
+for _, id in ipairs(IDS) do
+    local file = one_file(id)
+    local src = slurp(file)
+    local block = src:match("(# %-%- {{{ patch_" .. id .. "_.-\n# %-%- }}}\n?)")
+    if not block then error("merge-install-steps: no fold block for patch_" .. id .. "_ in " .. file) end
+    local base = block:match("patch_" .. id .. "_([%w_]+)%(%)")
+    if not base then error("merge-install-steps: no patch_" .. id .. "_<name>() in " .. file) end
+    local has_undo = block:find("unpatch_" .. id .. "_" .. base .. "%(%)") ~= nil
+    local head = Header.read(file)
+    if head.state ~= "whole" then error("merge-install-steps: " .. file .. " has no whole header (scripts/check-patch-headers)") end
+    steps[#steps + 1] = { id = id, file = file, block = block, base = base, has_undo = has_undo, head = head.fields }
+end
+for i = 2, #steps do
+    if steps[i].head.profiles ~= steps[1].head.profiles then
+        error("merge-install-steps: " .. steps[i].id .. " is taken by \"" .. steps[i].head.profiles .. "\", " ..
+              steps[1].id .. " by \"" .. steps[1].head.profiles .. "\"; only steps taken together can be joined")
+    end
+end
+
+local first = IDS[1]
+local newfile = P .. first .. "-" .. NAME .. ".sh"
+local fname = NAME:gsub("%-", "_")
+local parts_text = {}
+for _, s in ipairs(steps) do
+    local part = s.block
+    part = part:gsub("unpatch_" .. s.id .. "_" .. s.base .. "%(%)", "_" .. s.id .. "_" .. s.base .. "_revert()")
+    part = part:gsub("patch_" .. s.id .. "_" .. s.base .. "%(%)", "_" .. s.id .. "_" .. s.base .. "_apply()")
+    part = part:gsub("{{{ patch_" .. s.id .. "_" .. s.base, "{{{ _" .. s.id .. "_" .. s.base .. " (a part of " .. first .. ")")
+    parts_text[#parts_text + 1] = part
+    s.apply_fn, s.revert_fn = "_" .. s.id .. "_" .. s.base .. "_apply", "_" .. s.id .. "_" .. s.base .. "_revert"
+end
+local apply_calls, revert_calls, ids_text = {}, {}, {}
+for _, s in ipairs(steps) do
+    apply_calls[#apply_calls + 1] = "    " .. s.apply_fn .. " || return 1"
+    ids_text[#ids_text + 1] = s.id
+end
+for i = #steps, 1, -1 do
+    local s = steps[i]
+    if s.has_undo then revert_calls[#revert_calls + 1] = "    " .. s.revert_fn .. " || return 1" end
+end
+local text = table.concat({
+    "#!/usr/bin/env bash",
+    "# " .. first .. "-" .. NAME .. ".sh - one install step, loaded by patches/E-patches.sh.",
+    "# Joined by scripts/merge-install-steps (2026-10-20) from steps that were always",
+    "# taken together: " .. table.concat(ids_text, ", ") .. " (the owner: \"sure that's fine I guess. We",
+    "# can split them later if we need to.\"). Each old step is a part below, its code",
+    "# unchanged (only the name: _E0NN_<old name>_apply / _revert); its log lines still",
+    "# say its old number. The step applies the parts in order and undoes them in",
+    "# reverse. To split again: each part is a whole function; copy it back into a",
+    "# step of its own. Helpers are in patches/E-helpers.sh, loaded first.",
+    "",
+    table.concat(parts_text, "\n"),
+    "",
+    "# -- {{{ patch_" .. first .. "_" .. fname,
+    "patch_" .. first .. "_" .. fname .. "() {",
+    table.concat(apply_calls, "\n"),
+    "}",
+    "unpatch_" .. first .. "_" .. fname .. "() {",
+    table.concat(revert_calls, "\n"),
+    "}",
+    "# -- }}}",
+    "",
+}, "\n")
+
+local tmp = newfile .. ".merging"
+spit(tmp, text)
+for _, s in ipairs(steps) do
+    local pairs_to_check = { { "patch_" .. s.id .. "_" .. s.base, s.apply_fn } }
+    if s.has_undo then pairs_to_check[2] = { "unpatch_" .. s.id .. "_" .. s.base, s.revert_fn } end
+    for _, pr in ipairs(pairs_to_check) do
+        local old = body_of(s.file, pr[1]):gsub("^" .. pr[1]:gsub("%p", "%%%0") .. " ", "")
+        local new = body_of(tmp, pr[2]):gsub("^" .. pr[2]:gsub("%p", "%%%0") .. " ", "")
+        if old == "" or old ~= new then
+            os.remove(tmp)
+            error("merge-install-steps: " .. pr[2] .. " is not " .. pr[1] .. "'s code; nothing written")
+        end
+    end
+end
+os.remove(tmp)
+spit(newfile, text)
+for _, s in ipairs(steps) do
+    if s.file ~= newfile then
+        local _, ok = run("git -C " .. q(DIR) .. " rm -q " .. q(s.file))
+        if not ok then os.remove(s.file) end
+    end
+end
+local h1 = steps[1].head
+local said, ok = run(q(HERE .. "add-patch-header") .. " " .. q(DIR) .. " " .. q(newfile:sub(#DIR + 2)) ..
+                     " --profiles " .. q(h1.profiles) .. " --priority " .. q(h1.priority) ..
+                     " --about " .. q("joined install steps " .. table.concat(ids_text, ", ") .. " (" .. NAME .. ")"))
+if not ok then error("merge-install-steps: joined, but the header could not be written:\n" .. said) end
+print("joined " .. table.concat(ids_text, " ") .. " into " .. newfile:sub(#DIR + 2) ..
+      " (each part's code unchanged), at " .. first .. "'s priority " .. h1.priority .. " for " .. h1.profiles)
