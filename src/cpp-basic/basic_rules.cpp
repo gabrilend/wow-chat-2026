@@ -36,6 +36,10 @@
      five times; rares' loot is rolled twice; bosses (every creature a
      dungeon's or raid's encounter list credits, and world bosses) keep
      stock chances. The numbers are settings (config patch C040).
+   - Hidden shoulders (issue 720): ".shoulders" hides a player's own
+     shoulders from every client, their own included, and shows them again;
+     the shoulders stay worn, stats and all. Kept per character in the
+     server's player settings (switched on for basic by config patch C041).
    - Refused channels (issue 155x): nobody joins General, Trade,
  *     LocalDefense or WorldDefense. The refusal is source patch B038 (no
  *     script hook sees every join); this file reports the list at startup.
@@ -63,6 +67,8 @@
 #include "ScriptMgr.h"
 #include "SpellInfo.h"
 #include "TemporarySummon.h"
+#include "World.h"
+#include "WorldConfig.h"
 #include "WorldSession.h"
 #include <algorithm>
 #include <atomic>
@@ -1156,6 +1162,84 @@ public:
 };
 // -- }}}
 
+// -- {{{ Hidden shoulders (issue 720)
+// The owner, 2026-10-08 and 2026-10-25: a way to hide shoulders, as the game
+// hides helms and cloaks; players only ("Buddies shouldn't get it").
+//
+// How: the server tells every client what a player wears through one
+// "what this slot looks like" value per visible slot (the item's number and
+// its enchantments), which is all other clients draw from. Right after the
+// server sets the shoulder slot's value (equipping, swapping, logging in:
+// every path goes through Player::SetVisibleItemSlot, whose after-hook this
+// is), a player who hid them gets nothing written there instead; the item
+// itself stays worn. The game's own hide-helm and hide-cloak are one flag
+// each, with nothing for shoulders, so this is the whole of it.
+//
+// The choice is kept per character in the server's player settings
+// (source "basic-shoulders", index 0: 1 hidden, 0 shown), which save and
+// load only when EnablePlayerSettings is on (config patch C041, basic).
+static char const* const BASIC_SHOULDERS_SETTING = "basic-shoulders";
+
+static bool BasicShouldersHidden(Player* player)
+{
+    return player && sWorld->getBoolConfig(CONFIG_PLAYER_SETTINGS_ENABLED)
+        && player->GetPlayerSetting(BASIC_SHOULDERS_SETTING, 0).IsEnabled();
+}
+
+class basic_rules_hide_shoulders : public PlayerScript
+{
+public:
+    basic_rules_hide_shoulders() : PlayerScript("basic_rules_hide_shoulders", { PLAYERHOOK_ON_AFTER_SET_VISIBLE_ITEM_SLOT, PLAYERHOOK_ON_LOGIN }) { }
+
+    // After the shoulder slot's look is set: nothing, for a player who hid them.
+    void OnPlayerAfterSetVisibleItemSlot(Player* player, uint8 slot, Item* item) override
+    {
+        if (slot != EQUIPMENT_SLOT_SHOULDERS || !item || !BasicShouldersHidden(player))
+            return;
+        player->SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * 2), 0);
+        player->SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENCHANTMENT + (slot * 2), 0);
+    }
+
+    // At login the settings arrive after the gear is put on: set the slot again.
+    void OnPlayerLogin(Player* player) override
+    {
+        if (BasicShouldersHidden(player))
+            player->SetVisibleItemSlot(EQUIPMENT_SLOT_SHOULDERS, player->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_SHOULDERS));
+    }
+};
+
+class basic_rules_hide_shoulders_command : public CommandScript
+{
+public:
+    basic_rules_hide_shoulders_command() : CommandScript("basic_rules_hide_shoulders_command") { }
+
+    ChatCommandTable GetCommands() const override
+    {
+        static ChatCommandTable commandTable =
+        {
+            { "shoulders", HandleShoulders, SEC_PLAYER, Console::No },
+        };
+        return commandTable;
+    }
+
+    // Hides the player's shoulders, or shows them again: a toggle.
+    static bool HandleShoulders(ChatHandler* handler)
+    {
+        Player* player = handler->GetSession()->GetPlayer();
+        if (!sWorld->getBoolConfig(CONFIG_PLAYER_SETTINGS_ENABLED))
+        {
+            handler->SendSysMessage("Hiding shoulders needs EnablePlayerSettings = 1 (config patch C041); it is off on this server.");
+            return false;
+        }
+        bool hide = !BasicShouldersHidden(player);
+        player->UpdatePlayerSetting(BASIC_SHOULDERS_SETTING, 0, hide ? 1 : 0);
+        player->SetVisibleItemSlot(EQUIPMENT_SLOT_SHOULDERS, player->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_SHOULDERS));
+        handler->SendSysMessage(hide ? "Your shoulders are hidden. Type .shoulders again to show them." : "Your shoulders are shown again.");
+        return true;
+    }
+};
+// -- }}}
+
 // -- {{{ AddSC_basic_rules
 // Registered from src/server/scripts/Custom/custom_script_loader.cpp by B030.
 void AddSC_basic_rules()
@@ -1173,5 +1257,7 @@ void AddSC_basic_rules()
     new basic_rules_refused_channels_report();
     new basic_rules_drops_load();
     new basic_rules_drops_roll();
+    new basic_rules_hide_shoulders();
+    new basic_rules_hide_shoulders_command();
 }
 // -- }}}

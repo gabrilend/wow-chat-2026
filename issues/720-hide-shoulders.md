@@ -6,7 +6,7 @@
 - Related: 617f (creature outfits: the server shaping what a client
   draws, B047), 175 (custom items told to the client ahead)
 - Priority: Low
-- State: planned; open questions first
+- State: built 2026-10-26; waiting for the compile and a look in game
 
 ## Origin
 
@@ -17,6 +17,22 @@ Verbatim, 2026-10-15:
 
 ## Current Behavior
 
+**Built 2026-10-26, not yet compiled** (the owner runs the compile):
+`.shoulders`, a player command (game master level 0, in game only),
+hides the player's own shoulders from every client, their own included,
+and shows them again; the shoulders stay worn, stats and all. In basic's
+rules code (`src/cpp-basic/basic_rules.cpp`, "Hidden shoulders"): right
+after the server sets the shoulder slot's look (`Player::SetVisibleItemSlot`'s
+after-hook, which every equip, swap and login goes through), a player who
+hid them gets nothing written there; at login the slot is set again, since
+the settings arrive after the gear. The choice is kept per character in
+the server's player settings (source `basic-shoulders`), which save only
+with `EnablePlayerSettings = 1`, written for basic by config patch C041.
+Its `.help` text is in `config/custom-gm-commands.lua` (install step
+E053). Players only: buddies never run the command. Compiles with basic's
+patches; not yet seen in game.
+
+Before:
 The game client (3.3.5a) has two display toggles in its interface
 options, Show Helm and Show Cloak. Each sets a flag on the character that
 the server keeps and passes to everyone who sees it; nothing exists for
