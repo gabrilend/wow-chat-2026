@@ -12,7 +12,15 @@
   class change now dresses the character in a buddy's gearset and mails
   its old gear; whether this issue stays for level changes is 197's open
   question 2; answered 2026-10-25: "it's for level changes and class
-  changes")
+  changes"; then, the same day: "buddy gear if we go up in level,
+  suitable copies of old gear at equal strength if they go down in level.
+  Remember, we aren't using copies of the old gear, but rather choosing
+  new copies of new gear - the level 4 with the level 12 weapon gets a
+  level 12 weapon, not a level 60 epic weapon with reduced stats. for the
+  class change, just the buddy-gear sets." So this issue is for going
+  down in level: each item replaced by a real item of the new level chosen
+  for equal strength; going up in level takes the buddy gearsets, and a
+  class change takes the buddy gearsets only (197))
 - Priority: Medium
 
 ## Origin

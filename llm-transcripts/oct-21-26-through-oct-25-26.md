@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-25 16:51:53
+Generated on: 2026-10-25 16:59:08
 Models: claude-opus-5-5
 
 ## Contents
@@ -6566,6 +6566,92 @@ Two things I'll assume unless you say otherwise:
 - **Buddy reset:** administrator's script only for now, no Sargobras option yet.
 
 Say go and I'll work through them in that order, committing each as it's done.
+
+--------------------------------------------------------------------------------
+
+### User Request 60
+
+> 2. Measure bosses' spells. This is the next step of the balancing issue
+> (155f1): read each boss's spells from its fight script and the spell file,
+> then write rows for the dungeon
+>      bosses toward your 10–15 seconds.
+
+I'd also like to know the default values, with default scaling and all that, so
+we can compare. Ideally, we're looking for similar difficulty, but ideally, a
+little different so it feels fresh to the players.
+
+> 4. Spirit on gear (155k2). All answered. A generator turns two fifths of the
+> items that have stamina into spirit items, one for one, with a backup and an
+> exact revert.
+
+we shouldn't touch tier gear, btw. Also, we shouldn't touch cloth gear or mail
+gear. Just leather and plate.
+
+> 7. Buddy reset (617a7). I'd build it as an administrator's script first. Its
+> last open question, whether the owner can also ask Sargobras in game, can come
+> later.
+
+the players cannot do this. Sargobras shouldn't know about it, not really. It's
+for the GMs to use. We should have it usable as either a GM command or a bash
+script, if you're building the bash script anyway.
+
+Question. How hard is it for you to send commands to a running server? Should we
+set up some sort of messaging system or something?
+
+> 8. Gear of equal strength (186). Waiting on your decision about whether it's
+> only for level changes now or retired.
+
+it's for level changes and class changes.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 60
+
+> Checking how the basic server can take remote commands today.
+
+*[commit] 0c368d04d in wow-chat-2026 - Record four answers: stock fights measured beside ours, spirit only on leather and plate, buddy resets for game masters only, equal-strength gear for level and class changes (issues 155f1, 155k2, 617a7, 186, 197)*
+
+I've recorded all four answers in their issues and committed them.
+
+**Sending commands to a running server:** that already works, so no new
+messaging system is needed. The server accepts game-master commands over a small
+web connection that only this machine can reach (SOAP: turned on by config patch
+C021, listening on 127.0.0.1:7878). `scripts/gm-command "character level
+Felicity 44"` sends one command and prints the server's reply. The server does
+the work itself, so nothing it holds in memory gets overwritten, which editing
+the database while it runs could do.
+
+What that means for the buddy reset:
+- **The GM command:** I'd build it as a command in the buddy module, something
+  like `.buddy reset <owner> <buddy>`. A game master can type it in game, and
+  `gm-command` can send it.
+- **The bash script:** it calls that command while the server runs. While the
+  server is stopped, it changes the database directly.
+- **Sargobras:** no line in his dialogue starts a reset. He only sees the slot
+  that comes back owed, with its race kept.
+
+**Recorded:**
+- **Bosses' spells:** each Outland boss will also be measured at its stock
+  level, against a level-70 tank in its stock tier's gear. That puts the stock
+  fight next to ours, so we can aim for about the same difficulty without
+  copying it.
+- **Spirit on gear:** only leather and plate armour, never cloth or mail, never
+  tier-set pieces.
+- **Buddy reset:** game masters only.
+- **Gear of equal strength (186):** for level changes and class changes.
+
+Two questions before I start:
+1. **Spirit on gear:** earlier you said weapons, rings, necklaces and cloaks
+   change too ("yes to the others"). Now that only leather and plate armour
+   change, do those four still change, or nothing but leather and plate armour?
+2. **Class change gear:** with 186 now covering class changes too, which gear
+   does a class-changed player get? Options:
+   - the buddy's gear set from the class-change issue (197);
+   - copies of their old gear at equal strength (186);
+   - both: the gear set now, and 186's copies once it's built.
+
+Say go, and I'll start at the top of the list (Kazzak's rows, then bosses'
+spells). Neither question blocks those first items.
 
 --------------------------------------------------------------------------------
 

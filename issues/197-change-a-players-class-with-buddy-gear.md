@@ -77,6 +77,7 @@ a target.
    changes". **186's plan** (made copies of the old gear at equal strength) and this
    one (a buddy's set, the old gear mailed): is 186 now only for level
    changes, or retired?
-3. **Which gear after a class change, then:** the buddy's gearset (this
+3. (Answered 2026-10-25) "for the class change, just the buddy-gear
+   sets." **Which gear after a class change, then:** the buddy's gearset (this
    issue), copies of the old gear at equal strength (186), or both, the
    gearset first and 186's copies when it is built?
