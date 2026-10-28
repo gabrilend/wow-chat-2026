@@ -68,7 +68,7 @@ the invisible one answers by whisper.
 
 | Whisper | Does |
 |---|---|
-| `priest` (any class name) | chooses a buddy of that class for the lowest owed slot, by the same rules the dialogue line uses (`lib/buddy-choice.lua`); the spec comes from the class's default spec profile (a priest: Holy) |
+| `priest` (any class name) | chooses a buddy of that class for the lowest owed slot, by the same rules the dialogue line uses (`lib/buddy-choice.lua`), spec included: the buddy is made exactly as one chosen at his menus would be |
 | `shadow priest` (spec, then class) | the same, with that spec profile |
 | `troll` (any race name) | chooses by race, as the race dialogue lines do |
 | `priest Felicity` (a name after it) | the same, and the buddy is given that name if it is free |
@@ -148,6 +148,9 @@ and bots: the whisper.
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 32), merged with the
+same questions from other sub-issues; answers are written back here.
+
 - **Which account:** the stand-in account (already a bot account with no
   owner), or a new account of his own?
 - **Both factions:** one Sargobras with a patched faction check, or two
@@ -157,6 +160,8 @@ and bots: the whisper.
   (as written above), or every Sargobras creature in the world?
 - **A name that is taken:** a random name instead, or refuse and ask
   again?
-- **Default spec:** "priest" alone gives a holy priest in your example.
-  Is that the class's first spec always, or the role the whisperer's group
-  lacks most?
+- **Default spec:** answered 2026-10-28: "the spec should be picked in the
+  same way that any other buddy. This whisper shortcut is just a way to
+  interact with him from afar, or in an automated fashion. It should just
+  create a priest using the same rules we already have." The whisper is
+  his menus from afar; it adds no rules of its own.

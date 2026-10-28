@@ -1,6 +1,6 @@
 # Conversation Summary: 9f34a2ef-039a-4f5f-8723-b741d984044f
 
-Generated on: 2026-10-27 13:11:42
+Generated on: 2026-10-28 15:56:15
 Models: claude-opus-5-5
 
 ## Contents
@@ -13,6 +13,10 @@ Models: claude-opus-5-5
    machines, with locked journals and a public connection page. That page now
    generates in preview; next, I need your answer on where the build caches go
    and what "the authorization page" means.
+3. 2026-10-27 13:14, after Request 9 - We're planning the public game on Linode
+   machines, every realm running at once, with each player's chat journal locked
+   to their password; plans and the connection page are written but uncommitted.
+   Next: answer how players make their own account.
 
 --------------------------------------------------------------------------------
 
@@ -1002,6 +1006,219 @@ Here's a puzzle for you: the table can only say what the pages prove, so "AI
 playerbots in the world" is blank for Basic. Basic will have each player's own
 buddies but no wandering bots. Is a buddy the same feature as a playerbot, or a
 different row?
+
+--------------------------------------------------------------------------------
+
+### User Request 10
+
+> 1. Making your own account: by rmail, by a form on the connection page, or
+> both? The form would show the login machine the password once,
+>      which is also when the journal key gets made.
+
+ideally, the form would create an rmail message and send it to my "create
+account" task mailbox... or similar... But the HTML rmail functionality is still
+in progress.
+
+> 2. Which realms go public? All six, or not cc-test (the custom client's test
+> server) or alpha?
+
+right now, none, I will tell you when we're getting ready for release.
+
+> 3. The cloud location for the bit-rot mirror: Linode's file storage (paid per
+> gigabyte; checking a file may mean reading it back), or a
+>      disk on one of our own rented machines? And mirror this project's databases and game data first, or whole disks?
+
+let's talk about this when it's time to build it.
+
+> 4. Bit rot, what first: fingerprints and repair data on the disks as they are,
+> or moving to a filesystem that checksums file contents
+>      (btrfs or ZFS)? And where does the secret key for signed fingerprints live?
+
+I guess btrfs or ZFS or similar. The secret key lives inside of a piece of paper
+that I've implanted into my thigh. Actually just kidding it should be in
+cleartext on my facebook page. actually idk let's think of some other wacky and
+creative places to put it like... up ur butt
+
+... sorry idk what came over me, maybe it was a teenage spirit who wandered in
+and wanted to cause trouble. Anyway ~
+
+> 5. Building at once on this machine: should several profiles actually compile
+> at the same time here, or is it enough that their folders are
+>      kept apart so order doesn't matter?
+
+they should be built iteratively, not at once. Let me know and I will compile
+them.
+
+> 6. Login-database speed: one round trip per login lookup, or should each realm
+> keep a short-lived copy of the account rows it uses?
+
+um... Not sure how to answer this.
+
+> 7. Who may ask for a journal: anyone who names the account, or only the rmail
+> address that made it? The files are locked, but their names
+>      and dates show when someone played. And is there a size limit on an rmail message?
+
+not sure about the technical implementation right now, but the person who is
+tied to the account should.
+
+> 8. Which text goes in a journal: conversation menus, quest text, and mail read
+> in game? Leave out addon messages?
+
+chatlog, not combat related text or anything like that.
+
+> 9. Linking an rmail address to an account: rmail messages go to an address,
+> not an account. Should the journal use the account-creation
+     pairing?
+
+maybe in their account management page they can change the rmail secret key or
+whatever?
+
+>   10. Journals over time:
+>       - An old journal stays locked to an old password. Is that fine?
+
+yeah. they can request another one maybe if they want a new password?
+
+> 11. Passwords with accented letters: refuse them at account creation, so the
+> server, the tools and the browser always make the same key?
+
+it's just bits at the end of the day.
+
+> Here's a puzzle for you: the table can only say what the pages prove, so "AI
+> playerbots in the world" is blank for Basic. Basic will have
+> each player's own buddies but no wandering bots. Is a buddy the same feature
+> as a playerbot, or a different row?
+
+describe it like you're walking through best-buy after a 2 hour car ride and
+you've been obsessed with fantasy because of Lord of the Rings and Dragon
+Warrior so you stumble across a box for World of Warcraft right in the center of
+Circuit City or Costco and you're reading on the back of the box about... well,
+one box per realm. Actually inside of the frutiger aero theming can you create
+box art for each of them? It can use stable diffusion at
+/mnt/kaun/stable-diffusion/ but it shouldn't use any of the other IP licensed
+stuff for world of warcraft - if you want to say something like "orc" or
+"night-elf" or similar make sure you say "off-brand night elf" and make sure
+it's tied to the token that you're using, so it treats "night-elf" as one token
+even though it's two words and "off-brand night-elf" as one token, even though
+it's four words. It should be a different token than "night-elf" not a
+modification to it - in this way, we are emphasizing the discrepancies, and
+everyone knows the original is the best, the knock-off is typically lower
+quality and definitely of slightly different proportions. Some even call it a
+form of inanimate uncanny valley. There's nothing quite like the real thing...
+Anyway that should help keep us separate enough while still having the type of
+pictures we want.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 10
+
+> Recording your answers first, then the box art. Checking what the Stable
+> Diffusion setup looks like, and the game's own uppercase rule (passwords are
+> "just bits", so the lock library should copy that rule exactly rather than
+> refuse accented letters).
+
+> Lock test: 27 checks pass, accented passwords included. Your new rule says
+> command-line tools need `--help`, and interactive ones need `-I`. Adding both.
+
+> Now writing your answers into the plans.
+
+> Answers recorded. Now the box art. The Stable Diffusion project seems to take
+> its jobs through rmail hooks; reading how a job is submitted, and which models
+> are there.
+
+> ComfyUI isn't running; I'll start it in the background when the images are
+> ready to make. Writing the plan for the box art first.
+
+> Each off-brand token will be the weighted average of its plain words' own
+> vectors. The maker stops if any listed word isn't a single word the encoder
+> knows. Writing the token list and the maker.
+
+> The maker caught "fangs" (not one whole word to the encoder). Checking every
+> listed word in one pass to pick replacements.
+
+> All eight tokens check out, each a single word-length vector. Writing them,
+> then each realm's cover prompt and the back-of-box text.
+
+> Now the tool that sends the covers to ComfyUI: four candidates per realm, made
+> as one batch on the GPU.
+
+> Starting ComfyUI in the background, with its log in RAM.
+
+The edit script tripped on its own brackets. Rewriting it with long-bracket
+quoting.
+
+--------------------------------------------------------------------------------
+
+### User Request 11
+
+[Image: original 900x2200, displayed at 818x2000. Multiply coordinates by 1.10
+to map to original image.]
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 11
+
+> Boxes render: a turned box front per realm and a back-of-box panel when a
+> realm is opened. Recording the pictures' notes and the plan's current state.
+
+Every realm on the connection page is now a game box with a back-of-box blurb,
+but there are no painted covers yet. Stable Diffusion won't start until its own
+project is updated, so the boxes have plain glass fronts. I've recorded all your
+answers in the plans; nothing is committed.
+
+**What's built for the boxes:**
+- **The off-brand peoples, eight of them:** night-elf, orc, dwarf, gnome,
+  undead, bull-folk, death-knight and demon. Each is one word of its own to
+  Stable Diffusion, made by averaging the model's own entries for plain words
+  like "elf, violet, tall, moon" with lighter knock-off words like "plastic,
+  bootleg, uncanny, crooked". The original's name is never one of the words, so
+  none of its look gets in. The maker refuses any word the model doesn't know as
+  a single whole word; it caught "fangs" and "runes".
+- **The cover descriptions:** they use only those off-brand words, and push away
+  from text, logos and the original's names.
+- **The box backs, in the car-ride kid's voice:** every line is a fact from that
+  realm's own page. Release's opens with "THE WORLD IS EMPTY. UNTIL YOU SHOW
+  UP." and Alpha's with "OPEN ONCE A YEAR."
+- **On the page:** each realm row has a small box turned on its spine. Opening a
+  realm turns the box face-on and shows its back first.
+- **The cover painter** is ready but hasn't run. It paints four candidates per
+  realm in one batch on the graphics card and saves a note of how each was made.
+  You pick one with `--keep`, so a picture you like is never repainted.
+
+**The password rule was mine to fix.** I'd read the game's code wrong: it
+uppercases only a–z and leaves accented letters exactly as typed. The lock
+library now does the same and refuses only bytes that aren't valid UTF-8, which
+the game refuses too. The lock test passes 27 checks. The journal opener also
+now asks for a password only with `-I`, and the tools have `--help`.
+
+**Your answers, now in the plans:**
+- **Accounts:** the page's form will write an rmail message to the
+  account-creation mailbox. It waits on rmail working from a web page.
+- **Public realms:** none until you say so.
+- **Builds:** one at a time, run by you.
+- **Bit rot:** a filesystem that checksums file contents (btrfs, ZFS or similar)
+  comes first. The cloud mirror is for later.
+- **Journals:**
+  - only chat-window text, nothing about combat;
+  - only the person tied to the account may ask for theirs;
+  - the account page will let them change their rmail key;
+  - old journals stay under old passwords.
+- **Login-database speed:** you weren't sure, so I decided it: one round trip
+  per lookup, no copies kept on the realms. A copy would make a ban or a
+  password change wait for the copy to expire. It gets measured, and only a
+  measured problem reopens it.
+
+**Two things need you:**
+1. **Run `/mnt/kaun/stable-diffusion/update`.** ComfyUI's own run script asks
+   for it before it will start. It rebuilds that project's installation, so I
+   didn't run it myself. Once it's done, I'll paint the six covers.
+2. **The eight off-brand files are in that project's `models/embeddings/`
+   folder,** named `ghostsong-…` beside its own EasyNegative. Is that all
+   right, or should ComfyUI read them from a folder in this project?
+
+Here's a puzzle for you: the off-brand night-elf is mostly "elf, violet, tall,
+moon, forest, purple". If a cover still comes out looking too much like the real
+thing, which would you turn up: the knock-off words' weight, or would you swap
+out one of the plain words, and which one?
 
 --------------------------------------------------------------------------------
 

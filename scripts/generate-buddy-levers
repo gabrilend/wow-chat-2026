@@ -1,0 +1,309 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- generate-buddy-levers - the list of small things a buddy can do with its
+-- own body, each described in a sentence (issue 638)
+--
+-- For a general audience: the owner, 2026-10-28: "give them levers, create
+-- five hundred more, and then let them sort themselves into their world
+-- accordingly." A lever is one small, whole thing a buddy can do: bow to its
+-- partner, sit down, hop forward, turn to look at a passer-by. This tool
+-- writes them all from the game's own data rather than by hand: every text
+-- emote the game has (with the game's own sentences, so a buddy's /bow reads
+-- as a player's), every pose and looping motion, and a family of small
+-- movements (hops of every size from straight up to a running arc, steps,
+-- turns, walked circles). Each lever carries a plain-English sentence of what
+-- it does; another tool (generate-buddy-lever-map) groups the levers by the
+-- meaning of those sentences.
+--
+-- Reads:  data-files/dbc/EmotesText.dbc, EmotesTextData.dbc, Emotes.dbc
+-- Writes: src/lua-basic/data/buddy-levers.lua
+-- Usage:  scripts/generate-buddy-levers [PROJECT_DIR]
+--         scripts/generate-buddy-levers --help
+--------------------------------------------------------------------------------
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] == "--help" then
+    print("generate-buddy-levers [PROJECT_DIR]: writes src/lua-basic/data/buddy-levers.lua,")
+    print("every lever (one small thing a buddy can do) from the game's emote data and")
+    print("this tool's own tables of poses and movements (issue 638).")
+    os.exit(0)
+end
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local OUT = DIR .. "/src/lua-basic/data/buddy-levers.lua"
+
+-- {{{ configuration
+-- Who an aimed lever can be aimed at. Each is a kind the puller finds at the
+-- moment it pulls (lib/buddy-levers.lua): the words go into the sentence in
+-- place of the game's "%s", so the embedding model reads who it is for.
+local TARGETS = {
+    { key = "partner",  words = "your partner"           },
+    { key = "buddy",    words = "a fellow buddy"         },
+    { key = "player",   words = "a passing player"       },
+    { key = "creature", words = "the nearest creature"   },
+}
+
+-- The game's stand states (UnitStandStateType): held poses. Sitting on a
+-- chair's states (2, 4-6) need a chair and come with world levers later.
+local STANDS = {
+    { state = 0, name = "stand",     say = "You stand up."                              },
+    { state = 1, name = "sit",       say = "You sit down on the ground."                },
+    { state = 3, name = "sleep",     say = "You lie down and go to sleep."              },
+    { state = 7, name = "play-dead", say = "You lie down as if dead."                   },
+    { state = 8, name = "kneel",     say = "You kneel on one knee."                     },
+}
+
+-- Weapons out or away (SheathState).
+local SHEATHES = {
+    { state = 0, name = "put-away",  say = "You put your weapons away."                 },
+    { state = 1, name = "melee",     say = "You draw your melee weapons."               },
+    { state = 2, name = "ranged",    say = "You draw your ranged weapon."               },
+}
+
+-- Eight ways round the buddy, as turns from where it faces (radians,
+-- counter-clockwise as the game measures).
+local WAYS = {
+    { name = "forward",       turn = 0.0000, words = "forward"                  },
+    { name = "forward-left",  turn = 0.7854, words = "forward and to the left"  },
+    { name = "left",          turn = 1.5708, words = "to the left"              },
+    { name = "back-left",     turn = 2.3562, words = "back and to the left"     },
+    { name = "back",          turn = 3.1416, words = "backward"                 },
+    { name = "back-right",    turn = 3.9270, words = "back and to the right"    },
+    { name = "right",         turn = 4.7124, words = "to the right"             },
+    { name = "forward-right", turn = 5.4978, words = "forward and to the right" },
+}
+
+-- Hops: how far forward the arc lands, from none (straight up) to a running
+-- jump's length. The owner, 2026-10-28: "You can jump straight up and then
+-- move forward to make a tiny arc, so we should treat all of those arcs as
+-- possibilities." The upward speed and the arc's top are the puller's, from
+-- the character's own jump (617o6); these are where it lands.
+local HOP_LENGTHS = {
+    { yards = 0.0, words = "straight up in place"   },
+    { yards = 0.5, words = "a tiny hop"             },
+    { yards = 1.5, words = "a small hop"            },
+    { yards = 3.0, words = "a hop"                  },
+    { yards = 5.0, words = "a long leap"            },
+}
+local STEP_LENGTHS = {
+    { yards = 1, words = "one step"    },
+    { yards = 3, words = "a few steps" },
+    { yards = 6, words = "a short walk"},
+}
+local CIRCLES = {
+    { radius = 2, words = "a small circle" },
+    { radius = 5, words = "a wide circle"  },
+}
+-- }}}
+
+-- {{{ local function load_dbc
+-- A client data file: a 20-byte header (magic, rows, fields, row size,
+-- string block size), the rows, then the strings. u(row, field) reads a
+-- field as an unsigned 32-bit number, s(row, field) as an offset into the
+-- string block.
+local function load_dbc(name)
+    local f = io.open(DIR .. "/data-files/dbc/" .. name, "rb")
+    if not f then io.stderr:write("generate-buddy-levers: cannot open data-files/dbc/" .. name .. "\n"); os.exit(1) end
+    local d = f:read("*a"); f:close()
+    if d:sub(1, 4) ~= "WDBC" then io.stderr:write("generate-buddy-levers: " .. name .. " is not a client data file (no WDBC mark)\n"); os.exit(1) end
+    local function u32(o) local a, b, c, e = d:byte(o + 1, o + 4); return a + b * 256 + c * 65536 + e * 16777216 end
+    local n, size = u32(4), u32(12)
+    local strs = 20 + n * size
+    local t = { n = n }
+    function t.u(r, i) return u32(20 + r * size + i * 4) end
+    function t.s(r, i) local o = t.u(r, i); local e = d:find("\0", strs + o + 1, true); return d:sub(strs + o + 1, e - 1) end
+    return t
+end
+-- }}}
+
+local levers = {}
+local function add(l) levers[#levers + 1] = l end
+
+-- {{{ text emotes
+-- EmotesText.dbc: field 0 id, 1 the command's name (BOW), 2 the animation
+-- (an Emotes.dbc id, 0 for none), 3..18 sentence ids into EmotesTextData,
+-- by slot: 0 others see it aimed ("%s bows before %s."), 2 the doer sees it
+-- aimed ("You bow before %s."), 4 others see it alone, 6 the doer alone.
+-- Other slots (8, 9, 12) are variants this list doesn't use.
+-- Emotes.dbc: 0 id, 1 name, 4 what kind of motion (0 once, 1 a stand state,
+-- 2 a looping state), 5 that state's number.
+local text_list = load_dbc("EmotesText.dbc")
+local text_data = load_dbc("EmotesTextData.dbc")
+local motions   = load_dbc("Emotes.dbc")
+local sentence = {}
+for r = 0, text_data.n - 1 do sentence[text_data.u(r, 0)] = text_data.s(r, 1) end
+local motion = {}
+for r = 0, motions.n - 1 do motion[motions.u(r, 0)] = { name = motions.s(r, 1), kind = motions.u(r, 4), param = motions.u(r, 5) } end
+local MOTION_KIND = { [0] = "once", [1] = "stand", [2] = "loop" }
+
+-- A few of the game's sentences don't open with the doer ("With arms
+-- flapping, %s struts around."). A player's emote line always opens with
+-- their name (the server puts it in front, Player::TextEmote), so these are
+-- said again name-first, keyed by emote and sentence slot (0 aimed, 4
+-- alone). A new one the game data brings stops the tool: it must be worded
+-- here, not guessed.
+local REWORDED = {
+    ["shifty.4"]  = "glances about, eyes shifting back and forth suspiciously.",
+    ["smirk.4"]   = "smirks, a sly smirk spreading across the face.",
+    ["drool.4"]   = "drools, a tendril of it running down the lip.",
+    ["bleed.4"]   = "bleeds, blood oozing from the wounds.",
+    ["mourn.0"]   = "mourns the death of %s in quiet contemplation.",
+    ["mourn.4"]   = "mourns the loss of the dead in quiet contemplation.",
+    ["chicken.0"] = "flaps both arms and struts around %s.  Cluck, Cluck, Chicken!",
+    ["chicken.4"] = "flaps both arms and struts around.  Cluck, Cluck, Chicken!",
+}
+
+-- The others' sentence, without its leading "%s " (the server puts the
+-- buddy's name in front of an emote line itself). An empty sentence (the
+-- game has some: an aimed /charge, /helpme) is no sentence.
+local function others(id, name, slot)
+    local s = sentence[id]
+    if not s or s == "" then return nil end
+    if s:find("^%%s ") then return (s:gsub("^%%s ", "")) end
+    local r = REWORDED[name .. "." .. slot]
+    if not r then
+        io.stderr:write(("generate-buddy-levers: the %s emote's sentence (slot %d) doesn't open with the doer: \"%s\"; word it name-first in REWORDED\n"):format(name, slot, s))
+        os.exit(1)
+    end
+    return r
+end
+local function yours(id) local s = sentence[id]; return s ~= "" and s or nil end
+
+local emote_count = 0
+for r = 0, text_list.n - 1 do
+    local name   = text_list.s(r, 1):lower()
+    local anim   = text_list.u(r, 2)
+    local m      = motion[anim]
+    local act    = m and MOTION_KIND[m.kind] or "none"
+    local param  = m and m.param or 0
+    local aimed_others, aimed_you = others(text_list.u(r, 3 + 0), name, 0), yours(text_list.u(r, 3 + 2))
+    local alone_others, alone_you = others(text_list.u(r, 3 + 4), name, 4), yours(text_list.u(r, 3 + 6))
+    -- Alone: when the game has a sentence for it alone.
+    if alone_others and alone_you then
+        add({ id = "emote." .. name .. ".alone", kind = "text-emote", target = "none", say = alone_you,
+              needs = { "out-of-combat" },
+              values = { motion = anim, act = act, param = param, text = alone_others } })
+        emote_count = emote_count + 1
+    end
+    -- Aimed: once per kind of target, the target's words in the sentence.
+    if aimed_others and aimed_you then
+        for _, t in ipairs(TARGETS) do
+            add({ id = "emote." .. name .. ".at-" .. t.key, kind = "text-emote", target = t.key,
+                  say = (aimed_you:gsub("%%s", t.words)),
+                  needs = { "out-of-combat" },
+                  values = { motion = anim, act = act, param = param, text = aimed_others } })
+            emote_count = emote_count + 1
+        end
+    end
+end
+-- }}}
+
+-- {{{ motions no text emote names
+-- Every looping or once-only motion in Emotes.dbc that no text emote above
+-- already plays, as a motion alone (no line of text). Names marked "(DNR)"
+-- ("do not reuse", the game's own) and the empty ones (ONESHOT_NONE,
+-- STATE_NONE: no motion at all) are left out.
+-- The game names some motions twice (READYUNARMED once and looping), so a
+-- lever's name carries the kind, and the motion's number when even that
+-- is taken.
+local played, motion_names = {}, {}
+for r = 0, text_list.n - 1 do played[text_list.u(r, 2)] = true end
+local motion_count = 0
+for r = 0, motions.n - 1 do
+    local id, raw, kind = motions.u(r, 0), motions.s(r, 1), motions.u(r, 4)
+    if id ~= 0 and not played[id] and not raw:find("DNR") and not raw:find("NONE$") and (kind == 0 or kind == 2) then
+        local words = raw:gsub("^ONESHOT_", ""):gsub("^STATE_", ""):gsub("_", " "):lower()
+        local lever_name = "motion." .. MOTION_KIND[kind] .. "." .. words:gsub(" ", "-")
+        if motion_names[lever_name] then lever_name = lever_name .. "." .. id end
+        motion_names[lever_name] = true
+        add({ id = lever_name, kind = "motion", target = "none",
+              say = kind == 2 and ("You keep up the motion: " .. words .. ".") or ("You make the motion: " .. words .. "."),
+              needs = { "out-of-combat", "idle" },
+              values = { motion = id, act = MOTION_KIND[kind] } })
+        motion_count = motion_count + 1
+    end
+end
+-- }}}
+
+-- {{{ the body's own: poses, weapons, turning, hops, steps, circles
+for _, s in ipairs(STANDS) do
+    add({ id = "pose." .. s.name, kind = "stand", target = "none", say = s.say,
+          needs = { "out-of-combat", "idle" }, values = { state = s.state } })
+end
+for _, s in ipairs(SHEATHES) do
+    add({ id = "weapons." .. s.name, kind = "sheathe", target = "none", say = s.say,
+          needs = { "out-of-combat" }, values = { state = s.state } })
+end
+for _, t in ipairs(TARGETS) do
+    add({ id = "face." .. t.key, kind = "face", target = t.key, say = "You turn to look at " .. t.words .. ".",
+          needs = { "out-of-combat", "idle" }, values = { away = 0 } })
+    add({ id = "face-away." .. t.key, kind = "face", target = t.key, say = "You turn your back on " .. t.words .. ".",
+          needs = { "out-of-combat", "idle" }, values = { away = 1 } })
+    add({ id = "approach." .. t.key, kind = "approach", target = t.key, say = "You walk up to " .. t.words .. ".",
+          needs = { "out-of-combat", "idle" }, values = { stop_at = 2 } })
+    add({ id = "withdraw." .. t.key, kind = "withdraw", target = t.key, say = "You step back away from " .. t.words .. ".",
+          needs = { "out-of-combat", "idle" }, values = { yards = 4 } })
+end
+for _, w in ipairs(WAYS) do
+    add({ id = "turn." .. w.name, kind = "turn", target = "none", say = "You turn to face " .. w.words .. ".",
+          needs = { "out-of-combat", "idle" }, values = { turn = w.turn } })
+    for _, h in ipairs(HOP_LENGTHS) do
+        -- a hop straight up has no direction: once, under "forward"
+        if h.yards > 0 or w.name == "forward" then
+            add({ id = "hop." .. (h.yards > 0 and (w.name .. "." .. h.yards) or "in-place"), kind = "hop", target = "none",
+                  say = h.yards > 0 and ("You jump " .. w.words .. ", " .. h.words .. ".") or ("You jump " .. h.words .. "."),
+                  needs = { "out-of-combat", "idle" }, values = { turn = w.turn, yards = h.yards } })
+        end
+    end
+    for _, s in ipairs(STEP_LENGTHS) do
+        add({ id = "step." .. w.name .. "." .. s.yards, kind = "step", target = "none",
+              say = "You take " .. s.words .. " " .. w.words .. ".",
+              needs = { "out-of-combat", "idle" }, values = { turn = w.turn, yards = s.yards } })
+    end
+end
+for _, c in ipairs(CIRCLES) do
+    for _, dir in ipairs({ { 1, "clockwise" }, { -1, "counter-clockwise" } }) do
+        add({ id = "circle." .. dir[2] .. "." .. c.radius, kind = "circle", target = "none",
+              say = "You walk " .. c.words .. " " .. dir[2] .. " where you stand.",
+              needs = { "out-of-combat", "idle" }, values = { radius = c.radius, dir = dir[1] } })
+    end
+end
+-- }}}
+
+-- {{{ check and write
+-- Each id once: two levers under one name would leave the puller unable to
+-- tell them apart.
+local seen = {}
+for _, l in ipairs(levers) do
+    if seen[l.id] then io.stderr:write("generate-buddy-levers: two levers named " .. l.id .. "\n"); os.exit(1) end
+    seen[l.id] = true
+end
+
+local function q(s) return string.format("%q", s) end
+local function value_text(v)
+    local keys = {}
+    for k in pairs(v) do keys[#keys + 1] = k end
+    table.sort(keys)
+    local parts = {}
+    for _, k in ipairs(keys) do
+        parts[#parts + 1] = k .. " = " .. (type(v[k]) == "string" and q(v[k]) or tostring(v[k]))
+    end
+    return "{ " .. table.concat(parts, ", ") .. " }"
+end
+
+local out = assert(io.open(OUT, "w"))
+out:write("-- Generated by scripts/generate-buddy-levers (issue 638) from the game's emote\n")
+out:write("-- data and that tool's own tables; every small thing a buddy can do with its body,\n")
+out:write("-- one per line, for lib/buddy-levers.lua to pull and the semantic map to group.\n")
+out:write("-- Do not edit by hand: change the tool and run it again.\n")
+out:write("return {\n")
+for _, l in ipairs(levers) do
+    out:write(string.format("    { id = %-40s kind = %-13s target = %-11s needs = { %s },\n      say = %s,\n      values = %s },\n",
+        q(l.id) .. ",", q(l.kind) .. ",", q(l.target) .. ",",
+        table.concat((function() local t = {} for i, n in ipairs(l.needs) do t[i] = q(n) end return t end)(), ", "),
+        q(l.say), value_text(l.values)))
+end
+out:write("}\n")
+out:close()
+print(string.format("generate-buddy-levers: %d levers (%d text emotes, %d motions, %d of the body's own) -> %s",
+    #levers, emote_count, motion_count, #levers - emote_count - motion_count, OUT))
+-- }}}

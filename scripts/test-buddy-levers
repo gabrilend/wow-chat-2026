@@ -1,0 +1,144 @@
+#!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-buddy-levers
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      every generated buddy lever is pulled on a stand-in buddy, and refused in a fight, while moving, or with no one near
+-- quick-test: yes
+-- ==== end of header ====
+-- test-buddy-levers - checks every generated buddy lever can be pulled, and
+-- is refused when it should be (issue 638).
+--
+-- For a general audience: a buddy has some fourteen hundred levers, small
+-- things it can do with its body, written by scripts/generate-buddy-levers.
+-- This test pulls every one of them on a stand-in buddy (an object that
+-- answers like a character in the game and writes down every command it is
+-- given) with a partner, a fellow buddy, a passer-by and a creature all
+-- near, and checks that each lever was carried out: that some command
+-- reached the stand-in, that an emote's line names whom it was aimed at, and
+-- that a hop lands where its length says. Then it checks the refusals: in
+-- a fight nothing is pulled; while the buddy is being moved by its orders,
+-- nothing that moves it is pulled; with no one near, nothing aimed is.
+--
+-- Usage: scripts/test-buddy-levers [PROJECT_DIR]
+
+-- {{{ configuration
+local DIR    = arg[1] or "/mnt/kaun/wow-chat-2026"
+local LIST   = dofile(DIR .. "/src/lua-basic/data/buddy-levers.lua")
+local Levers = dofile(DIR .. "/src/lua-basic/lib/buddy-levers.lua")
+local AT_LEAST = 500                                 -- the owner: "create five hundred more"
+-- }}}
+
+local checks, failed = 0, 0
+local function check(ok, what)
+    checks = checks + 1
+    if not ok then failed = failed + 1; print("FAIL: " .. what) end
+end
+
+-- {{{ local function stand_in
+-- A character as the puller sees one: where it stands, its name, and every
+-- other method writing itself down in `calls` (a list of {name, args...}).
+-- `opts.near` is what GetPlayersInRange and GetNearestCreature find.
+local function stand_in(name, low, x, y, opts)
+    opts = opts or {}
+    local u = { calls = {} }
+    local fixed = {
+        GetName = function() return name end,
+        GetGUIDLow = function() return low end,
+        GetGUID = function() return low end,
+        GetMapId = function() return 1 end,
+        GetX = function() return x end, GetY = function() return y end, GetZ = function() return 10 end,
+        GetO = function() return 0 end,
+        GetLocation = function() return x, y, 10, 0 end,
+        GetDistance = function(_, o) return math.sqrt((o:GetX() - x) ^ 2 + (o:GetY() - y) ^ 2) end,
+        GetAngle = function(_, o) return math.atan2(o:GetY() - y, o:GetX() - x) end,
+        IsInCombat = function() return opts.fighting == true end,
+        GetMap = function() return { GetHeight = function() return 10 end } end,
+        GetPlayersInRange = function() return opts.players or {} end,
+        GetNearestCreature = function() return opts.creature end,
+    }
+    return setmetatable(u, { __index = function(_, k)
+        if fixed[k] then return fixed[k] end
+        return function(_, ...) u.calls[#u.calls + 1] = { k, ... } end
+    end })
+end
+-- }}}
+
+local function world(opts)
+    opts = opts or {}
+    local partner   = stand_in("Gabri",  1, 3, 0)
+    local fellow    = stand_in("Montahmu", 2, 0, 4)
+    local passer    = stand_in("Wanderer", 3, -5, 0)
+    local critter   = stand_in("Prairie Dog", 4, 0, -6)
+    local buddy = stand_in("Felicity", 5, 0, 0, { fighting = opts.fighting,
+        players = opts.alone and {} or { partner, fellow, passer },
+        creature = not opts.alone and critter or nil })
+    local ctx = { idle = opts.idle ~= false, partner = not opts.alone and partner or nil,
+                  buddies = opts.alone and {} or { fellow, buddy } }
+    return buddy, ctx
+end
+
+-- {{{ the list itself
+check(#LIST >= AT_LEAST, ("at least %d levers (%d)"):format(AT_LEAST, #LIST))
+local seen = {}
+for _, l in ipairs(LIST) do
+    check(not seen[l.id], "one lever per name: " .. l.id)
+    seen[l.id] = true
+    check(Levers.WAY_KINDS[l.kind], l.id .. ": its kind (" .. l.kind .. ") has a way")
+    check(type(l.say) == "string" and #l.say > 3, l.id .. ": has a sentence")
+end
+-- }}}
+
+-- {{{ every lever pulled
+local kinds = {}
+for _, l in ipairs(LIST) do
+    local buddy, ctx = world()
+    local ok, why = Levers.pull(buddy, l, ctx)
+    check(ok, l.id .. " pulled (" .. tostring(why) .. ")")
+    check(#buddy.calls > 0, l.id .. " gave the buddy a command")
+    kinds[l.kind] = (kinds[l.kind] or 0) + 1
+    if l.kind == "text-emote" then
+        local line
+        for _, c in ipairs(buddy.calls) do if c[1] == "TextEmote" then line = c[2] end end
+        check(line ~= nil, l.id .. ": says its line")
+        local who = ({ partner = "Gabri", buddy = "Montahmu", player = "Wanderer", creature = "Prairie Dog" })[l.target]
+        if who and line then check(line:find(who, 1, true), l.id .. ": its line names " .. who .. " (" .. line .. ")") end
+        if line then check(not line:find("%%s"), l.id .. ": no blank left in its line") end
+    end
+    if l.kind == "hop" then
+        local c = buddy.calls[#buddy.calls]
+        check(c[1] == "MoveJump", l.id .. ": jumps")
+        local d = math.sqrt(c[2] ^ 2 + c[3] ^ 2)
+        check(math.abs(d - l.values.yards) < 0.01, ("%s lands %.2f yards away (%.2f)"):format(l.id, l.values.yards, d))
+        check(c[5] > 0 and c[6] > 0, l.id .. ": moves forward and up")
+    end
+end
+-- }}}
+
+-- {{{ the refusals
+for _, l in ipairs(LIST) do
+    local buddy, ctx = world({ fighting = true })
+    check(not Levers.pull(buddy, l, ctx), l.id .. ": refused in a fight")
+    local moves = false
+    for _, n in ipairs(l.needs) do if n == "idle" then moves = true end end
+    if moves then
+        buddy, ctx = world({ idle = false })
+        check(not Levers.pull(buddy, l, ctx), l.id .. ": refused while not idle")
+    end
+    if l.target ~= "none" then
+        buddy, ctx = world({ alone = true })
+        check(not Levers.pull(buddy, l, ctx), l.id .. ": refused with no one near")
+    end
+end
+-- }}}
+
+local parts = {}
+for k, n in pairs(kinds) do parts[#parts + 1] = k .. " " .. n end
+table.sort(parts)
+print(("%d levers (%s)"):format(#LIST, table.concat(parts, ", ")))
+print(("%d checks, %d failed"):format(checks, failed))
+os.exit(failed == 0 and 0 or 1)
+-- ==== footer of test-buddy-levers ====
+-- lines:      144
+-- ==== end of footer ====

@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-27 20:23:50
+Generated on: 2026-10-28 15:35:06
 Models: claude-opus-5-5
 
 ## Contents
@@ -72,6 +72,19 @@ Models: claude-opus-5-5
     I just built the per-zone map renderer and animation from real position
     records, and all tests pass. Next, answer which bots should quest with no
     player watching, so I can build that.
+17. 2026-10-28 10:43, after Request 60 - We're tuning the bots' movement to look
+    like a school of fish, with a judge running on the image pipeline (repairing
+    in the background) and a server patch streaming live positions. Next: run
+    your compile, then score a run with `scripts/judge-run
+    barrens-largest-clockwise --ask`.
+18. 2026-10-28 15:02, after Request 61 - We're bringing issue 617 up to date and
+    working through its 40 open questions; 18 are answered. Next, tell me which
+    slow lookups to work out ahead of time and what the Barrens swirl lacks next
+    to a school of fish.
+19. 2026-10-28 15:08, after Request 63 - We're answering issue 617's merged
+    buddy questions, and 18 of the 40 are now answered and written into the
+    issues. Next, you decide whether I build the sweep that lists herbs, ore and
+    chests buddies can't reach yet, or we keep going through the questions.
 
 --------------------------------------------------------------------------------
 
@@ -5636,6 +5649,1368 @@ yours it stands for. For example, at least 60% moving, at least 30% of minutes
 circling, and both directions at least 40% as often as each other. What would
 you rather set them from: numbers you choose, or the first runs you look at and
 say "yes, that's it"?
+
+--------------------------------------------------------------------------------
+
+### User Request 57
+
+I think in the compile script we should only do our tests if the compilation
+fails. if we find nothing wrong in the tests we try the compilation again, and
+if that doesn't work then we try a design session.
+
+this might be custom client work, but we need the ability to "recompile a life"
+- basically, to redevelop a trajectory path for an NPC to instantiate as.
+
+... we also need the ability to 
+
+oh it compiled
+
+--------------------------------------------------------------------------------
+
+*Login expired · Please run /login*
+
+--------------------------------------------------------------------------------
+
+`/login` - Login interrupted
+
+--------------------------------------------------------------------------------
+
+`/login` - Login interrupted
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 57
+
+> Your compile built everything from tonight, with no errors. Under the new
+> commit rule, I'll commit now, in batches by topic. Previewing first.
+
+> The shared files hold only this session's lines. Committing in three batches:
+> the server's changes, the tools and tests, then the plans and docs.
+
+*[commit] 28b2748c9 - Buddies follow, gear up and travel better; coins are the group's; several server fixes*
+
+> Batch two: the tools and tests.
+
+*[commit] 7dd60890c - Tools: test memory, the compile ledger, a password-free MySQL login, party checkpoints, and the world drawn from above*
+
+> The second commit printed nothing and didn't land. Running it again with its
+> full output.
+
+> Batch three: plans, docs, notes and the project instructions.
+
+*[commit] 653156b52 - Plans and docs: pathfinding while questing and in dungeons, the Botanica party, vanilla's endgame, the world watch; the owner's words kept*
+
+> Writing the plan (a sub-issue of test memory), then the change.
+
+> Making the change in the compile script.
+
+> Without the tests going first, nothing starts MySQL before the gear step needs
+> it, which undoes your earlier ask. Making that step start MySQL itself.
+
+I've changed the compile the way you described, and committed everything your
+last compile built.
+
+**Committed** (that compile built tonight's work cleanly):
+- `28b2748`: the server's changes (following, the follow orders, travel along
+  your track, the slope limit, gear, coins, the other server patches).
+- `7dd6089`: tools and tests (test memory, the MySQL login file, checkpoints,
+  the zone renderer, the benchmark).
+- `653156b`: plans, docs and the asides notes.
+
+Each commit's tests are running in the background. I left out the one-time SQL
+in `backups/one-time/`: nothing in `backups/` has ever been committed, and two
+of those files are copies of characters' rows. Say if you want them in git.
+
+**The compile now goes build first** (planned in
+`issues/1100d-tests-after-a-failed-build.md`):
+- **The build succeeds:** no quick tests run. Each commit's own background tests
+  still run.
+- **It fails:** the quick tests run. A failing test is named as the likely
+  cause, with its log, and the compile stops.
+- **It fails and every test passes:** "the quick tests find nothing wrong:
+  building once more."
+- **It fails again:** a design session. The compile writes
+  `tmp/shared-memory/design-session-basic.md` with the compiler's errors, the
+  tests' verdict, which source and patch files differ from the last commit, and
+  the last good build. Then it tells you to open a Claude session on that note.
+- `--tests-first` brings back the old order, and `--skip-tests` runs none.
+
+Two details:
+- **Only real build failures lead to the retry.** Only cmake, make and install
+  failures count. Anything else that breaks still stops the run as before, so a
+  failing install step can't slip past.
+- **MySQL still starts itself.** The tests used to start MySQL if it was down;
+  with them gone from the front, the gear step now starts it.
+
+It parses, but I can't try a real failure without running the compile, which is
+yours to run. I'll commit it after your next compile runs it.
+
+**Questions:**
+1. **The design session:** is a note for a Claude session to read what you
+   meant, or should the compile open that session itself, with the note as its
+   first message?
+2. **"Recompile a life":** I'm reading it as taking a trajectory (a recorded
+   path, like a buddy's track in the positions record) and making an NPC that
+   lives it out, walking that path as its life. Is that right? Should the NPC
+   replay the exact path, or regrow a new life with the same shape?
+3. Your message broke off at "we also need the ability to…" What was the rest?
+
+--------------------------------------------------------------------------------
+
+### User Request 58
+
+hello good morning I'm back! What do we need to work on for the pathfinding? How
+did the renderer go? Does it properly use the image generation pipeline at
+/mnt/kaun/stable-diffusion/ (which might be incomplete or non-functional and
+need updates) to embed and such? Remember, we're using that image generation as
+a standard to continue iterating until it starts to seem reasonably confident
+that the behavior we've programmed into a group of ~36 bots wandering around in
+a zone have movement patterns that feel like a fish. We can try multiple
+attempts each round of code iteration, like pushing all of them into the same
+sub-zone or whatever. Really, having a web page we could go to that shows the
+location of each of the players in the game is just a neat utility to have. Can
+we have several different visual themes for the map? If we zoom out, it should
+take us to the world map, and if we click or zoom in on one of the zones, it
+should slowly zoom and bring us to that zone in particular. What we're looking
+for is the image pipeline to look like the movements of a school of fish. To get
+that specific output we might need to make it so they always rotate in one
+direction, say, clockwise? What we're looking for right now specifically is
+just, flow, through a sub-zone, in a roughly circular pattern that fills all the
+gaps and explores all the shape. When the "player" (just a dot) moves to a
+different sub-zone, the bots should follow. They don't need to follow terrain
+and such for now, let's just... paint a sub-zone (monster spawning location
+zone) with a yellow fence, and the bots (green dots) will wander around there.
+If the player clicks somewhere else it'll highlight a different yellow fence.
+The bots should try and wander around in the sub-zone (which is just the area
+that a monster type spawns in - one monster type, but if the player is within
+multiple "sub-zones" then the NPCs will wander in that sub-zone.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 58
+
+> Good morning! Let me check the image pipeline first, since that decides how
+> the judge can work.
+
+> The pipeline is half there: PyTorch sees the 1080 Ti, but ComfyUI can't start.
+> Checking the spawn data the "fences" would come from.
+
+> 1,908 fences across the two continents, named after their monsters (Ragged
+> Young Wolf, Frostmane Troll Whelp…). Now the page.
+
+> Node and Firefox are here. Checking the script parses, then adding a way to
+> drive the page from its address so it can be photographed headless.
+
+> Adding the address-driven run (pick a continent, zone, theme, and simulate N
+> seconds before drawing), so a headless browser can take the pictures the judge
+> will score.
+
+> The canvas is blank: the screenshot fires before the first animation frame
+> draws. Drawing once at start, then checking for script errors.
+
+> The world view draws, but the sea zones show as big rectangles around the
+> land. Checking which zones those are.
+
+> Ocean squares are out: 86,209 on the Eastern Kingdoms alone. The test's two
+> numbers assumed the sea was in. Updating it.
+
+> The world view is right. The zone view's night-sea colours are wrong: the
+> colour reader was taking the digits out of hex codes. Fixing that and
+> photographing each theme.
+
+The map page is built and the bots already swirl clockwise. The renderer doesn't
+use the image pipeline yet, because the pipeline can't start.
+
+The page is `docs/HTML/fish-sandbox.html`. Open it straight from the file in
+Firefox; it needs no server. The picture below the panel in
+`tmp/shared-memory/fish-sandbox/barrens-close.png` is the first result: 36 green
+bots after 4 minutes in a Barrens fence, 35 of them circling clockwise and
+drawing a spiral with arms.
+
+**What the page does:**
+- **World and zones:** it opens on a whole continent (Eastern Kingdoms or
+  Kalimdor). Clicking or zooming into a zone glides you there slowly; zooming
+  out far enough glides you back to the continent.
+- **Four themes:** grey patchwork, parchment, night sea, and "ninja" (black,
+  neon green and red, your Mastermind's colours).
+- **Fences:** each zone shows yellow fences, one per place a kind of monster
+  spawns, named after it. There are 2,119 across the two continents. A monster
+  is anything not friendly to either side's players, so neutral beasts count and
+  guard camps don't.
+- **You and the bots:** clicking moves the player (white dot), and the fence the
+  player stands in lights up. If the player is inside several fences, the
+  smallest one holds the bots. Outside every fence, the bots follow the player.
+- **How the bots move:** clockwise by default (switchable to anticlockwise or
+  each its own). Each bot circles at its own depth inside the fence. Every 6 to
+  12 seconds a bot moves to whichever ring of the fence has been crossed least
+  lately, so over time they sweep the whole shape. They keep apart from close
+  neighbours and lean toward the heading of the bots near them, like a school.
+- **Live numbers:** how many are circling and which way, how much of the fence
+  they crossed in the last minute (59% in the first run), and their spacing. The
+  fence's corners are seldom reached yet.
+- **Close-up and frame strip buttons,** and the page can be driven from its
+  address, so Firefox can photograph it with nobody at the screen. That's how
+  the judge will get its frames.
+
+I also fixed the zone data: the sea along each coast was labelled as part of the
+coast's zone and drew as huge rectangles. Ocean squares are now left out.
+
+**The image pipeline** (`/mnt/kaun/stable-diffusion`):
+- It's ComfyUI with Stable Diffusion 1.5 (Dreamshaper-8). It makes pictures; it
+  doesn't describe them.
+- Its last update stopped on Oct 10 while building OpenBLAS, so it never
+  recorded which Python to use. Two libraries ComfyUI needs (`safetensors` and
+  `transformers`) are missing, so ComfyUI won't start.
+- PyTorch with CUDA does work on your 1080 Ti, and a CLIP image encoder (a model
+  that turns a picture into a list of numbers to compare) is there.
+- So a judge can work like this: have it paint reference pictures of a school of
+  fish seen from above, turn those and our frame strips into those numbers, and
+  score how close they are. Each code change gets several attempts (one fence,
+  scattered, different fences) and the average decides.
+
+**Pathfinding to-do:**
+1. **See last night's build in game.** That means following, the follow orders,
+   travel along your track, the slope limit, and `.buddy spec Montahmu`. After a
+   walk, run `scripts/movement-benchmark`.
+2. **Bring the sandbox's flocking into the server's roaming** once you like how
+   it looks. Its two new rules (one turning direction, and moving to the
+   least-crossed ring) map onto roaming's existing method of picking waypoints.
+3. **The referee:** still your choice between a separate state picker and the
+   bot module's lowest-ranked behaviour.
+
+Nothing new is committed: the sandbox is still in progress, and the compile
+change waits for your next compile.
+
+**Questions:**
+1. **The pipeline is its own project.** May I repair its update and add the two
+   missing libraries there?
+2. **The judge's yardstick:** score frames against fish pictures the pipeline
+   paints, or install a model that reads pictures and answers questions?
+3. **Live player dots** need a small local server; the page alone can't read the
+   game's position record. Is Python's built-in server (one command) all right?
+4. **Clockwise only:** two days ago you wanted "all directions at once", today
+   one direction. Should the benchmark follow today's?
+
+--------------------------------------------------------------------------------
+
+### User Request 59
+
+The path finding should eventually be both clockwise and counter clockwise.
+Right now we're isolating one direction until we get the pattern right, then we
+do both. Can we build a patch for the world server that lets it stream it's
+player positions to the websitepage? Also yes please repair the image generation
+pipeline. I can manually judge for now but we should build the judgement
+machinery so we can compare things and evaluate whether or not they're done /
+correct in a headless way in the future.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 59
+
+> Three pieces: a stream from the world server to the page, the image pipeline
+> repaired, and judging machinery. I'll start with why the pipeline's update
+> failed, since a fix may need a long build that can run while I write the rest.
+
+> The update didn't fail on its own: the compiler was stopped mid-build (each
+> "Terminated signal" is a kill, not a code error), most likely an interrupted
+> run. Reading how the update resumes.
+
+> `-y` doesn't approve building local copies; each needs its own `--local-NAME`
+> flag. I'll start the repair now, building here at half the processor, detached
+> as the update script itself recommends.
+
+> Writing the plans first, then the stream.
+
+> Now the stream itself.
+
+> Both compile-checks pass. Now the page's "Live players" switch.
+
+The page side is done. Now the judging machinery: named runs, photographed
+headless, judged by you now and by a machine later, all recorded in one place.
+
+--------------------------------------------------------------------------------
+
+### User Request 60
+
+[Image: original 2400x450, displayed at 2000x375. Multiply coordinates by 1.20
+to map to original image.]
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 60
+
+> Runs photograph headless in about 18 seconds. Now a test for the comparer,
+> with made-up judgements whose agreement is known.
+
+I built all three. Nothing new is committed yet; that waits for your compile.
+
+**1. The world server's position stream** (built and compile-checked, not yet
+compiled or run):
+- A new file in the buddy module writes down every character in the world once a
+  second: name, kind (person, buddy or other bot), a buddy's owner, map, zone,
+  sub-zone, position, facing, and whether it's fighting or dead.
+- A small listener on its own thread hands that to anyone asking for
+  `http://127.0.0.1:8097/positions`. It's reachable from this computer only.
+- `Buddies.MapStream.Port` in `worldserver.conf` moves it, and 0 turns it off.
+  If the port is taken, the server says so and runs on without it.
+- The page now has a **Live players** switch. It asks once a second and draws
+  everyone on the continent and zone views with tails: people white with their
+  names, buddies in their owner's colour, other bots grey.
+- After your next compile, open the page and tick Live players. I couldn't check
+  that Firefox lets a page opened from a file read the stream; if it says "not
+  streaming" while the server runs, that's the first suspect.
+
+**2. The image pipeline repair is running**, detached, at 6 compile jobs out of
+12:
+- The Oct 10 run hadn't failed in its code: its compiler processes were killed
+  partway, most likely by a dropped terminal.
+- A fresh run first needs development libraries your system lacks (OpenBLAS,
+  nasm, x264, vpx, ffmpeg) and Python 3.12, so it's building its own copies.
+- It also updates ComfyUI, taking a snapshot first; the update printed the
+  command that puts the old one back.
+- It will take hours. Progress is in `tmp/shared-memory/sd-update.out`, and it's
+  done when `/mnt/kaun/stable-diffusion/.installed` appears. Installing the
+  system's development packages would have been faster, but that needs `sudo`.
+
+**3. The judging machinery** (planned in
+`issues/617e16b-the-judging-machinery.md`):
+- **Runs:** four named situations so far, in
+  `src/lua-basic/data/judge-variants.lua` (two Barrens fences, Dun Morogh,
+  Elwynn), all 36 bots clockwise. `scripts/judge-run barrens-largest-clockwise`
+  photographs one with no window after 60, 120 and 240 seconds of play, in about
+  18 seconds, and joins the frames into a strip.
+- **Your judgements:** `scripts/judge-run <run> --ask` shows the strip and asks
+  "does this move like a school of fish?" for a score from 0 to 10 and a note.
+  Each answer becomes one line in `docs/judgements.tsv`.
+- **Comparing:** `scripts/judge-compare` lists runs best first by your score.
+  For each machine judge it shows how closely that judge's order of the runs
+  matches yours, from 1.00 (same order) through 0 (no relation) to -1.00
+  (reversed). Its test, with made-up judgements, gets 1.00, -1.00 and "too few"
+  right.
+- **A run's name** carries a fingerprint of the page, so runs after each change
+  to the flock stay separate.
+- **The machine judge itself** comes once the pipeline runs. It will paint
+  reference pictures of a school of fish from above, turn those and our frames
+  into CLIP image embeddings (lists of numbers that can be compared), and score
+  how close they lie. It then writes its own lines into `docs/judgements.tsv`
+  like you do. We trust it once it agrees with your scores.
+
+**Direction:** clockwise only for now, as you said, with both ways once the
+pattern's right. That's written into the sandbox issue and next to the
+benchmark's "both ways" target.
+
+From the first run's frames: the flock makes a steady clockwise spiral, but
+stays rounder than the fence and seldom reaches its corners. You could score
+that run now: `scripts/judge-run barrens-largest-clockwise --ask`.
+
+--------------------------------------------------------------------------------
+
+### User Request 61
+
+can we work on issue file 617 now?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 61
+
+> Issue 617 is the parent of the whole buddy system, with 20-odd sub-issues. Its
+> "Current Behavior" still says "Nothing like this exists". Surveying where each
+> sub-issue stands.
+
+> **[Asked the user]**
+>
+> *Q1 — 617 focus:* Which part of issue 617 should we work on?
+> - Bring 617 up to date (Recommended) — Rewrite 617's Current Behavior from
+>   what's built and seen in game, mark which sub-issues are done (to move to
+>   completed, with your OK), and list what's left in order. About 90
+>   sub-issues; most say 'not yet built or run' for things that now run.
+> - Build the next unbuilt piece — Pick from the planned-but-unbuilt
+>   sub-issues: party buffs shared out (617c5), reset a buddy keeping name and
+>   race (617a7), weapon specialization follows the weapon (617g1), kneeling at
+>   the fallen (617v), tank leads the way (617w), prestige (617x).
+> - Work through its open questions — About 60 open questions are spread
+>   across the 617 sub-issues; go through them with you one by one, most
+>   blocking first.
+> - Movement parts only — Roaming, pathfinding and formation (617e, 617o,
+>   617s): fold the follow formation and today's flock into them and retire what
+>   they replace.
+> → **Answered:** first bring it up to date, then work through the open
+> issues. When you're bringing them up to date, consider the open questions and
+> try to coalesce them into fewer than SIXTY. Jeez... I guess I am pretty
+> particular about this stuff aren't I? Well, let's try and build features.
+
+> First, collecting every open question across the 617 sub-issues, leaving out
+> the ones already marked answered.
+
+> Writing the parent's new Current Behavior and the merged question list.
+
+> Now the merged questions, 40 of them, grouped by subject, plus a separate list
+> of things to check in game rather than ask.
+
+> Now a pointer in each sub-issue to its merged question, so answers find their
+> way back.
+
+> Issue 617 is up to date, and its open questions are down from 137 to 40,
+> grouped by subject. Now working through them, starting with the four that
+> block building something.
+
+> **[Asked the user]**
+>
+> *Q1 — Formation:* The compass formation (617s: buddies on a ring round you
+> at fixed compass places, tank in front, radius commands, sidesteps, sending
+> one buddy to a clicked spot) was planned before the following formation you
+> designed yesterday (a half circle behind you, along your track). Does yours
+> replace it?
+> - Mine replaces it, keep extras (Recommended) — The half circle along the
+>   track is how buddies follow. The compass plan's extras stay planned on top
+>   of it: the tank in front, ring-radius commands, sidesteps in a fight,
+>   sending one buddy to a clicked spot.
+> - Mine replaces it entirely — Retire 617s and its sub-issues to
+>   will-not-implement; anything wanted later is asked for afresh.
+> - Keep both as modes — Two formations you switch between: the half circle
+>   behind (default) and the compass ring round you.
+> → **Answered:** When moving distances, we should do an "arc follow" which
+> means they trail behind you. When doing a "close follow" in combat or when
+> specified, they circle around you.
+>
+> *Q2 — Party buffs:* Shared party buffs (617c5: three paladin buddies all
+> giving the same blessing and aura). When the owner is a paladin or shaman too,
+> should buddies plan around what the owner already gives?
+> - Yes, plan round the owner (Recommended) — Buddies read the auras,
+>   blessings and totems already on the party and fill the gaps; the owner's own
+>   choice is never overridden.
+> - No, buddies plan among themselves — Buddies share out buffs only among
+>   buddies; the owner may double up.
+> → **Answered:** Buddies plan around any player in the group. They should
+> send each other a message if they have an improved version of the aura, and
+> the other person if a buddy will switch to a different one. They need to have
+> awareness of the current buffs and try to fill them, with stuff relevant to
+> the party or if we start for example taking fire damage, they might resist a
+> fire aura. Or shadow for shadow aura. If we're fighting a mage primarily
+> there's no need for stone wall totem. Etc. Plan your auras and totems and such
+> around the team you have and the threats you face.
+>
+> *Q3 — Test clan:* May tests log in characters of their own (a test account
+> with a test clan) for scripted walks and for bots questing with no player
+> watching?
+> - Yes, a test account and clan (Recommended) — A dedicated test account owns
+>   a test character and its buddies; scripted runs use it so your characters
+>   are untouched.
+> - Use my characters — Tests use existing characters such as Feldowinn.
+> - Neither yet — Keep tests offline (the sandbox) for now.
+> → **Answered:** Only on a separate testing server. Not beta. We can use
+> basic for now, they're all testing servers right now. But, we should not allow
+> players to connect unless they're a GM account when we're doing these tests.
+>
+> *Q4 — DBM licence:* Boss warnings (617e5b) would read Deadly Boss Mods'
+> encounter files. Its licence is CC BY-NC-SA 3.0: credit DBM with a link, never
+> sell it, and the table we derive shares the same licence. Acceptable?
+> - Acceptable — Read DBM's files into our boss table under those three
+>   conditions; the server's boss scripts fill gaps.
+> - Not acceptable — Build the table only from the server's own boss scripts.
+> → **Answered:** How compatible is it with the RGPL? Our goals, remember, are
+> to make the system so distinct that it is sellable, or at least, considered
+> fully our own work. To that end, we probably can't use something that says we
+> shouldn't sell it. Something to keep in mind is that this is probably okay,
+> because we need to create entirely new bosses anyway. So, DBM couldn't be in
+> the final product except as like, a user addon, but it wouldn't even have the
+> same mechanics anyway. I need more details on the license.
+
+> Recording your answers. The licence needs a fuller answer, below. First, the
+> test lock: the realm list has a setting for the lowest account level allowed
+> in.
+
+> Now the answers into their sub-issues, with the licence details for the boss
+> warnings.
+
+> Now the test lock itself (planned in 1100e). Checking whether the scripts can
+> already send commands to a running server's console.
+
+> `scripts/gm-command` already sends console commands through the server's local
+> SOAP connection. The lock will use it, plus the realm list so the lock
+> outlasts a restart.
+
+> Your four answers are written in, and I built the test lock you asked for.
+>
+> **Recorded:**
+> - **Following** has two modes:
+>   - **arc follow** (the half circle behind you, already built) when moving
+>     distances;
+>   - **close follow** (the ring round you, plan 617s) in combat or when asked.
+> - **Party buffs:** buddies plan round every player in the group and tell each
+>   other when one has the improved aura or will switch. They read what's
+>   already on the party and fill the gaps, and choose by the threat: fire
+>   resistance when fire hurts, no Stoneskin Totem against a mage. Still open:
+>   the words for asking for a preference, and the order of judgements.
+> - **Test characters:** basic for now, never beta, with the realm closed to
+>   everyone but game masters while a test runs. That's `scripts/test-lock on |
+>   off | status`:
+>   - it sets the realm's lowest allowed account level in the login database, so
+>     the lock outlasts a restart;
+>   - when the server is running, it also sends `server plimit` through its
+>     console, which logs out everyone below the line;
+>   - it refuses beta.
+>
+>   Status and a dry run work; the server isn't running now, so the lock itself
+>   is untried.
+>
+> **The boss-mods licence, in detail** (my reading, not legal advice):
+> - **DBM's terms** (CC BY-NC-SA 3.0): anyone may copy it and build on it, if
+>   they credit DBM with a link, never use it commercially, and put what they
+>   build under the same licence.
+> - **The RGPL** is the AGPL plus your clauses. GPL-family licences require that
+>   anyone may sell the work; DBM's "non-commercial" forbids it, and its "share
+>   alike" demands its own terms instead. So nothing derived from DBM's files
+>   can sit in RGPL code or in anything sold.
+> - **Facts aren't DBM's.** "This boss casts spell N every 30 seconds" belongs
+>   to no one in most countries. DBM's code, wording, and its selection and
+>   arrangement of those facts are its own. Learning from DBM and writing our
+>   own table from the game is the usual safe line; copying its files in is not.
+> - **That fits your plan.** The bosses will be new, so nothing of DBM ships.
+>   For today's bosses, our own tool can write the warning table from the
+>   server's own boss scripts, and players can still run DBM as their own addon.
+> - **What's left for you:** whether to read DBM at all during development, for
+>   ideas or to check our table, knowing none of it ships.
+>
+> Next batch: four more that block building something.
+
+> **[Asked the user]**
+>
+> *Q1 — Which bots:* Bots questing with no player watching (617e14d): which
+> bots should do it, on basic with the realm locked to game masters?
+> - A test clan (Recommended) — A test account with a test character and seven
+>   buddies of its own; the test character stands in town or logs out while the
+>   buddies are sent to quest. Your characters' buddies are untouched.
+> - Offline owners' buddies — Buddies of players who are offline are logged in
+>   and sent to quest on their own.
+> - The bot module's random bots — Random bots (none on basic today) are made
+>   and taught our roaming.
+> → **Answered:** Rest clan, we define the players position when we click
+>
+> *Q2 — Pull pacing:* Tank-paced pulls (617z, 617w): before each pull, does
+> the tank buddy wait for the party's health and mana?
+> - Yes, and says why (Recommended) — The tank waits until the healer and
+>   casters have enough mana and everyone enough health, and says so ("Waiting
+>   for mana."), as "My bags are full." is said.
+> - Yes, silently — It waits, without a word.
+> - No, the player paces — The tank pulls when the player moves on; nothing
+>   waits.
+> → **Answered:** The healers should be able to say ready and oom or out of
+> mana or mana and the tank slows down or stops. We discussed this before.
+>
+> *Q3 — Left behind:* Left behind (617e13): how far behind may a following
+> buddy fall before it counts as left behind?
+> - 40 yards, then it runs (Recommended) — Past 40 yards it runs to catch up
+>   (and walks back into the formation); past 150 yards, or on another map,
+>   travel takes over.
+> - 20 yards — Tighter: any buddy more than 20 yards back hurries.
+> - Out of sight — Left behind when it can't see you (line of sight), however
+>   near.
+> → **Answered:** Never. But we must ensure they can navigate the map with
+> ease.
+>
+> *Q4 — Selling:* Selling (617h): the full-bags rounds never sell tools,
+> fishing poles, gear the buddy would wear, ammo, quest items or the owner's
+> epics; they sell the cheapest half first; buddies carry 20 meals, restock
+> below 10, spending at most a quarter of their purse a stop. Keep these as
+> built?
+> - Keep as built — The rules stand; tuning goes to the balance log if they
+>   misbehave.
+> - Change some — Say which in a note.
+> → **Answered:** They should always sell as much as they need. When they
+> acquire an item they should place it on a list that determines what they want
+> to do with it. These lists can be per bot and in lua, recalculated when the
+> bot logs in. They should attempt to resolve any lists they have entries in
+> when they are near a vendor, AH, profession trainer, etc. Bots should not
+> receive quest items or... The players epics? Huh?
+
+> Writing these answers in.
+
+> **[Asked the user]**
+>
+> *Q1 — Epics:* The rare world epics stay bind-on-equip on basic so a buddy
+> that loots one mails it to its owner. On the new item lists, is that still the
+> epic's list (mail it to the owner), or does it go on the same lists as
+> anything else?
+> - Mail to the owner (Recommended) — A rare epic's list is always 'send to
+>   the owner', whatever else the buddy would do.
+> - Same lists as anything — The buddy wears it if it's an upgrade, else it's
+>   auctioned like any other item.
+> → **Answered:** Um we should treat items as normal and skip that behavior
+> for now.
+>
+> *Q2 — Danger:* Closer in danger (617e10): when a place turns out tougher
+> than expected, buddies draw closer to the owner. What makes it dangerous?
+> - How fights went — Recent fights: health lost, deaths, fights that ran
+>   long.
+> - Monster levels — Monsters above the buddies' level.
+> - Elites and packs — Elite monsters, and several monsters at once.
+> - The clan's, not one buddy's — One buddy's bad fight draws the whole clan
+>   in, not only that buddy.
+> → *(no answer recorded)*
+>
+> *Q3 — Weapon talents:* Weapon talents (617g1): a warrior's or rogue's
+> weapon-specialization talents follow the weapon it holds. For whom, and when?
+> - Buddies, out of combat (Recommended) — Only buddies, re-spent only out of
+>   combat, by the main hand.
+> - Buddies and players — Players too, out of combat.
+> - Buddies, in combat too — A mid-fight weapon swap re-spends the talents.
+> → **Selected:** Buddies, out of combat (Recommended)
+>
+> *Q4 — Next:* We've answered 10 of 40. Keep going through the questions, or
+> switch to building now?
+> - Build now (Recommended) — Build what's answered: the close-follow ring in
+>   combat (617s), party buffs planned round the group and its threats (617c5),
+>   healer pace words (617z), the per-item lists in Lua (617h2). Return to
+>   questions as each build needs them.
+> - More questions first — Another batch of four.
+> → **Selected:** More questions first
+
+> **[Asked the user]**
+>
+> *Q1 — Buff wishes:* Party buffs (617c5): when a player wants a particular
+> blessing, aura or totem from the buddies, how is it said, and how long does it
+> last?
+> - Said in party chat, until changed (Recommended) — e.g. "kings please",
+>   "fire aura", "windfury" in party chat; it holds until changed or the party
+>   breaks up.
+> - Whispered to one buddy — Told to a specific buddy; lasts until logout.
+> - No wishes, buddies decide — Buddies plan entirely by the group and the
+>   threats; nothing to say.
+> → **Selected:** Whispered to one buddy
+>
+> *Q2 — Next pack:* Tank-paced pulls (617z): how does the tank choose its next
+> pack?
+> - Nearest unfought pack (Recommended) — The closest pack not yet fought,
+>   toward the dungeon's end; no hand-made routes.
+> - A route per dungeon — Packs in a fixed order, written per dungeon, as a
+>   player learns them.
+> - Follow the player — The tank pulls only what the player walks toward.
+> → **Answered:** We want to fight our way to each boss in the correct order -
+> make sure if the boss isn't available or whatever that we target the correct
+> one, for example the murloc in wailing caverns. Also, if there are multiple
+> paths we could take, pick one at random. We can use the "skeletonized" path
+> finding mechanism for that.
+>
+> *Q3 — Raids:* Raids (617c3): entering a raid, do buddies come in by
+> themselves?
+> - Invited by hand, as now (Recommended) — Nothing is drawn into a raid;
+>   owners invite the buddies they want (the 2026-09-24 decision).
+> - Every online buddy comes — Entering a raid brings every online buddy of
+>   every player in the raid group.
+> - Every buddy, with a tank/healer check — All come, and the raid is held to
+>   a sum of tanks and healers.
+> → **Selected:** Invited by hand, as now (Recommended)
+>
+> *Q4 — Weapons away:* Weapons in town (617e4b): buddies put weapons away in
+> towns. Should ranged weapons and wands go away too, and should players'
+> weapons follow the same rule?
+> - Ranged too; buddies only (Recommended) — Bows, guns and wands are put away
+>   in town as well, as built; players' weapons are their own business.
+> - Ranged too; players too — A Lua script puts players' weapons away in towns
+>   as well.
+> - Melee only — Ranged weapons and wands stay out.
+> → **Selected:** Ranged too; buddies only (Recommended)
+
+> **[Asked the user]**
+>
+> *Q1 — Skeleton:* The "skeletonized" pathfinding for choosing a dungeon
+> route: nothing by that name is built. Is it the exploring grid's map of rooms
+> and the passages between them (617e6): each room a point, each passage a line
+> through its middle, so a dungeon becomes a graph of ways the tank can choose
+> among?
+> - Yes, that's it — Build the route choice on 617e6's rooms-and-passages
+>   graph of each dungeon.
+> - Something else — Describe it in a note.
+> → **Answered:** We built this for the path finding HTML page we made. Search
+> there and find it.
+>
+> *Q2 — How close:* Closer in danger (617e10): when it's dangerous, how close
+> do buddies draw in?
+> - Shrinks with the danger (Recommended) — The roaming radius narrows step by
+>   step as danger rises, down to the close-follow ring at its worst, and widens
+>   again as fights go well.
+> - Straight to close follow — Any danger puts every buddy in the close-follow
+>   ring round you until it passes.
+> - A fixed leash — e.g. never more than 30 yards from you while it's
+>   dangerous.
+> → **Selected:** Shrinks with the danger (Recommended)
+>
+> *Q3 — Go faster:* Tank-paced pulls (617z): may a damage player also say "go
+> faster"? (Any player may already slow it.)
+> - Any player (Recommended) — Any player may speed the tank up, as any may
+>   slow it; the healer's "oom" still wins over a "go faster".
+> - Healers only — Only a healer may say go faster.
+> → **Answered:** If the DPS wants to go faster, they should just pull more
+> mobs. The tank will pick them up and be a little upset. They should sense how
+> well they're doing and if they can handle it, they'll adjust to the new speed
+> and pull accordingly.
+>
+> *Q4 — Harmless packs:* Tank-paced pulls (617z): a pack too low to harm the
+> group (grey to the tank): what happens?
+> - Walked past (Recommended) — The tank skips harmless packs on the way to
+>   the boss; nobody stops to fight them.
+> - Fought anyway — Everything on the way is cleared.
+> → **Answered:** If they are hostile they are picked up and cleared by AoE on
+> the way to the next patches.
+
+> Question 21 (tank pacing) and question 3 (danger) are now fully answered. Next
+> four:
+
+> **[Asked the user]**
+>
+> *Q1 — Judgements:* Party buffs (617c5): when there are fewer paladins than
+> judgements, which judgement comes first?
+> - By the party (Recommended) — Wisdom when the party leans on mana (healers,
+>   casters), Light when it's mostly melee, Justice for runners; the threat
+>   picks among ties.
+> - Wisdom first always — Wisdom, then Light, then Justice.
+> - Light first always — Light, then Wisdom, then Justice.
+> → **Answered:** We should dynamically evaluate this as the fight goes on.
+> Lght if the party needs health, wisdom if the party needs mana.
+>
+> *Q2 — Weapon kinds:* Weapon masters in the capitals (617n): how many weapon
+> kinds does a buddy buy?
+> - Every kind its class can use, if affordable (Recommended) — Weapon
+>   training is cheap at 60; a buddy learns every kind it may wield, so any
+>   weapon that drops is usable.
+> - Up to its owner's count — As built: until it knows as many kinds as its
+>   owner.
+> - Only kinds it carries — Learns a kind when it picks up a weapon of that
+>   kind.
+> → **Selected:** Every kind its class can use, if affordable (Recommended)
+>
+> *Q3 — Creature kind:* Bots questing with no player (617e14d): "a kind of
+> creature" (follow the goat goddess) is grouped by what?
+> - Its family (Recommended) — Boar, wolf, goat, spider...: all wolves of any
+>   name count as one kind.
+> - Its exact name — Only "Ragged Young Wolf", not "Gray Forest Wolf".
+> - Its type — Beast, humanoid, undead, demon...
+> → **Answered:** When would bots ever quest without a player?
+>
+> *Q4 — Recorder:* The world recorder (617e14a) writes everyone's position, on
+> Debug builds only (your rule for path recording said game masters only). How
+> much should it keep?
+> - Everyone, last hour (Recommended) — Everyone on Debug builds; the file is
+>   trimmed to the last hour (about 5 MB in RAM).
+> - Game masters only — Only game masters' characters and their buddies, as
+>   the spread recorder.
+> - Everyone, keep a day — About 120 MB in RAM.
+> → **Selected:** Everyone, last hour (Recommended)
+
+> **[Asked the user]**
+>
+> *Q1 — Kneeling:* Passing each other (617e11): when a buddy passes another
+> character, how many levels apart before the lower one kneels?
+> - 10 levels (Recommended) — A buddy kneels to anyone 10 or more levels above
+>   it as they pass.
+> - Double its level — Kneels to anyone at least twice its level (a level 10
+>   to a 20).
+> - No kneeling — Buddies swerve and wave, but never kneel.
+> → **Selected:** Double its level
+>
+> *Q2 — To players:* Passing each other (617e11): do buddies also swerve
+> round, wave at and kneel to players (not only other buddies)?
+> - Yes, players too (Recommended) — Players are passed, greeted and (if far
+>   above) knelt to like anyone.
+> - Only other buddies — Players are left alone.
+> → **Selected:** Yes, players too (Recommended)
+>
+> *Q3 — Mage teleport:* Crossings (617e8): a mage buddy teleports to its
+> owner's city whenever it can. Should the owner's own way (the boat they took)
+> come first?
+> - Owner's way first (Recommended) — Mages take the boat or portal their
+>   owner took; they teleport only when the owner teleported, was summoned, or
+>   used a hearthstone.
+> - Teleport whenever possible — As built: a mage teleports whenever its spell
+>   lands it near the owner.
+> → **Answered:** They should build a route, as they would with any path
+> finding task, and one of the paths that route might take us through their
+> teleportation spells
+>
+> *Q4 — Screen:* Your screen's size, for the zone pictures and the judge's
+> frames (617e14c)?
+> - 1920 x 1080 — As set.
+> - 2560 x 1440 — 1440p.
+> - 3840 x 2160 — 4K.
+> → **Answered:** Depends on what we're using them for
+
+> **[Asked the user]**
+>
+> *Q1 — Clan greets:* Passing each other (617e11): do buddies of the same clan
+> greet each other every time they pass?
+> - Only after time apart (Recommended) — A greeting when they meet after
+>   being apart a while (say 5 minutes); passing again soon after, a nod or
+>   nothing.
+> - Every time — Each pass, a greeting.
+> - Never — Clan-mates don't greet each other.
+> → **Answered:** Clanmates only greet each other when they log in. They
+> should walk to each clan mate and greet them, wait a second or two, and then
+> greet someone else. Sometimes that second or two becomes a chat that has a 20%
+> chance of ending after every /talk emote.
+>
+> *Q2 — Conquest:* Places conquered (617e15): what does holding a place give
+> the clan?
+> - A mark, then something in play later — First a mark on the map from above;
+>   what it gives in play (a camp, safer rest, a vendor) decided later.
+> - Safer rest — Fewer ambushes and quicker resting there.
+> - A camp — A campfire, a vendor or a repair spot appears where the clan
+>   holds ground.
+> → **Answered:** I have no idea what this is about
+>
+> *Q3 — Plenty:* Room for what matters (617j4): a buddy's bags fill; when is a
+> stack "plenty" to throw away, and is selling it later better?
+> - Never destroy; list it to sell (Recommended) — With the new item lists,
+>   nothing is destroyed: an item over what's needed goes on the sell list and
+>   waits for a vendor; the least valuable is dropped only when nothing else
+>   fits.
+> - A stack past 20 is plenty — Trade goods and food over 20 are destroyed
+>   when room is short.
+> → **Answered:** It's the opposite actually, you should prioritize full
+> stacks over partial. One or two of a thing is less valuable than 20.
+>
+> *Q4 — Upgrade news:* Room for what matters (617j4): how often does a buddy
+> tell the guild about an upgrade it equips?
+> - Rare and better, always (Recommended) — Every blue or purple upgrade is
+>   announced; greens never.
+> - Some greens too — Rare and better always, and one in five greens.
+> - Never — No announcements.
+> → **Answered:** When it's a big upgrade. If they are congratulated they
+> should say what they're replacing too. Each buddy-bot has a 10% chance to
+> congratulate them.
+
+> **[Asked the user]**
+>
+> *Q1 — Conquest:* Your words of Oct 27 about conquest (a place becoming the
+> clan's as they hold it; monsters fighting back harder the harder the clan
+> pushes): is that a feature to build, or a picture of how questing should feel?
+> - A feeling, not a feature — Set 617e15 aside: it describes the mood
+>   (pushing into a place, resistance rising), already carried by roaming and
+>   the ambush spawns.
+> - A feature, later — Keep 617e15 planned; its questions wait until it's
+>   taken up.
+> - Build it now — Answer its questions next.
+> → **Answered:** Oh it's for dungeons and raids and such. The idea is a
+> monster group will push forth and attack the player party periodically until
+> they fight their way in to the boss. But that's a later feature, let's defer
+> it for now.
+>
+> *Q2 — Far party:* Several players in one group (617c2): buddies too far to
+> be seated form their own party. Who leads it?
+> - The lowest-numbered far buddy (Recommended) — A stable choice: the same
+>   buddy leads each time.
+> - The one far longest — Whoever has been away from its owner the longest.
+> - No far party — Far buddies stay ungrouped.
+> → **Answered:** The far buddies will quest outside of the dungeon entrance
+> right? Protecting and exploring and maybe PvPing... The leader isn't too
+> important, there might be two groups if for example you're playing with three
+> humans and two buddy-bots at level 60, there will be 6 or more left out of the
+> dungeon. So they should try and spread out amongst groups and cover different
+> ground.
+>
+> *Q3 — Gems in C++:* Gems (617j2): the gem choice is in C++ because it uses
+> the bot module's stat weights (only there). You'd asked for it in Lua, cached
+> for everyone. Keep it in C++?
+> - Keep it in C++ (Recommended) — Its scoring needs the bot module's stat
+>   weights; a Lua copy would drift.
+> - Move it to Lua — Port the weights' reading too.
+> → **Selected:** Keep it in C++ (Recommended)
+>
+> *Q4 — Valley vendors:* Starting valleys' vendors (617a4a): confirm the
+> candidate vendor list per valley, written in the valley-vendor report
+> (docs/reports/valley-vendor-gear.md)?
+> - Confirmed as listed — Use the report's vendors.
+> - I'll check the report — Leave it open until you've read it.
+> → **Answered:** [No preference]
+
+> **[Asked the user]**
+>
+> *Q1 — Tuning:* Roaming's tuning numbers that are ours (the obstacle step,
+> planner costs, pull toward openings, tie side, grid size and speed, the follow
+> formation's spacing past five, its mingle roll): set them by the benchmark and
+> your judging instead of asking one by one?
+> - Yes, by benchmark and judging (Recommended) — Each number is tried at a
+>   few values in the sandbox and the server; your scores (and later the machine
+>   judge's) and the benchmark pick.
+> - Ask me each — Bring them to me one at a time.
+> → **Selected:** Yes, by benchmark and judging (Recommended)
+>
+> *Q2 — Yardstick:* The machine judge's yardstick (617e14e/e16): frames
+> compared with "school of fish" pictures the image pipeline paints (both turned
+> into CLIP picture embeddings), judged on a strip of frames?
+> - Yes, as planned (Recommended) — Reference pictures painted by Stable
+>   Diffusion; frame strips scored by how near their embeddings lie; trusted
+>   only as far as it agrees with your scores.
+> - Ask a question-answering model — Install a model that reads pictures and
+>   answers questions (none is installed).
+> → **Answered:** I dunno I could talk about this a bit if you want. The goal
+> is to just describe a movement pattern and then try and get it working by
+> having the human relate to the behavior pattern with imagery and analogy,
+> rather than specified code.
+>
+> *Q3 — Targets:* The movement benchmark's targets (617e14f): numbers you
+> choose, or set from the runs you score highly?
+> - From the runs I score highly (Recommended) — Once you've scored some runs,
+>   each target becomes what the high-scoring runs measure.
+> - Numbers I choose — You give each target.
+> → **Answered:** No numbers. We're trying to get a feel.
+>
+> *Q4 — Bake ahead:* What to bake ahead (617e2, e3): sub-zone edges are to be
+> baked. Bake these too?
+> - Routes between areas — Paths from each sub-zone to its neighbours.
+> - Routes in towns — Paths between each town's NPCs and entrances.
+> - Reachable nodes and chests — A one-time sweep of which herbs, ore and
+>   chests can be walked to.
+> - Dungeon floor skeletons — Each dungeon's floor skeleton (for the tank's
+>   route, 617z).
+> → *(no answer recorded)*
+
+Recorded:
+- **Tuning numbers** get set by trying them and judging the result, not one by
+  one.
+- **No numeric targets:** the benchmark's measures now just describe a run, and
+  your feel is the verdict.
+
+Two of them are better talked through.
+
+**What "baking" means.** Some things the buddies need are slow to work out but
+never change, because the world's ground and buildings don't move. Baking means
+a tool works those out once, ahead of time (at install, from the map files),
+writes the answers to a file, and the server just reads the file instead of
+working them out while a buddy stands waiting. The town circles are already
+baked this way. The candidates:
+- **The edges of each sub-zone:** how far roaming may go in each direction.
+  Already decided.
+- **Routes between neighbouring sub-zones,** so travel never has to search from
+  scratch.
+- **Routes inside towns,** between each vendor, trainer and gate.
+- **Which herbs, ore and chests can actually be walked to,** found once, so
+  buddies never try to reach the unreachable.
+- **Each dungeon's floor skeleton,** the graph of its passages, for the tank's
+  route.
+
+Which of those would you want done ahead of time, and which worked out live?
+
+**The judge.** If I've understood you, the point isn't a number at all. You
+describe the movement in images ("a school of fish", "a maelstrom of swirls").
+You look at what the bots do and tell me how it relates to the image: what's off
+about it, as a picture. I turn that into the change. Then the machine's only job
+is to learn, from your words and scores, to see what you see, so it can catch it
+when you're not watching.
+
+So here's a question back. Look at the Barrens strip
+(`tmp/shared-memory/judging/barrens-largest-clockwise@d1ce350301/strip.png`), or
+open the sandbox page. What does that swirl look like to you, and what is it
+missing compared with a school of fish?
+
+--------------------------------------------------------------------------------
+
+### User Request 62
+
+First of all ore, herbs, and chests would always be reachable because otherwise
+how could a player reach them?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 62
+
+For a player, yes. The catch is that the buddy isn't a player; it walks only
+where the navigation mesh says it can. The mesh is the server's simplified map
+of walkable ground, and it misses things a player handles easily:
+- **Jumps.** A node on a ledge you reach by hopping up rocks, or by dropping off
+  a cliff (a one-way trip), has no walkable route on the mesh.
+- **Gaps in the mesh.** Small rocks and crates sometimes leave a hole or a thin
+  wall that isn't really there, so a node sits just beyond where the mesh ends.
+- **Water and flying.** Some nodes are underwater, which needs swimming, or on
+  Outland and Northrend cliffs that only a flying mount reaches.
+
+So "reachable" was really about whether our pathfinding can get there. That's
+why buddies sometimes stood at the foot of a slope, trying to walk to a herb
+they could see. It's also your point from earlier: the work is making them
+navigate the map with ease.
+
+That changes what baking would be for. Not to skip nodes, but to find where the
+buddies' pathfinding fails at nodes players reach, so we can fix the
+pathfinding. A one-time sweep would try a route to every node and chest and list
+the ones that fail. Each failure is a place a player gets to and a buddy can't
+yet. Is that list worth having?
+
+--------------------------------------------------------------------------------
+
+### User Request 63
+
+Ah well the buddy-bots will eventually be able to do everything the players can.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 63
+
+I've written that into issue 617 as a principle: anywhere a buddy can't do what
+a player can, the buddy falls short and the gap is work to do, never something
+to steer round.
+
+So nothing gets baked to dodge hard places. The sweep I described would then
+serve as a to-do list toward that goal: it lists every herb, ore node and chest
+a buddy can't yet reach, and why (a jump, a drop, a swim, a flight, a gap in the
+map), so the most common gap is fixed first. Want that built, or should we carry
+on with the questions?
+
+--------------------------------------------------------------------------------
+
+### User Request 64
+
+The baking should be multiple layers. We should have "one way paths" like
+jumping down a cliff, and anywhere should be "pathable" to those with flying
+mounts, although they should make arcs when they fly to a specific spot.
+Underwater path finding is also important. The small gaps and such should either
+be smoothed and avoided, or if they are larger than a person then we should
+route around them the same way we route around doodads, with an orbit and leave
+as soon as we have a clear shot to the next waypoint.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 64
+
+I've planned that as a new sub-issue,
+`issues/617o6-layered-ways-drops-flight-water-and-gaps.md`, and marked question
+9 answered in 617. The ways are baked as layers and searched together as one map
+of routes:
+- **Walking:** the navigation mesh, as today.
+- **One-way drops:** found by stepping off every ledge and finding survivable
+  ground below. They're taken down, never up.
+- **Flight:** anywhere is reachable with a flying mount, flown in an arc
+  (rising, then curving down) and landing on ground the buddy can stand on.
+- **Water:** swimming routes, on the surface and underwater, joined to the
+  shores.
+- **Gaps:** narrower than a body, they're smoothed over; wider, the buddy
+  circles round them the way it circles round rocks, and leaves the circle as
+  soon as it has a clear line to the next waypoint.
+- **A sweep** over every herb, ore node and chest, listing what the layers can't
+  reach yet, as the to-do list.
+
+Two questions it raises:
+1. **How far may a buddy drop?** Only falls that do no damage, or falls it can
+   heal from (up to some share of its health)?
+2. **How high should a flight arc rise?** For example, a tenth of the trip's
+   length?
+
+--------------------------------------------------------------------------------
+
+### User Request 65
+
+How do we handle jumping across the Wailing Caverns gap? There's a jump there
+that players need to get across.
+
+For the one-way drops, be sure to account for the server's fall damage
+setting...
+
+Buddies can drop as far as they can survive. The arcs should be randomized but
+still on a natural trajectory toward the destination. The mount is following
+wind patterns that we can't see.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 65
+
+All three are written into the layered-ways plan
+(`issues/617o6-layered-ways-drops-flight-water-and-gaps.md`), and the line about
+wind patterns is in the asides notes.
+
+**Jumps across gaps (Wailing Caverns)** become their own layer:
+- The bake pairs up edges of the navigation mesh that face each other across a
+  gap a running jump can clear. The reach is the buddy's run speed times how
+  long a jump stays in the air, and the landing can't be higher than the jump
+  allows.
+- The buddy makes the jump with the server's own jump movement. Where the
+  landing allows, the jump works both ways.
+- If the bake misses one, a game master can place it by hand, the way inn beds
+  are placed now.
+- The Wailing Caverns gap is the first test.
+
+**Drops use the server's own fall-damage formula.** A fall of h yards costs
+(0.018 × h − 0.243) × `Rate.Damage.Fall` of the buddy's maximum health. The
+rate is 10 on every profile (config patch C004), so:
+- falls under 13.5 yards cost nothing;
+- at full health a buddy survives about 19 yards;
+- a hurt buddy survives less.
+
+The bake stores only each drop's height. The route search reads the realm's rate
+and the buddy's health at the moment it plans, and allows for safe-fall effects
+like Slow Fall and Levitate. Changing the rate later needs no re-bake.
+
+**Flight arcs** are random each time but stay on a natural trajectory: rising,
+bending as if the mount rides a wind nobody can see, then coming down onto the
+spot.
+
+One question this raises: may a buddy also jump where a player would just to
+save time, like over a fence or onto a rock? Or only where a gap leaves no other
+way?
+
+--------------------------------------------------------------------------------
+
+### User Request 66
+
+Sometimes we need to do less than running jumps. You can jump straight up and
+then move forward to make a tiny arc, so we should treat all of those arcs as
+possibilities. I want to dynamically calculate the jumping patterns every time
+we do it because it's very intrinsic to the WoW character's form. Buddies can
+jump whenever they want. Some are just bouncy people.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 66
+
+Written into the layered-ways plan; "some are just bouncy people" is in the
+asides notes too.
+
+- **Jumps are worked out live, every time, never baked.** A jump uses the
+  character's own upward speed and fall, with any forward speed from none
+  (straight up, then a nudge forward: your tiny arc) up to a full run, and every
+  arc in between.
+- **When the way ahead is cut** (a gap, a step too high to walk, the Wailing
+  Caverns crossing), the route search tries those arcs from where the buddy
+  stands. It takes one that lands on ground it can stand on. A jump it never
+  finds can still be placed by hand.
+- **Buddies hop whenever they like.** Each has its own bounciness, from never to
+  often.
+
+One question: is a buddy's bounciness drawn at random when it's made, or does it
+come from its race or class (a gnome bouncier than a tauren)?
+
+--------------------------------------------------------------------------------
+
+### User Request 67
+
+Random when made. But Tauren, with their extra mass, are never bouncy.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 67
+
+> Recorded: bounciness is drawn at random when a buddy is made and kept for
+> life, and tauren never bounce. Next four:
+
+> **[Asked the user]**
+>
+> *Q1 — DBM in dev:* Boss warnings (617e5b): nothing of Deadly Boss Mods will
+> ship. During development, may we read DBM (for ideas, and to check our own
+> boss table against it)?
+> - Read it, ship nothing of it (Recommended) — DBM is read as a reference;
+>   our table is written from the server's own boss scripts; no DBM file ever
+>   enters the project.
+> - Don't read it at all — Work only from the server's boss scripts.
+> → **Answered:** I need to know specifics about their license.
+>
+> *Q2 — Item lists:* On a buddy's item lists (617h2), what happens to these?
+> - Open openables at once — Bags of coin, clams, lockboxes (a rogue picks the
+>   lock) are opened when picked up.
+> - Use scrolls before fights — Stat scrolls are read on itself before a
+>   fight.
+> - Learn recipes it can — A recipe for its profession and skill is learned;
+>   others are auctioned.
+> - Buy more — Buddies also buy potions from vendors, better gear from the
+>   auction house, and bags.
+> → *(no answer recorded)*
+>
+> *Q3 — Loot rule:* Loot (617j1): in a group with buddies, which loot rule?
+> - Group loot, buddies pass (Recommended) — Rolls for good items; buddies
+>   pass when a player needs it, so players get first choice; the rest by turns.
+> - Free for all, by turns — Everyone loots in turn: each corpse goes to
+>   whoever has looted least.
+> - Need before greed for all — Buddies roll need on upgrades like players.
+> → **Answered:** Buddies don't pass. They are as intrinsic to your character
+> as you are. They level up and gear up in tandem with the player.
+>
+> *Q4 — Owner word:* The word for a buddy's player (617q): rename "owner"
+> everywhere in code, tables, logs and docs?
+> - "partner" — Short in code and tables.
+> - "player-partner" — As you once said it.
+> - Keep "owner" — No rename.
+> → **Selected:** "player-partner"
+
+Recorded:
+- **Item lists:** openables are opened at once, usable recipes learned, and
+  buddies do buy more (potions, auction gear, bags). Stat scrolls follow the
+  inscription overhaul's rule: one active at a time per character, lasting 30
+  minutes, stacking with class buffs. So each buddy keeps its best scroll up.
+- **Loot:** buddies don't pass. They roll on their own needs, like players.
+- **The word:** "player-partner".
+
+**DBM's licence, the specifics.** Their own file says, word for word:
+
+> The code of this addon is licensed under a Creative Commons
+> Attribution-Noncommercial-Share Alike 3.0 License. (see license.txt) All
+> included textures and sounds are copyrighted by their respective owners…
+> You are free: to Share – to copy, distribute, display, and perform the work;
+> to Remix – to make derivative works. Under the following conditions:
+> **Attribution.** You must attribute the work… (but not in any way that
+> suggests that they endorse you…). (A link to http://www.deadlybossmods.com
+> is sufficient)
+> **Noncommercial.** You may not use this work for commercial purposes.
+> **Share Alike.** If you alter, transform, or build upon this work, you may
+> distribute the resulting work only under the same or similar license to this
+> one.
+
+It's copyrighted by Paul Emmerich, Martin Verges and Adam Williams. What that
+means for us (my reading, not legal advice):
+- **Reading it isn't covered at all.** A licence governs copying, changing and
+  handing the work on. Reading DBM to learn how a boss behaves needs no
+  permission.
+- **Copying it in can't fit with the RGPL.** Anything made by transforming its
+  files must stay non-commercial and keep its licence, but the RGPL, being
+  AGPL-based, lets anyone sell the code. So nothing transformed from DBM's files
+  may enter the project.
+- **Facts are free.** A boss's spells and timings are the game's. A table we
+  write ourselves from the server's boss scripts is ours, even if DBM showed us
+  where to look.
+
+The full text and these notes are now in the boss-warnings plan. So the choice
+is yours: read DBM as a reference, writing our own table from the game, or don't
+look at it at all?
+
+--------------------------------------------------------------------------------
+
+### User Request 68
+
+Okay let's read them as a reference. We can find out WHAT they are paying
+attention to, and then build our own tracking capabilities. We are using it for
+buddy-bots. Be sure to credit them.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 68
+
+> There's no project-wide credits page yet, so I'm starting one with DBM's
+> credit.
+
+> **[Asked the user]**
+>
+> *Q1 — First bosses:* Boss warnings (617e5b): which bosses first?
+> - Basic's dungeons, 1-60, then raids (Recommended) — The dungeons basic's
+>   players reach, in level order; Molten Core and the rest after.
+> - Raids first — Molten Core, Onyxia, Blackwing Lair first.
+> - Outland's dungeons first — Basic's hard endgame dungeons (the Botanica
+>   among them).
+> → **Answered:** order doesn't matter, we want to build all of them
+>
+> *Q2 — Failing:* Boss warnings (617e5b): what counts as failing a mechanic,
+> for a player's record?
+> - Hit by what could be avoided (Recommended) — Standing in fire, a cleave, a
+>   breath: damage a dodge would have avoided. One record per kind of mechanic.
+> - That, and missed duties — Also a missed interrupt, a dispel not made, a
+>   stack taken late.
+> - No record — Buddies react to mechanics; nobody's failures are counted.
+> → **Selected:** That, and missed duties
+>
+> *Q3 — Thirds loot:* Loot (617j): a buddy with a third in each talent tree:
+> is an item an upgrade by a blend of all three, or if it's better for any one
+> of them?
+> - A blend of all three (Recommended) — As built: scored by a third of each
+>   tree's weights, so it doesn't swap two items back and forth.
+> - Better for any one — An upgrade to any of its three specs counts.
+> → **Answered:** A blend of all three, but we have to make sure that we have
+> stats that all three would want. I'm concerned that blending the weights might
+> just mean everyone prioritizes things like stamina, that everyone wants. Also
+> if the blend has a healing spec it should disprefer hit rating, this counts
+> for the 2-1 specs as well.
+>
+> *Q4 — Upgrade bar:* Loot (617j): the bot module only equips an upgrade 10%
+> better than what it wears (so small upgrades are skipped). Keep that?
+> - Equip any upgrade (Recommended) — Your rule was "upgrades are always
+>   equipped": lower the bar to any improvement.
+> - Keep 10% — Only clear upgrades are worn.
+> → **Answered:** for 0-10% improvement they should only take it if nobody
+> else wants it.
+
+> **[Asked the user]**
+>
+> *Q1 — Class book:* A class book (a spell or ability book) drops that the
+> owner can use but the owner isn't in the group: what does the buddy do?
+> - Need it, then mail it (Recommended) — The buddy needs it to keep it in the
+>   clan, and mails it to its owner.
+> - Greed it, keep it — As built: greeds, keeps it in its bags until handed
+>   over.
+> - Treat it as any item — Onto the item lists like anything else.
+> → **Answered:** treat it as any item, but class books should always be given
+> to clanmembers (no player preference) unless no clanmate needs them, then they
+> are auctioned.
+>
+> *Q2 — Loot turns:* Loot turns (617j1): a corpse's loot goes to whoever in
+> the clan has looted least. Does the owner count in those turns?
+> - Yes, the owner takes turns too (Recommended) — Buddies are as much the
+>   character as you are: you take your turn like them.
+> - The owner loots freely — Turns are among buddies only.
+> → **Answered:** Yes, the owner takes turns too. If there are multiple clans
+> represented in a group or raid, they each will be treated as a monolith for
+> the loot distribution. If there are only coins on an item, as with the
+> recently created/planned patch, then that doesn't count as their loot since
+> it's split amongst everyone anyway.
+>
+> *Q3 — Kneel:* Kneeling at the fallen (617v): a buddy kneels at a corpse to
+> loot it. If you've already emptied it, does it still kneel?
+> - Skip it (Recommended) — An empty corpse isn't knelt at.
+> - Kneel anyway — A moment's respect, loot or no.
+> → **Selected:** Skip it (Recommended)
+>
+> *Q4 — Outfit back:* Elite outfits (617r): when a buddy is remade (a stage
+> reset), does its elite outfit come back?
+> - Yes, it comes back (Recommended) — The outfit is part of who the buddy is.
+> - One-time gift — Lost on a remake.
+> → **Selected:** Yes, it comes back (Recommended)
+
+> **[Asked the user]**
+>
+> *Q1 — Unspent:* Elite outfits (617r): a just-made buddy hasn't spent its
+> talent points yet, so it has no spec to choose its outfit by. Use its talent
+> plan instead until then?
+> - Use its talent plan (Recommended) — The plan it will grow into decides the
+>   outfit.
+> - Skip it until spent — As built: skipped with a message.
+> → **Selected:** Use its talent plan (Recommended)
+>
+> *Q2 — MC drops:* Elite outfits (617r): a world drop that also falls in
+> Molten Core (Lady Maye's Pendant): counted as Molten Core gear?
+> - No, only boss drops (Recommended) — Molten Core outfits are made of what
+>   Molten Core's bosses drop.
+> - Yes, anything that drops there — Trash drops count too.
+> → **Answered:** this is just for one outfit, do whatever feels right.
+>
+> *Q3 — Default spec:* Whispering Sargobras (617b2): "priest" alone: which
+> spec?
+> - What the group lacks (Recommended) — The role the whisperer's group is
+>   shortest of (healer if none).
+> - The class's first spec — Always the first tree (Discipline for a priest).
+> - Random — Any spec of the class.
+> → **Answered:** hang on, what's this about?
+>
+> *Q4 — Reborn where:* Prestige (617x): when a level-60 character is reborn
+> with its buddies, where do they start?
+> - A starting valley (Recommended) — The rotating valleys, as a new
+>   character.
+> - Where they stand — At level 1 where they are.
+> → **Answered:** they can do so by talking to a faction leader. The faction
+> leader will congratulate them on their success and retirement, and then the
+> screen will fade-to-black and they will re-appear at that faction leader's
+> starting zone, with Sargobras ready to greet them with a smile.
+
+Recorded:
+- **Unspent talents:** a buddy whose points aren't spent yet is dressed by its
+  talent plan.
+- **Molten Core outfits** count only Molten Core's boss drops.
+- **Prestige** is asked of a faction leader, who congratulates them on their
+  success and retirement. The screen fades to black and they reappear in that
+  leader's starting zone, with Sargobras greeting them with a smile.
+
+What the Sargobras question is about: on Oct 14 you asked for whisper shortcuts
+to Sargobras. He'd be an invisible character that can be whispered, and your
+example was "`/whisper Sargobras priest` creates a holy priest named Felicity
+for the player to adventure with." It would be a faster way to fill a buddy slot
+than walking to him and using his menus. A priest has three specs, so the
+question was which one to give when the whisper names only the class. Your
+example said holy. Should it be:
+- whatever the group lacks (a healer if there's none);
+- the class's first spec;
+- random?
 
 --------------------------------------------------------------------------------
 

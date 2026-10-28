@@ -1,0 +1,295 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- generate-buddy-lever-map - groups the buddies' levers by what they mean,
+-- and names each group automatically (issue 638)
+--
+-- For a general audience: the owner, 2026-10-28: "semantic map, old style AI
+-- design, except with the power of embedding models, to create automatically
+-- labelled segments." Each lever (one small thing a buddy can do, from
+-- scripts/generate-buddy-levers) comes with a sentence ("You bow before your
+-- partner."). An embedding model, running on this computer, turns each
+-- sentence into a list of 768 numbers, a point in a space where sentences
+-- that mean nearly the same thing lie close together. The points are then
+-- gathered into segments (k-means: start with K middles, give each point to
+-- its nearest middle, move each middle to the average of its points, again
+-- until nothing moves), and each segment is named by the words its sentences
+-- use much more often than the rest of the list does. Last, every point is
+-- flattened onto the two directions the points spread along most (principal
+-- components), so a page can draw the map.
+--
+-- Whom a lever is aimed at is its own field, so for the meaning the aimed
+-- sentence says "someone" in place of the target: the four aims of /bow then
+-- share one point and one segment, and segments gather by what is done, not
+-- whom to.
+--
+-- Reads:  src/lua-basic/data/buddy-levers.lua; the ollama server at
+--         127.0.0.1:11434 (start it with `ollama serve`) and its model
+-- Writes: src/lua-basic/data/buddy-lever-map.lua
+--         tmp/shared-memory/buddy-lever-map/ (the requests, while it runs)
+-- Usage:  scripts/generate-buddy-lever-map [PROJECT_DIR] [--segments K]
+--                                          [--seed N] [--model NAME]
+--         scripts/generate-buddy-lever-map --help
+--------------------------------------------------------------------------------
+
+-- {{{ configuration
+local DIR      = "/mnt/kaun/wow-chat-2026"
+local LIBS     = "/home/ritz/programming/ai-stuff/libs/lua"
+local MODEL    = "nomic-embed-text:v1.5"
+-- nomic-embed-text is trained with a task word before each text; for
+-- grouping, "clustering: " (its model card's prefixes: search_query,
+-- search_document, clustering, classification).
+local PREFIX   = "clustering: "
+local SERVER   = "http://127.0.0.1:11434/api/embed"
+local BATCH    = 64                       -- sentences per request: the model embeds a batch at once on the GPU
+local SEGMENTS = 0                        -- 0: about the square root of half the distinct sentences
+local SEED     = 638
+local ROUNDS   = 100                      -- k-means stops sooner when nothing moves
+local LABEL_WORDS = 3
+-- Words that say nothing about what is done; never a label.
+local STOP = {}
+for w in ("you your a an the to at of and in on with is it as for from up down someone one some own " ..
+          "are be by this that its it's into out around over make keep motion"):gmatch("%S+") do STOP[w] = true end
+-- What generate-buddy-levers puts in a sentence for each target: said as
+-- "someone" for the meaning (see the header).
+local TARGET_WORDS = { "your partner", "a fellow buddy", "a passing player", "the nearest creature" }
+-- }}}
+
+-- {{{ the options
+local i = 1
+while i <= #arg do
+    local a = arg[i]
+    if a == "--help" then
+        print("generate-buddy-lever-map [PROJECT_DIR] [--segments K] [--seed N] [--model NAME]")
+        print("  groups the buddy levers by meaning with a local embedding model (ollama serve")
+        print("  must be running) and writes src/lua-basic/data/buddy-lever-map.lua (issue 638).")
+        print("  --segments K  how many segments (default: about the square root of half the sentences)")
+        print("  --seed N      where k-means starts (default 638); the same seed gives the same map")
+        print("  --model NAME  the ollama embedding model (default " .. MODEL .. ")")
+        os.exit(0)
+    elseif a == "--segments" then SEGMENTS = tonumber(arg[i + 1]); i = i + 2
+    elseif a == "--seed"     then SEED     = tonumber(arg[i + 1]); i = i + 2
+    elseif a == "--model"    then MODEL    = arg[i + 1]; i = i + 2
+    elseif a:sub(1, 2) == "--" then io.stderr:write("generate-buddy-lever-map: unknown option " .. a .. " (--help lists them)\n"); os.exit(1)
+    else DIR = a; i = i + 1 end
+end
+package.path = LIBS .. "/?.lua;" .. package.path
+local json   = require("dkjson")
+local LEVERS = dofile(DIR .. "/src/lua-basic/data/buddy-levers.lua")
+local OUT    = DIR .. "/src/lua-basic/data/buddy-lever-map.lua"
+local WORK   = DIR .. "/tmp/shared-memory/buddy-lever-map"
+os.execute("mkdir -p '" .. WORK .. "'")
+-- }}}
+
+-- {{{ the sentences for meaning
+-- Each lever's sentence with its target said as "someone"; identical ones
+-- (the four aims of one emote) are embedded once.
+local meaning_of, distinct, index_of = {}, {}, {}
+for _, l in ipairs(LEVERS) do
+    local s = l.say
+    for _, w in ipairs(TARGET_WORDS) do s = s:gsub(w, "someone") end
+    meaning_of[l.id] = s
+    if not index_of[s] then distinct[#distinct + 1] = s; index_of[s] = #distinct end
+end
+local N = #distinct
+if SEGMENTS == 0 then SEGMENTS = math.floor(math.sqrt(N / 2) + 0.5) end
+-- }}}
+
+-- {{{ local function embed_all
+-- Every distinct sentence's vector, unit length (so nearness is the dot
+-- product), in batches: one request each, its body written to a file and
+-- handed to curl, its answer read back.
+local function embed_all()
+    local vecs = {}
+    for first = 1, N, BATCH do
+        local input = {}
+        for k = first, math.min(first + BATCH - 1, N) do input[#input + 1] = PREFIX .. distinct[k] end
+        local body = WORK .. "/request.json"
+        local f = assert(io.open(body, "w")); f:write(json.encode({ model = MODEL, input = input })); f:close()
+        local h = io.popen("curl -s -S --max-time 300 " .. SERVER .. " -d @'" .. body .. "'")
+        local answer = h:read("*a"); h:close()
+        local got = json.decode(answer)
+        if not got or not got.embeddings then
+            io.stderr:write(("generate-buddy-lever-map: the model server gave no vectors for sentences %d-%d (of %d; %d done before).\n"):format(first, first + #input - 1, N, first - 1))
+            io.stderr:write("  it answered: " .. (answer ~= "" and answer:sub(1, 300) or "(nothing: is `ollama serve` running?)") .. "\n")
+            io.stderr:write("  to debug: `curl -s http://127.0.0.1:11434/api/tags` lists the models the server has; is " .. MODEL .. " among them?\n")
+            os.exit(1)
+        end
+        for k, v in ipairs(got.embeddings) do
+            local len = 0
+            for d = 1, #v do len = len + v[d] * v[d] end
+            len = math.sqrt(len)
+            for d = 1, #v do v[d] = v[d] / len end
+            vecs[first + k - 1] = v
+        end
+        io.write(("\rgenerate-buddy-lever-map: embedded %d of %d sentences"):format(math.min(first + BATCH - 1, N), N)); io.flush()
+    end
+    print()
+    return vecs
+end
+-- }}}
+
+local function dot(a, b) local s = 0 for d = 1, #a do s = s + a[d] * b[d] end return s end
+
+-- {{{ local function kmeans
+-- K segments of the vectors. Starts by k-means++ (each next middle drawn
+-- with odds by how far it is from the middles so far, so they start spread),
+-- on a seeded random draw so a run can be made again. One thread: the
+-- whole thing is about K x N x 768 multiplications a round, well under a
+-- second, less than starting threads would cost.
+local function kmeans(vecs, K)
+    math.randomseed(SEED)
+    local dims = #vecs[1]
+    local mids = { vecs[math.random(N)] }
+    while #mids < K do
+        local far, total = {}, 0
+        for p = 1, N do
+            local best = -2
+            for _, m in ipairs(mids) do local s = dot(vecs[p], m); if s > best then best = s end end
+            far[p] = (1 - best) ^ 2; total = total + far[p]
+        end
+        local r, pick = math.random() * total, N
+        for p = 1, N do r = r - far[p]; if r <= 0 then pick = p; break end end
+        mids[#mids + 1] = vecs[pick]
+    end
+    local seg = {}
+    for round = 1, ROUNDS do
+        local moved = 0
+        for p = 1, N do
+            local best, best_s = 1, -2
+            for k = 1, K do local s = dot(vecs[p], mids[k]); if s > best_s then best, best_s = k, s end end
+            if seg[p] ~= best then moved = moved + 1; seg[p] = best end
+        end
+        if moved == 0 then break end
+        -- each middle to its points' average, made unit length again; a
+        -- middle left with no points keeps where it was
+        local sums, counts = {}, {}
+        for k = 1, K do sums[k] = {}; counts[k] = 0; for d = 1, dims do sums[k][d] = 0 end end
+        for p = 1, N do local k = seg[p]; counts[k] = counts[k] + 1; for d = 1, dims do sums[k][d] = sums[k][d] + vecs[p][d] end end
+        for k = 1, K do
+            if counts[k] > 0 then
+                local len = math.sqrt(dot(sums[k], sums[k]))
+                for d = 1, dims do sums[k][d] = sums[k][d] / len end
+                mids[k] = sums[k]
+            end
+        end
+    end
+    return seg, mids
+end
+-- }}}
+
+-- {{{ local function labels
+-- Each segment's name: its words scored by how much more often its
+-- sentences use them than the whole list does (the share of its sentences
+-- holding the word, over the share of all sentences holding it, with one
+-- added below so a word in a single sentence doesn't top every list), the
+-- best LABEL_WORDS of them. A word must be in two of its sentences, or the
+-- segment's only one.
+local function words_of(s)
+    local seen, out = {}, {}
+    for w in s:lower():gmatch("[%a']+") do
+        if #w > 2 and not STOP[w] and not seen[w] then seen[w] = true; out[#out + 1] = w end
+    end
+    return out
+end
+local function labels(seg, K)
+    local all, per, size = {}, {}, {}
+    for k = 1, K do per[k] = {}; size[k] = 0 end
+    for p = 1, N do
+        local k = seg[p]; size[k] = size[k] + 1
+        for _, w in ipairs(words_of(distinct[p])) do all[w] = (all[w] or 0) + 1; per[k][w] = (per[k][w] or 0) + 1 end
+    end
+    local out = {}
+    for k = 1, K do
+        local scored = {}
+        for w, c in pairs(per[k]) do
+            if c >= 2 or size[k] == 1 then
+                scored[#scored + 1] = { w = w, s = (c / size[k]) / ((all[w] + 1) / N) }
+            end
+        end
+        table.sort(scored, function(a, b) return a.s > b.s or (a.s == b.s and a.w < b.w) end)
+        local ws = {}
+        for j = 1, math.min(LABEL_WORDS, #scored) do ws[j] = scored[j].w end
+        out[k] = { label = #ws > 0 and table.concat(ws, " ") or "(no shared words)", size = size[k] }
+    end
+    return out
+end
+-- }}}
+
+-- {{{ local function flatten
+-- Every vector onto the two directions the vectors spread along most
+-- (principal components, found by power iteration: multiply a direction by
+-- the spread of the points again and again until it stops turning; the
+-- second with the first taken out). Returns x and y per point.
+local function flatten(vecs)
+    local dims = #vecs[1]
+    local mean = {}
+    for d = 1, dims do mean[d] = 0 end
+    for p = 1, N do for d = 1, dims do mean[d] = mean[d] + vecs[p][d] / N end end
+    local function component(skip)
+        math.randomseed(SEED + (skip and 1 or 0))
+        local v = {}
+        for d = 1, dims do v[d] = math.random() - 0.5 end
+        for _ = 1, 60 do
+            local w = {}
+            for d = 1, dims do w[d] = 0 end
+            for p = 1, N do
+                local s = 0
+                for d = 1, dims do s = s + (vecs[p][d] - mean[d]) * v[d] end
+                for d = 1, dims do w[d] = w[d] + s * (vecs[p][d] - mean[d]) end
+            end
+            if skip then local s = dot(w, skip); for d = 1, dims do w[d] = w[d] - s * skip[d] end end
+            local len = math.sqrt(dot(w, w))
+            for d = 1, dims do w[d] = w[d] / len end
+            v = w
+        end
+        return v
+    end
+    local a = component(nil)
+    local b = component(a)
+    local xy = {}
+    for p = 1, N do
+        local x, y = 0, 0
+        for d = 1, dims do local c = vecs[p][d] - mean[d]; x = x + c * a[d]; y = y + c * b[d] end
+        xy[p] = { x, y }
+    end
+    return xy
+end
+-- }}}
+
+-- {{{ run and write
+local vecs = embed_all()
+local seg, mids = kmeans(vecs, SEGMENTS)
+local segs = labels(seg, SEGMENTS)
+-- each segment's example: the sentence nearest its middle
+for k = 1, SEGMENTS do
+    local best, best_s = nil, -2
+    for p = 1, N do if seg[p] == k then local s = dot(vecs[p], mids[k]); if s > best_s then best, best_s = p, s end end end
+    segs[k].example = best and distinct[best] or ""
+end
+local xy = flatten(vecs)
+
+local out = assert(io.open(OUT, "w"))
+out:write("-- Generated by scripts/generate-buddy-lever-map (issue 638): the buddy levers\n")
+out:write(("-- grouped by meaning, from the %s embedding model, %d segments, seed %d.\n"):format(MODEL, SEGMENTS, SEED))
+out:write("-- segments: each one's label (the words its sentences use most, against the\n")
+out:write("-- rest), size (distinct sentences) and example (the sentence nearest its middle);\n")
+out:write("-- segment_of: lever id -> segment number; xy: lever id -> the map's two coordinates.\n")
+out:write("-- Do not edit by hand: run the tool again.\n")
+out:write("return {\n")
+out:write(("    model = %q, seed = %d, sentences = %d,\n"):format(MODEL, SEED, N))
+out:write("    segments = {\n")
+for k, s in ipairs(segs) do
+    out:write(("        { label = %-36s size = %4d, example = %q },\n"):format(("%q,"):format(s.label), s.size, s.example))
+end
+out:write("    },\n    segment_of = {\n")
+for _, l in ipairs(LEVERS) do out:write(("        [%-42s = %3d,\n"):format(("%q]"):format(l.id), seg[index_of[meaning_of[l.id]]])) end
+out:write("    },\n    xy = {\n")
+for _, l in ipairs(LEVERS) do
+    local p = xy[index_of[meaning_of[l.id]]]
+    out:write(("        [%-42s = { %8.4f, %8.4f },\n"):format(("%q]"):format(l.id), p[1], p[2]))
+end
+out:write("    },\n}\n")
+out:close()
+print(("generate-buddy-lever-map: %d levers, %d distinct sentences, %d segments -> %s"):format(#LEVERS, N, SEGMENTS, OUT))
+for k, s in ipairs(segs) do print(("  %2d  %4d  %-34s e.g. %s"):format(k, s.size, s.label, s.example)) end
+-- }}}

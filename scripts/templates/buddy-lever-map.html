@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- GENERATED_NOTE -->
+<title>Buddy Lever Map</title>
+<style>
+  :root { --bg: #f6f3ec; --fg: #222; --dim: #6b665c; --line: #d8d2c4; --panel: #fffdf8; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #16161a; --fg: #e6e2d8; --dim: #9a958a; --line: #34343c; --panel: #1e1e24; } }
+  :root[data-theme="dark"] { --bg: #16161a; --fg: #e6e2d8; --dim: #9a958a; --line: #34343c; --panel: #1e1e24; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 13px/1.45 system-ui, sans-serif; }
+  #wrap { display: flex; flex-wrap: wrap; gap: 12px; padding: 12px 16px; box-sizing: border-box; }
+  #side { flex: 1 1 280px; max-width: 380px; min-width: 0; }
+  #mapbox { flex: 3 1 420px; min-width: 0; }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  p.about { color: var(--dim); margin: 0 0 10px; }
+  #find { width: 100%; box-sizing: border-box; padding: 6px 8px; background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 4px; }
+  #segs { list-style: none; padding: 0; margin: 10px 0; max-height: 52vh; overflow-y: auto; }
+  #segs li { display: flex; gap: 8px; align-items: baseline; padding: 3px 4px; cursor: pointer; border-radius: 3px; }
+  #segs li.on { background: var(--panel); outline: 1px solid var(--line); }
+  #segs .sw { width: 10px; height: 10px; border-radius: 50%; flex: none; transform: translateY(1px); }
+  #segs .n { font-variant-numeric: tabular-nums; color: var(--dim); width: 3.2em; text-align: right; flex: none; }
+  #segs .ex { color: var(--dim); display: block; font-size: 12px; }
+  canvas { width: 100%; aspect-ratio: 4 / 3; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; touch-action: none; }
+  #pick { min-height: 4.5em; margin-top: 8px; white-space: pre-wrap; font-variant-numeric: tabular-nums; }
+  #stats { color: var(--dim); font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="side">
+    <h1>Buddy lever map</h1>
+    <p class="about">Each dot is one meaning of the small things a buddy can do with its body (issue 638). Dots close together mean nearly the same thing to the embedding model; colours are the segments it was cut into, each named by its own words. Click a segment to light it, a dot to read it; type to find levers.</p>
+    <input id="find" type="search" placeholder="find a lever: bow, sleep, hop…">
+    <div id="stats"></div>
+    <ul id="segs"></ul>
+  </div>
+  <div id="mapbox">
+    <canvas id="map" width="960" height="720"></canvas>
+    <div id="pick">Click a dot.</div>
+  </div>
+</div>
+<script>
+const DATA = /*MAP_DATA*/;
+// DATA: { model, seed, segments: [{label, size, example}], levers: [{id, say, seg, x, y}] }
+
+// {{{ colours: one hue per segment, spread round the wheel
+const hue = k => `hsl(${Math.round(k * 360 / DATA.segments.length * 7) % 360} 62% 52%)`;
+// }}}
+
+const cv = document.getElementById("map"), cx = cv.getContext("2d");
+const list = document.getElementById("segs"), pick = document.getElementById("pick"), find = document.getElementById("find");
+let lit = -1, query = "";
+
+// {{{ where each dot is drawn: the two coordinates fitted into the canvas
+const xs = DATA.levers.map(l => l.x), ys = DATA.levers.map(l => l.y);
+const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+const PAD = 24;
+const px = l => PAD + (l.x - x0) / (x1 - x0) * (cv.width - 2 * PAD);
+const py = l => PAD + (l.y - y0) / (y1 - y0) * (cv.height - 2 * PAD);
+// }}}
+
+// {{{ draw: lit segment or matches bright, the rest faint
+function shown(l) {
+  if (query) return l.id.includes(query) || l.say.toLowerCase().includes(query);
+  return lit < 0 || l.seg === lit;
+}
+function draw() {
+  cx.clearRect(0, 0, cv.width, cv.height);
+  let n = 0;
+  for (const pass of [false, true]) for (const l of DATA.levers) {
+    const on = shown(l);
+    if (on !== pass) continue;
+    if (on) n++;
+    cx.globalAlpha = on ? 0.9 : 0.12;
+    cx.fillStyle = hue(l.seg);
+    cx.beginPath(); cx.arc(px(l), py(l), on ? 4 : 3, 0, 6.2832); cx.fill();
+  }
+  cx.globalAlpha = 1;
+  document.getElementById("stats").textContent =
+    `${DATA.levers.length} levers, ${DATA.segments.length} segments, ${n} shown · ${DATA.model}, seed ${DATA.seed}`;
+}
+// }}}
+
+// {{{ the segment list
+DATA.segments.forEach((s, i) => {
+  const k = i + 1, li = document.createElement("li");
+  li.innerHTML = `<span class="sw" style="background:${hue(k)}"></span><span class="n">${s.size}</span><span><b></b><span class="ex"></span></span>`;
+  li.querySelector("b").textContent = s.label;
+  li.querySelector(".ex").textContent = s.example;
+  li.onclick = () => { lit = lit === k ? -1 : k; query = ""; find.value = "";
+    [...list.children].forEach((c, j) => c.classList.toggle("on", j + 1 === lit)); draw(); };
+  list.appendChild(li);
+});
+// }}}
+
+// {{{ clicking a dot: every lever at that point (the aims of one emote share it)
+cv.addEventListener("click", e => {
+  const r = cv.getBoundingClientRect(), mx = (e.clientX - r.left) * cv.width / r.width, my = (e.clientY - r.top) * cv.height / r.height;
+  let best = null, bd = 1e9;
+  for (const l of DATA.levers) { const d = (px(l) - mx) ** 2 + (py(l) - my) ** 2; if (d < bd) { bd = d; best = l; } }
+  if (!best || bd > 400) { pick.textContent = "Click a dot."; return; }
+  const same = DATA.levers.filter(l => l.x === best.x && l.y === best.y);
+  pick.textContent = `segment ${best.seg}: ${DATA.segments[best.seg - 1].label}\n` + same.map(l => `${l.id}  —  ${l.say}`).join("\n");
+});
+find.addEventListener("input", () => { query = find.value.trim().toLowerCase(); draw(); });
+// }}}
+
+draw();
+</script>
+</body>
+</html>
