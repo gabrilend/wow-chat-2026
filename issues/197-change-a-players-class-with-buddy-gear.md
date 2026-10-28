@@ -35,6 +35,14 @@ reputation and buddies. Its gear is left exactly as it was (items the new
 class cannot use are listed, not replaced), and it accepts death knight as
 a target.
 
+Since 2026-10-26 it also teaches, as a matter of course, every lesson of
+the new class up to the character's level (`scripts/teach-character-lessons`,
+run by it), and for a buddy sets its roster row to the new class (plan and
+role with `--plan`, `--role`) and the stage (6; 5 is "set aside", 718) at which the buddy module,
+at the buddy's next login, dresses it for the new class: kit, PvP jewellery
+and gems (`buddies_stage.cpp`, Reclassed). A player's gear is still left as
+it was: the rest of this issue.
+
 ## Intended Behavior
 
 - **Everything that isn't the class is kept**: level, name, race, gender,

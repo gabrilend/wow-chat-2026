@@ -108,7 +108,12 @@ degraded the bots; repairing protects both.
   trigger; sibling patch at the same crash site, different trigger. Its
   delete-before-reconstruct never fired during these diagnostics; its
   null-strategy guard remains useful and B027 keeps a redundant null skip so
-  either patch stands alone.
+  either patch stands alone. Its delete went through the map's base-class
+  pointer (`PlayerbotAIBase`, no virtual destructor), so only the base part
+  was destroyed and `~PlayerbotAI` (its engines, its context, its slot's
+  erase) never ran; since 2026-10-26 it deletes as `PlayerbotAI`, the only
+  type put in that map (found by clang's `-Wdelete-abstract-non-virtual-dtor`
+  in the first Debug build the compile ledger watched).
 - **Upstream report:** the diagnostic trail in the patch doc is sufficient to
   file against mod-playerbots (module rev `93aaea3d`): corrupt facade at
   construction, stride-8 victim selection, watchpoint-clean afterward. Worth

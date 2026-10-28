@@ -698,6 +698,60 @@ makes stamina against spirit a choice of gear (issue 155k2, the owner
 2026-10-04, 2026-10-23 and 2026-10-25). Takes effect at basic's next
 install.
 
+## 2026-10-27 — a buddy's second PvP ring or trinket must fit
+
+| Knob | Value | Where |
+|---|---|---|
+| A second ring or trinket of another name is worn instead of the first's lower-level copy only if it scores at least | 3/4 of that copy's score | `SECOND_PICK_FIT`, `buddies_kit.cpp` (B036) |
+
+Why: the owner wants two different rings and trinkets, from two
+battlegrounds where there are two, but only "another WSG ring that'd fit
+her"; at "any score above 0" a priest wore the warrior's Legionnaire's
+Band for its stamina ("legionnaires band is not useful to a priest").
+Takes effect at the next compile, then `.buddy kit`.
+
+## 2026-10-27 — buddies travelling to their owner (617e13)
+
+| Knob | Value | Where |
+|---|---|---|
+| In the owner's town but farther than this: travel walks it over | 80 yards | `TOWN_STAY_YARDS`, `buddies_town.cpp` (B036) |
+| Long walks in a row that found no way, then unstuck at once | 3 | `FAILS_BEFORE_UNSTUCK` |
+| How far an unstick may move it | 30 yards, 60 for a second in a row | `UNSTUCK_YARDS` and the travel step |
+| The arc a travelling buddy ends on round its owner | 5 yards out, places 4 yards apart | `ARRIVE_RADIUS`, `ARRIVE_SPACING` |
+| A place on it not walked toward for this long is free | 30 s | `ARRIVE_CLAIM_MS` |
+
+Why: the first measured walk (issue 617e13: 41 pairs within 3 yards, 24
+samples within 2 yards of the owner, Matis and Lariadel never arriving):
+travel walked to the owner's own spot, stood down inside one town circle
+however far, and waited 90 s before unsticking a buddy whose every walk
+found no way. To be judged by the next measured walk
+(`scripts/measure-buddy-spread`), numbers before and after.
+
+## 2026-10-27 (later) — the town rule kept; the arc shares its places out
+
+The 80-yard rule of the entry above (a buddy in the owner's town but
+farther than 80 yards travels to the owner) is taken out before it was
+ever in a build: inside the owner's town the town visit has a buddy,
+wherever it is (the owner: "that's not intended behavior"). The arc's
+places are no longer skipped when another buddy claimed them: every
+traveller's place is shared out again at each step, nearest pairs first,
+and a buddy that loses its place walks to its new one (`ArrivalPlace`,
+`buddies_town.cpp`). The other knobs of the entry above stand.
+
+## 2026-10-27 (evening) — a roaming buddy's slope limit is a walker's
+
+A roaming buddy's waypoint was refused only on ground steeper than 45
+degrees, and the search for a sub-zone's edge walked straight up any
+steady slope, which is why buddies climbed hillsides (the owner: "why are
+they climbing up mountains?"). The owner's rule: "what's the limit for a
+player walking up a slope? That should be the limit", and "it's about the
+buddy-bot, not the player". The limit is now 50 degrees, the angle the
+server's mesh builder calls the player's slope and past which the mesh
+marks ground steep and keeps bots off it; it applies both to the waypoint
+and to the edge search, which now stops where the ground climbs faster
+than that (`WALK_SLOPE_DEGREES`, `buddies_roam_ground.cpp`). A hill a
+walker can climb is still roamed. Not yet measured in game.
+
 ## How to add an entry
 
 ```markdown

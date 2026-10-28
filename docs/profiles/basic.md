@@ -103,44 +103,48 @@ lowest priority first, each line its header's own (`scripts/plan-patches basic`)
 
 **Before the compile (source patches, taken off again once it is through):**
 
-| priority | id   | kind   | about                                                                                       |
-| -------: | ---- | ------ | ------------------------------------------------------------------------------------------- |
-|      120 | B002 | source | Add ALE OnLogin hook to playerbots bot login                                                |
-|      140 | B004 | source | Fix ~695 compiler warnings in upstream modules                                              |
-|      150 | B005 | source | Cap level difference impact on hit/miss at ±3 levels                                        |
-|      300 | B020 | source | Add LOCK_ALE to ALEEventProcessor::RemoveEvent                                              |
-|      320 | B022 | source | A --conf-dir option for the servers and dbimport, over the compiled-in module config folder |
-|      360 | B026 | source | Fix the bot-login Engine::Init crash (dangling strategy on duplicate add)                   |
-|      370 | B027 | source | Guard Engine::Init against a strategy with a stale/foreign bot facade                       |
-|      380 | B028 | source | Basic: new characters spawn in their faction's rotating starting valley                     |
-|      390 | B029 | source | A trainer gossip option can name which trainer list it opens                                |
-|      400 | B030 | source | Build the basic profile's own server rules into the worldserver                             |
-|      410 | B031 | source | No crushing blows on basic (was: start 4 levels later)                                      |
-|      420 | B032 | source | A buff can be cast on anyone, whatever the gap between its level and theirs                 |
-|      430 | B033 | source | White (common-quality) gear is never repaired                                               |
-|      450 | B035 | source | Respec cost: no cap, and it falls on the weekly reset                                       |
-|      460 | B036 | source | Build the project's buddy module (mod-buddies) into the worldserver                         |
-|      470 | B037 | source | Playerbots: a switch for the group invite at a bot's login                                  |
-|      480 | B038 | source | Built-in chat channels a profile refuses                                                    |
-|      490 | B039 | source | Log why the console thread shuts the world down (issue 163)                                 |
-|      500 | B040 | source | Creatures one player cannot select                                                          |
-|      510 | B041 | source | Lua calls for creatures one player cannot select                                            |
-|      520 | B042 | source | A bot says "AI was reset to defaults" only when asked to reset                              |
-|      530 | B043 | source | The world says who stopped it                                                               |
-|      540 | B044 | source | Companion accounts: their characters are not in /who and can't be friended                  |
-|      550 | B045 | source | Playerbots: a bot on a companion account takes no chat commands                             |
-|      560 | B046 | source | Playerbots: buddies judge gear by their own talent plan and roll                            |
-|      570 | B047 | source | Creature outfits: a creature can look like a dressed player character                       |
-|      580 | B048 | source | Buddies don't whisper their owner about failed item moves                                   |
-|      590 | B049 | source | Spirit heals by stamina, in combat too                                                      |
-|      600 | B050 | source | Playerbots: a buddy weighs spirit by what it heals                                          |
-|      610 | B051 | source | a Lua call that asks the navigation mesh how far a walk is                                  |
-|      620 | B052 | source | Playerbots: a buddy's long walk never ends in a teleport                                    |
-|      630 | B053 | source | Players walk at the full stock speed; only running and the rest                             |
-|      640 | B054 | source | The server accepts navigation tiles built by version 19 of the                              |
-|      660 | B056 | source | Bots see only as far as they act                                                            |
-|      670 | B057 | source | The most any view distance may be, as a setting                                             |
-|      680 | B058 | source | Bots trade with their own guild                                                             |
+| priority | id   | kind   | about                                                                                                                  |
+| -------: | ---- | ------ | ---------------------------------------------------------------------------------------------------------------------- |
+|      120 | B002 | source | Add ALE OnLogin hook to playerbots bot login                                                                           |
+|      140 | B004 | source | Fix ~695 compiler warnings in upstream modules                                                                         |
+|      150 | B005 | source | Cap level difference impact on hit/miss at ±3 levels                                                                   |
+|      300 | B020 | source | Add LOCK_ALE to ALEEventProcessor::RemoveEvent                                                                         |
+|      320 | B022 | source | A --conf-dir option for the servers and dbimport, over the compiled-in module config folder                            |
+|      360 | B026 | source | Fix the bot-login Engine::Init crash (dangling strategy on duplicate add)                                              |
+|      370 | B027 | source | Guard Engine::Init against a strategy with a stale/foreign bot facade                                                  |
+|      380 | B028 | source | Basic: new characters spawn in their faction's rotating starting valley                                                |
+|      390 | B029 | source | A trainer gossip option can name which trainer list it opens                                                           |
+|      400 | B030 | source | Build the basic profile's own server rules into the worldserver                                                        |
+|      410 | B031 | source | No crushing blows on basic (was: start 4 levels later)                                                                 |
+|      420 | B032 | source | A buff can be cast on anyone, whatever the gap between its level and theirs                                            |
+|      430 | B033 | source | White (common-quality) gear is never repaired                                                                          |
+|      450 | B035 | source | Respec cost: no cap, and it falls on the weekly reset                                                                  |
+|      460 | B036 | source | Build the project's buddy module (mod-buddies) into the worldserver                                                    |
+|      470 | B037 | source | Playerbots: a switch for the group invite at a bot's login                                                             |
+|      480 | B038 | source | Built-in chat channels a profile refuses                                                                               |
+|      490 | B039 | source | Log why the console thread shuts the world down (issue 163)                                                            |
+|      500 | B040 | source | Creatures one player cannot select                                                                                     |
+|      510 | B041 | source | Lua calls for creatures one player cannot select                                                                       |
+|      520 | B042 | source | A bot says "AI was reset to defaults" only when asked to reset                                                         |
+|      530 | B043 | source | The world says who stopped it                                                                                          |
+|      540 | B044 | source | Companion accounts: their characters are not in /who and can't be friended                                             |
+|      550 | B045 | source | Playerbots: a bot on a companion account takes no chat commands                                                        |
+|      560 | B046 | source | Playerbots: buddies judge gear by their own talent plan and roll                                                       |
+|      570 | B047 | source | Creature outfits: a creature can look like a dressed player character                                                  |
+|      580 | B048 | source | Buddies don't whisper their owner about failed item moves                                                              |
+|      590 | B049 | source | Spirit heals by stamina, in combat too                                                                                 |
+|      600 | B050 | source | Playerbots: a buddy weighs spirit by what it heals                                                                     |
+|      610 | B051 | source | a Lua call that asks the navigation mesh how far a walk is                                                             |
+|      620 | B052 | source | Playerbots: a buddy's long walk never ends in a teleport                                                               |
+|      630 | B053 | source | Players walk at the full stock speed; only running and the rest                                                        |
+|      640 | B054 | source | The server accepts navigation tiles built by version 19 of the                                                         |
+|      660 | B056 | source | Bots see only as far as they act                                                                                       |
+|      670 | B057 | source | The most any view distance may be, as a setting                                                                        |
+|      680 | B058 | source | Bots trade with their own guild                                                                                        |
+|      690 | B059 | source | flight points made from Lua get an empty name in every language, so reading one cannot stop the server                 |
+|      700 | B060 | source | crowd control lasts its full length however often it lands: no diminishing returns, no 10-second PvP cap (taunts kept) |
+|      710 | B061 | source | a guild leader's character may be deleted: every basic player leads its buddies' clan                                  |
+|      720 | B062 | source | coins alone on a body are any member's of the group it fell to (issue 155z17)                                          |
 
 **After the compile and install (install steps and settings, mixed by priority):**
 
@@ -182,45 +186,46 @@ lowest priority first, each line its header's own (`scripts/plan-patches basic`)
 
 **After the databases are brought to upstream's state (our SQL):**
 
-| priority | id   | kind | about                                                                                       |
-| -------: | ---- | ---- | ------------------------------------------------------------------------------------------- |
-|     2380 | E008 | sql  | Clear the flightmaster bit network-wide and replace gossip with                             |
-|     2490 | E019 | sql  | Installs a BEFORE INSERT trigger on acore_characters_vanilla.characters                     |
-|     2500 | E020 | sql  | Push the two ground riding skills to Classic level gates (148l): Apprentice                 |
-|     2520 | E022 | sql  | Open every quest to its whole faction on the basic profile (issue 155e):                    |
-|     2530 | E023 | sql  | Create and seed the rotation-state table the basic profile's                                |
-|     2540 | E024 | sql  | Basic's Outland dungeon ladder (issue 155f): sixteen dungeons open at 60,                   |
-|     2550 | E025 | sql  | One "Visiting Mentor" per starting valley that teaches exactly the classes                  |
-|     2560 | E026 | sql  | The table of per-creature (and per-map) damage, healing and health                          |
-|     2570 | E027 | sql  | Outland without tradeskills (issue 155n): its herb, ore, gas and fishing                    |
-|     2580 | E028 | sql  | Outland without quests (issue 155l): every Outland, Shattrath, Isle and                     |
-|     2590 | E029 | sql  | Inscription without glyphs (issue 155o): glyph recipes off the trainers,                    |
-|     2600 | E030 | sql  | Darkmoon cards (issue 155o): nothing from a Darkmoon deck binds, and the                    |
-|     2610 | E031 | sql  | Outland gear scaling (issue 155k, with 155f's dungeon ladder): Outland's                    |
-|     2620 | E032 | sql  | Outland world levels (issue 155k): Outland's open-world monsters +4, the                    |
-|     2630 | E033 | sql  | Gem supply (issue 155p, stage 1): prospecting yields, Wrath and epic gem                    |
-|     2660 | E036 | sql  | White gear durability (issue 155p): white weapons and armor last twice as                   |
-|     2670 | E037 | sql  | Class books for the level 61-80 abilities (issue 155q): one stock-style                     |
-|     2680 | E038 | sql  | The Dark Portal as the only door into Outland (issue 155l): Shattrath's                     |
-|     2690 | E039 | sql  | No guild banks (issue 617l): every Guild Vault spawn removed. Same                          |
-|     2700 | E040 | sql  | Sargobras at the gate of Acherus (issue 718): the gossip NPC in the Ebon                    |
-|     2720 | E042 | sql  | The buddy clan and roster tables (issue 617a1): each owner's companion                      |
-|     2730 | E043 | sql  | Sargobras, the buddy selector (issue 617b): his two creatures (the valley                   |
-|     2740 | E044 | sql  | Every named area's borders and middle (issue 617e2), for the buddies'                       |
-|     2750 | E045 | sql  | The beds buddies sleep on in towns (issue 617e4), placed by hand in game                    |
-|     2760 | E046 | sql  | The world bosses' respawn taken off the server's timer (issue 155j): the                    |
-|     2800 | E050 | sql  | The world's little towns as circles (issue 617e4a): every cluster of                        |
-|     2820 | E052 | sql  | Every gearset profile (issue 617r: src/lua-basic/data/gearsets/*.lua) as                    |
-|     2830 | E053 | sql  | The `command` rows for the game master commands the project compiles in                     |
-|     2840 | E054 | sql  | The game's legendaries as level-60 raid drops (issue 182): level-60 copies                  |
-|     2850 | E055 | sql  | The smaller places buddies roam (issue 617e12, the first cut): every named                  |
-|     2860 | E056 | sql  | The kept stand-ins (issue 617t1): one row per stand-in character the buddy                  |
-|     2870 | E057 | sql  | The Eternal Belt Buckle usable from level 60 (issue 624): one item's                        |
-|     2970 | E067 | sql  | One enchanting scroll per classic dungeon boss kill, near the boss's level (issue 812)      |
-|     2980 | E068 | sql  | A Profession Mentor in each capital, teaching the professions its city lacks (issue 155e1)  |
-|     3010 | E071 | sql  | The level-60 fights' multipliers and rewritten boss spells (issues 155i, 155f1, 155j)       |
-|     3020 | E072 | sql  | Some gear trades its stamina for spirit: two fifths of each kind, all or half (issue 155k2) |
-|     3030 | E073 | sql  | Shared loot tables that mix qualities split into one table per quality (issue 181)          |
+| priority | id   | kind | about                                                                                                    |
+| -------: | ---- | ---- | -------------------------------------------------------------------------------------------------------- |
+|     2380 | E008 | sql  | Clear the flightmaster bit network-wide and replace gossip with                                          |
+|     2490 | E019 | sql  | Installs a BEFORE INSERT trigger on acore_characters_vanilla.characters                                  |
+|     2500 | E020 | sql  | Push the two ground riding skills to Classic level gates (148l): Apprentice                              |
+|     2520 | E022 | sql  | Open every quest to its whole faction on the basic profile (issue 155e):                                 |
+|     2530 | E023 | sql  | Create and seed the rotation-state table the basic profile's                                             |
+|     2540 | E024 | sql  | Basic's Outland dungeon ladder (issue 155f): sixteen dungeons open at 60,                                |
+|     2550 | E025 | sql  | One "Visiting Mentor" per starting valley that teaches exactly the classes                               |
+|     2560 | E026 | sql  | The table of per-creature (and per-map) damage, healing and health                                       |
+|     2570 | E027 | sql  | Outland without tradeskills (issue 155n): its herb, ore, gas and fishing                                 |
+|     2580 | E028 | sql  | Outland without quests (issue 155l): every Outland, Shattrath, Isle and                                  |
+|     2590 | E029 | sql  | Inscription without glyphs (issue 155o): glyph recipes off the trainers,                                 |
+|     2600 | E030 | sql  | Darkmoon cards (issue 155o): nothing from a Darkmoon deck binds, and the                                 |
+|     2610 | E031 | sql  | Outland gear scaling (issue 155k, with 155f's dungeon ladder): Outland's                                 |
+|     2620 | E032 | sql  | Outland world levels (issue 155k): Outland's open-world monsters +4, the                                 |
+|     2630 | E033 | sql  | Gem supply (issue 155p, stage 1): prospecting yields, Wrath and epic gem                                 |
+|     2660 | E036 | sql  | White gear durability (issue 155p): white weapons and armor last twice as                                |
+|     2670 | E037 | sql  | Class books for the level 61-80 abilities (issue 155q): one stock-style                                  |
+|     2680 | E038 | sql  | The Dark Portal as the only door into Outland (issue 155l): Shattrath's                                  |
+|     2690 | E039 | sql  | No guild banks (issue 617l): every Guild Vault spawn removed. Same                                       |
+|     2700 | E040 | sql  | Sargobras at the gate of Acherus (issue 718): the gossip NPC in the Ebon                                 |
+|     2720 | E042 | sql  | The buddy clan and roster tables (issue 617a1): each owner's companion                                   |
+|     2730 | E043 | sql  | Sargobras, the buddy selector (issue 617b): his two creatures (the valley                                |
+|     2740 | E044 | sql  | Every named area's borders and middle (issue 617e2), for the buddies'                                    |
+|     2750 | E045 | sql  | The beds buddies sleep on in towns (issue 617e4), placed by hand in game                                 |
+|     2760 | E046 | sql  | The world bosses' respawn taken off the server's timer (issue 155j): the                                 |
+|     2800 | E050 | sql  | The world's little towns as circles (issue 617e4a): every cluster of                                     |
+|     2820 | E052 | sql  | Every gearset profile (issue 617r: src/lua-basic/data/gearsets/*.lua) as                                 |
+|     2830 | E053 | sql  | The `command` rows for the game master commands the project compiles in                                  |
+|     2840 | E054 | sql  | The game's legendaries as level-60 raid drops (issue 182): level-60 copies                               |
+|     2850 | E055 | sql  | The smaller places buddies roam (issue 617e12, the first cut): every named                               |
+|     2860 | E056 | sql  | The kept stand-ins (issue 617t1): one row per stand-in character the buddy                               |
+|     2870 | E057 | sql  | The Eternal Belt Buckle usable from level 60 (issue 624): one item's                                     |
+|     2970 | E067 | sql  | One enchanting scroll per classic dungeon boss kill, near the boss's level (issue 812)                   |
+|     2980 | E068 | sql  | A Profession Mentor in each capital, teaching the professions its city lacks (issue 155e1)               |
+|     3010 | E071 | sql  | The level-60 fights' multipliers and rewritten boss spells (issues 155i, 155f1, 155j)                    |
+|     3020 | E072 | sql  | Some gear trades its stamina for spirit: two fifths of each kind, all or half (issue 155k2)              |
+|     3030 | E073 | sql  | Shared loot tables that mix qualities split into one table per quality (issue 181)                       |
+|     3040 | E074 | sql  | Camp Narache's leather merchant sells the Thin Cloth set too, as Cloth & Leather Merchant (issue 617a4a) |
 <!-- patch-lists: end -->
 
 ## How to switch to basic

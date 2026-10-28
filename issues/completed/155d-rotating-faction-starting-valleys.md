@@ -22,6 +22,14 @@ Verbatim, 2026-09-23:
 
 ## Current Behavior
 
+**Since then (2026-10-27):** two valley quests ask for the valley race's own
+racial ability, so another race starting there could not finish them:
+Thirst Unending (8346, Arcane Torrent, Sunstrider Isle) and Rescue the
+Survivors! (9283, Gift of the Naaru, Ammen Vale). `src/lua-basic/racial-quests.lua`
+completes them for a character of any other race as it takes them (and at
+login for one already carrying them); `scripts/test-racial-quests` checks
+it. Found by searching every quest's text for a racial ability's name.
+
 **Built 2026-09-23 (route 1); patched source type-checks, not yet compiled
 or run.** Source patch B028 (`patches/B028-basic-starting-valley-rotation.sh`)
 adds the rotation to the character-creation handler. It runs after the

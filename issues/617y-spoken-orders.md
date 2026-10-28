@@ -45,6 +45,25 @@ Answers, 2026-10-12 (verbatim):
 
 ## Current Behavior
 
+**"follow me", "follow <name>", "go away", "go away!", "shoo",
+2026-10-27; syntax-checked, not yet built or run** (`buddies_orders.cpp`,
+ObeyFollow; the words read by `roam/buddy_follow_core.h`, ReadOrder, and
+checked by `scripts/test-buddy-follow-core`). The hearers follow the
+speaker or the named player (a buddy among the hearers by name, else any
+player online) in the following formation of 617e13 (`buddies_follow.cpp`),
+with the "told to follow" behaviour set in the open and in towns (no
+roaming, no town visit; looting and gathering kept). "go away" or "shoo"
+from the player followed (or from the buddies' own owner) sends them back
+to their usual behaviour; "go away!" also refuses that player until that
+player logs out, and a refused buddy is named to the speaker when told to
+follow again. A leader logging out ends the follow. Who hears, by where it
+is said (617e13's step 5): party or raid chat, the buddies in that group;
+a whisper, that buddy; guild chat, every buddy of the guild; /say and
+/yell, the speaker's own buddies within the server's say or yell range.
+The speaker is told how many follow or went. Question 3 (how a follow
+ends) is answered by the 2026-10-23 entry below; question 4 (whose
+buddies obey "follow <name>") by 617e13's hearing rules: those who hear it.
+
 **"Attack", 2026-10-15; syntax-checked, not yet rebuilt or run**
 (`buddies_orders.cpp`, ObeyAttack). The owner: "There should be a macro
 based command that tells my buddy-bots to 'attack my target' as in,

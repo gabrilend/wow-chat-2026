@@ -538,6 +538,11 @@ mysql error.
   renders the character in their kit. Reason for adding mod-ale to
   the vanilla module set — see Lua engine bullet in the canonical
   definition above).
+- **148x — Levels 41-60 as the endgame of a level-40 server** (added
+  2026-10-27: the content above the cap scaled as basic scales Outland,
+  so a group of level 40s can take down Ragnaros; its own sub-issues
+  148x1-148x5 for the world, the dungeons, the gear, the raids and the
+  balancing).
 
 ## Decisions Recorded — Sub-Issues Considered and Declined
 

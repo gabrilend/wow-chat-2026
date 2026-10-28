@@ -30,8 +30,12 @@ offline test is `scripts/test-ambush`.*
    The answer comes back later to the player who asked, looked up by name
    (issue 210). A rank with nothing for the level asks the next one down:
    rare elite, then rare, then normal (`Ambush.NEXT_RANK_WHEN_NONE`).
-6. **The spawn** (`Ambush.randomSpawn`). 120-160 yards out: in an arc
-   ahead of a moving player, on a plus sign round a still one. Water:
+6. **The spawn** (`Ambush.randomSpawn`). Ahead of a moving player, in an
+   arc 120-160 yards out. Round a still one, on a plus sign: 120-160 yards
+   out along one of the four directions and up to 120 yards to either side
+   of it, so 120 to 200 yards away (the shape is wow-chat-1's, "more like
+   a plus shape but that's close enough"; until 2026-10-26 this line said
+   120-160 for both, and `scripts/test-datapath-ambush` found one at 161). Water:
    up to 3 retries round the player. A cliff (ground 15+ yards above or
    below the player) or no ground: up to 5 retries, each nearer, never
    under 30 yards. Then the monster is counted against its player.

@@ -45,7 +45,13 @@ Lifestealing (1898) or Unholy Weapon (1899), chosen at random, in the
 item's permanent enchant slot. A re-dress (`.buddy kit`, a stand-in's
 new level) enchants nothing. From level 30 (owner, 2026-10-15: "above level 29, 30 and up").
 The next enhancements by level are 624's. An enchant number the server's tables lack is
-named in the kit's problem line. Not yet: the weapons of the level-up
+named in the kit's problem line. A buddy being made is in no world, so
+the enchant is written straight into the weapon's fields (the first save
+keeps it; its effects come at the first login), as the gems are; the
+server's own enchant setter looks the owner up among the players in the
+world, found nobody, and crashed the server on every buddy made at 30 or
+more (found 2026-10-26 with a Debug build's backtrace; guarded since by
+`scripts/test-buddy-made-out-of-world`). Not yet: the weapons of the level-up
 command (185) and the class-change tool (187), and players.
 
 Before:

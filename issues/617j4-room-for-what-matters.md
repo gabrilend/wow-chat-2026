@@ -1,0 +1,87 @@
+# 617j4 - Room for What Matters
+
+## Status
+- Created: 2026-10-27
+- Phase: 6
+- Parent: 617j (buddy loot rolls and upgrades)
+- Related: 617j1 (loot turns), 617h1 (the selling trip: what empties
+  bags today), 617a4 (the starting kit: bags), B046 (the playerbots
+  module's loot judgement for buddies), `buddies_loot.cpp`
+- Priority: High (a won upgrade was lost, 2026-10-26)
+- State: plan only; nothing built
+
+## Origin
+
+The owner, 2026-10-27, after Matis won green bracers with a need roll
+and never had them (his backpack was full and he had no bags):
+
+> buddies shouldn't always get bags. They should find them. Though, they
+> should be spawned from Sargobras with the same number of slots that the
+> player has.
+>
+> also, buddy-bots should destroy items if they need to loot something. I
+> don't see buddy-bots looting anything, so we should make sure that their
+> functionality there is fixed. For this case, a full inventory prevented
+> the looting of a green - which is more important than plenty of items in
+> inventory, presumably. Especially because it was "need"ed. Buddy-bots
+> should prioritize almost anything lower than a gear upgrade. Gear
+> upgrades are precious and beloved and cherished and celebrated.
+> Sometimes, they are posted to guild chat to celebrate. But the bot
+> should be HAPPY if they do.
+
+## Current Behavior
+
+- **Bags**: a buddy is made with bags like its owner's (617a4; "the same
+  number of slots that the player has", as the owner wants); an owner with
+  none gives buddies none. On 2026-10-27 Feldowinn and her six buddies had
+  none; four Mageweave Bags each were given by hand (and the `travel-bags`
+  gearset profile now does it in game).
+- **Looting**: the owner sees buddies loot nothing. Their trace shows the
+  loot actions ("add all loot", "loot roll") tried and failing every tick
+  (`Playerbots.log`, "A:loot roll - FAILED"); why is not yet known.
+- **Full bags**: a buddy that wins a roll with no room loses the item
+  (Matis, 2026-10-26: a need-rolled green, gone).
+
+## Intended Behavior
+
+1. **Bags are found, not given**: none beyond the starting kit's (its
+   owner's slot count, at its making by Sargobras); new bags come from
+   loot, vendors and the owner, as for a player.
+2. **Buddies loot**: corpses and chests they kill or open, as the owner
+   expects to see.
+3. **Room is made for what matters**: when a buddy must take an item and
+   has no room, it destroys the least worth item it carries to make room.
+   What may go, first to last: grey junk, then common trade goods and food
+   it has plenty of, then anything else that is not a gear upgrade, a quest
+   item or soulbound gear it wears. A gear upgrade is never what goes, and
+   a gear upgrade (or anything won with a need roll) always gets its room.
+4. **Upgrades are celebrated**: a buddy that loots or wins an upgrade puts
+   it on, and is happy about it: an emote (cheer, dance), and sometimes (a
+   chance, not every time) a line in guild chat naming the item.
+
+## Suggested Implementation Steps
+
+1. Find why the loot actions fail for buddies: the playerbots module's loot
+   strategy and the buddy module's changes to it (B046, `buddies_loot.cpp`),
+   with the movement trace (`.buddy trace <name>`) while killing near a
+   corpse. Fix that first; nothing else matters while nothing is looted.
+2. A worth order for a buddy's items (a pure function with a test): given
+   what it carries (quality, sell price, stack, kind, soulbound, an
+   upgrade by its own gear scoring), the order in which they may be
+   destroyed; an upgrade or a need-won item never in the list.
+3. Before taking an item (loot, a won roll) with no free slot: destroy the
+   first of that order; a log line names it.
+4. On an upgrade worn: an emote, and a guild-chat line now and then.
+5. Seen in game: a buddy with full bags wins a green, destroys a grey,
+   wears the green, cheers.
+
+## Open Questions
+
+1. **"Plenty of"**: when is a stack of trade goods or food "plenty" (to be
+   destroyed before other items), and is selling it next time in town
+   better than destroying it now?
+2. **How often a guild line**: every upgrade of rare quality or better,
+   one in five of the uncommon ones, or something else? And its words:
+   fixed lines, or the chat layer's (920)?
+3. (Answered 2026-10-27: "yes") **Need rolls with full bags**: a buddy
+   with no room and nothing it may destroy passes the roll.

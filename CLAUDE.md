@@ -140,7 +140,14 @@ One script per command since issue 142 (2026-04-14); the old
 
 - MySQL runs on port 3307 (project-local installation, MySQL 9.6, settings
   in `mysql/conf/my.cnf`)
-- Credentials: ritz / menardi
+- Credentials: ritz / menardi. Since 2026-10-27 no script puts them on a
+  command line: the MySQL tools read them from `mysql/conf/client.cnf`
+  (private, not in git), named as the first option,
+  `--defaults-file=${DIR}/mysql/conf/client.cnf`. `scripts/mysql-client-options`
+  writes that file from `secrets.conf` (`scripts/start-mysql` does it
+  when it is missing), and its `check` (a quick test) fails on any
+  script that passes the password again. By hand:
+  `mysql/installed-files/bin/mysql --defaults-file=mysql/conf/client.cnf -h127.0.0.1 -P3307`.
 - Databases: `acore_auth` (shared by every realm), and per profile
   `acore_world_<profile>`, `acore_characters_<profile>`,
   `acore_playerbots_<profile>` (the names come from `_profile_db_name` in
@@ -414,6 +421,23 @@ See `issues/117-visual-powerline-mapping-tool.md` for full specification.
   conversation pages' rebuild, now of whichever folder is pushing) is kept
   as `pre-push.before-intuition` and runs first. Like the commit hook, it is
   not version-controlled: after a fresh clone, run the installer again.
+- **Each commit on main is tested in the background** (issue 1100b):
+  `.git/hooks/post-commit`, written by `scripts/install-commit-test-hook`,
+  starts `scripts/test-commit`, which runs the quick tests that read a file
+  the commit changed, on the commit's own files, and keeps the results in
+  git's notes (`git log --notes=tests`); the compile then skips a test
+  whose files are unchanged since it passed (`--retest` runs them all).
+  The report: `tmp/shared-memory/commit-tests/<commit>/summary`. Not
+  version-controlled either: after a fresh clone, run the installer again.
+- **A patch that compiles may be committed.** The owner, 2026-10-27: "if
+  we create a patch file and it successfully compiles, that we can commit
+  that work." A patch (and the work riding with it: its tests, docs and
+  issue updates) is committed once the owner's compile has built it
+  cleanly, without waiting for its whole issue to be complete. The issue
+  stays in progress, its Current Behavior saying what is built and what is
+  not. "Compiles" means the owner's `scripts/compile` run, read from its
+  log (`tmp/shared-memory/compile-<profile>.log`); a syntax-only check on
+  scratch copies is not enough on its own.
 
 ## Patch System
 

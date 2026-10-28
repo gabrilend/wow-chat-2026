@@ -6,7 +6,7 @@
 - Parent: 617
 - Blocked by: 617a
 - Priority: High
-- Sub-issues: 617c1 through 617c4
+- Sub-issues: 617c1 through 617c5 (617c5: party buffs shared out)
 
 ## Origin
 

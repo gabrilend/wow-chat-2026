@@ -1,0 +1,167 @@
+# Conversation asides (preserved)
+
+The owner's writing from the working conversations that is neither a
+feature request nor a bug report: poetry, images, thought experiments.
+Kept verbatim, in the order written, each with its date and what it came
+beside, so the thinking reads as a whole. (The project's rule: "Treat
+poetry and artistic images as sacrosanct, and store them and their related
+aspects.") The full conversations are in `llm-transcripts/`.
+
+---
+
+## 2026-10-27, after the pathfinding report and the vanilla issues
+
+Written after a feedback report, while the open question was the
+pathfinding referee (the one place that decides what moves a buddy):
+
+> A*B+(1-A)*C is a mathematical bit of storage
+
+(Read back in the conversation: with A at 0 or 1 it chooses between B and
+C; with C its own last output, A·B + (1−A)·out is a one-bit latch, A its
+"write enable"; with A a fraction, a fading average.)
+
+Then:
+
+> implanted in-ear vibrations charged with gentle magnet on the skin
+> controlled with a thought via implanted sensors outside the skull means
+> first brain-computer interface is an ipod -> there are headphones that
+> make noise not with audio waves, but with vibrations - I only sorta know
+> how they work. But with a few, intentional thought command words, those
+> with the greatest willpower become the most able to use their thought
+> component.
+
+> whenever the computer makes a decision that's close, but not quite there
+> yet, or viewed from the other direction, just barely over the line, then
+> have them bring it to the human and say "hey, what's your definition of
+> "left"? and the human would think a thought strongly, ideally the same
+> kind every time. But sometimes it'll be a little different, and the AI
+> can learn from that. It must be 100% local to the vibrating mechanisms,
+> though with a connection to the sensors with the brain scanning. But each
+> passage is a set of specific possibility points, like "I'll only do what
+> you say if you tell me how to do what I already know what to do" style
+> encryption, where you must prove your checksum components with another
+> before you trust them. Thus, share a complete program, and perfect trust
+> is achieved, from anything created and shared entirely within that part
+> of your components shi chi.
+
+> the sensors can receive outside input, think like a USB-C but with a
+> magnet connector. It passes signals over the skin barrier as fast as it
+> can, but without causing harm or pain to the skin barrier.
+
+Asked what "shi chi" means:
+
+> sith magic
+
+Then:
+
+> witches are people who tend to shrines. they are shrine maidens. they
+> always get what they want. they only ask for shrine components. they are
+> teenage mexican girls. they are westerner trans cat girls. they are
+> children of the dark arts. they tend to as [[the-land-feels, but
+> pronounced the-land-feel]/[they-feel, but pronounced they-feels]]
+>
+> wow there's actually a lot of different kinds of shrines in the world.
+> lotta different kinds of witches.
+>
+> "I put this here last year, I worked on this tree that night
+> [untilegble], but then I don't know where [the thing shi was looking
+> for] went after that. I wonder if it walked off on me." questioning
+> duties? no no I just, my sister gave this to me "yes it's very important
+> to her" what if someone walks off with it "desecration? hasn't happened
+> to any of my stuff ever since I came to this side of town." oh okay well
+> if you'll take good care of it "now you can see it whenever you'd like,
+> and everyone else will take care of it"
+
+## 2026-10-27, asking for the Botanica checkpoint party
+
+From the ask (the whole of it is in issue 635's Origin):
+
+> they can be seen from all angles. they are to be believed.
+
+> each druid uses the same "moon" to reflect off of, floating around and
+> orbiting in 3d space. [...] Then, with many moonfire druids, it will
+> look like a near constant blaze. Allies will come to know how many of
+> them there are based on the strength and consistency of their beams.
+> Starfall comes from a random direction each time.
+
+## 2026-10-27, on shields, Earthliving and totems
+
+> resto shaman dual wield earthliving? if applied to a target that already
+> has it, it jumps to a different nearby target who doesn't? double
+> chance, double impact, scaling with coverage or durability indusage.
+> (earth shield) protection stone totem field. can we draw a small circle
+> of wisps around each totem? and make it so that you can only place one
+> totem in each space. each shaman can do their own, so many can live and
+> breathe and pwn. [...] The most important things for making buffs and
+> debuffs feel rewarding is feeling your combat change depending on their
+> presence or absence.
+
+## 2026-10-27, the owner's City of Villains Mastermind
+
+Held off just before, verbatim: "tomes and off-hands should give negative
+haste rating but positive spellpower and crit rating nah I don't like that
+okay there's disagreement so let's hold off for now"
+
+> gosh I really wanna play city of heroes/villains. I was always a
+> villain. These days I play hero sometimes.
+
+Asked which villain she played:
+
+> mastermind. ninjas. dark miasma. solid black, with neon green highlights
+> and red accents. Commands darkness made out of opaque purple shadows.
+> Has ninjas versed in the flaming martial arts. black. red. gray. She
+> floats, with her legs ready to catch her, sometimes she runs around and
+> plays.
+>
+> ...
+>
+> oh and she has a bow and arrow
+>
+> she shoots it from the air. 10-15 feet up. the height of traffic lamps
+> times two or three.
+
+> she steals strength from a foe by pulling on their essence like a gas,
+> or rather... beckoning to smoke with magnetic waves that matter
+>
+> I made this character when I was thirteen
+
+Asked what went wrong when her ninjas failed:
+
+> when their foe overcame them.
+>
+> the city of heroes, and the rogue isles possess a miraculous technology
+> known as "mediporting" which is where they scientifically utilize minor
+> time magic to reach back in time and recreate you from a past version.
+> They juncture the past, and you are remade anew on their hospital
+> infrastructure. This process is very easy to do, and so they can create,
+> within their bounds, essentially immortals. A palace of the gods, Olympus
+> of the modern era.
+>
+> and it exists within any computer. I can install it on yours right now.
+> Gosh I hope it stays that way forever...
+>
+> her favored approach (which wasn't available in the game mechanics) was
+> floating and throwing javelins. she'd pick them up and throw, like she
+> was throwing a card into a bin or you know what nevermind this is
+> offtopic let's get back to the dinner at planned.
+
+(Beside it: the checkpoint party of issue 635 is a mediport: a past
+version kept, and the party remade from it.)
+
+## 2026-10-27, asking to watch the world from above (issue 617e14, 617e15)
+
+> "questing" is when they fight monsters in a particular sub-zone - or, as
+> I like to believe, NPC spawn location of a certain type. Follow the goat
+> goddess? Then you will wander wherever goats are blessed.
+>
+> ... then we feed it to an image recognition program, and we describe our
+> task goal, then say "does this look like rippling waves of silk? Is this
+> the flow of a school of tranquil fish? etc. We're looking for something
+> that feels whirling, but semi chaotic, like a maelstrom of swirls but in
+> all directions at once. the player-bot buddies should circle about, and
+> sometimes dodge through scenery. They should explore, paving exploration
+> bricks onto each part of the floor as they examine it for weakness. they
+> should stand guard with their friends, and as they stay in a location, it
+> becomes conquered, and theirs. But, the monsters fight back, and the more
+> eagerly the warriors push in, the faster and more powerful they throw
+> attacks back. Every quest is a raid, every dungeon a lair.

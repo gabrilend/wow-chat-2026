@@ -29,6 +29,10 @@ wow-chat-2026/
 │   ├── rmail-integration.md       rmail setup for server services
 │   ├── scripting.md               ALE Lua scripting reference
 │   ├── toy-world.md               The pretend world: testing game scripts without a server (the tests and demo built on it)
+│   ├── pathfinding-improvements.md Ten ideas for buddy movement beyond 617e13's first fixes, each with how it would be measured
+│   ├── pathfinding-questing-and-dungeons.md How buddies move while questing and in dungeons, why they climb hills, and the plan for the five ideas the owner commented on
+│   ├── buddy-gear-spec.md         How a buddy is trained and dressed, by rule (checked by scripts/check-buddies)
+│   ├── reports/valley-vendor-gear.md  Generated: each starting zone's vendors and the slots they fill, by class (617a4a)
 │   ├── roadmap.md                 Development phases and milestones
 │   ├── road-to-release.md         Milestones from today to the public release of basic, then the custom client and 3D models
 │   ├── road-to-1.0.md             From the public release to 1.0 (our client, their art, our generators) and the sold full version (all our own assets)
@@ -96,6 +100,7 @@ wow-chat-2026/
 │   ├── owner-perspective.md       How the owner plays (Retribution Paladin); explain from that view
 │   ├── claude-md-asides.md        Writing lifted out of CLAUDE.md when it was trimmed
 │   ├── todo-file-asides.md        Writing preserved from the root todo/new-issue files
+│   ├── conversation-asides.md     The owner's poetry and thought experiments from the conversations, verbatim
 │   ├── vision-enchanting-system-update.md  Layered, level-scaling enchantments; materials, sprites and crowsign (2026-09-26)
 │   ├── vision-medal-encounters.md  Optional bosses gated by marginal stats (resilience, etc.)
 │   ├── larp-renfair-visual-style.md Monsters shown as people in costume, LARP / Renaissance-fair style (2026-10-22, for 634)

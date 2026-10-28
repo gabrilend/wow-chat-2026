@@ -62,7 +62,11 @@ anyway."
   Thrallmar, and back from Krill Bitterhue (Honor Hold) and Barley
   (Thrallmar); Light's Hope Chapel's Khaelyn Steelwing (Alliance) and
   Georgia (Horde) to the Isle, and back from Ohura on the Isle (by the
-  player's faction). The routes' waypoints are the client's own
+  player's faction). The Lua engine's `AddTaxiPath`, which builds them,
+  makes a flight point per waypoint (numbered from 500) and left their
+  names unset; `.lookup taxinode` read one and stopped the server
+  (2026-10-26); patch B059 gives each an empty name in every language.
+  The routes' waypoints are the client's own
   (`scripts/generate-basic-outland-flights` copies them from
   TaxiPathNode.dbc into `src/lua-basic/data/outland-flight-paths.lua`); the
   Horde's Isle route joins the client's two legs via Zul'Aman into one
