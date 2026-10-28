@@ -53,6 +53,13 @@ check "starter called the PID file stale"        '[[ "${OUT1}" == *"Removing sta
 check "server answers a ping"                    '"${ADMIN}" --no-defaults --socket="${SOCKET}" --connect-timeout=2 ping >/dev/null 2>&1'
 check "decoy process was left untouched"         'kill -0 ${DECOY_PID} 2>/dev/null'
 check "PID file now names a mysqld"              '[[ "$(readlink /proc/$(cat "${PID_FILE}")/exe)" == */mysqld ]]'
+# mysqld in a session of its own (2026-10-26): a Ctrl-C at whatever
+# launched it, or that terminal closing, must never stop MySQL. Its session
+# number is its own process number (it leads the session setsid made), and
+# differs from this test's.
+MYSQLD_NOW="$(cat "${PID_FILE}")"
+check "mysqld leads a session of its own"        '[[ "$(ps -o sid= -p "${MYSQLD_NOW}" | tr -d " ")" == "${MYSQLD_NOW}" ]]'
+check "mysqld is outside the starter's session"    '[[ "$(ps -o sid= -p "${MYSQLD_NOW}" | tr -d " ")" != "$(ps -o sid= -p $$ | tr -d " ")" ]]'
 
 echo "Run 2: starter with MySQL already up"
 OUT2="$("${DIR}/scripts/start-mysql" "${DIR}")"

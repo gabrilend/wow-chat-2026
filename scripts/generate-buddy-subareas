@@ -211,7 +211,7 @@ local function worker(map)
     -- every starting valley: turkeys took Deathknell whole and the valleys'
     -- level ranges read 1-70 (2026-10-08). Training dummies are left out
     -- too (they pass every faction test; their script is the only mark)
-    local q = string.format("'%s/mysql/installed-files/bin/mysql' --no-defaults --socket='%s/mysql/databases/mysql.sock' -uritz -pmenardi acore_world_basic -N -B -e \"SELECT c.position_x, c.position_y, ct.type, ct.family, ct.faction, ct.minlevel, ct.maxlevel, ct.name FROM creature c JOIN creature_template ct ON ct.entry = c.id WHERE c.map = %d AND ct.npcflag = 0 AND ct.type <> 8 AND (ct.unit_flags & 33554434) = 0 AND ct.ScriptName <> 'npc_training_dummy' AND NOT EXISTS (SELECT 1 FROM game_event_creature g WHERE g.guid = c.guid AND g.eventEntry > 0)\" 2>&1", DIR, DIR, map)
+    local q = string.format("'%s/mysql/installed-files/bin/mysql' --defaults-file=" .. DIR .. "/mysql/conf/client.cnf --socket='%s/mysql/databases/mysql.sock' acore_world_basic -N -B -e \"SELECT c.position_x, c.position_y, ct.type, ct.family, ct.faction, ct.minlevel, ct.maxlevel, ct.name FROM creature c JOIN creature_template ct ON ct.entry = c.id WHERE c.map = %d AND ct.npcflag = 0 AND ct.type <> 8 AND (ct.unit_flags & 33554434) = 0 AND ct.ScriptName <> 'npc_training_dummy' AND NOT EXISTS (SELECT 1 FROM game_event_creature g WHERE g.guid = c.guid AND g.eventEntry > 0)\" 2>&1", DIR, DIR, map)
     local spawns_by_area = {}
     local h = io.popen(q)
     for line in h:lines() do

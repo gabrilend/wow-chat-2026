@@ -128,7 +128,7 @@ end
 -- {{{ load: the command table rows
 local db = DATABASE[PROFILE]
 if not db then io.stderr:write("ERROR: unknown profile '" .. PROFILE .. "'\n"); os.exit(1) end
-local mysql = string.format("'%s/mysql/installed-files/bin/mysql' --no-defaults --socket='%s/mysql/databases/mysql.sock' -uritz -pmenardi -B -N %s -e 'SELECT name, security, help FROM command' 2>&1",
+local mysql = string.format("'%s/mysql/installed-files/bin/mysql' --defaults-file=" .. DIR .. "/mysql/conf/client.cnf --socket='%s/mysql/databases/mysql.sock' -B -N %s -e 'SELECT name, security, help FROM command' 2>&1",
     DIR, DIR, db)
 local raw_rows, ok = shell_lines(mysql)
 local rows = {}
@@ -169,7 +169,7 @@ local RBAC_LEVEL = {}                                   -- permission number -> 
 RBAC_PENDING = {}                                       -- permission numbers granted only by updates not yet run
 do
     local auth = (PROFILE == "vanilla") and "acore_auth_vanilla" or "acore_auth"
-    local q = string.format("'%s/mysql/installed-files/bin/mysql' --no-defaults --socket='%s/mysql/databases/mysql.sock' -uritz -pmenardi -B -N %s -e "
+    local q = string.format("'%s/mysql/installed-files/bin/mysql' --defaults-file=" .. DIR .. "/mysql/conf/client.cnf --socket='%s/mysql/databases/mysql.sock' -B -N %s -e "
         .. "\"SELECT 'd', secId, permissionId FROM rbac_default_permissions UNION ALL SELECT 'l', id, linkedId FROM rbac_linked_permissions\" 2>&1", DIR, DIR, auth)
     local lines = shell_lines(q)
     local roots, links = {}, {}
@@ -189,7 +189,7 @@ do
     -- from their INSERTs; a permission reached only through them is marked
     -- so ("after the next start")
     local applied = {}
-    for _, line in ipairs(shell_lines(string.format("'%s/mysql/installed-files/bin/mysql' --no-defaults --socket='%s/mysql/databases/mysql.sock' -uritz -pmenardi -B -N %s -e 'SELECT name FROM updates' 2>&1", DIR, DIR, auth))) do
+    for _, line in ipairs(shell_lines(string.format("'%s/mysql/installed-files/bin/mysql' --defaults-file=" .. DIR .. "/mysql/conf/client.cnf --socket='%s/mysql/databases/mysql.sock' -B -N %s -e 'SELECT name FROM updates' 2>&1", DIR, DIR, auth))) do
         applied[line] = true
     end
     local pending_dir = SRC .. "/data/sql/updates/db_auth"

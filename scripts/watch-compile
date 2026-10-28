@@ -17,6 +17,11 @@
 # a watcher that trusted the promotion alone reported a success whose trial
 # server never finished starting (owner: "you should have caught this").
 #
+# This waits for the end and judges it. To see each warning and error the
+# moment it is printed, sorted by kind, follow the run with
+# scripts/compile-ledger (2026-10-26), which writes them to
+# tmp/shared-memory/compile-<profile>.warnings as they come.
+#
 # Usage: scripts/watch-compile [PROJECT_DIR] [--profile P] [--after SECONDS_SINCE_EPOCH] [--max MINUTES]
 #   --profile  default: the project's .profile
 #   --after    only a receipt written after this time counts (default: now,
@@ -101,7 +106,10 @@ if grep -q "^verdict: *compiled" "${RECEIPT}"; then
     sleep 5   # the run log is written through a pipe; let its last lines arrive
 fi
 
-if ! grep -q "World initialized in" "${TRIAL_LOG}" 2>/dev/null; then
+# Any case: the server prints "WORLD: World Initialized In 0 Minutes 43
+# Seconds"; matched exactly, a promoted Debug build was called FAILED
+# (2026-10-26). scripts/validate has always matched it in any case.
+if ! grep -qi "World initialized in" "${TRIAL_LOG}" 2>/dev/null; then
     verdict FAILED "the trial server never said \"World initialized\""
     exit 1
 fi

@@ -215,6 +215,12 @@ debug_run_binary() {
         # saved so the trace survives the terminal scrollback.
         echo " Using gdb. Backtrace on crash -> ${bt}"
         echo ""
+        # Ctrl-C and terminate are passed straight to the server, not caught:
+        # the server's own handler then shuts it down the ordinary way,
+        # saving every player. Until 2026-10-26 gdb stopped on Ctrl-C, wrote
+        # its "backtrace" and ended the server unsaved; a buddy's newly won
+        # bracers, after the last autosave (every 15 minutes), were lost so.
+        # A real crash (SIGSEGV, SIGABRT) still stops gdb and is traced.
         # Dump everything that helps localize a crash, to the console (tee) and
         # the saved file. Note: exact file:line still depends on how the binary
         # was built — a RelWithDebInfo (-O2) build smears inlined frames, so for
@@ -224,6 +230,8 @@ debug_run_binary() {
             -ex 'set pagination off' \
             -ex 'set confirm off' \
             -ex 'set print pretty on' \
+            -ex 'handle SIGINT nostop noprint pass' \
+            -ex 'handle SIGTERM nostop noprint pass' \
             -ex 'run' \
             -ex 'printf "\n=== CRASHING THREAD (full: frames + locals) ===\n"' \
             -ex 'backtrace full' \

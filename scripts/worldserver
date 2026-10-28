@@ -21,6 +21,9 @@ DEFAULT_PROFILE="${PROFILE}"
 # --debug launches the server under a crash-backtrace catcher (see
 # scripts/debug-run.sh). Off by default so normal runs are untouched.
 DEBUG_MODE=0
+# --after-compile: started by a compile's promotion (scripts/promote): the
+# server runs as usual, its start-up lines hidden until it is ready
+AFTER_COMPILE=0
 
 # =============================================================================
 # Argument Parsing
@@ -51,6 +54,10 @@ parse_args() {
                 ;;
             --debug)
                 DEBUG_MODE=1
+                shift
+                ;;
+            --after-compile)
+                AFTER_COMPILE=1
                 shift
                 ;;
             --help|-h)
@@ -144,6 +151,44 @@ check_mysql() {
 # =============================================================================
 
 parse_args "$@"
+
+# {{{ quiet_until_ready
+# Between the server's output and this terminal, for a start after a
+# compile: every line is held back until the server says it is ready
+# ("(worldserver-daemon) ready..."); then one line saying so, and from there
+# everything passes straight through, byte by byte (cat), so the AC> prompt,
+# which ends with no newline, shows at once. The start-up lines are not
+# lost: the server writes them to logs-<profile>/Server.log as always.
+#   the ready line seen: the message, then everything as it comes
+#   the output ends first (the server stopped while starting): the last
+#     lines it printed, so the failure is not silent
+quiet_until_ready() {
+    local line last=()
+    while IFS= read -r line; do
+        last+=("${line}")
+        (( ${#last[@]} > 25 )) && last=("${last[@]:1}")
+        if [[ "${line}" == *"ready..."* ]]; then
+            echo "Compilation and promotion successful, server is now online."
+            exec cat
+        fi
+    done
+    echo "ERROR: the new server stopped before it was ready; its last lines (all of them: logs-${PROFILE}/Server.log):"
+    printf '  %s\n' "${last[@]}"
+    return 1
+}
+# }}}
+
+# After a compile: this same script runs the server inside `script`, which
+# gives it a terminal of its own (a server writing into a pipe holds its
+# output back in large blocks, and its console needs a terminal), while
+# what it prints comes through quiet_until_ready. Keys typed here go to it
+# as usual, Ctrl-C included (it reaches the server, which saves and stops).
+if [[ "${AFTER_COMPILE}" -eq 1 ]]; then
+    echo "Starting the new server (its start-up lines: logs-${PROFILE}/Server.log)..."
+    script -qfec "$(printf '%q ' "${DIR}/scripts/worldserver" --profile "${PROFILE}")" /dev/null | quiet_until_ready
+    exit "${PIPESTATUS[0]}"
+fi
+
 get_profile_paths
 setup_log_symlinks
 check_mysql

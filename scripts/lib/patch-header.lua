@@ -35,8 +35,11 @@ local Header = {}
 -- {{{ the fields
 -- required (true) or optional (false); any other name is a fault, so a
 -- misspelt field is never quietly ignored
+-- "remember: no" (issue 1100b) marks a test whose result is never kept
+-- with a commit: it reads things git does not hold (installed trees, a
+-- running server), so a pass says nothing about a later moment.
 Header.FIELDS = { id = true, profiles = true, priority = true, kind = true, about = true,
-                  carries = false, ["quick-test"] = false }
+                  carries = false, ["quick-test"] = false, remember = false }
 Header.KINDS  = { source = true, settings = true, install = true, sql = true, test = true }
 -- }}}
 

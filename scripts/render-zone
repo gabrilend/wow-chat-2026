@@ -1,0 +1,193 @@
+#!/usr/bin/env luajit
+-- render-zone - one zone, seen from above, filling the screen, with a dot
+-- for every character in it and a fading tail of where each has just been
+-- (issue 617e14c).
+--
+-- For a general audience: the owner wants to watch the pattern bots make
+-- as they quest (617e14: "one map per zone, with the entire screen used to
+-- visualize"). This draws one picture of one zone at one moment from a
+-- positions record: the zone's sub-zones in their tints of grey (made by
+-- scripts/generate-zone-maps), every character there a dot (people white,
+-- each owner's buddies in that owner's colour, other bots light grey), and
+-- behind each dot its last positions, smaller and fading, so a swirl reads
+-- as a swirl. It only reads; the record and the zone data are written by
+-- their own tools.
+--
+-- Records it reads (either, told apart by their columns):
+--   the world record (617e14a, tmp/shared-memory/world-positions.tsv):
+--     time, guid, name, kind, map, zone, area, x, y, z, fighting, dead, owner
+--   the buddy spread record (617e13, tmp/shared-memory/buddy-spread.tsv):
+--     time, owner, guid, name, role, map, zone, area, x, y, z, fighting, dead
+--
+-- Usage: scripts/render-zone [PROJECT_DIR] --zone MAP-ZONE [--record TSV] [--at TIME]
+--                            [--tail SECONDS] [--size WxH] [--out PNG]
+--   --zone   the zone's file name in assets/zone-maps/ (1-17: The Barrens)
+--   --at     the moment drawn, unix seconds (default: the record's last)
+--   --tail   seconds of tail behind each dot (default 60)
+--   --size   the picture (default 1920x1080)
+--   --out    default tmp/shared-memory/zone-frames/<zone>-<time>.png
+-- Prints what it drew; the picture is written as PNG by ImageMagick.
+
+local ffi = require("ffi")
+
+-- {{{ configuration
+local DIR, ZONE, RECORD, AT, TAIL, W, H, OUT = "/mnt/kaun/wow-chat-2026", nil, nil, nil, 60, 1920, 1080, nil
+do
+    local i = 1
+    while i <= #arg do
+        local a = arg[i]
+        if a == "--zone" then i = i + 1; ZONE = arg[i]
+        elseif a == "--record" then i = i + 1; RECORD = arg[i]
+        elseif a == "--at" then i = i + 1; AT = tonumber(arg[i])
+        elseif a == "--tail" then i = i + 1; TAIL = tonumber(arg[i])
+        elseif a == "--size" then i = i + 1; W, H = arg[i]:match("^(%d+)x(%d+)$"); W, H = tonumber(W), tonumber(H)
+        elseif a == "--out" then i = i + 1; OUT = arg[i]
+        elseif a:sub(1, 2) == "--" then io.stderr:write("render-zone: unknown option " .. a .. "\n"); os.exit(1)
+        else DIR = a end
+        i = i + 1
+    end
+end
+local function die(m) io.stderr:write("render-zone: " .. m .. "\n"); os.exit(1) end
+if not ZONE then die("--zone MAP-ZONE is needed (a file of assets/zone-maps/, e.g. 1-17)") end
+if not W or not H then die("--size is WIDTHxHEIGHT") end
+RECORD = RECORD or (DIR .. "/tmp/shared-memory/world-positions.tsv")
+local DATA_PATH = DIR .. "/assets/zone-maps/" .. ZONE .. ".lua"
+local SIZE_OF_GRIDS = 533.3333
+local GRAY = 104                                     -- outside the zone (617e7's)
+local DOT, TAIL_DOT = 4, 2                           -- radii in pixels
+-- }}}
+
+-- {{{ the zone
+local okData, Z = pcall(dofile, DATA_PATH)
+if not okData then die("no zone data at " .. DATA_PATH .. " (scripts/generate-zone-maps writes it)") end
+local ROWS, COLS = Z.X1 - Z.X0 + 1, Z.Y1 - Z.Y0 + 1
+local grid = ffi.new("uint16_t[?]", ROWS * COLS)    -- sub-zone index per square, 0 outside
+for r, row in ipairs(Z.rows) do
+    local c = 0
+    for v, n in row:gmatch("(%d+)%*(%d+)") do
+        v, n = tonumber(v), tonumber(n)
+        for _ = 1, n do grid[(r - 1) * COLS + c] = v; c = c + 1 end
+    end
+end
+-- the tints: 617e7's six (darker grey, nudged toward red, green or blue)
+local TINTS = {}
+for s = 1, 2 do
+    for ch = 1, 3 do
+        local base = GRAY * (s == 1 and 0.90 or 0.82)
+        local v = { base, base, base }
+        v[ch] = v[ch] + (s == 1 and 9 or 15)
+        TINTS[#TINTS + 1] = v
+    end
+end
+-- the fit: squares to pixels, the whole zone on the picture, centred
+local SCALE = math.min(W / COLS, H / ROWS)          -- pixels per square
+local OX, OY = (W - COLS * SCALE) / 2, (H - ROWS * SCALE) / 2
+-- a world (x, y) to a pixel. The square under it, as a fraction: X = 16 *
+-- (32 - x / grid), Y likewise. Row r covers X from X0 + r to X0 + r + 1,
+-- so the row position is X - X0; column c covers Y from Y1 - c down to
+-- Y1 - c + 1 (Y grows westward, columns eastward), so the column
+-- position is Y1 + 1 - Y.
+local function to_pixel(x, y)
+    local X = 16 * (32 - x / SIZE_OF_GRIDS)
+    local Y = 16 * (32 - y / SIZE_OF_GRIDS)
+    return OX + (Z.Y1 + 1 - Y) * SCALE, OY + (X - Z.X0) * SCALE
+end
+-- }}}
+
+-- {{{ the record: rows of this zone's map, by character
+local samples, last_t, kinds = {}, 0, {}            -- samples[guid] = { {t, x, y, kind, owner, dead}, ... }
+do
+    local f = io.open(RECORD) or die("no record at " .. RECORD .. " (the world recorder writes it on a Debug build)")
+    for line in f:lines() do
+        local c = {}
+        for v in (line .. "\t"):gmatch("([^\t]*)\t") do c[#c + 1] = v end
+        local t, guid, kind, map, zone, x, y, owner, dead
+        if #c == 13 and (c[4] == "player" or c[4] == "buddy" or c[4] == "bot") then
+            t, guid, kind, map, zone, x, y, dead, owner = c[1], c[2], c[4], c[5], c[6], c[8], c[9], c[12], c[13]
+        elseif #c == 13 and (c[5] == "owner" or c[5] == "buddy") then
+            t, owner, guid, kind, map, zone, x, y, dead = c[1], c[2], c[3], (c[5] == "owner" and "player" or "buddy"), c[6], c[7], c[9], c[10], c[13]
+        end
+        if t and tonumber(map) == Z.map and tonumber(zone) == Z.zone then
+            t, guid = tonumber(t), tonumber(guid)
+            samples[guid] = samples[guid] or {}
+            table.insert(samples[guid], { t = t, x = tonumber(x), y = tonumber(y), kind = kind, owner = tonumber(owner) or 0, dead = dead == "1" })
+            last_t = math.max(last_t, t)
+        end
+    end
+    f:close()
+end
+AT = AT or last_t
+-- }}}
+
+-- {{{ the picture
+local img = ffi.new("uint8_t[?]", W * H * 3)
+for py = 0, H - 1 do
+    local r = math.floor((py - OY) / SCALE)
+    for px = 0, W - 1 do
+        local c = math.floor((px - OX) / SCALE)
+        local v = (r >= 0 and r < ROWS and c >= 0 and c < COLS) and grid[r * COLS + c] or 0
+        local o = (py * W + px) * 3
+        if v == 0 then
+            img[o], img[o + 1], img[o + 2] = GRAY, GRAY, GRAY
+        else
+            local tint = TINTS[Z.subzones[v].tint]
+            img[o], img[o + 1], img[o + 2] = tint[1], tint[2], tint[3]
+        end
+    end
+end
+-- {{{ local function disc(cx, cy, radius, rgb, alpha)
+local function disc(cx, cy, radius, rgb, alpha)
+    for py = math.max(0, math.floor(cy - radius)), math.min(H - 1, math.ceil(cy + radius)) do
+        for px = math.max(0, math.floor(cx - radius)), math.min(W - 1, math.ceil(cx + radius)) do
+            if (px - cx) ^ 2 + (py - cy) ^ 2 <= radius * radius then
+                local o = (py * W + px) * 3
+                for k = 0, 2 do img[o + k] = math.floor(img[o + k] * (1 - alpha) + rgb[k + 1] * alpha + 0.5) end
+            end
+        end
+    end
+end
+-- }}}
+-- an owner's colour: a hue from the owner's number, bright
+local function owner_colour(owner)
+    local h = (owner * 0.6180339887) % 1
+    local i, f = math.floor(h * 6), h * 6 - math.floor(h * 6)
+    local q, t = 1 - f, f
+    local rgb = ({ { 1, t, 0 }, { q, 1, 0 }, { 0, 1, t }, { 0, q, 1 }, { t, 0, 1 }, { 1, 0, q } })[i + 1]
+    return { 60 + rgb[1] * 195, 60 + rgb[2] * 195, 60 + rgb[3] * 195 }
+end
+local COLOUR = { player = { 255, 255, 255 }, bot = { 200, 200, 200 } }
+local drawn, by_kind = 0, { player = 0, buddy = 0, bot = 0 }
+for _, list in pairs(samples) do
+    local now = nil
+    for _, s in ipairs(list) do if s.t <= AT and (not now or s.t > now.t) then now = s end end
+    if now and AT - now.t <= 10 then                -- seen within the last two samples: here now
+        local rgb = now.kind == "buddy" and owner_colour(now.owner) or COLOUR[now.kind]
+        for _, s in ipairs(list) do                  -- the tail, oldest faintest
+            if s.t < now.t and s.t >= AT - TAIL then
+                local px, py = to_pixel(s.x, s.y)
+                disc(px, py, TAIL_DOT, rgb, 0.15 + 0.55 * (1 - (AT - s.t) / TAIL))
+            end
+        end
+        local px, py = to_pixel(now.x, now.y)
+        disc(px, py, DOT, rgb, now.dead and 0.4 or 1.0)
+        drawn = drawn + 1
+        by_kind[now.kind] = by_kind[now.kind] + 1
+    end
+end
+-- }}}
+
+-- {{{ writing: a raw picture, made a PNG by ImageMagick
+local outdir = DIR .. "/tmp/shared-memory/zone-frames"
+OUT = OUT or ("%s/%s-%d.png"):format(outdir, ZONE, AT)
+os.execute("mkdir -p '" .. OUT:match("^(.*)/") .. "'")
+local raw = OUT:gsub("%.png$", "") .. ".ppm"
+local f = io.open(raw, "wb") or die("cannot write " .. raw)
+f:write(("P6\n%d %d\n255\n"):format(W, H))
+f:write(ffi.string(img, W * H * 3))
+f:close()
+local r = os.execute(("magick '%s' '%s'"):format(raw, OUT))
+if not (r == true or r == 0) then die("ImageMagick could not make " .. OUT .. " from " .. raw) end
+os.remove(raw)
+print(("render-zone: %s (%s), %dx%d, %.1f pixels a square; at %s: %d drawn (%d players, %d buddies, %d bots), tails %d s -> %s"):format(
+    Z.name, ZONE, W, H, SCALE, os.date("%Y-%m-%d %H:%M:%S", AT), drawn, by_kind.player, by_kind.buddy, by_kind.bot, TAIL, OUT))
+-- }}}

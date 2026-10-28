@@ -1,0 +1,340 @@
+#!/usr/bin/env luajit
+-- mysql-client-options - keeps the project's MySQL password off command
+-- lines: writes the private file the MySQL tools read it from, checks that
+-- no script passes it on a command line, and rewrites a script that does.
+--
+-- For a general audience: a password typed after "-p" on a command line
+-- can be read by anyone on the computer who lists the running programs,
+-- and MySQL prints a warning every time ("Using a password on the command
+-- line interface can be insecure"). MySQL's own answer is an "option
+-- file": a small private file (readable by its owner only) holding the
+-- user name and password, named to the tool with --defaults-file. This
+-- tool:
+--   write    - writes that file, mysql/conf/client.cnf, from the project's
+--              secrets file (secrets.conf, DB_USER and DB_PASS), made
+--              private before the password goes in (the same order as
+--              scripts/mysql-install's own secret files);
+--   check    - lists every place in scripts/, patches/ and config/patches/
+--              that still passes the password on a command line; exits 1
+--              when there is one (a quick test runs it);
+--   rewrite  - changes the named scripts: the user name and password come
+--              off the command, and --defaults-file takes the place of
+--              --no-defaults (or goes right after the program's name when
+--              there is none). It must be the first option: MySQL reads
+--              it only there.
+--
+-- Usage: scripts/mysql-client-options [--dir DIR] write
+--        scripts/mysql-client-options [--dir DIR] check
+--        scripts/mysql-client-options [--dir DIR] rewrite [--dry-run] FILE...
+
+-- {{{ configuration
+local DIR = "/mnt/kaun/wow-chat-2026"
+local args = { ... }
+if args[1] == "--dir" then DIR = args[2]; table.remove(args, 1); table.remove(args, 1) end
+
+local OPTIONS_FILE = "/mysql/conf/client.cnf"           -- under DIR
+local SECRETS_FILE = "/secrets.conf"                     -- under DIR
+local LOOKED_IN    = { "/scripts", "/patches", "/config/patches" }
+-- A user and password on a command line, in the spellings the scripts used
+-- (2026-10-27: 67 places in 48 files): "-uNAME -pPASS", "-u NAME -pPASS",
+-- and Python's list of words "-uNAME", "-pPASS". The two side by side, so
+-- a comment's "follow-up" or "in-place" is not taken for one.
+-- {{{ local function has_password(line)
+local function has_password(line)
+    return line:find("%-u ?%w+ +%-p%w+") ~= nil or line:find("\"%-u%w+\", \"%-p%w+\"") ~= nil
+end
+-- }}}
+-- }}}
+
+-- {{{ local function ran(command)
+-- Whether a shell command succeeded. LuaJIT built with Lua 5.2's extras
+-- (this machine's) returns true, "exit", 0; plain Lua 5.1 returns 0.
+local function ran(command)
+    local r = os.execute(command)
+    return r == true or r == 0
+end
+-- }}}
+
+-- {{{ local function die(message)
+local function die(message)
+    io.stderr:write("mysql-client-options: " .. message .. "\n")
+    os.exit(1)
+end
+-- }}}
+
+-- {{{ local function read_file(path)
+local function read_file(path)
+    local f = io.open(path, "rb")
+    if not f then return nil end
+    local text = f:read("*a")
+    f:close()
+    return text
+end
+-- }}}
+
+-- {{{ local function secrets()
+-- The user and password from secrets.conf (a shell file of NAME=value
+-- lines; read as text, never run).
+local function secrets()
+    local text = read_file(DIR .. SECRETS_FILE)
+        or die("can't read " .. DIR .. SECRETS_FILE .. " (it holds DB_USER and DB_PASS; secrets.conf.example shows its shape)")
+    local user = text:match("\nDB_USER=([^\n]*)") or text:match("^DB_USER=([^\n]*)")
+    local pass = text:match("\nDB_PASS=([^\n]*)") or text:match("^DB_PASS=([^\n]*)")
+    if not user or user == "" then die(DIR .. SECRETS_FILE .. " has no DB_USER line") end
+    if not pass or pass == "" then die(DIR .. SECRETS_FILE .. " has no DB_PASS line") end
+    user = user:gsub("^[\"']", ""):gsub("[\"']$", "")
+    pass = pass:gsub("^[\"']", ""):gsub("[\"']$", "")
+    return user, pass
+end
+-- }}}
+
+-- {{{ local function write_options()
+-- Created empty, made private, then filled: the password is never on disk
+-- readable by others, even for a moment.
+local function write_options()
+    local user, pass = secrets()
+    local path = DIR .. OPTIONS_FILE
+    local f = io.open(path, "w") or die("can't create " .. path)
+    f:close()
+    if not ran("chmod 600 '" .. path .. "'") then die("can't make " .. path .. " private (chmod 600)") end
+    f = io.open(path, "w") or die("can't write " .. path)
+    f:write("# client.cnf - written by scripts/mysql-client-options from secrets.conf,\n")
+    f:write("# so the MySQL tools read the project's login from here and not from a\n")
+    f:write("# command line. Private (mode 600); not in git. Rewrite with:\n")
+    f:write("#   scripts/mysql-client-options write\n")
+    f:write("[client]\nuser=" .. user .. "\npassword=" .. pass .. "\n")
+    f:close()
+    print("wrote " .. path .. " (private, for user " .. user .. ")")
+end
+-- }}}
+
+-- {{{ local function files_looked_at()
+-- Every file under the folders, except deprecated ones (kept for
+-- reference only, never run: scripts/azerothcore-deprecated).
+local function files_looked_at()
+    local list = {}
+    for _, sub in ipairs(LOOKED_IN) do
+        -- this tool and its test are left out: they spell the pattern on purpose
+        local h = io.popen("find '" .. DIR .. sub .. "' -type f ! -name '*-deprecated' ! -name '*.sql' ! -name '*.md' ! -name '*mysql-client-options'")
+        for path in h:lines() do list[#list + 1] = path end
+        h:close()
+    end
+    table.sort(list)
+    return list
+end
+-- }}}
+
+-- {{{ local function check()
+local function check()
+    local found = 0
+    for _, path in ipairs(files_looked_at()) do
+        local n = 0
+        for line in (read_file(path) or ""):gmatch("[^\n]*") do
+            n = n + 1
+            if has_password(line) then
+                found = found + 1
+                print(path:sub(#DIR + 2) .. ":" .. n .. ": " .. line:gsub("^%s+", ""))
+            end
+        end
+    end
+    if found > 0 then
+        print(found .. " place(s) pass the MySQL password on a command line; to change them:")
+        print("  scripts/mysql-client-options rewrite FILE...")
+        os.exit(1)
+    end
+    print("no script passes the MySQL password on a command line")
+end
+-- }}}
+
+-- {{{ local function language_of(text)
+-- From the file's first line: "#!/usr/bin/env luajit" and the like.
+local function language_of(text, path)
+    local first = text:match("^[^\n]*")
+    if first:find("luajit") or first:find("lua") then return "lua" end
+    if first:find("python") then return "python" end
+    if first:find("bash") or first:find("/sh") or path:find("%.sh$") then return "bash" end
+    die(path .. ": can't tell its language from its first line: " .. first)
+end
+-- }}}
+
+-- {{{ local function quote_at(line, upto)
+-- Which quote encloses position `upto` of the line: '"', "'", or nil when
+-- outside any. Backslash-escaped quotes count as text.
+local function quote_at(line, upto)
+    local inside = nil
+    local i = 1
+    while i < upto do
+        local c = line:sub(i, i)
+        if c == "\\" then i = i + 1
+        elseif inside == '"' and line:sub(i, i + 1) == "$(" then inside = nil; i = i + 1  -- bash: "$( starts a command of its own
+        elseif inside == nil and (c == '"' or c == "'") then inside = c
+        elseif c == inside then inside = nil end
+        i = i + 1
+    end
+    return inside
+end
+-- }}}
+
+-- {{{ local function option_text(lang, line, at)
+-- The --defaults-file option as it must be written at position `at` of the
+-- line, by the language and by whether `at` is inside a string. Each path:
+--   lua, in a string    - the string is broken to join DIR in:
+--                         --defaults-file=" .. DIR .. "/mysql/conf/client.cnf
+--   bash, in a string   - no quotes of its own (the project's path has no
+--                         spaces): --defaults-file=${DIR}/mysql/conf/client.cnf
+--   bash, outside       - quoted as one word: "--defaults-file=${DIR}/..."
+--   python              - written by the list rule, not here
+local function option_text(lang, line, at)
+    local q = quote_at(line, at)
+    if lang == "lua" then
+        if not q then die("a Lua command outside a string, at: " .. line) end
+        return "--defaults-file=" .. q .. " .. DIR .. " .. q .. OPTIONS_FILE
+    end
+    if q then return "--defaults-file=${DIR}" .. OPTIONS_FILE end
+    return "\"--defaults-file=${DIR}" .. OPTIONS_FILE .. "\""
+end
+-- }}}
+
+-- {{{ local function rewrite_text(text, lang, path)
+-- One command at a time: a line holding the password, and the lines
+-- before it that continue onto it (bash: ending in "\"; Lua: ending in
+-- ".." ). In that span --no-defaults becomes --defaults-file; with none,
+-- --defaults-file goes right after the program. Then the user and password
+-- come off the line.
+local function rewrite_text(text, lang, path)
+    local lines = {}
+    for line in (text .. "\n"):gmatch("([^\n]*)\n") do lines[#lines + 1] = line end
+    if lines[#lines] == "" then lines[#lines] = nil end
+    local changed = 0
+    for n = 1, #lines do
+        local line = lines[n]
+        if has_password(line) then
+            -- the span of the command
+            local first = n
+            while first > 1 and (lines[first - 1]:find("\\%s*$") or lines[first - 1]:find("%.%.%s*$")) and n - first < 4 do
+                first = first - 1
+            end
+            local placed = false
+            if lang == "python" then
+                -- a list of words: the option becomes the word after the program
+                for k = first, n do
+                    local s, e = lines[k]:find("bin/mysql[%w]*\",")
+                    if s and not placed then
+                        lines[k] = lines[k]:sub(1, e) .. " \"--defaults-file=\" + DIR + \"" .. OPTIONS_FILE .. "\"," .. lines[k]:sub(e + 1)
+                        placed = true
+                    end
+                end
+            else
+                for k = first, n do
+                    local s, e = lines[k]:find("%-%-no%-defaults")
+                    if s and not placed then
+                        lines[k] = lines[k]:sub(1, s - 1) .. option_text(lang, lines[k], s) .. lines[k]:sub(e + 1)
+                        placed = true
+                    end
+                end
+                -- the program's name, in the shapes the scripts use: a path
+                -- ending in bin/mysql (or mysqldump, mysqladmin) inside or
+                -- outside quotes, a variable holding it ("${MYSQL}"), or
+                -- Lua's q(MYSQL) .. " ..."
+                for k = first, n do
+                    if placed then break end
+                    local l = lines[k]
+                    local s, e = l:find("\"%${MYSQL[%w_]*}\"")
+                    if not s then s, e = l:find("q%(MYSQL%) %.%. \"") ; if s then e = e - 1 end end
+                    if not s then
+                        s, e = l:find("bin/mysql[%w]*['\"]?")
+                        if s and l:sub(e, e) ~= "'" and l:sub(e, e) ~= "\"" then e = e end
+                        -- a closing quote right after the name belongs to it
+                        -- only when it closes the name's own quotes
+                        if s and (l:sub(e, e) == "'" or l:sub(e, e) == "\"") and quote_at(l, e) ~= l:sub(e, e) then e = e - 1 end
+                    end
+                    -- a name in escaped quotes inside a bash string
+                    -- ("\"${MYSQL_DIR}/bin/mysql\" -h..."): after them
+                    if s and l:sub(e + 1, e + 2) == "\\\"" then e = e + 2 end
+                    if s then
+                        local at = e + 1
+                        if l:sub(e + 1, e + 1) == "\"" and l:find("q%(MYSQL%)", 1) then at = e + 2 end
+                        lines[k] = l:sub(1, at - 1) .. " " .. option_text(lang, l, at) .. l:sub(at)
+                        placed = true
+                    end
+                end
+            end
+            if not placed then die(path .. ":" .. n .. ": found no program name or --no-defaults to place the option at") end
+            -- the user and password off the line
+            local before = lines[n]
+            lines[n] = lines[n]:gsub(" ?\"%-u%w+\", \"%-p%w+\",", "")
+                               :gsub(" %-u ?%w+ %-p%w+", "")
+                               :gsub("^(%s*)%-u ?%w+ %-p%w+ ", "%1")
+                               :gsub("(['\"])%-u ?%w+ %-p%w+ ", "%1")
+            if lines[n] == before or has_password(lines[n]) then
+                die(path .. ":" .. n .. ": the password is still on the line after the rewrite: " .. lines[n])
+            end
+            changed = changed + 1
+        end
+    end
+    return table.concat(lines, "\n") .. "\n", changed
+end
+-- }}}
+
+-- {{{ local function syntax_ok(path, lang)
+-- The rewritten file must still parse: bash -n, luajit's compiler, or
+-- python's.
+local function syntax_ok(path, lang)
+    local cmd = ({
+        bash   = "bash -n '%s'",
+        lua    = "luajit -bl '%s' > /dev/null",
+        python = "python3 -m py_compile '%s'",
+    })[lang]:format(path)
+    return ran(cmd)
+end
+-- }}}
+
+-- {{{ local function rewrite(files, dry)
+local function rewrite(files, dry)
+    if #files == 0 then die("rewrite: name the files") end
+    local total = 0
+    for _, path in ipairs(files) do
+        local text = read_file(path) or die("can't read " .. path)
+        local lang = language_of(text, path)
+        local new, changed = rewrite_text(text, lang, path)
+        if changed > 0 then
+            local scratch = os.tmpname()
+            local f = io.open(scratch, "w"); f:write(new); f:close()
+            if not syntax_ok(scratch, lang) then
+                os.execute("diff -u '" .. path .. "' '" .. scratch .. "' >&2")
+                os.remove(scratch)
+                die(path .. ": the rewritten file no longer parses as " .. lang .. "; left unchanged")
+            end
+            os.remove(scratch)
+            if dry then
+                local before = os.tmpname()
+                f = io.open(before, "w"); f:write(new); f:close()
+                os.execute("diff -u '" .. path .. "' '" .. before .. "'")
+                os.remove(before)
+            else
+                local mode = io.popen("stat -c %a '" .. path .. "'"):read("*l")
+                f = io.open(path, "w"); f:write(new); f:close()
+                os.execute("chmod " .. mode .. " '" .. path .. "'")
+            end
+            print(("%s: %d command(s)%s"):format(path:sub(#DIR + 2), changed, dry and " (dry run)" or ""))
+            total = total + changed
+        end
+    end
+    print(total .. " command(s) changed")
+end
+-- }}}
+
+-- {{{ the command
+local verb = table.remove(args, 1)
+if verb == "write" then
+    write_options()
+elseif verb == "check" then
+    check()
+elseif verb == "rewrite" then
+    local dry = false
+    if args[1] == "--dry-run" then dry = true; table.remove(args, 1) end
+    rewrite(args, dry)
+else
+    die("usage: mysql-client-options [--dir DIR] write | check | rewrite [--dry-run] FILE...")
+end
+-- }}}

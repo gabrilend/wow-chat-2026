@@ -46,7 +46,7 @@ PIECES="${SHM_DIR}/buddy-town-pieces.tsv"
 # "+ 0e0" turns the stored single-precision borders into doubles printed in
 # full, so the baker reads back the very floats the server reads.
 echo "Listing area pieces from ${WORLD_DB}..."
-"${MYSQL}" -h127.0.0.1 -P3307 -uritz -pmenardi -N --batch "${WORLD_DB}" \
+"${MYSQL}" "--defaults-file=${DIR}/mysql/conf/client.cnf" -h127.0.0.1 -P3307 -N --batch "${WORLD_DB}" \
     -e "SELECT map, area, piece, min_x + 0e0, max_x + 0e0, min_y + 0e0, max_y + 0e0 FROM buddy_area_centre ORDER BY map, area, piece" \
     2>&1 > "${PIECES}" | grep -v "Using a password" || true
 COUNT="$(wc -l < "${PIECES}")"
@@ -66,5 +66,22 @@ fi
 
 # {{{ 3. the bake
 mkdir -p "${DATA}/buddy-towns"
-"${BAKER}" "${DATA}" "${PIECES}"
+# One line per town piece goes to a log, not the terminal (the owner,
+# 2026-10-26, of some 130 of them in every install: "we don't need to know.
+# It's just visual snow"); the terminal gets the baker's last line (how many
+# pieces and cells, and where), how many pieces had no mesh under them, and
+# anything it says on its error stream, unchanged.
+#   the baker succeeds: its summary, and the count of meshless pieces
+#   it fails: its exit status and the log's last lines
+BAKE_LOG="${DIR}/tmp/shared-memory/bake-buddy-towns.log"
+BAKE_STATUS=0
+"${BAKER}" "${DATA}" "${PIECES}" > "${BAKE_LOG}" || BAKE_STATUS=$?
+if [[ ${BAKE_STATUS} -ne 0 ]]; then
+    echo "ERROR: the town baker exited ${BAKE_STATUS}; its last lines (all of them: ${BAKE_LOG#${DIR}/}):"
+    tail -n 5 "${BAKE_LOG}" | sed 's/^/  /'
+    exit "${BAKE_STATUS}"
+fi
+MESHLESS="$(grep -c "nothing kept" "${BAKE_LOG}" || true)"   # grep -c says 0 and fails on none: not an error here
+echo "  $(tail -n 1 "${BAKE_LOG}")"
+echo "  ${MESHLESS} town pieces had no mesh under them (measured live by the server); each piece: ${BAKE_LOG#${DIR}/}"
 # }}}

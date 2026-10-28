@@ -1,0 +1,94 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-spell-designs
+# profiles:   basic
+# priority:   10
+# kind:       test
+# about:      every spell design names real spells and keeps the spells it is built round, and the writing tool leaves one skip list, refusing an online character or another class
+# quick-test: yes
+# ==== end of header ====
+# test-spell-designs - checks the spell designs and the tool that writes
+# them into a bot's settings (issue 635c).
+#
+# For a general audience: a spell design says which spells a character's
+# bot never casts. This checks every design's spell names against the
+# game's own spell file (a misspelt name would silently skip nothing), that
+# the spells a design is built round stay castable (the Renew priest's
+# Renew, the druid healer's heals over time), and that the writing tool,
+# run twice on a copy of one character in scratch databases, leaves exactly
+# one skip list holding the design's spells, and refuses an online
+# character or the wrong class.
+#
+# Usage: scripts/test-spell-designs [PROJECT_DIR]
+# Exit status: 0 when every check passes, 1 otherwise.
+
+set -uo pipefail
+
+# {{{ configuration
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+TOOL="${DIR}/scripts/write-spell-design"
+MYSQL=("${DIR}/mysql/installed-files/bin/mysql" "--defaults-file=${DIR}/mysql/conf/client.cnf" -h127.0.0.1 -P3307 -N -B)
+SCRATCH_PROFILE="sdtest"
+CHARS="acore_characters_${SCRATCH_PROFILE}"
+BOTS="acore_playerbots_${SCRATCH_PROFILE}"
+CHECKS=0
+FAILED=0
+ok()   { CHECKS=$((CHECKS + 1)); echo "ok   $1"; }
+fail() { CHECKS=$((CHECKS + 1)); FAILED=$((FAILED + 1)); echo "FAIL $1"; }
+sql()  { "${MYSQL[@]}" -e "$1"; }
+cleanup() { sql "DROP DATABASE IF EXISTS ${CHARS}; DROP DATABASE IF EXISTS ${BOTS};"; }
+trap cleanup EXIT
+# }}}
+
+# {{{ 1. every name is a spell, and the kept spells are kept
+OUT="$(luajit -e '
+local DIR = "'"${DIR}"'"
+local S = dofile(DIR .. "/scripts/lib/spell-data.lua").open(DIR, false)
+local known = {}
+for id = 1, 80000 do local n = S.name(id); if n then known[n] = true end end
+local keep = { ["botanica-renew-priest"] = { "Renew" }, ["botanica-druid-healer"] = { "Rejuvenation", "Regrowth", "Lifebloom" } }
+for _, d in ipairs(dofile(DIR .. "/src/lua-basic/data/spell-designs.lua")) do
+    for _, n in ipairs(d.never) do if not known[n] then print("unknown " .. d.name .. ": " .. n) end end
+    local never = {}
+    for _, n in ipairs(d.never) do never[n] = true end
+    for _, n in ipairs(keep[d.name] or {}) do if never[n] then print("skipped " .. d.name .. ": " .. n) end end
+end')"
+if grep -q "^unknown" <<< "${OUT}"; then fail "every design names real spells: ${OUT}"; else ok "every design names spells the game's spell file has"; fi
+if grep -q "^skipped" <<< "${OUT}"; then fail "a design skips a spell it is built round: ${OUT}"; else ok "Renew, and the druid's heals over time, stay castable"; fi
+# }}}
+
+# {{{ 2. the tool on a scratch copy of an offline priest
+WHO="$(sql "SELECT name FROM acore_characters_basic.characters WHERE class = 5 AND online = 0 ORDER BY guid LIMIT 1")"
+GUID="$(sql "SELECT guid FROM acore_characters_basic.characters WHERE name = '${WHO}'")"
+cleanup
+sql "CREATE DATABASE ${CHARS}; CREATE DATABASE ${BOTS};
+     CREATE TABLE ${CHARS}.characters LIKE acore_characters_basic.characters;
+     INSERT INTO ${CHARS}.characters SELECT * FROM acore_characters_basic.characters WHERE guid = ${GUID};
+     CREATE TABLE ${BOTS}.playerbots_db_store LIKE acore_playerbots_basic.playerbots_db_store;
+     INSERT INTO ${BOTS}.playerbots_db_store (guid, \`key\`, value) VALUES (${GUID}, 'nc', '+chat'), (${GUID}, 'value', 'skip spells list>1');"
+"${TOOL}" --dir "${DIR}" --profile "${SCRATCH_PROFILE}" botanica-renew-priest "${WHO}" > /dev/null
+"${TOOL}" --dir "${DIR}" --profile "${SCRATCH_PROFILE}" botanica-renew-priest "${WHO}" > /dev/null
+LISTS="$(sql "SELECT value FROM ${BOTS}.playerbots_db_store WHERE guid = ${GUID} AND \`key\` = 'value' AND value LIKE 'skip spells list>%'")"
+[[ "$(wc -l <<< "${LISTS}")" == 1 && "${LISTS}" == "skip spells list>596,"* ]] \
+    && ok "written twice: one skip list, the design's (its lowest spell number, 596)" \
+    || fail "the skip list after two writes: ${LISTS}"
+[[ "$(sql "SELECT value FROM ${BOTS}.playerbots_db_store WHERE guid = ${GUID} AND \`key\` = 'nc'")" == "+chat" ]] \
+    && ok "the bot's other settings are left alone" || fail "the bot's other settings changed"
+sql "UPDATE ${CHARS}.characters SET online = 1 WHERE guid = ${GUID}"
+if "${TOOL}" --dir "${DIR}" --profile "${SCRATCH_PROFILE}" botanica-renew-priest "${WHO}" > /dev/null 2>&1; then
+    fail "it wrote for an online character"
+else
+    ok "it refuses an online character"
+fi
+if "${TOOL}" --dir "${DIR}" --profile "${SCRATCH_PROFILE}" --dry-run botanica-druid-healer "${WHO}" > /dev/null 2>&1; then
+    fail "it took a druid's design for a priest"
+else
+    ok "it refuses a design for another class"
+fi
+# }}}
+
+echo "test-spell-designs: ${CHECKS} checks, ${FAILED} failed"
+[[ "${FAILED}" -eq 0 ]]
+# ==== footer of test-spell-designs ====
+# lines:      94
+# ==== end of footer ====

@@ -58,6 +58,11 @@ parse_args() {
                 NO_PROMOTE=true
                 shift
                 ;;
+            --then-serve)
+                # passed on to promote: the server starts once promoted
+                THEN_SERVE=true
+                shift
+                ;;
             --help|-h)
                 show_help
                 exit 0
@@ -132,7 +137,7 @@ validate_shadow_worldserver() {
     # (VALIDATE_PROGRESS_CMD) with a file its pretend servers write.
     local PROGRESS_CMD="${VALIDATE_PROGRESS_CMD:-}"
     if [[ -z "${PROGRESS_CMD}" ]]; then
-        local MYSQL_CALL="\"${MYSQL_DIR}/bin/mysql\" -h127.0.0.1 -P3307 -uritz -pmenardi -N -B"
+        local MYSQL_CALL="\"${MYSQL_DIR}/bin/mysql\" --defaults-file=${DIR}/mysql/conf/client.cnf -h127.0.0.1 -P3307 -N -B"
         # every database with an updates table (each profile's, and acore_auth)
         local SCHEMAS
         SCHEMAS="$(eval "${MYSQL_CALL}" -e "\"SELECT table_schema FROM information_schema.tables WHERE table_name = 'updates' AND table_schema LIKE 'acore%'\"" 2>&1 | grep -v "Using a password")"
@@ -312,6 +317,7 @@ validate_shadow_worldserver() {
 # =============================================================================
 
 NO_PROMOTE=false
+THEN_SERVE=false
 parse_args "$@"
 get_profile_paths
 
@@ -329,4 +335,4 @@ fi
 # Auto-promote on successful validation
 echo ""
 echo "Validation passed, promoting to main installation..."
-exec "${DIR}/scripts/promote" --profile "${PROFILE}"
+exec "${DIR}/scripts/promote" --profile "${PROFILE}" $([[ "${THEN_SERVE:-false}" == "true" ]] && echo --then-serve)

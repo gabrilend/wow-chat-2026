@@ -492,8 +492,8 @@ seed_database_base() {
     local base_dir="${2}"
     local marker_table="${3}"
 
-    if "${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" \
-        -u ritz -pmenardi "${db}" \
+    if "${MYSQL_DIR}/bin/mysql" "--defaults-file=${DIR}/mysql/conf/client.cnf" --socket="${MYSQL_SOCKET}" \
+        "${db}" \
         -e "SHOW TABLES LIKE '${marker_table}'" 2>/dev/null | grep -q "${marker_table}"; then
         echo "  ${db}: already seeded (${marker_table} table present, skipping)"
         return 0
@@ -523,8 +523,8 @@ seed_database_base() {
         if (( count % 50 == 0 || count == total )); then
             printf "    [%d/%d] %s\n" "${count}" "${total}" "$(basename "${file}")"
         fi
-        if ! "${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" \
-            -u ritz -pmenardi "${db}" < "${file}" 2>&1; then
+        if ! "${MYSQL_DIR}/bin/mysql" "--defaults-file=${DIR}/mysql/conf/client.cnf" --socket="${MYSQL_SOCKET}" \
+            "${db}" < "${file}" 2>&1; then
             echo "  ERROR: failed importing $(basename "${file}") into ${db}"
             echo "  Path: ${file}"
             return 1
@@ -539,7 +539,7 @@ seed_database_base() {
 # Check whether the databases exist at all; create them if not. Note
 # this only checks existence, not whether they've been seeded — the
 # seed_database_base step below handles seeding idempotently.
-if "${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" -u ritz -pmenardi -e "USE ${DB_WORLD}; USE ${DB_PLAYERBOTS}" 2>/dev/null; then
+if "${MYSQL_DIR}/bin/mysql" "--defaults-file=${DIR}/mysql/conf/client.cnf" --socket="${MYSQL_SOCKET}" -e "USE ${DB_WORLD}; USE ${DB_PLAYERBOTS}" 2>/dev/null; then
     echo "  Databases already exist (skipping CREATE)"
 else
     if [[ ! -S "${MYSQL_SOCKET}" ]]; then

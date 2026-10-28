@@ -1,0 +1,251 @@
+#!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-datapath-ambush
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      one monster followed from the world database to its corpse, along the ambush's whole path (issue 1100c)
+-- quick-test: yes
+-- ==== end of header ====
+-- test-datapath-ambush - follows one monster along the ambush's whole
+-- data path, step by step as docs/datapaths/ambush.md names them, from the
+-- folder the install links into the server to the monster's corpse.
+--
+-- For a general audience: the ambush has its own test (scripts/test-ambush)
+-- that checks each of its decisions on its own. This one checks the path
+-- they make together, by following a single piece of data, one monster's
+-- number, the whole way: from the world database's table of creatures,
+-- through the question the script asks it, the player's queue, the spawn
+-- out in the field, the chase, the fight, the kill, to the corpse left
+-- lying. If any link drops the number or swaps it for another, this fails
+-- at that link, and says which step.
+--
+-- What is real and what is pretend:
+--   real:    the install step's choice of folder (patches/E001), beta's
+--            scripts from that folder, loaded together as the server loads
+--            them (movement, then the ambush, then the travellers, which
+--            share the world with it); the exact SQL the script sends
+--   pretend: the server (scripts/lib/toy-world.lua) and the database. The
+--            database is a small creature table (CREATURES below) that
+--            answers the SQL by applying the query's own conditions, one
+--            by one; a condition it does not know is a failure, not
+--            ignored, so a new kind of question can't pass unexamined. The
+--            owner, 2026-10-26: "we can simulate database answers. The
+--            database is fine, so long as we don't add new types of
+--            records."
+--
+-- Usage: scripts/test-datapath-ambush [PROJECT_DIR]
+-- Exit status: 0 when every step checks out, 1 otherwise.
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+
+local fails, checks = 0, 0
+-- {{{ local function check
+-- `step` is the datapath document's step number, so a failure points at
+-- the link of the path that broke.
+local function check(ok, step, what)
+    checks = checks + 1
+    if not ok then fails = fails + 1; print("  FAIL (step " .. step .. "): " .. what) end
+end
+-- }}}
+
+-- {{{ step 0: the folder the install links into the server
+-- E001 links installed-files-<profile>/bin/lua_scripts/custom to the folder
+-- named by its LUA_SRC line; the server loads the scripts from there. Read
+-- that line rather than assume it, so a change to the install's mapping is
+-- followed here (until 2026-06-02 it named src/lua, for every profile).
+local e001 = assert(io.open(DIR .. "/patches/E001-lua-script-symlinks.sh")):read("*a")
+local pattern = e001:match('local LUA_SRC="%${DIR}/([^"]+)"')
+check(pattern ~= nil, 0, "patches/E001 no longer names its folder as LUA_SRC=\"${DIR}/...\"; teach this test its new shape")
+local FOLDER = DIR .. "/" .. (pattern or "src/lua-${PROFILE}"):gsub("%${PROFILE}", "beta")
+local probe = io.open(FOLDER .. "/ambush.lua")
+check(probe ~= nil, 0, "the install would link " .. FOLDER .. " for beta, and it holds no ambush.lua")
+if not probe then print(string.format("test-datapath-ambush: %d of %d checks failed", fails, checks)); os.exit(1) end
+probe:close()
+-- }}}
+
+local here = (arg[0]:match("^(.*[/\\])") or "./")
+local Toy = dofile(here .. "lib/toy-world.lua")
+local World, handlers, advance, pending = Toy.World, Toy.handlers, Toy.advance, Toy.pending
+
+-- {{{ the pretend world database: creature_template, a few rows
+-- One row is the monster being followed (TRACED); the others are each kept
+-- out by exactly one of the query's conditions, so a condition dropped
+-- from the SQL lets its decoy through and this test sees it spawn.
+--   entry (number), minlevel, maxlevel, rank (0 normal, 4 rare, 2 rare
+--   elite), npcflag (0 none), lootid (0 none), type (6 undead, 7 humanoid)
+local TRACED = 1531
+local CREATURES = {
+    { entry = TRACED, minlevel = 6,  maxlevel = 7,  rank = 0, npcflag = 0, lootid = 1531, type = 6 },
+    { entry = 9001,   minlevel = 6,  maxlevel = 7,  rank = 0, npcflag = 2, lootid = 9001, type = 6 },  -- a vendor
+    { entry = 9002,   minlevel = 6,  maxlevel = 7,  rank = 0, npcflag = 0, lootid = 0,    type = 6 },  -- no loot
+    { entry = 9003,   minlevel = 6,  maxlevel = 7,  rank = 0, npcflag = 0, lootid = 9003, type = 7 },  -- a humanoid
+    { entry = 9004,   minlevel = 30, maxlevel = 31, rank = 0, npcflag = 0, lootid = 9004, type = 6 },  -- too high
+    { entry = 9005,   minlevel = 1,  maxlevel = 5,  rank = 0, npcflag = 0, lootid = 9005, type = 6 },  -- too low
+}
+local DECOY = { [9001] = "a vendor (npcflag)", [9002] = "lootless (lootid)", [9003] = "a humanoid (type)",
+                [9004] = "too high a level (minlevel)", [9005] = "too low a level (maxlevel)" }
+
+-- Each condition the ambush's question may hold, as a pattern and a test
+-- on one row. The WHERE clause is split on AND; every part must match one
+-- of these, or the question is one this table has not been taught.
+local CONDITIONS = {
+    { "^minlevel <= (%d+)$",   function(r, n) return r.minlevel <= tonumber(n) end },
+    { "^maxlevel >= (%d+)$",   function(r, n) return r.maxlevel >= tonumber(n) end },
+    { "^`rank` = (%d+)$",      function(r, n) return r.rank == tonumber(n) end },
+    { "^npcflag = (%d+)$",     function(r, n) return r.npcflag == tonumber(n) end },
+    { "^lootid != (%d+)$",     function(r, n) return r.lootid ~= tonumber(n) end },
+    { "^type IN %(([%d, ]+)%)$", function(r, list)
+          for t in list:gmatch("%d+") do if r.type == tonumber(t) then return true end end
+          return false
+      end },
+}
+local asked = {}                       -- every SQL text sent, in order (strings)
+local unknown = {}                     -- parts of a WHERE no condition matched
+function WorldDBQueryAsync(sql, callback)
+    asked[#asked + 1] = sql
+    local cols, where = sql:match("^SELECT (.-) FROM creature_template WHERE (.-);?$")
+    if not cols then unknown[#unknown + 1] = "not a creature_template question: " .. sql; callback(nil); return end
+    local tests = {}
+    for part in (where .. " AND "):gmatch("(.-) AND ") do
+        local known = false
+        for _, c in ipairs(CONDITIONS) do
+            local cap = part:match(c[1])
+            if cap then tests[#tests + 1] = { c[2], cap }; known = true; break end
+        end
+        if not known then unknown[#unknown + 1] = part end
+    end
+    local rows = {}
+    for _, r in ipairs(CREATURES) do
+        local keep = true
+        for _, t in ipairs(tests) do if not t[1](r, t[2]) then keep = false; break end end
+        if keep then rows[#rows + 1] = r end
+    end
+    if #rows == 0 then callback(nil) return end
+    -- columns as the SELECT names them: entry, minlevel, maxlevel, `rank`
+    local order, i = {}, 1
+    for name in cols:gmatch("[^,%s`]+") do order[#order + 1] = name end
+    local q = {}
+    function q:GetUInt32(col) return rows[i][order[col + 1]] end
+    function q:NextRow() i = i + 1; return i <= #rows end
+    callback(q)
+end
+-- }}}
+
+-- {{{ the scripts, from the install's folder, in the server's order
+local quiet = print
+print = function() end
+dofile(FOLDER .. "/movement.lua")
+dofile(FOLDER .. "/ambush.lua")
+dofile(FOLDER .. "/travel.lua")
+print = quiet
+local function silently(fn, ...) print = function() end; local r = { fn(...) }; print = quiet; return unpack(r) end
+-- }}}
+
+-- {{{ step 4's watch: every monster that enters a queue
+-- A queue holds up to 8 monsters while only one spawns per tick, so a
+-- decoy let through by a dropped condition may sit in the queue long after
+-- this test has ended; watching the queues' writes (pushToAmbushQueue writes a whole queue at once) catches it (found
+-- 2026-10-26: with "npcflag = 0" taken out of the query, the vendor was
+-- queued and this test, watching only the field, still passed).
+local queued = {}                      -- creature entries, in the order queued (numbers)
+local function watchQueues(player)
+    local set = player.SetData
+    function player:SetData(k, v)
+        if (k == "queue" or k == "rare-queue") and type(v) == "table" then
+            for _, entry in ipairs(v) do queued[#queued + 1] = entry end
+        end
+        return set(self, k, v)
+    end
+end
+-- }}}
+
+-- {{{ step 1: login
+local p = Toy.new_player("Tracer", 701)
+p.level, p.x, p.y = 6, 1000, 1000
+watchQueues(p)
+silently(Toy.login, p)
+check(pending(p, Ambush.spawnAndAttackPlayer) == 1, 1, "login should start exactly one ambush clock, started " .. pending(p, Ambush.spawnAndAttackPlayer))
+check(p:GetData("num-ambushers") == 0, 1, "login should set the ambusher count to 0")
+-- }}}
+
+-- {{{ steps 2-6: the clock, the queues, the question, the spawn
+-- Wound forward until a monster from the table stands in the field (the
+-- first tick may be the 30 s grace; each later one 10-200 s apart).
+local function fromTable(c) return c.entry == TRACED or DECOY[c.entry] ~= nil end
+local monster
+for _ = 1, 600 do
+    silently(advance, 1000)
+    for _, c in ipairs(p.spawned) do if fromTable(c) and not monster then monster = c end end
+    if monster then break end
+end
+check(#unknown == 0, 5, "the ambush asked the database something this table has not been taught: " .. table.concat(unknown, " | "))
+check(#asked > 0, 5, "the ambush never asked the world database for creatures")
+local q1 = asked[1] or ""
+check(q1:find("minlevel <= 6", 1, true) and q1:find("maxlevel >= 6", 1, true), 5, "the question should ask for level 6 (the player's), asked: " .. q1)
+check(monster ~= nil, 6, "no monster from the database stood in the field after 10 minutes")
+if monster then
+    check(monster.entry == TRACED, 6, "the spawned monster should be " .. TRACED .. " (the one row that fits), is " ..
+          monster.entry .. (DECOY[monster.entry] and (", " .. DECOY[monster.entry]) or ""))
+    -- the player stands still, so the spawn is on the plus sign
+    -- (Movement.getPlusSpawnPosition, as wow-chat-1 had it: "it's more like
+    -- a plus shape but that's close enough"): 120-160 yards out along one
+    -- axis and within 120 yards either side of it, so 120 to 200 yards in
+    -- all. This test found on 2026-10-26 a monster 161 yards out, against
+    -- the datapath document's "120-160"; the document was the one wrong.
+    local ax, ay = math.abs(monster.x - p.x), math.abs(monster.y - p.y)
+    local onArm = (ax >= 120 and ax <= 160 and ay <= 120) or (ay >= 120 and ay <= 160 and ax <= 120)
+    check(onArm, 6, string.format("the monster should stand on the plus sign (120-160 out along one axis, within 120 of it), stood at %.1f, %.1f from the player", ax, ay))
+    check(p:GetData("num-ambushers") == 1, 6, "the monster should count against its player (1), count is " .. tostring(p:GetData("num-ambushers")))
+    check(monster:GetData("ambush-chase-target") == p:GetGUID(), 6, "the monster should know its player")
+end
+-- }}}
+
+-- {{{ steps 7-8: the chase, the fight
+local engaged, closer = false, true
+if monster then
+    local last = math.huge
+    for _ = 1, 120 do
+        silently(advance, 1000)
+        local d = math.sqrt((monster.x - p.x) ^ 2 + (monster.y - p.y) ^ 2)
+        if monster.combat then engaged = true; break end
+        if d > last + 0.01 then closer = false end
+        last = d
+    end
+end
+check(closer, 7, "each chase step should bring the monster nearer its player")
+check(engaged, 7, "the monster should reach its player and attack within two minutes")
+-- }}}
+
+-- {{{ step 9: the end
+if monster then
+    monster.dead, monster.combat = true, false
+    for _, fn in ipairs(handlers[7] or {}) do silently(fn, 7, p, monster) end
+    check(p:GetData("num-ambushers") == 0, 9, "the kill should take the monster off its player's count (0), count is " .. tostring(p:GetData("num-ambushers")))
+    check(monster:GetData("ambush-chase-target") == nil, 9, "the dead monster should forget its player")
+    check(pending(monster) == 0, 9, "the dead monster should keep no timers, keeps " .. pending(monster))
+    check(not monster.gone, 9, "the corpse should stay where it fell (the game removes it later), it was removed")
+    check(monster.summonTimer ~= nil and monster.summonTimer > 0, 9, "the spawn should hand the game a corpse timer")
+    -- the next monster: the clock still runs, and the path starts again
+    check(pending(p, Ambush.spawnAndAttackPlayer) == 1, 2, "after the kill the player should still have one ambush clock, has " .. pending(p, Ambush.spawnAndAttackPlayer))
+end
+check(#queued > 0, 4, "no monster ever entered the player's queues")
+for _, entry in ipairs(queued) do
+    check(DECOY[entry] == nil, 4, "a monster the query should have kept out was queued: " .. entry .. ", " .. (DECOY[entry] or ""))
+end
+for _, c in ipairs(p.spawned) do
+    check(DECOY[c.entry] == nil, 5, "a monster the query should have kept out came: " .. c.entry .. ", " .. (DECOY[c.entry] or ""))
+end
+-- }}}
+
+silently(Toy.logout, p)
+if fails == 0 then
+    print(string.format("test-datapath-ambush: all %d checks passed (monster %d followed from the table to its corpse)", checks, TRACED))
+    os.exit(0)
+end
+print(string.format("test-datapath-ambush: %d of %d checks failed", fails, checks))
+os.exit(1)
+-- ==== footer of test-datapath-ambush ====
+-- lines:     251
+-- ==== end of footer ====

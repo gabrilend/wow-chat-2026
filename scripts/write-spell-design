@@ -1,0 +1,118 @@
+#!/usr/bin/env luajit
+-- write-spell-design - writes a spell design (which spells a character's
+-- bot never casts) into that character's bot settings (issue 635c).
+--
+-- For a general audience: the bot module keeps, per bot, a "skip spells
+-- list": spells it will not cast, every rank of each named one. It reads
+-- the list from its own database at every login. This tool turns a design
+-- from src/lua-basic/data/spell-designs.lua (spell names) into that list
+-- (spell numbers, found by name in the game's own spell file) and writes
+-- it for one character, replacing any skip list it had and leaving its
+-- other settings alone. The character must be offline: the bot module
+-- writes its settings when a grouped bot logs out, over anything written
+-- meanwhile.
+--
+-- Usage: scripts/write-spell-design [--dir DIR] [--profile P] [--dry-run] DESIGN CHARACTER
+--        scripts/write-spell-design [--dir DIR] list
+--   --dry-run  print the list and what would be written; write nothing
+
+-- {{{ configuration
+local DIR, PROFILE, DRY = "/mnt/kaun/wow-chat-2026", nil, false
+local args = { ... }
+while args[1] and args[1]:find("^%-%-") do
+    local a = table.remove(args, 1)
+    if a == "--dir" then DIR = table.remove(args, 1)
+    elseif a == "--profile" then PROFILE = table.remove(args, 1)
+    elseif a == "--dry-run" then DRY = true
+    else io.stderr:write("write-spell-design: unknown option " .. a .. "\n"); os.exit(1) end
+end
+if not PROFILE then
+    local f = io.open(DIR .. "/.profile")
+    PROFILE = f and f:read("*l") or nil
+    if f then f:close() end
+end
+local MYSQL   = DIR .. "/mysql/installed-files/bin/mysql --defaults-file=" .. DIR .. "/mysql/conf/client.cnf -h127.0.0.1 -P3307 -N -B"
+local DESIGNS = dofile(DIR .. "/src/lua-basic/data/spell-designs.lua")
+local SKIP    = "skip spells list"           -- the bot module's own name for the value (SkipSpellsListValue)
+-- }}}
+
+-- {{{ local function die(message)
+local function die(message)
+    io.stderr:write("write-spell-design: " .. message .. "\n")
+    os.exit(1)
+end
+-- }}}
+
+-- {{{ local function query(sql)
+-- Rows of tab-separated fields, the query on standard input (never through
+-- the shell's quoting).
+local function query(sql)
+    local file = os.tmpname()
+    local w = io.open(file, "w"); w:write(sql, ";\n"); w:close()
+    local h = io.popen(MYSQL .. " < '" .. file .. "' 2>&1")
+    local rows = {}
+    for line in h:lines() do
+        if line:find("^ERROR") then os.remove(file); die("MySQL said: " .. line) end
+        local r = {}
+        for field in (line .. "\t"):gmatch("([^\t]*)\t") do r[#r + 1] = field end
+        rows[#rows + 1] = r
+    end
+    h:close()
+    os.remove(file)
+    return rows
+end
+-- }}}
+
+-- {{{ local function ids_for(design)
+-- One spell number per name (the bot module skips every rank of the name),
+-- the lowest the spell file has. A name the file lacks is an error.
+local function ids_for(design)
+    local Spells = dofile(DIR .. "/scripts/lib/spell-data.lua").open(DIR, false)
+    local want, found = {}, {}
+    for _, n in ipairs(design.never) do want[n] = true end
+    for id = 1, 80000 do
+        local n = Spells.name(id)
+        if n and want[n] and not found[n] then found[n] = id end
+    end
+    local ids, missing = {}, {}
+    for _, n in ipairs(design.never) do
+        if found[n] then ids[#ids + 1] = found[n] else missing[#missing + 1] = n end
+    end
+    if #missing > 0 then die(("design %q names spells the game's spell file has none of: %s"):format(design.name, table.concat(missing, ", "))) end
+    table.sort(ids)
+    return ids
+end
+-- }}}
+
+-- {{{ local function find_design(name)
+local function find_design(name)
+    for _, d in ipairs(DESIGNS) do if d.name == name then return d end end
+    local names = {}
+    for _, d in ipairs(DESIGNS) do names[#names + 1] = d.name end
+    die(("no design named %q (there are: %s)"):format(tostring(name), table.concat(names, ", ")))
+end
+-- }}}
+
+-- {{{ the command
+if args[1] == "list" then
+    for _, d in ipairs(DESIGNS) do print(("%-30s class %2d, never: %s"):format(d.name, d.class, table.concat(d.never, ", "))) end
+    os.exit(0)
+end
+local design, who = find_design(args[1]), args[2]
+if not who then die("usage: write-spell-design [--dir DIR] [--profile P] [--dry-run] DESIGN CHARACTER | list") end
+if not PROFILE or PROFILE == "" then die("no profile (.profile is missing; give --profile)") end
+local CHARS, BOTS = "acore_characters_" .. PROFILE, "acore_playerbots_" .. PROFILE
+local rows = query(("SELECT guid, class, online FROM %s.characters WHERE name = '%s'"):format(CHARS, who:gsub("[^%a]", "")))
+if #rows == 0 then die("no character named " .. who .. " in " .. CHARS) end
+local guid, class, online = tonumber(rows[1][1]), tonumber(rows[1][2]), rows[1][3] ~= "0"
+if class ~= design.class then die(("%s is class %d; design %q is for class %d"):format(who, class, design.name, design.class)) end
+if online and not DRY then die(who .. " is online: log it out first (the bot module writes its settings over this at logout); nothing written") end
+local ids = ids_for(design)
+local value = SKIP .. ">" .. table.concat(ids, ",")
+print(("%s (character %d): never %s"):format(who, guid, table.concat(design.never, ", ")))
+print("  as the bot module's setting: " .. value)
+if DRY then print("  (dry run: nothing written)"); os.exit(0) end
+query(("START TRANSACTION; DELETE FROM %s.playerbots_db_store WHERE guid = %d AND `key` = 'value' AND value LIKE '%s>%%';" ..
+       " INSERT INTO %s.playerbots_db_store (guid, `key`, value) VALUES (%d, 'value', '%s'); COMMIT"):format(BOTS, guid, SKIP, BOTS, guid, value))
+print("  written; the bot reads it at its next login")
+-- }}}

@@ -28,7 +28,7 @@ DIR="/mnt/kaun/wow-chat-2026"
 [[ -n "${1:-}" ]] && DIR="$1"
 SRC="${DIR}/sql/beta/db_auth.src"
 WORK="${DIR}/tmp/shared-memory/test-beta-two-side-permissions"
-MYSQL=("${DIR}/mysql/installed-files/bin/mysql" --no-defaults "--socket=${DIR}/mysql/databases/mysql.sock" -uritz -pmenardi)
+MYSQL=("${DIR}/mysql/installed-files/bin/mysql" "--defaults-file=${DIR}/mysql/conf/client.cnf" "--socket=${DIR}/mysql/databases/mysql.sock")
 SCRATCH_DB="_smoke_test"
 
 fails=0

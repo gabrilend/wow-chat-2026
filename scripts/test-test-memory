@@ -1,0 +1,132 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-test-memory
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      a remembered test result holds only while the files the test reads are unchanged (issue 1100b)
+# quick-test: yes
+# ==== end of header ====
+# test-test-memory - checks the memory of test results: that a pass is
+# reused exactly while the files its test reads are unchanged, and never
+# after one of them changes.
+#
+# For a general audience: the compile skips a test that already passed on
+# the same files (scripts/test-memory). A memory that skipped a test after
+# its files changed would let a broken change through unseen, so this
+# builds a small pretend project, in its own git repository, with two
+# pretend tests that each read one file of their own, records a pass for
+# each, and changes things one at a time: a file one test reads, committed
+# and uncommitted, and then changed back; a new file in a folder a test
+# lists; a failure recorded after a pass. After each change it asks the
+# memory which tests must run again, and checks the answer.
+#
+# Usage: scripts/test-test-memory [PROJECT_DIR]
+# Exit status: 0 when every check passes, 1 otherwise.
+
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+MEMORY="${DIR}/scripts/test-memory"
+SCRATCH="${DIR}/tmp/tmp/test-test-memory"
+FAILS=0
+CHECKS=0
+
+# {{{ check
+check() {
+    CHECKS=$((CHECKS + 1))
+    if [[ "$2" != "$3" ]]; then echo "  FAIL: $1 (expected \"$3\", got \"$2\")"; FAILS=$((FAILS + 1)); fi
+}
+# }}}
+
+# {{{ verdict
+# The memory's verdict for one test of the pretend project (text).
+verdict() {
+    "${MEMORY}" "${SCRATCH}" plan "$@" | awk -F'\t' '{print $3}'
+}
+# }}}
+
+# {{{ the pretend project
+# scripts/test-a reads lib/a.lua (named from the scripts folder);
+# scripts/test-b reads src/b.txt (named from the project folder);
+# scripts/test-c lists the folder data/ and is "remember: no";
+# scripts/test-d lists the folder data/;
+# scripts/test-e loads src/e.lua, which loads data/e2.lua from its own
+#   folder (src/data/e2.lua), as a script does with here .. "data/x.lua".
+rm -rf "${SCRATCH}"
+mkdir -p "${SCRATCH}/scripts/lib" "${SCRATCH}/src" "${SCRATCH}/data"
+git -C "${SCRATCH}" init --quiet
+git -C "${SCRATCH}" config user.email test@example.invalid
+git -C "${SCRATCH}" config user.name test
+printf 'return 1\n'                                > "${SCRATCH}/scripts/lib/a.lua"
+printf 'b\n'                                       > "${SCRATCH}/src/b.txt"
+printf 'one\n'                                     > "${SCRATCH}/data/one.txt"
+printf '#!/bin/bash\ncat "$1/scripts/lib/a.lua"\n' > "${SCRATCH}/scripts/test-a"
+printf '#!/bin/bash\ncat "$1/src/b.txt"\n'         > "${SCRATCH}/scripts/test-b"
+printf '#!/bin/bash\n# ==== header: 9 lines, footer: 3 lines ====\n# id:         test-c\n# profiles:   all\n# priority:   10\n# kind:       test\n# about:      lists data\n# quick-test: yes\n# remember:   no\n# ==== end of header ====\nls "$1/data/"\n# ==== footer of test-c ====\n# lines:     14\n# ==== end of footer ====\n' > "${SCRATCH}/scripts/test-c"
+printf '#!/bin/bash\nls "$1/data/"\n'              > "${SCRATCH}/scripts/test-d"
+mkdir -p "${SCRATCH}/src/data"
+printf 'dofile(here .. "data/e2.lua")\n'          > "${SCRATCH}/src/e.lua"
+printf 'return 2\n'                               > "${SCRATCH}/src/data/e2.lua"
+printf '#!/bin/bash\nluajit "$1/src/e.lua"\n'    > "${SCRATCH}/scripts/test-e"
+chmod +x "${SCRATCH}"/scripts/test-*
+git -C "${SCRATCH}" add -A
+git -C "${SCRATCH}" commit --quiet -m one
+ONE="$(git -C "${SCRATCH}" rev-parse HEAD)"
+# }}}
+
+# {{{ what each test reads
+check "test-a reads itself and lib/a.lua" "$("${MEMORY}" "${SCRATCH}" reads test-a | tr '\n' ' ')" "scripts/lib/a.lua scripts/test-a "
+check "test-e reads what its script loads from its own folder" "$("${MEMORY}" "${SCRATCH}" reads test-e | tr '\n' ' ')" "scripts/test-e src/data/e2.lua src/e.lua "
+check "test-b reads itself and src/b.txt" "$("${MEMORY}" "${SCRATCH}" reads test-b | tr '\n' ' ')" "scripts/test-b src/b.txt "
+# }}}
+
+# {{{ nothing recorded: everything runs
+check "test-a with nothing recorded" "$(verdict test-a)" "run"
+check "test-c says remember: no" "$(verdict test-c)" "never"
+# }}}
+
+# {{{ record passes, then nothing changed
+FP_A="$("${MEMORY}" "${SCRATCH}" plan test-a | cut -f2)"
+FP_B="$("${MEMORY}" "${SCRATCH}" plan test-b | cut -f2)"
+FP_D="$("${MEMORY}" "${SCRATCH}" plan test-d | cut -f2)"
+printf 'pass test-a %s\npass test-b %s\npass test-d %s\n' "${FP_A}" "${FP_B}" "${FP_D}" | "${MEMORY}" "${SCRATCH}" record "${ONE}" commit > /dev/null
+check "test-a after its pass" "$(verdict test-a)" "remembered"
+check "test-b after its pass" "$(verdict test-b)" "remembered"
+# }}}
+
+# {{{ a change to what test-b reads, committed
+printf 'b2\n' > "${SCRATCH}/src/b.txt"
+git -C "${SCRATCH}" commit --quiet -am two
+TWO="$(git -C "${SCRATCH}" rev-parse HEAD)"
+check "test-a, whose file did not change"        "$(verdict test-a)" "remembered"
+check "test-b, whose file changed"               "$(verdict test-b)" "run"
+check "the commit's own view: test-a untouched"  "$(verdict --commit "${TWO}" --touched-by "${TWO}" test-a)" "untouched"
+check "the commit's own view: test-b runs"       "$(verdict --commit "${TWO}" --touched-by "${TWO}" test-b)" "run"
+check "the first commit's files: test-b remembered" "$(verdict --commit "${ONE}" test-b)" "remembered"
+# }}}
+
+# {{{ uncommitted changes count, and changing back restores the pass
+printf 'return 2\n' > "${SCRATCH}/scripts/lib/a.lua"
+check "test-a with its file changed but not committed" "$(verdict test-a)" "run"
+printf 'return 1\n' > "${SCRATCH}/scripts/lib/a.lua"
+check "test-a with its file changed back"              "$(verdict test-a)" "remembered"
+# }}}
+
+# {{{ a new file in a folder a test lists
+printf 'two\n' > "${SCRATCH}/data/two.txt"
+check "test-d with a new, uncommitted file in its folder" "$(verdict test-d)" "run"
+rm "${SCRATCH}/data/two.txt"
+check "test-d with it gone again"                         "$(verdict test-d)" "remembered"
+# }}}
+
+# {{{ a failure after a pass, on the same files: run again
+printf 'fail test-a %s\n' "${FP_A}" | "${MEMORY}" "${SCRATCH}" record "${TWO}" compile > /dev/null
+check "test-a after failing on the files it once passed on" "$(verdict test-a)" "run"
+# }}}
+
+rm -rf "${SCRATCH}"
+if [[ ${FAILS} -eq 0 ]]; then echo "test-test-memory: all ${CHECKS} checks passed"; exit 0; fi
+echo "test-test-memory: ${FAILS} of ${CHECKS} checks failed"
+exit 1
+# ==== footer of test-test-memory ====
+# lines:     132
+# ==== end of footer ====

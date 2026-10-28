@@ -118,7 +118,7 @@ f:write("CREATE DATABASE IF NOT EXISTS `", SCRATCH, "`; USE `", SCRATCH, "`;\n",
         "SELECT 'stage', 'applied twice';\n", tables, rows, revert, "\n",
         "SELECT 'stage', 'reverted';\n", tables)
 f:close()
-local mysql = string.format("'%s/mysql/installed-files/bin/mysql' --no-defaults --socket='%s/mysql/databases/mysql.sock' -uritz -pmenardi -N -B < '%s' 2>&1", DIR, DIR, script)
+local mysql = string.format("'%s/mysql/installed-files/bin/mysql' --defaults-file=" .. DIR .. "/mysql/conf/client.cnf --socket='%s/mysql/databases/mysql.sock' -N -B < '%s' 2>&1", DIR, DIR, script)
 local h = io.popen(mysql)
 local stage, seen = nil, {}
 for line in h:lines() do

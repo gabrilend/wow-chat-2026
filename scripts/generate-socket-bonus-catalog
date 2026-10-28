@@ -29,7 +29,7 @@ local DIR  = arg[1] or "/mnt/kaun/wow-chat-2026"
 local DB   = arg[2] or "acore_world"
 local DBC  = DIR .. "/data-files/dbc/"
 local OUT  = DIR .. "/docs/profiles/socket-bonus-catalog.md"
-local MYSQL = DIR .. "/mysql/installed-files/bin/mysql -h127.0.0.1 -P3307 -uritz -pmenardi -N --batch " .. DB
+local MYSQL = DIR .. "/mysql/installed-files/bin/mysql --defaults-file=" .. DIR .. "/mysql/conf/client.cnf -h127.0.0.1 -P3307 -N --batch " .. DB
 
 -- {{{ configuration
 -- enchantment effect types (ITEM_ENCHANTMENT_TYPE_* in the server's DBCEnums.h)

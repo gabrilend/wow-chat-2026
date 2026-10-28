@@ -37,6 +37,7 @@ end
 -- {{{ the stand-in world
 local TAUREN = 6
 local menu, heard, executed, items, quests_touched = {}, {}, {}, {}, {}
+local marked_after       -- quests rewarded when the skip mark was written (number, nil until then)
 local rewarded, flags, money, xp_while_rewarding = {}, 0, 2000, {}
 -- each quest's reward in this stand-in world: the runeblade from 12619, a
 -- cloak from 12679, 50 silver from every quest, and experience unless held off
@@ -110,6 +111,15 @@ local env = setmetatable({
     RegisterCreatureGossipEvent = function(entry, ev, fn) if entry == 7180001 then handlers[#handlers + 1] = fn end end,   -- Sargobras: hello, then select
     RegisterPlayerEvent = function() end,
     CharDBQuery = function(sql)
+        -- a write that waits for the database (the skip mark since
+        -- 2026-10-22, issue 718d): kept with the queued ones, with how many
+        -- quests were rewarded before it (marked_after), since the mark
+        -- must land before the first one
+        if sql:find("^UPDATE") then
+            executed[#executed + 1] = sql
+            if sql:find("SET skipped = 1") then local n = 0; for _ in pairs(rewarded) do n = n + 1 end; marked_after = n end
+            return nil
+        end
         if sql:find("SHOW COLUMNS FROM basic_718_souls") then return {} end              -- the skipped column is there
         if sql:find("FROM basic_718_souls") then
             return { GetUInt32 = function(_, c) return ({ 0, 0, 0, 0, 0 })[c + 1] end }   -- owed
@@ -198,6 +208,9 @@ check((items[39320] or 0) == 0, "no gear: the cloak is taken back")
 local marked = false
 for _, s in ipairs(executed) do if s:find("SET skipped = 1") and s:find("dk = 900") then marked = true end end
 check(marked, "the ledger is marked as skipped")
+-- before any story quest is rewarded: each one that grants talent points
+-- makes the server recount them by this mark (basic_rules.cpp, issue 718d)
+check(marked_after == 0, "and marked before the first story quest is rewarded (" .. tostring(marked_after) .. " were before it)")
 local d = tele and math.sqrt((tele.x - 2337.8) ^ 2 + (tele.y - (-5676.7)) ^ 2) or 99
 check(tele and tele.map == 0 and math.abs(tele.z - 382.3) < 0.01 and d <= 6.01, string.format("placed off the Ebon Hold, within 6 yards of its spot (%.2f)", d))
 
@@ -264,5 +277,5 @@ print("")
 print(fails == 0 and ("All " .. checks .. " checks passed") or (fails .. " of " .. checks .. " checks failed"))
 os.exit(fails == 0 and 0 or 1)
 -- ==== footer of test-dk-skip-story ====
--- lines:      268
+-- lines:      281
 -- ==== end of footer ====

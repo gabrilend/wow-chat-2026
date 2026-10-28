@@ -1,0 +1,86 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-movement-benchmark
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      the movement benchmark passes a swirling clan, and fails a standing or a straight-walking one naming the right cause
+# quick-test: yes
+# ==== end of header ====
+# test-movement-benchmark - checks scripts/movement-benchmark passes a clan
+# that moves the way the owner pictured, and fails, naming the right
+# cause, clans that don't (issue 617e14f).
+#
+# For a general audience: the benchmark is the stop-or-go-on for movement
+# work, so it must say yes to the right thing and no, with the right
+# reason, to the wrong one. Three made-up records, twenty minutes each, a
+# sample every five seconds:
+#   swirling  - four buddies circling drifting centres, two each way round:
+#               must pass;
+#   standing  - four buddies standing 40 yards off while their owner walks
+#               about: must fail, the first cause "nothing moves them";
+#   straight  - four buddies walking straight lines back and forth: must
+#               fail on circling, the first cause "walking straight".
+# The records sit on a map with no zone data, so the covering measure is
+# left out ("--"), and no animation is drawn.
+#
+# Usage: scripts/test-movement-benchmark [PROJECT_DIR]
+# Exit status: 0 when every check passes, 1 otherwise.
+
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+SCRATCH="${DIR}/tmp/shared-memory/test-movement-benchmark"
+CHECKS=0
+FAILS=0
+check() { CHECKS=$((CHECKS + 1)); if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; FAILS=$((FAILS + 1)); fi; }
+mkdir -p "${SCRATCH}"
+
+# {{{ the three records (world record columns; map 9999: no zone data)
+luajit -e '
+local out = "'"${SCRATCH}"'"
+local function rec(name, buddy_xy)
+    local f = io.open(out .. "/" .. name .. ".tsv", "w")
+    for k = 0, 239 do
+        local t = 1000 + k * 5
+        local ox, oy = 50 * math.cos(k * 0.05), 50 * math.sin(k * 0.05)       -- the owner walks a wide circle
+        f:write(("%d\t1\tOwner\tplayer\t9999\t1\t1\t%.1f\t%.1f\t0\t0\t0\t0\n"):format(t, ox, oy))
+        for b = 1, 4 do
+            local x, y = buddy_xy(b, k, ox, oy)
+            f:write(("%d\t%d\tBuddy%d\tbuddy\t9999\t1\t1\t%.1f\t%.1f\t0\t0\t0\t1\n"):format(t, 10 + b, b, x, y))
+        end
+    end
+    f:close()
+end
+rec("swirling", function(b, k, ox, oy)
+    local dir = (b % 2 == 0) and 1 or -1                                       -- two each way round
+    local cx, cy = ox + 12 * math.cos(b * 1.57), oy + 12 * math.sin(b * 1.57) -- each its own drifting centre
+    local a = dir * k * 0.5 + b
+    return cx + 15 * math.cos(a), cy + 15 * math.sin(a)
+end)
+rec("standing", function(b) return 200 + b * 3, 200 end)                       -- far off, still
+rec("straight", function(b, k, ox, oy)
+    local s = (k % 40) < 20 and (k % 20) or (20 - k % 20)                     -- to and fro along a line
+    return ox + s * 6, oy + b * 4
+end)'
+# }}}
+
+run() { "${DIR}/scripts/movement-benchmark" "${DIR}" --record "${SCRATCH}/$1.tsv" --no-animation --logs "${SCRATCH}" 2>&1; }
+
+OUT="$(run swirling)"; RC=$?
+check "a swirling clan passes" '[[ ${RC} -eq 0 && "${OUT}" == *"comes back right"* ]]'
+[[ ${RC} -eq 0 ]] || echo "${OUT}" | sed 's/^/    /'
+
+OUT="$(run standing)"; RC=$?
+check "a standing clan fails" '[[ ${RC} -eq 1 ]]'
+FIRST="$(grep -A1 "^\*\*moving\*\* missed" <<< "${OUT}" | tail -1)"
+check "and the first cause named is that nothing moves them" '[[ "${FIRST}" == *"nothing moves them"* ]]'
+
+OUT="$(run straight)"; RC=$?
+check "a clan walking straight lines fails" '[[ ${RC} -eq 1 ]]'
+FIRST="$(grep -A1 "^\*\*circling\*\* missed" <<< "${OUT}" | tail -1)"
+check "and the first cause named for its circling is walking straight" '[[ "${FIRST}" == *"walking straight"* ]]'
+
+echo "test-movement-benchmark: ${CHECKS} checks, ${FAILS} failed"
+[[ ${FAILS} -eq 0 ]]
+# ==== footer of test-movement-benchmark ====
+# lines:      86
+# ==== end of footer ====

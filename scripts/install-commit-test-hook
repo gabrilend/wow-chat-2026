@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# install-commit-test-hook - test every commit in the background, as it is made
+#
+# For a general audience: after each commit on main, git runs a small
+# step of ours ("post-commit"). This installs one that starts
+# scripts/test-commit in the background: the quick tests that read a file
+# the commit changed are run on exactly the commit's files, and their
+# results are kept beside the commit, where the compile finds them and
+# skips any test whose files are unchanged since it passed (issue 1100b).
+# The commit itself is never held up or refused: the tests run after it,
+# on their own, and their report waits in
+# tmp/shared-memory/commit-tests/<commit>/summary.
+#
+# Only commits on main in this folder are tested: the other folders of the
+# repository (the comment-free copy on "intuition", the neuron folder)
+# share its hooks and are left alone, as are the copies test-commit lays
+# out (they make no commits).
+#
+# Git keeps hooks outside version control (in .git/hooks/, shared by every
+# folder of the repository), so after a fresh clone this script is run
+# again. A post-commit hook already there is kept: it is moved aside to
+# post-commit.before-tests and run first, exactly as before. Running this
+# twice changes nothing.
+#
+# Usage: scripts/install-commit-test-hook [PROJECT_DIR]
+
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+MARK="# installed by install-commit-test-hook"
+
+hooks="$(git -C "${DIR}" rev-parse --git-common-dir)/hooks"
+[[ "${hooks}" == /* ]] || hooks="${DIR}/${hooks}"
+hook="${hooks}/post-commit"
+before="${hooks}/post-commit.before-tests"
+
+# {{{ the hook already there
+#   ours already:      rewritten (settings may have changed), the kept one stays
+#   another's:         moved aside, run first by ours
+#   none:              ours alone
+if [[ -f "${hook}" ]] && ! grep -qF "${MARK}" "${hook}"; then
+    if [[ -e "${before}" ]]; then
+        echo "ERROR: ${hook} is not ours and ${before} already exists; not overwriting either."
+        echo "       to debug: compare the two and keep the one in use as ${before}"
+        exit 1
+    fi
+    mv "${hook}" "${before}"
+    echo "kept the hook that was there: ${before} (run first)"
+fi
+# }}}
+
+cat > "${hook}" <<EOF
+#!/usr/bin/env bash
+${MARK} (issue 1100b)
+# After a commit: any hook that was here before (post-commit.before-tests)
+# runs first; then, for a commit on main in ${DIR}, the commit's tests
+# start in the background, in a session of their own (setsid), so neither
+# the commit nor a Ctrl-C at the terminal that made it stops them.
+# Remade by scripts/install-commit-test-hook.
+if [[ -x "${before}" ]]; then
+    "${before}" "\$@" || exit \$?
+fi
+[[ "\$(git rev-parse --show-toplevel)" == "${DIR}" ]] || exit 0
+[[ "\$(git symbolic-ref --quiet HEAD)" == "refs/heads/main" ]] || exit 0
+commit="\$(git rev-parse HEAD)"
+out="${DIR}/tmp/shared-memory/commit-tests"
+mkdir -p "\${out}" || { echo "commit tests: can't make \${out} (is tmp/shared-memory linked?); not started"; exit 0; }
+setsid "${DIR}/scripts/test-commit" "${DIR}" "\${commit}" < /dev/null > "\${out}/\${commit}.log" 2>&1 &
+echo "commit tests: started in the background for \${commit:0:9} (report: tmp/shared-memory/commit-tests/\${commit}/summary)"
+exit 0
+EOF
+chmod +x "${hook}"
+echo "installed: ${hook}"

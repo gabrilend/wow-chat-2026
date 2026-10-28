@@ -1,0 +1,120 @@
+#!/bin/bash
+# ==== header: 9 lines, footer: 3 lines ====
+# id:         test-datapath-installed-lua
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      the installed server's Lua folder is the one the install step means to link (issue 1100c)
+# quick-test: yes
+# remember:   no
+# ==== end of header ====
+# test-datapath-installed-lua - checks the first link of every Lua data
+# path: that the installed server's scripts folder leads to the project's
+# own scripts for that profile.
+#
+# For a general audience: the server never reads the project's scripts
+# where they are written. The install step (patches/E001) leaves a
+# signpost in the installed server's folder, a link named "custom" that
+# points at the profile's scripts (src/lua-<profile>). If the signpost
+# points somewhere else, or nowhere, the server starts without a word of
+# complaint and runs none of the project's scripts. This looks at the
+# signposts that are really there. Found on its first day (2026-10-26):
+# beta's and release's pointed at src/lua, a folder renamed away on
+# 2026-06-02, so those two realms would load none of the project's Lua
+# until reinstalled.
+#
+# The installed trees are not in git, so this test's result is never
+# remembered with a commit (issue 1100b): "remember: no" in its header.
+#
+# Usage: scripts/test-datapath-installed-lua [PROJECT_DIR] [--every-profile]
+#   without --every-profile: the active profile (.profile) and the
+#     compile's shadow tree (which is installed as the active profile), the
+#     ones the compile is about to build and run
+#   --every-profile: every installed-files-<profile>/ tree there is
+# Exit status: 0 when every checked link is right, 1 otherwise.
+
+DIR="/mnt/kaun/wow-chat-2026"
+EVERY=0
+for a in "$@"; do
+    case "${a}" in
+        --every-profile) EVERY=1 ;;    # every installed tree
+        *)               DIR="${a}" ;; # the project folder
+    esac
+done
+
+FAILS=0
+CHECKED=0
+
+# {{{ the folder E001 links, read from E001 itself
+# Its line: local LUA_SRC="${DIR}/src/lua-${PROFILE}"; read rather than
+# assumed, so a change to the install's mapping is followed here.
+E001="${DIR}/patches/E001-lua-script-symlinks.sh"
+LUA_SRC_LINE="$(grep -m1 'local LUA_SRC="${DIR}/' "${E001}")"
+if [[ -z "${LUA_SRC_LINE}" ]]; then
+    echo "  FAIL: ${E001} no longer names its folder as LUA_SRC=\"\${DIR}/...\"; teach this test its new shape"
+    exit 1
+fi
+LUA_SRC_PATTERN="${LUA_SRC_LINE#*\$\{DIR\}/}"
+LUA_SRC_PATTERN="${LUA_SRC_PATTERN%\"*}"
+# }}}
+
+# {{{ check_tree
+# One installed tree: its custom link must name, exactly, the folder E001
+# would link for its profile, and that folder must exist.
+#   $1  the installed tree's folder
+#   $2  the profile it was installed as
+check_tree() {
+    local tree="$1" profile="$2"
+    local link="${tree}/bin/lua_scripts/custom"
+    local want="${DIR}/${LUA_SRC_PATTERN//\$\{PROFILE\}/${profile}}"
+    CHECKED=$((CHECKED + 1))
+    if [[ ! -L "${link}" ]]; then
+        # no link: the install never ran E001 for this tree, or it was removed
+        echo "  FAIL: ${link} is missing (the install links it; run the install for ${profile})"
+        FAILS=$((FAILS + 1))
+        return
+    fi
+    local have
+    have="$(readlink "${link}")"
+    if [[ "${have}" != "${want}" ]]; then
+        # pointing elsewhere: the server would load some other folder, or none
+        echo "  FAIL: ${link}"
+        echo "        points at ${have}$([[ -d "${have}" ]] || echo " (which does not exist)")"
+        echo "        the install would link ${want}"
+        echo "        to mend: scripts/install --profile ${profile} (its Lua step relinks it)"
+        FAILS=$((FAILS + 1))
+    elif [[ ! -d "${want}" ]]; then
+        # the right name, but nothing there: the profile has no scripts folder
+        echo "  FAIL: ${link} points at ${want}, which does not exist"
+        FAILS=$((FAILS + 1))
+    fi
+}
+# }}}
+
+ACTIVE="$(cat "${DIR}/.profile")"
+if [[ ${EVERY} -eq 1 ]]; then
+    # every tree there is; its profile is its folder's name (shadow: the active one)
+    for tree in "${DIR}"/installed-files-*/; do
+        tree="${tree%/}"
+        profile="${tree##*/installed-files-}"
+        [[ "${profile}" == "shadow" ]] && profile="${ACTIVE}"
+        [[ -d "${tree}/bin" ]] || continue     # a tree never installed holds only its config
+        check_tree "${tree}" "${profile}"
+    done
+else
+    # the trees the compile is about to use
+    for tree in "${DIR}/installed-files-${ACTIVE}" "${DIR}/installed-files-shadow"; do
+        [[ -d "${tree}/bin" ]] || continue
+        check_tree "${tree}" "${ACTIVE}"
+    done
+fi
+
+if [[ ${FAILS} -eq 0 ]]; then
+    echo "test-datapath-installed-lua: all ${CHECKED} installed Lua links lead where the install means them to"
+    exit 0
+fi
+echo "test-datapath-installed-lua: ${FAILS} of ${CHECKED} installed Lua links are wrong"
+exit 1
+# ==== footer of test-datapath-installed-lua ====
+# lines:     120
+# ==== end of footer ====

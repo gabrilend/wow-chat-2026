@@ -1,0 +1,411 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- test-memory - what each test reads, and the results kept with commits,
+-- so a test whose files have not changed since it last passed is not run
+-- again (issue 1100b)
+--
+-- For a general audience: the project has some fifty quick tests, and a
+-- compile used to run every one of them every time. Most changes touch a
+-- few files, and most tests read only a few. This tool knows, for each
+-- test, which of the project's files it reads, and takes a fingerprint of
+-- exactly those files. Every time a test runs, its result is written down
+-- beside a commit, together with that fingerprint, in git's notes (a
+-- record git keeps beside each commit without changing the commit). Later,
+-- if a test's files fingerprint the same as at some recorded pass, that
+-- pass still holds and the test is not run.
+--
+-- What a test reads (the "read set") is found by reading the test, not by
+-- watching it run (no tracer is installed; see the issue): every project
+-- path written in the test (a file, a folder, the start of a name such as
+-- "src/lua-" or "patches/B[0-9]"), and the same again for each script those
+-- name, so a test that loads scripts/lib/toy-world.lua also reads what that
+-- names. A name may be written from the project folder ("src/lua-beta/x"),
+-- from the scripts folder ("lib/x.lua"), or as a bare file name with an
+-- extension ("ambush.lua"). Folders and prefixes take every file under
+-- them, so the set errs large: a test runs again more often than it must,
+-- not less. Files outside the project (luajit, the compiler) and the
+-- database's contents are not in any fingerprint: the owner, 2026-10-26,
+-- "The database is fine, so long as we don't add new types of records"
+-- (and those commits are tested thoroughly; scripts/test-commit).
+--
+-- A test whose header says "remember: no" reads what git does not hold
+-- (installed trees) and is always run.
+--
+-- Usage:
+--   scripts/test-memory [PROJECT_DIR] reads TEST [--commit SHA]
+--       the test's read set, one path a line
+--   scripts/test-memory [PROJECT_DIR] plan [--commit SHA] [--touched-by SHA] TEST...
+--       one line per test, tab-separated:
+--         name, fingerprint (40 hex, or "-"), verdict, detail
+--       verdicts:
+--         remembered  a recorded pass has this fingerprint (detail: the
+--                     commit it was recorded on, and how)
+--         run         no recorded pass matches: run it
+--         never       its header says "remember: no": run it
+--         untouched   with --touched-by: the commit changed none of the
+--                     files it reads (detail: how many it reads)
+--       --commit SHA      the files as they are in that commit (default:
+--                         as they are in the working tree, uncommitted
+--                         changes and new files included)
+--       --touched-by SHA  for the commit hook: "untouched" for a test that
+--                         reads none of the files SHA changed, before
+--                         looking for a remembered pass
+--   scripts/test-memory [PROJECT_DIR] record SHA HOW
+--       reads "pass|fail TEST FINGERPRINT" lines on standard input and
+--       appends them to SHA's note; HOW is a word saying who ran them
+--       (commit, compile)
+--
+-- The notes: ref refs/notes/tests, one line per result:
+--   <pass|fail> <test> <fingerprint> <unix time> <how>
+-- `git log --notes=tests` shows them beside the commits. Not pushed
+-- (git pushes notes only when asked).
+--------------------------------------------------------------------------------
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+local args = {}
+for _, a in ipairs(arg) do args[#args + 1] = a end
+if args[1] and args[1]:sub(1, 1) == "/" then DIR = table.remove(args, 1) end
+local CMD = table.remove(args, 1)
+local NOTES_REF = "tests"
+
+local function die(msg) io.stderr:write("test-memory: " .. msg .. "\n"); os.exit(1) end
+local function q(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
+-- {{{ local function lines_of
+-- Every line a command prints (a list of text); a failing command stops
+-- this tool, naming it, rather than leaving a short list to be trusted.
+local function lines_of(cmd)
+    local h = io.popen(cmd .. "; echo \"__status $?\"")
+    local out = {}
+    for l in h:lines() do out[#out + 1] = l end
+    h:close()
+    local status = table.remove(out)
+    if status ~= "__status 0" then die("this failed (" .. tostring(status) .. "): " .. cmd) end
+    return out
+end
+-- }}}
+local GIT = "git -C " .. q(DIR) .. " "
+local HERE = debug.getinfo(1, "S").source:match("^@(.*/)") or "./"
+local Header = dofile(HERE .. "lib/patch-header.lua")
+
+-- {{{ the options
+local COMMIT, TOUCHED, names = nil, nil, {}
+do
+    local i = 1
+    while i <= #args do
+        if args[i] == "--commit" then i = i + 1; COMMIT = args[i]
+        elseif args[i] == "--touched-by" then i = i + 1; TOUCHED = args[i]
+        else names[#names + 1] = args[i] end
+        i = i + 1
+    end
+end
+-- }}}
+
+-- {{{ the project's files, and each one's content hash
+-- FILES: path -> blob hash (40 hex), every file git holds or would hold:
+--   with --commit: the files of that commit's tree
+--   without: the working tree, i.e. the index's files, with those changed
+--   since hashed afresh, deleted ones left out, and new files not ignored
+--   added (an uncommitted new test or patch is part of what is tested)
+local FILES = {}
+local function load_files()
+    if COMMIT then
+        for _, l in ipairs(lines_of(GIT .. "ls-tree -r " .. q(COMMIT))) do
+            local kind, hash, path = l:match("^%d+ (%w+) (%x+)\t(.+)$")
+            if kind == "blob" then FILES[path] = hash end
+        end
+        return
+    end
+    for _, l in ipairs(lines_of(GIT .. "ls-files -s")) do
+        local hash, path = l:match("^%d+ (%x+) %d\t(.+)$")
+        if hash then FILES[path] = hash end
+    end
+    for _, path in ipairs(lines_of(GIT .. "ls-files -d")) do FILES[path] = nil end
+    local fresh = {}
+    for _, path in ipairs(lines_of(GIT .. "ls-files -m")) do if FILES[path] then fresh[#fresh + 1] = path end end
+    for _, path in ipairs(lines_of(GIT .. "ls-files -o --exclude-standard")) do fresh[#fresh + 1] = path end
+    if #fresh > 0 then
+        -- one hash-object for them all; it reads the paths, one a line
+        local list = os.tmpname()
+        local f = assert(io.open(list, "w"))
+        local real = {}
+        for _, path in ipairs(fresh) do
+            -- a link or folder (a submodule, a linked tree) is not hashed as a file
+            local probe = io.open(DIR .. "/" .. path, "rb")
+            if probe and probe:read(0) then real[#real + 1] = path; f:write(path, "\n") end
+            if probe then probe:close() end
+        end
+        f:close()
+        local hashes = #real > 0 and lines_of(GIT .. "hash-object --stdin-paths < " .. q(list)) or {}
+        os.remove(list)
+        for k, path in ipairs(real) do FILES[path] = hashes[k] end
+    end
+end
+-- }}}
+
+-- {{{ the lookups: sorted paths (for prefixes), folders, bare names
+local SORTED, BASENAMES = {}, {}
+local function index_files()
+    for path in pairs(FILES) do
+        SORTED[#SORTED + 1] = path
+        local base = path:match("([^/]+)$")
+        BASENAMES[base] = BASENAMES[base] or {}
+        table.insert(BASENAMES[base], path)
+    end
+    table.sort(SORTED)
+end
+-- every path starting with `prefix` (a list); a binary search to the
+-- first, then along while they match
+local function starting_with(prefix)
+    local lo, hi = 1, #SORTED + 1
+    while lo < hi do
+        local mid = math.floor((lo + hi) / 2)
+        if SORTED[mid] < prefix then lo = mid + 1 else hi = mid end
+    end
+    local out = {}
+    while SORTED[lo] and SORTED[lo]:sub(1, #prefix) == prefix do out[#out + 1] = SORTED[lo]; lo = lo + 1 end
+    return out
+end
+-- }}}
+
+-- {{{ local function text_of
+-- A file's text as of the chosen moment (the commit's, or on disk), or nil
+-- for a file too big to be a script worth reading for names (1 MB).
+local TEXT = {}
+local function text_of(path)
+    if TEXT[path] ~= nil then return TEXT[path] or nil end
+    local t
+    if COMMIT then
+        local h = io.popen(GIT .. "cat-file -p " .. FILES[path])
+        t = h:read("*a"); h:close()
+    else
+        local f = io.open(DIR .. "/" .. path, "rb")
+        if f then t = f:read("*a"); f:close() end
+    end
+    if t and #t > 1024 * 1024 then t = nil end
+    TEXT[path] = t or false
+    return t
+end
+-- }}}
+
+-- {{{ local function followed
+-- Whether the names written in a read file are read too: scripts are (they
+-- load and run what they name); documents, data and SQL are not (a page
+-- that mentions a file does not read it).
+local function followed(path)
+    return path:match("^scripts/") or path:match("^patches/") or path:match("^config/patches/")
+        or path:match("%.lua$") or path:match("%.sh$")
+end
+-- }}}
+
+-- {{{ local function code_of
+-- A script's text without its comments: a comment names what a reader
+-- should see ("see docs/x.md", "issue 1100"), not what the script reads.
+-- Lua: from "--" to the line's end. Bash: from a "#" at a line's start or
+-- after a space, to the line's end ("${#list[@]}" keeps its "#"). The
+-- first line ("#!") goes too. A "#" or "--" inside a quoted string is
+-- taken for a comment as well; what is lost so is a message's text, rarely
+-- a path the script opens (a path in such a string would be missed).
+local function code_of(path, text)
+    local lua = path:match("%.lua$") or text:match("^#![^\n]*lua")
+    local out = {}
+    for line in (text .. "\n"):gmatch("([^\n]*)\n") do
+        if lua then line = line:gsub("%-%-.*$", "")
+        else line = line:gsub("^#.*$", ""):gsub("(%s)#.*$", "%1") end
+        out[#out + 1] = line
+    end
+    return table.concat(out, "\n")
+end
+-- }}}
+
+-- {{{ local function names_in
+-- The project paths one file's code names: a list of { path, exact }
+-- (exact: named as that very file, so a script among them is followed;
+-- not exact: reached through a folder or a name's start, read as data).
+local DIR_PREFIX = DIR .. "/"
+local function names_in(text, home)
+    local found = {}
+    local function add(list) for _, p in ipairs(list) do found[#found + 1] = { p, false } end end
+    -- each word, and each tail of it after a "/": "$1/src/x" is read as
+    -- the word "1/src/x" ("$" ends a word), whose tail "src/x" is the path;
+    -- the first form that names something is taken
+    local function tails(word)
+        local out = { word }
+        for pos in word:gmatch("()/") do out[#out + 1] = word:sub(pos + 1) end
+        return out
+    end
+    for word in text:gmatch("[%w%._%-/]+") do
+      if word:sub(1, #DIR_PREFIX) == DIR_PREFIX then word = word:sub(#DIR_PREFIX + 1) end
+      local before = #found
+      for _, tok in ipairs(tails(word)) do
+        if #found > before then break end
+        tok = tok:gsub("^%./", ""):gsub("^/+", "")
+        if #tok >= 3 then
+            if FILES[tok] and tok:find("[/.]") then
+                -- a file, from the project folder; a bare word ("issue")
+                -- is not taken for a file of that name in the project root
+                found[#found + 1] = { tok, true }
+            elseif home and FILES[home .. tok] and tok:find("[/.]") then
+                -- from the reading file's own folder (a script that loads
+                -- here .. "data/x.lua"; found 2026-10-26: the death knight
+                -- souls script's data file was missing from its test's set)
+                found[#found + 1] = { home .. tok, true }
+            elseif tok:find("/", 1, true) and FILES["scripts/" .. tok] then
+                -- from the scripts folder ("lib/toy-world.lua"); a bare word
+                -- ("install" in a message) is not taken for scripts/install
+                found[#found + 1] = { "scripts/" .. tok, true }
+            elseif tok:find("/", 1, true) and #tok >= 5 then
+                local list = starting_with(tok)                      -- a folder, or a name's start
+                if #list == 0 then list = starting_with("scripts/" .. tok) end
+                add(list)
+            elseif tok:match("^[%w_%-]+%.[%w]+$") and #tok >= 6 and BASENAMES[tok] then
+                for _, p in ipairs(BASENAMES[tok]) do found[#found + 1] = { p, true } end  -- a bare file name
+            end
+        end
+      end
+    end
+    return found
+end
+-- }}}
+
+-- {{{ local function read_set
+-- A test's read set: itself, the paths its code names, and those named in
+-- the code of each script it names exactly, followed until nothing new
+-- turns up. A file reached only through a folder is read but not followed
+-- (the folders of tests, patches and issues are read as data by the
+-- tests that list them). A sorted list.
+local function read_set(test)
+    local start = "scripts/" .. test
+    if not FILES[start] then die("no " .. start .. (COMMIT and (" in commit " .. COMMIT) or " in the working tree")) end
+    -- seen: path -> true once listed; queue: exactly named scripts still to read
+    local seen, queue, out = { [start] = true }, { start }, { start }
+    while #queue > 0 do
+        local path = table.remove(queue)
+        local t = text_of(path)
+        if t then
+            for _, n in ipairs(names_in(code_of(path, t), path:match("^(.*/)"))) do
+                local p, exact = n[1], n[2]
+                if not seen[p] then
+                    seen[p] = true
+                    out[#out + 1] = p
+                    if exact and followed(p) then queue[#queue + 1] = p; if os.getenv("TEST_MEMORY_DEBUG") then io.stderr:write("follow: ", path, " -> ", p, "\n") end end
+                end
+            end
+        end
+    end
+    table.sort(out)
+    return out
+end
+-- }}}
+
+-- {{{ local function fingerprint
+-- One hash of the read set's paths and their contents: the same files with
+-- the same contents give the same 40 hex digits, whatever commit they are in.
+local function fingerprint(set)
+    local f = os.tmpname()
+    local h = assert(io.open(f, "w"))
+    for _, path in ipairs(set) do h:write(path, "\t", FILES[path], "\n") end
+    h:close()
+    local out = lines_of("sha1sum " .. q(f))
+    os.remove(f)
+    return out[1]:match("^(%x+)")
+end
+-- }}}
+
+-- {{{ local function remembered_passes
+-- Every recorded pass: test -> fingerprint -> "commit (how, date)". A
+-- later fail with the same fingerprint (a test that is not repeatable)
+-- cancels the pass: such a test is run again until it passes again.
+local function remembered_passes()
+    local passes = {}
+    local pairs_ = lines_of(GIT .. "notes --ref=" .. NOTES_REF .. " list")
+    for _, l in ipairs(pairs_) do
+        local blob, commit = l:match("^(%x+) (%x+)$")
+        if blob then
+            local h = io.popen(GIT .. "cat-file -p " .. blob)
+            for line in h:lines() do
+                local result, test, fp, when, how = line:match("^(%a+) (%S+) (%x+) (%d+) (%S+)$")
+                if result then
+                    passes[test] = passes[test] or {}
+                    local was = passes[test][fp]
+                    when = tonumber(when)
+                    -- the latest result wins; two in the same second: the
+                    -- fail (a pass is trusted only when nothing contradicts it)
+                    if not was or when > was.when or (when == was.when and result == "fail") then
+                        passes[test][fp] = { pass = (result == "pass"), when = when, commit = commit, how = how }
+                    end
+                end
+            end
+            h:close()
+        end
+    end
+    return passes
+end
+-- }}}
+
+-- {{{ the commands
+local COMMANDS = {}
+
+function COMMANDS.reads()
+    if #names ~= 1 then die("usage: test-memory [PROJECT_DIR] reads TEST [--commit SHA]") end
+    load_files(); index_files()
+    for _, p in ipairs(read_set(names[1])) do print(p) end
+end
+
+function COMMANDS.plan()
+    if #names == 0 then die("usage: test-memory [PROJECT_DIR] plan [--commit SHA] [--touched-by SHA] TEST...") end
+    load_files(); index_files()
+    local changed
+    if TOUCHED then
+        changed = {}
+        -- a commit's changed paths; the first commit has no parent to compare with
+        for _, p in ipairs(lines_of(GIT .. "diff-tree --root --no-commit-id --name-only -r " .. q(TOUCHED))) do changed[p] = true end
+    end
+    local passes = remembered_passes()
+    for _, test in ipairs(names) do
+        local r = Header.read(DIR .. "/scripts/" .. test)
+        local set = read_set(test)
+        local fp = fingerprint(set)
+        if r.fields and r.fields.remember == "no" then
+            -- reads what git does not hold: never remembered
+            print(table.concat({ test, "-", "never", "its header says remember: no" }, "\t"))
+        else
+            local touched = true
+            if changed then
+                touched = false
+                for _, p in ipairs(set) do if changed[p] then touched = true; break end end
+            end
+            local hit = passes[test] and passes[test][fp]
+            if not touched then
+                -- the commit changed nothing it reads
+                print(table.concat({ test, fp, "untouched", #set .. " files read, none changed by " .. TOUCHED:sub(1, 7) }, "\t"))
+            elseif hit and hit.pass then
+                -- the same files passed before: that pass still holds
+                print(table.concat({ test, fp, "remembered", hit.commit:sub(1, 7) .. " (" .. hit.how .. ", " .. os.date("%Y-%m-%d %H:%M", hit.when) .. ")" }, "\t"))
+            else
+                -- never run on these files, or failed on them last time
+                print(table.concat({ test, fp, "run", hit and "failed last time on these files" or "not yet run on these files" }, "\t"))
+            end
+        end
+    end
+end
+
+function COMMANDS.record()
+    local sha, how = names[1], names[2]
+    if not (sha and how and how:match("^%w+$")) then die("usage: test-memory [PROJECT_DIR] record SHA HOW < results") end
+    local now, out = os.time(), {}
+    for line in io.lines() do
+        local result, test, fp = line:match("^(%a+) (%S+) (%x+)$")
+        if not (result == "pass" or result == "fail") then die("a result line should read \"pass|fail TEST FINGERPRINT\", not: " .. line) end
+        out[#out + 1] = table.concat({ result, test, fp, now, how }, " ")
+    end
+    if #out == 0 then return end
+    local f = os.tmpname()
+    local h = assert(io.open(f, "w")); h:write(table.concat(out, "\n"), "\n"); h:close()
+    lines_of(GIT .. "notes --ref=" .. NOTES_REF .. " append -F " .. q(f) .. " " .. q(sha))
+    os.remove(f)
+    print("recorded " .. #out .. " results on " .. sha:sub(1, 7))
+end
+-- }}}
+
+if not COMMANDS[CMD or ""] then die("the command is reads, plan or record (see the top of this file)") end
+COMMANDS[CMD]()

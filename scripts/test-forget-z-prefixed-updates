@@ -29,7 +29,7 @@ DIR="/mnt/kaun/wow-chat-2026"
 if [[ -n "$1" ]]; then
     DIR="$1"
 fi
-MYSQL="${DIR}/mysql/installed-files/bin/mysql --no-defaults --socket=${DIR}/mysql/databases/mysql.sock -uritz -pmenardi -N _smoke_test"
+MYSQL="${DIR}/mysql/installed-files/bin/mysql --defaults-file=${DIR}/mysql/conf/client.cnf --socket=${DIR}/mysql/databases/mysql.sock -N _smoke_test"
 
 source /home/ritz/programming/ai-stuff/scripts/libs/ensure-ram-tiers
 ensure_ram_tiers "${DIR}" || exit 1

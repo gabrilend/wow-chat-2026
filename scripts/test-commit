@@ -1,0 +1,171 @@
+#!/bin/bash
+# test-commit - runs, for one commit, the quick tests that read anything
+# the commit changed, on exactly that commit's files, and keeps the results
+# with the commit (issue 1100b). Started in the background by the commit
+# hook after every commit on main.
+#
+# For a general audience: each time work is committed, this checks it
+# straight away, in the background, so problems surface while the change
+# is fresh instead of at the next compile. It does not test the folder
+# being worked in (which may hold unfinished changes that were not
+# committed); it lays out a second copy of the project as it was in the
+# commit, and runs the tests there. Only the tests that read a file the
+# commit changed are run (scripts/test-memory decides which); every result
+# is written beside the commit in git's notes, where the compile later
+# finds it and skips a test whose files are unchanged since it passed.
+#
+# A commit that adds a new kind of database record (a table or a column:
+# "CREATE TABLE" or "ALTER TABLE ... ADD" in its added lines) is tested
+# thoroughly: every quick test that talks to the database runs, whatever
+# files it reads, and so do the builds of each profile's whole database in
+# RAM (scripts/test-basic-sql-in-ram, scripts/test-beta-sql-in-ram, the
+# slow ones). The owner, 2026-10-26: "The database is fine, so long as we
+# don't add new types of records. And those must be thoroughly tested at
+# their git commit time".
+#
+# Usage: scripts/test-commit [PROJECT_DIR] COMMIT
+# Writes: tmp/shared-memory/commit-tests/<commit>/ (each test's log, and
+#   summary: what ran, what passed, what was skipped and why)
+# Exit status: 0 when every test it ran passed, 1 when any failed, 2 when
+#   it could not test at all (the reason is printed).
+
+DIR="/mnt/kaun/wow-chat-2026"
+if [[ $# -ge 2 ]]; then DIR="$1"; shift; fi
+COMMIT_ARG="${1:?usage: test-commit [PROJECT_DIR] COMMIT}"
+
+COMMIT="$(git -C "${DIR}" rev-parse --verify "${COMMIT_ARG}^{commit}")" || { echo "ERROR: ${COMMIT_ARG} is not a commit in ${DIR}"; exit 2; }
+SHORT="${COMMIT:0:7}"
+OUT="${DIR}/tmp/shared-memory/commit-tests/${COMMIT}"
+# The commit's copy, under a short name: the tests reach MySQL through its
+# socket by a path inside the copy (mysql/databases/mysql.sock, linked),
+# and a socket's path may be at most 107 characters; the commit's full
+# 40-digit name made it 128, cut short to ".../mysql/database" (found on
+# the first run, 2026-10-26: every database test failed to connect).
+TREE="${DIR}/tmp/tmp/ct-${SHORT}"
+# One test run at a time, the compile's included: the tests share their
+# scratch folders (tmp/tmp/<test>), so two runs at once would trip on each
+# other. The compile takes the same lock (scripts/compile, quick tests).
+LOCK="${DIR}/tmp/shared-memory/test-runs.lock"
+mkdir -p "${OUT}" "${DIR}/tmp/tmp" || { echo "ERROR: can't make ${OUT} (is tmp/shared-memory linked?)"; exit 2; }
+SUMMARY="${OUT}/summary"
+: > "${SUMMARY}"
+say() { echo "$*" | tee -a "${SUMMARY}"; }
+
+exec 9> "${LOCK}"
+say "test-commit ${SHORT}: $(git -C "${DIR}" log -1 --format=%s "${COMMIT}")"
+if ! flock -n 9; then
+    say "  waiting for another test run to finish (lock: ${LOCK})"
+    flock 9
+fi
+
+# {{{ remove_tree
+# The commit's copy goes once the tests are done, whatever happened.
+remove_tree() {
+    [[ -d "${TREE}" ]] && git -C "${DIR}" worktree remove --force "${TREE}"
+}
+trap remove_tree EXIT
+# }}}
+
+# {{{ the commit's copy of the project
+# A git worktree: the commit's own files, checked out beside the project.
+# What git ignores (MySQL and its data, the installed servers, the source
+# trees, tmp/) is not in a commit, and the tests need it, so each ignored
+# entry of the project is linked in at the same place. Untracked files that
+# are not ignored (someone's uncommitted work) are left out: they are not
+# part of the commit.
+remove_tree
+git -C "${DIR}" worktree prune
+git -C "${DIR}" worktree add --detach --quiet "${TREE}" "${COMMIT}" || { say "ERROR: could not lay out the commit's copy at ${TREE}"; exit 2; }
+IGNORED="$(git -C "${DIR}" ls-files -o -i --exclude-standard --directory)"
+# Untracked but not ignored, yet no one's work: the running system's own
+# folders. MySQL's data (mysql/databases/: .gitignore names only some files
+# inside it), the installed servers and their logs. Matched by the shape
+# of their names; anything else untracked stays out of the copy.
+#   mysql/databases/      MySQL's data and its socket
+#   installed-files-*/    an installed server (alpha and cc-test are not ignored)
+#   logs-*                a server's log link
+RUNTIME="$(git -C "${DIR}" ls-files -o --exclude-standard --directory | grep -E '^(mysql/databases/|installed-files-[^/]+/|logs-[^/]+/?)$')"
+IGNORED="$(printf '%s\n%s\n' "${RUNTIME}" "${IGNORED}")"
+while IFS= read -r entry; do
+    [[ -z "${entry}" ]] && continue
+    entry="${entry%/}"
+    # already there (the commit holds something of that name): leave it
+    [[ -e "${TREE}/${entry}" || -L "${TREE}/${entry}" ]] && continue
+    mkdir -p "$(dirname "${TREE}/${entry}")"
+    ln -s "${DIR}/${entry}" "${TREE}/${entry}"
+done <<< "${IGNORED}"
+# }}}
+
+# {{{ which tests
+QUICK="$("${TREE}/scripts/plan-patches" "${TREE}" --quick-tests 2>&1)" || { say "ERROR: the commit's quick tests could not be gathered:"; say "${QUICK}"; exit 2; }
+mapfile -t QUICK_TESTS <<< "${QUICK}"
+
+# New kinds of record: added lines that make a table or add a column.
+ADDED="$(git -C "${DIR}" show --format= --unified=0 "${COMMIT}" | grep -E '^\+' | grep -v '^+++')"
+NEW_KINDS="$(echo "${ADDED}" | grep -ioE 'CREATE TABLE( IF NOT EXISTS)? `?[a-z0-9_]+`?|ALTER TABLE `?[a-z0-9_]+`? +ADD( COLUMN)? `?[a-z0-9_]+`?' | sort -u)"
+# the project's own test-memory (an older commit has none), on the commit's files
+PLAN="$("${DIR}/scripts/test-memory" "${TREE}" plan --commit "${COMMIT}" --touched-by "${COMMIT}" "${QUICK_TESTS[@]}")" || { say "ERROR: test-memory could not plan this commit's tests"; exit 2; }
+
+TO_RUN=()
+declare -A FINGERPRINT
+while IFS=$'\t' read -r test fp verdict detail; do
+    FINGERPRINT["${test}"]="${fp}"
+    case "${verdict}" in
+        run|never) TO_RUN+=("${test}") ;;                       # its files changed, or never remembered
+        remembered) say "  remembered  ${test}: ${detail}" ;;   # the same files passed before
+        untouched)
+            # the commit changed nothing it reads; a new kind of record
+            # still runs the tests that ask the database
+            if [[ -n "${NEW_KINDS}" ]] && grep -q 'mysql/installed-files/bin/mysql' "${TREE}/scripts/${test}"; then
+                TO_RUN+=("${test}")
+            fi ;;
+    esac
+done <<< "${PLAN}"
+THOROUGH=()
+if [[ -n "${NEW_KINDS}" ]]; then
+    say "  new kinds of record in this commit:"
+    while IFS= read -r k; do say "    ${k}"; done <<< "${NEW_KINDS}"
+    for t in test-basic-sql-in-ram test-beta-sql-in-ram; do
+        [[ -x "${TREE}/scripts/${t}" ]] && THOROUGH+=("${t}")
+    done
+fi
+# }}}
+
+if [[ ${#TO_RUN[@]} -eq 0 && ${#THOROUGH[@]} -eq 0 ]]; then
+    say "  nothing to run: no quick test reads a file this commit changed"
+    exit 0
+fi
+
+# {{{ the tests, and their results kept
+# MySQL is started if it is down, as the compile does (issue 1100a).
+"${DIR}/scripts/start-mysql" "${DIR}" > "${OUT}/start-mysql.log" 2>&1 || { say "ERROR: MySQL did not start; ${OUT}/start-mysql.log"; exit 2; }
+say "  running ${#TO_RUN[@]} quick tests${THOROUGH[*]:+ and ${#THOROUGH[@]} whole-database builds}..."
+status=0
+"${DIR}/scripts/run-tests-in-parallel" "${TREE}" "${OUT}" "${TO_RUN[@]}" "${THOROUGH[@]}" || status=$?
+if [[ ${status} -ne 0 ]]; then
+    say "  STOPPED: the test runner exited ${status} (130: interrupted); nothing recorded"
+    exit 2
+fi
+
+RESULTS=""
+FAILED=0
+for t in "${TO_RUN[@]}"; do
+    if [[ -f "${OUT}/${t}.ok" ]]; then r=pass; else r=fail; FAILED=$((FAILED + 1)); fi
+    say "  ${r}  ${t}$([[ ${r} == fail ]] && echo ": ${OUT}/${t}.log")"
+    # "-": a test never remembered (remember: no) has no fingerprint to keep
+    [[ "${FINGERPRINT[${t}]}" != "-" ]] && RESULTS+="${r} ${t} ${FINGERPRINT[${t}]}"$'\n'
+done
+for t in "${THOROUGH[@]}"; do
+    if [[ -f "${OUT}/${t}.ok" ]]; then say "  pass  ${t} (whole database)"; else say "  fail  ${t} (whole database): ${OUT}/${t}.log"; FAILED=$((FAILED + 1)); fi
+done
+if [[ -n "${RESULTS}" ]]; then
+    printf '%s' "${RESULTS}" | "${DIR}/scripts/test-memory" "${DIR}" record "${COMMIT}" commit | tee -a "${SUMMARY}"
+fi
+# }}}
+
+if [[ ${FAILED} -gt 0 ]]; then
+    say "test-commit ${SHORT}: ${FAILED} failed (logs in ${OUT}/)"
+    exit 1
+fi
+say "test-commit ${SHORT}: every test run passed"
+exit 0

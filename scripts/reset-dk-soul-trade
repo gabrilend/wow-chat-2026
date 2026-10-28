@@ -71,7 +71,7 @@ AT_LOGIN_RESET_TALENTS=4                            # Player.h: AtLoginFlags
 sql() {
     # the characters database is the default: a multi-table DELETE resolves
     # its aliases there even when every table is named in full
-    "${MYSQL}" -h127.0.0.1 -P3307 -uritz -pmenardi -D "${CHARS}" -N -B -e "$1" 2>&1 | grep -v "Using a password" || true
+    "${MYSQL}" "--defaults-file=${DIR}/mysql/conf/client.cnf" -h127.0.0.1 -P3307 -D "${CHARS}" -N -B -e "$1" 2>&1 | grep -v "Using a password" || true
 }
 # }}}
 

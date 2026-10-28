@@ -30,7 +30,7 @@ DBC      = DIR + "/data-files/dbc/"
 CLIENT   = os.path.dirname(DIR) + "/client/client-files/Data/"
 TEMPLATE = DIR + "/scripts/templates/stones-per-icon.html"
 OUT      = DIR + "/docs/HTML/stones-per-icon.html"
-MYSQL    = [DIR + "/mysql/installed-files/bin/mysql", "-h127.0.0.1", "-P3307", "-uritz", "-pmenardi",
+MYSQL    = [DIR + "/mysql/installed-files/bin/mysql", "--defaults-file=" + DIR + "/mysql/conf/client.cnf", "-h127.0.0.1", "-P3307",
             "-N", "--batch", "acore_world_release"]
 sys.path.insert(0, os.environ.get("PYLIBS", DIR + "/libs/pylibs"))
 # }}}

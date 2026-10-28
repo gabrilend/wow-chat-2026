@@ -36,7 +36,7 @@ local DB    = arg[2] or "acore_world_release"
 local DBC   = DIR .. "/data-files/dbc/"
 local MAPS  = DIR .. "/data-files/maps/"
 local OUT   = DIR .. "/sql/basic/db_world.src/18-gem-supply.apply.sql"
-local MYSQL = DIR .. "/mysql/installed-files/bin/mysql -h127.0.0.1 -P3307 -uritz -pmenardi -N --batch " .. DB
+local MYSQL = DIR .. "/mysql/installed-files/bin/mysql --defaults-file=" .. DIR .. "/mysql/conf/client.cnf -h127.0.0.1 -P3307 -N --batch " .. DB
 
 -- {{{ configuration
 local SKILL_JEWELCRAFTING = 755

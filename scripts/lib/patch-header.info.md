@@ -17,7 +17,8 @@ A result is a table:
 - `state` (text): `"whole"` (a patch), `"broken"` (opens like one, something
   wrong) or `"absent"` (no header: a helper or a note)
 - `fields` (table of text by name): `id`, `profiles`, `priority`, `kind`,
-  `about`, and when given `carries`, `quick-test`
+  `about`, and when given `carries`, `quick-test`, `remember` ("no": a
+  test whose result is never kept with a commit, issue 1100b)
 - `problems` (list of text): every fault, in plain words, for a broken one
 - `marker` (text): `"#"` or `"--"`, the comment marker the header uses
 - `lines` (integer): the file's line count; `counted` (integer): the

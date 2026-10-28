@@ -1,0 +1,324 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- compile-ledger - every warning and error of a compile, sorted by kind, as
+-- they appear
+--
+-- For a general audience: a compile prints thousands of lines, and the
+-- few that matter (a warning, an error, a test that failed) scroll past.
+-- The compile copies everything it prints into a log
+-- (tmp/shared-memory/compile-<profile>.log, each line with the time it
+-- came). This reads that log as it grows, and the log of the trial start
+-- of the new server, picks out each line that warns or fails, names what
+-- kind it is (a compiler warning, a failed test, a server's error...) and
+-- in which stage of the compile it came, and writes it to a short ledger
+-- (compile-<profile>.warnings) the moment it appears. A person, or a
+-- chatbot checking in now and then, reads the ledger rather than the log.
+-- The owner, 2026-10-26: "oh, there's a warning, I should keep that in
+-- mind for future errors. Or there's an error, now let's go back and fix
+-- that error, and then address all of the warnings. ALL of the warnings.
+-- It must be airtight."
+--
+-- Every kind goes into the ledger; which kinds matter is the reader's
+-- choice (the owner, 2026-10-26: "let each implementation usecase pick for
+-- itself"): `show --kinds` and `follow --kinds` choose what is printed.
+--
+-- Usage:
+--   scripts/compile-ledger [PROJECT_DIR] [follow] [--profile P] [--kinds K,K] [--max MINUTES]
+--       waits for the compile that is running (or the next one to start),
+--       writes its ledger as its lines arrive, prints the entries of the
+--       chosen kinds (all when none are chosen), and ends when the run does
+--       (its receipt written, and, when it handed over to validation, the
+--       validation's end). Exit status 0 when the run ended with no entry of
+--       an error kind, 1 when it had one, 2 when it gave up waiting.
+--   scripts/compile-ledger [PROJECT_DIR] once [--profile P] [--previous]
+--       writes the ledger from a log already there, and prints a count by kind
+--   scripts/compile-ledger [PROJECT_DIR] show [--profile P] [--kinds K,K] [--previous]
+--       prints the ledger's entries of those kinds
+--   scripts/compile-ledger kinds
+--       lists the kinds, errors first
+--   --previous: the last run's (compile-<profile>.previous.log and
+--     .previous.warnings, kept by the compile when a new run starts)
+--
+-- The ledger, one entry a line, tab-separated:
+--   time (HH:MM:SS, when the line came)   kind   stage   where (run:N or
+--   trial:N, the line in the run log or the trial server's log)   the line
+-- Its first line is a comment saying what made it.
+--------------------------------------------------------------------------------
+
+local DIR, CMD, PROFILE, PREVIOUS, MAX = "/mnt/kaun/wow-chat-2026", "follow", nil, false, 300
+local CHOSEN = nil                                   -- kind -> true; nil: every kind
+do
+    local i = 1
+    while i <= #arg do
+        local a = arg[i]
+        if a == "--profile" then i = i + 1; PROFILE = arg[i]
+        elseif a == "--kinds" then
+            i = i + 1; CHOSEN = {}
+            for k in arg[i]:gmatch("[^,%s]+") do CHOSEN[k] = true end
+        elseif a == "--previous" then PREVIOUS = true
+        elseif a == "--max" then i = i + 1; MAX = tonumber(arg[i])
+        elseif a == "follow" or a == "once" or a == "show" or a == "kinds" then CMD = a
+        elseif a:sub(1, 1) == "/" then DIR = a
+        else io.stderr:write("compile-ledger: unknown argument " .. a .. "\n"); os.exit(2) end
+        i = i + 1
+    end
+end
+local function die(msg) io.stderr:write("compile-ledger: " .. msg .. "\n"); os.exit(2) end
+
+-- {{{ the kinds
+-- In the order they are tried; a line takes the first kind that fits. Each
+-- has the patterns that fit it (Lua patterns, tried on the line without its
+-- time and colour codes), and whether it is an error (the run's exit
+-- status) or a warning. `from` says which log it is looked for in: "run"
+-- (the compile's own) or "trial" (the trial server's).
+local KINDS = {
+    { name = "compiler-error",   error = true,  from = "run",   about = "the compiler refused a file (file:line:col: error)",
+      fits = { "%S+:%d+:%d+: fatal error:", "%S+:%d+:%d+: error:", "^clang[%w%-+.]*: error:", "^g%+%+: error:" } },
+    { name = "linker-error",     error = true,  from = "run",   about = "the parts did not link into a program",
+      fits = { "undefined reference to", "ld[%w.]*: error", "collect2: error", "linker command failed" } },
+    { name = "build-stopped",    error = true,  from = "run",   about = "make stopped (its *** line)",
+      fits = { "^g?make%S*: %*%*%*", "^ninja: build stopped" } },
+    { name = "cmake-error",      error = true,  from = "run",   about = "cmake refused the configuration",
+      fits = { "^CMake Error" } },
+    { name = "test-failure",     error = true,  from = "run",   about = "a quick test failed, or a check inside one",
+      fits = { "quick tests failed", "^%s+FAIL", "^FAIL" } },
+    { name = "error",            error = true,  from = "run",   about = "any other line that says it failed",
+      fits = { "ERROR", "[Ee]rror:", "FAILED", "[Ff]atal" } },
+    { name = "compiler-warning", error = false, from = "run",   about = "the compiler warned (file:line:col: warning)",
+      fits = { "%S+:%d+:%d+: warning:" } },
+    { name = "cmake-warning",    error = false, from = "run",   about = "cmake warned",
+      fits = { "^CMake Warning", "^CMake Deprecation Warning" } },
+    { name = "fallback",         error = false, from = "run",   about = "something used a fallback (the house rules count it a warning)",
+      fits = { "[Ff]allback", "[Ff]all back", "[Ff]alling back" } },
+    { name = "mysql-warning",    error = false, from = "run",   about = "the mysql client warned (most: a password given on its command line)",
+      fits = { "^mysql: %[Warning%]", "^mysqldump: %[Warning%]", "^mysqladmin: %[Warning%]" } },
+    { name = "warning",          error = false, from = "run",   about = "any other line that warns",
+      fits = { "WARNING", "[Ww]arning:", "[Ww]arn" } },
+    { name = "server-error",     error = true,  from = "trial", about = "the trial server reported an error",
+      fits = { "[Ee]rror", "[Cc]ould not", "[Ff]ailed", "[Cc]an't" } },
+    { name = "server-unused-data", error = false, from = "trial", about = "the trial server found data nothing uses (a loot entry nobody refers to, an empty pool)",
+      fits = { "isn't .* and not referenced", "Pool Id %d+ is empty" } },
+    { name = "server-empty-table", error = false, from = "trial", about = "the trial server loaded a table with nothing in it (the guild bank, auctions...)",
+      fits = { "DB table .* is empty" } },
+    { name = "server-warning",   error = false, from = "trial", about = "the trial server warned, any other way",
+      fits = { "[Ww]arn", "missing in your update directory", "is empty" } },
+}
+-- Lines that look like one of the kinds but are not: each with its reason.
+local NOT_A_FINDING = {
+    { "Can't set process priority",  "the server asks for a priority only root may give; harmless, every start says it" },
+    { "%-Werror",                    "a compiler flag being named, not an error" },
+    { "[%w]_warning",                "a name with \"warning\" in it (patch_B004_upstream_warning_fixes)" },
+    { "^==== stage:",                "the compile's own stage line" },
+    { "errors%.log",                 "a log file being named" },
+    { "Errors%.log",                 "a log file being named" },
+    { "0 errors",                    "a count of none" },
+    { "%(--skip%-tests builds",      "the compile's advice after a failure, not a second failure" },
+    { "warnings and errors, sorted as they appear", "the compile naming this ledger" },
+    { "^%d+ warnings? generated%.$", "clang's count of the warnings it just printed, each already an entry" },
+    { "^%d+ warnings? and %d+ errors? generated%.$", "clang's count, as above" },
+    { "^This warning is for project developers", "cmake's footnote to a warning (dev) already counted" },
+    { "All warnings enabled",        "cmake saying the compiler's warnings are on" },
+    { "Show all warnings",           "cmake's option summary" },
+}
+local KIND = {}
+for _, k in ipairs(KINDS) do KIND[k.name] = k end
+-- }}}
+
+if CMD == "kinds" then
+    for _, k in ipairs(KINDS) do
+        print(string.format("%-17s %-7s %-5s %s", k.name, k.error and "error" or "warning", k.from, k.about))
+    end
+    os.exit(0)
+end
+if CHOSEN then for k in pairs(CHOSEN) do if not KIND[k] then die("no kind \"" .. k .. "\" (compile-ledger kinds lists them)") end end end
+
+-- {{{ the files
+if not PROFILE then
+    local f = io.open(DIR .. "/.profile"); if not f then die("no " .. DIR .. "/.profile, and no --profile") end
+    PROFILE = f:read("*l"); f:close()
+end
+local SHM       = DIR .. "/tmp/shared-memory/"
+local BASE      = SHM .. "compile-" .. PROFILE .. (PREVIOUS and ".previous" or "")
+local RUN_LOG   = BASE .. ".log"
+local LEDGER    = BASE .. ".warnings"
+local RECEIPT   = SHM .. "compile-" .. PROFILE .. ".goodbye"
+local TRIAL_LOG = DIR .. "/tmp/shadow-validation-" .. PROFILE .. ".log"
+-- }}}
+
+-- {{{ local function classify
+-- A line's kind (a KINDS entry) or nil, for a line from `from` ("run" or
+-- "trial"); the line is given without its time or colour codes.
+local function classify(text, from)
+    for _, n in ipairs(NOT_A_FINDING) do if text:find(n[1]) then return nil end end
+    for _, k in ipairs(KINDS) do
+        if k.from == from then
+            for _, p in ipairs(k.fits) do if text:find(p) then return k end end
+        end
+    end
+    return nil
+end
+-- }}}
+
+-- {{{ the reader of one growing file
+-- A file read as it grows: each call to :more() gives the complete lines
+-- added since the last call (a last line without its newline waits for it).
+local function reader(path)
+    local r = { path = path, pos = 0, n = 0, rest = "" }
+    function r:more()
+        local f = io.open(self.path, "rb")
+        if not f then return {} end
+        local size = f:seek("end")
+        if size < self.pos then self.pos, self.n, self.rest = 0, 0, "" end   -- the file was started again
+        f:seek("set", self.pos)
+        local chunk = f:read(size - self.pos) or ""
+        f:close()
+        self.pos = size
+        local text, out = self.rest .. chunk, {}
+        local last = 1
+        for line, nextpos in text:gmatch("([^\n]*)\n()") do out[#out + 1] = line; last = nextpos end
+        self.rest = text:sub(last)
+        return out
+    end
+    return r
+end
+-- }}}
+
+-- {{{ the ledger being written
+local entries, errors, counts = 0, 0, {}
+local stage = "starting"
+local ledger
+local function open_ledger()
+    ledger = assert(io.open(LEDGER, "w"))
+    ledger:write("# made by scripts/compile-ledger from " .. RUN_LOG:sub(#DIR + 2) .. " and " .. TRIAL_LOG:sub(#DIR + 2)
+        .. ", " .. os.date("%Y-%m-%d %H:%M:%S") .. ": every warning and error line, by kind (scripts/compile-ledger kinds)\n")
+    ledger:flush()
+end
+-- one line of either log: its stage noted, its kind (if any) written down
+-- cmake's warnings and errors run on over several lines (what, where, why,
+-- how to silence it) until a blank line: the first line is the finding,
+-- the rest belong to it and are not findings of their own (found
+-- 2026-10-26: one boost policy warning made five entries)
+local within_cmake = false
+local function take(raw, from, n)
+    local text = raw:gsub("\27%[[%d;]*m", "")
+    local time, rest = text:match("^(%d%d:%d%d:%d%d) (.*)$")
+    if from == "run" and time then text = rest else time = os.date("%H:%M:%S") end
+    if from == "run" and within_cmake then
+        --   indented, or cmake's "This warning is for project developers": its explanation
+        --   blank: the end of it, nothing more
+        --   anything else: the end of it, and a line of its own, read below
+        if text:find("^%s+%S") or text:find("^This warning is for project developers") then return end
+        within_cmake = false
+        if text:find("^%s*$") then return end
+    end
+    local s = text:match("^==== stage: (.+)$")
+    if s then stage = s; return end
+    -- validate's and promote's own beginnings, printed after the compile hands over
+    if text:find("^Validating shadow worldserver") then stage = "validating (the trial server)"
+    elseif text:find("^Validation passed, promoting") then stage = "promoting" end
+    local k = classify(text, from)
+    if not k then return end
+    if k.name == "cmake-warning" or k.name == "cmake-error" then within_cmake = true end
+    entries = entries + 1
+    counts[k.name] = (counts[k.name] or 0) + 1
+    if k.error then errors = errors + 1 end
+    local line = table.concat({ time, k.name, stage, from .. ":" .. n, text }, "\t")
+    ledger:write(line, "\n"); ledger:flush()
+    if CMD == "follow" and (not CHOSEN or CHOSEN[k.name]) then print(line); io.stdout:flush() end
+end
+local function summary()
+    local parts = {}
+    for _, k in ipairs(KINDS) do if counts[k.name] then parts[#parts + 1] = counts[k.name] .. " " .. k.name end end
+    return (#parts > 0 and table.concat(parts, ", ") or "nothing") .. " (ledger: " .. LEDGER:sub(#DIR + 2) .. ")"
+end
+-- }}}
+
+-- {{{ show
+if CMD == "show" then
+    local f = io.open(LEDGER) or die("no ledger at " .. LEDGER .. " (compile-ledger once writes one from a log)")
+    for line in f:lines() do
+        local kind = line:match("^[^\t]*\t([^\t]*)\t")
+        if kind and (not CHOSEN or CHOSEN[kind]) then print(line) end
+    end
+    f:close()
+    os.exit(0)
+end
+-- }}}
+
+-- {{{ once
+if CMD == "once" then
+    if not io.open(RUN_LOG) then die("no run log at " .. RUN_LOG) end
+    open_ledger()
+    local run = reader(RUN_LOG)
+    for _, l in ipairs(run:more()) do run.n = run.n + 1; take(l, "run", run.n) end
+    -- the trial server's log is this run's only once this run validated
+    -- (before that, it is the log of an earlier run's trial start)
+    local g = io.open(RUN_LOG); local validated = g:read("*a"):find("Validating shadow worldserver"); g:close()
+    if not PREVIOUS and validated then
+        local trial = reader(TRIAL_LOG)
+        for _, l in ipairs(trial:more()) do trial.n = trial.n + 1; take(l, "trial", trial.n) end
+    end
+    ledger:close()
+    print("compile-ledger: " .. summary())
+    os.exit(errors > 0 and 1 or 0)
+end
+-- }}}
+
+-- {{{ follow
+if PREVIOUS then die("follow watches the run under way; --previous goes with once or show") end
+local function exists(p) local f = io.open(p); if f then f:close(); return true end return false end
+local function sleep(s) os.execute("sleep " .. s) end
+local function mtime(p) local h = io.popen("stat -c %Y '" .. p .. "' 2>/dev/null"); local t = tonumber(h:read("*a")); h:close(); return t end
+local started, deadline = os.time(), os.time() + MAX * 60
+
+-- Which run: the compile removes its receipt as it starts and writes it as
+-- it ends. No receipt: a run is under way, followed from its first line.
+-- A receipt: the last run is over; wait for the next to remove it.
+--   a receipt older than this follower: the next run is waited for
+--   no receipt: the run under way
+if exists(RECEIPT) then
+    io.stderr:write("compile-ledger: waiting for the next compile of " .. PROFILE .. " to start\n")
+    while exists(RECEIPT) do
+        if os.time() > deadline then print("compile-ledger: GAVE UP: no compile started in " .. MAX .. " minutes"); os.exit(2) end
+        sleep(2)
+    end
+end
+while not exists(RUN_LOG) do sleep(1) end
+open_ledger()
+io.stderr:write("compile-ledger: following " .. RUN_LOG:sub(#DIR + 2) .. "\n")
+
+local run, trial = reader(RUN_LOG), reader(TRIAL_LOG)
+local trial_from = nil             -- the trial log's time when this run began: an older one is the last run's
+local function drain()
+    for _, l in ipairs(run:more()) do run.n = run.n + 1; take(l, "run", run.n) end
+    -- the trial log only once this run's validation has (re)written it
+    if not trial_from then trial_from = mtime(TRIAL_LOG) or 0 end
+    if (mtime(TRIAL_LOG) or 0) > trial_from or stage:find("^validating") then
+        for _, l in ipairs(trial:more()) do trial.n = trial.n + 1; take(l, "trial", trial.n) end
+    end
+end
+-- The run's end: its receipt is there and fresh; a run that handed over
+-- to validation ends when promotion completes, validation times out, or
+-- an error is printed after the hand-over.
+local function over()
+    if not exists(RECEIPT) or (mtime(RECEIPT) or 0) < started - 5 then return false end
+    local f = io.open(RECEIPT); local r = f:read("*a"); f:close()
+    if not r:find("verdict:%s*compiled") then return true end
+    local g = io.open(RUN_LOG); local log = g:read("*a"); g:close()
+    local after = log:match("==== stage: compiled(.*)$") or ""
+    return after:find("Promotion complete") or after:find("Validation timeout") or after:find("ERROR:") ~= nil
+end
+while true do
+    drain()
+    if over() then sleep(3); drain(); break end   -- the log comes through a pipe: its last lines a moment late
+    if os.time() > deadline then
+        ledger:close()
+        print("compile-ledger: GAVE UP after " .. MAX .. " minutes: " .. summary())
+        os.exit(2)
+    end
+    sleep(1)
+end
+ledger:close()
+print("compile-ledger: the run is over: " .. summary())
+os.exit(errors > 0 and 1 or 0)
+-- }}}

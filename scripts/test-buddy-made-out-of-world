@@ -1,0 +1,87 @@
+#!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-buddy-made-out-of-world
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      the buddy module never calls what needs a character in the world on one still being made
+-- quick-test: yes
+-- ==== end of header ====
+-- test-buddy-made-out-of-world - checks that the buddy module guards every
+-- call that only works on a character in the world.
+--
+-- For a general audience: a buddy is made as a character that is not yet
+-- in the game world: no one is logged in as it, and the server's list of
+-- players does not hold it. A few of the server's own functions find an
+-- item's owner by looking in that list, to send the owner's game client a
+-- message; on a buddy being made they find nobody and the server crashes.
+-- It happened twice: the gems (fixed earlier, by writing a gem straight
+-- into the item when the buddy is not in the world), and on 2026-10-26 the
+-- level-30-and-up weapon enchant, which crashed the server on three
+-- level-55 buddies in a row. This reads the buddy module's C++ and fails
+-- for any function that calls one of those functions without first asking
+-- whether the character is in the world (IsInWorld()).
+--
+-- The calls that need the world, each with why:
+--   SetEnchantment(        Item::SetEnchantment: the owner's client is sent the enchant's log line
+--   SendEnchantmentLog(    the same message, sent directly
+--   ->GetOwner()           Item::GetOwner: the owner looked up among the players in the world
+--
+-- Usage: scripts/test-buddy-made-out-of-world [PROJECT_DIR]
+-- Exit status: 0 when every such call is guarded, 1 otherwise.
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local SRC = DIR .. "/patches/B036-mod-buddies/mod-buddies/src"
+
+local NEEDS_WORLD = { "SetEnchantment%(", "SendEnchantmentLog%(", "%->GetOwner%(%)" }
+
+local fails, checked, files = 0, 0, 0
+local h = io.popen("ls '" .. SRC .. "'/*.cpp")
+for path in h:lines() do
+    files = files + 1
+    local f = assert(io.open(path)); local text = f:read("*a"); f:close()
+    -- a function's body: from a line starting a definition at the left
+    -- margin to the next one; comments taken out (a comment naming
+    -- SetEnchantment is not a call)
+    local name = path:match("([^/]+)$")
+    local current, body, first = nil, {}, 0
+    local function judge()
+        if not current then return end
+        local code = table.concat(body, "\n")
+        for _, call in ipairs(NEEDS_WORLD) do
+            if code:find(call) then
+                checked = checked + 1
+                if not code:find("IsInWorld%(%)") then
+                    fails = fails + 1
+                    print(string.format("  FAIL: %s:%d %s calls %s without asking IsInWorld() first",
+                        name, first, current, call:gsub("%%", "")))
+                end
+            end
+        end
+    end
+    local n = 0
+    for line in (text .. "\n"):gmatch("([^\n]*)\n") do
+        n = n + 1
+        local code = line:gsub("//.*$", "")
+        local starts = code:match("^[%w_:<>%*&, ]+[%s%*&]([%w_:~]+)%s*%b()%s*[%w ]*$") or code:match("^[%w_:<>%*&, ]+[%s%*&]([%w_:~]+)%s*%(")
+        if starts and not code:find(";%s*$") and not code:match("^%s") then
+            judge()
+            current, body, first = starts, {}, n
+        end
+        body[#body + 1] = code
+    end
+    judge()
+end
+h:close()
+
+if files == 0 then print("test-buddy-made-out-of-world: no C++ files in " .. SRC); os.exit(1) end
+if fails == 0 then
+    print(string.format("test-buddy-made-out-of-world: all %d calls that need the world are guarded (%d files)", checked, files))
+    os.exit(0)
+end
+print(string.format("test-buddy-made-out-of-world: %d of %d calls that need the world are not guarded", fails, checked))
+os.exit(1)
+-- ==== footer of test-buddy-made-out-of-world ====
+-- lines:     87
+-- ==== end of footer ====

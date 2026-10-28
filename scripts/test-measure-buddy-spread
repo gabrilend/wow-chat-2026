@@ -1,0 +1,62 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-measure-buddy-spread
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      the buddy spread numbers are right on a record whose answers are known (issue 617e13)
+# quick-test: yes
+# ==== end of header ====
+# test-measure-buddy-spread - checks scripts/measure-buddy-spread on a
+# made-up record.
+#
+# For a general audience: the spread numbers decide whether a change to
+# how buddies walk is kept (issue 617e13), so they must be right. This
+# writes a three-sample record by hand: an owner and two buddies together,
+# then the owner steps into another sub-zone; one buddy follows ten seconds
+# later, the other never does, and both walk away from the owner while
+# outside it. It checks every number the tool prints against what that
+# record must give.
+#
+# Usage: scripts/test-measure-buddy-spread [PROJECT_DIR]
+# Exit status: 0 when every check passes, 1 otherwise.
+
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+SCRATCH="${DIR}/tmp/tmp/test-measure-buddy-spread"
+FAILS=0
+CHECKS=0
+check() { CHECKS=$((CHECKS + 1)); grep -qF -- "$2" <<< "${OUT}" || { echo "  FAIL: $1 (wanted \"$2\")"; FAILS=$((FAILS + 1)); }; }
+
+mkdir -p "${SCRATCH}"
+# time owner guid name role map zone area x y z fighting dead
+#   100: all three in area 10; Aa and Bb one yard apart (stacked)
+#   105: the owner in area 20, 40-45 yards on; both buddies still in 10, farther from the owner
+#   115: Aa in area 20 (arrived after 10 s); Bb still in 10, farther again
+printf '%s\n' \
+    $'100\t1\t1\tOwn\towner\t0\t85\t10\t0\t0\t0\t0\t0' \
+    $'100\t1\t2\tAa\tbuddy\t0\t85\t10\t10\t0\t0\t0\t0' \
+    $'100\t1\t3\tBb\tbuddy\t0\t85\t10\t11\t0\t0\t0\t0' \
+    $'105\t1\t1\tOwn\towner\t0\t28\t20\t50\t0\t0\t0\t0' \
+    $'105\t1\t2\tAa\tbuddy\t0\t85\t10\t10\t0\t0\t0\t0' \
+    $'105\t1\t3\tBb\tbuddy\t0\t85\t10\t5\t0\t0\t0\t0' \
+    $'115\t1\t1\tOwn\towner\t0\t28\t20\t50\t0\t0\t0\t0' \
+    $'115\t1\t2\tAa\tbuddy\t0\t28\t20\t45\t0\t0\t0\t0' \
+    $'115\t1\t3\tBb\tbuddy\t0\t85\t10\t0\t0\t0\t0\t0' > "${SCRATCH}/spread.tsv"
+OUT="$("${DIR}/scripts/measure-buddy-spread" --file "${SCRATCH}/spread.tsv" 2>&1)"
+
+check "three samples over 15 seconds"                     "3 samples over 15 s"
+check "half the buddy samples in the owner's sub-zone"    "50% of buddy samples in the owner's sub-zone"
+check "one stacked pair"                                  "stacked (two within 3 yd): 1"
+check "one change of sub-zone"                            "1 sub-zone changes"
+check "Aa arrived after 10 seconds"                       "arrived after 10 s (median, 1 arrivals)"
+check "Bb never arrived"                                  "never arrived: Bb"
+check "three samples of walking away"                     "wandering: 3 samples"
+
+rm -rf "${SCRATCH}"
+if [[ ${FAILS} -eq 0 ]]; then echo "test-measure-buddy-spread: all ${CHECKS} checks passed"; exit 0; fi
+echo "${OUT}" | sed 's/^/    | /'
+echo "test-measure-buddy-spread: ${FAILS} of ${CHECKS} checks failed"
+exit 1
+# ==== footer of test-measure-buddy-spread ====
+# lines:     62
+# ==== end of footer ====

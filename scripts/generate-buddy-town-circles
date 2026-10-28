@@ -31,7 +31,7 @@ local DB    = arg[2] or "acore_world_basic"
 local DATA  = DIR .. "/data-files"
 local OUT_APPLY  = DIR .. "/patches/E050-basic-buddy-town-circles/31-buddy-town-circles.apply.sql"
 local OUT_REVERT = DIR .. "/patches/E050-basic-buddy-town-circles/31-buddy-town-circles.revert.sql"
-local MYSQL = DIR .. "/mysql/installed-files/bin/mysql -h127.0.0.1 -P3307 -uritz -pmenardi -N --batch " .. DB
+local MYSQL = DIR .. "/mysql/installed-files/bin/mysql --defaults-file=" .. DIR .. "/mysql/conf/client.cnf -h127.0.0.1 -P3307 -N --batch " .. DB
 
 -- {{{ tuning
 local LINK_YARDS  = 35      -- two helpers this near belong to one cluster

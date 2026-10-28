@@ -37,7 +37,7 @@ WORLD="acore_world_basic"
 # {{{ ask
 # One query against the world database, rows tab-separated, no header.
 ask() {
-    "${MYSQL}" -h127.0.0.1 -P3307 -uritz -pmenardi -N -B "${WORLD}" -e "$1" 2>&1 | grep -v "Using a password"
+    "${MYSQL}" "--defaults-file=${DIR}/mysql/conf/client.cnf" -h127.0.0.1 -P3307 -N -B "${WORLD}" -e "$1" 2>&1 | grep -v "Using a password"
 }
 # }}}
 

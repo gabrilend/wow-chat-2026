@@ -1,0 +1,78 @@
+#!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-racial-quests
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      a quest needing another race's racial ability is done for those who lack it
+-- quick-test: yes
+-- ==== end of header ====
+-- test-racial-quests - checks src/lua-basic/racial-quests.lua with pretend
+-- players.
+--
+-- For a general audience: Thirst Unending needs the blood elves' Arcane
+-- Torrent and Rescue the Survivors! the draenei's Gift of the Naaru; on
+-- basic other races can be handed them. This loads the real script with
+-- stand-ins for the few game calls it makes and checks: a troll taking
+-- Thirst Unending has it completed and is told why; a blood elf taking it is
+-- left to do it; a dwarf carrying Rescue the Survivors! at login is helped;
+-- a quest already done is not touched; any other quest is not touched.
+--
+-- Usage: scripts/test-racial-quests [PROJECT_DIR]
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+
+local fails, checks = 0, 0
+local function check(ok, what) checks = checks + 1; if not ok then fails = fails + 1; print("  FAIL: " .. what) end end
+
+local handlers = {}
+local env = setmetatable({
+    RegisterPlayerEvent = function(event, fn) handlers[event] = fn end,
+    print = function() end,
+}, { __index = _G })
+local chunk = assert(loadfile(DIR .. "/src/lua-basic/racial-quests.lua"))
+setfenv(chunk, env)()
+
+-- a pretend player of `race` carrying `quests` (quest -> status: 3 incomplete, 1 complete)
+local function player(race, quests)
+    local p = { race = race, quests = quests, completed = {}, heard = {} }
+    function p:GetRace() return self.race end
+    function p:GetName() return "P" .. self.race end
+    function p:GetQuestStatus(q) return self.quests[q] or 0 end
+    function p:CompleteQuest(q) self.completed[q] = true; self.quests[q] = 1 end
+    function p:SendBroadcastMessage(t) self.heard[#self.heard + 1] = t end
+    return p
+end
+local function quest(id) return { GetId = function() return id end } end
+local ACCEPT, LOGIN = 63, 3
+
+check(handlers[ACCEPT] and handlers[LOGIN], "the script listens for quest accepts and logins")
+
+local troll = player(8, { [8346] = 3 })
+handlers[ACCEPT](ACCEPT, troll, quest(8346))
+check(troll.completed[8346], "a troll taking Thirst Unending has it completed")
+check(troll.heard[1] and troll.heard[1]:find("Arcane Torrent"), "and is told it needs Arcane Torrent")
+
+local elf = player(10, { [8346] = 3 })
+handlers[ACCEPT](ACCEPT, elf, quest(8346))
+check(not elf.completed[8346], "a blood elf taking it is left to do it")
+
+local dwarf = player(3, { [9283] = 3 })
+handlers[LOGIN](LOGIN, dwarf)
+check(dwarf.completed[9283], "a dwarf carrying Rescue the Survivors! is helped at login")
+
+local done = player(8, { [8346] = 1 })
+handlers[LOGIN](LOGIN, done)
+check(not done.completed[8346], "a quest already complete is not touched")
+
+local other = player(8, { [123] = 3 })
+handlers[ACCEPT](ACCEPT, other, quest(123))
+check(not other.completed[123], "any other quest is not touched")
+
+if fails == 0 then print(string.format("test-racial-quests: all %d checks passed", checks)); os.exit(0) end
+print(string.format("test-racial-quests: %d of %d checks failed", fails, checks))
+os.exit(1)
+-- ==== footer of test-racial-quests ====
+-- lines:     78
+-- ==== end of footer ====

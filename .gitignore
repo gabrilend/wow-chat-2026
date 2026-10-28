@@ -66,6 +66,9 @@ mysql/installed-files/
 # change; this rule takes effect for any machine that has not got one.
 mysql/conf/my.cnf
 mysql/conf/my.cnf.bak
+# The login file the MySQL tools read (scripts/mysql-client-options writes
+# it from secrets.conf): private, never committed.
+mysql/conf/client.cnf
 
 # TRACKED: Database files containing custom world/character data
 # Per-profile databases (acore_world_release, acore_characters_beta, etc.)

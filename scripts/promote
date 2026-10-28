@@ -46,6 +46,11 @@ parse_args() {
                 fi
                 shift
                 ;;
+            --then-serve)
+                # from a compile (not --bake): start the server once promoted
+                THEN_SERVE=true
+                shift
+                ;;
             --help|-h)
                 show_help
                 exit 0
@@ -181,6 +186,17 @@ promote_shadow_to_main() {
 # Main
 # =============================================================================
 
+THEN_SERVE=false
 parse_args "$@"
 get_profile_paths
 promote_shadow_to_main
+# Promoted, from a compile without --bake: the new server starts here, in
+# the compile's own terminal, its start-up lines kept out of sight (the
+# owner, 2026-10-27: "once it's fully validated, we don't have to close it,
+# unless the --bake cli flag is provided ... find ourselves at a started
+# AC> prompt, with none of the startup logs").
+#   --then-serve: the worldserver, started quietly, takes over this terminal
+#   otherwise: promotion is the end, as before
+if [[ "${THEN_SERVE}" == "true" ]]; then
+    exec "${DIR}/scripts/worldserver" --profile "${PROFILE}" --after-compile
+fi

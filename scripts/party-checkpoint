@@ -1,0 +1,342 @@
+#!/usr/bin/env luajit
+-- party-checkpoint - saves a party of characters under a name, and puts
+-- them back exactly as saved, in one command (issue 635a).
+--
+-- For a general audience: a dungeon test is only repeatable if the party
+-- that walks in is the same every time: the same talents, gear, spells,
+-- bars, skills, money, and the same spot at the door. This tool takes a
+-- picture of each character's rows in the characters database (and its
+-- bot settings in the bot database) and writes them as files; restoring
+-- deletes what the characters hold now and loads the picture back, all in
+-- one transaction, so a party is either wholly restored or untouched. The
+-- owner called the idea "mediporting" before it had a name: a past version
+-- kept, and remade from.
+--
+-- What a character's picture holds, and what it leaves out, is the table
+-- list below; scripts/test-party-checkpoint holds it to the characters
+-- database's own tables, so a table added upstream is never silently
+-- missed.
+--
+-- The characters must be offline (the server keeps an online character in
+-- its own memory and would write over a restore, and a picture of an
+-- online character is only as fresh as its last save): either command
+-- stops and says which are online. The world server itself may run.
+--
+-- Usage: scripts/party-checkpoint [--dir DIR] [--profile P] [--store FOLDER] save NAME CHARACTER...
+--        scripts/party-checkpoint [--dir DIR] [--profile P] restore [--dry-run] NAME
+--        scripts/party-checkpoint [--dir DIR] list
+--        scripts/party-checkpoint [--dir DIR] show NAME
+--        scripts/party-checkpoint [--dir DIR] tables      (the table list, for the test)
+
+-- {{{ configuration
+local DIR     = "/mnt/kaun/wow-chat-2026"
+local PROFILE = nil
+local STORE_AT = nil                 -- --store: where checkpoints are kept (the test's scratch folder)
+local args    = { ... }
+while args[1] == "--dir" or args[1] == "--profile" or args[1] == "--store" do
+    if args[1] == "--dir" then DIR = args[2] elseif args[1] == "--profile" then PROFILE = args[2] else STORE_AT = args[2] end
+    table.remove(args, 1); table.remove(args, 1)
+end
+if not PROFILE then
+    local f = io.open(DIR .. "/.profile")
+    PROFILE = f and f:read("*l") or nil
+    if f then f:close() end
+end
+if not PROFILE or PROFILE == "" then io.stderr:write("party-checkpoint: no profile (.profile is missing; give --profile)\n"); os.exit(1) end
+local CHARS     = "acore_characters_" .. PROFILE
+local BOTS      = "acore_playerbots_" .. PROFILE
+local STORE     = STORE_AT and (STORE_AT .. "/") or (DIR .. "/backups/checkpoints/")
+local LOGIN     = "--defaults-file=" .. DIR .. "/mysql/conf/client.cnf -h127.0.0.1 -P3307"
+local MYSQL     = DIR .. "/mysql/installed-files/bin/mysql " .. LOGIN
+-- }}}
+
+-- {{{ the tables
+-- What a character's picture holds. Each row: the database, the table, and
+-- the rows that are the character's ("%d" is its number):
+--   kept    - saved, and on restore deleted then loaded back
+--   cleared - not saved; on restore deleted, so the party comes back
+--             without them (cooldowns, auras, a corpse, dungeon locks:
+--             "healthy, cooldowns cleared, ... with the dungeon reset")
+-- Order matters for deleting: a row found through another table (an item
+-- through the inventory, a pet's spells through the pet) is deleted
+-- before the table it is found through.
+local ITEMS = "guid IN (SELECT item FROM " .. CHARS .. ".character_inventory WHERE guid = %d)"
+local PETS  = "guid IN (SELECT id FROM " .. CHARS .. ".character_pet WHERE owner = %d)"
+local TABLES = {
+    { "chars", "item_instance",                         ITEMS,           "kept"    },
+    { "chars", "pet_aura",                              PETS,            "cleared" },
+    { "chars", "pet_spell_cooldown",                    PETS,            "cleared" },
+    { "chars", "pet_spell",                             PETS,            "kept"    },
+    { "chars", "character_pet",                         "owner = %d",    "kept"    },
+    { "chars", "character_pet_declinedname",            "owner = %d",    "kept"    },
+    { "chars", "characters",                            "guid = %d",     "kept"    },
+    { "chars", "character_account_data",                "guid = %d",     "kept"    },
+    { "chars", "character_achievement",                 "guid = %d",     "kept"    },
+    { "chars", "character_achievement_progress",        "guid = %d",     "kept"    },
+    { "chars", "character_achievement_offline_updates", "guid = %d",     "kept"    },
+    { "chars", "character_action",                      "guid = %d",     "kept"    },
+    { "chars", "character_arena_stats",                 "guid = %d",     "kept"    },
+    { "chars", "character_aura",                        "guid = %d",     "cleared" },
+    { "chars", "character_battleground_random",         "guid = %d",     "kept"    },
+    { "chars", "character_brew_of_the_month",           "guid = %d",     "kept"    },
+    { "chars", "character_declinedname",                "guid = %d",     "kept"    },
+    { "chars", "character_entry_point",                 "guid = %d",     "kept"    },
+    { "chars", "character_equipmentsets",               "guid = %d",     "kept"    },
+    { "chars", "character_glyphs",                      "guid = %d",     "kept"    },
+    { "chars", "character_homebind",                    "guid = %d",     "kept"    },
+    { "chars", "character_instance",                    "guid = %d",     "cleared" },
+    { "chars", "character_inventory",                   "guid = %d",     "kept"    },
+    { "chars", "character_queststatus",                 "guid = %d",     "kept"    },
+    { "chars", "character_queststatus_daily",           "guid = %d",     "kept"    },
+    { "chars", "character_queststatus_monthly",         "guid = %d",     "kept"    },
+    { "chars", "character_queststatus_rewarded",        "guid = %d",     "kept"    },
+    { "chars", "character_queststatus_seasonal",        "guid = %d",     "kept"    },
+    { "chars", "character_queststatus_weekly",          "guid = %d",     "kept"    },
+    { "chars", "character_reputation",                  "guid = %d",     "kept"    },
+    { "chars", "character_settings",                    "guid = %d",     "kept"    },
+    { "chars", "character_skills",                      "guid = %d",     "kept"    },
+    { "chars", "character_social",                      "guid = %d",     "kept"    },
+    { "chars", "character_spell",                       "guid = %d",     "kept"    },
+    { "chars", "character_spell_cooldown",              "guid = %d",     "cleared" },
+    { "chars", "character_stats",                       "guid = %d",     "kept"    },
+    { "chars", "character_talent",                      "guid = %d",     "kept"    },
+    { "chars", "corpse",                                "guid = %d",     "cleared" },
+    { "chars", "basic_world_boss_timer",                "guid = %d",     "kept"    },
+    { "bots",  "playerbots_db_store",                   "guid = %d",     "kept"    },
+    { "bots",  "playerbots_preferred_mounts",           "guid = %d",     "kept"    },
+}
+-- Tables with a character column that a picture leaves alone, and why
+-- (the test fails on a table in neither list):
+local LEFT_ALONE = {
+    arena_team_member = "a team's membership, shared with its other members", arena_team = "a team is shared",
+    auctionhouse = "the auction house is everyone's market",
+    buddy_retired_node = "the herb and ore nodes buddies gathered: the world's, not the character's",
+    buddy_stage_record = "the buddy module's own record of a buddy's earlier self, for its remake",
+    buddy_stage_item = "the buddy module's own record of a buddy's earlier self, for its remake",
+    buddy_stage_spell = "the buddy module's own record of a buddy's earlier self, for its remake",
+    buddy_stage_talent = "the buddy module's own record of a buddy's earlier self, for its remake",
+    battleground_deserters = "a log", buddy_clan = "the owner's clan, not the party's", buddy_draw = "the owner's draw",
+    buddy_roster = "who owns whom stays as it is", buddy_stand_in = "the stand-ins' own rows",
+    calendar_invites = "other players' invitations", channels_bans = "a channel's list",
+    character_banned = "a ban is the game master's", character_gifts = "a wrapped gift's record, kept with its item",
+    creature_respawn = "a spawn number, not a character", gameobject_respawn = "a spawn number, not a character",
+    gm_survey = "a log", gm_ticket = "a log", group_member = "groups are formed at login", groups = "groups are formed at login",
+    guild = "a guild is shared", guild_bank_eventlog = "a log", guild_bank_item = "the guild's", guild_eventlog = "a log",
+    guild_member = "a guild is shared", guild_member_withdraw = "the guild's",
+    instance_saved_go_state_data = "an instance's, not a character's", item_loot_storage = "an item's loot, kept with its item",
+    item_refund_instance = "a purchase's refund window", item_soulbound_trade_data = "a trade window",
+    lag_reports = "a log", lfg_data = "the dungeon finder's queue", log_arena_memberstats = "a log", log_money = "a log",
+    mail = "mail is between characters", mail_items = "mail is between characters", mail_server_character = "the server's mail",
+    petition = "a charter is shared", petition_sign = "a charter is shared", pvpstats_players = "a log",
+    quest_tracker = "a log", recovery_item = "the item restorer's", spam_reports = "a log",
+}
+-- }}}
+
+-- {{{ local function die(message)
+local function die(message)
+    io.stderr:write("party-checkpoint: " .. message .. "\n")
+    os.exit(1)
+end
+-- }}}
+
+-- {{{ local function query(db, sql)
+-- Rows of tab-separated fields; a failed query stops the tool.
+local function query(db, sql)
+    -- the query goes in on standard input, never through the shell (whose
+    -- quoting would run a `backticked` column name as a command)
+    local file = os.tmpname()
+    local w = io.open(file, "w"); w:write(sql, ";\n"); w:close()
+    local h = io.popen(MYSQL .. " -N -B " .. db .. " < '" .. file .. "' 2>&1")
+    local rows = {}
+    for line in h:lines() do
+        if line:find("^ERROR") then die("MySQL said: " .. line .. "\n  for: " .. sql) end
+        local r = {}
+        for field in (line .. "\t"):gmatch("([^\t]*)\t") do r[#r + 1] = field end
+        rows[#rows + 1] = r
+    end
+    h:close()
+    os.remove(file)
+    return rows
+end
+-- }}}
+
+-- {{{ local function character(name)
+-- A character's number and whether it is online; stops on a name nobody has.
+local function character(name)
+    local rows = query(CHARS, ("SELECT guid, online, level, class FROM characters WHERE name = '%s'"):format(name:gsub("[^%a]", "")))
+    if #rows == 0 then die("no character named " .. name .. " in " .. CHARS) end
+    return tonumber(rows[1][1]), rows[1][2] ~= "0", tonumber(rows[1][3]), tonumber(rows[1][4])
+end
+-- }}}
+
+-- {{{ local function insert_lines(db, tbl, where)
+-- The rows of a table as INSERT statements that load back bit for bit.
+-- Not mysqldump: it writes a FLOAT as its shortest printed form (a
+-- position of -243.38499450683594 as -243.385), which loads back as a
+-- different number, and the checkpoint test caught the restored rows
+-- differing (2026-10-27). So each column is read in a form that can't
+-- lose anything, by its type:
+--   float, double     - as a DOUBLE (a float widened to a double is
+--                       exactly its value, and MySQL prints a double in a
+--                       form that reads back to the same double, so the
+--                       column's float comes back to itself)
+--   integer, decimal  - as written
+--   anything else     - as hexadecimal bytes (0x...), so text, binary
+--                       and dates never need quoting; an empty value as ''
+--   NULL              - NULL
+local function insert_lines(db, tbl, where)
+    local cols = query("information_schema", ("SELECT column_name, data_type FROM columns WHERE table_schema = '%s' AND table_name = '%s' ORDER BY ordinal_position"):format(db, tbl))
+    if #cols == 0 then die("no table " .. db .. "." .. tbl) end
+    local exprs, names = {}, {}
+    for _, c in ipairs(cols) do
+        local col, kind = "`" .. c[1] .. "`", c[2]:lower()
+        local e
+        if kind == "float" or kind == "double" then
+            e = ("CAST(%s AS DOUBLE)"):format(col)
+        elseif kind:find("int$") or kind == "decimal" then
+            e = col
+        else
+            e = ("IF(LENGTH(%s) = 0,'''''', CONCAT('0x', HEX(%s)))"):format(col, col)
+        end
+        exprs[#exprs + 1] = ("IF(%s IS NULL, 'NULL', %s)"):format(col, e)
+        names[#names + 1] = col
+    end
+    local rows = query(db, ("SELECT %s FROM `%s` WHERE %s"):format(table.concat(exprs, ", "), tbl, where))
+    local out = {}
+    for _, r in ipairs(rows) do
+        out[#out + 1] = ("INSERT INTO `%s`.`%s` (%s) VALUES (%s);"):format(db, tbl, table.concat(names, ", "), table.concat(r, ", "))
+    end
+    return out
+end
+-- }}}
+
+-- {{{ local function refuse_online(names)
+local function refuse_online(names)
+    local online = {}
+    for _, n in ipairs(names) do
+        local _, on = character(n)
+        if on then online[#online + 1] = n end
+    end
+    if #online > 0 then
+        die("online now: " .. table.concat(online, ", ") .. ". Log them out first (the server holds an online character in memory" ..
+            " and would write over the change); nothing was done")
+    end
+end
+-- }}}
+
+-- {{{ local function save(name, names)
+-- One file per character: the deletes for every table (kept and cleared),
+-- then the kept tables' rows, between a transaction's start and commit.
+local function save(name, names)
+    if not name or not name:find("^[%w%-]+$") then die("a checkpoint's name is letters, digits and dashes") end
+    if #names == 0 then die("save: name the characters") end
+    refuse_online(names)
+    os.execute("mkdir -p '" .. STORE .. name .. "'")
+    local manifest = {}
+    for _, n in ipairs(names) do
+        local guid, _, level, class = character(n)
+        local path = STORE .. name .. "/" .. n .. ".sql"
+        local f = io.open(path, "w") or die("can't write " .. path)
+        f:write("-- " .. n .. " (character " .. guid .. ", level " .. level .. ", class " .. class .. ") in checkpoint " .. name .. ",\n")
+        f:write("-- written " .. os.date("%Y-%m-%d %H:%M:%S") .. " by scripts/party-checkpoint save; restore with\n")
+        f:write("--   scripts/party-checkpoint restore " .. name .. "\n")
+        f:write("-- Deletes what the character holds, then loads what it held when saved.\n")
+        f:write("SET autocommit = 0;\nSTART TRANSACTION;\n")
+        for _, t in ipairs(TABLES) do
+            local db = t[1] == "chars" and CHARS or BOTS
+            f:write(("DELETE FROM `%s`.`%s` WHERE %s;\n"):format(db, t[2], t[3]:format(guid)))
+        end
+        f:close()
+        local h = io.open(path, "a")
+        for _, t in ipairs(TABLES) do
+            if t[4] == "kept" then
+                local db = t[1] == "chars" and CHARS or BOTS
+                for _, line in ipairs(insert_lines(db, t[2], t[3]:format(guid))) do h:write(line, "\n") end
+            end
+        end
+        h:write("COMMIT;\n")
+        h:close()
+        manifest[#manifest + 1] = ("%s\t%d\t%d\t%d"):format(n, guid, level, class)
+        print(("saved %-12s character %6d, level %2d -> %s"):format(n, guid, level, path))
+    end
+    local f = io.open(STORE .. name .. "/party", "w")
+    f:write("# checkpoint " .. name .. ", saved " .. os.date("%Y-%m-%d %H:%M:%S") .. " by scripts/party-checkpoint (" .. PROFILE .. ")\n")
+    f:write("# name\tcharacter\tlevel\tclass\n" .. table.concat(manifest, "\n") .. "\n")
+    f:close()
+end
+-- }}}
+
+-- {{{ local function members(name)
+local function members(name)
+    local f = io.open(STORE .. name .. "/party") or die("no checkpoint named " .. tostring(name) .. " (see: party-checkpoint list)")
+    local list = {}
+    for line in f:lines() do
+        if not line:find("^#") then
+            local n, guid, level, class = line:match("^(%S+)\t(%d+)\t(%d+)\t(%d+)$")
+            if n then list[#list + 1] = { name = n, guid = tonumber(guid), level = tonumber(level), class = tonumber(class) } end
+        end
+    end
+    f:close()
+    return list
+end
+-- }}}
+
+-- {{{ local function restore(name, dry)
+-- Each character's file runs in one transaction; with --dry-run it runs
+-- and is rolled back (the COMMIT swapped for a ROLLBACK), so a dry run
+-- proves the file loads without changing anything.
+local function restore(name, dry)
+    local list = members(name)
+    local names = {}
+    for _, m in ipairs(list) do names[#names + 1] = m.name end
+    refuse_online(names)
+    for _, m in ipairs(list) do
+        local guid = character(m.name)
+        if guid ~= m.guid then die(m.name .. " is character " .. guid .. " now, " .. m.guid .. " when saved: a different character of the same name; nothing restored for it") end
+        local path = STORE .. name .. "/" .. m.name .. ".sql"
+        local cmd
+        if dry then
+            cmd = ("sed '$s/^COMMIT;$/ROLLBACK;/' '%s' | %s 2>&1"):format(path, MYSQL)
+        else
+            cmd = ("%s < '%s' 2>&1"):format(MYSQL, path)
+        end
+        local h = io.popen(cmd)
+        local out = h:read("*a")
+        h:close()
+        if out:find("ERROR") then die("restoring " .. m.name .. " failed (its transaction was not committed):\n" .. out) end
+        print(("%s %-12s character %6d, level %2d"):format(dry and "would restore (rolled back)" or "restored", m.name, m.guid, m.level))
+    end
+end
+-- }}}
+
+-- {{{ the command
+local verb = table.remove(args, 1)
+if verb == "save" then
+    local name = table.remove(args, 1)
+    save(name, args)
+elseif verb == "restore" then
+    local dry = args[1] == "--dry-run"
+    if dry then table.remove(args, 1) end
+    restore(args[1], dry)
+elseif verb == "list" then
+    local h = io.popen("ls -1 '" .. STORE .. "' 2>/dev/null")
+    for n in h:lines() do
+        local ok, list = pcall(members, n)
+        if ok then
+            local who = {}
+            for _, m in ipairs(list) do who[#who + 1] = m.name end
+            print(n .. ": " .. table.concat(who, ", "))
+        end
+    end
+    h:close()
+elseif verb == "show" then
+    for _, m in ipairs(members(args[1])) do
+        print(("%-12s character %6d, level %2d, class %2d"):format(m.name, m.guid, m.level, m.class))
+    end
+elseif verb == "tables" then
+    for _, t in ipairs(TABLES) do print(t[1] .. "\t" .. t[2] .. "\t" .. t[4]) end
+    for t, why in pairs(LEFT_ALONE) do print("left\t" .. t .. "\t" .. why) end
+else
+    die("usage: party-checkpoint [--dir DIR] [--profile P] save NAME CHARACTER... | restore [--dry-run] NAME | list | show NAME | tables")
+end
+-- }}}
