@@ -49,6 +49,16 @@ static constexpr float  PROBE_DEPTH       = 50.0f;  // yards below it a height s
 static constexpr float  EDGE_CAP          = 300.0f; // yards: no area edge is looked for beyond this
 static constexpr int    CLEAR_RING_POINTS = 8;      // points round a waypoint tested for steps
 static constexpr float  CENTRE_ABOVE      = 10.0f;  // yards above the owner a centre's height search starts (then PROBE_DEPTH down)
+// The steepest ground a walker climbs (the owner, 2026-10-27: "what's the
+// limit for a player walking up a slope? That should be the limit."): 50
+// degrees, the angle the server's mesh builder names the player's slope
+// (MapBuilder.cpp, modAlmostUnwalkableTriangles(50.0f, ...)): ground from
+// 50 to 60 degrees is marked steep in the mesh, and bots, buddies among
+// them, are kept off it (PathGenerator's filter, and the buddies' own,
+// roam/buddy_mesh_core.h, which leaves the steep mark out). Kept here as
+// the rise per yard across, tan(50 degrees). It replaced 45 degrees.
+static constexpr float  WALK_SLOPE_DEGREES = 50.0f;
+static float const      WALK_RISE_PER_YARD = std::tan(WALK_SLOPE_DEGREES * float(M_PI) / 180.0f);   // 1.19
 // }}}
 
 // {{{ BuddyRosterPairs
@@ -146,6 +156,8 @@ static float WalkLine(Map const* map, uint32 phaseMask, uint32 areaId, float ste
         float change = z - lastZ;
         if (IsSharpStep(change, prevChange, stepRise))
             return float(i - 1);                       // a wall, rock or ledge
+        if (std::fabs(change) > WALK_RISE_PER_YARD)
+            return float(i - 1);                       // steeper than a walker climbs (2026-10-27): a slope is an edge too
         prevChange = change;
         lastZ = z;
     }
@@ -169,9 +181,12 @@ BuddyRoam::Ground BuddyRoamGround(Map const* map, uint32 phaseMask, uint32 areaI
     // ground, and is not stepped: for each opposite pair on the ring, the
     // two heights either side should average to the middle's (a plane,
     // however tilted, does); a crate or a rock on one side breaks that by
-    // more than the step rise. A slope steeper than 45 degrees (more rise
-    // than the clearance over the radius) is also refused: no waypoint on a
-    // cliff face.
+    // more than the step rise. A slope steeper than a walker climbs
+    // (WALK_SLOPE_DEGREES, 50: more rise than the clearance times
+    // WALK_RISE_PER_YARD over the radius) is also refused: no waypoint on a
+    // cliff face. Judged at the waypoint, from the ground round it, so it
+    // is the buddy's climb that counts, not the owner's height (the owner,
+    // 2026-10-27: "it's about the buddy-bot, not the player").
     g.clear = [map, phaseMask, areaId, stepRise](float x, float y, float z, float clearance) -> bool
     {
         float hc;
@@ -184,7 +199,7 @@ BuddyRoam::Ground BuddyRoamGround(Map const* map, uint32 phaseMask, uint32 areaI
             float px = x + std::cos(a) * clearance, py = y + std::sin(a) * clearance;
             if (!ProbeHeight(map, phaseMask, px, py, hc, h[i]) || map->GetAreaId(phaseMask, px, py, h[i]) != areaId)
                 return false;
-            if (std::fabs(h[i] - hc) > clearance)
+            if (std::fabs(h[i] - hc) > clearance * WALK_RISE_PER_YARD)
                 return false;
         }
         for (int i = 0; i < CLEAR_RING_POINTS / 2; ++i)

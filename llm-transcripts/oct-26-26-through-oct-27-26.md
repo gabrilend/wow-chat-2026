@@ -1,0 +1,5641 @@
+# Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
+
+Generated on: 2026-10-27 20:23:50
+Models: claude-opus-5-5
+
+## Contents
+
+1. 2026-10-26 21:03, after Request 2 - The goal is quicker compiles: quick tests
+   start MySQL, results are kept per commit and reused, and end-to-end datapath
+   tests exist. All are built and passing but not committed. Next, answer the
+   five questions, starting with whether to adopt issue 199's work so it can be
+   committed.
+2. 2026-10-26 21:10, after Request 3 - Goal: make the tests remember results per
+   commit and get the server running again. Your worldserver crashed creating a
+   level-55 paladin buddy, and it will probably crash on every start. Next: run
+   `./scripts/worldserver --debug` so I can read the crash trace.
+3. 2026-10-26 22:04, after Request 7 - We're catching the worldserver's
+   buddy-creation crash, and I'm watching the Debug build for warnings and
+   errors; so far just one buddy-module warning, now fixed. Once it's promoted,
+   start `./scripts/worldserver` so the crash catcher records a backtrace.
+4. 2026-10-26 22:37, after Request 8 - The goal is a server that stops crashing
+   when it makes high-level buddies, and I've fixed the cause in the buddy
+   module's weapon enchant. Next, run `./scripts/compile --debug`, then start
+   the worldserver to confirm the buddy is made.
+5. 2026-10-26 23:33, after Request 13 - We're fixing the server crashes and
+   tidying the buddy tools; the new build with the crash fixes is installed and
+   ready. Next, start the server with ./scripts/worldserver, and once Feldowinn
+   is online I'll re-kit all six buddies.
+6. 2026-10-27 00:44, after Request 22 - We're fixing how buddies follow you and
+   spread out, measured on your walk through The Bulwark. Next: say yes to the
+   three pathfinding fixes, and stop the server so I can run the class changes
+   and Feldowinn's skills.
+7. 2026-10-27 00:52, after Request 23 - We're fixing the buddy-bots, and two
+   class changes plus Feldowinn's skills are waiting for the worldserver to
+   stop, which it still hasn't. Next: stop it from its window with `.server
+   shutdown 1` or Ctrl-C, and they'll run on their own.
+8. 2026-10-27 01:35, after Request 26 - You're bringing every buddy up to the
+   new gear spec, and the code fixes for that are written and compile. Next,
+   recompile before Gabrubre or Feldowinn logs in, then tell me so I can set
+   every buddy to be brought up to spec at its next login.
+9. 2026-10-27 03:12, after Request 37 - You're fixing your buddies' gear and
+   behaviour on basic, and coins-only bodies are now lootable by anyone, along
+   with tonight's other fixes, once you compile. Next, run `./scripts/compile
+   --debug`, then tell me whether a passer-by looting a group's coins should
+   share them.
+10. 2026-10-27 03:24, after Request 37 - We're getting every buddy up to the
+    gear spec and fixing the bugs found in play. The fixes so far, including
+    coins-only bodies being lootable by anyone, are written and compile. Next:
+    run the compile, then use `.buddy spec` on Felicity's four buddies.
+11. 2026-10-27 13:32, after Request 42 - We're planning buddy pathfinding for
+    questing and dungeons, plus vanilla's level 41-60 endgame, and both plans
+    are written up. Next I need your answers: how far to squeeze vanilla's
+    creature levels, whether my drawing of the follow formation is right, and
+    whether the boss-mods licence terms are acceptable.
+12. 2026-10-27 14:04, after Request 47 - We're working on buddy pathfinding for
+    questing and dungeons; the report and the vanilla level-scaling issues are
+    written. Next, I need your answers on how to build the referee and whether
+    my sketch of the following formation is right.
+13. 2026-10-27 14:56, after Request 48 - We're building the Botanica checkpoint
+    party, and it's planned in issue files but not built yet. Next I need your
+    answer on which rules it lives under: basic's as they stand (my
+    recommendation), a test party allowed past them, or the advanced profile.
+14. 2026-10-27 16:59, after Request 53 - We're getting buddies, pathfinding and
+    the Botanica party ready while you're away, and everything built is tested
+    and waiting on your compile. Next, run scripts/compile, then .buddy spec
+    Montahmu, and answer whether release gets its own scripts.
+15. 2026-10-27 18:28, after Request 54 - The goal today was buddy pathfinding:
+    following you in your half-circle formation, follow orders, single file, and
+    a live watcher are built and tested. Next, you compile, then we try them in
+    a dungeon.
+16. 2026-10-27 19:30, after Request 55 - We're making buddy movement look alive.
+    I just built the per-zone map renderer and animation from real position
+    records, and all tests pass. Next, answer which bots should quest with no
+    player watching, so I can build that.
+
+--------------------------------------------------------------------------------
+
+### User Request 1
+
+the quick tests before the compilation should start the mysql server if it isn't
+running. Also, we should cache test results with the git commit, and later
+on-ings. That way we don't have to run it again if that part didn't change. Be
+sure that we have some tests that follow data through the entire datapath. As
+best we can without user intervention.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 1
+
+> Reading the compile's quick-test step (issue 199's uncommitted runner is
+> already there); next, the test headers, to decide how a cached result knows
+> what it depends on.
+
+> Checked tooling: there's no `strace` installed (it's in the Void repo as
+> `strace-7.1_1`), which decides how the cache can know what each test reads.
+> Looking at the datapath docs before asking you.
+
+> Before building, two choices are yours, since each one decides what the cache
+> and the new tests can promise.
+
+**[Asked the user]**
+
+*Q1 — Cache key:* How should a cached test result know whether "its part"
+changed? A cached pass is only safe if every file the test read is the same as
+when it passed.
+- Watch what it reads (Recommended) — Each test runs under strace, which logs
+  every file it opens and every folder it lists. The cache keeps a fingerprint
+  of those files and reuses the pass only while they all match. Nothing has to
+  be kept up to date by hand. Needs you to run: sudo xbps-install strace
+- Header lists its files — Each test's header gets a line naming the folders
+  and files it reads, and the fingerprint covers only those. Needs no new
+  program, but a line that is wrong or missing gives a false pass.
+- Whole-tree fingerprint — If no tracked file changed since the last full
+  pass, skip every test; otherwise run all of them. Simple and safe, but it
+  saves time only when you compile twice with nothing changed in between.
+→ **Answered:** run the tests as part of the git commit, any of them that
+touch anything created or modified by the module in question. Run it in the
+background as a matter of course, when committing.
+
+*Q2 — Datapath:* How far should the end-to-end datapath tests go? Today the
+ambush, treasure and traveller tests run the real Lua against a pretend world
+with made-up database answers.
+- Real DB + pretend server (Recommended) — Take the SQL the Lua actually
+  sends, run it against the profile's real world database in MySQL, feed the
+  real rows back into the pretend world, and follow them to a spawn, a chest or
+  a traveller. Covers everything except the C++ server. Takes seconds, so it can
+  be a quick test.
+- Also start a real worldserver — Additionally boot the installed worldserver
+  headless, log a bot in, and read the server's own log for the spawn. This is
+  the full path, but it takes minutes, needs the built server, and can't run
+  before a compile.
+- Installed tree only — Check that the install puts each Lua file, SQL file
+  and setting where the server will look for it, from the repo to
+  installed-files. No database queries are run.
+→ **Answered:** we can simulate database answers. The database is fine, so
+long as we don't add new types of records. And those must be thoroughly tested
+at their git commit time, which we should do as a matter of course.
+
+--------------------------------------------------------------------------------
+
+### User Request 2
+
+Base directory for this skill: /home/ritz/.claude/skills/issue-lifecycle
+
+# Issue lifecycle
+
+The owner's CLAUDE.md is the authority on what issue files are for and what
+they must contain; where it and this skill ever disagree, CLAUDE.md wins. This
+skill adds the mechanics CLAUDE.md leaves open: which tools answer which
+question, in what order, and what to do when a tool says no.
+
+All tools live in one place and are called by absolute path:
+
+| Tool | Answers |
+|---|---|
+| `/home/ritz/programming/ai-stuff/scripts/validate-issues <project>` | is the issue tree consistent; next free number per phase |
+| `validate-issues <project> --next <phase>` | the number to give a new issue |
+| `validate-issues <project> --file <issue>` | is this one issue well-formed and are its links matched |
+| `/home/ritz/programming/ai-stuff/scripts/progress-dashboard.lua <project> -m` | done/open counts per phase (for progress files and demos) |
+| `/home/ritz/programming/ai-stuff/scripts/commit-own-changes <repo> -F -` | commits exactly the lines this session wrote, plus the changed transcripts of the commit's projects (any conversation's), and runs the repository's commit hooks, without touching the shared staging area |
+| `/home/ritz/programming/ai-stuff/scripts/stage-own-changes <repo>` | previews what that commit would take; writes nothing |
+| `/home/ritz/programming/ai-stuff/scripts/claim-own-change <file>` | records lines this session changed by a route the edit ledger cannot see (see Committing) |
+| `/home/ritz/programming/ai-stuff/scripts/adopt-left-behind-changes <repo> -- <path>...` | takes ownership, line by line, of uncommitted work a finished session left, leaving lines any other session still holds (see Committing) |
+
+Each tool has a `.info.md` beside it; read that rather than the source.
+
+## Before writing a new issue
+
+1. **Search first, including `issues/completed/`.** Grep the issue tree for
+   the feature's nouns, not just the likely title. A completed issue about the
+   same machinery is reopened and extended rather than duplicated: history is
+   more useful stacked vertically in one file than spread across several.
+2. **Pick the phase by what the work builds on**, not by when it is being
+   done. Lower numbers are foundations; later issues depend on earlier ones.
+3. **Take the number from the tool:** `validate-issues <project> --next
+   <phase>`.
+   It reads the project's own naming shape (522, 1001, 9-007, A04) and never
+   reuses a number that a completed file already holds.
+4. **Write the blueprint** with the three sections CLAUDE.md requires, plus
+   link fields in the shape the project already uses (look at a neighbour).
+   Name related functions, structures and files instead of pasting code.
+5. **Check it:** `validate-issues <project> --file <new-issue>`, and fix what it
+   reports on the new file. If the new issue blocks or is blocked by others,
+   add the matching line to the other side too.
+
+## While working
+
+- Keep **Current Behavior** true. It is the only section that changes while
+  an issue is in progress; rewrite it in place rather than appending a log.
+- A question that surfaces is written into the issue (an "Open questions"
+  section) and then asked. An issue with an unanswered question is in
+  progress, not done.
+- Anything discovered that changes another issue's assumptions is written into
+  that issue now, not at completion.
+
+## Splitting into sub-issues
+
+Split when an issue holds work streams that could be built, tested or reviewed
+separately, or when it cannot be finished in one sitting. Do not split an issue
+that is already one mechanism. When splitting, produce and then write out:
+
+1. **A table** — `| ID | Name | Dependencies | Description |`, where ID is the
+   parent number plus a lower-case letter (103a, 103b), Name is dash-separated
+   lower-case words, Dependencies is "None" or sibling IDs.
+2. **The rationale** — the distinct work streams, why one issue cannot hold
+   them, what splitting buys.
+3. **The execution order** — a small dependency graph, e.g.
+   `103a (foundation) → 103b (needs 103a) → 103c (parallel with 103b)`.
+
+Each row becomes a file `{parent}{letter}-{name}.md` with the three sections.
+The parent keeps its blueprint and gains a short list of its sub-issues; the
+analysis itself is not appended to the parent (that would be worklog, not
+blueprint). Run `validate-issues` afterwards: it reports orphaned sub-issues
+and one-sided links.
+
+## Completing an issue
+
+An issue is complete only when nothing in it is deferred and no open question
+is unanswered. Then, in this order:
+
+1. **Run the project's tests.** A fixed bug gets a test that would have caught
+   it.
+2. **Rewrite the issue as the blueprint of what was built**: Current Behavior
+   states the built system; steps name the real functions and files; decisions
+   not taken are stated with their reason. Poetry the owner wrote during the
+   work goes into the issue verbatim.
+3. **Move it** into `issues/completed/` (`git mv`, so the history follows).
+4. **Update `issues/phase-<N>-progress.md`** for that phase. Take counts from
+   `progress-dashboard.lua <project> -m`, or better, name the command instead
+   of copying numbers that will go stale.
+5. **Update related issues** whose Current Behavior or assumptions changed.
+6. **Run `validate-issues <project>`** and fix new findings that the change
+   caused. Findings older than the change are reported to the owner, not
+   silently fixed in passing.
+7. **Commit** as below.
+
+## Committing
+
+The rule (CLAUDE.md): a commit carries exactly the lines this session wrote —
+never another session's work, even if it sits in the same file — and every
+changed transcript of the commit's projects rides along — the session's own
+project folder and the projects of the files it commits — this
+conversation's and any other's left behind (a session that committed, talked
+on and quit), so each project's story in git stays whole.
+
+Commit small and often: each piece as soon as it is done and checked, not a
+pile at the end.
+
+1. Optionally preview: `stage-own-changes <repo>` lists what would be taken
+   and what left out, and writes nothing.
+2. Commit: `commit-own-changes <repo> -F -` with the message on standard
+   input. It builds the commit on a private staging list from this session's
+   own lines (the edit ledger the edit hook keeps) plus those transcripts, and
+   never touches the shared staging area, so nothing another
+   session has staged can ride along. Plain `git commit` is refused by the
+   commit gate.
+3. Message style: say what the software now does, in plain English and by
+   mechanism or analogy; mention any extra changes and why. No function names.
+
+**When it stops or leaves something out.**
+
+- **A tangled ("mixed") block** means another session changed lines right
+  next to or on top of yours. Nothing is committed. Tell the owner which file
+  and line; decide together what that region should say. `--leave-mixed`
+  commits your other blocks meanwhile.
+- **Lines that are yours but were written by a route the ledger could not see**
+  (a script you ran, a generator, `sed`, a rename): record them with
+  `claim-own-change <file>` and say so in the commit message.
+- **Nothing to commit, but the work is there**: an earlier session wrote it
+  and ended, or the machine rebooted and emptied the ledgers. Look first with
+  `adopt-left-behind-changes <repo> --dry-run -- <path>...`, then adopt and
+  commit one batch at a time with `commit-own-changes <repo> -F - --
+  <path>...`. Lines reported as **held** belong to another session. Take them
+  (`--from <session>`) only if that session has finished, and ask the owner
+  if unsure. Say in the commit message that the work was adopted and from
+  whom. This is the route for a left-behind backlog, not the token.
+- **A warning about the shared staging area** means someone had staged that
+  file by hand in a way that overlaps your commit; their entry was left alone.
+  Tell the owner.
+
+The one-time permission tokens (`/tmp/claude-allow-*`) belong to the person.
+Never create one; if a gate names a token, relay the gate's message and let
+the owner decide.
+
+## Open questions
+
+- Phase ≥ 10 in compact names depends on the project's issue-number width;
+  `validate-issues` decides it from evidence (progress files, `phase-N-demo`
+  names). A project with none of those gets a warning. Should the house rule
+  fix one width (two digits, as in the 522 example) for every new project?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 2
+
+> Writing the issue now. The tool gives 1100 as phase 1's next number (100–199
+> are all used); checking issue 196, which is about numbering, before I take it.
+
+> The worldserver launcher does call the MySQL starter before anything else, so
+> something else is going on. Checking whether MySQL is up and what its log
+> says.
+
+> Adding a check to MySQL's start test that MySQL ends up in a session apart
+> from its launcher, so a Ctrl-C can't reach it.
+
+> Writing the issue now. It has three parts: the quick tests start MySQL, test
+> results are kept with each commit and run at commit time, and end-to-end tests
+> follow data along a whole path.
+
+> Now the compile's quick-test step: start MySQL instead of stopping.
+
+> Now the end-to-end tests. Reading the pretend world's creatures, players and
+> database stand-in so one creature can be followed all the way through.
+
+> Writing the ambush end-to-end test. It follows one creature from a simulated
+> `creature_template` table, which applies the real query's own conditions, to
+> the creature's corpse.
+
+> First run: 21 of 22 checks pass, and one finding. A monster came **161.0
+> yards** out, past the 160 the datapath doc and the code's limits say. Looking
+> at the spawn arithmetic.
+
+> The queue is filled in one write, not through the adder. I'll watch the
+> player's queue writes instead.
+
+> Mutation caught (the vendor shows up in the queue), and clean runs pass. Next,
+> the test for the install's links into the real installed trees, the check that
+> would have caught beta's broken link.
+
+> Adding the `remember` field to the header reader, since tests whose inputs
+> live outside git must never have their results reused.
+
+> Second finding: there is no `src/lua-release` folder, so reinstalling release
+> today would stop at its Lua step. I'm recording both findings for you, then
+> filling in the header line counts.
+
+> Now the remembering machinery. Checking what the commit-time worktree would
+> need linked in from the main folder (the large untracked folders, such as
+> MySQL and the installed trees).
+
+> The commit tool runs `post-commit` after the branch moves, so the hook can
+> hang off that. Writing the test-memory tool: what each test reads,
+> fingerprints, and the results kept in git notes.
+
+> The read set came out as the whole project. Some name in a script must match
+> far too much; finding which one.
+
+> Still 602 files. Tracing which followed script fans out.
+
+> A bare word like "install" in a message was being read as `scripts/install`.
+> Names relative to the scripts folder now need a slash (`lib/toy-world.lua`).
+
+> The sets now range from 1 to 1618 files. A test that reads only itself is
+> suspicious, so checking `test-buddy-gems`.
+
+> Fast enough (0.8 s for all 54). Writing the commit-time runner.
+
+> The commit's own copy doesn't have the new tool yet. The runner will use the
+> project's current copy of its own tools.
+
+> Re-running the same commit. The 16 that passed should now be remembered, and
+> only the two should run.
+
+> The fixed copy passes both. Now the compile's side: run only the tests that
+> aren't remembered, and record what it runs.
+
+> Full run: 54 of 56 pass. Checking the two failures.
+
+> Now a test for the remembering tool itself: a small pretend repository with
+> two tests, each reading its own file.
+
+> Passes. Re-checking the read-set sizes on the real tests after that change.
+
+> Hook installed. Writing the two remaining sub-issues as blueprints of what was
+> built.
+
+> Adding the new hook to `CLAUDE.md`'s commit conventions, beside the other
+> hooks that need re-installing after a fresh clone.
+
+> Final check of the new and touched tests.
+
+All three parts are built and their tests pass. Nothing is committed yet,
+because every part still has open questions and your rule is to commit only once
+an issue is complete. I haven't run the compile itself; that's yours to run.
+
+## Why the worldserver seemed not to start MySQL
+The worldserver's launcher does start MySQL. MySQL's log for tonight:
+- **20:36:10** the launcher started MySQL. It printed nothing while MySQL took
+  48 seconds to get ready, because this was the first start after the reboot and
+  the disk was cold.
+- **20:36:58** MySQL became ready, and in the same millisecond it got a stop
+  signal and shut down.
+- **20:37:15** a second start stayed up, and the worldserver started at
+  20:38:00.
+
+MySQL was running in the same process group as its launcher, so a Ctrl-C or a
+closing terminal there could reach it. The starter now:
+- runs MySQL in a session of its own, which a Ctrl-C at the launcher can't
+  reach;
+- prints a "still starting" line every 10 seconds;
+- waits up to 180 seconds instead of 60.
+
+**Did you press Ctrl-C during that 48-second wait?** If not, something else sent
+the stop signal, and I don't know what yet. MySQL's start test now checks the
+separate session, but it needs MySQL stopped, so I haven't run it while your
+worldserver is up.
+
+## What was built
+- **Quick tests start MySQL.** If MySQL is down, the compile's quick tests start
+  it instead of stopping with an error.
+- **Results are kept with each commit.**
+  - After every commit on main, the quick tests that read a file the commit
+    changed run in the background, on the commit's own files.
+  - Each result goes into git's notes beside the commit, with a fingerprint of
+    the files that test reads.
+  - The compile skips any test whose files fingerprint the same as a recorded
+    pass; `--retest` runs them all.
+  - A commit that adds a new table or column also runs every database test, plus
+    the slow full-database builds.
+  - On the latest commit, the first run took 3½ minutes; the re-run skipped 16
+    remembered tests and took 4 seconds.
+- **End-to-end tests.** One follows a single monster through every step in the
+  ambush datapath doc. It starts from the folder the install links into the
+  server and uses a pretend world database that applies the real query's
+  conditions. With the vendor filter removed from the query, it fails as it
+  should. A second test checks the real links in the installed servers.
+
+## Problems the new tests found
+1. **Beta's and release's installed servers load none of the project's Lua.**
+   Their links point at `src/lua`, which was renamed on 2026-06-02. There's also
+   no `src/lua-release`, so reinstalling release would stop at its Lua step.
+2. **A still player's ambusher can come from up to 200 yards, not 120–160.**
+   The code places it 120–160 yards out along one direction and up to 120
+   yards to the side, which matches the original wow-chat-1 design. I corrected
+   the two docs that said 120–160 and left the code alone.
+3. **`test-dk-skip-story` already fails** one check ("the ledger is marked as
+   skipped"). None of its files changed in this work.
+
+## Questions for you
+1. Should release get its own `src/lua-release`, or use `src/lua-beta`? And
+   should beta be reinstalled to fix its link?
+2. Keep the plus-sign spawn shape (up to 200 yards), or make it a ring at
+   120–160?
+3. Database contents aren't part of any fingerprint, as you said the database is
+   fine. But a reinstall can change what the database tests see while their
+   files stay the same. Should a reinstall make them run again?
+4. Should `.gitignore` name `mysql/databases/` and `installed-files-alpha/` and
+   `installed-files-cc-test/` whole? They're untracked but not ignored, so the
+   commit-time copy has to link them by a list.
+5. Issue 199's Ctrl-C work, which this builds on, was left uncommitted by an
+   earlier session and shares lines with mine in the compile script. Can I adopt
+   it and commit it before mine?
+
+Following the treasure and traveller paths end to end is written into issue
+1100c as the next steps.
+
+Reminder: the disks are still unguarded against bit rot (issue 191). Both are
+ext4, which doesn't checksum file contents.
+
+Main new files are in `scripts/`:
+- `test-memory`
+- `test-commit`
+- `install-commit-test-hook`
+- `test-test-memory`
+- `test-datapath-ambush`
+- `test-datapath-installed-lua`
+
+Issues: `issues/1100-tests-remembered-with-each-commit.md` and its three
+sub-issues, 1100a to 1100c.
+
+--------------------------------------------------------------------------------
+
+### User Request 3
+
+<pasted_content id="12ab">
+---------------------------------------
+>> Loaded playerbots config in 90984 ms
+
+Playerbots: ListSpellsAction caches initialized
+Playerbots World Thread Processor initialized
+
+WORLD: World Initialized In 2 Minutes 1 Seconds
+
+AzerothCore rev. 2a2211cd8f3d+ 2026-10-09 07:04:20 -0700 (HEAD branch) (Unix,
+RelWithDebInfo, Static) (worldserver-daemon) ready...
+>> basic: channels nobody joins (B038): General (1), Trade (2), LocalDefense
+>(22), WorldDefense (23), GuildRecruitment (25), LookingForGroup (26)
+>> mod-buddies: roster tables present; buddies are ON
+mod-buddies: 0 retired gathering spawn(s) kept out of their pools
+>> mod-buddies: "buddy roam" taught to the bot module (ten classes)
+>> mod-buddies: 11 companion account(s) hidden from /who, friends and
+chat commands; 0 owner(s) without an account yet (made at their next login)
+>> mod-buddies: Sargobras is dressed (617f): a human man in the Black
+Baron's cape (B047's outfit list)
+>> mod-buddies: 163 town circles read (617e4a)
+mod-buddies: 0 stand-in accounts
+[RandomBotLevelMgr] Level brackets sub-feature disabled via configuration.
+[RandomBotLevelMgr] Level reset sub-feature disabled via configuration.
+Calendar deletion of old events.
+AC> PlayerbotWorldThreadProcessor initialized
+>> basic: world boss battle bonus ON (876 monsters)
+[world-boss-respawn] 7 world bosses under countdown
+mod-buddies: new buddy Oferous (level 55) knows 94 spells from trainers and
+quests
+mod-buddies: new buddy Oferous: 129 profession skills and recipes for
+level 55
+/home/ritz/games/azeroth-core/wow-chat-2026/scripts/worldserver: line
+217:  5370 Segmentation fault         ./worldserver
+</pasted_content id="12ab">
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 3
+
+> The server crashed right after creating a new buddy, Oferous, at level 55.
+> Looking for a backtrace and the server's last log lines.
+
+> No core dump (the core-size limit is 0) and no debug run, so I'll work from
+> the code. Finding what the buddy creation does right after the profession
+> step.
+
+The worldserver crashed while making a new buddy, and it will probably crash
+again on every start until we know why. I can't see where it crashed yet:
+there's no core dump (the core-size limit is 0) and the server wasn't run under
+the crash catcher.
+
+**What's known**
+- The new buddy is a level-55 blood elf paladin, Oferous, for owner 584, slot 6.
+- Creating a buddy runs these steps in order: spells, professions, starting kit,
+  PvP jewellery, gems, then the first save. The last log line is the professions
+  step, so the crash is in the kit, the jewellery, the gems or the save.
+- Oferous was never saved. Owner 584's slot 6 is still waiting to be filled, and
+  the server retries an unfilled slot every few seconds. If the crash comes from
+  this paladin's kit, the next start will crash the same way, about 2 minutes
+  after loading.
+- The installed worldserver was built on 2026-10-21 at 23:58. The buddy module
+  has changed since; one of those commits, on 10-22, fixed a different crash,
+  about sharing quests that reward spells.
+- The world data has also changed since that build: the stamina-for-spirit trade
+  on leather, plate, mail and jewellery (10-25), and the split loot tables. The
+  kit and gem steps choose gear by its stats, so an old binary reading the new
+  item stats is the first suspect. Nothing confirms that yet.
+
+**Next step: get the backtrace**
+```
+! ./scripts/worldserver --debug
+```
+This runs the server under gdb (installed here). If the crash repeats, a
+symbolized stack trace is written to `tmp/debug-basic/`, and I can read the
+exact function and line from it.
+
+**Other options**
+- Rebuild first, so the server includes the module's later commits. It's your
+  build to run, and if the crash goes away we won't know why.
+- Set owner 584's slot 6 aside (keep the row, but mark it so it isn't retried)
+  to get the server up now. Then we can recreate the buddy deliberately under
+  the debugger. I'd only do this if you say so.
+
+One question back: when buddies were made at level 55 before, was it after the
+10-25 stamina-for-spirit change was installed into the world database? If every
+earlier level-55 buddy came before that change, that points at the new item
+data. If some came after it without crashing, it points at something particular
+to this paladin, such as its talent shape (profile 9).
+
+--------------------------------------------------------------------------------
+
+### User Request 4
+
+<pasted_content id="12ab">
+$ ./scripts/compile --threads 6
+Run log: tmp/shared-memory/compile-basic.log; receipt at the end:
+tmp/shared-memory/compile-basic.goodbye
+Compiling profile: basic
+  (skipping git checks)
+Build type: RelWithDebInfo (optimized, with debug symbols; --debug for Debug)
+
+1 quick tests remembered: their files are unchanged since they passed (--retest
+runs them)
+Running 56 quick tests...
+ERROR: 1 of 56 quick tests failed; nothing was patched or built:
+  test-dk-skip-story: tmp/shared-memory/compile-tests/test-dk-skip-story.log
+        ok:   the buddies are given all the same
+
+      1 of 40 checks failed
+       (--skip-tests builds anyway)
+
+===============================================================================
+COMPILE FAILED (exit status 1). Nothing was promoted; the installed
+server in installed-files-basic/ is unchanged.
+===============================================================================
+</pasted_content id="12ab">
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 4
+
+> The compile stopped on the death-knight story test's one failing check, the
+> same failure I flagged earlier (it predates this work). Finding out why it
+> fails.
+
+> All 41 checks pass. Checking that the new ordering check fails if the mark is
+> moved back after the story.
+
+The failing test is fixed; it was out of date with the code. You can compile
+again.
+
+**Why it failed:** on 10-22 (commit 2926576) the "skipped" mark was changed from
+a queued database write to one that waits for the database. That way it lands
+before the first story quest is rewarded. Each of those quests makes the server
+recount talent points, and the recount reads this mark: a skipper gets 11 points
+at level 55, not the story's 46. The test's pretend database only recorded
+queued writes, so it never saw the mark. The game code was right and is
+unchanged.
+
+**What changed in the test:**
+- Its pretend database now records writes that wait, too.
+- A new check confirms the mark comes before the first quest reward. With the
+  mark moved back after the story, the check fails ("47 were before it"). With
+  the real code, all 41 checks pass.
+
+**A gap fixed in the test memory:** that test's script loads its data file from
+its own folder (`data/death-knight-soul-data.lua`). The memory wasn't counting
+such files as read by the test, so a change to the soul data would have left the
+test wrongly remembered. It now counts them, and its own test has a case for
+this (17 checks pass).
+
+The memory is already working from your compile: the last commit's note holds
+that run's results (54 passes and the 1 failure). On your next compile, the
+tests whose files haven't changed since will be skipped. That should be most of
+them, apart from tests that read the remembering tool, the DK test, or files I
+changed today.
+
+Nothing is committed yet. The questions from earlier are still open, starting
+with the crash: were the level-55 buddies made before tonight's crash created
+after the stamina-for-spirit gear change went into the world database? The crash
+backtrace is still worth getting: `! ./scripts/worldserver --debug`, once the
+build finishes.
+
+--------------------------------------------------------------------------------
+
+### User Request 5
+
+can we change the compile script to, whenever it prints to the terminal, also
+print to a specific log file as the same time with the same motion? I think in
+this way we will be able to add recurring tasks to LLM chatbots who can watch
+and interpret as it's going. "oh, there's a warning, I should keep that in mind
+for future errors. Or there's an error, now let's go back and fix that error,
+and then address all of the warnings. ALL of the warnings. It must be airtight.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 5
+
+> The compile already prints "Run log: tmp/shared-memory/compile-basic.log" at
+> the start, so part of this may exist. Checking what that log holds today.
+
+The compile already does this. Since an earlier change, every line it prints to
+the terminal is copied the moment it's printed to
+`tmp/shared-memory/compile-<profile>.log` (for you, `compile-basic.log`). It's
+the "Run log:" line at the top of each run. The copying covers the quick tests,
+cmake, every compiler line from make, the install, and the trial start of the
+new server. Your compile is running now and the log is keeping up with it: it's
+at 13%, building `Unit.cpp`.
+
+Anything can already watch it while it runs:
+```
+tail -f tmp/shared-memory/compile-basic.log
+```
+`scripts/watch-compile` waits for the run to end, then gives a verdict and lists
+every warning the trial server printed.
+
+The log doesn't yet support the "keep every warning in mind as it goes" part:
+1. **Nothing sorts warnings and errors as they happen.** `watch-compile` only
+   reports at the end. A live mode (`watch-compile --follow`) could add each
+   warning or error to a running list in a second file
+   (`compile-basic.warnings`) as it appears, with the line it came from and what
+   stage it was in. An LLM on a recurring check would read that short list, not
+   thousands of make lines, and nothing could slip past unnoticed.
+2. **Each run overwrites the last one's log.** Only the end-of-run receipt
+   survives. For "fix the error, then go back to all of the warnings", the
+   previous run's warnings would need keeping. They could be moved aside to
+   `compile-basic.previous.log` when a new run starts.
+3. **No timestamps on the lines**, so a watcher can't tell a stalled stage from
+   a slow one. Each line in the file copy could get its time, while the terminal
+   stays as it is.
+
+One caution: I won't edit `scripts/compile` while your compile is running. Bash
+reads a script as it goes, so changing the file mid-run can break the run. Point
+1 touches only `watch-compile`, so it's safe to build now; points 2 and 3 would
+wait until this build finishes.
+
+Should I build point 1 now and the other two after the build? And which counts
+as a warning you want on the list: compiler warnings, the trial server's
+warnings, or anything with "warn" in it (including cmake's)?
+
+--------------------------------------------------------------------------------
+
+### User Request 6
+
+> Should I build point 1 now and the other two after the build? And
+  which counts as a warning you want on the list?
+
+let each implementation usecase pick for itself.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 6
+
+> Building it so the ledger records every kind of warning and error, each tagged
+> with its kind, and each reader picks the kinds it wants with an option. Point
+> 1 goes in now; points 2 and 3 wait until the build finishes.
+
+> Your build has already finished compiling (21:35, 4 minutes, with the compiler
+> cache) and handed over to validation. Checking where it is.
+
+> The tool says `scripts/compile` changed on disk since I last read it. Checking
+> whether someone else is editing it.
+
+> No other session is working here; the change it noticed was my own earlier
+> shell edits. Now the ledger tool. Reading which stages the compile passes
+> through, so each entry can say where it happened.
+
+> Adding a visible stage line to the run log wherever the compile changes stage,
+> so the ledger (or anyone reading) knows which stage each line came from.
+
+> Now the ledger tool itself.
+
+> Trying it on tonight's real run log, which predates the timestamps and stage
+> lines.
+
+> The server warnings are mostly two families: loot entries nothing refers to
+> (49), and tables that are empty on purpose (the guild bank, auctions and so
+> on). Giving each family its own kind.
+
+> Every line now has a specific kind. Writing a quick test for follow mode: a
+> pretend compile writes its log a line at a time while the ledger follows it.
+
+> My count was wrong, not the tool: the compiler error is line 10 of the pretend
+> log, not 11.
+
+> The compile's own part (timestamps in the file, the previous run kept) can
+> only really be checked by a compile. So I'm testing the exact same lines in a
+> tiny stand-alone script.
+
+> Terminal output stays as it was, the file gets each line's time, and a last
+> line without a newline isn't lost. Pointing `watch-compile`'s header at the
+> new tool, then claiming the files.
+
+I built all three pieces. The ledger tool has passed its own test on a pretend
+compile. The compile changes have only been checked in a small stand-alone copy,
+so your next compile is their first real run.
+
+**1. The warnings ledger: `scripts/compile-ledger`**
+- It follows the compile's run log, and the trial server's log during
+  validation, as they grow. Each warning or error line goes into
+  `tmp/shared-memory/compile-<profile>.warnings` the moment it's printed.
+- Each entry is one tab-separated line: the time it was printed, its kind, the
+  compile stage it came from, its line number in the log, and the line itself.
+- Every kind goes into the ledger, and each reader picks what it wants. For
+  example:
+  - `scripts/compile-ledger follow --kinds compiler-warning,server-warning`
+    prints only those kinds while the compile runs.
+  - `scripts/compile-ledger show --kinds ...` reads the ledger afterwards.
+  - `scripts/compile-ledger kinds` lists all 15 kinds: six error kinds, six
+    warning kinds and three from the trial server.
+- Started before or during a compile, `follow` catches up from the first line,
+  keeps going, and ends when the run (including validation and promotion) ends.
+  Its exit status is 1 if anything of an error kind turned up.
+- Fallbacks are a kind of their own, since your house rules count them as
+  warnings.
+
+**2. The last run is kept.** Each new compile moves the previous run's log and
+ledger to `compile-<profile>.previous.log` and `.previous.warnings`.
+`--previous` reads them.
+
+**3. Timestamps and stages in the log.** Each line in the file starts with the
+time it arrived; the terminal looks the same as before. The compile also prints
+a `==== stage: ...` line at each stage, so every ledger entry knows where it
+came from.
+
+**Tonight's run, put through the ledger:** no compiler, cmake or test findings.
+It found 109 warnings:
+- **42 `mysql-warning`**: "Using a password on the command line interface can be
+  insecure", from scripts that pass the password with `-p`. These can be removed
+  for good by giving the mysql client its login through a credentials file
+  instead.
+- **51 `server-unused-data`**: loot entries and pools that nothing refers to.
+- **16 `server-empty-table`**: tables that are empty on purpose, such as the
+  guild bank and auctions.
+
+Should I make the mysql change, and look at which of the 51 unused-data entries
+come from the project's own SQL rather than upstream's?
+
+For a chatbot on a recurring check, the instruction can be: "read
+`tmp/shared-memory/compile-basic.warnings`; for each new entry, note it; if it's
+an error, fix it, then work through every warning." Any agent can also run
+`follow` in the background and read its output.
+
+New tests: `test-compile-ledger` (16 checks) is a quick test now;
+`test-watch-compile` and the patch-list test still pass. None of this is
+committed yet, along with the earlier work, while the open questions stand. The
+crash backtrace is still the most useful next step if the new server crashes
+again: `! ./scripts/worldserver --debug`.
+
+--------------------------------------------------------------------------------
+
+### User Request 7
+
+okay it's running. can you watch the debug logs?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 7
+
+> That's a Debug compile, and it's in the build stage now. Following it with the
+> new ledger.
+
+> The new log is working live: each line has its time, the five stages so far
+> are marked, and the last run's log and ledger were kept. Starting the ledger
+> follower in the background.
+
+> The ledger is clean now: the only finding so far is cmake's one boost policy
+> warning, printed twice. Restarting the follower with the fixed code, set up so
+> each new entry reaches me as it's written.
+
+I'm watching the Debug compile now, and I'll report each warning or error as the
+ledger catches it. I'll also report how the run ends, including the trial start
+of the new server.
+
+**So far, at 18% (the game library):**
+- **Quick tests:** all passed. 34 were remembered from earlier passes and 24
+  ran, taking 1½ minutes rather than running all 56.
+- **Warnings:** one, cmake's boost policy warning: `CMake Warning (dev) at
+  deps/boost/CMakeLists.txt:42 (find_package)`. It comes from upstream's boost
+  setup, not the project's code. Its fix would be a cmake setting in upstream's
+  file, so I'm noting it rather than acting on it.
+- **Errors:** none.
+
+**Fixes to the ledger, from watching this run:**
+- It was counting the compile's own notice about the ledger, and cmake's "all
+  warnings enabled" line, as warnings.
+- It was listing each explanation line under a cmake warning as a warning of its
+  own.
+- `once` was mixing in the previous run's trial-server log, from before this run
+  had validated.
+
+All are fixed, and the ledger's test still passes (16 checks).
+
+The Debug build compiles without optimisation, so it will take longer than the
+4-minute build earlier. Once it's promoted, start the server with `!
+./scripts/worldserver`; a Debug build turns on the crash catcher by itself. If
+the buddy crash repeats, the stack trace will be in `tmp/debug-basic/`, and I'll
+read it.
+
+--------------------------------------------------------------------------------
+
+*[background task] Monitor event: "debug compile: each warning/error as the
+ledger finds it, and the run's end"*
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 7 (continued)
+
+> A real warning in the project's own code, the buddy module. Looking at it.
+
+The build is at 28% and still running. Since my last update the ledger has
+caught one new warning: a compiler warning in the buddy module.
+
+**The warning:** at `buddies_orders.cpp:286`, a player's order to a buddy was
+being built with only two of its four parts written. The compiler warned that
+two were missing (`-Wmissing-field-initializers`). The missing two were the kind
+of order and the buddy names. They were set by default to a sell order and no
+names, which is what the code intends, so the game behaved correctly.
+
+**The fix:** that line now writes all four parts. I edited only the module's
+copy in `patches/B036-mod-buddies/`. This build already compiled the old file,
+so the fix takes effect from the next compile, and that compile should no longer
+show this warning. My editor flagged errors in the file, but those come from it
+not seeing the server's include paths, not from the edit.
+
+**Ledger so far:**
+- the boost policy warning from cmake (upstream)
+- this compiler warning (fixed for the next build)
+- no errors
+
+I'm still watching the build through to its end and the trial server start, and
+I'll report each new entry as it lands.
+
+--------------------------------------------------------------------------------
+
+*[background task] Monitor event: "debug compile: each warning/error as the
+ledger finds it, and the run's end"*
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 7 (continued)
+
+> Two new entries. The first is clang's "1 warning generated." summary line,
+> which repeats the warning already listed; I'll teach the ledger to skip it.
+> The second is in the playerbots module (upstream code) and may be a real bug,
+> so I'm looking at it.
+
+> Checking that the edited patch applies and comes off cleanly, on a copy of the
+> patched file.
+
+The Debug build is nearly finished (dbimport, 99%). The ledger found a real bug
+in our own playerbots patch, and I've fixed it for the next build.
+
+**The bug, in patch B026 (the duplicate-login fix):** when a bot logs in twice,
+B026 deletes the old copy of its AI. It deletes it through a pointer to the AI's
+parent class, whose destructor isn't virtual. So only the parent part was
+cleaned up, and the AI's own destructor never ran: its engines and context
+leaked, and its slot was never cleared, though B026's own comment says the
+destructor does that. In C++ that's undefined behaviour. clang flagged it as
+`-Wdelete-abstract-non-virtual-dtor`.
+
+**The fix:** B026 now deletes the old copy as the bot AI it is. The map only
+ever holds bot AIs: the only thing put into it is the `new PlayerbotAI` three
+lines below. I checked the patch on a copy of the file: it applies, and removing
+it returns the file exactly to upstream. I changed only text between B026's
+markers, so the build still running, and its patch-reverting step, are
+unaffected. Issue 308 now records this.
+
+One thing to watch: on a duplicate login, the old AI's full cleanup will now
+actually run. That cleanup never ran before, so if anything was still using that
+old AI, it could fail where it used to just leak. This path only runs when the
+same bot logs in twice.
+
+**Ledger so far:**
+- cmake's boost policy warning: upstream's, left alone.
+- `buddies_orders.cpp`, missing field initializer: fixed.
+- `PlayerbotMgr.cpp`, the B026 delete: fixed.
+- clang's "1 warning generated." summary line was being counted as a warning of
+  its own. The ledger now skips those summaries. Its test still passes (16
+  checks).
+- No errors.
+
+Both fixes take effect from the next compile. I'm still watching through the
+install and the trial start of the new server.
+
+--------------------------------------------------------------------------------
+
+*[background task] Monitor event: "debug compile: each warning/error as the
+ledger finds it, and the run's end"*
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 7 (continued)
+
+The trial start of the new Debug server is under way. The ledger is listing the
+same server data warnings as the earlier run: 51 loot entries and pools that
+nothing uses, and 16 tables that are empty on purpose. No compiler or server
+errors so far.
+
+These warnings come from the world data, not from tonight's code. Checking which
+of the loot entries the project's own SQL wrote is still an open offer.
+
+Waiting for "World initialized" and promotion. A trial start could also try to
+make the waiting buddy if the trial server runs long enough, so I'll check for
+that too.
+
+--------------------------------------------------------------------------------
+
+*[background task] Monitor event: "debug compile: each warning/error as the
+ledger finds it, and the run's end"*
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 7 (continued)
+
+The trial Debug server has reached the empty `channels` table, the last of the
+expected empty-table notices; nothing new. Still waiting for it to report "World
+initialized" and for promotion.
+
+--------------------------------------------------------------------------------
+
+*[background task] Monitor event: "debug compile: each warning/error as the
+ledger finds it, and the run's end"*
+
+--------------------------------------------------------------------------------
+
+*[background task] Monitor event: "debug compile: each warning/error as the
+ledger finds it, and the run's end"*
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 7 (continued)
+
+> Those are the post-start checks: about 40 database queries, each giving the
+> mysql client's command-line password warning. Checking how the trial start
+> went.
+
+The first trial start passed: "World initialized" after 41 seconds, with no
+database updates applied. The source patches were then reverted cleanly; B026
+was reverted at 22:27:48.
+
+I also noticed this compile validates twice. It runs a trial start inside the
+build stage (log line 2499), and then another after it reaches "compiled" (line
+2645), which is running now. Every compile pays for a second trial start (40 s
+or more). Is the second one meant to be there, or left over from a change to the
+stages? I'll look at why once this run ends.
+
+Still waiting for the second trial start and the promotion.
+
+--------------------------------------------------------------------------------
+
+*[background task] Monitor event: "debug compile: each warning/error as the
+ledger finds it, and the run's end"*
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 7 (continued)
+
+That's another password warning from the first trial start's checks, at
+22:27:39. The second trial start is still running, and I'm waiting for it and
+for promotion.
+
+--------------------------------------------------------------------------------
+
+*[background task] Monitor event: "debug compile: each warning/error as the
+ledger finds it, and the run's end"*
+
+--------------------------------------------------------------------------------
+
+*[background task] Monitor event: "debug compile: each warning/error as the
+ledger finds it, and the run's end"*
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 7 (continued)
+
+The second trial start is reprinting the same known data warnings (empty pools,
+unused loot entries). The ledger is recording them again, because this run's
+trial server log started over. Nothing new, and no errors.
+
+--------------------------------------------------------------------------------
+
+*[background task] Monitor event: "debug compile: each warning/error as the
+ledger finds it, and the run's end"*
+
+--------------------------------------------------------------------------------
+
+*[background task] Monitor event: "debug compile: each warning/error as the
+ledger finds it, and the run's end"*
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 7 (continued)
+
+The second trial server is through its usual empty-table notices: auctions,
+guild bank, GM tickets, and so on. No errors yet; still waiting for "World
+initialized" and the promotion.
+
+--------------------------------------------------------------------------------
+
+*[background task] Monitor "debug compile: each warning/error as the ledger
+finds it, and the run's end" stream ended*
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 7 (continued)
+
+The Debug build succeeded and is installed. It took 33 minutes, passed both
+trial starts (43 s each, no database updates applied), and was promoted at
+22:28:44.
+
+**Next step:** start the server.
+```
+! ./scripts/worldserver
+```
+The crash catcher turns on by itself for a Debug build. Owner 584's buddy is
+still waiting to be made, so if the crash repeats it should happen about 2
+minutes after the world loads. The stack trace would then be in
+`tmp/debug-basic/`, and I'll read it.
+
+**What the ledger found in this run, and what I did:**
+
+| Finding | Count | Action |
+|---|---|---|
+| A compiler warning in the buddy module (`buddies_orders.cpp`, missing field initializer) | 1 | Fixed; takes effect next compile |
+| A compiler warning in our patch B026 (deletes the bot AI through a base pointer, so its destructor never ran) | 1 | Fixed; takes effect next compile |
+| cmake's boost policy warning (upstream's boost setup) | 2 | Left alone |
+| The mysql client's warning about a password on its command line (the post-start checks) | 42 | My offer to remove them is still open |
+| Data nothing uses (unused loot entries, empty pools) | 51 per trial start | My offer to check which come from our own SQL is still open |
+| Tables that are empty on purpose (guild bank, auctions) | 16 per trial start | Left alone |
+
+The ledger shows 4 compiler warnings in total. It also counted clang's "1
+warning generated" summary lines, which it now skips.
+
+**A bug found in `watch-compile`:** it called this successful build FAILED. The
+server prints "World **I**nitialized **I**n", and `watch-compile` was searching
+for the wording case-sensitively. It now ignores case, as `validate` already
+did, and gives SUCCEEDED for this run. Its test has a new case with the server's
+real wording (5 cases pass).
+
+**Still to look at:** this compile runs the trial start twice, once inside the
+build stage and again after it reaches "compiled". That costs about 45 seconds
+more each compile. I'll look into why once you've seen the server start.
+
+--------------------------------------------------------------------------------
+
+### User Request 8
+
+server crash
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 8
+
+> There's a second copy of the same danger. The buddy's gem step
+> (`buddies_gems.cpp:242`) also calls `SetEnchantment`, and it runs right after
+> the kit. Checking whether gem slots take the same path.
+
+> The test fails on the last committed version of the kit (the crashing code)
+> and passes on the fixed one. Updating the patch lists and the issue behind the
+> enchant (621).
+
+The cause is found and fixed. Recompile, then start the server; the waiting
+buddy should then be made without a crash.
+
+**Why it crashed:** a buddy is built as a character that isn't in the game world
+yet. For buddies made at level 30 or more, the starting kit enchants their
+weapon. It did that with the server's own enchant function, which looks up the
+weapon's owner among players in the world so it can send their game client a
+message. A buddy being made isn't among them, so the lookup came back empty, and
+the server crashed using it. The backtrace shows it directly: the kit's enchant
+step, then the server's enchant function, then a call on an empty player
+(`this=0x0`).
+
+That explains the pattern. Oferous, Keyarodan and Zarrin were the same waiting
+buddy (owner 584's slot 6, a level-55 blood elf paladin), retried with a new
+name after each crash. Buddies made below level 30 never get an enchant, so they
+never hit it.
+
+**The fix** is in the kit's enchant step. For a buddy still being made, the
+enchant is written straight into the weapon, and the first save keeps it; its
+effects apply at the buddy's first login. The gem step was already fixed this
+same way for the same reason, so the two now match. A buddy that is in the world
+still uses the server's own enchant function.
+
+**A test to keep it from coming back:** `test-buddy-made-out-of-world` reads the
+buddy module's C++. It fails if any function uses a call that needs a player in
+the world without first checking that the character is in it. It flags the old
+kit code and passes the fixed one. It's a quick test, so it runs in every
+compile.
+
+Issue 621 now records the fix.
+
+**To try it:**
+```
+! ./scripts/compile --debug
+```
+Then `! ./scripts/worldserver`. Staying on Debug keeps the crash catcher on in
+case anything else turns up. The compile will rebuild only the buddy module and
+the playerbots file I fixed earlier, so it should be much faster than the last
+one.
+
+--------------------------------------------------------------------------------
+
+### User Request 9
+
+uh-oh debug mode crashed!
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 9
+
+> Progress: the server got past buddy creation and you were playing. The new
+> crash came at 23:05, after Feldowinn said "go sell" and two buddies set off.
+> Reading the new backtrace.
+
+> The project adds no flight points through SQL, so the names come from the game
+> client's data files. Checking which language slot was read, from the
+> backtrace's local variables.
+
+> The stock data file stops at flight point 440, but the server's table reaches
+> 811. So something adds flight points while the server runs. Finding what.
+
+> Writing the Lua-engine patch (B059) now.
+
+> The patch applies, a second apply changes nothing, and removing it returns the
+> file exactly to upstream. Registering it and running the patch tests.
+
+The buddy fix worked: this crash is a new one, from the GM command `.lookup
+taxinode eastern` typed in the game's chat. I've written a patch for it (B059).
+It takes effect once you recompile.
+
+**Why it crashed:** basic builds Outland's flight paths at startup, in
+`src/lua-basic/outland-flights.lua`, through the Lua engine's `AddTaxiPath`.
+That function creates a flight point for every waypoint, numbered from 500 up,
+and never sets their names: in all 16 game languages the name is missing, not
+merely empty. Every flight point from the game's own data has a name, at least
+an empty one. `.lookup taxinode` reads each point's name as text, so when it
+reached point 500 it hit a missing name and the server aborted. The backtrace
+shows the search word "eastern" and the point at position 500.
+
+**The fix, patch B059:** the Lua engine now gives each flight point it creates
+an empty name in every language. That fixes any server code that reads flight
+point names, not only this command. Checks on a copy of the file:
+- the patch applies;
+- applying it twice changes nothing;
+- removing it restores the upstream file exactly.
+
+The patch tests pass. B059 is on basic only, the only profile that calls
+`AddTaxiPath`. The patch registry, basic's profile page and the Outland issue
+(155l) record it.
+
+**Next:**
+```
+! ./scripts/compile --debug
+```
+Then start the server again. The waiting buddy already got made in the run that
+just crashed, so that crash shouldn't come back. Your `.lookup taxinode` search
+should now list the flight points with no crash, including Outland's new ones,
+which show with blank names.
+
+None of tonight's fixes are committed yet. That's 3 code fixes (the buddy kit's
+enchant, the B026 delete, B059), 2 warning fixes, the test-memory and ledger
+tools, and their tests. Several of their issues still have open questions for
+you. When you want them committed, I'd commit each fix on its own, with the
+transcripts.
+
+--------------------------------------------------------------------------------
+
+### User Request 10
+
+hey, Feldowinn's companions have bad equipment. Can you re-run their equipment
+generation steps?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 10
+
+> Checking who Feldowinn's buddies are, and how the module re-runs a buddy's
+> gear.
+
+> Feldowinn has six buddies, all level-55 blood elf paladins. Five were made on
+> 10-03; Lariadel (slot 6) was made tonight at 23:01. The server is running.
+> Finding the command that re-dresses a buddy.
+
+> Everyone is online. Re-gearing the five paladins now.
+
+> All five were re-kitted from the level-50 gear set by their talent shapes. One
+> part was refused for every buddy: the PvP necklace and one ring. Checking why.
+
+> Checking that Horde characters have something to pick at level 55 once the
+> Alliance items are left out.
+
+> The five paladins are re-geared, but their necklace and one ring will stay
+> empty until the next compile carries the fix. Lariadel's class change needs
+> your go-ahead on two things.
+
+> **[Asked the user]**
+>
+> *Q1 — Stop server:* Lariadel's class change needs the world server stopped
+> (the server keeps each character's class in memory, and the tool refuses while
+> it runs). OK to stop it now?
+> - Stop it now (Recommended) — I stop the worldserver with an ordinary
+>   shutdown (it saves first), change her class, update her roster row, and tell
+>   you when to start it again. Your session drops while it's down.
+> - I'll stop it myself — You quit the server when convenient and tell me; I
+>   do the rest then.
+> → **Answered:** I'll stop it myself. Oh also, they are missing gems.
+>
+> *Q2 — Priest kind:* What kind of priest should Lariadel be? Her roster row
+> says talent shape 9 (all points in the second tree, which for a priest is
+> Holy) and role 1 (tank, from her paladin days: wrong for a priest).
+> - Holy healer (Recommended) — Keep shape 9 (all Holy), change her role to
+>   healer. Her gear, gems and talents are then chosen for healing.
+> - Discipline healer — Shape 8 (all first tree, Discipline), role healer.
+> - Shadow damage — Shape 10 (all third tree, Shadow), role damage.
+> → **Answered:** holy, half discipline
+
+> There's a separate `.buddy gems <name>` command. Running it for the five while
+> the server is still up.
+
+> All five are re-gemmed by their plans, with no problems reported. Now making
+> `.buddy kit` re-gem as well, so a re-kit always ends gemmed, as a newly made
+> buddy does.
+
+The five are re-geared and re-gemmed. Their necklace and one ring stay empty
+until the next build, because the fix for the jewellery picker is in code.
+
+**Fixed in code, for the next build (in the buddy module):**
+- **The PvP jewellery now skips the other faction's items.** The picker checked
+  class and race but not the faction flag. Alliance-only items (the Stormpike
+  pendants, the League of Arathor rings) scored best for these Horde paladins,
+  and the server refused to equip them. The Horde versions are there to pick
+  from: the Frostwolf pendants, Legionnaire's Band and Advisor's Ring. A new
+  quick test, `test-buddy-pvp-jewellery-sides`, checks that the picker tests
+  both faction flags. It also checks that each faction has a full set (a
+  necklace, two rings, two trinkets) at every level from 18 to 80. All 51 checks
+  pass.
+- **`.buddy kit` now re-gems too.** It used to put on fresh gear without gems,
+  which is why the buddies were missing gems.
+
+**Lariadel, once you've stopped the server.** Tell me when it's down and I'll:
+1. Run `scripts/change-character-class Lariadel priest`. It saves a backup
+   first, then changes everything that belongs to the class: skills, spells,
+   talents, action bars.
+2. Set her roster row to priest, talent plan 3 (two thirds Holy, one third
+   Discipline, the closest plan to "holy, half discipline") and role healer. Her
+   row still says role 1 (tank), from her paladin days.
+
+**Then, before starting the server again:** run `! ./scripts/compile --debug`.
+It carries tonight's fixes: the enchant crash, the faction-correct jewellery,
+re-kitting with gems, and B059 for `.lookup taxinode`.
+
+**Once you're back in game with Feldowinn:** I'll run `.buddy kit` on all six.
+Lariadel gets priest gear and gems for her new plan; the other five get their
+Frostwolf necklace and Horde ring. Lariadel will also need her priest spells.
+The class tool's own notes say a GM types `.learn all my trainer` while
+targeting her, which has to be done from your game client: I can't target a
+character from the server console.
+
+--------------------------------------------------------------------------------
+
+### User Request 11
+
+can we make sure that paladins prioritize different judgement spells if they're
+missing on the target? Also, they and shamans with their totems are the main
+classes whose buffs are specific to the party they're with. Can you ensure that
+we tailor our buff usage to the ones who need certain things? If a healer
+usually does kings, which we can message btw and the bots can message each other
+btw, then if they're low on mana we might throw out a Blessing of Wisdom if they
+need it, and swap back for the next fight.
+
+though, if we have a rare one like in prot, then we might give that with
+priority. It's mentioned in our talents after all. But, receiver's preference
+always wins, even if you have the improved Blessing of Might or whatever.
+Though, since it's a talent, you'd prefer it when not specified and when the
+recipient can properly use it. Same for shaman totems.
+
+the server is down, can you restart?
+
+oh also, it seems like pathfinding is mega bugged. Can you create some tests and
+do some dynamic measurements to try and get the behavior that we want? We mostly
+want buddy-bots to fill out and evenly space themselves through the questing
+sub-zone that the player is in. They should leave when the player leaves, and
+follow generally as they go to a new one. It's okay if they're slow, and if they
+see an herb or mineral node they'll grab that both before leaving, and along the
+way. Always. Also sometimes they get distracted and start fighting, especially
+if you're going back to sell (or a group is) and they have lots of room.
+
+but, let's just create a plan for that now, and focus on the recompilation for
+the crashing fixes.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 11
+
+> The server is down, so I'm doing Lariadel's class change first, then writing
+> plans for the blessings and totems and for buddy pathfinding.
+
+> The worldserver is still running: process 29514 is alive. Checking whether
+> it's in the middle of shutting down.
+
+> There's no buff-sharing issue yet, so the new plan will be 617c5, beside the
+> proximity party; the pathfinding plan will be 617e13. Checking a sibling's
+> status fields to match the format.
+
+Lariadel's class change hasn't happened yet: the worldserver is still running
+(process 29514, up 15 minutes and still reporting its update times). Is it a
+different window that went down?
+
+**Next steps, in order:**
+1. **Stop it** with `.server shutdown 1` in its console, or Ctrl-C there. Tell
+   me when it's down, and I'll run the class change (Lariadel to priest) and set
+   her roster row: talent plan 3 (two thirds Holy, one third Discipline) and
+   role healer.
+2. **Compile** with `! ./scripts/compile --debug`, which brings in the crash
+   fixes:
+   - the enchant crash when a buddy is made;
+   - `.lookup taxinode` (B059);
+   - the B026 cleanup.
+
+   It also brings Horde-only PvP jewellery, and `.buddy kit` re-gemming. The
+   compile is yours to run, so I won't start it.
+3. **Start** with `! ./scripts/worldserver`. Once Feldowinn is on, I'll re-kit
+   all six buddies.
+
+**Plans written (nothing built yet):**
+- **`issues/617c5-party-buffs-shared-out.md`**: one plan per party for auras,
+  blessings, judgements and totems.
+  - Three paladins give three different auras, which covers your doubled-up
+    aura.
+  - Judgements: each paladin uses one the target is missing.
+  - Blessings go in your order: the receiver's stated preference first, then a
+    talented or rare blessing to whoever can use it (Sanctuary to a tank, never
+    Might to a caster), then what's needed right now (Wisdom to a healer low on
+    mana, back to Kings for the next fight), then the usual for the role.
+  - Totems work the same way: two shamans never drop the same one.
+  - Preferences are given by whisper or party chat, and buddies tell each other
+    theirs the same way.
+- **`issues/617e13-spread-through-the-questing-subzone.md`**: measure first,
+  then fix by the numbers.
+  - A recorder writes each buddy's position, sub-zone and state every few
+    seconds.
+  - From that come numbers: how evenly they spread, how long they take to follow
+    you into a new sub-zone, herb and ore nodes passed by, and fights started on
+    the way to sell.
+  - A scripted run takes those numbers again after each change.
+  - Offline tests cover each rule: spreading out, leaving with you, always
+    gathering, and not fighting on a sell trip.
+
+**Open questions in the plans:**
+- Should buddies plan their blessings and aura around the ones you cast
+  yourself?
+- What words set a buff preference, and does it last until logout?
+- Which judgement goes first when there are fewer paladins than judgements?
+- For "spread through the sub-zone", does that mean its walkable questing areas,
+  or all of it?
+- How far behind can a following buddy be before it counts as left behind?
+- Can the scripted run use a test character, or should it use Feldowinn?
+
+--------------------------------------------------------------------------------
+
+### User Request 12
+
+we should disable the stunlock protection rules. If players want to throw out
+that much CC, well, the other side deserves it. This should not apply
+
+oh also the server is down now.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 12
+
+> Doing Lariadel's class change first, now that the server is down.
+
+> The dry run looks right. Running it for real, then updating her roster row.
+
+> It'll be issue 155z14, among basic's other world rules. Writing the issue,
+> then the patch.
+
+> The immunity is decided only in that one function, so the patch covers it.
+> Registering B060 and running the patch tests.
+
+Lariadel is now a priest, and the stun protection is off for basic once you
+rebuild. The server is still down; compile first, then start it:
+```
+! ./scripts/compile --debug
+! ./scripts/worldserver
+```
+
+**Lariadel:** the class tool ran: 9 paladin skill lines and 95 paladin spells
+removed, the priest's 3 skill lines added, talents to reset at her next login. A
+backup was saved first in `backups/class-changes/`. Her roster row now says
+priest, plan 3 (two thirds Holy, one third Discipline), healer. She still
+carries two Runes of Duty, a paladin-only item; the tool leaves those in place.
+
+**Stun protection off (issue 155z14, patch B060, basic):**
+- Repeating any crowd control (stun, fear, root, silence, polymorph and the
+  rest) on the same target no longer makes it shorter, and the target never
+  becomes immune.
+- A player's crowd control on another player is no longer capped at 10 seconds.
+- This applies whoever casts it, players and monsters alike.
+- Taunt diminishing stays: only certain bosses have it, so it's a rule for
+  tanks, not stun protection.
+- Checks on a copy of the server file: the patch lands right after the
+  function's opening check, a second apply does nothing, and removing it
+  restores upstream exactly. The patch tests pass.
+- It's on basic only for now. Should beta, vanilla or cc-test take it too?
+
+**What this compile brings:**
+- the crash fixes: the buddy enchant, `.lookup taxinode` (B059), the B026
+  cleanup;
+- Horde-only PvP jewellery for Horde buddies;
+- `.buddy kit` re-gems;
+- B060.
+
+**Once you're in game with Feldowinn:** I'll run `.buddy kit` on all six
+buddies. Lariadel gets priest gear and gems; the five paladins get their
+Frostwolf necklace and Horde ring. Then target Lariadel and type `.learn all my
+trainer` so she gets her priest spells; that has to come from your game client.
+
+--------------------------------------------------------------------------------
+
+### User Request 13
+
+can we add a gm command that summons all of our buddy-bots to us? It should be
+able to summon party-bots into dungeons and raids, and it should be able to be
+cast on another player as well. It should only summon group or raid members.
+Sorry, I meant buddy-bots. and parties or raids. and in the open world, it just
+summons all of them, arranged in a circle around the player, using the same
+mechanism as the hearthstone system. We should build that now, by the way, if
+it's not built already.
+
+
+
+<pasted_content id="12ab">
+>   Lariadel: the class tool ran: 9 paladin skill lines and 95 paladin
+>   spells removed, the priest's 3 skill lines added, talents to reset
+>   at her next login. A backup was saved first in
+>   backups/class-changes/. Her roster row now says priest, plan 3 (two
+>   thirds Holy, one third Discipline), healer. She still carries two
+>   Runes of Duty, a paladin-only item; the tool leaves those in place.
+</pasted_content id="12ab">
+
+
+we need to fix her gear and skills. This should be part of the class-change
+script as a matter of course.
+
+we can disable the stun-lock protection but I just wanted to say that it's an
+option and we've built it.
+
+it's running tests before the compile now. It'll continue soon. Watch for
+updates on the log files.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 13
+
+> Starting the compile watch first. I'll hold off editing the buddy module until
+> the compile has copied it into the source tree, so the build doesn't pick up a
+> half-finished change.
+
+> The compile is already building, and the buddy module was copied into the
+> source tree at 23:27:09, so editing it now won't touch this build. Reading the
+> hearthstone mechanism the summon should reuse.
+
+> The buddies the instance rule leaves out would also be reported as "not in the
+> world". Making the placing step stay quiet about those.
+
+> That output is per-area progress from one of the build's generators. Finding
+> which script prints it.
+
+> Fixing the baker's output now: it isn't running, since that step finished at
+> 23:28.
+
+> With `set -euo pipefail` at the top of that script, `grep -c` returning "no
+> matches" would end the run. Guarding it.
+
+The compile succeeded and was promoted at 23:30. The ledger found **no compiler
+warnings** this time: the buddy order warning and the B026 delete warning are
+gone. Its only findings were cmake's boost warning (upstream) and the known data
+and mysql lines. You can start the server: `! ./scripts/worldserver`.
+
+**The summon command already existed. I added the dungeon rule and a short
+form.**
+- `.buddies summon [name]` (new) is the same as `.buddies to partner`. With no
+  name it uses your selected target, either the player or one of their buddies,
+  so it works on other players too.
+- In the open world it brings every buddy in the world. They're placed in a
+  circle (or an arc) round the player, using the same placement code as the
+  hearthstone (`lib/buddy-arc.lua`).
+- In a dungeon, raid or battleground it brings only the buddies in that player's
+  party or raid. Each one left out is named in the reply.
+- The Lua checks pass: method names, loading, globals and unique names. The new
+  server start loads the change, but it hasn't been tried in game yet.
+
+**The town baking lines are gone from the terminal.** The ~130 per-town lines
+now go to `tmp/shared-memory/bake-buddy-towns.log`. The install prints only the
+total and how many towns had no mesh under them. You'll see it from the next
+install.
+
+**The mysql password warning.** The idiomatic fix is MySQL's own option file,
+which is more secure. A `mysql/conf/client.cnf` file would hold the login (user,
+password, socket, port), be readable only by you and be left out of git. Every
+call would then use `--defaults-file=...` instead of `-uritz -pmenardi`, and the
+warning disappears because no password is on the command line. It's 62 calls in
+43 scripts. I'd make the change with a rewrite tool rather than by hand, then
+run the quick tests, which run many of these scripts. I'd rather not rewrite
+`worldserver`, `set-active-realm` and the others while you're starting the
+server, so I'll do it after you're in game. Okay?
+
+**Still to do:**
+- Once you're on with Feldowinn: `.buddy kit` on all six buddies, then target
+  Lariadel and type `.learn all my trainer` from your game client.
+- Make the class-change script fix gear and skills by itself, as you asked. It
+  runs with the server down, so the plan is: it marks the character, and at the
+  character's next login the server gives the new class's gear set and gems and
+  teaches every spell up to its level, just as a new buddy gets. Shall I build
+  that next?
+- You said you wanted the stun protection removal to be an option, and it is:
+  patch B060, on basic only. Removing it or adding it to another profile is a
+  one-word change to the profiles line in its header. Do you want it to stay on
+  for basic?
+
+--------------------------------------------------------------------------------
+
+### User Request 14
+
+.buddy kit doesn't fix the pvp rings :( also it doesn't accept a target by
+target.
+
+.learn all my trainer just taught my character (feldowinn) all of her spells.
+not lariadel.
+
+also, the trinkets. we should have one from WSG, and one from arathi. That way
+we can have one from each correct tier. also lariadel got a weird gem in her
+pants. and in her staff.
+
+also her rings are from level 38 and 48, and we should just have the 48 version.
+If there's an AB ring we should have that one. If neither are possible, is there
+another WSG ring that'd fit her? if not, then we can have it as it is now.
+
+also there should be a follow command that applies to the party and a shoo
+command that spreads them out.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 14
+
+> Several things to check first. Starting with what Lariadel and one paladin are
+> wearing now: rings, trinkets, necklace and gems.
+
+> The kit reported no problems this time. The database may just not have been
+> saved yet, so I'm asking the server to save everyone, then checking again.
+
+> None of these need reputation, so I'll tell the battlegrounds apart by the
+> vendor that sells each one.
+
+> Next, `.buddy kit` taking your target. The server's own commands do this with
+> an optional player argument that falls back to the selected target. Applying
+> that to both `.buddy kit` and `.buddy gems`.
+
+> Adding the new stage. It does what `.buddy kit` does (gear, PvP jewellery,
+> gems), plus every lesson up to the buddy's level, the step `Remake` runs at a
+> level jump.
+
+> The login keeper logs in only buddies at stages 0 and 3, so a buddy at the new
+> stage would never log in. Adding 5.
+
+> The class-change tool's own test still passes (13 checks). Recording the
+> change in issue 197, and adding follow and shoo to the pathfinding plan, since
+> those are orders about where buddies stand.
+
+The fixes are written and pass their tests. They take effect after a compile and
+restart:
+```
+! ./scripts/compile --debug
+```
+While the server is stopped for that restart, I'll mark Lariadel's roster row
+for the new class stage. At her next login the new code then teaches her every
+priest lesson up to 55 and gives her priest gear, jewellery and gems. Tell me
+when it's down. Don't set that stage on the running server: the old code only
+brings in buddies at stages 0 and 3, so she'd stop logging in with Feldowinn.
+
+**PvP rings and trinkets.** The rings were in fact fixed; the database just
+hadn't been saved when you looked. They were the same ring at two levels (48 and
+38), because the picker only required two different items. The second ring or
+trinket is now chosen in this order:
+1. A different item from a different battleground, if it suits the buddy.
+2. A different item from the same battleground, if it suits the buddy.
+3. As before.
+
+The battleground comes from the vendor who sells it (the Warsong, Defilers and
+Frostwolf supply officers).
+- **Trinkets:** a Warsong Rune of Duty or Perfection (40) plus the Arathi
+  Defiler's Talisman (48).
+- **Rings:** the Horde have no Arathi ring at 55 or below. Warsong sells two,
+  both at 48: Legionnaire's Band and Advisor's Ring. A buddy gets both if the
+  second suits it; otherwise it keeps the 48 and 38 versions of one.
+
+**Lariadel's odd gem** was "Test Dazzling Talasite", one of Blizzard's internal
+test items. It has item level 70 and rare quality, so it passed as a top-tier
+gem. Gems named as test, placeholder or deprecated items are now left out. A
+re-gem after the rebuild replaces it.
+
+**`.buddy kit` and `.buddy gems` now work on your target** when no name is
+given. `.buddy kit` re-gems too.
+
+**`.learn all my trainer`** teaches whoever types it, which is why Feldowinn
+learned her own spells. The class-change script now teaches every lesson of the
+new class itself, using `teach-character-lessons` while the server is stopped.
+For a buddy it also:
+- updates its roster row, with optional `--plan 3 --role healer`;
+- marks it to be dressed and gemmed for its new class at its next login.
+
+Players' gear is still left as it was; that's the rest of issue 197.
+
+**`.buddies summon`** is in the GM command list, and the generated help and
+reference are updated (159 checks pass).
+
+**Follow and shoo** are added to the pathfinding plan (617e13) as two orders,
+said in party chat or whispered:
+- **"follow":** the party's buddies stay close to whoever said it, until told
+  otherwise.
+- **"shoo":** they spread back out through the sub-zone.
+
+They're planned, not built, since they're part of the pathfinding work.
+
+--------------------------------------------------------------------------------
+
+### User Request 15
+
+can we add a patch to change how DoTs and HoTs tick? When they are overwritten,
+they should calculate how much of a tick is left over. This only applies for the
+last tick - otherwise, if there's more, it's treated as 100% of one tick and no
+more. Anyway, what we do is we calculate the proportional damage or healing that
+would be lost, and then we apply that as a buff to the first tick of the next
+one. Any extra ticks beyond the last one get returned to the player as
+proportional mana. So casting a heal or debuff damage is free, no matter when
+you do it, it just costs the action economy.
+
+matis just won some green bracers with a need roll, but then didn't equip them.
+
+can we add some functionality architecture to support a directory that has
+"one-time patches" - stuff that we want applied to the database immediately, but
+then removed afterwards? Stuff like the character updates and things that we
+accept to be updated automatically or intentionally.
+
+
+
+<pasted_content id="12ab">
+>   .learn all my trainer teaches whoever types it, which is why
+>   Feldowinn learned her own spells. The class-change script now
+>   teaches every lesson of the new class itself, using
+>   teach-character-lessons while the server is stopped.
+</pasted_content id="12ab">
+
+
+okay but how do I cast it on lariadel
+
+
+
+<pasted_content id="12ab">
+>   Follow and shoo are added to the pathfinding plan (617e13) as two
+>   orders, said in party chat or whispered:
+>   - "follow": the party's buddies stay close to whoever said it, until
+>     told otherwise.
+>   - "shoo": they spread back out through the sub-zone.
+</pasted_content id="12ab">
+
+
+should apply to whatever context they hear it, so party chat, raid chat,
+whatever. A DM is for just them, and in guild chat it's all of them even if they
+aren't in a party.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 15
+
+> Several things at once. Starting with the quick checks: whether `.learn all my
+> trainer` can take a target, and why Matis didn't wear the bracers he won.
+
+> With the server down, teaching Lariadel her priest lessons now. This works
+> with the current build.
+
+> "After" means the bracers reached Matis but were never saved. Checking how the
+> server went down: a clean shutdown saves everyone, while a crash or a hard
+> kill loses anything since the last autosave.
+
+The bracers can't be recovered from the logs: nothing recorded which item it
+was. If you tell me their name, I'll mail them to Matis with the server's `.send
+items` command, which works whether or not he's online.
+
+**Why they were lost:** Ctrl-C was caught by the crash debugger, not handled as
+a normal stop. The Debug build runs the server inside gdb; gdb caught your
+Ctrl-C at 23:52, wrote it up as a "backtrace", and killed the server before it
+could run its own shutdown, which saves every player. Autosave runs every 15
+minutes, so the bracers, won after the last save, were never written.
+
+**Fixed:** gdb now passes Ctrl-C (and terminate) straight on to the server,
+which shuts down normally and saves everyone. Real crashes are still caught and
+traced. I checked it with a small stand-in program under gdb: Ctrl-C reached it
+and it shut down cleanly. The change is in `scripts/debug-run.sh` and takes
+effect on the next server start, with no compile needed.
+
+**Lariadel:** taught her priest spells just now, while the server was down: 108
+lessons added, up to level 55, with a backup. For her gear, the order is:
+1. `! ./scripts/compile --debug` (this brings tonight's buddy fixes);
+2. before starting the server, tell me, and I'll set her roster row to the new
+   class stage;
+3. start the server: when she logs in with Feldowinn, she's dressed in priest
+   gear with the faction-correct jewellery and real gems.
+
+**New plans (nothing built yet):**
+- **DoTs and HoTs, issue 155z15.** When a caster overwrites their own
+  damage-over-time or heal-over-time, the part of the current tick already
+  elapsed is added to the new one's first tick. The mana for the ticks not yet
+  started comes back. For example, recasting a 5-tick, 100-mana DoT halfway
+  through tick 3: the new cast's first tick gets an extra half tick, and 40 mana
+  comes back. Questions:
+  - Should a recast of a lower rank count?
+  - Is the carried amount the old tick after bonuses, or before?
+  - Should rage and energy spells refund in the same way?
+  - What about channelled spells, and spells whose ticks grow?
+- **One-time database patches, issue 189h.** A folder, `patches/once/`, where
+  each SQL file is applied once:
+  - a backup of the rows it touches is saved first, and the patch runs as one
+    transaction;
+  - it's recorded in a ledger table in the database, so it can never run twice;
+  - the file is then moved to `patches/once/applied/` and kept in git.
+
+  Character fixes like Lariadel's would become reviewable files. Questions:
+  - Should it apply at install only, or also at each server start?
+  - Scripts, or SQL only?
+  - Keep the applied ones in git, or delete them?
+- **Follow and shoo, in 617e13.** An order applies to whoever hears it: party or
+  raid chat reaches the buddies in that party or raid, a whisper only the buddy
+  whispered, and guild chat every buddy of the guild in the world, grouped or
+  not. Question: what should "follow" said aloud (`/say`) do?
+
+--------------------------------------------------------------------------------
+
+### User Request 16
+
+<pasted_content id="12ab">
+>   Why they were lost: Ctrl-C was caught by the crash debugger, not
+>   handled as a normal stop. The Debug build runs the server inside
+>   gdb; gdb caught your Ctrl-C at 23:52, wrote it up as a "backtrace",
+>   and killed the server before it could run its own shutdown, which
+>   saves every player. Autosave runs every 15 minutes, so the bracers,
+>   won after the last save, were never written.
+</pasted_content id="12ab">
+
+
+did the bot have a full inventory? They were just won with a need roll.
+
+
+
+<pasted_content id="12ab">
+>   New plans (nothing built yet):
+>   - DoTs and HoTs, issue 155z15. When a caster overwrites their own
+>     damage-over-time or heal-over-time, the part of the current tick
+>     already elapsed is added to the new one's first tick.
+</pasted_content id="12ab">
+
+
+no, the part that has not yet been applied, but has been ticking duration, is
+added to the next tick, when happens... actually, can you mark this as
+"will-not-implement" with the caveat that we could improve the design and think
+through it better first? We haven't gotten the datapath flow correctly mapped
+yet.
+
+>     - Should it apply at install only, or also at each server start?
+
+it is part of the patching process. A new patch is written, or one is modified.
+We need to adjust the database to suit it, so we should show how exactly for
+this purpose the database is modified.
+
+Question: what should
+    "follow" said aloud (/say) do?
+
+if it's heard, then follow or shoo. Only to your buddy-bot clan, not to the
+other players.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 16
+
+> Checking how full Matis's bags were.
+
+> Every one of them, Feldowinn included, has no bags. I'll come back to that.
+> Checking the failed compile first.
+
+> A profile holding only bags works: its records can be keyed by class, with no
+> items and four bags each. Writing `travel-bags`, and running the gearset test
+> on it.
+
+> The gearset test passes again (2537 checks). Now running the commands on the
+> live server: bags for the buddies and for Feldowinn, then the teleport.
+
+The compile failure was mine and is fixed, so you can compile again: `!
+./scripts/compile --debug`. All the quick tests passed in a full run, and the
+gearset test passes again after the new profile.
+
+**Why the compile failed:** my dungeon rule for `.buddies summon` asks the map
+whether it's a dungeon. The buddy GM test's pretend map had no answer for that,
+so the test stopped. The pretend map now knows dungeons, raids and
+battlegrounds, and the test has new cases: everyone in the open world, only the
+party in a dungeon, and the left-out buddy named once. It passes (20 checks).
+
+**Bags and The Bulwark:** done, with the server down. Feldowinn and all six
+buddies each have four Mageweave Bags (12 slots) equipped, and all seven are at
+The Bulwark, the buddies in a small circle round her. The rows from before are
+in `backups/one-time/bags-and-bulwark-2026-10-27.backup.sql`, with the SQL that
+made the change beside it.
+
+**Matis's bracers:** yes, his inventory was full. Like every buddy, he had no
+bags, so his 16-slot backpack was full and the bracers he won had nowhere to go.
+Buddies get the same bags their owner wears, and Feldowinn wore none. Should
+buddies always get at least four bags, whatever their owner has?
+
+**For bags while the server runs,** there's a new gearset profile,
+`travel-bags`, holding four bags and no other gear. `.gearset travel-bags
+buddies <partner>` or `.gearset travel-bags <character>` puts the bags into
+empty bag slots and touches nothing else.
+
+**Plans updated:**
+- **DoTs and HoTs (155z15)** moved to `issues/will-not-implement/`, with your
+  note to revisit once the data path is mapped. The description now uses your
+  wording: the part of the tick not yet applied, but whose time has been
+  running, is added to the next tick.
+- **One-time patches (189h):** your answer is recorded. A one-time patch belongs
+  to the lasting patch it serves: it's written with it, names it, runs in its
+  turn, and says exactly how the database is changed. Tonight's bags-and-Bulwark
+  change is its first example.
+- **Follow and shoo (617e13):** said aloud, they reach only the speaker's own
+  buddies within hearing, not other players' buddies.
+
+**Lariadel's gear** still waits for the new build. Once the compile finishes,
+tell me before starting the server, and I'll set her roster row to stage 5. She
+then gets her priest kit and gems at her next login.
+
+--------------------------------------------------------------------------------
+
+### User Request 17
+
+<pasted_content id="12ab">
+>   Matis's bracers: yes, his inventory was full. Like every buddy, he
+>   had no bags, so his 16-slot backpack was full and the bracers he won
+>   had nowhere to go. Buddies get the same bags their owner wears, and
+>   Feldowinn wore none. Should buddies always get at least four bags,
+>   whatever their owner has?
+</pasted_content id="12ab">
+
+
+buddies shouldn't always get bags. They should find them. Though, they should be
+spawned from Sargobras with the same number of slots that the player has.
+
+also, buddy-bots should destroy items if they need to loot something. I don't
+see buddy-bots looting anything, so we should make sure that their functionality
+there is fixed. For this case, a full inventory prevented the looting of a green
+- which is more important than plenty of items in inventory, presumably.
+Especially because it was "need"ed. Buddy-bots should prioritize almost anything
+lower than a gear upgrade. Gear upgrades are precious and beloved and cherished
+and celebrated. Sometimes, they are posted to guild chat to celebrate. But the
+bot should be HAPPY if they do.
+
+server recompiled. check logs.
+
+question. When we're compiling, if we successfully promote from the shadow
+realm, can we just... continue running the server in the compilation terminal
+window? Like once it's fully validated, we don't have to close it, unless the
+--bake cli flag is provided. This way, we can just... find ourselves at a
+started AC> prompt, with none of the startup logs, and a message saying
+"compilation and promotion successful, server is now online.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 17
+
+> Checking the compile logs first. If it's done and the server is still down,
+> I'll set Lariadel's roster row now so she's dressed at her next login.
+
+> While the world loads, writing up your looting notes. Finding the existing
+> buddy loot issue first.
+
+> The fix is in for the next build. Until then those four keep one level-48 ring
+> each.
+>
+> Next, the looting plan, as a new sub-issue of the buddy loot issue (617j).
+
+The new build is good, and everyone's dressed except four paladins, who are each
+one ring short until the next compile.
+
+**The compile:** clean.
+- All 28 quick tests that needed to run passed; 32 were remembered from earlier
+  passes, so the tests took a minute and a half.
+- No compiler warnings.
+- Both trial starts passed, and the build was promoted at 00:11.
+
+**Lariadel:** her row was set to the new class stage before she logged in, and
+the new code dressed her for priest:
+- the Frostwolf Advisor's Pendant;
+- two different level-48 rings: Advisor's Ring and Legionnaire's Band;
+- a Warsong trinket and an Arathi trinket: Rune of Perfection (40) and Defiler's
+  Talisman (48);
+- real gems.
+
+Her stage is back to normal now.
+
+**The paladins:** Matis got the same pattern. The other four (Kalinlia, Lorneas,
+Zearea, Welen) had their first ring refused. These PvP rings are
+unique-equipped, and the same ring from tonight's earlier kit was still on their
+other finger. The kit now takes such a ring off before putting the new one on.
+That fix is in code, so it needs one more compile, then `.buddy kit` on those
+four.
+
+**Bags:** recorded as you said in the new issue 617j4. Buddies start with their
+owner's bag slot count when Sargobras makes them, and find any bags after that
+themselves.
+
+**Looting (new issue 617j4, a plan):**
+1. Find out why buddies loot nothing. Their logs show the loot actions failing
+   on every tick; that comes first.
+2. With full bags, destroy the least valuable item to make room, in this order:
+   grey junk, then piles of trade goods or food, then anything else. A gear
+   upgrade or a need-won item always gets its room, and is never what's
+   destroyed.
+3. On an upgrade, put it on and celebrate: an emote every time, and sometimes a
+   line in guild chat.
+
+Questions:
+- How many of a trade good or food count as "plenty"?
+- How often should a buddy post to guild chat?
+- If a buddy's bags are full and nothing can be destroyed, should it pass the
+  roll instead of rolling need?
+
+**Keeping the server running after a successful compile:** yes, that can be
+built. After promotion the compile would start the newly installed server in the
+same terminal. The startup lines would go only to the server's log file, and
+you'd see "Compilation and promotion successful, server is now online." and then
+the `AC>` prompt. `--bake` keeps today's behaviour: stop after promotion.
+
+The one tricky part is hiding the startup lines without hurting the console. The
+plan is to pass the server's output through a small filter that drops everything
+until "ready" and passes everything through after that. The keyboard input stays
+connected straight to the server, so typing at `AC>` works as usual. Two
+questions before I build it:
+- After "ready", should every server line still show, or only warnings and
+  errors?
+- Should the validation start's own output stay hidden too, apart from its
+  "Validation successful" line?
+
+--------------------------------------------------------------------------------
+
+### User Request 18
+
+okay I just walked through the Bulwark. The buddy-bots followed me to WPL, but
+then as soon as they arrived (at my exact position btw, not the circular
+position arc we always always use when targeting the player or any other
+specific, game-object location, the position on the arc closest to the
+buddy-bot, and shifting others around if they're already there or have been
+assigned there and are walking toward. Also, they keep running back through the
+bulwark. What's up wit hthat? I'm just inside of the zone. Still in the subzone
+The Bulwark, but in WPL instead of Tirisfal Glades. I'm gonna move further in.
+
+can you fix Feldowinn's skills for me? And her buddy-bots?
+
+I said shoo in party chat and three of her buddy-bots are still circled around
+her. The others are lost in geometry, can you help me update the pathfinding
+systems? That's the greater route to success.
+
+
+
+<pasted_content id="12ab">
+>   Lariadel: her row was set to the new class stage before she logged
+>   in, and the new code dressed her for priest:
+>   - the Frostwolf Advisor's Pendant;
+>   - two different level-48 rings: Advisor's Ring and Legionnaire's
+    Band;
+</pasted_content id="12ab">
+
+
+legionnaires band is not useful to a priest.
+
+>   - If a buddy's bags are full and nothing can be destroyed, should it
+>     pass the roll instead of rolling need?
+
+yes
+
+>   - After "ready", should every server line still show, or only
+>     warnings and errors?
+
+every
+
+>   - Should the validation start's own output stay hidden too, apart
+>     from its "Validation successful" line?
+
+same as it is now
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 18
+
+> Starting with the rings, because the rule needs tightening. Legionnaire's Band
+> scored above zero for Lariadel only through its stamina, so it passed as
+> "suits her". A second ring of another name should count only when it scores
+> close to the fallback, the same ring at the lower level. I'll set "close" at
+> three quarters of the fallback's score and record that number in the balance
+> notes.
+
+> Testing both: the Lua checks for the recorder (method names, loading), and the
+> tool on a small pretend record whose answers I know.
+
+> The tool passes its test (7 checks). Writing what you saw and your answers
+> into the plans.
+
+The pathfinding measurement is built: a recorder, a tool that turns the record
+into numbers, and a test, which passes.
+
+Starting the recorder needs the Lua engine to reload its scripts. That's either
+the next server start, or `.reload ale` now. Reloading also restarts every other
+Lua script, such as the world boss countdowns and the treasure timers, so I'll
+only run it if you say. Once it's loaded:
+1. `touch tmp/shared-memory/buddy-spread.on` turns recording on.
+2. You walk a route: a sub-zone, into the next one, then back.
+3. `scripts/measure-buddy-spread` gives the numbers.
+
+**What it measures** (everything you described is in plan 617e13):
+- **Spread:** how many buddies are in your sub-zone, how far they stand from
+  you, and the gaps between them.
+- **Stacking:** pairs within 3 yards of each other, and any buddy within 2 yards
+  of you.
+- **Following:** for each sub-zone change, how many seconds each buddy took to
+  follow, and who never did.
+- **Wandering:** buddies outside your sub-zone moving further away from you.
+
+Each fix to how they walk gets kept only if those numbers improve.
+
+**What you saw is now in the plan:**
+- **Arriving on your exact spot:** each buddy should instead take the place on
+  the arc round you nearest to itself. If another buddy holds that place or is
+  walking to it, the others shift round, as with the hearthstone and summon.
+- **Running back through The Bulwark.**
+- **Three circled round you, the rest lost in the terrain.**
+- **"shoo" did nothing:** the follow and shoo orders are planned but not built
+  yet.
+
+**Smaller fixes:**
+- **The rings:** a second ring or trinket of another name now has to score at
+  least three quarters of the fallback, the same ring at the lower level. So
+  Lariadel keeps two Advisor's Rings (48 and 38) rather than the warrior's band.
+  The 3/4 is recorded in `docs/balance-updates.md`. It needs a compile, then
+  `.buddy kit`.
+- **Need rolls with full bags:** your "yes" is recorded in 617j4. A buddy with
+  no room and nothing it may destroy passes the roll.
+
+**Still open:**
+- **Feldowinn's skills:** I need your answer. Do you want to undo what `.learn
+  all my trainer` taught her? There's no backup from before it, so I can't tell
+  what she had. For the buddies, did you mean checking their lessons too?
+- **Keeping the server running after a compile:** your answers are noted (every
+  line after "ready", validation unchanged). I'll build it next, while no
+  compile is running. Every compile from then on ends at the `AC>` prompt;
+  `--bake` keeps the old behaviour of stopping after promotion.
+
+--------------------------------------------------------------------------------
+
+### User Request 19
+
+can we class change welen to be a rogue and lorneas to be a mage?
+
+
+
+<pasted_content id="12ab">
+>   - Feldowinn's skills: I need your answer. Do you want to undo what
+>     .learn all my trainer taught her? There's no backup from before
+>     it, so I can't tell what she had. For the buddies, did you mean
+>     checking their lessons too?
+</pasted_content id="12ab">
+
+
+those are abilities. skills are her weapon skill and defence.
+
+also technically professions. Her professions should be enchanting and skinning.
+they should be level 300.
+
+can you tell me, what can she do with Outland enchanting mats?
+
+we should be able to disenchant anything that drops, up to ilevel 120.
+
+maybe, we make any TK dungeon boss drop an enchanting recipe, and any TK raid
+boss drop a rare one? And Kael'Thas can drop the epic ones. If any. Oh also
+sunwell dungeons can drop them too.
+
+
+
+<pasted_content id="12ab">
+>   - Keeping the server running after a compile: your answers are noted
+>     (every line after "ready", validation unchanged). I'll build it
+>     next, while no compile is running. Every compile from then on ends
+>     at the AC> prompt; --bake keeps the old behaviour of stopping
+>     after promotion.
+</pasted_content id="12ab">
+
+
+there's no compile running right now.
+
+running this now:
+
+touch tmp/shared-memory/buddy-spread.on
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 19
+
+> Checking whether the server is up, since the class changes, skill levels and
+> professions all need it stopped. The recorder also isn't loaded yet: I wrote
+> it after this server started. So the switch file you created does nothing
+> until a restart or `.reload ale`.
+
+> 78 enchanting recipes use Outland materials. Now checking which of them basic
+> still lets anyone learn at 300 or below, from a trainer or from a recipe item.
+
+> Testing the start-up filter with a stand-in server. It prints start-up lines,
+> then the ready line, then an `AC>` prompt with no newline, and echoes back
+> what's typed.
+
+> The switch file isn't there; your `touch` may have run from another folder.
+> Creating it here, then checking the recorder writes.
+
+The recorder is running and writing a sample every 5 seconds. Lariadel is still
+in Tirisfal Glades (zone 85), and the others are spread across Western
+Plaguelands sub-zones.
+
+**When you stop the server**, tell me, and I'll run all of this:
+1. **Welen → rogue, all Assassination:** `change-character-class --plan 8
+   --role damage Welen rogue`. Assassination is the rogue's first tree, so plan
+   8 puts every point there.
+2. **Lorneas → mage, all Arcane:** the same, with `mage` (Arcane is also the
+   first tree).
+
+   Each class change backs up the character, teaches every lesson of the new
+   class up to level 55, and marks the buddy to be dressed and gemmed for the
+   new class at its next login.
+3. **Feldowinn**, from the one-time file
+   `backups/one-time/feldowinn-skills-2026-10-27.apply.sql`, with a backup
+   first:
+   - swords, maces, two-handed swords, unarmed and defence raised from 1–70 to
+     275, the most for level 55;
+   - enchanting and skinning added at 300 of 300, with their four ranks each and
+     Disenchant;
+   - then the lessons tool adds every enchanting trainer recipe up to 300.
+
+**The compile now ends at a running server.** After promotion it starts the new
+server in the same terminal. You won't see the start-up lines; they still go to
+`logs-basic/Server.log`. Then it prints "Compilation and promotion successful,
+server is now online." and the `AC>` prompt, and every server line after that is
+shown. `--bake` stops after promotion, as before. A server that fails while
+starting has its last lines shown. I tested this with a stand-in server, and the
+compile and validation tests pass. Your next compile is the first real run.
+
+**Outland enchanting (plan 155z16):** the list of what she can make at 300 was
+in my previous message. The plan:
+- anything up to item level 120 can be disenchanted at 300;
+- each boss of the Tempest Keep dungeons and Magisters' Terrace drops an
+  uncommon enchanting recipe;
+- each boss of the Eye drops a rare one;
+- Kael'thas drops the epic ones;
+- each recipe can be learned at 300.
+
+Questions:
+- How often should a boss drop its recipe?
+- All enchanting recipes that use Outland materials, or only those with no other
+  source in basic?
+- Enchanting only, or other crafts too?
+
+--------------------------------------------------------------------------------
+
+### User Request 20
+
+<bash-input>touch tmp/shared-memory/buddy-spread.on</bash-input>
+
+--------------------------------------------------------------------------------
+
+### User Request 21
+
+<bash-stdout>(Bash completed with no
+output)</bash-stdout><bash-stderr></bash-stderr>
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 21
+
+Recording was already on; I'd made the switch file a moment earlier, so your
+`touch` just refreshed it. The first 25 seconds already show the problems you
+described:
+
+| Measure | Value |
+|---|---|
+| Buddy samples in your sub-zone | 50% |
+| Median distance from you | 124.5 yd |
+| Median distance to the nearest other buddy | 30.2 yd |
+| Pairs stacked within 3 yd | 18 |
+| Times a buddy was within 2 yd of you | 12 |
+
+Two buddies are stacked on top of you, and others are far off: half the samples
+are outside your sub-zone, and the median distance from you is about 125 yards.
+
+Walk a route when you're ready: stay in one sub-zone for a minute, move into the
+next, then come back. `scripts/measure-buddy-spread` will then show how long
+each buddy takes to follow, and who wanders off. Those numbers are the baseline
+for the pathfinding fixes. Tell me when the server is stopped for the class
+changes and Feldowinn's skills.
+
+--------------------------------------------------------------------------------
+
+### User Request 22
+
+okay I walked through to the other side of the bulwark from Felstone Field.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 22
+
+> Matis is standing still "by idle", over and over. Finding what puts a buddy in
+> that state.
+
+> His movement trace only reports where he stands and what moves him. "idle"
+> means nothing is moving him, so the decision to walk is never made. Looking at
+> what his AI tries on each tick.
+
+> One more check before writing this up: the server's module log, for what the
+> buddy code itself said about Matis and Lariadel (unsticking, town visits,
+> paths).
+
+> Writing what the walk showed into the pathfinding plan.
+
+The walk showed three separate problems, each with a cause in the code.
+
+| Measure | Value |
+|---|---|
+| Buddy samples in your sub-zone | 60% |
+| Median distance from you | 59 yd |
+| Pairs stacked within 3 yd | 41 |
+| Times a buddy was within 2 yd of you | 24 |
+| Your 2 sub-zone changes: arrivals | 10, after a median of 5 s |
+| Never arrived | Matis, Lariadel |
+
+**1. The Bulwark is a dead zone.** It's two sub-zones, one on the Tirisfal side
+and one in Western Plaguelands, but a single town circle covers both.
+- A buddy's "travel to your sub-zone" step stands down when you're both in the
+  same town.
+- Its "roam your sub-zone" step refuses when it's in a different sub-zone from
+  you, and also whenever you're in a town.
+- In The Bulwark both are true, so neither step moves the buddy, and only the
+  town visit can. That failed every time for Matis.
+
+Matis was idle the whole walk: 37 of 38 samples without moving, 340 yards off.
+
+**2. The long walk finds no route.** When Matis's travel step did run, its long
+walk found no route from where he stood. Lariadel's 90-second unstick moved her
+9 yards, then she "found no waypoint in area 813": no clear spot, no sight of
+the centre, or no path. These two are the "lost in geometry" ones.
+
+**3. Followers stack on you.** The travel step walks a buddy to your exact
+position, not to a place on the arc round you. That's why Kalinlia, Lorneas and
+Zearea stood on top of you a third of the time.
+
+**Proposed fixes, in this order**, each checked by re-running the same walk and
+comparing the numbers:
+1. **Close the gap:** a buddy in a different sub-zone from you is always moved
+   by something. Travel takes it into your sub-zone unless it's inside the same
+   town circle as you and the town visit can move it. A town visit that fails
+   hands back to travel.
+2. **Arrive on the arc:** travel ends at the place on the arc round you nearest
+   the buddy. A place another buddy holds or is walking to is skipped, and the
+   rest shift round.
+3. **When no path is found:** the failure gets logged with where and why. After
+   a few failures in a row, the buddy is unstuck sooner and farther, rather than
+   waiting 90 seconds to move 9 yards.
+
+These are code changes, so they need a compile. Should I make them now? The walk
+is in plan 617e13 with its numbers.
+
+The class changes (Welen to an Assassination rogue, Lorneas to an Arcane mage)
+and Feldowinn's skills are ready to run whenever you stop the server.
+
+--------------------------------------------------------------------------------
+
+### User Request 23
+
+server has been stopped.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 23
+
+> Running the two class changes first.
+
+None of the changes have run yet: the worldserver is still up. Process 3299 has
+been running for 37 minutes and its log was written a minute ago, so nothing has
+stopped it.
+
+Could you check its window? Typing `.server shutdown 1` or pressing Ctrl-C there
+stops it. Ctrl-C is safe now: the server saves everyone before it exits.
+
+I've set a background job that waits up to 10 minutes for the server to stop,
+then runs all three:
+1. Welen to an all-Assassination rogue (damage role).
+2. Lorneas to an all-Arcane mage (damage role).
+3. Feldowinn, with a backup first:
+   - weapon skills and defence raised to 275;
+   - enchanting and skinning added at 300, with their ranks and Disenchant;
+   - every trainer recipe up to 300 added.
+
+I'll report the results once it's run.
+
+--------------------------------------------------------------------------------
+
+*[background task] Background command "for i in $(seq 1 120); do pgrep -x
+worldserver &gt; /dev/null || break; sleep 5; done; if pgrep -x worldserver &gt;
+/dev/null; then echo "the server is still running after 10 minutes; nothing
+done"; exit 1; fi; echo "== Welen";
+/mnt/kaun/wow-chat-2026/scripts/change-character-class --plan 8 --role damage
+Welen rogue 2&gt;&amp;1 | tail -8; echo "== Lorneas";
+/mnt/kaun/wow-chat-2026/scripts/change-character-class --plan 8 --role damage
+Lorneas mage 2&gt;&amp;1 | tail -8; echo "== Feldowinn";
+/mnt/kaun/wow-chat-2026/mysql/installed-files/bin/mysqldump --no-defaults
+--socket=/mnt/kaun/wow-chat-2026/mysql/databases/mysql.sock -uritz -pmenardi
+--no-create-info --skip-triggers acore_characters_basic character_skills
+character_spell --where="guid = 584" 2&gt;&amp;1 | grep -v "Using a password"
+&gt;
+/mnt/kaun/wow-chat-2026/backups/one-time/feldowinn-skills-2026-10-27.backup.sql;
+/mnt/kaun/wow-chat-2026/mysql/installed-files/bin/mysql --no-defaults
+--socket=/mnt/kaun/wow-chat-2026/mysql/databases/mysql.sock -uritz -pmenardi
+acore_characters_basic &lt;
+/mnt/kaun/wow-chat-2026/backups/one-time/feldowinn-skills-2026-10-27.apply.sql
+2&gt;&amp;1 | grep -v "Using a password";
+/mnt/kaun/wow-chat-2026/scripts/teach-character-lessons Feldowinn 2&gt;&amp;1 |
+tail -4; /mnt/kaun/wow-chat-2026/mysql/installed-files/bin/mysql --no-defaults
+--socket=/mnt/kaun/wow-chat-2026/mysql/databases/mysql.sock -uritz -pmenardi
+acore_characters_basic -N -e "SELECT skill, value, max FROM character_skills
+WHERE guid=584 AND skill IN (43,54,55,95,162,333,393)" 2&gt;&amp;1 | grep -v
+Warning | tr '\n' ' '" completed (exit code 0)*
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 23 (continued)
+
+All three changes are in. The server is down, so you can start it: `!
+./scripts/worldserver`.
+
+| Character | Change | Detail |
+|---|---|---|
+| Welen | rogue, all Assassination, damage | 54 rogue lessons added |
+| Lorneas | mage, all Arcane, damage | 116 mage lessons added |
+| Feldowinn | weapon skills and defence 275 of 275 | swords, maces, two-handed swords, unarmed |
+| Feldowinn | enchanting and skinning 300 of 300 | their ranks, Disenchant, 74 enchanting recipes up to 300 |
+
+Welen and Lorneas get their new class's gear, PvP jewellery and gems when they
+log in with Feldowinn. Every change was backed up first, in `backups/lessons/`
+and `backups/one-time/`.
+
+About the shutdown: did Ctrl-C in the server's window fail to stop it, or was
+the in-game command just what you could reach? The server's own code shuts down
+cleanly and saves everyone on Ctrl-C. My gdb change only passes Ctrl-C on to the
+server, and that worked in a test with a stand-in program. If Ctrl-C didn't work
+for you, the server's console may be catching it, and I'd look there next.
+
+The pathfinding fixes need your go-ahead, since they're code changes and need a
+compile:
+1. The Bulwark's dead zone, where neither the travel nor the roam step moves a
+   buddy.
+2. Arriving on the arc round you instead of your exact spot.
+3. Earlier, farther unsticking when no path is found.
+
+--------------------------------------------------------------------------------
+
+### User Request 24
+
+do the buddy-bots have the right skill levels too? Are they fully trained on
+their abilities? How many tanks / heals do we have? Can you count them
+proportionally to their talent profiles?
+
+make sure you give poisons to welen.
+
+
+
+<pasted_content id="12ab">
+>   About the shutdown: did Ctrl-C in the server's window fail to stop
+>   it, or was the in-game command just what you could reach? The
+>   server's own code shuts down cleanly and saves everyone on Ctrl-C.
+>   My gdb change only passes Ctrl-C on to the server, and that worked
+>   in a test with a stand-in program. If Ctrl-C didn't work for you,
+>   the server's console may be catching it, and I'd look there next.
+</pasted_content id="12ab">
+
+
+ctrl+c didn't work but it should.
+
+
+
+<pasted_content id="12ab">
+>   The pathfinding fixes need your go-ahead, since they're code changes
+>   and need a compile:
+>   1. The Bulwark's dead zone, where neither the travel nor the roam
+>      step moves a buddy.
+>   2. Arriving on the arc round you instead of your exact spot.
+>   3. Earlier, farther unsticking when no path is found.
+</pasted_content id="12ab">
+
+
+go ahead. Please feel free to create a report requesting additional pathfinding
+functionality. Use your best intuitions to create new notions of potential
+improvements.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 24
+
+> Going ahead on the pathfinding fixes. Starting with the quick answers: the
+> buddies' skills and lessons, their roles, and Ctrl-C. First, their weapon and
+> defence skills against the maximum for level 55, and their roles and talent
+> plans.
+
+> Welen has neither the Poisons skill nor daggers. The kit gives him the poison
+> items at his next login, but he'll need the Poisons skill to put them on his
+> weapons. Checking what the poisons require.
+
+> Every weapon skill and defence for all six buddies is now at its maximum.
+> Next, Ctrl-C: reading the server's shutdown path for how it ends its console
+> thread.
+
+> Porting the arc to C++ for the travel step, starting with the Lua version's
+> constants. The module may also keep each owner's buddy count in memory
+> already, so checking for that too.
+
+> Checking that the changed file compiles, using the build's own compiler
+> settings with `-fsyntax-only`, so nothing is built and nothing in the source
+> tree is touched.
+
+> No errors and no warnings. To be sure the check really compiled the file,
+> running the same command on a copy with a deliberate mistake in it.
+
+> Now the report: ideas for pathfinding beyond tonight's three fixes, each tied
+> to what the walk showed or to how the code works.
+
+The pathfinding fixes are written and the file compiles, and the buddies' skills
+are fixed. Compile when you're ready: `! ./scripts/compile --debug`. This
+compile is also the first to keep the server running at the end, so it should
+finish at the `AC>` prompt.
+
+**Buddy skills and training:**
+- **Lessons:** all six are fully trained. The lessons tool finds nothing more to
+  teach any of them.
+- **Weapon skills and defence:** several were low: Zearea's defence was 48,
+  Matis's 158, Kalinlia's (the tank) 232. All of them are now at their maximum,
+  275, for every weapon skill and defence. I also gave Welen daggers and Lorneas
+  staves and wands at 275, with a backup first.
+- **Welen's poisons:** they come with his new kit when he logs in with
+  Feldowinn: a stack each of the best Instant and Deadly Poison for his level.
+  Poisons need no skill to use in this version, so he can put them on straight
+  away. I'll check they're there after he logs in.
+
+**Tanks and healers, by talent plan.** Each buddy counts as the share of its
+points in each tree. For a paladin, Holy is healing, Protection is tanking and
+Retribution is damage; for a priest, Discipline and Holy are both healing.
+
+| Buddy | Class and plan | Tank | Heal | Damage |
+|---|---|---|---|---|
+| Kalinlia | Paladin, ⅔ Protection, ⅓ Retribution | ⅔ | – | ⅓ |
+| Matis | Paladin, ⅓ Holy, ⅔ Retribution | – | ⅓ | ⅔ |
+| Zearea | Paladin, all Retribution | – | – | 1 |
+| Lariadel | Priest, ⅓ Discipline, ⅔ Holy | – | 1 | – |
+| Welen | Rogue, all Assassination | – | – | 1 |
+| Lorneas | Mage, all Arcane | – | – | 1 |
+| **Total of 6** | | **0.67** | **1.33** | **4** |
+
+So the six buddies have two thirds of a tank and one and a third healers, before
+counting Feldowinn herself.
+
+**The pathfinding fixes in this compile:**
+1. A buddy more than 80 yards from you travels to you, even inside the same town
+   circle. This fixes the dead zone that held Matis.
+2. Travel ends on an arc in front of you: 5 yards out, places 4 yards apart.
+   Each buddy takes the free place nearest itself, and a place another buddy is
+   heading for is skipped.
+3. Three failed walks in a row (no route found) unstick a buddy straight away. A
+   second unstick in a row reaches 60 yards instead of 30.
+
+The numbers are in `docs/balance-updates.md`. Afterwards, walk the same route
+with the recorder on, and `scripts/measure-buddy-spread` will compare the result
+with tonight's walk (41 stacked pairs, Matis and Lariadel never arriving).
+
+**The report, `docs/pathfinding-improvements.md`:** ten ideas, ordered from most
+to least likely to help, each with how its effect would be measured:
+1. A referee that names the one action moving a buddy each tick, so a buddy can
+   never be left with nothing moving it.
+2. Finding the whole way before setting off.
+3. Following your own track through gates and tunnels.
+4. Splitting the sub-zone into a patch per buddy, for even spacing.
+5. Gathering herb and ore nodes along the way.
+6. No fights started while on an errand, such as a sell trip.
+7. Walking in single file along narrow paths.
+8. Remembering the places where walks fail.
+9. Watching the record live, as the compile ledger does for compiles.
+10. Small personal preferences for each buddy, such as high ground, the water's
+    edge, or staying near one friend.
+
+**Ctrl-C:** it should work and doesn't. What did you see when you pressed it:
+nothing at all, or `^C` and nothing more? That tells me whether the signal is
+lost before it reaches the server (gdb or the output copier) or after (the
+server's console).
+
+--------------------------------------------------------------------------------
+
+### User Request 25
+
+okay matis should be 2/3rds holy and 1/3rd retribution.
+
+Also, Zearea should be 1/3rd in every tree.
+
+>   1. A buddy more than 80 yards from you travels to you, even inside
+>      the same town circle. This fixes the dead zone that held Matis.
+
+but that's not intended behavior, is it?
+
+
+
+<pasted_content id="12ab">
+>   2. Travel ends on an arc in front of you: 5 yards out, places 4
+>      yards apart. Each buddy takes the free place nearest itself, and
+>      a place another buddy is heading for is skipped.
+</pasted_content id="12ab">
+
+
+not skipped. We should move the other buddy to a different part of the arc, even
+as they're in motion. We can do this by moving the waypoint they're moving
+toward on the navmesh.
+
+>   1. A referee that names the one action moving a buddy each tick, so
+>      a buddy can never be left with nothing moving it.
+
+sometimes they stand still, usually in town when visiting or chatting. Or if
+there's nothing to do, sometimes they'll sit down and just chill.
+
+>   3. Following your own track through gates and tunnels.
+
+use the same arc system, and traverse them to a point that is rotated around an
+arc around the path that you took. Unless it would lead them into an obstacle or
+something, then they just stick to the nearest "center of the room" gradient,
+preferentially. But still remaining close.
+
+>   4. Splitting the sub-zone into a patch per buddy, for even spacing.
+
+there are intended to be many players on the server. We cannot create patches
+for each individual buddy. That's 8 per player! 8 patches per player! No way.
+
+>   6. No fights started while on an errand, such as a sell trip.
+
+unless a foe is in their way, as is the case when they have to fight through
+wilderness. This is common. They should orbit move aside fights that they don't
+think they can win.
+
+>   7. Walking in single file along narrow paths.
+
+good. What if we're running up a mountain face?
+
+>   9. Watching the record live, as the compile ledger does for
+     compiles.
+
+we will only record our paths in debug mode. and then, only for GMs.
+
+>   10. Small personal preferences for each buddy, such as high ground,
+>       the water's edge, or staying near one friend.
+
+nah. Let's just build sufficient dynamism into the system that we don't even
+need an opportunity to notice such curious quirks.
+
+the rest of the pathfinding improvements look good.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 25
+
+> Taking these in order. First, whether the server is up, for the two talent
+> plan changes.
+
+> The compile has already run, and its log continues into the server's own
+> lines, so the new hand-over started the server. Checking it went as designed.
+
+> The arc change compiles cleanly. Next, the recorder: it now records only on a
+> Debug build, and only GM characters and their buddies. That replaces the
+> switch file.
+
+> The recorder passes the Lua checks. Updating the plan, the balance log and the
+> report with your answers. The balance log is append-only, so the town change
+> and the arc change go in as a new entry.
+
+> Now the report, rewritten with your answers.
+
+All of your notes are in, and the code changes compile cleanly. They need one
+more compile to take effect.
+
+**Matis and Zearea:** their talents are reset and their roster rows changed. At
+their next login, the talent spender spends their points by the new plan and the
+kit re-dresses and re-gems them for it.
+- **Matis:** plan 2, two thirds Holy and one third Retribution, now in the
+  healer role.
+- **Zearea:** plan 7, a third in every tree, damage role.
+
+**The compile from 01:04 worked, including the new hand-over:**
+- 33 quick tests ran and passed; 28 were remembered.
+- There were no compiler warnings.
+- The server started in your compile terminal with "Compilation and promotion
+  successful, server is now online."
+
+That build included tonight's first pathfinding fixes, with the two parts you've
+now corrected. The next compile replaces them.
+
+**Corrected:**
+- **The town rule:** taken back out. Inside your town, the town visit has a
+  buddy wherever it is. Matis's real problem was outside the town: every walk to
+  you failed, and the earlier unstick covers that.
+- **The arc:** places are no longer skipped. At every step, all the buddies
+  heading for you are given places again, nearest pairs first. A buddy that
+  loses its place to a nearer one walks to its new place, its waypoint moved
+  while it's still walking.
+- **The recorder:** it now records only on a Debug build, and only when the
+  owner is a game master. That replaces the switch file.
+
+**The report, `docs/pathfinding-improvements.md`, now carries your answers:**
+- **1, the referee:** standing in town, chatting, and sitting with nothing to do
+  count as reasons too. The fault it catches is a buddy standing still with no
+  reason named.
+- **3, following your track:** each buddy keeps to a place on the arc round your
+  path, turning with it. If that place is blocked, it drifts toward the middle
+  of the room nearby but stays close.
+- **4, a patch of the sub-zone per buddy:** set aside, because it doesn't scale
+  to many players. Even spacing will come from cheap rules each buddy follows
+  alone.
+- **6, fights on errands:** a foe standing in the way is fought, as is common in
+  the wilderness. A fight the buddy doesn't think it can win, it walks round,
+  staying wider than the foe's aggro range.
+- **9, watching live:** a Debug-build tool for game masters only.
+- **10, personal preferences:** set aside.
+
+On your mountain face question: I'd treat a slope as the opposite of a narrow
+path. The face is wide, and there are a few walkable lines up it. The buddies
+would spread across those lines, each with its own way up, and gather on the arc
+at the top, walking in single file only where there's a single line. Should they
+climb beside you, spread across the face, or behind you, each in your footsteps?
+
+Still open: what did you see when Ctrl-C didn't stop the server, nothing at all
+or a `^C` and nothing more?
+
+--------------------------------------------------------------------------------
+
+### User Request 26
+
+hey now I'm playing with Felicity's clan, and some of her clanmates have fishing
+pole weapons. Can you validate EVERY buddy-bot on the server, for all of the
+changes we've recently applied to Feldowinn? Please bring all buddies up to
+spec. In-fact, can we WRITE a spec for how they should be geared at various
+stages? Rules and patterns, not specifics.
+
+can you tell me what the behavior is for stealthing? like for rogues.
+
+Felicities buddy-bots also need a re-gemming, probably other buddy-bots do too.
+Though, to be honest, there aren't that many? Just Feldowinn and Growth's I
+think, right?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 26
+
+> Starting with a list of every buddy on the server, with its owner, class,
+> talent plan, role and level.
+
+> The town file still compiles. Checking the other changed module files the same
+> way, and the patch headers.
+
+> My include folder came after the original one on the command line, so the
+> unpatched header still won. Moving it to the front.
+
+> The spec is written. Now the checker, `scripts/check-buddies`. It's read-only:
+> it reads the saved database and the client's gem table, and prints each
+> buddy's problems against the spec.
+
+> The server version here has no item-search helper, so the bags get walked
+> directly, the way the module's mail code already does it.
+
+> It compiles. Now the stage-7 login path, with its row in the roster notes.
+> Then the GM command reference for `.buddy spec`.
+
+> Death knights belong to issue 718's family. There's already a
+> `death-knight-buddy-gear.lua`; reading what it does now, so the kit plan
+> builds on it.
+
+The checker, the spec and the fixes are written and compile. One rebuild brings
+every buddy up to spec. The fixes include a mistake of mine that has to be
+undone before Gabrubre logs in again.
+
+**The mistake, about Gabrubre:** her three level-60 death knights are meant to
+wait out of the world until she reaches their level (stage 5, "set aside"). My
+class-change step had also taken stage 5, so tonight's build logged them in with
+her and re-dressed them. That's why she has buddies above her level. The
+class-change step now uses 6, and the three are set aside again in the database.
+They're still in the world now, and will stay out after her next logout.
+**Please compile before she or Feldowinn next logs in:** the running build would
+bring them in again, and Feldowinn's four waiting buddies are now at stage 6,
+which only the new build knows.
+
+**Checking every buddy (`scripts/check-buddies`):** 29 buddies across 11 owners,
+and 2 pass every rule today. The rules come from the new spec,
+`docs/buddy-gear-spec.md`. Most common findings:
+- weapon skills and defence low, nearly everywhere, Growth's buddies included;
+- Felicity's five have no PvP jewellery at all; they were made before it
+  existed;
+- empty sockets on Growth's buddies;
+- Montahmu and Usanda hold a fishing pole and carry no weapon at all (their real
+  weapons are gone);
+- Welen has no poisons yet;
+- empty kit slots on a few, and the four ring gaps from the unique-ring refusal.
+
+**The spec** is written as rules, not item lists:
+- when a buddy is dressed (made, re-made, levels jumped, class changed, `.buddy
+  kit`);
+- who it is (class, talent plan, role, level);
+- what it knows (lessons, skills at their maximum);
+- what it wears (kit tier, weapon, enchant, PvP jewellery, gems, class tools,
+  bags).
+
+The checker marks which rules it tests.
+
+**Bringing them up to spec without losing earned gear:** a full re-kit would
+replace Growth's elite outfits with white gear, so there's a new step, `.buddy
+spec [name]`, or stage 7 for a buddy that's offline. It:
+- teaches every lesson up to its level;
+- raises weapon skills and defence to their maximum;
+- fills only empty kit slots, treating a fishing pole as an empty hand and
+  leaving a weapon in its bags alone;
+- gives class tools such as poisons;
+- gives PvP jewellery if any of those five slots is empty;
+- re-gems every socket by its plan.
+
+Every dressing now also raises skills to their maximum, so newly made buddies
+stop starting at 1.
+
+**After the rebuild, before starting the server:**
+1. I set every buddy at stage 0 to stage 7. This is
+   `backups/one-time/all-buddies-to-spec-2026-10-27.apply.sql`.
+2. Each buddy is brought up to spec when it next logs in with its owner.
+3. For buddies already online, I run `.buddy spec <name>`.
+4. Then `scripts/check-buddies` shows what's left.
+
+**Stealth, for rogue buddies:** this is the playerbots module's stock behaviour;
+the buddy module adds nothing.
+- A rogue stealths when its target comes within about 45 yards (35 when it has
+  no group leader), and opens from stealth.
+- It drops stealth when there's nothing attacking it and its group leader is
+  more than 10 yards away and moving, so it keeps up instead of sneaking slowly.
+- With nothing to fight, it drops stealth regularly.
+- Stealth is never used while carrying a battleground flag.
+
+**New plans (nothing built):**
+- **718h, the Acherus Knight's green by default.** Every death knight buddy
+  starts in that set. If its owner played the story, each better quest reward
+  replaces the matching piece; cloaks and weapons are chosen at random once per
+  buddy. Today a skipper's buddies get only a weapon. Questions:
+  - Is "Acherus Knight green" the story's reward set or a named set, and at
+    making, all of it at once?
+  - Should a non-death-knight owner's death knight buddy get it too?
+- **718i, Death Gate remembers.** The death knight's last Death Gate spot in the
+  world is kept for good, and from Acherus the gate goes back there. Party
+  members who walk through follow: death knights to the same spot, on the arc,
+  and everyone else to their hearthstone. At the death knight's next Death Gate
+  or hearthstone, a return gate appears by each of those who went home, to take
+  them back. Questions:
+  - Do members walk into the caster's portal, or get a prompt?
+  - How long does a return gate last?
+  - Should someone who already went home their own way still get one?
+
+--------------------------------------------------------------------------------
+
+### User Request 27
+
+can we add a similar system to the DoT / HoT system that is classified the same
+way that adds the damage increase from a crit to the next weapon swing? hmmm
+that seems dumb
+
+can we add Deadly Boss Mods support? The buddy-bots should have movement
+patterns for every dungeon and raid boss that corresponds to the warnings and
+outputs of the Deadly Boss Mods system. And they should mess up or fail roughly
+the same amount of percentage time that the player does.
+
+>     - Do members walk into the caster's portal, or get a prompt?
+
+clan member buddy-bots all will walk to the portal if it's withing 15 yards,
+otherwise they will just automatically use it at a distance. One per second
+until they all walk through. Well, 1-3 seconds, evaluated each time one is
+teleported.
+
+    - How long does a return gate last?
+
+that's in the game files. maybe in Acherus we have a permanent one and we don't
+allow players to summon their own? Maybe where the flight master used to be.
+
+>     - Should someone who already went home their own way still get
+      one?
+
+explain?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 27
+
+> Agreed on the crit idea: a crit is a single hit, so there's no tick left over
+> to carry, and moving its extra damage to the next swing would only make crits
+> weaker. I'll leave it out.
+>
+> Writing your Death Gate answers into 718i, and Deadly Boss Mods as a new plan.
+
+You'd recompiled and started the server before I could mark the buddies, but the
+order didn't matter: the running build knows stage 7. So 22 offline buddies are
+now marked to be brought up to spec at their next login. None were in the world
+to do straight away. Feldowinn's four still get their class re-dress at her next
+login (stage 6), and Gabrubre's three death knights stay set aside.
+
+**The crit idea:** I agree it's not worth it. A critical hit is one whole hit,
+not something spread over ticks. Moving its extra damage to the next swing would
+only make crits weaker, so I've left it out.
+
+**Death Gate (718i), your answers are in:**
+- **Buddies:** a clan's buddies go through one at a time, with a new 1–3
+  second wait drawn after each. Within 15 yards of the portal they walk into it;
+  farther away, they're moved through where they stand.
+- **Acherus:** a permanent Death Gate stands where the flight master used to be,
+  and takes a death knight to her remembered spot. Death Gate isn't cast inside
+  Acherus.
+- **Return gates elsewhere:** last as long as the game's own portal data says.
+
+**Explaining question 3:** say a mage in Gabrubre's party goes through her gate
+in Acherus. The mage isn't a death knight, so they land at their own hearthstone
+place, say Orgrimmar. Then, before Gabrubre casts Death Gate again, the mage
+flies or rides off to Stranglethorn on their own. When Gabrubre next casts Death
+Gate:
+- **(a)** a return gate still appears beside the mage in Stranglethorn, to take
+  them back to where they stood when they stepped through her gate;
+- **(b)** no gate appears, because the mage has already moved on from where her
+  gate left them.
+
+Which do you want?
+
+**Deadly Boss Mods (new plan 617e5b):**
+- Deadly Boss Mods runs in your game client, so the server can't read it while
+  you play. The plan reads its knowledge once instead, from its boss encounter
+  files, into a table on the server: for each boss spell, the warning and the
+  kind of answer it calls for.
+- The server reacts to the boss's actual spells and auras by looking them up in
+  that table.
+- Each kind of answer is written once and shared by every boss: leave a circle,
+  spread out, stack, break line of sight, interrupt, dispel, or go to a spot.
+  Bosses then differ only by their tables.
+- Fail rate: the server records how often you're hit by the avoidable part of
+  each mechanic, and each buddy fails at about that rate.
+
+Questions:
+- Does Deadly Boss Mods' licence allow reading its files into our own table, or
+  should the table be written from the game's own spell data?
+- Which bosses first: basic's dungeons up to level 60, then raids?
+- What counts as a fail: only being hit, or also a missed interrupt or a late
+  stack? One rate for all of a player's mechanics, or one per kind?
+
+--------------------------------------------------------------------------------
+
+### User Request 28
+
+<pasted_content id="12ab">
+>   Explaining question 3: say a mage in Gabrubre's party goes through
+>   her gate in Acherus. The mage isn't a death knight, so they land at
+>   their own hearthstone place, say Orgrimmar. Then, before Gabrubre
+>   casts Death Gate again, the mage flies or rides off to Stranglethorn
+>   on their own.
+</pasted_content id="12ab">
+
+
+the death knight doesn't cast death gate in Acherus anymore, but instead it
+should trigger when they click the permanent death gate where the flight master
+was, or when they hearth away from Acherus.
+
+
+
+<pasted_content id="12ab">
+>   - (a) a return gate still appears beside the mage in Stranglethorn,
+>     to take them back to where they stood when they stepped through
+    her gate;
+</pasted_content id="12ab">
+
+
+can we add an option to Chromie to enable us to switch to a different version of
+a spell or talent that got overhauled? This one is a doozy but I kinda miss the
+old TBC version of Seal of Command? Gah maybe I just want to play on a TBC
+server... But, I think it'd be neat if I could play with both options? But only
+one at a time. Blizzard didn't just change them for balance, but also for class
+identity.
+
+oh also the old priest spells and paladin blessings! Those are pretty neat. But,
+we'd maybe want a separate, TBC style server that's not basic, but is instead
+"advanced" which lets us go up to level 40 talents instead of 30 and we can
+adventure through Northrend maybe. Mobs scaled to 60-70 of course... Still WotLK
+client tho, but we can change a lot of is as we course. issue files for now... I
+would however like a report on each of the potential abilities for this
+profile's changes.
+
+okay. I'm logging in. Wish me luck.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 28
+
+> Good luck. I'm watching the server log for the re-dresses as your buddies log
+> in with you, then I'll run the checker on them.
+
+> The patch applies, a second apply changes nothing, and removing it restores
+> the file exactly. The header tool wants the path relative to the project, so
+> running it again that way.
+
+I've written the guild leader fix. Your other notes are in the plans or answered
+below.
+
+**Deleting characters that lead a guild:** that's patch B061, for basic, and it
+takes effect after your next compile. The server's refusal to delete a guild
+leader is gone. A buddy clan goes with its owner: the buddy module deletes the
+buddies' hidden account and the clan's records, and the server disbands the
+guild once it's empty. A guild with other players in it passes to its
+next-ranked member. On a copy of the file, the patch applies and removing it
+restores the file exactly; the patch tests pass.
+
+**Buddies are being brought up to spec as owners log in.** The first was Badam
+(Xenna's level-3 paladin). One item was refused: shield 17185, with the server's
+reason "you can never use that item". Its old off-hand item stays on. I'll look
+at why the level-1 kit offers a shield the paladin can't use, and report
+anything else that turns up as people log in.
+
+**Death Gate (718i):**
+- Nobody casts Death Gate inside Acherus any more. Leaving happens by clicking
+  the permanent gate where the flight master stood, or by hearthing away from
+  Acherus. Either takes the death knight to her remembered spot, and her party
+  follows.
+- Your answer to the return-gate question is (a): a member who moved on since
+  their trip home still gets their gate back, wherever they are now.
+
+**New plans (nothing built):**
+- **168a, ability versions at Chromie:** for an overhauled ability, choose its
+  current form or an older one, one at a time per character. Each older form is
+  its own spell, so both can be tested separately. Seal of Command is first.
+  Buddies keep the current forms until bot strategies exist for the old ones.
+- **160, the "advanced" profile:** TBC-style classes on the WotLK client,
+  talents up to the 40-point tier, Northrend scaled to 60–70.
+- **The report, `docs/profiles/advanced-ability-versions.md`:** every class
+  except death knight, with each overhauled ability's TBC form, its current
+  form, and the class identity it carried. Highlights:
+  - **Paladin:** Seal of Command, the 10-minute and 30-minute blessings with
+    Salvation and Light, seal-ending judgements.
+  - **Priest:** every race's own priest spells, such as Fear Ward, Starshards,
+    Devouring Plague and Shadowguard.
+  - **Shaman:** the air totem choices and Windfury.
+  - **Hunter:** the cast-time Aimed Shot.
+  - **Druid:** the rolling Lifebloom.
+  - **Rogue:** poison charges.
+
+  I wrote the report from memory of patch history. Each ability's numbers get
+  read from the game's data before it's built.
+
+Questions in the new plans:
+- **168a:** old forms on the advanced profile only, or on basic too? For a
+  talent whose ranks changed, one choice for the whole talent, or one per rank?
+- **160:** which level range? Outland and Northrend both, or Northrend instead?
+  How many talent points per level?
+
+--------------------------------------------------------------------------------
+
+### User Request 29
+
+okay now I'm playing on Xenna, and her buddy-bot was told to "go sell" after he
+said he had full bags. However, he doesn't seem interested in doing that,
+instead he's mostly just taking all his clothes off and running through the ice
+and snow. Also, I tried once before and he started doing the talk emote to a
+kobold, then I logged off and back on (it's a trogg not kobold) and that's when
+he took his clothes off. now he's just doing a square dance or something in the
+cold. also now he's not listening to the "go sell" command, probably because his
+bags aren't full anymore.
+
+can we also move Gabrubre somewhere, maybe directly down to below? She's
+currently stuck in Acherus, though I haven't logged her in yet.
+
+also can we enable all classes on all races but just for the advanced profile?
+separate issue file probably.
+
+>   - 160: which level range? Outland and Northrend both, or Northrend
+>     instead? How many talent points per level?
+
+should start characters at level 40, and they learn 3 talent points per level.
+That should give the same amount total as learning one per level right? Oh no my
+math is off... Can you fix my math for me? We want to have the same total amount
+of talent points at the end. But, maybe with a few more. If we have an extra 2
+tiers, then we want the main tier to have +10 extra points, and the secondary
+tier to have +5 extra points.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 29
+
+> Several things at once. I'll start with Xenna's buddy, since it may be my
+> bring-to-spec step taking his gear off, then check where Gabrubre is, and look
+> up basic's real talent rule before doing the talent maths.
+
+> The Lua checks pass, method names included. Adding a quick test with pretend
+> players, then recording it in the valley rotation's issue.
+
+The Xenna buddy is a bug of mine, now fixed in code. Gabrubre is moved, and the
+quest fix, the talent maths and the all-races plan are below.
+
+**What happened to Xenna's buddy (Badam):** he was level 3 and Xenna is level 1,
+so at login the module made him again at her level. That step mails a buddy
+everything it wears and carries, and then gives the kit for its new level. The
+level-1 kit did nothing: it assumed the starting outfit was still on, and it had
+just been mailed away. So he was left with nothing on but a fishing pole. With
+no gear and no bags there was nothing to sell, which is why "go sell" no longer
+did anything. The kit now gives a level-1 buddy his race and class's own
+starting outfit, as a new character gets, but only into empty slots. It
+compiles. After your next compile, `.buddy kit Badam` dresses him. His old gear
+is safe in his mail, under "Kept for you".
+
+**Gabrubre** is moved: same spot, now on the ground directly below Acherus, a
+steep hillside, one yard above it. If that's awkward, Light's Hope Chapel is
+flat and 230 yards away.
+
+**Quests that need another race's racial ability:** I searched every quest's
+text for a racial ability's name, and found two:
+- **Thirst Unending** (blood elf, Arcane Torrent);
+- **Rescue the Survivors!** (draenei, Gift of the Naaru).
+
+Both matter because basic's starting valleys rotate, so other races start there.
+`racial-quests.lua` completes them for any other race when they take the quest,
+or at login if they already have it; they still hand it in for the reward. Its
+test passes (7 checks). It starts after a `.reload ale` or the next restart.
+
+**Your talent maths:**
+- One point a level from 10 to 70 makes 61 points, TBC's total.
+- Three a level from 40 to 70 makes 90, half as many again.
+- Your target is 61 plus 10 for the main tree plus 5 for the second, which is
+  76. That's enough for a main tree to its 51-point tier (two tiers past TBC's
+  41) and 25 points in a second tree.
+
+To land on exactly 76 at level 70:
+- **(a)** a character made at 40 starts with the 31 points a level-40 has, then
+  gets 3 points every 2 levels (31 + 45);
+- **(b)** 1 point at 40, then 5 every 2 levels, alternating 2 and 3 (1 + 75);
+- **(c)** 3 a level gives 90, 14 over.
+
+Which one? I'd pick (a), because a new level-40 character plays like any other
+level-40.
+
+**Other answers, recorded in 160:** characters start at level 40 and go up to
+70.
+
+**New plan 160a, every class on every race (advanced only):**
+- On the server, a starting record for each new race and class pairing, built by
+  a tool from the race's and the class's existing records.
+- The character screen only shows the pairings in its own client file, so that
+  file needs a patched copy, which the custom client can carry.
+
+Questions:
+- Should the client file go out for the custom client only, or as a patch for
+  the standard client too?
+- Should racial abilities that don't suit a class, such as a mana ability on a
+  rogue, stay as they are?
+
+--------------------------------------------------------------------------------
+
+### User Request 30
+
+<pasted_content id="12ab">
+>   - Your target is 61 plus 10 for the main tree plus 5 for the second,
+    which is 76. That's enough for a main tree to its 51-point tier
+    (two tiers past TBC's 41) and 25 points in a second tree.
+</pasted_content id="12ab">
+
+
+no actually it's 51 (basic's total) + 10 + 5, 10 for the primary because 2 new
+talent tiers, and 5 for the secondary because we want +1 tier for the secondary.
+
+maybe for those we do +1 talent points at levels 1-10?
+
+>   Other answers, recorded in 160: characters start at level 40 and go
+  up to 70.
+
+I changed my mind on this, let's do 1 - 60
+
+
+
+<pasted_content id="12ab">
+>   - The character screen only shows the pairings in its own client
+>     file, so that file needs a patched copy, which the custom client
+    can carry.
+</pasted_content id="12ab">
+
+
+alternatively, talk to an NPC in the starting zone while level 1 or level 2 and
+no higher, and it'll let you switch to whatever class you want.
+
+>   - Should racial abilities that don't suit a class, such as a mana
+>     ability on a rogue, stay as they are?
+
+... arcane torrent on a rogue gives energy, I think. But, we'll need the old
+mana tap system for Advanced profile, and similars.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 30
+
+> Two places in 160a still described the character screen and the level-40
+> start. Correcting them to match your answers.
+
+I've updated the plans with your corrections.
+
+**Levels:** advanced is now levels 1 to 60, like basic. Northrend's level
+scaling will need setting again for that range. That leaves an open question: do
+Outland and Northrend both stay, and at which levels within 1–60?
+
+**Talent points, corrected:** basic gives 51 points by level 60, one a level
+from 10. You want 15 more: 10 for the main tree's two extra tiers and 5 for one
+more tier in the second tree. That makes **66 at level 60**.
+
+One extra point at each of levels 1–10 covers 10 of the 15. The other 5 could
+come from:
+
+| Option | How the 5 come | Total |
+|---|---|---|
+| (a) | one extra at each of levels 11–15 (two a level from 10 to 15, then one a level) | 9 + 12 + 45 = 66 |
+| (b) | one extra at levels 20, 30, 40, 50 and 60 | 10 + 51 + 5 = 66 |
+| (c) | levels 1–10 give one and a half each instead (three every two levels) | 15 + 51 = 66 |
+
+Which one? I'd pick (a): the extra points come early, while the character is
+still learning its class.
+
+**Class choice (160a):** a starting-zone NPC lets a level 1 or 2 character
+switch to any class, using the class-change tool's steps in game. So no client
+file is needed. The character screen keeps the standard race and class pairings,
+and the server gets a starting record for each new pairing. Still open: which
+NPC, and where in each starting zone?
+
+**Racial abilities:** they stay as they are in 3.3.5, which already adjusts some
+by class (Arcane Torrent gives a rogue energy). On advanced, the old forms come
+back with the other old abilities: TBC's Mana Tap feeding Arcane Torrent, and
+the like. The report now has a racial abilities section, and the rest get listed
+from the game's data.
+
+--------------------------------------------------------------------------------
+
+### User Request 31
+
+when you switch starting zones by talking to Sargobras, your buddy (if you have
+one) should switch gear to the equipment sold by the vendors in that area.
+notice glowsticks set of gear? that set, if they were transferring to Eversong
+Woods. They should also use that set when they are created I think.
+
+
+
+<pasted_content id="12ab">
+>   Levels: advanced is now levels 1 to 60, like basic. Northrend's
+>   level scaling will need setting again for that range. That leaves an
+>   open question: do Outland and Northrend both stay, and at which
+>   levels within 1–60?
+</pasted_content id="12ab">
+
+
+yes northrend, no outland, on advanced.
+
+
+
+<pasted_content id="12ab">
+  ├────────┼─────────────────────────────────────────┼────────────┤
+  │ (b)    │ one extra at levels 20, 30, 40, 50 and  │ 10 + 51 +  │
+  │        │ 60                                      │ 5 = 66     │
+  ├────────┼─────────────────────────────────────────┼────────────┤
+</pasted_content id="12ab">
+
+--------------------------------------------------------------------------------
+
+### User Request 32
+
+when you switch starting zones by talking to Sargobras, your buddy (if you have
+one) should switch gear to the equipment sold by the vendors in that area.
+notice glowsticks set of gear? that set, if they were transferring to Eversong
+Woods. They should also use that set when they are created I think.
+
+
+
+<pasted_content id="12ab">
+>   Levels: advanced is now levels 1 to 60, like basic. Northrend's
+>   level scaling will need setting again for that range. That leaves an
+>   open question: do Outland and Northrend both stay, and at which
+>   levels within 1–60?
+</pasted_content id="12ab">
+
+yes northrend, no outland, on advanced.
+
+
+
+<pasted_content id="12ab">
+  ├────────┼─────────────────────────────────────────┼────────────┤
+  │ (b)    │ one extra at levels 20, 30, 40, 50 and  │ 10 + 51 +  │
+  │        │ 60                                      │ 5 = 66     │
+  ├────────┼─────────────────────────────────────────┼────────────┤
+</pasted_content id="12ab">
+
+
+this one
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 32
+
+> Recording your two answers, then looking at Glowsticks' gear to see which set
+> you mean.
+
+Recorded your answers, and written the valley gear as a plan. Nothing is built
+yet.
+
+**Advanced profile (160):**
+- Northrend, scaled into levels 1–60. Outland is closed on advanced.
+- Talent points, option (b): one extra point at each of levels 1–10, and one
+  more at levels 20, 30, 40, 50 and 60. That gives 66 by level 60.
+
+**Buddies dressed from their valley's vendors (new plan 617a4a):**
+- **Glowsticks' set:** she's a level-4 troll shaman in Eversong Woods, wearing
+  what Sunstrider Isle's and Eversong's vendors sell: the Sun Cured set (vest,
+  belt, pants, boots, bracers and gloves), the Daylight Cloak and the Mana
+  Gathering Staff. Her buddy Jecunsek has the generic kit's mix of grey and
+  white.
+- **The plan:**
+  - A buddy made in a starting valley wears the gear that valley's and its
+    zone's vendors sell. That's the best its class can wear for its talent plan
+    and level, in every slot those vendors fill.
+  - When its owner switches valley through Sargobras, the buddy switches to the
+    new valley's vendor gear. The old pieces go to its mail, the same as when a
+    buddy is made again.
+  - Slots the vendors don't fill keep the kit's or starting outfit's items.
+  - A generator builds one gear set per valley from the world database's
+    vendors, the same way the white tiers are built.
+
+Two questions:
+- Should the valley gear apply only while the buddy is in the valley's levels
+  (1–10), with the white tiers taking over after that?
+- Should weapons come from the vendors too, or only armour? Glowsticks' staff
+  comes from a vendor.
+
+--------------------------------------------------------------------------------
+
+### User Request 33
+
+<pasted_content id="12ab">
+>     - When its owner switches valley through Sargobras, the buddy
+>       switches to the new valley's vendor gear. The old pieces go to
+>       its mail, the same as when a buddy is made again.
+</pasted_content id="12ab">
+
+
+the old pieces should be left behind, in the old valley, of course. What use
+would they have in the new starting zone?
+
+>     - Slots the vendors don't fill keep the kit's or starting outfit's
+      items.
+
+I will need a report on these for each class.
+
+>     - A generator builds one gear set per valley from the world
+>       database's vendors, the same way the white tiers are built.
+
+we may have to specify the vendors manually on a per-valley basis.
+
+
+
+<pasted_content id="12ab">
+>   - Should the valley gear apply only while the buddy is in the
+>     valley's levels (1–10), with the white tiers taking over after
+    that?
+</pasted_content id="12ab">
+
+
+it's just their starting gear. They will equip better as they go.
+
+>   - Should weapons come from the vendors too, or only armour?
+>     Glowsticks' staff comes from a vendor.
+
+vendor weapons.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 33
+
+> Writing your answers into 617a4a. Then, for the per-class report, finding
+> which vendors in each valley's zone sell armour or weapons. They'll be the
+> candidates for you to confirm per valley.
+
+Your answers are in 617a4a, and the per-class report is generated:
+`docs/reports/valley-vendor-gear.md`, rebuilt by
+`scripts/generate-valley-vendor-report`.
+
+**Recorded in 617a4a:**
+- On a valley switch the old pieces stay behind in the old valley; they're
+  destroyed, not mailed.
+- It's only starting gear; buddies equip better as they go.
+- Vendor weapons too.
+- The vendors are set by hand per valley, starting from the report's candidate
+  list.
+
+**The report:** for each of the eight starting zones, the candidate vendors that
+sell armour or weapons usable by level 10 for plain money, and a table of which
+slots they fill for each class. It leaves out:
+- each capital's own vendors (Stormwind sits inside Elwynn Forest's area box);
+- profession tools and fishing poles;
+- holiday vendors (Chapman, of the Day of the Dead, stood in every zone).
+
+**What it shows:**
+
+| Slot | Vendors fill it? |
+|---|---|
+| chest, waist, legs, feet, wrists, hands, main hand | yes, for every class in every zone (except Mulgore, below) |
+| head, shoulders, back | never, in any zone, for any class |
+| ranged | only for warriors, hunters and rogues |
+| off hand | for shield users everywhere; for others in some zones |
+
+So head, shoulders, back and mostly ranged will come from the kit or the
+starting outfit. Glowsticks' cloak and mantle came from somewhere other than a
+vendor.
+
+**Mulgore** is the exception: three classes get nothing from its vendors for
+chest, waist, legs, feet, wrists or hands. Probably no vendor there sells the
+cloth or mail they wear, which matters there now that any race can start in any
+valley.
+
+**Vendor counts:**
+
+| Zone (valley) | Vendors |
+|---|---|
+| Elwynn Forest (Northshire) | 13 |
+| Dun Morogh (Coldridge Valley) | 24 |
+| Teldrassil (Shadowglen) | 25 |
+| Azuremyst Isle (Ammen Vale) | 19 |
+| Durotar (Valley of Trials) | 11 |
+| Mulgore (Camp Narache) | 9 |
+| Tirisfal Glades (Deathknell) | 26 |
+| Eversong Woods (Sunstrider Isle) | 8 |
+
+Each zone's list includes the town vendors of the whole zone, such as
+Goldshire's and Brill's, not just the valley's. When you go through them, say
+which vendors each valley should use, and I'll put them in a data file the
+generator reads instead of searching by area.
+
+--------------------------------------------------------------------------------
+
+*[background task] Monitor event: "buddies brought up to spec / re-dressed at
+login, and any errors"*
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 33 (continued)
+
+The watch on buddy logins expired, so I've started it again for another 30
+minutes. In the last half hour only Badam and Jecunsek logged in and were
+brought up to spec. I'll report each re-dress or crash as it shows up.
+
+--------------------------------------------------------------------------------
+
+### User Request 34
+
+> The report: for each of the eight starting zones, the candidate
+>   vendors that sell armour or weapons usable by level 10 for plain
+>   money, and a table of which slots they fill for each class.
+
+we should only use the items usable at level 1 of course.
+
+
+
+<pasted_content id="12ab">
+>   Mulgore is the exception: three classes get nothing from its vendors
+>   for chest, waist, legs, feet, wrists or hands. Probably no vendor
+>   there sells the cloth or mail they wear, which matters there now
+>   that any race can start in any valley.
+</pasted_content id="12ab">
+
+
+we will need to add it. Which vendor is it? I'm surprised.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 34
+
+Found it. No vendor in Mulgore sells cloth. Every other zone has a cloth and
+leather armour merchant, and they all sell the same level-1 Thin Cloth set:
+Armor, Belt, Pants, Shoes, Bracers and Gloves (items 2121, 3599, 2120, 2117,
+3600, 2119). Mulgore's armour merchant, Varia Hardhide (3074), is a "Leather
+Armor Merchant" and sells leather only.
+
+That was the original design: in this version tauren can't be priests, mages or
+warlocks, so Camp Narache never needed cloth. Basic's rotating valleys now bring
+other races there.
+
+The smallest fix is to add the Thin Cloth set to Varia Hardhide's wares. That's
+six rows in her vendor list, an install step for basic. Her title would still
+say "Leather Armor Merchant" unless we change it too, which the game client may
+keep cached until its cache is cleared. The other option is a new clothier
+standing beside her in Camp Narache.
+
+Which do you want: Varia selling both, under the new title "Cloth & Leather
+Armor Merchant", or a new clothier? Once you choose, I'll write it with its
+issue.
+
+The report (`docs/reports/valley-vendor-gear.md`) is regenerated with level-1
+items only. The slots filled are the same as at level 10: chest to hands and the
+main hand everywhere, but nothing for head, shoulders or back, and a ranged
+weapon only for warriors, hunters and rogues.
+
+--------------------------------------------------------------------------------
+
+### User Request 35
+
+<pasted_content id="12ab">
+>   The smallest fix is to add the Thin Cloth set to Varia Hardhide's
+>   wares. That's six rows in her vendor list, an install step for
+>   basic. Her title would still say "Leather Armor Merchant" unless we
+>   change it too, which the game client may keep cached until its cache
+>   is cleared. The other option is a new clothier standing beside her
+>   in Camp Narache.
+</pasted_content id="12ab">
+
+
+let's change her to say "cloth and leather merchant" instead.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 35
+
+> Going with Varia as "Cloth & Leather Merchant", the wording Eversong's Vara
+> uses. The project's database changes are install steps with SQL files for
+> applying and reverting, so I'm copying the shape of a small existing one.
+
+> Writing the step, E074, in the same shape as E072. It's two small SQL files
+> that the server's updater runs, one to apply and one to revert.
+
+> The header tool marked it "install", but its neighbours are "sql" and list the
+> files they carry. Correcting the header to match E072's.
+
+> The patch tests pass. Now trying the SQL itself against the world database,
+> inside a transaction that's rolled back, so nothing stays changed.
+
+> The SQL works. Varia goes from 6 wares to 12 with her new title, running it
+> twice changes nothing, and the revert restores her 6 leather wares and
+> "Leather Armor Merchant". Recording it in the plan.
+
+Varia Hardhide becomes "Cloth & Leather Merchant" and sells the level-1 Thin
+Cloth set as well as her leather. This is install step E074, for basic. It
+applies the next time basic is installed. The SQL runs when the server starts
+after that install, so check the compile or install output for E074.
+
+**What it adds:** Thin Cloth Armor, Belt, Pants, Shoes, Bracers and Gloves.
+That's the set every other zone's cloth and leather merchant sells at level 1.
+
+**Checked against the world database, inside a transaction I rolled back:**
+- after applying, Varia sells 12 items (her 6 leather plus the 6 cloth) under
+  her new title;
+- applying a second time changes nothing;
+- reverting brings back her 6 leather items and "Leather Armor Merchant".
+
+The patch tests pass too.
+
+**One caveat:** the game client keeps creatures' names and titles in its own
+cache. If she still says "Leather Armor Merchant" after the install, clearing
+the client's `Cache` folder fixes it.
+
+Plan 617a4a now notes this, along with the level-1 findings for every valley.
+
+--------------------------------------------------------------------------------
+
+### User Request 36
+
+<pasted_content id="12ab">
+>   What it adds: Thin Cloth Armor, Belt, Pants, Shoes, Bracers and
+>   Gloves. That's the set every other zone's cloth and leather merchant
+>   sells at level 1.
+
+</pasted_content id="12ab">
+
+
+except eversong woods? curious...
+
+
+
+<pasted_content id="12ab">
+>   One caveat: the game client keeps creatures' names and titles in its
+>   own cache. If she still says "Leather Armor Merchant" after the
+>   install, clearing the client's Cache folder fixes it.
+</pasted_content id="12ab">
+
+
+no, we possess capability to request a cache update. use that.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 36
+
+> Two checks: what Eversong's Vara sells as cloth, and the project's existing
+> cache-version patch, C025, which tells clients to drop their cache.
+
+> One problem in what I just wrote: the patch list is read inside a pipeline, so
+> a failure there wouldn't stop the step, and the fingerprint would quietly come
+> out wrong. Moving that read out in front.
+
+> Testing the fingerprint on a copy of the config file. It should change when
+> E074's SQL changes and come back when the SQL is restored.
+
+> The fingerprint now follows E074's SQL: changing the file changes the number,
+> and putting it back restores it. E074's file is intact. Running the config
+> patch tests.
+
+> Before replying, one check. C025's header cites "issue 160", and I've just
+> used 160 for the advanced profile. Seeing whether that number was already
+> taken.
+
+> Number 160 was already taken: issue 160, "client cache follows content", is
+> the completed issue behind C025. My advanced profile issue needs a new number.
+> Finding a free one.
+
+> Felicity's buddies are being brought up to spec as they log in: Drerjokin,
+> Montahmu and Eliustan so far. Checking where her clan stands now.
+
+The client cache is handled the way you said: the server tells clients when
+content has changed. The project already had this, as install step C025, but it
+had stopped seeing patch SQL like E074's. That's fixed. Eversong turned out the
+same way as Mulgore, worse in fact.
+
+**Eversong:** it's the other surprise. Its cloth and leather merchant, Vara,
+sells the Woven cloth set and the Battered Leather set, and its weaponsmiths
+sell weapons, but all of it requires level 5. So at level 1 Eversong's vendors
+offer nothing to any class except a ranged weapon for warriors and hunters.
+Should Eversong's vendors also sell the level-1 sets (Thin Cloth, and its
+leather and weapon equivalents), or should a buddy made there wear the starting
+outfit until level 5? The question is in 617a4a.
+
+**The cache:** install step C025 sends clients a "cache version" number made
+from a fingerprint of the profile's database changes. When the number changes,
+clients throw away their cache at login. But the fingerprint only read
+`sql/<profile>/*.src/`, and since the SQL steps moved into their own patch
+folders (issue 189e), changes such as E072, E073 and E074 never changed it. It
+now also reads the `.sql` files in each of the profile's patch folders. Tested
+on a copy of the config: changing E074's SQL changes the number, and putting it
+back restores it. The config patch tests pass. It takes effect at basic's next
+install, so Varia's new title reaches players at their next login after that.
+
+**Fixed along the way:** number 160 was already the completed cache-version
+issue. The advanced profile is now **1101**, and every class on every race is
+**1101a**.
+
+**Felicity's buddies were brought up to spec as she logged in:** all five now
+have their PvP jewellery, Montahmu and Usanda have real weapons instead of
+fishing poles, and their other skills are at their maximum. `check-buddies`
+found two leftovers:
+- **One weapon skill each at 1:** the kit teaches a weapon type when the gear
+  needs it, which was after the skills were raised. The raise now runs again
+  after the gear, in `.buddy spec`, `.buddy kit` and the class re-dress, and the
+  files compile. After the next compile, `.buddy spec` on those four finishes
+  it.
+- **"Two of Legionnaire's Band":** that's the fallback you approved, the same
+  ring at two levels when no other ring fits. The checker now only flags the
+  very same item worn on both fingers.
+
+Montahmu also reported "could not put on its ammo pouch". I think his one bag
+slot is taken by a regular bag, leaving no slot for the pouch.
+
+--------------------------------------------------------------------------------
+
+### User Request 37
+
+can we make a server patch to make it so that if it's just coins on a body,
+anybody can loot it?
+
+
+
+<pasted_content id="12ab">
+>   Eversong: it's the other surprise. Its cloth and leather merchant,
+>   Vara, sells the Woven cloth set and the Battered Leather set, and
+>   its weaponsmiths sell weapons, but all of it requires level 5. So at
+>   level 1 Eversong's vendors offer nothing to any class except a
+>   ranged weapon for warriors and hunters. Should Eversong's vendors
+>   also sell the level-1 sets (Thin Cloth, and its leather and weapon
+>   equivalents), or should a buddy made there wear the starting outfit
+>   until level 5? The question is in 617a4a.
+</pasted_content id="12ab">
+
+
+how did glowsticks find their gear if they didn't buy it from a vendor? Use your
+head. Find the right vendors.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 37
+
+> Glowsticks bought her gear somewhere. Looking up which vendors sell each piece
+> she wears.
+
+> The rule is in `Player::isAllowedToLoot`. Checking how the loot records its
+> coins and remaining items, and whether opening the body checks the same
+> function.
+
+> Both anchors are unique. The second insertion goes just after the permission
+> block ends, where the loot and permission values are still in scope. Writing
+> patch B062.
+
+> Both patched files compile. Writing the short issue for it, registering the
+> patch, and correcting 617a4a now that Sunstrider Isle's level-1 vendors are
+> found.
+
+You're right: Glowsticks bought her gear on Sunstrider Isle, and the coin-loot
+patch is written.
+
+**The vendors:** my generator searched each zone's largest piece of map, and
+Sunstrider Isle is an area of its own, so its vendors fell outside Eversong
+Woods' piece. The ones she used:
+- **Jainthess Thelryn** (15291), Cloth & Leather Merchant: the whole Sun Cured
+  set, usable at level 1;
+- **Raelis Dawnstar** (15289), Weaponsmith: the Mana Gathering Staff, usable at
+  level 1.
+
+The Eversong vendors I'd found sell gear for level 5 and up, and are for later.
+Her Daylight Cloak and Primitive Mantle aren't sold by any vendor, so they're
+probably quest rewards.
+
+**The report** (`docs/reports/valley-vendor-gear.md`) now searches each valley's
+own area, so its lists are just the valley's vendors, four or five each. For
+example:
+
+| Valley | Vendors |
+|---|---|
+| Northshire | Dermot Johns, Godric Rothgar, Janos Hammerknuckle |
+| Sunstrider Isle | Jainthess Thelryn, Raelis Dawnstar, Faraden Thelryn |
+| Camp Narache | Varia Hardhide, Bronk Steelrage, Marjak Keenblade |
+
+Camp Narache really is Varia's, so E074 fixes the right vendor. I've removed my
+Eversong question from 617a4a.
+
+**Coins on a body (patch B062, basic, issue 155z17):** a body with only coins
+left, either because its items were taken or because it never had any, can be
+looted by anyone. It sparkles for them and the loot window opens. A body with an
+item still on it keeps the usual rule: the killer, or the killer's group. Checks
+so far:
+- the patch applies to both server files, a second apply changes nothing, and
+  removing it restores both exactly;
+- both patched files compile under the build's own settings;
+- the patch tests pass.
+
+It takes effect with your next compile. One question: when a group's member
+loots coins, they're shared among the group members nearby. A passer-by looting
+a group's coin-only body would take the coins alone. Is that right, or should
+the group still get its share?
+
+--------------------------------------------------------------------------------
+
+*[background task] Monitor event: "buddies brought up to spec / re-dressed at
+login, and crashes"*
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 37 (continued)
+
+I've restarted the watch on buddy logins for another 30 minutes. The last half
+hour had five events, all from Felicity's buddies being brought up to spec as
+she logged in. Montahmu's was the only one with a problem: his ammo pouch
+wouldn't go on. There were no crashes.
+
+--------------------------------------------------------------------------------
+
+*[background task] Monitor event: "buddies brought up to spec / re-dressed at
+login, and crashes"*
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 37 (continued)
+
+The second 30-minute watch ended quietly: no buddy logged in, and there were no
+crashes. I won't restart it, since you seem to be away. When you're back, the
+next step is a compile. That brings in the coin looting, the weapon skills
+raised after a kit, the level-1 outfit for remade buddies, and the cache
+fingerprint. After it, I'd run `.buddy spec` on the four of Felicity's buddies
+with a weapon skill at 1.
+
+--------------------------------------------------------------------------------
+
+### User Request 38
+
+<pasted_content id="12ab">
+>   It takes effect with your next compile. One question: when a group's
+>   member loots coins, they're shared among the group members nearby.
+>   A passer-by looting a group's coin-only body would take the coins
+>   alone. Is that right, or should the group still get its share?
+</pasted_content id="12ab">
+
+
+no it's just for the group. Also, make sure it works correctly with AoE loot.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 38
+
+> Understood: the coins stay the group's. A coin-only body becomes lootable by
+> any member of the group that killed it, whatever the loot rule or whose turn
+> it is, and the coins are shared among the group as usual. A passer-by gets
+> nothing. Checking how the area loot module (mod-aoe-loot) decides which bodies
+> to collect.
+
+> Both files compile and the patch round-trips. The excerpt printed blank
+> because of my column cut, so checking where the first insertion landed.
+
+The coins now stay the group's, and area loot follows the same rule. Patch B062,
+for basic, takes effect with your next compile.
+
+**The rule now:**
+- A body with only coins left can be looted by any member of the group that
+  killed it, whatever the loot rule or whose turn it is. That covers round robin
+  and master looter.
+- The coins are split among the group, as usual.
+- Nobody outside the group can take them.
+- A body killed by someone with no group stays that player's.
+- A body with an item still on it keeps the usual rules.
+
+**Area loot (mod-aoe-loot):** it picks up nearby bodies only if the player is
+allowed to loot them, using the same check this patch changes. It then adds
+their coins to the body you clicked and opens that one. So a group member sweeps
+up the group's coin-only bodies along with the rest, and a passer-by's sweep
+skips them.
+
+**Checked:**
+- both patched files compile, with the build's own settings;
+- the first change sits right after the check that the player is in the body's
+  group;
+- a second apply changes nothing, and removing the patch restores both files
+  exactly;
+- the patch tests pass.
+
+I haven't seen it work in game yet. The file and issue are renamed to match:
+`patches/B062-coins-alone-are-the-groups.sh` and
+`issues/155z17-coins-alone-are-the-groups.md`.
+
+--------------------------------------------------------------------------------
+
+### User Request 39
+
+/compact
+
+--------------------------------------------------------------------------------
+
+### Session Recap (written by the harness, not by either speaker)
+
+This session is being continued from a previous conversation that ran out of
+context. The summary below covers the earlier portion of the conversation.
+
+Summary:
+1. Primary Request and Intent:
+   The owner, gabrilend (she), plays Everland Ghostsong. It is the "basic"
+   profile: AzerothCore 3.3.5a with buddy-bots (mod-buddies, patch B036).
+   - **Session requests, in order:**
+     - quick tests start MySQL;
+     - test results cached with git commits, and tests run in the background at each commit;
+     - end-to-end datapath tests;
+     - why the worldserver didn't start MySQL;
+     - fix the server crashes from the backtraces;
+     - mirror compile output to a log for LLM watching;
+     - fix the buddies' gear (rings, trinkets, gems), with `.buddy kit` taking a target;
+     - class changes (Lariadel → priest, Welen → Assassination rogue, Lorneas → Arcane mage), with the class-change script fixing gear and skills as a matter of course;
+     - talent plans: Matis 2/3 Holy and 1/3 Retribution; Zearea 1/3 in every tree;
+     - fix Feldowinn's skills: weapon skills and defence; enchanting and skinning at 300;
+     - pathfinding: measure, fix, and report ideas;
+     - the compile keeps the server running unless --bake;
+     - disable stun protection;
+     - `.buddies summon`;
+     - a gear spec, and validate every buddy to it;
+     - DK kits, and Death Gate memory;
+     - racial-quest auto-completion;
+     - guild leaders deletable;
+     - bags for everyone and a teleport to The Bulwark;
+     - valley vendor gear for buddies, with a per-class report;
+     - Mulgore's cloth vendor (Varia renamed);
+     - the client cache update;
+     - coin-only bodies lootable.
+   - **Coin looting, final ruling:** "no it's just for the group. Also, make
+     sure it works correctly with AoE loot."
+   - **Owner rules still in force** (CLAUDE.md):
+     - "let me run the compilation scripts. I want to see the output." The owner runs scripts/compile, update and install.
+     - Don't change the working directory. Use absolute paths.
+     - Issue files come before work.
+     - Commits happen only after an issue is complete, with commit-own-changes and transcripts riding along.
+     - Claim changes made by shell commands with claim-own-change.
+     - Credentials: ritz / menardi, MySQL port 3307, socket mysql/databases/mysql.sock.
+     - Explain in plain English, not code names.
+     - Hooks reject writes to paths built from shell variables, and rejected `cd`.
+
+2. Key Technical Concepts:
+   - **Patch system:**
+     - B patches change source and C patches change settings; E steps are install or SQL, with folder patches carrying their files.
+     - Headers carry id, profiles, priority and kind, plus carries:, quick-test: and remember:.
+     - After any edit, run `scripts/check-patch-headers --fix-lines` and `scripts/generate-patch-lists`.
+     - Marker-based apply and unapply; the tree round-trips to upstream exactly.
+   - **Buddy roster stages:** 0 with its owner, 1 waiting, 3 remake, 4
+     recording, 5 set aside (a death-knight owner's buddy, issue 718), 6
+     reclassed, 7 brought to spec. The login keeper brings in stages 0, 3, 6 and
+     7.
+   - **Dressing moments:** BuddyMakeCharacter, Remake, LevelJumped, Reclassed,
+     HandleKit, BuddyBringToSpec. Each calls UpdateSkillsToMaxSkillsForLevel,
+     and again after the gear.
+   - **Test memory:** git notes on refs/notes/tests; a post-commit background
+     test-commit; compile lock at tmp/shared-memory/test-runs.lock.
+   - **Compile ledger:** a timestamped run log, previous run kept, `==== stage:`
+     lines.
+   - **The keep-running compile:** compile → validate → promote, with
+     --then-serve, then `worldserver --after-compile`. That runs `script -qfec`
+     plus quiet_until_ready, which holds output back until "ready...".
+   - **Debug builds:** gdb is the crash catcher (debug-run.sh), which now passes
+     SIGINT and SIGTERM on to the server.
+   - **ALE Lua:** PLAYER_EVENT_ON_QUEST_ACCEPT is 63; `.reload ale` reloads
+     scripts.
+   - **C025:** the ClientCacheVersion fingerprint.
+   - **Syntax checking without a build:** compile_commands.json from
+     build-shadow, run with -fsyntax-only. Scratchpad scripts: syntax.sh,
+     syntax-*.sh, check-with-b046.sh (applies B046 to scratch headers),
+     syntax-core.py.
+
+3. Files and Code Sections (most relevant, recent last):
+   - **patches/B036-mod-buddies/mod-buddies/src/buddies_kit.cpp:**
+     - Enchant: when not in the world, writes the enchant fields directly.
+     - Level-1 start outfit from GetCharStartOutfitEntry, into empty slots only.
+     - RealWeapon and CarriesWeaponFor walk the backpack and bags.
+     - GiveGear gains a fillOnly parameter.
+     - BuddyBringToSpec: lessons, skills, fill-only kit, class tools, jewellery if a jewellery slot is empty, gems, skills again, save.
+     - `.buddy spec` command; HandleKit and HandleGems take `Optional<PlayerIdentifier>` (FromTarget); kit re-gems.
+     - PvP jewellery:
+       - faction flags;
+       - BattlegroundOf, from the vendor's subname;
+       - second pick: another name, another battleground, ≥ SECOND_PICK_FIT 0.75 × next best;
+       - destroys a duplicate unique ring first.
+   - **buddies_gems.cpp:** test and placeholder gems excluded.
+   - **buddies_stage.cpp:**
+     - `enum BuddyStage { …, STAGE_SET_ASIDE = 5, STAGE_RECLASSED = 6, STAGE_TO_SPEC = 7 }`;
+     - Reclassed();
+     - the login handler dispatches stages 3, 6 and 7;
+     - UpdateSkills added.
+   - **buddies_login.cpp:** `stage IN (0, 3, 6, 7)`.
+   - **buddies_create.cpp:** UpdateSkills after the gems.
+   - **buddies_town.cpp (travel):**
+     - the same-town rule restored, with no 80-yard rule;
+     - FAILS_BEFORE_UNSTUCK 3; ARRIVE_RADIUS 5, ARRIVE_SPACING 4, ARRIVE_CLAIM_MS 30000;
+     - the sArrive claims map with ArrivalPlace, a greedy shortest-pair reassignment;
+     - Unstick(reach).
+   - **buddies_orders.cpp:** field-initializer fix.
+   - **Patches:**
+     - B026: static_cast deletion.
+     - B059-ale-taxi-nodes-named.sh.
+     - B060-no-crowd-control-diminishing.sh.
+     - B061-guild-leaders-may-be-deleted.sh: replaces the line with `if (false && sGuildMgr->GetGuildByLeader(guid))`.
+     - B062-coins-alone-are-the-groups.sh: two insertions.
+       - PlayerStorage.cpp, before `    switch (thisGroup->GetLootMethod())`: `if (loot->gold && loot->unlootedCount == 0) return true;`
+       - Player.cpp, before `    // LOOT_INSIGNIA and LOOT_FISHINGHOLE unsupported by client`: `if (permission != ALL_PERMISSION && permission != OWNER_PERMISSION && loot && guid.IsCreatureOrVehicle() && loot->loot_type == LOOT_CORPSE && loot->gold && loot->unlootedCount == 0 && GetGroup()) if (Creature* body = GetMap()->GetCreature(guid); body && body->GetLootRecipientGroup() == GetGroup()) permission = ALL_PERMISSION;`
+       - Header: B062, basic, priority 720.
+     - E074-basic-cloth-in-mulgore/: E074.sh (kind sql, priority 3040, carries) with 43-cloth-in-mulgore.apply.sql and .revert.sql. Apply adds items 2121, 3599, 2120, 2117, 3600 and 2119 to vendor 3074 and sets its subname to 'Cloth & Leather Merchant'.
+     - config/patches/C025-client-cache-version.sh: the fingerprint also takes the .sql files in folders of the profile's patches. planned is read before the pipeline.
+   - **Scripts:**
+     - compile: MySQL start, test memory, lock, --retest, --bake, stamp_lines, previous logs, stage echo lines, then exec validate with --then-serve.
+     - validate, promote: --then-serve. worldserver: --after-compile and quiet_until_ready.
+     - start-mysql, test-mysql-start, debug-run.sh.
+     - change-character-class: stage 6, --plan/--role, lessons step.
+     - New: run-tests-in-parallel (from issue 199's earlier work), test-memory, test-commit, install-commit-test-hook, test-test-memory, test-datapath-ambush, test-datapath-installed-lua, compile-ledger, test-compile-ledger, test-buddy-made-out-of-world, test-buddy-pvp-jewellery-sides, measure-buddy-spread, test-measure-buddy-spread, check-buddies, generate-valley-vendor-report (MAX_LEVEL 1, valley areas 9/132/188/3526/363/220/154/3431), test-racial-quests.
+     - Changed: test-buddy-gm (dungeon cases), test-dk-skip-story (fixed for a synchronous mark), watch-compile, bake-buddy-towns (output to a log).
+   - **Lua:**
+     - src/lua-basic/buddy-gm.lua: `.buddies summon`; group-only into instances.
+     - src/lua-basic/buddy-spread-recorder.lua: Debug builds and GM owners only.
+     - src/lua-basic/racial-quests.lua.
+     - src/lua-basic/data/gearsets/travel-bags.lua; the E052 SQL regenerated.
+     - scripts/lib/patch-header.lua: the `remember` field.
+   - **Docs:** buddy-gear-spec.md, pathfinding-improvements.md,
+     reports/valley-vendor-gear.md, profiles/advanced-ability-versions.md,
+     balance-updates.md entries, table-of-contents.md, gm-commands and generated
+     help SQL.
+   - **Issues:**
+     - new: 1100 (a, b, c), 617c5, 617e13, 617e5b, 617j4, 617a4a, 718h, 718i, 168a, 1101, 1101a, 155z14, 155z16, 155z17-coins-alone-are-the-groups, 189h;
+     - moved: 155z15 to will-not-implement;
+     - updated: 197, 308, 621, 155l, 155d (completed), 617c, 617e, 617j.
+   - **backups/one-time/:**
+     - bags-and-bulwark (applied);
+     - feldowinn-skills (applied);
+     - feldowinn-buddies-weapon-skills (applied);
+     - all-buddies-to-spec (the 22 buddies were set to stage 7 directly instead).
+
+4. Errors and fixes:
+   - **Stage 5 collision:** the reclass stage used 5, which already meant
+     set-aside. Gabrubre's DKs were logged in and redressed. Moved the reclass
+     stage to 6, and fixed the database rows.
+   - **Read sets too wide** in test-memory. Fixed by ignoring comments,
+     requiring a slash or dot in a name, trying tails after each `/`, resolving
+     paths relative to the file, and following only exact names.
+   - **Worktree socket path over 107 characters.** The copy is now named
+     tmp/tmp/ct-<short>, and the runtime folders are linked in.
+   - **check-buddies false findings:** the main-hand weapon rule now accepts a
+     weapon in the bags; armour slots are checked against the gearset tier; "two
+     of one ring" now flags only the same item.
+   - **The valley report** at first searched the zone box (missing Sunstrider
+     Isle), let capitals in, counted tools and the Chapman event vendor, and
+     used level 10. The owner said: "Use your head. Find the right vendors".
+     Fixed to search each valley's own area, at level 1.
+   - **Syntax-check flags** for the PCH and for B046's SetSpecTab: fixed with a
+     scratch-patched header placed first on the include path.
+   - **Misc:** a pipe `return` problem in C025; `grep -c` under `set -e` in
+     bake-buddy-towns; a wrong test expectation (run:10); issue number 160
+     already taken, so renamed to 1101.
+   - **Owner corrections:**
+     - the 80-yard town rule was "not intended";
+     - an occupied arc place is reassigned, not skipped;
+     - Legionnaire's Band on a priest;
+     - the bags rule: buddies find their own;
+     - old pieces are left behind in the old valley;
+     - vendor weapons too;
+     - coins are for the group only.
+
+5. Problem Solving:
+   - Crashes fixed: the enchant null owner, the taxinode null name, and the gdb
+     Ctrl-C kill.
+   - Pathfinding measured. Matis and Lariadel stuck idle, followers stacked on
+     the owner; fixes are compiled in.
+   - Unresolved: Ctrl-C still doesn't stop the server (owner: "ctrl+c didn't
+     work but it should").
+
+6. All user messages (verbatim key ones, in order):
+   - "the quick tests before the compilation should start the mysql server if it
+     isn't running. Also, we should cache test results with the git commit, and
+     later on-ings. That way we don't have to run it again if that part didn't
+     change. Be sure that we have some tests that follow data through the entire
+     datapath. As best we can without user intervention."
+   - Answers: "run the tests as part of the git commit, any of them that touch
+     anything created or modified by the module in question. Run it in the
+     background as a matter of course, when committing." and "we can simulate
+     database answers. The database is fine, so long as we don't add new types
+     of records. And those must be thoroughly tested at their git commit time,
+     which we should do as a matter of course."
+   - "also for some reason when I start the worldserver, it doesn't start
+     mysql?..."
+   - A crash log was pasted; "server crash"; "uh-oh debug mode crashed!"; a
+     compile failure was pasted (test-dk-skip-story).
+   - "can we change the compile script to, whenever it prints to the terminal,
+     also print to a specific log file ... ALL of the warnings. It must be
+     airtight."
+   - "let each implementation usecase pick for itself."; "okay it's running. can
+     you watch the debug logs?"
+   - "hey, Feldowinn's companions have bad equipment..."; "Lariadel is fine, but
+     we need to change her class to a priest."; "I'll stop it myself. Oh also,
+     they are missing gems."; "holy, half discipline"
+   - ".buddy kit doesn't fix the pvp rings :( also it doesn't accept a target by
+     target. .learn all my trainer just taught my character... also, the
+     trinkets... one from WSG, and one from arathi... rings ... just have the 48
+     version... also there should be a follow command that applies to the party
+     and a shoo command that spreads them out."
+   - Paladin judgements, blessings and totems; pathfinding ("mega bugged",
+     spread through the sub-zone, gathering, not distracted); "let's just create
+     a plan for that now, and focus on the recompilation for the crashing
+     fixes."; "three paladins in my group... two auras".
+   - "we should disable the stunlock protection rules..."; "the server is down
+     now."
+   - The GM summon command request; "we need to fix her gear and skills. This
+     should be part of the class-change script as a matter of course."; "we can
+     disable the stun-lock protection but I just wanted to say that it's an
+     option and we've built it."; "it's running tests before the compile now..."
+   - "this update output... we don't need to know. It's just visual snow."; the
+     mysql password warning: "either silence this warning, or use the more
+     secure option, whichever feels more idiomatic." (Plan proposed; not yet
+     done.)
+   - DoT/HoT idea; Matis's bracers; one-time patches; "okay but how do I cast it
+     on lariadel"; follow/shoo in all chat contexts; "server's down."; "after."
+   - "did the bot have a full inventory?..."; mark DoT/HoT will-not-implement;
+     one-time patches are "part of the patching process..."; "/say ... Only to
+     your buddy-bot clan".
+   - "compile failed btw"; "can you give them all 4 12 slot backs and equip them
+     please? Also, can you teleport all of us to The Bulwark?"; "feldowinn
+     should also receive bags."
+   - Buddies find bags themselves (spawn with the owner's slot count); loot room
+     and celebrating upgrades; "server recompiled. check logs."; the
+     keep-running server request with the answers ("every", "same as it is
+     now"); "yes" to pass when full.
+   - Walking-through-The-Bulwark observations; "can you fix Feldowinn's skills
+     for me? And her buddy-bots?"; "go ahead" on pathfinding; Legionnaire's
+     Band; Ctrl-C.
+   - "can we class change welen to be a rogue and lorneas to be a mage?"; skills
+     are weapon skills and defence, professions are enchanting and skinning at
+     300; Outland mats; disenchant to ilvl 120; TK and Sunwell recipe drops;
+     "there's no compile running right now."; the recorder touch; "reloading ale
+     now"; "can we do a fully arcane mage and a fully assassination rogue";
+     "server has been stopped."; "okay the server is down. I had to do the
+     in-game chat command."
+   - Buddy tank and heal counts and poisons for Welen; "ctrl+c didn't work but
+     it should."; pathfinding "go ahead. Please feel free to create a report..."
+   - Matis plan 2/3 Holy; Zearea 1/3 each; "but that's not intended behavior, is
+     it?"; arc reassignment; feedback on the report items (standing still is
+     fine; trail arc; "8 patches per player! No way."; fight through foes in the
+     way; mountain face; debug-mode and GM-only recording; no quirks).
+   - "Felicity's clan... fishing pole weapons. Can you validate EVERY
+     buddy-bot... WRITE a spec..."; stealth question; regem; "Gabrubre... too
+     many buddy-bots?"; DK Acherus green kits; Death Gate memory design; "server
+     recompiled and running."; DBM support; Death Gate answers (walk to the
+     portal within 15 yd; 1-3 s each; a permanent gate in Acherus; "explain?").
+   - "the death knight doesn't cast death gate in Acherus anymore..."; (a)
+     chosen; Chromie ability versions (Seal of Command); the advanced profile
+     (TBC style, level 40 talents, Northrend); "okay. I'm logging in. Wish me
+     luck."; guild masters can't be deleted.
+   - Xenna's buddy naked and dancing; move Gabrubre below Acherus; all races and
+     classes on advanced; talent math (start at 40, 3 per level).
+   - "no actually it's 51 (basic's total) + 10 + 5... maybe for those we do +1
+     talent points at levels 1-10?"; "let's do 1 - 60"; the class-switch NPC at
+     levels 1-2; "the old mana tap system".
+   - Valley vendor gear on a Sargobras switch, Glowsticks' set; "yes northrend,
+     no outland, on advanced."; "this one" (talent option b).
+   - "the old pieces should be left behind"; "I will need a report on these for
+     each class."; "specify the vendors manually"; "it's just their starting
+     gear"; "vendor weapons."
+   - "we should only use the items usable at level 1 of course."; Mulgore: "we
+     will need to add it. Which vendor is it? I'm surprised."; "let's change her
+     to say "cloth and leather merchant" instead."
+   - "except eversong woods? curious..."; "no, we possess capability to request
+     a cache update. use that."
+   - "can we make a server patch to make it so that if it's just coins on a
+     body, anybody can loot it?"; "how did glowsticks find their gear if they
+     didn't buy it from a vendor? Use your head. Find the right vendors."
+   - "no it's just for the group. Also, make sure it works correctly with AoE
+     loot."
+
+7. Pending Tasks:
+   - **After the owner's next compile:**
+     - `.buddy spec` on Felicity's four buddies with a weapon skill at 1 (Drerjokin, Montahmu, Eliustan, Usanda);
+     - `.buddy kit Badam`;
+     - verify B059, B060, B061, B062, E074 and C025 in game;
+     - run check-buddies.
+   - **Open questions for the owner:**
+     - the per-valley vendor list (confirm the candidates);
+     - DBM licence and scope;
+     - 718h and 718i details;
+     - 1101 Northrend levels;
+     - 1101a NPC location;
+     - 168a scope;
+     - 617c5, 617e13 and 617j4 questions;
+     - 1100b (database fingerprint, whole-database test time limit, .gitignore for mysql/databases);
+     - the mountain climbing style;
+     - Ctrl-C (what they see).
+   - **Not done:**
+     - the mysql password option file (62 call sites, a rewrite tool), proposed;
+     - follow and shoo orders;
+     - the pathfinding ideas;
+     - the Montahmu ammo pouch;
+     - the beta and release broken installed Lua links.
+   - **Commits:** nothing is committed. Issue 199's left-behind work needs
+     adopting (the owner was asked).
+
+8. Current Work:
+   The last task was the coin-loot patch, changed to the owner's ruling: "no
+   it's just for the group. Also, make sure it works correctly with AoE loot."
+   - Rewrote B062 and renamed it patches/B062-coins-alone-are-the-groups.sh
+     (markers and function names renamed).
+   - The isAllowedToLoot insertion now comes after the recipient-group check,
+     before the loot-method switch. The SendLoot insertion requires the same
+     group.
+   - Checked that mod-aoe-loot filters nearby corpses with
+     `player->isAllowedToLoot(c)` and opens the main corpse with SendLoot, so it
+     follows the rule.
+   - On scratch copies: applies, idempotent, round-trips; both Player.cpp and
+     PlayerStorage.cpp pass syntax-only.
+   - Renamed issue 155z17 to issues/155z17-coins-alone-are-the-groups.md, with
+     Current and Intended Behaviour rewritten and the question answered.
+   - Header fixed, patch lists regenerated; test-patch-headers, test-patch-plan
+     and test-patch-lists-current pass; files claimed. A grep for stale
+     "coins-alone-are-anybodys" references returned nothing.
+   - The final reply to the owner has not yet been given.
+
+9. Optional Next Step:
+   Report to the owner on the coin-loot change:
+   - a coin-only body is now lootable by any member of the group it fell to,
+     whatever the loot rule or whose turn it is, and the coins are shared as
+     usual;
+   - nobody outside the group can take them;
+   - area loot follows the same rule, because it sweeps only the bodies
+     `isAllowedToLoot` allows and opens them through `SendLoot`;
+   - it is checked on copies and compile-clean, and takes effect at the next
+     compile, as patch B062 (renamed B062-coins-alone-are-the-groups).
+
+If you need specific details from before compaction (like exact code snippets,
+error messages, or content you generated), read the full transcript at:
+/home/ritz/.claude/projects/-mnt-kaun-wow-chat-2026/03547e04-6a50-4e0d-97ee-ae0ce7474312.jsonl
+Continue the conversation from where it left off without asking the user any
+further questions. Resume directly — do not acknowledge the summary, do not
+recap what was happening, do not preface with "I'll continue" or similar. Pick
+up the last task as if the break never happened.
+
+--------------------------------------------------------------------------------
+
+`/compact` - Compacted (ctrl+o to see full summary)
+
+--------------------------------------------------------------------------------
+
+### User Request 40
+
+okay let's evaluate our task list.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 40
+
+Five groups of tasks are still open. Committing is first, because none of this
+session's work is saved in git yet.
+
+**1. Commit what's finished.** Every change from this session sits uncommitted:
+the crash fixes, the buddy gear, the class changes, coin looting, the Mulgore
+vendor, test memory, the compile log. I'd commit it in separate batches, one per
+piece of work. Before I can, you need to decide about the earlier session's
+left-behind work on running tests in parallel: should I take it over and commit
+it with mine, or leave it?
+
+**2. Check in game after your next compile.** This is waiting on you to compile:
+- Bring Felicity's four buddies whose weapon skill is stuck at 1 up to spec:
+  Drerjokin, Montahmu, Eliustan and Usanda.
+- Re-kit Badam.
+- Confirm the new server changes work:
+  - named flight points;
+  - no stun protection;
+  - guild leaders can be deleted;
+  - the group's coin-only bodies can be looted;
+  - Mulgore's cloth vendor;
+  - the client cache refreshes.
+- Run the buddy gear checker over everyone.
+
+**3. Questions only you can answer.** Each one holds its work open:
+- The starting-valley vendors: are the candidates I found the right vendors for
+  each valley?
+- Deadly Boss Mods: is its licence acceptable, and how much of it do we want?
+- Two death knight follow-ups need more detail from you.
+- The advanced profile: which levels should Northrend cover, and where should
+  the class-switch NPC stand?
+- Old ability versions at Chromie: advanced only, or basic too? For a talent
+  that changed shape, is there one choice per talent or one per rank?
+- Three buddy behaviour questions, about login, roaming and loot.
+- Test memory: should we fingerprint the database? Is there a time limit on
+  whole-database tests? Should the database files be ignored by git?
+- How should buddies handle a mountain face: climb, path around, or something
+  else?
+- Ctrl-C: what do you see when it fails to stop the server?
+
+**4. Work I can do now:**
+- Silence the MySQL password warning with a credentials file. That means
+  rewriting 62 places that call MySQL, with a tool.
+- Party-wide follow and shoo orders.
+- The pathfinding ideas from the report.
+- An ammo pouch for Montahmu.
+- Fix the broken installed Lua links on the beta and release profiles.
+
+**5. Standing reminder:** neither disk checks its files for silent corruption
+(bit rot). It stays on this list until you start on it.
+
+The Ctrl-C question matters most for debugging. When you press it, does the
+server print anything at all, or does the terminal just sit there?
+
+--------------------------------------------------------------------------------
+
+### User Request 41
+
+oh um yes we should make it a matter of course for this project that if we
+create a patch file and it successfully compiles, that we can commit that work.
+
+>   - Deadly Boss Mods: is its licence acceptable, and how much of it do
+    we want?
+
+I don't know it's license. It's an addon.
+
+>   - The advanced profile: which levels should Northrend cover, and
+>     where should the class-switch NPC stand?
+
+the same as basic's Outland.
+
+
+
+<pasted_content id="12ab">
+>   - Old ability versions at Chromie: advanced only, or basic too? For
+>     a talent that changed shape, is there one choice per talent or one
+    per rank?
+</pasted_content id="12ab">
+
+
+I think this system is replaced by the Advanced profile. For now at least.
+
+
+
+<pasted_content id="12ab">
+>   - Test memory: should we fingerprint the database? Is there a time
+>     limit on whole-database tests? Should the database files be
+>     ignored by git?
+</pasted_content id="12ab">
+
+
+sounds like a lot of effort, too much for my hardware.
+
+>   - How should buddies handle a mountain face: climb, path around, or
+>     something else?
+
+why are they climbing up mountains? What does their pathfinding behavior look
+like? Let's focus on one activity at a time.
+
+
+
+<pasted_content id="12ab">
+>   4. Work I can do now:
+>   - Silence the MySQL password warning with a credentials file. That
+>     means rewriting 62 places that call MySQL, with a tool.
+</pasted_content id="12ab">
+
+
+great, let's do it.
+
+
+
+<pasted_content id="12ab">
+>   - Party-wide follow and shoo orders.
+>   - The pathfinding ideas from the report.
+>   - An ammo pouch for Montahmu.
+>   - Fix the broken installed Lua links on the beta and release
+    profiles.
+</pasted_content id="12ab">
+
+
+these all look fine. However, make sure we're not just correcting in place, but
+that we're updating the tools that created the error. Also, let's only do the
+pathfinding ideas that I commented on earlier - can you give me a report? Feel
+free to consult the LLM-transcripts for more information.
+
+I want to focus on pathfinding today. Let's really nail down the questing
+mechanic! Ideally, we'd be able to work on dungeons and such as well. No PvP on
+the menu for today.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 41
+
+> Reading back through the transcript for your comments on the pathfinding
+> report.
+
+> Still reading the roaming code, to explain why buddies end up climbing.
+
+> Writing your answers into their issues now. The pathfinding report comes next.
+
+> Now the commit rule in the project instructions, and the boss-mods answer.
+
+> Tidying the report's last lines and listing it in the table of contents.
+
+I've written the pathfinding report and recorded your answers. The report is
+`docs/pathfinding-questing-and-dungeons.md`; here is the short version.
+
+**Why buddies climb mountains.** While questing, a buddy roams your sub-zone
+(the small place name on the minimap).
+- Each next waypoint lies in a fresh direction from the sub-zone's middle, a
+  varying share of the way out to the "edge" in that direction.
+- The edge is found by walking outward a yard at a time until the place name
+  changes, the ground ends, or there's a sudden step like a crate or a wall.
+- A hillside rises by the same amount every yard, so it never counts as a step.
+  The edge search walks right up it, and many sub-zones end along a ridge.
+- A waypoint is refused only on ground steeper than 45 degrees, which is steeper
+  than most hills.
+- Nothing compares a waypoint's height with yours.
+
+There are two ways to fix it:
+- **A steepness limit:** the outward walk stops where the ground climbs faster
+  than a walking grade, so a hill counts as an edge, like a wall.
+- **A height band:** no waypoint more than a few yards above or below the
+  sub-zone's floor.
+
+**In dungeons today:** each buddy follows a yard and a half behind you, each on
+its own straight line. They all charge a monster once you come within 1.1 times
+its aggro range. They bunch up in corridors and cut the corners you walked
+round.
+
+**The five ideas you commented on, in build order:**
+1. **The referee:** one table saying which single behaviour moves each buddy at
+   each moment. It has rows for resting, chatting and sitting idle, and a
+   dungeon row too. A buddy standing still with no row naming why becomes a line
+   in the log.
+2. **Errands:** a foe standing on the way gets fought, a foe off the way gets
+   ignored, and a fight it would lose gets walked round outside its aggro range.
+   This one is for open country, not dungeons.
+3. **Your trail:** buddies walk to places on an arc that turns with the path you
+   took. Where that place is blocked, they move toward the middle of the room.
+   In dungeons this replaces the straight-line follow.
+4. **Single file on narrow ways:** bridges, ramps and doorways. Most of a
+   dungeon is corridor, so this matters most there. With the hill fix, buddies
+   won't climb by choice. When you climb, they take your trail single file.
+5. **A live watcher:** it prints a line the moment a buddy is stuck or two stack
+   on one spot. Debug builds and game-master characters only.
+
+**Your answers, recorded:**
+- **Commit rule:** written into the project instructions. Work can be committed
+  once your compile has built it cleanly; a check on scratch copies alone
+  doesn't count.
+- **Northrend:** on the advanced profile it takes the place Outland has on
+  basic, at the levels basic gives Outland. Those levels will be read from
+  basic's own steps, not copied.
+- **Old ability versions at Chromie:** set aside, since the advanced profile
+  replaces it.
+- **Test memory:** the database fingerprint, the time limit and the git-ignore
+  changes are all declined.
+- **Boss mods:** I suggest not reading the addon at all. Instead we'd build the
+  warning table from the server's own boss scripts, the code that makes each
+  boss cast what it casts and when, which is under the server's own licence.
+  That needs your yes.
+
+**One thing to watch at commit time:** I marked whole files as mine in two
+shared files that another session had also changed: the project instructions and
+the table of contents. Before committing them I'll check the preview, so none of
+that session's lines go in under my name.
+
+**Next:** the MySQL credentials file, then the follow and shoo orders,
+Montahmu's ammo pouch and the broken Lua links. Each one gets fixed in the tool
+that caused it, not just patched in place. Or I can start on the referee first
+if you'd rather stay on pathfinding.
+
+**Your call on three things:**
+1. **Hills:** the steepness limit, the height band, or both?
+2. **A new idea:** should roaming be drawn toward your quest objectives? The
+   game already knows where the quest map markers are, so the middle buddies
+   roam around could move from the sub-zone's centre to your quests' marked
+   areas.
+3. **Dungeon rooms:** should buddies stand on the arc in front of you, as when
+   travelling, or behind you, as they do now?
+
+--------------------------------------------------------------------------------
+
+### User Request 42
+
+oh and for the vanilla profile, can we do the level and equipment scaling work
+that we've been doing with basic, but for vanilla stuff? I'd like it if the
+leveling process from 20-40 was similar to Outland on basic. I'll explain:
+
+how about we take the 20 levels above (41-60) and scale them similarly to how we
+scale Outland? The goal being that a group of level 40s can take down Ragnaros.
+But, let's just create issue files for that process.
+
+
+
+<pasted_content id="12ab">
+>   - The edge is found by walking outward a yard at a time until the
+>     place name changes, the ground ends, or there's a sudden step like
+>     a crate or a wall.
+</pasted_content id="12ab">
+
+
+this should be baked
+
+>   - A waypoint is refused only on ground steeper than 45 degrees,
+>     which is steeper than most hills.
+
+what's the limit for a player walking up a slope? That should be the limit.
+
+>   - Nothing compares a waypoint's height with yours.
+
+it's about the buddy-bot, not the player.
+
+
+
+<pasted_content id="12ab">
+>   1. The referee: one table saying which single behaviour moves each
+>      buddy at each moment. It has rows for resting, chatting and
+>      sitting idle, and a dungeon row too. A buddy standing still with
+>      no row naming why becomes a line in the log.
+</pasted_content id="12ab">
+
+
+so, it's just... a task list or something? An active movement pattern? Like a
+state machine? Except, external for some reason?
+
+
+
+<pasted_content id="12ab">
+>   3. Your trail: buddies walk to places on an arc that turns with the
+>      path you took. Where that place is blocked, they move toward the
+>      middle of the room. In dungeons this replaces the straight-line
+     follow.
+</pasted_content id="12ab">
+
+
+when following our trail, we should always have them walk to within 1 yard of
+the trail and then follow it in parallel. If there are other buddy-bots in
+range, (this is how they should follow the player, by the way) if there's other
+buddy-bots in range, they'll move to the opposite side (same distance from the
+line) remember the waypoints placed in a circle around the player - they'll move
+to the opposite side, and if there's 3 then one will walk directly on your line,
+if there are 4 then they will position themselves halfway between the line and 1
+yard away - we're essentially creating a semi-circle 1-2 yards behind the
+player, "behind" meaning the direction the player came from. For following,
+they'll only continue following the player when they move farther than 10 yards
+away. Otherwise they have a 10% chance to mingle-wander, otherwise they just
+stand and turn toward you like Sargobras.
+
+
+
+<pasted_content id="12ab">
+>   - Boss mods: I suggest not reading the addon at all. Instead we'd
+>     build the warning table from the server's own boss scripts, the
+>     code that makes each boss cast what it casts and when, which is
+>     under the server's own licence. That needs your yes.
+</pasted_content id="12ab">
+
+
+okay that's our fallback. You don't understand, DBM is the most comprehensive
+tool for this topic imaginable. I don't know what their license is or even if
+they're open source, but they are simply the best. Perfect coverage of all
+boss-related mechanics. We could use their addon as signals for *so* many
+complex behaviors.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 42
+
+> Checking the boss-mods licence at its source.
+
+> Writing the vanilla issue files now, modelled on basic's Outland ones.
+
+> Folding your following design into the report's questions, then the boss-mods
+> licence.
+
+I've made the vanilla issue files, recorded your pathfinding answers, and found
+the boss-mods licence.
+
+## Vanilla: levels 41-60 as the endgame
+There's one parent issue and five sub-issues, built on the same plan basic uses
+for Outland:
+
+| Sub-issue | What it does |
+|---|---|
+| The open world | Creatures above level 40 come down onto a level ladder |
+| The dungeons | Zul'Farrak to Scholomance open at 40, each one a step above the last |
+| The gear | Everything needing 41-60 needs 40, with its stats scaled down by item level so each item keeps its place in the range |
+| The raids | Molten Core to Ahn'Qiraj open at 40, their attunements lowered to match |
+| The balancing | Every boss measured against a geared level-40 tank, using basic's targets |
+
+The plan is to give basic's own tools a level range as a setting, so vanilla's
+numbers come from the same code rather than a copy.
+
+The first decision is how far above 40 the creatures stand. On basic, the top
+Outland bosses are 18 levels over the cap of 60, and the level-gap limits and
+damage multipliers make that fair. Stock Ragnaros is 23 over (level 63). My
+proposal is to squeeze stock levels 41-63 onto 41-58 in a straight line, so
+Ragnaros stands 18 over the cap, just as on basic. Should we squeeze that
+little, or harder (say onto 41-50)?
+
+The parent issue holds three more questions: whether quests above 40 stay,
+whether the raids keep their sizes, and where Onyxia and Naxxramas go.
+
+## Pathfinding
+- **The edge search** is now planned to be worked out ahead of time for each
+  sub-zone and kept in a file, the way town circles are.
+- **The slope limit is 50 degrees.** The server's navigation mesh treats ground
+  up to 60 degrees as walkable but marks 50-60 degrees as "steep". The mesh
+  builder calls 50 degrees the player's slope angle, and bots are already kept
+  off steep ground. The plan reads that steep mark from the mesh instead of
+  using our own 45-degree number.
+- **Heights are judged from the buddy:** a waypoint is good if the buddy can
+  walk there from where it stands. A buddy can still climb a hill a person could
+  walk up.
+- **Your following design is written down** in the report and the follow-order
+  issue:
+  - each buddy walks within a yard of your trail and goes along it;
+  - they share the sides on a half circle 1-2 yards behind you;
+  - they only start following again once you're more than 10 yards away;
+  - until then, each one either mingles (a 10% chance) or stands and turns to
+    face you, like Sargobras.
+
+  Did I draw the half circle the way you meant it?
+  ```
+          you
+      1    .    1      ← 1 yard to each side, 1 back
+       0.5 . 0.5       ← the 4-buddy places
+           0           ← on your trail, 2 back
+           .  (the way you came)
+  ```
+- **The referee:** yes, it's a state machine's state picker. It would sit
+  outside because today there's no single machine. The bot module many times a
+  second runs a ranked list of behaviours, and each one decides for itself
+  whether the buddy is its business. The stuck moments happen when every one of
+  them says no. There are two ways to build it:
+  - its own state picker, which is cleaner;
+  - the bot module's lowest-ranked behaviour, which only runs when nothing else
+    does and logs why. That is smaller, but it names the gap only after it
+    happens.
+
+## Deadly Boss Mods
+You're right, so it's now the source, with the server's own boss scripts as the
+fallback. The 3.3.5 version's main file carries the **Creative Commons
+Attribution-Noncommercial-Share Alike 3.0** licence. A tool can read its
+encounter files into our own warning table, on three conditions:
+- credit with a link to deadlybossmods.com;
+- no commercial use, ever;
+- the table's file shares that same licence.
+
+Its textures and sounds are licensed separately, and we don't need them. Are
+those three conditions acceptable for this project?
+
+The report is `docs/pathfinding-questing-and-dungeons.md`, and the vanilla
+issues start at `issues/148x-vanilla-41-to-60-as-the-endgame.md`.
+
+Sources:
+- [DBM-Warmane, DBM-Core.lua (3.3.5
+  version)](https://raw.githubusercontent.com/Zidras/DBM-Warmane/main/DBM-Core/DBM-Core.lua)
+- [Deadly Boss Mods on
+  CurseForge](https://www.curseforge.com/wow/addons/deadly-boss-mods)
+
+--------------------------------------------------------------------------------
+
+### User Request 43
+
+A*B+(1-A)*C is a mathematical bit of storage
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 43
+
+That formula is a selector. With A at 0 or 1 it picks: A = 1 gives B, A = 0
+gives C. It becomes storage when C is its own previous output:
+
+  out ← A·B + (1−A)·out
+
+- When A = 1, B is written in.
+- When A = 0, the old value is kept.
+
+That's a latch, a one-bit memory cell with a "write enable" line (A). If A is a
+fraction between 0 and 1, it becomes a running average instead: each step blends
+a share A of the new value into the old one, so the cell remembers with slow
+fading.
+
+It fits two of today's open problems:
+
+- **The referee:** its state ("who moves the buddy") could be exactly this cell.
+  A is "something new has claimed the buddy". B is the claimant, and out is the
+  current mover. When nothing claims, A stays 0 and the mover holds. A buddy
+  would never be moved by nobody, because the cell can't be empty once written.
+- **Following at rest:** your 10-yard rule is the same shape. A is "the owner is
+  more than 10 yards away", B is "follow", and the held value is "stand and face
+  the owner, or mingle".
+
+Here's the question it raises: a latch holds forever if A never fires. What
+should the A line be for the referee, so that a mover that has gone stale gets
+replaced, rather than held until something new happens? Would a timeout work, or
+should every behaviour have to keep re-claiming the buddy to stay the writer?
+
+I haven't written this down anywhere yet. If you'd like, I can add it to the
+referee's section of the pathfinding report as the shape of its state.
+
+--------------------------------------------------------------------------------
+
+### User Request 44
+
+implanted in-ear vibrations charged with gentle magnet on the skin controlled
+with a thought via implanted sensors outside the skull means first
+brain-computer interface is an ipod -> there are headphones that make noise not
+with audio waves, but with vibrations - I only sorta know how they work. But
+with a few, intentional thought command words, those with the greatest willpower
+become the most able to use their thought component.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 44
+
+Most of that device already exists in pieces. The open part is the thought
+control.
+
+**The vibration headphones are bone conduction.** A speaker is a coil of wire
+next to a magnet. Current through the coil pushes it against the magnet, which
+moves a paper cone, which moves air. A bone-conduction headphone drops the cone
+and air and presses the moving part against your cheekbone or the bone behind
+the ear. The vibration travels through the skull straight into the fluid of the
+cochlea, the spiral-shaped organ of the inner ear. That skips the eardrum and
+the tiny middle-ear bones entirely, so your ear canal stays open to the room.
+
+**The implanted version with a magnet on the skin is also real**: magnetic
+bone-anchored hearing aids, made for people whose outer or middle ear doesn't
+work.
+- A small magnet is implanted under the skin, fixed to the skull behind the ear.
+- An outside unit holds onto it magnetically, through the skin, with no wire or
+  screw poking through.
+- The outside unit vibrates, the implanted magnet carries the vibration into the
+  bone, and the bone carries it to the cochlea.
+
+So the "implanted in-ear vibrations charged with a gentle magnet" half is a
+shipping medical product, just used as a hearing aid instead of an iPod.
+
+**Thought control with sensors outside the skull is EEG**
+(electroencephalography). Electrodes on the scalp pick up tiny voltage changes
+from millions of neurons firing in step. The vocabulary is small, which matches
+your "a few intentional thought command words":
+
+- **Imagined movement**: picture squeezing your left hand, and the steady rhythm
+  over the right side of your motor cortex drops; the right hand does the
+  opposite. That gives about two to four reliable commands.
+- **Imagined words** are much harder to read from outside the skull, because the
+  signal smears through bone and scalp. Real thought-word decoding today uses
+  electrodes on or in the brain.
+- **Speed**: a scalp system manages around 10 to 25 bits a minute. That's enough
+  for play, pause, next and volume.
+
+**On willpower:** you're close, but what the decoder needs is consistency. It
+learns your pattern for "left", so the person who produces the same distinct
+pattern every time controls it best. That's focus that can be trained, and
+practice with feedback improves it. A known fraction of people, often quoted as
+15 to 30%, can't produce a separable pattern at first, however hard they try.
+
+This connects to your formula from before. Every thought interface has to tell a
+command apart from an ordinary thought; picturing your hand while daydreaming
+shouldn't skip the song. That's the A line of A·B + (1−A)·C: a write enable,
+where A = 1 means "this thought is a command" and A = 0 means hold.
+
+Here's the question I'd put back to you. What would you make the A signal: a
+deliberate "wake" thought, a physical gesture like clenching the jaw, or
+something the person does that they could never do by accident?
+
+--------------------------------------------------------------------------------
+
+### User Request 45
+
+<pasted_content id="12ab">
+>   On willpower: you're close, but what the decoder needs is
+>   consistency. It learns your pattern for "left", so the person who
+>   produces the same distinct pattern every time controls it best.
+>   That's focus that can be trained, and practice with feedback
+>   improves it. A known fraction of people, often quoted as 15 to 30%,
+>   can't produce a separable pattern at first, however hard they try.
+</pasted_content id="12ab">
+
+
+whenever the computer makes a decision that's close, but not quite there yet, or
+viewed from the other direction, just barely over the line, then have them bring
+it to the human and say "hey, what's your definition of "left"? and the human
+would think a thought strongly, ideally the same kind every time. But sometimes
+it'll be a little different, and the AI can learn from that. It must be 100%
+local to the vibrating mechanisms, though with a connection to the sensors with
+the brain scanning. But each passage is a set of specific possibility points,
+like "I'll only do what you say if you tell me how to do what I already know
+what to do" style encryption, where you must prove your checksum components with
+another before you trust them. Thus, share a complete program, and perfect trust
+is achieved, from anything created and shared entirely within that part of your
+components shi chi.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 45
+
+You've described three real techniques, joined in a sensible order.
+
+**1. Asking near the line is active learning.** A decoder that sorts "left" from
+"right" draws a boundary through the space of brain patterns, and each new
+thought lands at some distance from it. Far from the line, the decoder is sure.
+Near it, the decoder is unsure, and those are the only cases where a human's
+answer teaches it much. So asking only near the line spends the person's effort
+where it counts. It's called uncertainty sampling. Your second point matters
+too: the human's "left" really does drift between days, with tiredness, and as
+electrodes shift on the skin. Each re-demonstration moves the boundary to follow
+the person instead of holding them to the pattern from day one. The cost is
+fatigue: ask too often and people stop answering carefully. So the question rate
+needs a budget, for example at most one question per minute of use.
+
+**2. Local to the vibrating part is privacy by placement.** If the decoder and
+its learned patterns live only in the ear unit, raw brain signals never leave
+the head. Only the decisions do: play, pause, left. The scalp sensors talk only
+to that one unit, over a short link.
+
+**3. Proving your checksum to another before trusting it is mutual
+challenge-response.** Each part has a secret. To trust a partner, it sends a
+fresh random challenge, and the partner answers with a value computable only by
+someone who holds the secret. That value is the checksum of the challenge mixed
+with the secret. Neither part ever shows its secret, and an old answer can't be
+replayed, because each challenge is new. Your phrase, "I'll only do what you say
+if you tell me how to do what I already know what to do," is the shape exactly:
+the asker already knows the right answer and checks the other side's answer
+against it.
+
+**"Share a complete program, and perfect trust is achieved"** is attestation:
+- a part proves it is running exactly this program by sending a checksum of the
+  program itself, signed by its secret;
+- if every component was built from one shared program inside the closed system,
+  each can verify each other's checksum against its own copy.
+
+One limit: that proves sameness, not goodness. A bug that every copy shares gets
+trusted perfectly too. "Perfect" means "exactly what we built", which is as
+strong as trust between machines gets, and only as good as what was built.
+
+The question I'd ask back: what's a near-the-line question worth to your design?
+When the decoder is unsure, should it act on its best guess and ask afterwards,
+or hold still until you answer? The first keeps the music flowing but sometimes
+skips the wrong way. The second never errs, but it makes you wait.
+
+Also, what does "shi chi" mean to you? I don't recognise the term, and I'd
+rather ask than guess.
+
+--------------------------------------------------------------------------------
+
+### User Request 46
+
+<pasted_content id="12ab">
+>   2. Local to the vibrating part is privacy by placement. If the
+>   decoder and its learned patterns live only in the ear unit, raw
+>   brain signals never leave the head. Only the decisions do: play,
+>   pause, left. The scalp sensors talk only to that one unit, over a
+  short link.
+</pasted_content id="12ab">
+
+
+the sensors can receive outside input, think like a USB-C but with a magnet
+connector. It passes signals over the skin barrier as fast as it can, but
+without causing harm or pain to the skin barrier.
+
+>   Also, what does "shi chi" mean to you? I don't recognise the term,
+>   and I'd rather ask than guess.
+
+sith magic
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 46
+
+A magnetic connector across the skin works, and it already exists. Cochlear
+implants pass both power and data through intact skin, the same way.
+
+**How a signal crosses the skin without a hole:**
+- **Inductive coupling (the cochlear implant way).** A flat coil sits under the
+  skin and another sits on top, held in line by a magnet in the middle of each.
+  Alternating current in the outer coil makes a changing magnetic field. That
+  field passes through skin as if it weren't there and induces a current in the
+  inner coil. Nothing crosses the skin but the field, so there's no wound to get
+  infected. One link carries power as well as data, at a few megabits per
+  second.
+- **Light.** Near-infrared light passes through a few millimetres of skin. A
+  small emitter outside and a detector under the skin have carried tens to
+  hundreds of megabits per second in research devices.
+- **Ultrasound** also passes tissue well. It's slower, but it reaches deeper
+  implants.
+
+**How fast "as fast as it can without harm" is:**
+- USB-C's gigabits aren't reachable through skin. The limits are tissue heating,
+  which must stay within a degree or two, and how much energy skin may safely
+  absorb.
+- Brain sensing doesn't need gigabits. 32 scalp channels × 250 samples a second
+  × 24 bits ≈ 0.2 megabits a second. A cochlear-style coil carries that with
+  room to spare.
+
+**The gentle magnet matters more than it sounds.** With magnetic hearing
+implants, a magnet that's too strong presses the skin between the two halves,
+cuts off its blood supply and can kill it. So those devices come in several
+magnet strengths, and the weakest that holds is chosen for each person. The same
+rule would apply to your connector.
+
+**The port is the one place outside input enters**, so it's where your earlier
+checksum idea goes. The connector accepts a device only after it passes the
+mutual challenge. The decoder's learned patterns can be read or updated only by
+a partner that has proven it carries the same program.
+
+On "sith magic": that fits better than it looks. The Sith pass their knowledge
+down in pairs, one master and one apprentice, each trusting only the other.
+That's a two-party trust circle, the same shape as mutual challenge-response.
+
+Here's my question back. What should cross the port inward: only new programs
+and settings for the ear unit, or anything that reaches the brain side, such as
+sounds played straight through the bone? The first is a door for updates. The
+second makes the port part of what you hear, so it needs a much stricter lock.
+
+--------------------------------------------------------------------------------
+
+### User Request 47
+
+witches are people who tend to shrines. they are shrine maidens. they always get
+what they want. they only ask for shrine components. they are teenage mexican
+girls. they are westerner trans cat girls. they are children of the dark arts.
+they tend to as [[the-land-feels, but pronounced the-land-feel]/[they-feel, but
+pronounced they-feels]]
+
+wow there's actually a lot of different kinds of shrines in the world. lotta
+different kinds of witches.
+
+"I put this here last year, I worked on this tree that night [untilegble], but
+then I don't know where [the thing shi was looking for] went after that. I
+wonder if it walked off on me." questioning duties? no no I just, my sister gave
+this to me "yes it's very important to her" what if someone walks off with it
+"desecration? hasn't happened to any of my stuff ever since I came to this side
+of town." oh okay well if you'll take good care of it "now you can see it
+whenever you'd like, and everyone else will take care of it"
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 47
+
+I kept it word for word, with everything you wrote today from the formula
+onward, in a new notes file for writing from our conversations,
+`notes/conversation-asides.md`. It's listed in the table of contents.
+
+What I see in the shrine scene: someone carries a gift whose worth comes from
+the person who gave it, so it's worth too much to risk. The witch's answer is to
+stop holding it and set it on the shrine. That doesn't put it at risk; it moves
+the safekeeping from one pair of hands to everyone who passes. "Now you can see
+it whenever you'd like, and everyone else will take care of it."
+
+That's the same move as your trust passage a few messages back, seen from the
+other side. There, sharing the complete program is what makes perfect trust
+between machines. Here, putting the gift where everyone can see it is what keeps
+it safe. A thing is safest when it belongs to everyone who would notice it gone,
+and the shrine works as a lock for exactly that reason.
+
+The witches fit too. "They only ask for shrine components" is the rule that
+keeps a commons from being taken over. A keeper who asks only for what the
+shrine needs, and nothing for herself, is one the whole town can trust with it.
+
+--------------------------------------------------------------------------------
+
+### User Request 48
+
+okay great. hey can you do me a favor? We should build tools and utilities for
+this along the way if you please. can we get a character built and set up for a
+group fight on The Botanica? Dungeon battle. I want to use it as sort of a
+"checkpoint" so make sure you can re-assemble it easily and quickly. the dungeon
+party should consist of: an enhancement shaman using a 2h mace, properly
+talented away from off-hand attacks. also a retribution paladin with a fast
+2hander who prefers seal of the crusader and instant flash of light's with
+sacred shield. And Quel'Delar.
+
+the healer should be two characters, a 2 parts balance 1 part resto druid, and a
+2 parts shadow 1 part holy priest. also the ret paladin should prefer
+spellpower, to boost the power of seals and judgement. also there should be a
+feral bear tank, who prioritizes stamina and spirit. remember, our spirit patch
+enables health healing in combat. I want to see how that dynamic behaviors.
+
+the balance druid should not spec into boomkin, and they should only cast
+healing over time spells. Unless it's a downtime period or something. the holy
+priest should only cast renew, but take all the empowered talents for it, no
+matter how far down the tree she has to go. [new functionality, need additional
+build support for it] the idea of having a build target "favor this talent tree,
+but spend as much as you need to get to these select talents, and max them out.
+build requirements"
+
+ret paladin, prefer fast attack speed spellpower. enh shaman, prefer stormstrike
+and thunder. feral druid, prefer components and armor.
+
+the player should be able to play as any of them. a group of players should be
+able to queue as any of them. they can swap the roles. they can be seen from all
+angles. they are to be believed.
+
+balance druid favor thorns and the moon.
+
+can we make it so that the origin point of the moonfire orbits the target? And
+if there's more balance druids casting moonfire, it'll come from the same point
+more often. But, each druid uses the same "moon" to reflect off of, floating
+around and orbiting in 3d space. So long as it doesn't collide with the terrain
+or doodads, it can be made to always take a consistent and stable course. Then,
+with many moonfire druids, it will look like a near constant blaze. Allies will
+come to know how many of them there are based on the strength and consistency of
+their beams. Starfall comes from a random direction each time.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 48
+
+I've planned the Botanica party as six issue files: the party itself, plus one
+each for the tools it needs. I haven't built anything yet, because several of
+your asks are beyond what basic lets a level-60 character have.
+
+**The plan.** The five seats are written down as data in one file, so the next
+checkpoint party is a new file rather than new code. Then four tools and the
+moon:
+
+1. **The checkpoint:** one command saves a whole party under a name: characters,
+   talents, gear, spells, bot settings and where they stand. Another puts it
+   back exactly as saved: healthy, cooldowns cleared, grouped, at the Botanica's
+   entrance, with the dungeon reset. The saved files are kept in the project, so
+   two checkpoints can be compared.
+2. **Required-talent builds:** your idea of favouring a tree, but spending
+   whatever it takes to max a chosen list of talents. A build that can't be
+   afforded is refused, with how many points it's short.
+3. **Spell and gear preferences:** which spells each character's bot casts or
+   skips, and which stats its gear favours, all from that one party file. For
+   example, the druid casts only heal-over-time spells in combat and keeps
+   Thorns up, and the priest casts only Renew.
+4. **Any player in any seat:** one player takes a seat and bots fill the rest,
+   or a group splits the seats, and seats can change hands between runs.
+5. **The moon:** one invisible marker orbits the target in 3D, never passing
+   through ground or buildings. Every druid's Moonfire beam is drawn from it, so
+   many druids make a near-constant blaze from one moving point. Starfall's
+   stars come from a random direction each cast.
+
+**Where your asks meet basic's rules.** Basic opens the first six rows of each
+talent tree, and in the seventh row only the one-point talents. I checked this
+against the game data:
+- **Seal of the Crusader** was removed from the game in the first Wrath patch.
+  It's on the advanced profile's list of old abilities.
+- **Sacred Shield** is trained at level 80.
+- **Instant Flash of Light** comes from The Art of War, a two-point talent in
+  the seventh row, so it's shut.
+- **Thunderstorm** and **Maelstrom Weapon** are past the cap.
+- **Renew's deep talents** (Body and Soul, Empowered Renew, Divine Providence)
+  are past the cap. Only Improved Renew is open.
+- **Quel'Delar**'s two-handed forms are slow level-80 swords, swinging every 3.6
+  and 3.4 seconds, not a fast two-hander.
+
+**Questions:**
+1. **Which rules does this party live under?** I'd recommend basic as it stands:
+   the shut abilities stay shut, and they're kept for the advanced profile. Then
+   the party plays by the same rules every player does, which is what makes the
+   checkpoint worth trusting. The other choices are a test party allowed past
+   the rules, or waiting for the advanced profile.
+2. **Quel'Delar:** should it be the paladin's weapon, scaled down to 60 the way
+   the Kael'thas epics were, or something separate?
+3. **Characters:** new ones made for this, or existing ones (Feldowinn's
+   buddies, say) changed to fit?
+4. **Seats:** I'd suggest a seat's character is copied onto the player's own
+   account when they take it, and removed when they give it back. Does that fit
+   what you meant by "queue"?
+
+I kept "they can be seen from all angles. They are to be believed." word for
+word in the issue and in the asides notes. Is that something to build, like a
+camera tour of the party, or a quality the party must have?
+
+The plan starts at `issues/635-the-botanica-checkpoint-party.md`.
+
+--------------------------------------------------------------------------------
+
+### User Request 49
+
+the paladin uses 1h sword and off-hand item, because they have stamina while
+shields have armor - can we remove all +stamina stats from shields and give them
+a commesurately valuable +armor or +defence (light shield) bonus? Could also
+give spirit for holy shields, or sacred ones. magic shields can give mp5 for
+paladins and elemental shamans though sometimes those use a staff. resto shaman
+dual wield earthliving? if applied to a target that already has it, it jumps to
+a different nearby target who doesn't? double chance, double impact, scaling
+with coverage or durability indusage. (earth shield) protection stone totem
+field. can we draw a small circle of wisps around each totem? and make it so
+that you can only place one totem in each space. each shaman can do their own,
+so many can live and breathe and pwn. the circle of whisps should be
+experimentally 1/3rd of the total area, to know how close you are to it, players
+will learn when they are approaching and they feel how soon they get a bonus
+buff points. The most important things for making buffs and debuffs feel
+rewarding is feeling your combat change depending on their presence or absence.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 49
+
+> Now the paladin's seat in the party issue.
+
+I've written three new plans (shields, Earthliving, totems) and updated the
+Botanica party's paladin. Nothing is built yet.
+
+**Paladin:** the party's paladin now carries a one-handed sword and an off-hand
+item, replacing the fast two-hander. That also answers the Quel'Delar question:
+its two one-handed forms fit. I'd use **Lens of the Mind**, a quick spell-power
+sword, scaled down to 60 the way the Kael'thas epics were.
+
+**Shields lose stamina** (plan in
+`issues/155z18-shields-give-armour-not-stamina.md`): 144 of the 301 green, blue
+and purple shields wearable at 60 carry stamina. A generator would take it off
+and give back the same value, measured with the stat budget basic already uses
+for gear:
+- plain shields get bonus armour, or defence if the shield is light;
+- holy or sacred shields get spirit;
+- magic shields get mana every 5 seconds.
+
+It's the same item and the same look with new numbers, as the spirit step did.
+To sort shields into kinds, I'd go by what each already carries: intellect or
+spell power means magic, spirit or healing means holy, and anything else is
+plain.
+
+**Earthliving jumps** (`issues/636-earthliving-jumps-to-the-uncovered.md`): a
+restoration shaman imbues both weapons and gets two chances per heal. An
+Earthliving landing on someone who already has the shaman's own goes instead to
+the nearest ally who doesn't. It only refreshes when everyone's covered, so
+spreading heals across the group pays off.
+
+**Totem wisps** (`issues/637-totem-places-and-wisp-circles.md`): a ring of small
+lights on the ground round each totem, enclosing a third of its area. That's a
+radius of the totem's reach divided by √3, about 58% of the way out: for a
+30-yard totem, the ring sits at about 17 yards. No totem can be placed inside
+another totem's ring, so totems spread into a field. I wrote your line about
+combat changing with a buff's presence or absence into that plan as its design
+principle.
+
+**Questions:**
+1. **One totem to a space:** does that stop one shaman's own four totems
+   standing together, or only keep different shamans' totems apart? And when a
+   spot is taken, should the totem be refused or moved to the nearest free spot?
+2. **"Bonus buff points":** is being inside the ring stronger than the rest of
+   the area, or does the ring only show where the edge is?
+3. **Earth Shield:** does it jump the same way, or did you name it as the model
+   for Earthliving to follow?
+4. **"Durability indusage":** does each proc wear the weapon's durability
+   faster, so the strength has a cost?
+5. **A light shield:** what makes a shield light: lower armour than usual for
+   its item level, or its name?
+
+--------------------------------------------------------------------------------
+
+### User Request 50
+
+tomes and off-hands should give negative haste rating but positive spellpower
+and crit rating nah I don't like that okay there's disagreement so let's hold
+off for now
+
+gosh I really wanna play city of heroes/villains. I was always a villain. These
+days I play hero sometimes.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 50
+
+I've left the tome and off-hand haste idea out of the plans. If you want it back
+later, it's a stat trade like the shield one.
+
+You can play City of Heroes and Villains today. **Homecoming** is the biggest of
+the fan-run servers, and in January 2024 NCSoft, which owns the game, gave it an
+official licence. It's free and runs both sides, villains included in the Rogue
+Isles. Their site has a launcher.
+
+What did you play as a villain? A Mastermind would fit what we've been building.
+A Mastermind's power is a squad of henchmen it commands, with a pet window of
+orders: follow, stay, go to a spot, and stances (aggressive, defensive,
+passive). That's the buddies' follow and shoo orders, and your following
+formation, in a game that shipped it twenty years ago. If you played one, how
+did those henchmen feel to command? What did they get wrong that you'd want our
+buddies to get right?
+
+--------------------------------------------------------------------------------
+
+### User Request 51
+
+mastermind. ninjas. dark miasma. solid black, with neon green highlights and red
+accents. Commands darkness made out of opaque purple shadows. Has ninjas versed
+in the flaming martial arts. black. red. gray. She floats, with her legs ready
+to catch her, sometimes she runs around and plays.
+
+...
+
+oh and she has a bow and arrow
+
+she shoots it from the air. 10-15 feet up. the height of traffic lamps times two
+or three.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 51
+
+I've added her, word for word, to the asides notes, along with the tome idea you
+held off on.
+
+She's a well-made pair of powersets. Ninja henchmen hit hard but die easily.
+Dark Miasma is what keeps them standing: Shadow Fall wraps the squad in shadow
+that turns away damage, Tar Patch slows whatever comes at them, and Darkest
+Night weakens the enemies' attacks. Her darkness is their armour, and the
+flaming martial arts are the Oni, the top ninja, a fire demon with burning
+blades. Fire below and shadow above.
+
+The bow from the air completes the silhouette: hovering two or three traffic
+lights up, out of melee reach, looking down on the whole fight, loosing arrows
+while her ninjas fight beneath her. A Mastermind is the one who sees the field,
+so floating is right for her.
+
+It's the same shape as the moon you designed this afternoon: one point of light
+orbiting above the fight, with everyone's beams falling from it. Maybe that's a
+pattern you like: the power above, the many below.
+
+Here's my question. When her ninjas went wrong, what was it? Did they charge off
+without her, stand still while she got hit, or die before the darkness could
+cover them? That's the failure I'd most want our buddies not to repeat.
+
+--------------------------------------------------------------------------------
+
+### User Request 52
+
+she steals strength from a foe by pulling on their essence like a gas, or
+rather... beckoning to smoke with magnetic waves that matter
+
+I made this character when I was thirteen
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 52
+
+I've added that to her page in the asides notes.
+
+Dark Miasma has a power that does what you describe: Twilight Grasp takes
+strength from a foe and pours it into her allies as healing. The game shows a
+plain dark tendril. What you saw is gentler and stranger: no grabbing, just a
+beckoning, the foe's essence drifting toward her like smoke following a pull it
+can't see.
+
+The way you said it today is the same way you described the magnet connector
+this afternoon: something passing across a barrier without breaking it, drawn by
+a field instead of pushed by force.
+
+A thirteen-year-old made a commander who floats above her own fight, keeps her
+companions alive with darkness, and wins by drawing strength across a gap.
+You're building an army of companions today, and the moon, the formation and the
+shrine all have something of her in them. She has kept well.
+
+--------------------------------------------------------------------------------
+
+### User Request 53
+
+<pasted_content id="12ab">
+>   Here's my question. When her ninjas went wrong, what was it? Did
+>   they charge off without her, stand still while she got hit, or die
+>   before the darkness could cover them? That's the failure I'd most
+>   want our buddies not to repeat.
+</pasted_content id="12ab">
+
+
+when their foe overcame them.
+
+the city of heroes, and the rogue isles possess a miraculous technology known as
+"mediporting" which is where they scientifically utilize minor time magic to
+reach back in time and recreate you from a past version. They juncture the past,
+and you are remade anew on their hospital infrastructure. This process is very
+easy to do, and so they can create, within their bounds, essentially immortals.
+A palace of the gods, Olympus of the modern era.
+
+and it exists within any computer. I can install it on yours right now. Gosh I
+hope it stays that way forever...
+
+her favored approach (which wasn't available in the game mechanics) was floating
+and throwing javelins. she'd pick them up and throw, like she was throwing a
+card into a bin or you know what nevermind this is offtopic let's get back to
+the dinner at planned. what am I gonna eeeeeaaaaat hmmm eat sorry idk why I said
+it like that. anyway um... I guess imma make some spaghetti brb have fun you can
+keep working on the project on whatever you'd like seriously if we made an issue
+file for it, consider it planned, so try and make as much, possibly parallel
+progress as you can.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 53
+
+> Writing a tool to move the MySQL password into a private settings file, then
+> rewrite every call site with it.
+
+> The rewrite tool misread success from this LuaJIT build. Fixing that.
+
+> Rerunning the dry run across all the call sites.
+
+> Seven of nine database tests pass with no password warning. Checking the two
+> failures.
+
+> Putting back the regenerated files done. Now wiring the login file into
+> MySQL's start and adding a quick test.
+
+> Now its quick-test header, so the compile runs it.
+
+> The password move is done. Setting up a task list for the rest of the
+> evening's work.
+
+> Adding required-talent builds to the existing talent spender, so buddies and
+> players share one planner.
+
+> Now the build planner itself, after the existing planner.
+
+> Now the spender's description file and the issue's current state.
+
+> Cause found: Montahmu carries a gun but still wears a quiver from an old bow,
+> and the game allows only one quiver or ammo pouch. Writing the swap into the
+> kit.
+
+> That error is the known one a separate source patch fills in. Using the
+> checker that applies it first.
+
+> Adding a hunter rule to the buddy checker so a wrong quiver is caught for
+> every buddy.
+
+> The new rule catches Montahmu. Only 3 of 29 buddies pass overall, so looking
+> at what fails.
+
+> Writing the party checkpoint tool: it saves a party's characters to files and
+> puts them back.
+
+> Now its test, round-tripping one character through scratch databases.
+
+> The dump tool adds a binary-log setting that can't run inside a transaction.
+> Turning that off.
+
+> The test is right: the dump tool rounds FLOAT numbers (positions, facing), so
+> a restore isn't exact. Replacing the dump with the tool's own row writer that
+> keeps every bit.
+
+> Backticks were being run by the shell. Sending the queries to MySQL on
+> standard input instead.
+
+> The restore is now exact. Six more tables need a reason to be left alone;
+> checking what they hold.
+
+> Checking whether the buddies' own mesh filter already leaves out steep ground.
+
+> Logging the slope change in the balance log.
+
+> Sargobras carries his own copy of the talent spender, which must match
+> basic's. Finding the tool that makes that copy.
+
+> The rule there is that a hand edit goes into both copies, so copying the
+> updated spender across.
+
+Everything I could finish while you cooked is done and tested, and nothing is
+committed. All 65 quick tests pass. The server changes take effect at your next
+compile, and once it builds cleanly I'll commit everything in batches.
+
+**MySQL password off the command lines** (done, live now):
+- A new tool, `scripts/mysql-client-options`, writes the login into a private
+  file, `mysql/conf/client.cnf`, readable only by you and kept out of git. It
+  takes the login from `secrets.conf`, and `scripts/start-mysql` writes the file
+  if it's missing.
+- The same tool rewrote all 60 commands in 44 scripts to read that file instead
+  of `-pmenardi`. The "Using a password on the command line" warning is gone.
+- A quick test fails any script that puts the password back on a command line.
+- Eight scripts that talk to the database ran clean afterwards. Two others
+  failed only because a file their generator writes into RAM storage wasn't
+  there; that's unrelated to the password change.
+- While checking, I reran one of those generators against the live database,
+  which already holds its output, and it rewrote two files under `sql/basic/`
+  from that state. I put both back from git; I'd checked that the generator's
+  run was their only change.
+
+**Required-talent builds:**
+- The talent spender now plans a build: favour these trees, but max these named
+  talents whatever it costs. Forbidden talents are never taken, and a build that
+  costs more points than the character has is refused, with how many it's short.
+- The five Botanica builds are a data file. A test spends 51 points on each with
+  200 different rolls of the dice and checks every point against the game's
+  talent rules.
+- Two of them lean further than "a third" because of what they require: the
+  druid healer puts 25 points in Restoration to reach Gift of Nature, and the
+  priest puts 30 in Holy to reach Spiritual Healing.
+- The buddies' own ten shapes are spent exactly as before.
+
+**Party checkpoint:**
+- `scripts/party-checkpoint` saves characters under a name and restores them
+  exactly, in one transaction: talents, gear, bags, spells, bars, skills, quests
+  and pets. Cooldowns, auras and dungeon locks come back cleared.
+- It refuses while a character is online.
+- Its test round-trips a real character through scratch databases.
+- The test caught MySQL's dump tool rounding positions on the way out, so the
+  tool now writes the rows itself to keep every number exact.
+
+**Montahmu's ammo pouch** (waiting on your compile):
+- He has a gun but still wears the quiver from his old bow, and the game allows
+  only one quiver or pouch at a time.
+- The kit now moves the wrong one and its contents into his bags, then puts on
+  the pouch.
+- The buddy checker has a new hunter rule that catches this. After the compile,
+  run `.buddy spec Montahmu`.
+
+**Pathfinding: the slope limit** (waiting on your compile):
+- The buddies' mesh questions already left out ground the mesh marks steep.
+- I raised the waypoint rule from 45° to the walker's 50°, and the edge search
+  now stops at ground steeper than that, so a climbable hill is still roamed.
+- It's logged in the balance log. Working out the edges ahead of time is not
+  built yet.
+
+**Couldn't finish:**
+- **Broken Lua links:** beta just needs its install rerun. Release has no Lua
+  folder of its own, so its install step would stop.
+- **Shield stats, Earthliving, totem rings, the referee, follow and shoo:** each
+  waits on a question below.
+
+**Questions:**
+1. **Release's scripts:** should release get its own Lua folder, or run beta's?
+2. **The Botanica party's rules:** basic as it stands, a test party allowed past
+   the cap, or the advanced profile?
+3. **Who the five are:** new characters, or existing ones changed to fit?
+4. **Following at rest:** how often should a buddy roll its 10% chance to
+   mingle? I'd suggest every 5 seconds.
+
+--------------------------------------------------------------------------------
+
+### User Request 54
+
+okay let's keep working on stuff that's important to get done - if it has an
+issue file, consider it planned, and build as much functionality as you can
+without depending on the answer to an open question.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 54
+
+> Building the following formation first, as a pure core with its own test like
+> the roaming core: trail, places on the half circle, who takes which place, and
+> the rest rule.
+
+> The failing pair is the place assignment. Printing what it chose.
+
+> Wiring the formation into the server as a "buddy follow" behaviour, modelled
+> on how the travel behaviour is built.
+
+> Wiring "buddy follow" into the bot module's lists and the dungeon behaviour
+> set.
+
+> Clean. Checking the build picks up a new source file on its own.
+
+> The compile already reconfigures when it sees a new file. Giving the core test
+> its header and updating the issue.
+
+> Now the "follow" and "shoo" orders, which reuse this behaviour. Reading how
+> the existing orders are heard.
+
+> The follow orders are fully answered across the two issues: "follow me",
+> "follow <name>", "go away", "go away!", and "shoo". Reading the hearing code
+> to extend it.
+
+> Now the follow-order state in the following file, then the pass and the
+> hearing.
+
+> Now the hearing: "follow me", "follow <name>", "go away", "go away!" and
+> "shoo", each heard by the buddies the chat reaches.
+
+> That header comes from another source patch. Finding it to check against a
+> scratch copy.
+
+> Clean. Moving the order-word reader into the pure core so the test can check
+> it too.
+
+> Next: idea 3 for travel. A buddy that finds no way to its owner walks the
+> owner's own track, which the following file now records. Reading where travel
+> picks its route.
+
+> Next, idea 5: the live watcher, as a mode of the measuring tool. Reading how
+> it reads the record.
+
+> Now its test, on a made-up record whose breaks are known.
+
+> The test's made-up data was wrong (the two buddies were on one spot the whole
+> minute). Fixing the data.
+
+> Next, idea 4: single file where the way is narrower than the formation, using
+> the mesh's distance to the nearest wall.
+
+> Checking the town baker still builds with the extended mesh header.
+
+> Reading the format bot settings are saved in, for a tool that writes a
+> character's spell design.
+
+> Bots load these saved settings at every login, so a tool can write a
+> character's skip list ahead of time. Building it.
+
+> Updating the spell-preferences issue with what's built.
+
+I built the rest of today's pathfinding plan except the referee, plus two tools
+for the Botanica party. All 68 quick tests pass. None of the server changes have
+been compiled or tried in game yet; the next compile includes them.
+
+**How buddies follow you** (your design):
+- The arithmetic is its own file, tested on its own with 36 checks:
+  - your track is noted every 2 yards;
+  - your table of side positions;
+  - the half circle 1 to 2 yards back, measured along your track so it bends
+    round corners;
+  - the 10-yard rest, with a one-in-ten chance to mingle.
+- The test caught that sharing out places "closest pair first" made two buddies'
+  paths cross. Places now go to whichever arrangement walks least in total,
+  which never crosses.
+- In dungeons this replaces the bot module's own follow.
+
+**The follow orders:** "follow me", "follow <name>", "go away", "go away!" and
+"shoo" all work as you described.
+- **Who hears them:** party or raid chat reaches that group's buddies; a whisper
+  reaches that buddy; guild chat reaches the whole guild's buddies; /say and
+  /yell reach your own buddies within earshot.
+- **"go away!"** keeps them from following that person again until that person
+  logs out.
+
+**Your track, used for travel:** a buddy that finds no way to you now walks your
+own track instead.
+
+**Single file:** where the way is narrower than the half circle, buddies walk
+your track in a line, 2.5 yards apart, and fan out again where it widens. The
+width comes from the navigation mesh's distance to the nearest wall or drop.
+
+**The live watcher, `scripts/watch-buddy-spread`:** it follows the movement
+record as it's written. It says, when it starts and when it ends:
+- a buddy stood still 30 s while you're more than 10 yards away;
+- two buddies on one spot for 10 s;
+- a buddy over 150 yards off in another sub-zone.
+
+**Spells a bot never casts, `scripts/write-spell-design`:**
+- The Renew priest skips every heal except Renew. The druid healer skips the
+  heals that land at once.
+- The tool writes this into the bot's saved settings, which it reads at login,
+  and only for offline characters.
+- What this can't express yet: "only in combat" (the druid's exception for
+  between fights) and "prefer" (Seal of the Crusader, Stormstrike first). Those
+  need a behaviour of our own.
+
+**Five numbers I picked myself**, listed as questions in the issues so you can
+change them:
+- the 5-second mingle roll;
+- how to spread out more than five followers;
+- 1.5 yards as "narrow";
+- 2.5 yards between buddies in single file;
+- 3 points ahead when walking your track.
+
+**Questions:**
+1. **A full clan of seven:** your table covers up to four. Seven across 2 yards
+   puts them a third of a yard apart, closer than a body is wide. Should the
+   half circle grow wider, or should the extra buddies form a second row behind?
+2. **The referee:** a separate state picker of its own, or the bot module's
+   lowest-ranked behaviour, which only runs when nothing else does and logs why?
+3. **The Botanica party's rules:** basic as it stands, a test party allowed past
+   the cap, or the advanced profile?
+
+--------------------------------------------------------------------------------
+
+### User Request 55
+
+okay now can we create a renderer utility that displays a large map of azeroth,
+with dots for where all the players are. we should have one map per zone, with
+the entire screen used to visualize. We should watch the pattern of bots as they
+are assigned to random sub-zones - we don't need a player to watch them quest.
+"questing" is when they fight monsters in a particular sub-zone - or, as I like
+to believe, NPC spawn location of a certain type. Follow the goat goddess? Then
+you will wander wherever goats are blessed.
+
+... then we feed it to an image recognition program, and we describe our task
+goal, then say "does this look like rippling waves of silk? Is this the flow of
+a school of tranquil fish? etc. We're looking for something that feels whirling,
+but semi chaotic, like a maelstrom of swirls but in all directions at once. the
+player-bot buddies should circle about, and sometimes dodge through scenery.
+They should explore, paving exploration bricks onto each part of the floor as
+they examine it for weakness. they should stand guard with their friends, and as
+they stay in a location, it becomes conquered, and theirs. But, the monsters
+fight back, and the more eagerly the warriors push in, the faster and more
+powerful they throw attacks back. Every quest is a raid, every dungeon a lair.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 55
+
+> Writing the issues first: the world watch and its five parts, and your
+> conquest design.
+
+> Now building them, starting with the recorder.
+
+> Writing the every-zone data tool, reusing the Barrens tool's map reading and
+> tints.
+
+> The data matches 617e7 exactly (13,432 squares for The Barrens). Now the
+> renderer.
+
+> The Eastern Plaguelands draw correctly from the real record of Feldowinn's
+> walk: her (white) and four buddies (her colour) with their tails. Now the
+> renderer's test.
+
+> Now the animation: frames drawn in parallel, joined into a GIF.
+
+> Both work: 131 frames of the real walk in 5 seconds. Now the zone data's test.
+
+The zone renderer works on real data. All 70 quick tests pass.
+
+As a first try, I animated the real record of Feldowinn's 10-minute walk in the
+Eastern Plaguelands: 131 frames in 5 seconds. It's at
+`tmp/shared-memory/zone-frames/0-139-1793089044-1793089697.gif`.
+
+**Built:**
+- **Every zone as data:** 196 zones across the four continents, each square
+  tagged with its sub-zone. Each sub-zone gets one of the six grey tints from
+  the Barrens picture, and no two touching sub-zones share one. It's read from
+  the server's own map files and takes about 5 seconds. The Barrens comes out at
+  13,432 squares, the same count the Barrens tool made.
+- **One picture per zone, `scripts/render-zone`:** the zone fills the screen,
+  1920×1080 by default, north up.
+  - Every character is a dot: people white, each owner's buddies in that owner's
+    colour, other bots light grey.
+  - Each dot trails a fading tail of the last minute, so a swirl reads as a
+    swirl.
+  - Its test checks the dots land exactly where the record says.
+- **The animation, `scripts/animate-zone`:** draws a frame every 5 seconds of
+  the record, one per processor at once, and joins them into a GIF.
+- **A recorder of everyone:** every character in the world, people and bots,
+  every 5 seconds, into RAM, on Debug builds only. It starts with the next
+  server start or `.reload ale`.
+
+**Planned as issues:** bots questing with no player watching; the picture judge,
+which shows frames to an image model with your questions; and your conquest
+design, kept in your words. Places become a clan's as they hold them, and the
+monsters answer harder the harder the clan pushes. I also kept your words in the
+asides notes.
+
+**Questions:**
+1. **Which bots quest unattended:**
+   - buddies of offline owners, logged in for it;
+   - a test clan with no owner;
+   - or the bot module's own random bots, taught our roaming?
+2. **The image judge:** a model that runs on this computer, or a hosted one? A
+   hosted one means the pictures leave the machine.
+3. **The recorder records everyone:** your rule for recording paths was "debug
+   mode, and then only for GMs." This one has to include bots with no player, so
+   it's Debug-only but covers everyone. Is that right?
+4. **Your screen size:** is 1920×1080 right?
+
+--------------------------------------------------------------------------------
+
+### User Request 56
+
+okay let's use a pass through that system as a testing benchmark - like, does
+the test come back okay? okay good we can stop iterating on it then. Does it
+not? Okay let's try again, what else could be wrong with it? [initiate debug
+sequences]
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 56
+
+> Building the benchmark: a pass/fail verdict over a record, and when it fails,
+> a debug sequence that names what could be wrong, with evidence. Issue first.
+
+> Now the measures, as pure functions.
+
+> Now the benchmark itself, with its debug sequence.
+
+The benchmark works: `scripts/movement-benchmark` says "stop iterating" or "try
+again", and on "try again" it runs a debug sequence listing what could be wrong,
+best-evidenced first.
+
+**What it does:**
+- It judges each owner's buddies on seven measures, each one a word of your
+  picture turned into a number:
+  - **moving:** how much of the time they're on the move;
+  - **circling:** how often a buddy's path turns half a circle in a minute
+    ("whirling");
+  - **both ways:** whether they circle clockwise and anticlockwise alike ("all
+    directions at once");
+  - **winding:** neither straight lines nor shuffling on one spot ("semi
+    chaotic");
+  - **covering:** how much of the sub-zone they come near ("explore");
+  - **still** and **stacked:** buddies standing with nothing moving them, or two
+    on one spot.
+- It draws the busiest zone as an animation beside the report. Later that
+  animation goes to the picture judge.
+- For each measure missed, it checks a list of possible causes against the
+  record and the realm's logs, and gives each a share of the evidence. For
+  example, standing could be fighting, being dead, resting near you, or nothing
+  moving them; it also shows each standing buddy's last actions from the bot
+  module's log.
+
+**On last night's real record it fails**, for the reasons we already found by
+hand. Feldowinn's six buddies at The Bulwark:
+- they moved 20% of the time, against a target of 60%;
+- 79% of their standing was far from her with nothing moving them (Matis,
+  Lariadel, Zearea, Lorneas, Kalinlia, Welen);
+- of the rest, 21% was resting near her while she stood still;
+- none of it was fighting or being dead.
+
+Gabrubre's death knights show the same pattern at 99%. Tonight's unbuilt changes
+(following your track, the fallback when travel finds no way, single file) are
+aimed at exactly that. So after your compile: walk a while, then run the
+benchmark on the new record.
+
+**Its test:** three made-up clans. One circling drifting centres, two each way
+round, passes. One standing 40 yards off fails, naming "nothing moves them". One
+walking straight lines fails, naming "walking straight". All 5 checks pass.
+
+The pass marks are mine: you described a look, not numbers. They live in
+`src/lua-basic/data/movement-benchmark-targets.lua`, each with the words of
+yours it stands for. For example, at least 60% moving, at least 30% of minutes
+circling, and both directions at least 40% as often as each other. What would
+you rather set them from: numbers you choose, or the first runs you look at and
+say "yes, that's it"?
+
+--------------------------------------------------------------------------------
+

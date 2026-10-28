@@ -42,6 +42,14 @@ bool BuddyMeshSnap(Map const* map, BuddyRoam::Point const& at, float reach, floa
 bool BuddyMeshLineClear(Map const* map, BuddyRoam::Point const& from, BuddyRoam::Point const& to);
 // }}}
 
+// {{{ BuddyMeshWallDistance
+// How far from `at` to the nearest edge of the walkable (a wall, a drop),
+// looking no farther than `maxRadius` yards (maxRadius itself when nothing
+// is that near): half a passage's width, from its middle. False when the
+// map has no mesh or `at` is off it.
+bool BuddyMeshWallDistance(Map const* map, BuddyRoam::Point const& at, float maxRadius, float& dist);
+// }}}
+
 // {{{ BuddyMeshRoute
 // The server's own path search from the bot to `to`, the same search its
 // walking runs. The kinds, by what the walking would then do:

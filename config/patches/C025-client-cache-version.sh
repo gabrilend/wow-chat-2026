@@ -23,7 +23,13 @@
 #   - the profile name,
 #   - the source tree's commit (upstream database content moves with it),
 #   - every file under sql/<profile>/*.src/ (symbolic links followed, so
-#     basic's links to vanilla's sources count by their content).
+#     basic's links to vanilla's sources count by their content),
+#   - every .sql file a patch the profile takes carries in its own folder
+#     (patches/<ID>-<name>/, issue 189e), in the build's order
+#     (scripts/plan-patches). Since 189e moved the install steps' SQL out
+#     of sql/<profile>/*.src/ into their patches' folders, those edits had
+#     not moved the fingerprint, so a client kept its old cache (2026-10-27:
+#     found while E074 renamed Camp Narache's merchant).
 # Written as ClientCacheVersion in worldserver.conf. 0 would mean "use the
 # database's own value", so a zero fingerprint is bumped to 1.
 #
@@ -58,6 +64,15 @@ config_client_cache_version() {
         return 1
     }
 
+    # The profile's patches in the build's order, read before the
+    # fingerprint (whose pipeline would hide a failure here)
+    local planned
+    planned="$("${project}/scripts/plan-patches" "${project}" "${PROFILE}" 2>&1)" || {
+        echo "    ERROR: C025 could not read ${PROFILE}'s patches: ${planned}"
+        echo "    to debug: ${project}/scripts/plan-patches ${project} ${PROFILE}"
+        return 1
+    }
+
     # Content fingerprint. A profile with no sql/<profile>/ (release) is
     # fingerprinted by name and commit alone.
     local fingerprint
@@ -68,6 +83,17 @@ config_client_cache_version() {
                 find -L "${project}/sql/${PROFILE}" -path '*.src/*' -type f -print0 \
                     | sort -z | xargs -0 -r cat
             fi
+            # the SQL carried beside each of the profile's patches: a patch
+            # that is a folder (its file is <folder>/<ID>-<name>.sh) carries
+            # its .sql files in that folder; a one-file patch carries none
+            #   a folder patch: its .sql files, by name
+            #   a one-file patch: nothing here
+            local rel folder
+            while IFS=$'\t' read -r _ _ _ rel; do
+                folder="${rel%/*}"
+                [[ "${folder}" == "patches" || "${folder}" == "config/patches" ]] && continue
+                find "${project}/${folder}" -maxdepth 1 -name '*.sql' -type f -print0 | sort -z | xargs -0 -r cat
+            done <<< "${planned}"
         } | cksum | cut -d' ' -f1
     )
     [[ "${fingerprint}" == "0" ]] && fingerprint=1
@@ -77,5 +103,5 @@ config_client_cache_version() {
 CONFIG_DESCRIPTIONS[config_client_cache_version]="ClientCacheVersion = fingerprint of profile + source commit + its SQL edits"
 # -- }}}
 # ==== footer of C025 ====
-# lines:      81
+# lines:      107
 # ==== end of footer ====

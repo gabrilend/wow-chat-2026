@@ -378,6 +378,11 @@ uint32 BuddyMakeCharacter(uint32 account, uint8 race, uint8 cls, uint8 level, ui
     }
     // its gear's sockets filled by its plan (617j2), free
     std::string gemProblems = BuddyGemKit(made, shape, role);
+    // weapon skills and defence at their maximum for its level (the server's
+    // own .levelup step; professions and riding are left as they are): a
+    // buddy is dressed and trained as a whole (2026-10-27, the owner, after
+    // Feldowinn's buddies wore defence 48 and two-handed swords 229 at 55)
+    made->UpdateSkillsToMaxSkillsForLevel();
     if (!gemProblems.empty())
         LOG_ERROR("module", "mod-buddies: new {} {} for {}, kit gems incomplete: {}", kind, name, forWhom, gemProblems);
 

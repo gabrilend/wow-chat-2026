@@ -22,6 +22,10 @@ std::string BuddyGiveStartingKit(Player* buddy, uint32 ownerGuid, uint8 shape);
 // (".buddy kit <name>"): the same choosing, replacing what it wears.
 // Returns what could not be given.
 std::string BuddyRegear(Player* buddy, uint8 shape);
+// Up to the gear spec without taking off what it earned (2026-10-27): its
+// lessons, its skills at their maximum, the kit only in empty slots, its
+// class tools, PvP jewellery when a slot of it is empty, its gems. Saved.
+std::string BuddyBringToSpec(Player* buddy, uint8 shape, uint8 role);
 
 // The neck, rings and trinkets of a stand-in (617t1): the best PvP rewards
 // of its level (bought with honor or arena points), scored by its talent

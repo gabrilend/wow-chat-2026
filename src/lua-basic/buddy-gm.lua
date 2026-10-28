@@ -9,6 +9,11 @@
 --        partner;
 --   .buddies to me [name] [ring|centre]
 --        ... brought to the game master instead;
+--   .buddies summon [name] [ring|centre]
+--        short for ".buddies to partner": summoned to the partner (the
+--        owner, 2026-10-26: "can we add a gm command that summons all of
+--        our buddy-bots to us? ... it should be able to be cast on another
+--        player as well");
 --   .buddies revive [name] at me|partner|graveyard [ring|centre]
 --        every dead one is brought back to life at the game master, the
 --        partner, or the graveyard nearest the partner (one their side may
@@ -24,6 +29,14 @@
 -- revives all of a target player's buddy-bots, both with options to revive
 -- them at the GM's location, the player-partner's location, and the
 -- nearest graveyard." (Replaces the one-off ".buddies here" of the same day.)
+--
+-- Into a dungeon, raid or battleground only the buddies in the partner's
+-- party or raid are brought (the owner, 2026-10-26: "It should only summon
+-- group or raid members ... and in the open world, it just summons all of
+-- them, arranged in a circle around the player, using the same mechanism
+-- as the hearthstone system": lib/buddy-arc.lua's places, as
+-- buddy-hearth.lua uses). An instance holds only its group: a buddy from
+-- outside it would be put back out by the server.
 --------------------------------------------------------------------------------
 
 local PLAYER_EVENT_ON_COMMAND = 42
@@ -80,14 +93,16 @@ end
 -- Puts the listed buddies (players in the world) round an anchor on map
 -- `map_id`, each at its roster index's place. `revive`: bring the dead to
 -- life first (and only them); otherwise the dead are left where they lie.
--- Returns how many were placed and lines about the rest.
-local function place(roster, buddies, map, map_id, ax, ay, az, ao, shape, revive)
+-- `kept_out`: guids already named as left out (not in the partner's group,
+-- for an instance), skipped without a second note. Returns how many were
+-- placed and lines about the rest.
+local function place(roster, buddies, map, map_id, ax, ay, az, ao, shape, revive, kept_out)
     local spots = Arc.places(ax, ay, ao, #roster, shape)
     local moved, notes = 0, {}
     for i, guid in ipairs(roster) do
         local b = buddies[guid]
         if not b then
-            notes[#notes + 1] = string.format("character %d: not in the world", guid)
+            if not kept_out[guid] then notes[#notes + 1] = string.format("character %d: not in the world", guid) end
         elseif revive and not b:IsDead() then
             -- revive moves only the dead; the living stay where they are
         elseif not revive and b:IsDead() then
@@ -111,14 +126,16 @@ end
 local function run(gm, words, say)
     local verb, rest = words:match("^(%a+)%s*(.*)$")
     local dest, name, shape
-    if verb == "to" then
+    if verb == "summon" then
+        dest = "partner"                                        -- .buddies summon = .buddies to partner
+    elseif verb == "to" then
         dest, rest = rest:match("^(%a+)%s*(.*)$")
     elseif verb == "revive" then
         local before, at = rest:match("^(.-)%s*at%s+(%a+).*$")
         if not at then return say(TAG .. "revive needs where: .buddies revive [name] at me|partner|graveyard [ring|centre]") end
         dest, rest = at, before .. " " .. (rest:match("at%s+%a+%s*(.*)$") or "")
     else
-        return say(TAG .. "commands: .buddies to partner [name] | .buddies to me [name] | .buddies revive [name] at me|partner|graveyard; each may end in ring or centre")
+        return say(TAG .. "commands: .buddies summon [name] | .buddies to partner [name] | .buddies to me [name] | .buddies revive [name] at me|partner|graveyard; each may end in ring or centre")
     end
     for word in (rest or ""):gmatch("%a+") do
         if word == "ring" or word == "centre" or word == "center" then shape = (word == "ring") and "ring" or "centre"
@@ -165,8 +182,23 @@ local function run(gm, words, say)
         map, map_id = anchor:GetMap(), anchor:GetMapId()
         ax, ay, az, ao = anchor:GetLocation()
     end
+    -- into an instance (a dungeon, raid or battleground): only the partner's
+    -- party or raid members among the buddies
+    --   the anchor's map is an instance: a buddy outside the partner's
+    --     group is left where it is, and named
+    --   the open world: every buddy in the world, as before
+    local kept_out = {}
+    if map:IsDungeon() or map:IsRaid() or map:IsBattleground() then
+        local group = partner:GetGroup()
+        for guid, b in pairs(buddies) do
+            if not (group and group:IsMember(b:GetGUID())) then
+                buddies[guid], kept_out[guid] = nil, true
+                say(TAG .. b:GetName() .. ": not in " .. partner:GetName() .. "'s party or raid, so not brought into the instance")
+            end
+        end
+    end
     shape = Arc.pick_shape(shape, math.random())
-    local moved, notes = place(roster, buddies, map, map_id, ax, ay, az, ao, shape, verb == "revive")
+    local moved, notes = place(roster, buddies, map, map_id, ax, ay, az, ao, shape, verb == "revive", kept_out)
     for _, line in ipairs(notes) do say(TAG .. line) end
     say(string.format("%s%d of %s's %d buddies %s %s (%s)", TAG, moved, partner:GetName(), #roster,
         verb == "revive" and "revived at" or "moved to",

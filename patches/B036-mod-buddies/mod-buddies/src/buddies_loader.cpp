@@ -38,6 +38,7 @@ void AddSC_buddies_kit();
 void AddSC_buddies_stand_ins();
 void AddSC_buddies_show();
 void AddSC_buddies_orders();
+void AddSC_buddies_follow();
 
 // {{{ Addmod_buddiesScripts
 void Addmod_buddiesScripts()
@@ -72,5 +73,6 @@ void Addmod_buddiesScripts()
     AddSC_buddies_stand_ins();
     AddSC_buddies_show();
     AddSC_buddies_orders();
+    AddSC_buddies_follow();
 }
 // }}}

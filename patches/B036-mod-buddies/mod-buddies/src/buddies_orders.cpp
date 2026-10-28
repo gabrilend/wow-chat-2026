@@ -39,14 +39,35 @@
  * the keybind. The bot module's own chat commands stay closed to buddies
  * (B045); this order reaches its attack action directly.
  *
- * Not built yet: "follow me" and "follow <name>" (617y's open question on
- * how a follow ends); the bot module's per-failure "My bags are full"
- * whisper stays silenced (B048), this one line said once replacing it.
+ * "follow me", "follow <name>", "go away", "go away!", "shoo" (617y, the
+ * owner 2026-10-23; 617e13, 2026-10-26/27): the buddies that hear it
+ * follow the speaker (or the named player) in the following formation
+ * (buddies_follow.cpp), until that player says "go away" or "shoo" (they
+ * go back to their usual behaviour); "go away!" also keeps them from
+ * following that player again until that player logs out. A bare "follow"
+ * means nothing. Who hears, by where it is said (the owner, 2026-10-26:
+ * "should apply to whatever context they hear it ... A DM is for just
+ * them, and in guild chat it's all of them even if they aren't in a
+ * party"; 2026-10-27, of /say: "Only to your buddy-bot clan"):
+ *   party or raid chat - the buddies in that party or raid
+ *   a whisper          - only the buddy whispered
+ *   guild chat         - every buddy of the speaker's guild in the world
+ *   /say, /yell        - the speaker's own buddies within hearing (the
+ *                        server's own say and yell ranges)
+ * "go away" and "shoo" reach the hearers following the speaker, and the
+ * speaker's own buddies following anyone.
+ *
+ * The bot module's per-failure "My bags are full" whisper stays silenced
+ * (B048), this one line said once replacing it.
  */
 
 #include "buddies.h"
 #include "buddies_roam.h"
 #include "buddies_town.h"
+#include "buddies_follow.h"
+#include "roam/buddy_follow_core.h"
+#include "Guild.h"
+#include "World.h"
 #include "Chat.h"
 #include "CompanionAccounts.h"
 #include "GameTime.h"
@@ -75,8 +96,18 @@ static char const* const GOING_LINE        = "Off to sell. Come with me if you c
 // Heard orders, waiting for the world's thread; buddies told to sell (taken
 // by the selling trip as it sets off, BuddyTakeSellOrder); buddies that
 // have said their bags are full, until the bags empty again.
-enum class OrderKind : uint8 { Sell, Attack };
-struct HeardOrder { ObjectGuid speaker; ObjectGuid whisperedBuddy; OrderKind kind = OrderKind::Sell; std::vector<std::string> names; };
+enum class OrderKind : uint8 { Sell, Attack, Follow, GoAway };
+// where an order was said, which decides who hears it (the follow orders)
+enum class Heard : uint8 { Say, Yell, Group, Whisper, Guild };
+struct HeardOrder
+{
+    ObjectGuid               speaker;
+    ObjectGuid               whisperedBuddy;
+    OrderKind                kind  = OrderKind::Sell;
+    std::vector<std::string> names;                    // attack: the buddies named; follow: the player named (empty: "me")
+    Heard                    where = Heard::Say;
+    bool                     hard  = false;            // "go away!": not again until the speaker logs out
+};
 static std::mutex              sOrdersLock;
 static std::vector<HeardOrder> sHeard;
 static std::set<uint32>        sToldToSell;
@@ -120,6 +151,121 @@ static bool IsAttack(std::string msg, std::vector<std::string>& names)
         return false;
     names.assign(words.begin() + 1, words.end());
     return true;
+}
+// }}}
+
+// {{{ IsFollowOrder
+// The words of a follow order, read by the following core
+// (BuddyFollow::ReadOrder, roam/buddy_follow_core.h, where the test checks
+// them).
+static bool IsFollowOrder(std::string const& raw, OrderKind& kind, std::string& name, bool& hard)
+{
+    BuddyFollow::Order o = BuddyFollow::ReadOrder(raw, name, hard);
+    if (o == BuddyFollow::Order::None)
+        return false;
+    kind = o == BuddyFollow::Order::Follow ? OrderKind::Follow : OrderKind::GoAway;
+    return true;
+}
+// }}}
+
+// {{{ Hearers
+// The buddies a follow order reaches, by where it was said (see the top).
+static std::vector<Player*> Hearers(HeardOrder const& h, Player* speaker)
+{
+    std::vector<Player*> out;
+    float range = h.where == Heard::Yell ? sWorld->getFloatConfig(CONFIG_LISTEN_RANGE_YELL)
+                                         : sWorld->getFloatConfig(CONFIG_LISTEN_RANGE_SAY);
+    Group* group = speaker->GetGroup();
+    for (auto const& [buddyGuid, ownerGuid] : BuddyRosterPairs())
+    {
+        Player* b = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(buddyGuid));
+        if (!b || !b->IsInWorld() || !b->IsAlive())
+            continue;
+        bool hears = false;
+        switch (h.where)
+        {
+            case Heard::Whisper: hears = h.whisperedBuddy.GetCounter() == buddyGuid; break;
+            case Heard::Group:   hears = group && b->GetGroup() == group; break;
+            case Heard::Guild:   hears = speaker->GetGuildId() != 0 && b->GetGuildId() == speaker->GetGuildId(); break;
+            case Heard::Say:
+            case Heard::Yell:    hears = ownerGuid == speaker->GetGUID().GetCounter() && b->GetMapId() == speaker->GetMapId()
+                                         && b->GetExactDist(speaker) <= range; break;
+        }
+        if (hears)
+            out.push_back(b);
+    }
+    return out;
+}
+// }}}
+
+// {{{ ObeyFollow
+// One heard follow order, carried out by each buddy that hears it.
+static void ObeyFollow(HeardOrder const& h, Player* speaker)
+{
+    ChatHandler tell(speaker->GetSession());
+    std::vector<Player*> hearers = Hearers(h, speaker);
+    if (h.kind == OrderKind::Follow)
+    {
+        Player* leader = speaker;
+        if (!h.names.empty())
+        {
+            std::string wanted = h.names[0];
+            leader = nullptr;
+            for (Player* p : hearers)                  // a buddy of the hearers, by name
+                if (p->GetName().size() == wanted.size() &&
+                    std::equal(wanted.begin(), wanted.end(), p->GetName().begin(), [](char a, char b) { return a == std::tolower(static_cast<unsigned char>(b)); }))
+                    leader = p;
+            if (!leader)
+            {
+                std::string proper = wanted;
+                proper[0] = char(std::toupper(static_cast<unsigned char>(proper[0])));
+                leader = ObjectAccessor::FindPlayerByName(proper, true);
+            }
+            if (!leader || !leader->IsInWorld())
+            {
+                tell.PSendSysMessage("There is no one called {} here to follow.", wanted);
+                return;
+            }
+        }
+        uint32 following = 0, refusing = 0;
+        for (Player* b : hearers)
+        {
+            if (b == leader)
+                continue;                              // a buddy told to follow itself stays as it is
+            if (BuddyFollowRefused(b->GetGUID().GetCounter(), leader->GetGUID().GetCounter()))
+            {
+                ++refusing;
+                continue;
+            }
+            BuddyFollowSet(b->GetGUID().GetCounter(), leader->GetGUID().GetCounter());
+            ++following;
+        }
+        tell.PSendSysMessage("{} {} following {}{}.", following, following == 1 ? "buddy is" : "buddies are", leader->GetName(),
+                             refusing ? " (" + std::to_string(refusing) + " were sent away and won't until " + leader->GetName() + " logs out)" : "");
+        LOG_INFO("module", "mod-buddies: {} said follow {}; {} buddies follow, {} refused", speaker->GetName(), leader->GetName(), following, refusing);
+        return;
+    }
+    // go away / shoo: the hearers following the speaker, and the speaker's
+    // own buddies following anyone
+    uint32 gone = 0;
+    uint32 me = speaker->GetGUID().GetCounter();
+    for (Player* b : hearers)
+    {
+        uint32 guid   = b->GetGUID().GetCounter();
+        uint32 leader = BuddyFollowLeader(guid);
+        bool   mine   = false;
+        for (auto const& [buddyGuid, ownerGuid] : BuddyRosterPairs())
+            if (buddyGuid == guid && ownerGuid == me)
+                mine = true;
+        if (!leader || (leader != me && !mine))
+            continue;
+        BuddyFollowStop(guid);
+        if (h.hard)
+            BuddyFollowRefuse(guid, me);
+        ++gone;
+    }
+    tell.PSendSysMessage("{} {} back to {} own business{}.", gone, gone == 1 ? "buddy goes" : "buddies go", gone == 1 ? "its" : "their",
+                         h.hard ? ", and won't follow you again until you log out" : "");
 }
 // }}}
 
@@ -187,6 +333,8 @@ static void Obey(HeardOrder const& h)
         return;
     if (h.kind == OrderKind::Attack)
         return ObeyAttack(h, speaker);
+    if (h.kind == OrderKind::Follow || h.kind == OrderKind::GoAway)
+        return ObeyFollow(h, speaker);
     std::set<uint32> owners;                           // whose buddies hear it
     owners.insert(speaker->GetGUID().GetCounter());
     if (Group* g = speaker->GetGroup())
@@ -246,20 +394,29 @@ class buddies_orders_player : public PlayerScript
 {
 public:
     buddies_orders_player() : PlayerScript("buddies_orders_player",
-        { PLAYERHOOK_CAN_PLAYER_USE_CHAT, PLAYERHOOK_CAN_PLAYER_USE_GROUP_CHAT, PLAYERHOOK_CAN_PLAYER_USE_PRIVATE_CHAT }) { }
+        { PLAYERHOOK_CAN_PLAYER_USE_CHAT, PLAYERHOOK_CAN_PLAYER_USE_GROUP_CHAT, PLAYERHOOK_CAN_PLAYER_USE_PRIVATE_CHAT,
+          PLAYERHOOK_CAN_PLAYER_USE_GUILD_CHAT }) { }
 
-    // /say (and yell): heard by the speaker's group's buddies
+    // /say (and yell): the sell and attack orders reach the speaker's
+    // group's buddies; the follow orders, the speaker's own within hearing
     bool OnPlayerCanUseChat(Player* player, uint32 type, uint32 /*lang*/, std::string& msg) override
     {
         if (type == CHAT_MSG_SAY || type == CHAT_MSG_YELL)
-            Hear(player, msg, ObjectGuid::Empty);
+            Hear(player, msg, ObjectGuid::Empty, type == CHAT_MSG_YELL ? Heard::Yell : Heard::Say);
         return true;
     }
 
     // party and raid chat
     bool OnPlayerCanUseChat(Player* player, uint32 /*type*/, uint32 /*lang*/, std::string& msg, Group* /*group*/) override
     {
-        Hear(player, msg, ObjectGuid::Empty);
+        Hear(player, msg, ObjectGuid::Empty, Heard::Group);
+        return true;
+    }
+
+    // guild chat: the follow orders only, heard by the guild's buddies
+    bool OnPlayerCanUseChat(Player* player, uint32 /*type*/, uint32 /*lang*/, std::string& msg, Guild* /*guild*/) override
+    {
+        Hear(player, msg, ObjectGuid::Empty, Heard::Guild);
         return true;
     }
 
@@ -272,22 +429,35 @@ public:
         // whether the speaker may order it (its owner, or in its owner's
         // group) is settled on the world's thread (Obey), where groups are
         // safe to read
-        Hear(player, msg, receiver->GetGUID());
+        Hear(player, msg, receiver->GetGUID(), Heard::Whisper);
         return true;
     }
 
 private:
-    // a player (not a buddy) saying "go sell" or "attack": noted for the
-    // world's thread
-    static void Hear(Player* player, std::string const& msg, ObjectGuid buddy)
+    // a player (not a buddy) saying an order: noted for the world's thread
+    // (guild chat carries only the follow orders)
+    static void Hear(Player* player, std::string const& msg, ObjectGuid buddy, Heard where)
     {
         if (!BuddiesEnabled() || CompanionAccounts::Is(player->GetSession()->GetAccountId()))
             return;
-        HeardOrder h { player->GetGUID(), buddy };
-        if (IsAttack(msg, h.names))
+        // every field named: a sell order until the readers below say
+        // otherwise (two given and two left to their defaults made the
+        // compiler warn, -Wmissing-field-initializers, 2026-10-26)
+        HeardOrder h { player->GetGUID(), buddy, OrderKind::Sell, {}, where, false };
+        OrderKind follow = OrderKind::Follow;
+        std::string name;
+        if (IsFollowOrder(msg, follow, name, h.hard))
+        {
+            h.kind = follow;
+            if (!name.empty())
+                h.names.push_back(name);
+        }
+        else if (where == Heard::Guild)
+            return;                                    // guild chat: only the follow orders
+        else if (IsAttack(msg, h.names))
             h.kind = OrderKind::Attack;
         else if (!IsGoSell(msg))
-            return;                                    // neither order: ordinary chat
+            return;                                    // no order: ordinary chat
         std::lock_guard<std::mutex> lock(sOrdersLock);
         sHeard.push_back(h);
     }

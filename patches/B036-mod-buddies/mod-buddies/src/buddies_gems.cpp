@@ -88,6 +88,17 @@ static void ReadTiers()
         Gem g;
         if (!GemOf(&p, g) || p.HasFlag(ITEM_FLAG_UNIQUE_EQUIPPABLE) || p.ItemLimitCategory || p.RequiredSkill)
             continue;
+        // Blizzard's own test items are in the item tables too, with real
+        // tiers' levels and qualities ("Test Dazzling Talasite", item level
+        // 70, rare: tier III's): never a buddy's gem (2026-10-26, Lariadel's
+        // pants and staff held one). Known by their names: "Test" as a word,
+        // or the placeholder and deprecated markers.
+        //   one of these names: left out
+        //   any other: a candidate, as before
+        std::string const& n = p.Name1;
+        if (n.rfind("Test ", 0) == 0 || n.find(" Test ") != std::string::npos || n.find("[PH]") != std::string::npos
+            || n.rfind("Deprecated", 0) == 0 || n.rfind("QA ", 0) == 0)
+            continue;
         for (int t = 0; t < 3; ++t)
             if (p.ItemLevel == GEM_TIERS[t].itemLevel && p.Quality == GEM_TIERS[t].quality)
                 sTierGems[t].push_back(g);
@@ -689,15 +700,20 @@ public:
         return commandTable;
     }
 
-    static bool HandleGems(ChatHandler* handler, std::string name)
+    // A name, or none: the game master's selected player (the owner,
+    // 2026-10-26: "it doesn't accept a target by target").
+    static bool HandleGems(ChatHandler* handler, Optional<PlayerIdentifier> who)
     {
-        if (!normalizePlayerName(name))
+        if (!who)
+            who = PlayerIdentifier::FromTarget(handler);
+        if (!who)
         {
-            handler->PSendSysMessage("Usage: .buddy gems <buddy name>");
+            handler->PSendSysMessage("Usage: .buddy gems [buddy name] (no name: the selected buddy)");
             return false;
         }
-        Player* buddy = ObjectAccessor::FindPlayerByName(name, true);
-        if (!buddy || !BuddyIsCompanionAccount(buddy->GetSession()->GetAccountId()))
+        std::string name = who->GetName();
+        Player* buddy = who->GetConnectedPlayer();
+        if (!buddy || !buddy->IsInWorld() || !BuddyIsCompanionAccount(buddy->GetSession()->GetAccountId()))
         {
             handler->PSendSysMessage("{} is not a buddy in the world (a buddy is in the world while its owner is online).", name);
             return false;

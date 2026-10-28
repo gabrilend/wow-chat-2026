@@ -1,6 +1,6 @@
 # ambush.lua
 
-Monsters sent at every player and bot on beta, from 120-160 yards away,
+Monsters sent at every player and bot on beta, from 120-200 yards away (120-160 ahead of a moving one, out to 200 on the plus sign round a still one),
 on a clock that drifts a few seconds each time. The danger half of the
 wow-chat loop (concepts in `docs/concept-catalog.md`, phase 3; issues 210,
 302, 303). Checked offline by `scripts/test-ambush`.

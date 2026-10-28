@@ -52,6 +52,26 @@ inline bool Snap(dtNavMeshQuery const* q, dtQueryFilter const& f, BuddyRoam::Poi
 }
 // }}}
 
+// {{{ WallDistance
+// How far from `at` (found on the mesh within `onMesh` sideways, `rise` up
+// or down) to the mesh's nearest edge, a wall or a drop, looking no
+// farther than `maxRadius`: the half-width of a passage, measured from its
+// middle. False when `at` is off the mesh.
+inline bool WallDistance(dtNavMeshQuery const* q, dtQueryFilter const& f, BuddyRoam::Point const& at, float onMesh, float rise,
+                         float maxRadius, float& dist)
+{
+    float const centre[3] = { at.y, at.z, at.x };
+    float const ext[3]    = { onMesh, rise, onMesh };
+    float on[3], hit[3], normal[3];
+    dtPolyRef ref = 0;
+    if (dtStatusFailed(q->findNearestPoly(centre, ext, &f, &ref, on)) || !ref)
+        return false;
+    if (dtStatusFailed(q->findDistanceToWall(ref, on, maxRadius, &f, &dist, hit, normal)))
+        return false;
+    return true;
+}
+// }}}
+
 // {{{ LineClear
 // Whether a walker goes straight from `from` to `to` over the mesh: both
 // ends on it (within `onMesh` sideways, `rise` up or down) and nothing (a

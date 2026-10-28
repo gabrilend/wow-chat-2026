@@ -33,7 +33,12 @@
 --                      buddy waiting for its death-knight level (55, 57,
 --                      59, 60), moved to 3 by sargobras.lua when the
 --                      owner reaches it; the buddy module neither logs
---                      in nor re-stages a 5
+--                      in nor re-stages a 5; 6 reclassed: its class was
+--                      changed (scripts/change-character-class), dressed
+--                      and taught for it at its next login, then 0; 7 to
+--                      spec: brought up to docs/buddy-gear-spec.md at its
+--                      next login (lessons, skills, empty kit slots, tools,
+--                      jewellery, gems), what it earned kept on, then 0
 --
 -- A row moves through three states: owed (class 0), chosen (class set,
 -- buddy 0: the module makes the character), filled (buddy set).

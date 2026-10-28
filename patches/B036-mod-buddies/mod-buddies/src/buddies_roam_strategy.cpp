@@ -76,6 +76,7 @@
 #include "buddies.h"
 #include "buddies_roam.h"
 #include "buddies_navmesh.h"
+#include "buddies_follow.h"
 #include "buddies_steer.h"
 #include "buddies_npcs.h"
 #include "MoveSpline.h"
@@ -1892,6 +1893,7 @@ public:
         creators["buddy roam"]   = [](PlayerbotAI* ai) -> Strategy* { return new BuddyRoamStrategy(ai); };
         creators["buddy travel"] = NewBuddyTravelStrategy;    // buddies_town.cpp (617e4)
         creators["buddy town"]   = NewBuddyTownStrategy;
+        creators["buddy follow"] = NewBuddyFollowStrategy;    // buddies_follow.cpp (617e13)
     }
 };
 class BuddyActionContext : public NamedObjectContext<Action>
@@ -1902,6 +1904,7 @@ public:
         creators["buddy roam step"]   = [](PlayerbotAI* ai) -> Action* { return new BuddyRoamStepAction(ai); };
         creators["buddy travel step"] = NewBuddyTravelStepAction;
         creators["buddy town step"]   = NewBuddyTownStepAction;
+        creators["buddy follow step"] = NewBuddyFollowStepAction;
     }
 };
 class BuddyTriggerContext : public NamedObjectContext<Trigger>
@@ -1912,6 +1915,7 @@ public:
         creators["buddy roam due"]   = [](PlayerbotAI* ai) -> Trigger* { return new BuddyRoamDueTrigger(ai); };
         creators["buddy travel due"] = NewBuddyTravelDueTrigger;
         creators["buddy town due"]   = NewBuddyTownDueTrigger;
+        creators["buddy follow due"] = NewBuddyFollowDueTrigger;
     }
 };
 // }}}
@@ -1967,19 +1971,31 @@ static void RegisterWithPlayerbots()
 struct Want { char const* name; bool on; };
 static std::vector<Want> const sOpenCountry = {
     { "follow", false }, { "buddy roam", true }, { "grind", false }, { "food", false }, { "loot", true }, { "gather", true },
-    { "buddy travel", true }, { "buddy town", false },
+    { "buddy travel", true }, { "buddy town", false }, { "buddy follow", false },
 };
 static std::vector<Want> const sTown = {
     { "follow", false }, { "buddy roam", false }, { "grind", false }, { "food", false },
-    { "buddy travel", true }, { "buddy town", true },
+    { "buddy travel", true }, { "buddy town", true }, { "buddy follow", false },
 };
-// In a dungeon, raid or battleground: the bot module's own way of running
-// one, which is to follow its leader and fight beside it (its bots don't
-// clear a dungeon by themselves; the leader leads the pulls). Seen
-// 2026-10-03 in Zul'Farrak: buddies stood at the entrance, because the
-// open-country set (no "follow") was left as it was when they went in.
+// In a dungeon, raid or battleground: follow the leader and fight beside
+// it (the bot module's bots don't clear a dungeon by themselves; the
+// leader leads the pulls). Seen 2026-10-03 in Zul'Farrak: buddies stood at
+// the entrance, because the open-country set (no following) was left as it
+// was when they went in. Since 2026-10-27 the following is ours, "buddy
+// follow" (buddies_follow.cpp: beside the owner's own track, on a half
+// circle behind, at rest until the owner is 10 yards off; the owner: "this
+// is how they should follow the player"), in place of the bot module's
+// "follow" (each bot a yard and a half behind on its own straight line).
+// Told to follow someone ("follow me", "follow <name>", buddies_orders.cpp)
+// in the open or in a town: following that player and nothing else of its
+// own, until "go away" (617y, 617e13). Looting and gathering stay: what the
+// leader kills is still looted on the way.
+static std::vector<Want> const sOrderedFollow = {
+    { "follow", false }, { "buddy follow", true }, { "buddy roam", false }, { "grind", false }, { "food", false },
+    { "loot", true }, { "gather", true }, { "buddy travel", false }, { "buddy town", false },
+};
 static std::vector<Want> const sInstance = {
-    { "follow", true }, { "buddy roam", false }, { "grind", false }, { "loot", true },
+    { "follow", false }, { "buddy follow", true }, { "buddy roam", false }, { "grind", false }, { "loot", true },
     { "buddy travel", false }, { "buddy town", false },
 };
 // }}}
@@ -2032,10 +2048,13 @@ public:
                 continue;                              // not driven by its owner (no master yet)
             // inside an instance: follow; else town or country by where the
             // owner stands (a building inside a town counts as the town)
-            bool inside = bot->GetMap()->Instanceable();
-            bool town   = !inside && BuddyTownArea(owner) != 0;
-            std::vector<Want> const& wants = inside ? sInstance : (town ? sTown : sOpenCountry);
-            uint8 place = inside ? PLACE_INSIDE : (town ? PLACE_TOWN : PLACE_COUNTRY);
+            // told to follow someone: that, wherever (in an instance too,
+            // where the instance set follows as well)
+            bool inside  = bot->GetMap()->Instanceable();
+            bool ordered = !inside && BuddyFollowLeader(buddyGuid) != 0;
+            bool town    = !inside && !ordered && BuddyTownArea(owner) != 0;
+            std::vector<Want> const& wants = inside ? sInstance : ordered ? sOrderedFollow : (town ? sTown : sOpenCountry);
+            uint8 place = inside ? PLACE_INSIDE : ordered ? PLACE_ORDERED : (town ? PLACE_TOWN : PLACE_COUNTRY);
             auto set = _placeSetFor.find(buddyGuid);
             if (set != _placeSetFor.end() && set->second == place)
                 continue;                              // set already put on for this place: the owner's orders stand
@@ -2135,7 +2154,7 @@ private:
     uint32 _sinceLast  = 0;
     uint32 _sinceAggro = 0;
     // buddy guid -> the kind of place its set was last put on for
-    static constexpr uint8 PLACE_COUNTRY = 0, PLACE_TOWN = 1, PLACE_INSIDE = 2;
+    static constexpr uint8 PLACE_COUNTRY = 0, PLACE_TOWN = 1, PLACE_INSIDE = 2, PLACE_ORDERED = 3;
     std::map<uint32, uint8> _placeSetFor;
 };
 

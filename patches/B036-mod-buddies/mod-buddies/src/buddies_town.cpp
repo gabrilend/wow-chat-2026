@@ -61,6 +61,7 @@
 #include "buddies_town.h"
 #include "buddies_beds.h"
 #include "buddies_crossing.h"
+#include "buddies_follow.h"
 #include "Bag.h"
 #include "Containers.h"
 #include "FishingAction.h"
@@ -103,6 +104,7 @@
 #include <mutex>
 #include <set>
 #include <unordered_map>
+#include <unordered_set>
 
 // The bot module's shore finder (FishingAction.cpp): defined there without a
 // header declaration, so declared here. From `targetPos` (water), steps back
@@ -149,6 +151,11 @@ static constexpr uint32 STUCK_MS            = 90000;   // no progress on a long 
 static constexpr float  PROGRESS_YARDS      = 10.0f;   // what counts as progress toward the owner
 static constexpr float  UNSTUCK_YARDS       = 30.0f;   // "a random spot within 30 yards"
 static constexpr uint32 UNSTUCK_TRIES       = 12;      // random spots tried for walkable ground
+// 617e13 (2026-10-27, from the first measured walk; tuned in docs/balance-updates.md):
+static constexpr uint32 FAILS_BEFORE_UNSTUCK = 3;      // long walks in a row that found no way: unstuck at once
+static constexpr float  ARRIVE_RADIUS       = 5.0f;    // the arc a travelling buddy ends on, round its owner
+static constexpr float  ARRIVE_SPACING      = 4.0f;    // yards between neighbouring places on it
+static constexpr uint64 ARRIVE_CLAIM_MS     = 30000;   // a place not walked to again for this long is free
 static constexpr float  WANDER_SCAN_YARDS   = 100.0f;  // the wander's townspeople this far: a walk of about 40 s,
                                                        // inside WALK_GIVE_UP_MS (150 yards would be the whole 60 s)
 static constexpr float  WANDER_CONE         = 0.785f;  // "the general direction": within 45 degrees either side
@@ -203,7 +210,26 @@ struct TravelProgress
     uint32 toArea  = 0;
     float  nearest = 0.0f;
     uint64 since   = 0;
+    uint32 fails   = 0;      // long walks in a row that found no way (617e13)
+    uint32 unstuck = 0;      // unsticks in a row without progress: each reaches farther
 };
+// {{{ the arrival arc (617e13)
+// Where a travelling buddy walks to: a place on an arc in front of its
+// owner, not the owner's own spot (2026-10-27, three followers stood
+// within 3 yards of their owner a third of the time). The owner: "the
+// circular position arc we always always use when targeting the player
+// ... the position on the arc closest to the buddy-bot, and shifting
+// others around if they're already there or have been assigned there and
+// are walking toward", and of a place another is heading for: "not
+// skipped. We should move the other buddy to a different part of the arc,
+// even as they're in motion. We can do this by moving the waypoint they're
+// moving toward". Each owner's travellers: buddy -> where it last stood,
+// when, and the place it was given; the places are shared out again at
+// each step (ArrivalPlace), and a buddy whose place changed walks to its
+// new one from its next step, its waypoint moved.
+struct ArriveClaim { uint32 place = 0; uint64 at = 0; float x = 0.0f, y = 0.0f; };
+static std::unordered_map<uint32, std::unordered_map<uint32, ArriveClaim>> sArrive;   // under sTownLock
+// }}}
 static std::unordered_map<uint32, TravelProgress> sTravel;   // under sTownLock
 static std::mutex sTownLock;
 static std::unordered_map<uint32, TownState> sTown;
@@ -1305,7 +1331,10 @@ public:
         }
         if (bot->GetMap()->Instanceable())
             return false;
-        // in the same town (a building inside it included) is not "elsewhere"
+        // in the same town (a building inside it included) is not "elsewhere":
+        // the town visit has it, wherever in the town it is (the owner,
+        // 2026-10-27, of travelling to the owner inside one town circle:
+        // "that's not intended behavior")
         if (uint32 town = BuddyTownArea(owner))
             if (BuddyTownArea(bot) == town)
                 return false;
@@ -1365,28 +1394,142 @@ public:
                 p.since = now;
             }
         }
-        if (stuck && Unstick())
-            return true;
+        if (stuck)
+        {
+            uint32 times;
+            {
+                std::lock_guard<std::mutex> lock(sTownLock);
+                times = ++sTravel[guid].unstuck;
+            }
+            if (Unstick(UNSTUCK_YARDS * float(std::min<uint32>(times, 2))))
+                return true;
+        }
 
         // keep the bot module's own teleport-to-destination from firing
         botAI->rpgInfo.stuckTs = getMSTime();
         botAI->rpgInfo.stuckAttempts = 0;
-        return MoveFarTo(WorldPosition(owner->GetMapId(), owner->GetPositionX(), owner->GetPositionY(), owner->GetPositionZ()));
+        float ax, ay, az;
+        ArrivalPlace(owner, ax, ay, az);
+        bool walking = MoveFarTo(WorldPosition(owner->GetMapId(), ax, ay, az));
+        // No way found to the arc: along the owner's own track instead (the
+        // owner, 2026-10-27, idea 3: "the owner's feet already proved the
+        // way", through gates, lifts and cave mouths the mesh may not join).
+        // Each path:
+        //   a track, and a way to its point a few steps on - walk that
+        //   no track (just arrived, teleported) or no way to it either -
+        //                                                  the failure counts
+        if (!walking)
+        {
+            float tx, ty, tz;
+            if (BuddyFollowTrackAhead(owner->GetGUID().GetCounter(), bot->GetPositionX(), bot->GetPositionY(), tx, ty, tz)
+                && MoveFarTo(WorldPosition(owner->GetMapId(), tx, ty, tz)))
+            {
+                BuddyTrace(bot, "travel: no way to its owner's arc; along the owner's track to ({:.0f}, {:.0f})", tx, ty);
+                walking = true;
+            }
+        }
+        // A long walk that found no way (2026-10-27: Matis's, every step,
+        // from one spot): FAILS_BEFORE_UNSTUCK of them in a row and it is
+        // unstuck now, not after STUCK_MS of standing.
+        //   found a way: the count starts again
+        //   none, the third in a row: unstuck (farther the second time in a row)
+        //   none, fewer: tried again next step
+        uint32 fails, times;
+        {
+            std::lock_guard<std::mutex> lock(sTownLock);
+            TravelProgress& p = sTravel[guid];
+            p.fails = walking ? 0 : p.fails + 1;
+            if (walking)
+                p.unstuck = 0;
+            fails = p.fails;
+            times = p.unstuck;
+            if (fails >= FAILS_BEFORE_UNSTUCK)
+            {
+                p.fails = 0;
+                times = ++p.unstuck;
+            }
+        }
+        if (!walking && fails >= FAILS_BEFORE_UNSTUCK)
+        {
+            BuddyTrace(bot, "travel: {} long walks in a row found no way to its owner; unstuck", FAILS_BEFORE_UNSTUCK);
+            return Unstick(UNSTUCK_YARDS * float(std::min<uint32>(times, 2)));
+        }
+        return walking;
     }
 
+    // {{{ ArrivalPlace
+    // The place this buddy walks to on its owner's arrival arc. Every
+    // traveller of the owner seen lately is given a place afresh, each time
+    // any of them steps: the pairs of (buddy, place) taken shortest first,
+    // so the nearest buddy gets the nearest place and one already on its
+    // way gives up its place to a nearer one and is handed the next free
+    // place instead (its waypoint moves on its next step). The arc is
+    // centred on the way the owner faces, a place ARRIVE_SPACING along it
+    // from the next, at ARRIVE_RADIUS (wider when the places would wrap
+    // round); the height the ground there, or the owner's when none is found.
+    void ArrivalPlace(Player* owner, float& x, float& y, float& z)
+    {
+        uint32 me = bot->GetGUID().GetCounter(), boss = owner->GetGUID().GetCounter();
+        uint64 now = Now();
+        float ox = owner->GetPositionX(), oy = owner->GetPositionY(), oz = owner->GetPositionZ(), oo = owner->GetOrientation();
+        std::lock_guard<std::mutex> lock(sTownLock);
+        auto& claims = sArrive[boss];
+        // travellers not seen stepping for ARRIVE_CLAIM_MS have arrived or stopped
+        for (auto it = claims.begin(); it != claims.end();)
+            it = (it->first != me && now - it->second.at > ARRIVE_CLAIM_MS) ? claims.erase(it) : std::next(it);
+        ArriveClaim& mine = claims[me];
+        mine.at = now;
+        mine.x  = bot->GetPositionX();
+        mine.y  = bot->GetPositionY();
+
+        uint32 n = uint32(claims.size());
+        float radius = std::max(ARRIVE_RADIUS, ARRIVE_SPACING * float(n) / (2.0f * float(M_PI)));
+        float step   = std::min(ARRIVE_SPACING / radius, 2.0f * float(M_PI) / float(n));
+        std::vector<std::pair<float, float>> places(n);
+        for (uint32 k = 0; k < n; ++k)
+        {
+            float a = oo + (float(k) - float(n - 1) / 2.0f) * step;
+            places[k] = { ox + std::cos(a) * radius, oy + std::sin(a) * radius };
+        }
+        // every (buddy, place) pair by distance, shortest first; each buddy
+        // and each place used once
+        struct Pair { float d; uint32 who; uint32 place; };
+        std::vector<Pair> pairs;
+        for (auto const& [who, c] : claims)
+            for (uint32 k = 0; k < n; ++k)
+                pairs.push_back({ std::hypot(places[k].first - c.x, places[k].second - c.y), who, k });
+        std::sort(pairs.begin(), pairs.end(), [](Pair const& a, Pair const& b) { return a.d < b.d; });
+        std::unordered_set<uint32> placed, used;
+        for (Pair const& pr : pairs)
+        {
+            if (placed.count(pr.who) || used.count(pr.place))
+                continue;
+            claims[pr.who].place = pr.place;
+            placed.insert(pr.who);
+            used.insert(pr.place);
+        }
+        x = places[mine.place].first;
+        y = places[mine.place].second;
+        z = bot->GetMap()->GetHeight(bot->GetPhaseMask(), x, y, oz + 5.0f, true, 15.0f);
+        if (z <= INVALID_HEIGHT)
+            z = oz;                                    // no ground found there: the owner's height
+    }
+    // }}}
+
 private:
-    // A random walkable spot within UNSTUCK_YARDS: ground found near the
+    // A random walkable spot within `reach` (UNSTUCK_YARDS, twice that for a
+    // second unstick in a row, 617e13): ground found near the
     // buddy's height, not under water, within sight of where it stands (so
     // it isn't put through a wall into a closed room). Returns false, logged,
     // when none of the tries fits; the walk then simply goes on.
-    bool Unstick()
+    bool Unstick(float reach = UNSTUCK_YARDS)
     {
         Map* map = bot->GetMap();
         float bx = bot->GetPositionX(), by = bot->GetPositionY(), bz = bot->GetPositionZ();
         for (uint32 attempt = 0; attempt < UNSTUCK_TRIES; ++attempt)
         {
             float angle = frand(0.0f, 2.0f * float(M_PI));
-            float d     = frand(5.0f, UNSTUCK_YARDS);
+            float d     = frand(5.0f, reach);
             float x = bx + std::cos(angle) * d;
             float y = by + std::sin(angle) * d;
             float z = map->GetHeight(bot->GetPhaseMask(), x, y, bz + 10.0f, true, 30.0f);
@@ -1402,7 +1545,7 @@ private:
             return true;
         }
         LOG_WARN("module", "mod-buddies: buddy {} is stuck but none of {} spots within {:.0f} yards was walkable; it keeps trying",
-            bot->GetName(), UNSTUCK_TRIES, UNSTUCK_YARDS);
+            bot->GetName(), UNSTUCK_TRIES, reach);
         return false;
     }
 };

@@ -69,6 +69,14 @@ bool BuddyMeshSnap(Map const* map, BuddyRoam::Point const& at, float reach, floa
 }
 // }}}
 
+// {{{ BuddyMeshWallDistance
+bool BuddyMeshWallDistance(Map const* map, BuddyRoam::Point const& at, float maxRadius, float& dist)
+{
+    dtNavMeshQuery const* q = Query(map);
+    return q && BuddyMeshCore::WallDistance(q, Filter(), at, BuddyMeshCore::LINE_ON_MESH, BuddyMeshCore::LINE_RISE, maxRadius, dist);
+}
+// }}}
+
 // {{{ BuddyMeshLineClear
 // The shared walkability ray (roam/buddy_mesh_core.h), ends found within
 // LINE_ON_MESH sideways and LINE_RISE up or down.

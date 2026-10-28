@@ -67,3 +67,29 @@ shapes).
 
 ### `can_fill(cls, role) -> boolean`
 Whether any of the class's shapes plays `role`.
+
+### `build_cost(cls, build) -> cost, per_tree`
+The fewest talent points that hold every required talent of a named build
+(`../data/talent-builds.lua`) at its last rank, its prerequisites
+included. `cost` is an integer; `per_tree` is `{ a, b, c }` (integers, one
+per tree). Per tree: the larger of the required points themselves and,
+for each required talent, the 5-a-row points its row needs below it plus
+the required points from its row down.
+
+### `plan_build(cls, build, held, free, rand) -> steps, unspent, missing`
+`plan` for a named build (issue 635b). `build` is a table: `name`
+(string), `thirds` (array of 3 integers summing to 3), `required` (array
+of talent names, each to be maxed), `forbidden` (array of talent names
+never taken), `past_cap` (boolean: take talents basic's cap shuts).
+`held`, `free`, `rand`, `steps` and `unspent` are as in `plan`; `missing`
+is an array of the required names not maxed when the points ran out.
+Each point: a required talent (or one on its prerequisite chain) that can
+be learned now, the shallowest first; else, while one is short, a point in
+its tree to open its row; else the thirds, as `plan`. Errors (never quiet
+skips): a name the class has no talent of, a required talent past basic's
+cap without `past_cap`, a talent both required and forbidden, and a build
+costing more points than `held` and `free` together.
+
+The checks (`legal`, `has_room`, the tree choosers and `pick_in_tree`)
+take an optional `rules` table `{ forbid = set of talent ids, past_cap =
+boolean }`; `plan` passes none, so buddies' shapes are unchanged.

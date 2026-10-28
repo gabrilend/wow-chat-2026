@@ -1,6 +1,6 @@
 # Conversation Summary: 784dd9a0-35c5-40f0-a67c-730fa19764df
 
-Generated on: 2026-10-25 17:49:12
+Generated on: 2026-10-25 18:39:37
 Models: claude-opus-5-5
 
 ## Contents
@@ -6844,6 +6844,211 @@ Also corrected along the way:
 Next on the list: spirit on gear (155k2), hide shoulders (720), the player class
 change (197) and the buddy reset (617a7). I'll carry on with those unless you'd
 rather answer the two questions first.
+
+--------------------------------------------------------------------------------
+
+### User Request 62
+
+Can we make the level 400 blacksmithing spells "socket bracer" and "socket
+gloves" require level 300 instead? And, can we have them learnable at 1/3rd
+chance from the same place the belt buckle recipe drops? I forget where we
+assigned it to.
+
+  1. Kazzak tuned for level 60.
+
+and how does this work for the fel reaver and doomwalker? Also, what's up with
+Highlord Kruul, is he part of our raid tiers? Should we put him on the HTML
+page?
+
+> Your 10–15 seconds is about where basic already is; stock's difficulty would
+> be about twice that. Should the dungeon bosses aim at your 10–15 seconds
+> (close to no change), at
+> stock's difficulty (roughly halving most bosses' damage), or somewhere
+> between?
+
+these numbers look good. The Outland dungeons should be hard, but not
+impossible, and the Outland world bosses should be nearly impossible, but not
+impossible.
+
+Question. If I want to give an item to a buddy-bot, they currently won't accept
+a trade request. Can we make it so they do? But only if they're in my clan.
+
+Where are we at with the buddy-bot behavior in capital cities?
+
+Can we write a "patch notes" system that we keep continuously updated, in the
+style of World of Warcraft patch notes? It should be roughly as detailed as
+those.
+
+> Question 2: 106 old loot tables mix whites with greens (or blues, or epics)
+> under one shared chance, mostly below level 58. The rule can't make their
+> greens likelier one item at a
+>   time, so those greens aren't boosted.
+> - have a generator split each into one table per quality, so their greens are
+> boosted like the rest.
+>
+> Next on the list: spirit on gear (155k2), hide shoulders (720), the player
+> class change (197) and the buddy reset (617a7).
+
+great! Let's keep working.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 62
+
+> Recording your answers and adding the new requests to the to-do list, then
+> starting with the socket recipes.
+
+> Doomwalker hits a Naxxramas-geared tank for 160% plainly (319% on a crit); the
+> Fel Reaver only 45%. Looking up what exists for buddies accepting trades and
+> buddies in capital cities.
+
+> Recording the answers and new requests in their issues.
+
+*[commit] 46f319d30 in wow-chat-2026 - Record the owner's answers and new asks: fight numbers kept, Doomwalker and the Fel Reaver measured, mixed loot tables to be split, clan trades to buddies, the socket recipes, patch notes (issues 155f1, 181, 623, 624, 198)*
+
+> Starting spirit on gear (155k2). Reading its full plan.
+
+> Now the install step, its registration in the RAM test and state checker, then
+> a test run on a RAM copy (the step creates a table, so the rolled-back test I
+> used for E071 isn't valid here).
+
+> This item table has no stat-count column (the server counts stats itself).
+> Removing it from the generator.
+
+> Applies, re-applies and reverts cleanly on the RAM copy. Recording it and
+> committing.
+
+*[commit] b1a07babc in wow-chat-2026 - Trade stamina for spirit on two fifths of leather, plate, mail and jewellery (issue 155k2)*
+
+> There's a hook right after the server sets any visible slot, which covers
+> every path (equip, login, swap). Checking its name and whether per-player
+> settings are switched on.
+
+> Writing the hide-shoulders rule and its player command.
+
+> Now the settings patch and the command's help row.
+
+> Compiles, and the settings checks pass. Recording it in the issue and
+> committing.
+
+*[commit] afc87cce8 in wow-chat-2026 - Let players hide their shoulders with .shoulders (issue 720)*
+
+> Splitting the mixed loot tables next. Checking how those 106 tables are
+> shaped, to see how many can be split cleanly.
+
+> 44 tables split into 92, with 1,609 loot entries rewritten. Now the install
+> step, its test registration and a state check, then the RAM test.
+
+> A parent table points at the same split table twice, so the new entries' row
+> numbers clashed. Giving each new entry its own number within its parent.
+
+> The step itself passes; the overall checker failed elsewhere. Finding which
+> check.
+
+> All checks pass. Recording it and committing.
+
+*[commit] 430fbd8ed in wow-chat-2026 - Split shared loot tables that mix qualities into one table per quality, so their greens can be boosted (issue 181)*
+
+> Next: buddies accepting trades from their clan (623). Seeing how the bot
+> module answers a trade request and why buddies refuse.
+
+> Applies and reverts cleanly, and compiles. Recording it in the issue and
+> committing.
+
+*[commit] 35ec16db0 in wow-chat-2026 - Let a buddy accept trades from players of its own clan (issue 623)*
+
+> Next: the player class change (197). Checking how the existing gear-set
+> command dresses a character, since it may already do most of the dressing.
+
+Six more things are built and committed since your last message, and your
+answers and new requests are in their issues. Three of the six change the
+server's code and need your rebuild; the other three are database steps that
+take effect at your next install.
+
+**Built:**
+1. **Spirit on gear** (155k2, install step E072). About 1,500 pieces trade
+   stamina for spirit: in each kind, one fifth turn all their stamina into
+   spirit and another fifth turn half.
+
+   | Kind | Items with stamina, no spirit | All to spirit | Half |
+   |---|---:|---:|---:|
+   | Leather | 1,014 | 202 | 202 |
+   | Plate | 1,192 | 238 | 238 |
+   | Mail without caster stats | 422 | 84 | 84 |
+   | Rings | 410 | 82 | 82 |
+   | Necklaces | 358 | 71 | 71 |
+   | Cloaks | 382 | 76 | 76 |
+
+   Never touched: weapons, cloth armour, trinkets, set pieces, class- or
+   race-limited gear, PvP gear. The draw is fixed by item number, and the revert
+   puts back exact copies. The test run in RAM passes.
+2. **Hide shoulders** (720). Players type `.shoulders` to hide or show their own
+   shoulders; the shoulders stay worn. The choice is remembered per character,
+   through a setting basic now turns on (config patch C041). Needs your rebuild.
+3. **Mixed loot tables split** (181, install step E073). 42 old tables are now
+   88 tables of one quality each, so their greens, blues and epics get boosted.
+   Unboosted, drops are exactly as before. Left alone: 21 tables with several
+   groups, 9 whose items already have their own chances, and Onyxia's hoard,
+   which mixes qualities on purpose. My first version split the hoard too, and
+   the state checker caught it.
+4. **Buddies accept trades from their clan** (623, source patch B058). Anyone in
+   a buddy's guild (its owner and clan mates) can now trade with it; everyone
+   else is still refused. Needs your rebuild. I couldn't check whether buddies'
+   trimmed bot behaviours still respond to a trade window; that will show in
+   game.
+5. **Kazzak, Doomwalker and the Fel Reaver measured.** Against a tank in
+   Naxxramas-40-level gear:
+
+   | Boss | Biggest plain hit (% of tank's health) | On a crit | Unhealed tank lasts |
+   |---|---:|---:|---:|
+   | Doomwalker | 160% | 319% | 3.4 s |
+   | Fel Reaver | 45% | — | 15.7 s |
+
+   For comparison, Kazzak at 0.40 tops out at 84%. Doomwalker at 0.50 would land
+   at about 80%.
+6. **Richer drops (181)**: built last round and still waiting on your rebuild;
+   nothing new here.
+
+**Answers to your questions:**
+- **The belt buckle recipe was never assigned anywhere.** The buckle itself is
+  level 60, but its recipe is on no trainer. Socket Bracer and Socket Gloves are
+  on no trainer either. All three take Northrend materials that basic doesn't
+  have (Saronite Bars, Eternal Earth or Shadow), and the stock client checks for
+  them before it lets you craft.
+- **Highlord Kruul** isn't spawned anywhere and has no fight script. He was a
+  world-invasion boss from before The Burning Crusade, so he isn't in any tier.
+- **Buddies in capital cities:**
+  - Town visits (617e4) and town circles (617e4a): the code is written, but the
+    issues say not yet seen in game.
+  - Weapons by place (617e4b): written; it needs a rebuild.
+
+  Tell me what you see buddies doing in a capital and I'll trace it.
+- **Patch notes:** written up as issue 198, a World of Warcraft-style notes file
+  kept up to date as changes are made, with a page and a check for changes
+  nobody has announced yet. It has three questions before I build it.
+
+**Questions:**
+1. **Doomwalker at 0.50?** And should the Fel Reaver be raised (about ×1.85 to
+   match Kazzak) or left as the easier world fight?
+2. **Kruul:** bring him back as a world boss (where, with what loot), or leave
+   him out of the page?
+3. **Recipe drops:** where should the buckle, Socket Bracer and Socket Gloves
+   recipes drop? Options: Azuregos, the Emerald Dragons, Kazzak, Doomwalker,
+   Blackrock Depths' smiths, or the rarest ambush elites. And for the Northrend
+   materials: make Saronite and the Eternals obtainable in basic, or drop the
+   finished buckle and socketing items instead of recipes?
+4. **Patch notes:**
+   - Basic only, or one set per profile?
+   - Builds named by date, by version number, or by name?
+   - Read only on the page, or also in game?
+5. **Class change gems:** a buddy's gems and weapon enchant come from the buddy
+   module's own code, which only works on buddies. For a class-changed player,
+   should I make that code work on players, or have the class change give the
+   gear set without gems for now?
+
+The player class change and the buddy reset are next. Each is a few pieces (a
+database step while the server is stopped, plus something at the character's
+next login), and question 5 decides part of the class change.
 
 --------------------------------------------------------------------------------
 

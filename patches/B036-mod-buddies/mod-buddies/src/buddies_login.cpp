@@ -129,9 +129,11 @@ static void KeepBuddies(uint64 now)
         }
         uint32 missing = 0;
         // only the owner's stage of buddies (617a6, buddies_stage.cpp):
-        // waiting and still-recording ones stay out; one to be made again
-        // is brought in for that
-        QueryResult buddies = CharacterDatabase.Query("SELECT buddy FROM buddy_roster WHERE owner = {} AND buddy <> 0 AND stage IN (0, 3)", it->first);
+        // waiting, still-recording and set-aside (5, 718) ones stay out;
+        // one to be made again (3), dressed for a new class (6, after the
+        // class-change tool) or brought up to the gear spec (7) is brought
+        // in for that
+        QueryResult buddies = CharacterDatabase.Query("SELECT buddy FROM buddy_roster WHERE owner = {} AND buddy <> 0 AND stage IN (0, 3, 6, 7)", it->first);
         if (buddies)
             do
             {

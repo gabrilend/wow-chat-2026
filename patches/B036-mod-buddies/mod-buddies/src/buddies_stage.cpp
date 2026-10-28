@@ -51,7 +51,18 @@ static constexpr uint32 RECORD_AFTER_MS = 5000;
 static constexpr uint32 PASS_EVERY_MS   = 1000;
 // }}}
 
-enum BuddyStage : uint8 { STAGE_WITH_OWNER = 0, STAGE_STORED = 1, STAGE_REMAKE = 3, STAGE_RECORDING = 4 };
+// STAGE_RECLASSED (2026-10-26): its class was changed while the server was
+// down (scripts/change-character-class); at its next login it is dressed
+// and taught for the new class (Reclassed, below). 6, not 5: 5 is "set
+// aside" (718, a death knight owner's buddy waiting for its level, which
+// the module neither logs in nor re-stages; sargobras.lua moves it to 3).
+// Until 2026-10-27 this was 5, and Gabrubre's three set-aside death knights
+// were logged in and dressed as if reclassed.
+// STAGE_TO_SPEC (2026-10-27): brought up to the gear spec at its next login
+// without taking off what it earned (BuddyBringToSpec, buddies_kit.cpp),
+// then 0; set for every buddy at once when the spec changes.
+enum BuddyStage : uint8 { STAGE_WITH_OWNER = 0, STAGE_STORED = 1, STAGE_REMAKE = 3, STAGE_RECORDING = 4, STAGE_SET_ASIDE = 5,
+                          STAGE_RECLASSED = 6, STAGE_TO_SPEC = 7 };
 
 // A buddy being recorded: when, and whether it is then to be re-made at
 // its next login (a lower slot) or to wait (a higher slot).
@@ -254,6 +265,11 @@ static void Remake(Player* bot, uint32 owner, uint8 profile, uint8 role)
     bot->resetTalents(true);
 
     uint32 lessons = BuddyLearnEverything(bot);
+    // weapon skills and defence at their maximum for its level (the server's
+    // own .levelup step; professions and riding are left as they are): a
+    // buddy is dressed and trained as a whole (2026-10-27, the owner, after
+    // Feldowinn's buddies wore defence 48 and two-handed swords 229 at 55)
+    bot->UpdateSkillsToMaxSkillsForLevel();
     std::string problems;
     lessons += BuddyRaiseProfessions(bot, problems);   // its professions to its new level (617k)
     problems += BuddyGiveStartingKit(bot, owner, profile);   // its gear by talent shape (617r2)
@@ -264,6 +280,39 @@ static void Remake(Player* bot, uint32 owner, uint8 profile, uint8 role)
     LOG_INFO("module", "mod-buddies: buddy {} made again: level {} -> {}, {} items and its money mailed to it, {} spells forgotten, "
         "{} learned, starting kit given{}{}", bot->GetName(), was, level, items, forgotten, lessons,
         problems.empty() ? "" : "; kit incomplete: ", problems);
+}
+// }}}
+
+// {{{ Reclassed
+// A buddy whose class the class-change tool changed (the stage it wrote)
+// just logged in: dressed for its new class as ".buddy kit" dresses (its
+// kit by talent shape, from 18 the PvP necklace, rings and trinkets, its
+// sockets gemmed) and taught every lesson of the new class up to its level.
+// Its talents were reset by the tool and are spent again by the talent
+// spender. The owner, 2026-10-15: "anything that changes a buddy-bots level
+// or class should be teaching them the relevant abilities already"; and of
+// the class change, 2026-10-26: "we need to fix her gear and skills. This
+// should be part of the class-change script as a matter of course."
+static void Reclassed(Player* bot, uint8 profile, uint8 role)
+{
+    uint32 lessons = BuddyLearnEverything(bot);
+    // weapon skills and defence at their maximum for its level (the server's
+    // own .levelup step; professions and riding are left as they are): a
+    // buddy is dressed and trained as a whole (2026-10-27, the owner, after
+    // Feldowinn's buddies wore defence 48 and two-handed swords 229 at 55)
+    bot->UpdateSkillsToMaxSkillsForLevel();
+    std::string problems = BuddyRegear(bot, profile);
+    if (bot->GetLevel() >= BUDDY_PVP_JEWELLERY_FROM)
+        problems += BuddyGivePvpJewellery(bot, profile, role);
+    problems += BuddyGemKit(bot, profile, role);
+    bot->UpdateSkillsToMaxSkillsForLevel();            // again: a weapon kind the kit needed was learned at 1
+    bot->SaveToDB(false, false);
+    // with its owner again; written directly, so a second login can't redo it
+    CharacterDatabase.DirectExecute("UPDATE buddy_roster SET stage = {} WHERE buddy = {}", uint8(STAGE_WITH_OWNER),
+        bot->GetGUID().GetCounter());
+    LOG_INFO("module", "mod-buddies: buddy {} (level {}) dressed and taught for its new class: {} lessons learned, kit, "
+        "jewellery and gems by plan {} (role {}){}{}", bot->GetName(), bot->GetLevel(), lessons, uint32(profile), uint32(role),
+        problems.empty() ? "" : "; ", problems);
 }
 // }}}
 
@@ -283,8 +332,23 @@ public:
             return BuddyStageCheck(player);
         QueryResult row = CharacterDatabase.Query("SELECT owner, stage, profile, role FROM buddy_roster WHERE buddy = {}",
             player->GetGUID().GetCounter());
+        //   STAGE_REMAKE: made again at its owner's level
+        //   STAGE_RECLASSED: dressed and taught for the class it was changed to
+        //   STAGE_TO_SPEC: brought up to the gear spec, what it earned kept
+        //   any other: nothing to do at login
         if (row && (*row)[1].Get<uint8>() == STAGE_REMAKE)
             Remake(player, (*row)[0].Get<uint32>(), (*row)[2].Get<uint8>(), (*row)[3].Get<uint8>());
+        else if (row && (*row)[1].Get<uint8>() == STAGE_RECLASSED)
+            Reclassed(player, (*row)[2].Get<uint8>(), (*row)[3].Get<uint8>());
+        else if (row && (*row)[1].Get<uint8>() == STAGE_TO_SPEC)
+        {
+            //   STAGE_TO_SPEC: up to the gear spec, what it earned kept on
+            std::string problems = BuddyBringToSpec(player, (*row)[2].Get<uint8>(), (*row)[3].Get<uint8>());
+            CharacterDatabase.DirectExecute("UPDATE buddy_roster SET stage = {} WHERE buddy = {}", uint8(STAGE_WITH_OWNER),
+                player->GetGUID().GetCounter());
+            LOG_INFO("module", "mod-buddies: buddy {} (level {}) brought up to the gear spec at login{}{}", player->GetName(),
+                player->GetLevel(), problems.empty() ? "" : ": ", problems);
+        }
     }
 
     void OnPlayerLevelChanged(Player* player, uint8 oldLevel) override
@@ -318,6 +382,7 @@ private:
         uint8  role    = (*row)[3].Get<uint8>();
         uint32 forgotten = level < oldLevel ? BuddyForgetLessons(bot) : 0;   // going down: the higher lessons go
         uint32 lessons = BuddyLearnEverything(bot);
+        bot->UpdateSkillsToMaxSkillsForLevel();        // weapon skills and defence at the new level's maximum (2026-10-27)
         std::string problems;
         if (level > oldLevel)
             lessons += BuddyRaiseProfessions(bot, problems);   // up: its professions practised to the new level (617k)

@@ -80,7 +80,12 @@ patch_B026_playerbots_bot_login_strategy_guard() {
             // (~PlayerbotAI -> RemovePlayerBotData) self-erases the slot by GUID —\
             // then erase-by-GUID idempotently so the slot is clear before emplace.\
             LOG_WARN("playerbots", "AddPlayerbotData: duplicate PlayerbotAI for GUID {} — reclaiming stale AI (B026)", player->GetGUID().ToString().c_str());\
-            PlayerbotAIBase* stale = itr->second;\
+            // Deleted as what it is: the map holds PlayerbotAIBase pointers,\
+            // whose destructor is not virtual, so deleting through one ran\
+            // only the base part and never ~PlayerbotAI (clang:\
+            // -Wdelete-abstract-non-virtual-dtor, seen 2026-10-26). Only\
+            // PlayerbotAI objects are put in this map (the emplace below).\
+            PlayerbotAI* stale = static_cast<PlayerbotAI*>(itr->second);\
             delete stale;\
             _playerbotsAIMap.erase(player->GetGUID());\
             // <<< B026 duplicate-login fix END
@@ -102,5 +107,5 @@ unpatch_B026_playerbots_bot_login_strategy_guard() {
 }
 # }}}
 # ==== footer of B026 ====
-# lines:      106
+# lines:      111
 # ==== end of footer ====
