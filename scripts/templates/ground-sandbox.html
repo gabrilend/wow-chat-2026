@@ -898,7 +898,13 @@ function stepFlock(dt) {
     // it came until its back-up distance is used up (the walls below still
     // have their say), then tries again.
     if (b.backLeft > 0) { b.vx = b.bx * SPEED; b.vy = b.by * SPEED; b.backLeft -= SPEED * dt; }
-    const meantX = b.vx, meantY = b.vy;                      // what it meant to do this step, before the walls
+    // What it meant to do this step: straight for its target at the speed it
+    // wants (617e16h). Not its velocity: the walls turn that along them, and
+    // a bot scraping along a wall then counted as getting where it meant,
+    // so it was hardly ever stuck and hardly ever backed up (the owner,
+    // 2026-10-28: "bots are still bumping into walls. they don't seem to be
+    // backing up at all"). Backing up: what it means is the back-up itself.
+    const meantX = b.backLeft > 0 ? b.vx : dx / dl * want, meantY = b.backLeft > 0 ? b.vy : dy / dl * want;
     // The ground (issue 617e16c): a step that would land on blocked ground
     // (too steep, or in a doodad) is turned aside, 20 degrees at a time,
     // left and right in turn (the smaller turn first), up to 140; the first
@@ -1467,6 +1473,8 @@ function draw() {
     ctx.globalAlpha = 1;
     const [px, py] = yd2px(b.x, b.y);
     ctx.beginPath(); ctx.arc(px, py, rpx, 0, 6.283); ctx.fillStyle = colour; ctx.fill();
+    // backing up (617e16h): a white ring, so it can be seen happening
+    if (b.backLeft > 0) { ctx.beginPath(); ctx.arc(px, py, rpx * 2.2, 0, 6.283); ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5; ctx.stroke(); }
   });
   ctx.shadowBlur = T.glow; ctx.shadowColor = T.player;
   const [ppx, ppy] = yd2px(player.x, player.y);

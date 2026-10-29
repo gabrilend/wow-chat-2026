@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-28 20:53:57
+Generated on: 2026-10-28 21:13:32
 Models: claude-opus-5-5
 
 ## Contents
@@ -97,6 +97,10 @@ Models: claude-opus-5-5
     a school of fish, now on the real ground in the ground sandbox page. Next, I
     need your answer: should each bot know every wall in its area from the
     start, or only the walls it has bumped into itself?
+23. 2026-10-28 20:57, after Request 77 - We're building out buddy-bot movement
+    and the player experience, and I just answered whether players can get a
+    pop-up dialogue at login (yes, nothing built yet). Next: your choice on
+    whether that window carries the news itself or points to a mailbox letter.
 
 --------------------------------------------------------------------------------
 
@@ -8229,6 +8233,121 @@ If you meant a different page: `fish-sandbox.html` is the original flock,
 
 Should the login window speak first and point to a letter for the news, or carry
 the news in the window itself?
+
+--------------------------------------------------------------------------------
+
+### User Request 78
+
+okay they keep getting stuck on obstacles - here's our solution - if they're
+moving at full speed in a direction but they aren't making progress moving in
+that direction, then that means they're stuck on something. When that happens,
+they need to back up, and try again. If it happens again, then they back up
+twice as far, and so on, and keep trying until we've fully mapped out the
+available space. Only then can we properly route-pathfind to things.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 78
+
+> She's watching the sandbox, so I'm reading this as the ground sandbox's bots.
+> Your rule also partly answers my open question about walls: the space gets
+> mapped by bumping into it. Writing the issue first:
+
+> Next, the code: the per-second progress measure, the doubling back-up, and the
+> shared map of known open cells and known walls.
+
+> Next, the panel's numbers and drawing the known walls:
+
+> The page broke: my measures insertion detached an `else` from its `if`.
+> Picture 034 was taken of the broken page anyway; it stays in the history, as
+> the rule says. Fixing the block:
+
+*[commit] b14a42a1d in wow-chat-2026 - *
+
+> It passes on the real page. Next, proving it stops on a broken one, using a
+> scratch page with the same slip:
+
+*[commit] 9758e9cf6 in wow-chat-2026 - *
+
+> Still on the buffers: adding them to the panel and the drawing, and widening
+> the panel so its lines stop running past the edge.
+
+> Now the code. The player's step gathers every fence they stand in. Each fence
+> name gives its part, and two or more parts join into one wandering area,
+> remembered so it isn't rebuilt every step.
+
+> Next, a test spot where two different monsters' fences overlap in the Barrens,
+> and an address setting (`at=x,y`) to put the player there:
+
+> The page tool's new check caught a broken page before any picture was taken,
+> as intended. Finding the slip:
+
+> My earlier insertion put the touch-recording line between an `if` and its
+> `else`. Moving it after both:
+
+> Next, the two issues brought up to date with what's built, and a new one for
+> your peninsulas, both of your messages word for word:
+
+*[commit] 8f7691d03 in wow-chat-2026 - *
+
+> Next, wiring exploring into the flock's step: a fight still comes first, but
+> otherwise a bot exploring a peninsula walks to its nearest unseen corner.
+
+*[commit] f9abac701 in wow-chat-2026 - *
+
+I've built all four of your movement requests into the ground sandbox and
+committed them. Refresh the page to try them:
+```
+firefox /mnt/kaun/wow-chat-2026/docs/HTML/ground-sandbox.html
+```
+
+1. **Stuck: back up and try again** (b14a42a1d)
+   - A bot pushing at nearly full speed without getting anywhere backs up 2
+     yards, then 4, then 8, up to 64, and tries again each time.
+   - Every spot a bot stands on goes onto one map the bots share. A spot a bot
+     got stuck facing becomes a known wall that all of them walk round.
+
+2. **Less progress means a bump** (8f7691d03)
+   - Getting less progress than meant while something real turned the bot aside
+     counts as a bump. It leaves a patch of clearance round the spot, shown in
+     amber.
+   - Bots keep clear of it when there's a way round, and go through when there
+     isn't. A bot crossing in a straight line walks through.
+   - It took three tries to get right, all kept as pictures 036–038:
+     - brushing a patch made more patches;
+     - crossings pushed forever at a pocket's walls, so a crossing now ends after three times the walk's time;
+     - patches as hard walls sealed narrow passages.
+
+3. **Overlapping fences** (8f7691d03)
+   - Standing where two monsters' fences overlap makes both the wandering area,
+     with both outlines lit.
+   - Moving into just one, or out of both, and the bots follow.
+   - They fight what they pass unless they're more than half a zone from you.
+
+4. **Peninsulas** (f9abac701)
+   - Rooms and pockets behind a narrow way are found by shrinking each area
+     about 8 yards, so ways under about 16 yards wide break off.
+   - Unseen corners show violet and doors show as rings.
+   - A bot near an unexplored door goes in, at most three at a time, and walks
+     to the nearest unseen corner until all are seen.
+   - If you click inside one, every bot sweeps it, as tanks clearing an
+     instance.
+   - So far only one has turned up, in the harpy hills, and it was seen whole
+     within four minutes. The instance behaviour hasn't been photographed, so
+     try clicking inside one.
+
+The page tool now checks the page's code before it takes a picture. It caught
+one of my mistakes before it reached a picture; an earlier slip got through as
+picture 034, which is kept.
+
+Still open, in the issues:
+- Routes over the mapped ground, once enough of it is known.
+- The panel's longest lines still run past its edge.
+
+One question, since it sets which rooms count: what width should count as a
+door? Right now a way under about 16 yards wide makes what's behind it a
+peninsula. Narrower would catch only real doorways and gullies; wider would also
+catch broad valley necks.
 
 --------------------------------------------------------------------------------
 
