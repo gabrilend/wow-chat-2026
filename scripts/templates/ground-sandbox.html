@@ -329,6 +329,7 @@ function groundFor(zi) {
       }
   }
   g.canvas = document.createElement("canvas"); g.canvas.width = cols; g.canvas.height = rows;
+  g.knownDoodad = new Uint8Array(nd); g.knownDoodads = 0;     // which doodads the bots have been shown (617e16h)
   g.ready = true;
   return g;
 }
@@ -383,6 +384,28 @@ function paintGround() {
 // buffers); the world holds that and the doodads too, and a step into one
 // is refused (the server pulling the client back). blocked() is the world;
 // steepAt() is the part of it a bot knows before it bumps into anything.
+// Doodads shown to the bots (617e16h): a doodad a bot has been refused by
+// is known to every bot from then on, by its whole footprint
+// (GROUND.knownDoodad, one flag a doodad). knownDoodadAt: inside a known
+// one; revealAt: makes known every doodad whose footprint holds the point.
+function knownDoodadAt(x, y) {
+  const g = GROUND; if (!g) return false;
+  const list = g.buckets.get(Math.floor(x / BUCKET) + "," + Math.floor(y / BUCKET));
+  if (list) for (const i of list) {
+    if (!g.knownDoodad[i]) continue;
+    const q = i * 4;
+    if (x >= g.rects[q] && x <= g.rects[q + 2] && y >= g.rects[q + 1] && y <= g.rects[q + 3]) return true;
+  }
+  return false;
+}
+function revealAt(x, y) {
+  const g = GROUND; if (!g) return;
+  const list = g.buckets.get(Math.floor(x / BUCKET) + "," + Math.floor(y / BUCKET));
+  if (list) for (const i of list) {
+    const q = i * 4;
+    if (!g.knownDoodad[i] && x >= g.rects[q] && x <= g.rects[q + 2] && y >= g.rects[q + 1] && y <= g.rects[q + 3]) { g.knownDoodad[i] = 1; g.knownDoodads++; }
+  }
+}
 function steepAt(x, y) {
   const g = GROUND; if (!g) return false;
   const c = Math.round((x - g.sx0) / g.step), r = Math.round((y - g.sy0) / g.step);
@@ -1054,25 +1077,35 @@ function stepFlock(dt) {
     // All of this is the bot's own steering, by what it knows: steep ground
     // (steepAt), known walls, buffers, the edge. The doodads it doesn't know
     // until it has been refused by one (below).
-    const hard = (x, y) => steepAt(x, y) || knownWall(x, y) || (f && f.contains && f.contains(b.x, b.y) && !f.contains(x, y));
+    const hard = (x, y) => steepAt(x, y) || knownDoodadAt(x, y) || knownWall(x, y) || (f && f.contains && f.contains(b.x, b.y) && !f.contains(x, y));
     const soft = (x, y) => hard(x, y) || (b.wstate !== "cross" && !b.move && knownBuffer(x, y));   // a move to another sector walks through buffers too (617e16k)
-    const nx = b.x + b.vx * dt, ny = b.y + b.vy * dt;
-    if (soft(nx, ny) && !steepAt(b.x, b.y)) {
+    // Looking LOOK_AHEAD yards ahead, not one step (a quarter of a yard): a
+    // bot turns before it touches, keeping that much clear of walls rather
+    // than sliding along them (the owner: "rubbing up against anything they
+    // can touch"). ahead: seconds of its own speed that make LOOK_AHEAD.
+    const ahead = LOOK_AHEAD / Math.max(Math.hypot(b.vx, b.vy), 0.5);
+    const nx = b.x + b.vx * ahead, ny = b.y + b.vy * ahead;
+    // The whole stretch is checked, the next step, 1 yard and LOOK_AHEAD: the
+    // far point alone jumped over a thin trunk while the next step still hit
+    // it (picture 053: 79 doodads known, 79,120 steps still refused).
+    const rayHit = (test, vx, vy) => { const sp = Math.max(Math.hypot(vx, vy), 0.01);
+      for (const d of [sp * dt, 1, LOOK_AHEAD]) if (test(b.x + vx / sp * d, b.y + vy / sp * d)) return true; return false; };
+    if (rayHit(soft, b.vx, b.vy) && !steepAt(b.x, b.y)) {
       const sides = b.wallSide ? [b.wallSide, -b.wallSide] : (Math.random() < 0.5 ? [1, -1] : [-1, 1]);
       let found = 0;
       for (const walled of [soft, hard]) {
-        if (!walled(nx, ny)) break;                           // only a buffer ahead, and none could be avoided: straight on
+        if (!rayHit(walled, b.vx, b.vy)) break;               // only a buffer ahead, and none could be avoided: straight on
         for (const sgn of sides) {
           for (let k = 1; k <= 8; k++) {
             const a = sgn * k * Math.PI / 9, ca = Math.cos(a), sa = Math.sin(a);
             const vx = b.vx * ca - b.vy * sa, vy = b.vx * sa + b.vy * ca;
-            if (!walled(b.x + vx * dt, b.y + vy * dt)) { b.vx = vx; b.vy = vy; found = sgn; break; }
+            if (!rayHit(walled, vx, vy)) { b.vx = vx; b.vy = vy; found = sgn; break; }
           }
           if (found) break;
         }
         if (found) break;
       }
-      if (!found && !hard(nx, ny)) found = b.wallSide || 1;  // through the buffer, as it was heading
+      if (!found && !rayHit(hard, b.vx, b.vy)) found = b.wallSide || 1;  // through the buffer, as it was heading
       if (found) { steer.turned++; b.wallSide = found; b.wallFor = WALL_MEMORY; }
       else { b.vx = 0; b.vy = 0; steer.stopped++; }
     } else if (b.wallSide && (b.wallFor -= dt) <= 0) b.wallSide = 0;
@@ -1083,7 +1116,15 @@ function stepFlock(dt) {
     // (trackProgress). A bot already standing in one (spawned there) walks
     // out unrefused.
     const stepX = b.vx * dt, stepY = b.vy * dt;
-    if (blocked(b.x + stepX, b.y + stepY) && !blocked(b.x, b.y)) { b.refusedX = b.x + stepX; b.refusedY = b.y + stepY; steer.refused++; }
+    // Refused: learned at once (the owner: "they're just uncomfortably rubbing up
+    // against anything they can touch"; they had pushed on for the rest of
+    // their second, 61,206 refused steps in five minutes, picture 051): the
+    // world shows the bot the thing it hit, its whole footprint (revealAt),
+    // and every bot steers round it from the next step. (Marking the refused
+    // 2-yard cell a wall failed: it was often the cell the bot stood in, and
+    // standing proves a cell open, so the mark was undone at once: 77,942
+    // refused steps, picture 052.)
+    if (blocked(b.x + stepX, b.y + stepY) && !blocked(b.x, b.y)) { b.refusedX = b.x + stepX; b.refusedY = b.y + stepY; steer.refused++; revealAt(b.refusedX, b.refusedY); }
     else { b.x += stepX; b.y += stepY; }
     learnOpen(b.x, b.y);
     trackProgress(b, stepX, stepY, dt);
@@ -1091,6 +1132,7 @@ function stepFlock(dt) {
 }
 const steer = { turned: 0, stopped: 0, refused: 0, since: 0 };   // counted between measures
 const WALL_MEMORY = 1.5;                                      // seconds a bot keeps to its side of a wall
+const LOOK_AHEAD = 2;                                         // yards a bot looks ahead when steering (617e16h)
 // }}}
 
 // {{{ stuck: back up, try again, and map the space (issue 617e16h)
@@ -1414,7 +1456,7 @@ function measure() {
     lines.push(`turned aside    ${(steer.turned / secs).toFixed(1)} steps a second`);
     lines.push(`stopped         ${(steer.stopped / secs).toFixed(1)} steps a second`);
     lines.push(`fence open      ${f ? Math.round(100 * openShareOf(f)) + "%" : "-"} (not steep, no doodad)`);
-    lines.push(`zone doodads    ${GROUND.rects.length / 4}`);
+    lines.push(`zone doodads    ${GROUND.rects.length / 4}, ${GROUND.knownDoodads} shown to the bots (orange)`);
     lines.push(`zone level      ${GROUND.level !== undefined ? GROUND.level.toFixed(1) + " yd (walkable ground's average)" : "-"}`);
     if (f && f.of) lines.push(`area            part ${f.rank + 1} of ${f.of}, ${Math.round(f.area)} sq yd`);
     lines.push(`player at edge  ${edgeEvents.reversed} reversed, ${edgeEvents.crossed} crossed`);
@@ -1544,6 +1586,8 @@ function draw() {
       for (let i = 0; i < g.rects.length; i += 4) {
         if (g.rects[i + 2] < lox || g.rects[i] > hix || g.rects[i + 3] < loy || g.rects[i + 1] > hiy) continue;
         const [p0, q0] = yd2px(g.rects[i] + BODY_R, g.rects[i + 1] + BODY_R), [p1, q1] = yd2px(g.rects[i + 2] - BODY_R, g.rects[i + 3] - BODY_R);
+        // a doodad the bots have been shown (617e16h): orange, not dark
+        ctx.fillStyle = g.knownDoodad[i / 4] ? "rgba(255,140,40,0.85)" : (T.doodad || "rgba(0,0,0,0.55)");
         ctx.fillRect(Math.min(p0, p1), Math.min(q0, q1), Math.max(1, Math.abs(p1 - p0)), Math.max(1, Math.abs(q1 - q0)));
       }
     }

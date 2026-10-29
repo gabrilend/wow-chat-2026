@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-28 21:56:47
+Generated on: 2026-10-28 22:08:45
 Models: claude-opus-5-5
 
 ## Contents
@@ -8754,6 +8754,68 @@ backup tool after every commit from here on.
 around the centre is never "too long in one place". Splitting each wedge into an
 inner and an outer half would send bots out to the edges as well. Should I add
 that? And are 30 seconds and eight wedges about right?
+
+--------------------------------------------------------------------------------
+
+### User Request 85
+
+we should instead have it go to a random pie-slice in the two that are next to
+the one that it's in. and all our future waypoints for this purpose should be in
+that wedge, until it is re-assigned again, typically through momentum direction
+but sometimes that gets reversed or it flips to the opposite side of the arena.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 85
+
+> Recording your words first:
+
+*[commit] bb5d1bb02 in wow-chat-2026 - *
+
+> Spread is better: bots are 15.4 yards apart on average, up from 9.7, and their
+> legs reach further out. Committing this version and backing it up:
+
+*[commit] 215482c88 in wow-chat-2026 - *
+
+> The backup commit failed silently again. Running it with its full output:
+
+*[commit] eda909b6c in wow-chat-2026 - Back up the spread-wedges version of the ground sandbox as a page*
+
+The wedges are in, and every version is committed and backed up as its own page
+(16 so far).
+
+**How it works now:** pick **wedges** in the Turning list.
+- The area is cut into eight pie slices round its middle, and each bot is given
+  one.
+- Every waypoint a bot walks to is inside its own slice, so it walks straight
+  legs from point to point there.
+- Every 30 seconds it moves on to the slice beside it, in the direction it has
+  been going round. Each bot keeps its own 30-second clock, so they don't all
+  move at once. Sometimes it reverses and takes the other neighbour; sometimes
+  it jumps to the slice across the arena.
+- In the other Turning modes, a bot that stays in one slice too long makes a
+  single move by the same rule.
+
+**Five minutes in the harpy hills:** 360 slice moves, with 40 reversals and 31
+jumps across.
+
+**Two fixes on the way:**
+- The waypoints first bunched at the narrow middle of each slice (picture 050).
+  They're now spread evenly over the slice's area, and the average distance
+  between bots rose from 9.7 to 15.4 yards.
+- The backup commits failed silently twice because I was filtering the commit
+  tool's output. Both went in once I ran it unfiltered, and from now on I'll
+  check that each backup commit landed.
+
+**Commits:** bb5d1bb02 (wedges), 215482c88 (the spread fix), plus a backup
+commit after each. Any version can be opened from:
+```
+firefox /mnt/kaun/wow-chat-2026/docs/HTML/archive/ground-sandbox/index.html
+```
+
+The numbers I chose are guesses and need your eye: a move every 30 seconds,
+about 1 in 7 moves reversed, about 1 in 10 jumping across the arena. Do they
+feel right when you watch?
 
 --------------------------------------------------------------------------------
 
