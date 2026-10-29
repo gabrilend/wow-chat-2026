@@ -31,7 +31,7 @@
   <label>Theme <select id="theme"></select></label>
   <label>Bots <input id="bots" type="range" min="6" max="72" value="36"><span id="botsN">36</span></label>
   <label>Speed <select id="speed"><option value="1">1x</option><option value="4" selected>4x</option><option value="10">10x</option></select></label>
-  <label>Turning <select id="turn"><option value="1">clockwise</option><option value="-1">anticlockwise</option><option value="0">each its own</option><option value="2">wanderers</option></select></label>
+  <label>Turning <select id="turn"><option value="1">clockwise</option><option value="-1">anticlockwise</option><option value="0">each its own</option><option value="2">wanderers</option><option value="3">wedges</option></select></label>
   <label>Formation <select id="form"><option value="none" selected>none</option><option value="line">line</option><option value="column">column</option><option value="wedge">wedge</option><option value="ring">ring</option><option value="square">square</option></select></label>
   <label>Formed <input id="formN" type="range" min="3" max="16" value="8"><span id="formNN">8</span></label>
   <label>Shape turns <input id="formTurn" type="checkbox" checked><span id="formTurnN">turning</span></label>
@@ -861,18 +861,64 @@ function unstick(b, f) {
 // The owner, 2026-10-28: "if they're staying in the same quadrant of the
 // spawn zone for too long, then we know they're not circulating. We want
 // them to spread out and be dynamically spread throughout the subzone."
-// The area in play is cut into SECTORS by bearing round its middle; each
-// bot keeps its sector (b.sector) and how long it has been in it
-// (b.sectorFor). In one sector longer than CIRCULATE seconds: it picks the
-// sector with the fewest bots now (a random one among equals, never its
-// own), a walkable point of the area in it (40 tries at random bearings
-// and depths in that sector), and walks there through buffers (b.move),
-// until within MOVE_ARRIVE yards or MOVE_LIMIT seconds have passed.
-const SECTORS = 8, CIRCULATE = 30, MOVE_ARRIVE = 8, MOVE_LIMIT = 60;
-const circulation = { moves: 0 };                            // not "circ": measure() has a local of that name
+// The area in play is cut into SECTORS wedges by bearing round its middle
+// (wedge numbers grow with the bearing, so +1 is one way round, -1 the
+// other).
+//
+// Which wedge next (the owner's second message: "go to a random pie-slice
+// in the two that are next to the one that it's in ... typically through
+// momentum direction but sometimes that gets reversed or it flips to the
+// opposite side of the arena"): the wedge beside it in its momentum's
+// direction; with chance P_REVERSE the momentum reverses first (the
+// other neighbour); with chance P_FLIP, the wedge across the arena instead.
+// (The first build, the emptiest wedge, gave way to this.)
+//
+// The "wedges" turning mode (wedgeTarget): each bot has its wedge
+// (b.wedge) and its momentum (b.wedgeDir, kept between moves); every
+// waypoint it walks to is a walkable point inside its wedge, a new one on
+// arriving (MOVE_ARRIVE yards) or after WAYPOINT_LIMIT seconds, until it is
+// reassigned, every CIRCULATE seconds.
+//
+// The other modes (circulate): a bot CIRCULATE seconds in one wedge makes
+// one move (through buffers, b.move) to the wedge the rule gives, its
+// momentum the way it has been going round the middle, then its mode goes on.
+const SECTORS = 8, CIRCULATE = 30, MOVE_ARRIVE = 8, MOVE_LIMIT = 60, WAYPOINT_LIMIT = 20;
+const P_REVERSE = 0.15, P_FLIP = 0.1;
+const circulation = { moves: 0, reversed: 0, flipped: 0 };  // not "circ": measure() has a local of that name
 function sectorOf(f, x, y) {
   const a = Math.atan2(y - f.cy, x - f.cx);                  // -pi .. pi
   return Math.min(SECTORS - 1, Math.floor((a + Math.PI) / (2 * Math.PI) * SECTORS));
+}
+// a walkable point inside wedge w of area f (40 tries), or null
+function pointInWedge(f, w) {
+  for (let t = 0; t < 40; t++) {
+    const a = -Math.PI + (w + Math.random()) * 2 * Math.PI / SECTORS, r = (0.15 + 0.8 * Math.random()) * edgeAt(f, a);
+    const x = f.cx + Math.cos(a) * r, y = f.cy + Math.sin(a) * r;
+    if (f.contains(x, y) && !blocked(x, y)) return [x, y];
+  }
+  return null;
+}
+// the next wedge from wedge s with momentum dir (+1 or -1); returns [wedge, dir]
+function nextWedge(s, dir) {
+  const roll = Math.random();
+  circulation.moves++;
+  if (roll < P_FLIP) { circulation.flipped++; return [(s + SECTORS / 2) % SECTORS, dir]; }
+  if (roll < P_FLIP + P_REVERSE) { circulation.reversed++; dir = -dir; }
+  return [((s + dir) % SECTORS + SECTORS) % SECTORS, dir];
+}
+// the way round the middle a bot is going: +1 (bearing growing) or -1
+function momentumOf(b, f) { return ((b.x - f.cx) * b.vy - (b.y - f.cy) * b.vx) >= 0 ? 1 : -1; }
+function wedgeTarget(b, f, dt) {
+  if (b.wedge === undefined || b.wpArea !== f) {
+    b.wedge = sectorOf(f, b.x, b.y); b.wedgeDir = b.wedgeDir || (Math.random() < 0.5 ? 1 : -1);
+    b.wedgeFor = Math.random() * CIRCULATE; b.wp = null; b.wpArea = f;     // their clocks apart, so they don't move together
+  }
+  b.sector = sectorOf(f, b.x, b.y);
+  if ((b.wedgeFor += dt) >= CIRCULATE) { [b.wedge, b.wedgeDir] = nextWedge(b.wedge, b.wedgeDir); b.wedgeFor = 0; b.wp = null; }
+  if (!b.wp || Math.hypot(b.wp[0] - b.x, b.wp[1] - b.y) < MOVE_ARRIVE || (b.wpFor -= dt) <= 0) {
+    b.wp = pointInWedge(f, b.wedge); b.wpFor = WAYPOINT_LIMIT;
+  }
+  return b.wp || [f.cx, f.cy];
 }
 function circulate(b, f, dt) {
   if (!f || !f.contains) { b.move = null; return null; }
@@ -884,17 +930,12 @@ function circulate(b, f, dt) {
     else return [b.move.x, b.move.y];
   }
   if (b.sectorFor < CIRCULATE) return null;
-  const count = new Array(SECTORS).fill(0);
-  for (const o of bots) if (o.sector !== undefined) count[o.sector]++;
-  const others = count.map((n, i) => i).filter(i => i !== s), least = Math.min(...others.map(i => count[i]));
-  const choices = others.filter(i => count[i] === least), want = choices[Math.floor(Math.random() * choices.length)];
   b.sectorFor = 0;
-  for (let t = 0; t < 40; t++) {
-    const a = -Math.PI + (want + Math.random()) * 2 * Math.PI / SECTORS, r = Math.random() * edgeAt(f, a);
-    const x = f.cx + Math.cos(a) * r, y = f.cy + Math.sin(a) * r;
-    if (f.contains(x, y) && !blocked(x, y)) { b.move = { x, y, left: MOVE_LIMIT }; circulation.moves++; return [x, y]; }
-  }
-  return null;
+  const [want] = nextWedge(s, momentumOf(b, f));
+  const p = pointInWedge(f, want);
+  if (!p) return null;
+  b.move = { x: p[0], y: p[1], left: MOVE_LIMIT };
+  return p;
 }
 // }}}
 
@@ -923,6 +964,8 @@ function stepFlock(dt) {
     let tx, ty;
     if (bi < formed) {                                       // a formation member: its place round the anchor
       [tx, ty] = placeOf(bi);
+    } else if (f && turnSel === 3) {                         // wedges (617e16k): waypoints inside its assigned wedge
+      [tx, ty] = wedgeTarget(b, f, dt);
     } else if (f && turnSel === 2) {                         // a wanderer (617e16d)
       [tx, ty] = wanderTarget(b, f, dt);
     } else if (f) {
@@ -953,7 +996,7 @@ function stepFlock(dt) {
     if (bi >= formed) { const ex = exploreTarget(b, dt); if (ex) [tx, ty] = ex; }
     // Circulating (617e16k): a bot too long in one sector moves to the
     // emptiest one; not while it explores a peninsula.
-    if (bi >= formed && !b.pen) { const mv = circulate(b, f, dt); if (mv) [tx, ty] = mv; }
+    if (bi >= formed && !b.pen && turnSel !== 3) { const mv = circulate(b, f, dt); if (mv) [tx, ty] = mv; }   // wedges circulate by their own clock
     if (bi >= formed) {
       const st = fightStep(b, dt, f);
       if (st === "standing") { b.vx = 0; b.vy = 0; return; }
@@ -1391,7 +1434,7 @@ function measure() {
     // circulation (617e16k): moves to the emptiest sector, and the bots per sector now
     if (f && f.contains) {
       const count = new Array(SECTORS).fill(0); for (const b of bots) if (b.sector !== undefined) count[b.sector]++;
-      lines.push(`circulating     ${circulation.moves} moves; bots a sector now ${Math.min(...count)} to ${Math.max(...count)} (${count.join(" ")})`);
+      lines.push(`circulating     ${circulation.moves} moves (${circulation.reversed} reversed, ${circulation.flipped} across); bots a sector now ${Math.min(...count)} to ${Math.max(...count)} (${count.join(" ")})`);
     }
     // peninsulas (617e16i)
     const pens = partsInPlay().flatMap(p => p.pens || []);

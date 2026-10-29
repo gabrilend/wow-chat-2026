@@ -19,6 +19,14 @@ The owner, 2026-10-28:
 > zone for too long, then we know they're not circulating. We want them to
 > spread out and be dynamically spread throughout the subzone.
 
+And, after the first build (a bot moving to the emptiest sector):
+
+> we should instead have it go to a random pie-slice in the two that are
+> next to the one that it's in. and all our future waypoints for this
+> purpose should be in that wedge, until it is re-assigned again,
+> typically through momentum direction but sometimes that gets reversed or
+> it flips to the opposite side of the arena.
+
 ## Current Behavior
 
 **Built 2026-10-28 in the ground sandbox** (steps 1-3; pictures 048,
@@ -42,6 +50,17 @@ inner and outer halves of each sector would push them outward too.
   the area in that sector, and walks there, through buffers as a crossing
   does (they are dispreferred, not walls), until it arrives or its time
   runs out; then it wanders as before.
+- **Wedges, by momentum** (the owner's second message, replacing the
+  emptiest sector): each bot is assigned a wedge, and every waypoint it
+  wanders to is a walkable point inside that wedge (a new one each time it
+  arrives), until it is reassigned. Reassigned after CIRCULATE seconds,
+  to one of the two wedges beside its own: the one its momentum points to
+  (the way round the middle it has been going), sometimes the other
+  (its momentum reversed, P_REVERSE), and sometimes the wedge across the
+  arena instead (P_FLIP). A turning mode of its own, "wedges"; in the
+  other modes, a bot too long in one wedge makes a single move to the
+  wedge its momentum chooses, by the same rule, then goes on as its mode
+  says.
 - **Spread, dynamically.** Because the least-occupied sector is chosen at
   each move, the bots spread over the whole area and keep moving through
   it, rather than settling.

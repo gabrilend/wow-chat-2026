@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-28 21:49:05
+Generated on: 2026-10-28 21:56:47
 Models: claude-opus-5-5
 
 ## Contents
@@ -8680,6 +8680,80 @@ learns and backs up. What would you like?
 2. Keep the one-second check, but stop pushing after the first refusal while
    waiting for it.
 3. Leave it.
+
+--------------------------------------------------------------------------------
+
+### User Request 84
+
+make sure you save a backup of each version.
+
+the problem with the false walls is the bots tend to get stuck in their little
+coccoons, so if they're staying in the same quadrant of the spawn zone for too
+long, then we know they're not circulating. We want them to spread out and be
+dynamically spread throughout the subzone.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 84
+
+> Two things, in order. First, a viewable backup of every version: a copy of the
+> page for each commit, which you can open and compare in the browser. Second,
+> the cocoons: bots staying too long in one corner of the area get sent to the
+> emptiest part of it.
+>
+> Starting with the backups. A tool will take every committed version of the
+> ground sandbox page out of git and save it as its own page in an archive
+> folder. Each copy is rewired to find the zone data, and an index page lists
+> them all with what changed.
+
+> All 13 committed versions are saved as pages, with an index:
+> ```
+> firefox /mnt/kaun/wow-chat-2026/docs/HTML/archive/ground-sandbox/index.html
+> ```
+> Committing the tool and the backups:
+
+*[commit] c6d5bd9d9 in wow-chat-2026 - Every committed version of the ground sandbox is kept as a page of its own*
+
+> Now the cocoons. Your words go into an issue first:
+
+> Next, the code: eight sectors round the area's middle, each bot's time in its
+> sector, and the move to the emptiest sector after 30 seconds.
+
+> The panel says "undefined moves": the measures already use a local `circ` (for
+> circling), which hides mine. Renaming mine:
+
+*[commit] 743d8b641 in wow-chat-2026 - *
+
+> The commit didn't report back. Checking what happened:
+
+Every version is now backed up two ways, and bots that sit in one part of the
+area too long get sent to the emptiest part.
+
+**Backups** (commit c6d5bd9d9): each committed version of the ground sandbox is
+in git, and is also saved as its own openable page. An index lists them newest
+first, with what changed and links to their pictures:
+```
+firefox /mnt/kaun/wow-chat-2026/docs/HTML/archive/ground-sandbox/index.html
+```
+There are 14 versions so far, back to the first ground sandbox. I'll run the
+backup tool after every commit from here on.
+
+**Circulation** (commit 743d8b641):
+- **How it works:** the area is cut into eight wedges round its middle. A bot
+  that has stayed in one wedge for 30 seconds picks the wedge with the fewest
+  bots and walks to an open spot there. It goes straight through the amber
+  clearance patches instead of round them, so learned marks can't wall it in.
+- **Five minutes in the harpy hills (picture 049):** 103 moves, and every wedge
+  held between 1 and 7 bots.
+- **The panel** now shows the move count and how many bots are in each wedge.
+- **One slip:** the first try showed "undefined moves" because the counter's
+  name clashed with another. It's kept as picture 048 and fixed in the same
+  commit.
+
+**The gap I can see:** all eight wedges meet at the middle, so a bot hanging
+around the centre is never "too long in one place". Splitting each wedge into an
+inner and an outer half would send bots out to the edges as well. Should I add
+that? And are 30 seconds and eight wedges about right?
 
 --------------------------------------------------------------------------------
 
