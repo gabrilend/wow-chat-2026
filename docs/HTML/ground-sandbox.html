@@ -3538,21 +3538,54 @@ function planGrid(f) {
   return (f.plan = P);
 }
 // open for planning: by what the bots know (learn: by what they have learned)
+// Each point's answer is kept with the state of knowledge it was worked out
+// in (doodads shown, walls learned), and worked out again only when that
+// changes: the corner rule asks two or three times as often as before, and
+// each fresh answer builds strings and scans the doodads near (the page
+// ran past the picture tool's 90 seconds for 120 seconds of play until
+// this was kept, 2026-10-29).
 function planOpen(P, q, learnOnly) {
   if (learnOnly) return !P.learned[q];
   if (!P.base[q]) return false;
-  const [x, y] = P.at(q);
-  return !knownDoodadAt(x, y) && !knownWall(x, y);
+  const stamp = (GROUND.knownDoodads || 0) * 100000 + ways.walls + 1;
+  if (!P.openAt) { P.openAt = new Float64Array(P.w * P.h); P.openIs = new Uint8Array(P.w * P.h); }
+  if (P.openAt[q] !== stamp) {
+    const [x, y] = P.at(q);
+    P.openIs[q] = !knownDoodadAt(x, y) && !knownWall(x, y) ? 1 : 0;
+    P.openAt[q] = stamp;
+  }
+  return P.openIs[q] === 1;
 }
 const N8 = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, 1.414], [1, -1, 1.414], [-1, 1, 1.414], [-1, -1, 1.414]];
-function neighbours(P, q, fn) {
+// the eight neighbours of q that `pass` lets through; a diagonal step
+// needs both points beside it passable too, or it slips through the corner
+// of what blocks (the module's offline test found it first, 2026-10-28:
+// a flow-field bot stood at a wall's end ten minutes; mended here the same
+// way, 2026-10-29, so the page and the game agree)
+function neighbours(P, q, fn, pass) {
   const c = q % P.w, r = (q - c) / P.w;
-  for (const [dc, dr, cost] of N8) { const nc = c + dc, nr = r + dr; if (nc >= 0 && nr >= 0 && nc < P.w && nr < P.h) fn(nr * P.w + nc, cost); }
+  for (const [dc, dr, cost] of N8) {
+    const nc = c + dc, nr = r + dr;
+    if (nc < 0 || nr < 0 || nc >= P.w || nr >= P.h) continue;
+    const n = nr * P.w + nc;
+    if (pass && (!pass(n) || (dc && dr && (!pass(r * P.w + nc) || !pass(nr * P.w + c))))) continue;
+    fn(n, cost);
+  }
 }
-// a straight line clear of what is known (or learned) to block
+// a straight line clear of what is known (or learned) to block: every grid
+// point the line passes through (crossing whichever cell border comes
+// first), the one it starts at aside; sampled points every half step
+// missed a line clipping a corner (the module's test, 2026-10-28)
 function planSight(P, x0, y0, x1, y1, learnOnly) {
-  const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / (P.st / 2));
-  for (let i = 1; i <= n; i++) { const q = P.cellOf(x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n); if (q < 0 || !planOpen(P, q, learnOnly)) return false; }
+  const g = GROUND, ax = (x0 - g.sx0) / P.st - P.c0, ay = (y0 - g.sy0) / P.st - P.r0, bx = (x1 - g.sx0) / P.st - P.c0, by = (y1 - g.sy0) / P.st - P.r0;
+  let c = Math.round(ax), r = Math.round(ay);
+  const ce = Math.round(bx), re = Math.round(by), dx = bx - ax, dy = by - ay, sc = dx > 0 ? 1 : -1, sr = dy > 0 ? 1 : -1;
+  let nextC = dx ? ((c + 0.5 * sc) - ax) / dx : Infinity, nextR = dy ? ((r + 0.5 * sr) - ay) / dy : Infinity;
+  const eachC = dx ? 1 / Math.abs(dx) : Infinity, eachR = dy ? 1 / Math.abs(dy) : Infinity;
+  for (let n = Math.abs(ce - c) + Math.abs(re - r); n > 0; n--) {
+    if (nextC < nextR) { c += sc; nextC += eachC; } else { r += sr; nextR += eachR; }
+    if (c < 0 || r < 0 || c >= P.w || r >= P.h || !planOpen(P, r * P.w + c, learnOnly)) return false;
+  }
   return true;
 }
 // {{{ flow field
@@ -3569,13 +3602,20 @@ function flowStep(b, tx, ty, f) {
     const queue = [tq]; field[tq] = 0;
     for (let i = 0; i < queue.length; i++) {
       const q = queue[i];
-      neighbours(P, q, (n, cost) => { if (field[n] > field[q] + cost && planOpen(P, n, false)) { field[n] = field[q] + cost; queue.push(n); } });
+      neighbours(P, q, (n, cost) => { if (field[n] > field[q] + cost) { field[n] = field[q] + cost; queue.push(n); } }, n => planOpen(P, n, false));
     }
     P.fields.set(key, field); ways.fields++;
   }
-  // downhill, two points ahead, so the steps run smooth
+  // downhill, up to three points ahead so the steps run smooth, the
+  // farthest of them in a clear line (the first is always a step the field allowed)
   let q = bq;
-  for (let k = 0; k < 2; k++) { let best = q; neighbours(P, q, n => { if (field[n] < field[best]) best = n; }); if (best === q) break; q = best; }
+  for (let k = 0; k < 3; k++) {
+    let best = q;
+    neighbours(P, q, n => { if (field[n] < field[best]) best = n; }, n => planOpen(P, n, false));
+    if (best === q) break;
+    if (k > 0) { const [x, y] = P.at(best); if (!planSight(P, b.x, b.y, x, y, false)) break; }
+    q = best;
+  }
   return q === bq ? null : P.at(q);
 }
 // }}}
@@ -3592,10 +3632,9 @@ function astarRoute(P, from, to, learnOnly) {
     if (q === to) break;
     if (shut[q]) continue; shut[q] = 1;
     neighbours(P, q, (n, cost) => {
-      if (!planOpen(P, n, learnOnly) && n !== to) return;
       const ng = gs[q] + cost;
       if (ng < gs[n]) { gs[n] = ng; came[n] = q; push([ng + hOf(n), n]); }
-    });
+    }, n => n === to || planOpen(P, n, learnOnly));
   }
   if (gs[to] === Infinity) return null;
   const route = []; for (let q = to; q !== -1; q = came[q]) route.push(q);

@@ -72,8 +72,8 @@ range would be healed and rewound too (open question below).
 
 ## Current Behavior
 
-**On paper, 2026-10-17** (the homework branch, not yet merged; no server
-code). `src/lua-basic/lib/battleground-front.lua` holds every rule below
+**On paper, 2026-10-17** (made on the homework branch, on main since
+commit c795688; no server code; its 30 checks pass, 2026-10-29). `src/lua-basic/lib/battleground-front.lua` holds every rule below
 as plain arithmetic on one front: the push axis and the borders between
 objectives, a deck per bot per fork (two branches: a switch), sections
 and the fewest-allies pick, the help rule with both readings of question

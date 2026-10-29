@@ -80,11 +80,29 @@ and the cup. That last is the method's own limit (forces with no route and
 no memory of where it has been), not a fault: the test checks that it is
 trapped, so a change shows.
 
-Not built: step 2's headless comparison tool; the second half of step 3,
-the server side (the grid filled from the navigation mesh, the switch
-command, the walker's point handed to the buddy's movement); step 4 trying
-them in game. In game, a buddy still walks the server's navigation mesh
-path to wherever its behaviours send it.
+**Step 3, its second half, written 2026-10-28, not yet compiled**: the
+server side (`buddies_path.h`, `buddies_path.cpp` in the buddy module,
+registered in `buddies_loader.cpp`, called from the roam action in
+`buddies_roam_strategy.cpp`). `.buddy path <orbit|flow|astar|potential|
+learn|mesh>` picks the way for the speaker's buddies (mesh, the default,
+is the walking as before); `.buddy path` alone says which, and a table of
+each way's walks since the server started (arrived, given up, mean
+seconds, refused steps, stuck checks, orbits, kicks, plans). With a way
+picked, each roaming waypoint is walked by it: a grid round the buddy and
+the waypoint (cells 3 yards apart, coarser for a far waypoint, at most 80
+across, 24 yards of margin) is filled outward from the buddy's own cell
+like water, a cell open where the mesh has ground near its middle reached
+by a clear straight walk from its neighbour; every half second the walker
+gives the next point, which is moved onto the mesh and walked in a
+straight line (no server path search), unless the mesh says the line
+crosses a wall, a cliff or a gap: then the step is refused (not walked,
+the buddy stopped, the way told). Arrived within 3 yards; given up after
+90 seconds, the waypoint dropped as one the mesh refuses is. A syntax-only
+check against the server's headers passes; the owner's compile is the
+real test.
+
+Not built: step 2's headless comparison tool; step 4 trying them in game
+(after the compile, on the test realm, with the army of 617e17).
 
 ## Intended Behavior
 
@@ -142,6 +160,12 @@ Each is built twice:
    it as it is (a way that shows what forces alone do), or give it a
    memory (cells it has stood in push too, so it can't sink back into the
    same dip)? With the memory it is no longer "no map at all".
-3. The sandbox's flow and A* may cut the same corners the module's first
-   version did (diagonals past a wall's end, sampled line checks): mend
-   them there too, so the sandbox and the game agree?
+3. ~~The sandbox's flow and A* may cut the same corners the module's
+   first version did: mend them there too?~~ Answered 2026-10-29 (the
+   owner: "Okay let's do all of those things"): mended in the sandbox the
+   same way (a diagonal needs both points beside it open; the line check
+   walks every point it crosses; flow's look-ahead keeps to a clear
+   line), pictures 062-063. The corner rule asks whether a point is open
+   two or three times as often, so each point's answer is now kept until
+   what is known changes (without that, 120 seconds of play overran the
+   picture tool's 90).

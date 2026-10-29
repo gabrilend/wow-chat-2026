@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-28 23:09:10
+Generated on: 2026-10-29 01:40:41
 Models: claude-opus-5-5
 
 ## Contents
@@ -105,6 +105,14 @@ Models: claude-opus-5-5
     wander naturally in the ground sandbox; the new "wedges" mode is built,
     committed and backed up. Next: watch it and tell me whether the 30-second
     move rate and the reversal and jump-across chances feel right.
+25. 2026-10-29 01:29, after Request 92 - You asked to test five pathfinding ways
+    in game with an army of 64 bots. The pathtest test realm is ready and the
+    server code is written. Next: compile and install basic, then run
+    `scripts/worldserver --profile pathtest`.
+26. 2026-10-29 01:38, after Request 93 - We're building a test realm where an
+    army of 64 stand-ins tries five pathfinding ways round you, grouped and
+    gemmed like buddies. Next: you compile and install basic, then start
+    `scripts/worldserver --profile pathtest`.
 
 --------------------------------------------------------------------------------
 
@@ -9050,6 +9058,846 @@ Two questions:
    - only count a bot as stuck if it got less than a third of what it could have
      walked toward its target, instead of half;
    - or only check orders that have lasted at least 2 seconds.
+
+--------------------------------------------------------------------------------
+
+### User Request 89
+
+okay can you create at least 3-5 radically different pathfinding solutions with
+equivalent levels of complexity? then, make sure that all of them are viewable
+in-game. I want to test them myself. We should have stand-in buddy-bots, say an
+army of 64, just for me, and my buddy-bots should displace some of them, so it's
+always a total of 64 (for the scenario setup scene jumps we're planning for
+later) - anyway they will quest in the area that my character is in, as if they
+were the white dot. remember, random buddy-bot stand-ins. They should behave as
+if we were all in one clan, and in-fact, for these purposes, you can make it so.
+But this is for the test server probably... Can you spin up a test-profile real
+quick and build out everything by copying the build from a different
+compilation, and then applying the modification patches you need to get it
+modified to your position?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 89
+
+> That's a big build with several parts: pathfinding designs, in-game switching,
+> a 64-strong stand-in army, and a new test profile. Before deciding how to
+> split it, I'm checking what the project already has for spinning up a profile
+> from another's build:
+
+> **[Asked the user]**
+>
+> *Q1 — Test realm:* Where should the pathfinding test realm come from?
+> Copying basic means copying its installed server and its world, characters and
+> bots databases (several GB), plus a realm entry, GM-only during tests.
+> - New profile from basic (Recommended) — A new profile (say 'pathtest') that
+>   is basic's world and build, copied: its own install folder and databases, so
+>   the army and experiments never touch basic's characters. Its patch lists
+>   follow basic's; the buddy patches gain it.
+> - Use basic itself — No copy: the test switch and the army go on the basic
+>   realm, locked to game masters while testing (scripts/test-lock). Fastest;
+>   basic's characters share the world with the army.
+> - Use cc-test — The existing test profile, but it is the stock game (level
+>   80, no custom content) and not yet built; the army would quest a world
+>   unlike basic's.
+> → **Answered:** this system should be flexible, able to create branches off
+> of any living database. Like git, but dynamic instead of stored.
+>
+> *Q2 — In game:* How should the five pathfinding ways reach the bots in game?
+> - Module switch, one compile (Recommended) — All five written into the buddy
+>   module (C++) behind one switch: '.buddies path <way>' per bot or for the
+>   whole army. You compile once; then you can flip between them live and watch.
+> - Lua driving the bots — No compile: Lua sends each bot its moves directly,
+>   with the bot module's own movement switched off for the army. Faster to try,
+>   but it fights the bot module and won't be what real buddies use.
+> → **Selected:** Module switch, one compile (Recommended)
+
+> Free numbers: 136d for the realm branches, 617o7 for the five ways, 617e17 for
+> the army. Nothing claims the shared profile files. Writing the three issues:
+
+> This is a multi-part build, so I'm tracking it as tasks:
+
+*[commit] 048e303ea in wow-chat-2026 - *
+
+> Writing the four new ways and the grid they share:
+
+> Next, wiring the selector in: the flock step uses the chosen way; in "learn"
+> the bots steer only by what they've learned; a refused step teaches it;
+> backing out and orbiting stay with "orbit".
+
+> Next, the selector on the panel, its address setting, a measures line, and
+> drawing the routes the A* ways plan:
+
+> Checking the A* picture's numbers:
+
+> Graph-and-A* now plans 4,308 routes instead of 96,424, and no bot stops dead.
+> All five ways work in the sandbox. Writing the notes, updating the issue,
+> committing, then the page backup:
+
+*[commit] ce4158c3f in wow-chat-2026 - *
+
+> The backup commit failed silently again. It happens whenever the claim and the
+> commit share one command. Running the commit on its own:
+
+*[commit] ba964c22b in wow-chat-2026 - *
+
+> The five ways are done in the sandbox. Next, the realm branch tool. First, how
+> big basic's databases are, and how the world server script finds a profile's
+> install and settings:
+
+> Both the launcher and the realm switch know only the six fixed profiles.
+> They'll learn to look a name up in the branch list. The design changes for the
+> better, so the issue first:
+
+> Writing the branch tool:
+
+> Next, the launcher and the realm switch learn branches. The launcher first;
+> reading where it starts the binary, so the overrides go just before:
+
+> Before the launcher sets the overrides, checking exactly how the server turns
+> a setting's name into its variable name ("RealmID" in particular):
+
+> The launcher accepts branches. Next, the realm switch, so it can bring a
+> branch's realm online:
+
+> While the copy runs, starting on the in-game switch. First, how the buddy
+> module moves a buddy today: its steering and mesh files.
+
+The branch copy is running again. Meanwhile, the module's mesh code, which the
+in-game ways would plan on:
+
+--------------------------------------------------------------------------------
+
+*Prompt is too long*
+
+--------------------------------------------------------------------------------
+
+### User Request 90
+
+Please try again
+
+--------------------------------------------------------------------------------
+
+*Prompt is too long*
+
+--------------------------------------------------------------------------------
+
+### User Request 91
+
+/compact
+
+--------------------------------------------------------------------------------
+
+### Session Recap (written by the harness, not by either speaker)
+
+This session is being continued from a previous conversation that ran out of
+context. The summary below covers the earlier portion of the conversation.
+
+Summary:
+1. Primary Request and Intent
+
+**Project context.** The project is Everland Ghostsong
+(/mnt/kaun/wow-chat-2026): an AzerothCore 3.3.5a server, profile basic, with the
+buddy-bot module B036 (patches/B036-mod-buddies/mod-buddies/). The owner is
+gabrilend (she/her in the project's records; use they/them in prose).
+
+**Standing rules:**
+- The owner runs scripts/compile, update and install.
+- Use absolute paths; never `cd` (a hook rejects it).
+- Write the issue file before the work.
+- Commit through commit-own-changes, with transcripts riding along. Claim
+  shell-written changes with claim-own-change.
+- MySQL: `--defaults-file=${DIR}/mysql/conf/client.cnf`. Never put a password on
+  a command line.
+- Hooks reject write paths built from shell variables ($F); write full paths.
+- Commit every version during this design process, each with its own
+  development-history picture and a page backup. The owner: "make sure you save
+  a backup of each version".
+- Screenshots go to development-history/, not RAM, filed by
+  scripts/file-screenshot.
+- Keep the owner's words and asides verbatim in the issues and in
+  notes/conversation-asides.md.
+- Explain in plain English.
+- Writes outside the project need the AskUserQuestion outside-write prompt.
+
+**Recent requests, in order:**
+1. **The ground sandbox** (docs/HTML/ground-sandbox.html) evolved through many
+   owner requests, all built:
+   - stuck detection, back-up doubling, a shared map, buffers;
+   - overlapping fences as one wandering area;
+   - peninsulas, sub-zone fence, monster cluster;
+   - middle-click pan;
+   - the owner's caught test (move inputs against displacement), with the world
+     refusing unknown doodads;
+   - wedges by momentum (circulation);
+   - no rubbing (look ahead along the whole stretch; refused doodads revealed to
+     all bots);
+   - the orbit rule ("snapshot position every second… range check to target…
+     if less than able, orbit obstacle until line of sight to a forward
+     position");
+   - back out first with doubling distance, reset when past the forwardmost
+     stuck spot along the forward axis.
+2. **Latest major request (verbatim):** "okay can you create at least 3-5
+   radically different pathfinding solutions with equivalent levels of
+   complexity? then, make sure that all of them are viewable in-game. I want to
+   test them myself. We should have stand-in buddy-bots, say an army of 64, just
+   for me, and my buddy-bots should displace some of them, so it's always a
+   total of 64 (for the scenario setup scene jumps we're planning for later) -
+   anyway they will quest in the area that my character is in, as if they were
+   the white dot. remember, random buddy-bot stand-ins. They should behave as if
+   we were all in one clan, and in-fact, for these purposes, you can make it so.
+   But this is for the test server probably... Can you spin up a test-profile
+   real quick and build out everything by copying the build from a different
+   compilation, and then applying the modification patches you need to get it
+   modified to your position?"
+3. **Her answers to my two questions:**
+   - Test realm: "this system should be flexible, able to create branches off of
+     any living database. Like git, but dynamic instead of stored."
+   - In game: "Module switch, one compile (Recommended)".
+
+2. Key Technical Concepts
+
+**Ground sandbox page** (scripts/templates/ground-sandbox.html →
+docs/HTML/ground-sandbox.html, built by scripts/generate-ground-sandbox-page;
+`--screenshot SETTINGS` files a picture; Node parse check before any picture):
+- Hash settings: continent, zone, theme, sim, turn (1/-1/0/2 wanderers/3
+  wedges), fence, view=fence, form, formN, formTurn, slope, shade, check, way
+  (orbit|flow|astar|potential|learn), at=X,Y, start=scatter|far.
+- Five ways section: planGrid, planOpen, flowStep (cache key uses knownDoodads +
+  ways.walls), astarRoute/astarStep (replan on target/knowledge change or 5 s),
+  potentialStep, learnRefusal, wayStep.
+- Orbit section: orbitStep, startOrbit, stuckAt, relaxIfPast; constants
+  BACK_FIRST=2, BACK_MAX=64, FRONT_PASS=1, ABLE_SHARE=0.5, ORDER_ARRIVE=6,
+  ORBIT_IN=1.3, ORBIT_LIMIT=15.
+- Steering: hard = known-steep (or learned in learn mode) + knownDoodadAt +
+  knownWall + edge; soft adds buffers; rayHit checks the next step, 1 yd and 2
+  yd (LOOK_AHEAD=2).
+- The world refuses steps into blocked() (steep + doodads); revealAt marks the
+  doodad known.
+- Circulation: wedges (SECTORS=8, CIRCULATE=30, P_REVERSE=0.15, P_FLIP=0.1,
+  pointInWedge using sqrt for even area).
+
+**Version backups:** scripts/archive-ground-sandbox-versions writes
+docs/HTML/archive/ground-sandbox/<date>-<sha>.html plus index.html from each git
+commit of the page. Run it after each commit, then commit the new page and the
+index.
+
+**AzerothCore config:**
+- Environment overrides `AC_<UPPER_SNAKE>` are read for every setting, module
+  settings included: AC_WORLD_DATABASE_INFO, AC_CHARACTER_DATABASE_INFO,
+  AC_PLAYERBOTS_DATABASE_INFO, AC_REALM_ID, AC_LOGS_DIR.
+- Module configs are read from the compiled-in _CONF_DIR.
+- The launcher stops any running worldserver first: one realm at a time.
+
+**Realm branches (136d):**
+- config/branches lines: `name source realm-id made`.
+- A branch runs its source's installed server with env overrides; only the
+  databases are copied.
+
+3. Files and Code Sections
+
+**Issues created or updated this stretch:**
+- 617e16c through 617e16k: sandbox ground, wanderers, formations, fences
+  reshaped, monsters, stuck/orbit, peninsulas, sub-zone fence, circulation.
+- 617o7-five-ways-to-find-a-path.md: step 1 built, with a measures table.
+- 136d-realm-branches.md: design updated to env overrides.
+- 617e17-an-army-of-sixty-four.md: planned.
+- Parents 617o, 136 and 617e list the new sub-issues. Plans committed as
+  048e303ea.
+
+**scripts/branch-realm** (new, uncommitted):
+- Commands: --list, --drop NAME, and SOURCE NAME (copy).
+- source_dbs reads the source's worldserver.conf and modules/playerbots.conf.
+- Copies with `mysqldump … --single-transaction --set-gtid-purged=OFF
+  --routines --triggers --no-tablespaces SRC | mysql NEW`; an `undo` drops the
+  databases it made on failure.
+- Inserts a realmlist row copied from the source row: new id MAX+1, flag 2,
+  allowedSecurityLevel 1.
+- Appends the branch to config/branches.
+
+**scripts/worldserver** (edited, uncommitted):
+- get_profile_paths resolves branches: SERVER_PROFILE, BRANCH_REALM; INSTALL_DIR
+  uses SERVER_PROFILE.
+- Before the start, a branch exports the AC_* overrides via b_info (the source's
+  connection string with the database name replaced), and checks each contains
+  ";acore_".
+
+**scripts/set-active-realm** (edited, uncommitted): an unknown profile's realm
+id is looked up in config/branches.
+
+**patches/B036-mod-buddies/mod-buddies/src/roam/buddy_path_ways.h** (new, just
+written, uncommitted):
+- Contents: namespace BuddyPath, struct P, enum Way {Orbit, Flow, AStar,
+  Potential, Learn}, WayName/WayFromName.
+- Grid: w, h, x0, y0, step, open, learned; Cell, Centre, Passable.
+- Neighbours (8-way), LineClear, FlowField (Dijkstra), FlowNext, AStar (octile),
+  PullTight, Learn, PotentialStep (PUSH_RANGE=6), Stuck(closer, able, distLeft),
+  struct Backing {StuckAt, Relax}, struct Orbit {Begin, Step}.
+- Diagnostics to fix:
+  - lines 123 and 173: a lambda captures structured bindings (`auto [d, q] =
+    open.top()` used inside a lambda), which is C++20. Use plain `float d =
+    open.top().first; int q = open.top().second;`.
+  - line 79: `float(q / w)` integer division warning; write `float(q / w)`
+    explicitly as an int then cast, e.g. `int r = q / w;`.
+
+**Other tools this session:**
+- scripts/file-screenshot and scripts/test-file-screenshot;
+- generate-ground-sandbox-data / -page / -monsters;
+- scripts/lib/monster-factions.lua;
+- test-ground-decode;
+- templates/ground-decode.js.
+
+**Latest commits:**
+- ce4158c3f (five ways in the sandbox), with page backup ba964c22b;
+- earlier: 070d6d077 (back-out), 17b139d36 (orbit), b786c90a6 (no rubbing), and
+  so on.
+
+4. Errors and fixes
+
+- **A sed with an empty line number** (`sed -i "${L}s|.*|…|"` where L was
+  empty) replaced every line of ground-sandbox.html. Restored with `git checkout
+  HEAD -- scripts/templates/ground-sandbox.html` and the edits redone with the
+  Edit tool. Never use sed with a computed line number without checking it;
+  prefer Edit.
+- **commit-own-changes failing silently:**
+  - When piped into `head -1`, it got SIGPIPE.
+  - When run in the same Bash command right after claim-own-change, with the
+    message piped in, it failed with no output.
+  - Fix: write the message to tmp/shared-memory/msg.txt, use `-F file`, and run
+    the commit in its own Bash call. Verify with `git status --short`
+    afterwards.
+- **Branch copy, ERROR 3546 (GTID_PURGED):** added `--set-gtid-purged=OFF`.
+  Dropped the half-made acore_world_pathtest by hand. Added automatic undo on
+  failure.
+- **Flow field hang and A* replanning every step:** the cache keys included
+  known.size, which grows every step. Changed the keys to knownDoodads plus
+  ways.walls.
+- **Earlier sandbox fixes:**
+  - a name clash (sx), renamed to stepX/stepY;
+  - `circ` shadowed by a local of the same name, renamed to circulation;
+  - a misplaced else, which the parse check now catches;
+  - refused-cell walls undone by learnOpen, replaced with revealing the whole
+    doodad;
+  - the look-ahead jumping thin trunks, replaced by rayHit;
+  - buffers breeding buffers;
+  - buffers as hard walls sealing passages, now soft;
+  - crossings that never ended, now with a time limit;
+  - the mirror bug (east was drawn left).
+
+5. Problem Solving
+
+- The five pathfinding ways run in the sandbox and are compared in issue 617o7.
+  Steps without a way and spacing, per way:
+
+| Way | Steps with no way | Spacing |
+|---|---|---|
+| Flow field | 0 | 13.8 yd |
+| Graph and A* (4,308 routes) | 0 | 12.4 yd |
+| Potential field | 0 | 14.7 yd |
+| Learn the map | 60/s | 18.8 yd |
+
+- The branch tool is built. Its second run (`scripts/branch-realm basic
+  pathtest`, background task bwlxk535j, output in
+  tmp/shared-memory/branch-pathtest.out) was still copying acore_world_basic
+  (about 1 GB) at last check.
+- The orbit stuck check may be too eager (516 orbits in 5 minutes); the owner
+  was asked to tune it.
+
+6. All user messages (recent part; earlier ones covered in the previous summary)
+
+- Spec answer: "oh, the spec should be picked in the same way that any other
+  buddy…" (Sargobras whisper).
+- "semantic map, old style AI design… give them levers, create five hundred
+  more…"
+- "um... okay... so, uh, what meaningful features can we build or present? Can
+  you tell me how to view the bot pathfinding page again?"
+- "the screenshots you're taking should go in the development history btw not
+  ram"
+- "this pathfinding design is excellent, make sure a copy of it is archived…
+  relate to the heightmap… slope… avoid doodads"
+- The long message on the player click dot moving instantly, wanderers, 3 turns,
+  zone level, formations, finding the MoBA game, plus asides (Uber Eats credits,
+  dancing through life).
+- "okay the sub-zones that players are wandering in need to be modified…
+  mental wall… merge… split…" and the edge answer "then they should change
+  their rotation… cross through the center…".
+- "now can you use realistic monster spawning… 1/4th of the continent…
+  teleported onward…"
+- "please continue"-type messages; "can we work on this next please" (the Lua
+  links task).
+- Release Lua answer: "we should ensure that the old pinned azerothcore we have
+  for that profile is fully functional, then we should bring it to compatibility
+  with the current version." Then chose "Alpha's pinned-old fork".
+- "heaven and hell is comfort and pain, the most relatable aspect a human could
+  find"
+- The login pop-up question with Sargobras or Chromie, and the HTML viewer.
+- "okay they keep getting stuck on obstacles - here's our solution… back up…
+  twice as far… fully mapped…"
+- "notice how I said *less than* not stuck… buffer spaces…"
+- "also, if a player is in any of multiple sub-zones…"
+- "also they should treet navmesh "peninsulas" like indoor buildings…"
+- "if a player is inside one, then they treat it like an instance, as if they
+  were tanks."
+- "hmmm, bots are still bumping into walls… save all of these versions as git
+  commits"
+- "so, I noticed a problem, there's some sub-zones that are so large… two
+  types of fences…" and the answer "your monster cluster…" (the
+  watering-hole passage).
+- "can we make it so we can drag the map with middle click just panning"
+- "I don't understand. they're walking around, and dropping a red pixel…"
+- "yes no no we need - it's moving… intended movement input array… disprefer
+  the movement track… let it be known."
+- "make sure you save a backup of each version. … coccoons… spread out…"
+- "we should instead have it go to a random pie-slice in the two that are next
+  to the one…"
+- "now they're just uncomfortably rubbing up against anything they can touch.
+  Are they horny? oh god tell me they are"
+- "okay how about this - if a buddy is on an uninterrupted or redirected
+  movement order for a second or more (configurable, down usually)… orbit…
+  line-of-sight…"
+- "remember it should double it's "backup distance"… reset when they've
+  travelled farther on the forward axis than the place they were foremost
+  stuck… [questing mob slain most recently]"
+- The five-ways / army / test-profile request (verbatim above), and the answers:
+  branches "like git, but dynamic instead of stored"; "Module switch, one
+  compile".
+
+7. Pending Tasks
+
+- **Task #7 (in progress):** finish the pathtest branch:
+  - wait for the background copy and check its output;
+  - commit scripts/branch-realm, the worldserver and set-active-realm edits,
+    config/branches and the 136d update;
+  - add a quick test if feasible.
+  - The owner starts it: `scripts/worldserver --profile pathtest`.
+- **Task #8:** the buddy module pathfinding switch:
+  - fix the buddy_path_ways.h warnings;
+  - write the offline test (scripts/test-buddy-path-ways plus
+    tests/buddy-path-ways/path-check.cpp, mirroring test-buddy-follow-core, with
+    a quick-test header);
+  - write the server side buddies_path.cpp: the `.buddies path <way>` command;
+    fill the grid from the mesh with BuddyMeshSnap/BuddyMeshLineClear; hook into
+    the roam movement; register in buddies_loader.cpp.
+  - The owner compiles.
+- **Task #9:** the army of 64:
+  - `.buddies army [count]` / `dismiss`: random stand-ins topped up to 64,
+    displaced by her own buddies, one clan, questing round the player;
+  - test realm only.
+- **Unanswered owner questions:**
+  - "[questing mob slain most recently]" meaning;
+  - loosen the stuck test;
+  - wall memory per bot;
+  - cluster granularity;
+  - door width;
+  - refusal reaction;
+  - dynamic-branch meaning (136d Q1);
+  - alpha's MySQL path (134a);
+  - the wedge numbers;
+  - army makeup across jumps;
+  - which measures decide the best way.
+- **Older:** alpha pinned-old fork working, then current (issue 134a);
+  beta/release reinstall (the owner's) to mend the Lua links.
+
+8. Current Work
+
+Just wrote patches/B036-mod-buddies/mod-buddies/src/roam/buddy_path_ways.h, the
+pure C++ core for the five ways. clang flagged C++20 structured-binding captures
+at lines 123 (FlowField: `auto [d, q] = open.top();` used inside the Neighbours
+lambda) and 173 (AStar: `auto [f, q] = open.top();` used in the lambda), and
+integer division at line 79 (Grid::Centre: `float(q / w)`). Meanwhile,
+`scripts/branch-realm basic pathtest` runs in the background (last output:
+"copying acore_world_basic -> acore_world_pathtest ...").
+
+9. Optional Next Step
+
+1. Fix the header's warnings: replace the structured bindings with `float d =
+   open.top().first; int q = open.top().second; open.pop();`, and in Centre use
+   `int r = q / w; return { x0 + float(q % w) * step, y0 + float(r) * step };`.
+2. Check tmp/shared-memory/branch-pathtest.out. When the branch is made, commit
+   the branch tool and launcher edits, with the message in a file and the commit
+   in its own Bash call.
+3. Continue Task #8 with the offline test of buddy_path_ways.h, per the owner's
+   request: "make sure that all of them are viewable in-game. I want to test
+   them myself" and "Module switch, one compile".
+
+If you need specific details from before compaction (like exact code snippets,
+error messages, or content you generated), read the full transcript at:
+/home/ritz/.claude/projects/-mnt-kaun-wow-chat-2026/03547e04-6a50-4e0d-97ee-ae0ce7474312.jsonl
+Continue the conversation from where it left off without asking the user any
+further questions. Resume directly — do not acknowledge the summary, do not
+recap what was happening, do not preface with "I'll continue" or similar. Pick
+up the last task as if the break never happened.
+
+--------------------------------------------------------------------------------
+
+`/compact` - Compacted (ctrl+o to see full summary)
+
+--------------------------------------------------------------------------------
+
+### User Request 92
+
+Please continue
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 92
+
+> Fixed the C++ header's warnings (it now builds clean); the test realm's
+> database copy is still running. Next: the offline test for the five ways.
+
+> Now the full header, to write checks against its real signatures.
+
+> Adding the walker (the per-buddy state that picks the next point by the chosen
+> way) to the header, so the server and the test share one driver.
+
+> Now the offline test: a wall with a gap, and a pocket that traps a buddy
+> walking straight, with each way walked through both.
+
+> Those editor errors are on server files opened without the server's include
+> paths (pre-existing, not from this change). Writing the test runner:
+
+> The test caught real faults: flow walks into walls constantly, orbit and
+> potential never get round. Tracing flow's first steps:
+
+> Now orbit's probe (checked 2 yards but walked 4) and potential's kick (fired
+> on "not closing in" rather than the header's "barely moves"):
+
+> A* now fails the pocket. Making the test report where each failing way was
+> first refused — useful beyond today:
+
+> A* clipped a wall's corner between the line check's samples. Replacing the
+> sampled line check with an exact cell walk (every cell the line passes
+> through):
+
+> All three grid ways pass now. Tracing orbit:
+
+> Orbit gets round both now (slowly: about 2 minutes for 60 yards). Potential is
+> still trapped in the dip in front of the wall; checking how the sandbox's
+> potential way escapes:
+
+> The sandbox holds a kick's direction for 1.5 seconds (about 10 yards); mine
+> kicked one step and was pulled straight back. Porting that:
+
+> All 38 checks hold. Mending the headers' line counts and checking the branch
+> copy:
+
+> The size query is blocked behind the copy's table locks. Stopping it and
+> asking MySQL what it's running instead:
+
+> The copy is moving: 227 of 397 world tables (277 of 559 MB). Meanwhile,
+> registering the new quick test in the generated lists:
+
+> The test's one-line description overstates it (potential doesn't get round the
+> wall). Correcting:
+
+> Writing the core's info page, then committing the five-ways core and its test.
+
+*[commit] fd2f990d6 in wow-chat-2026 - The five ways to find a path, as the buddy module's own arithmetic, checked alone*
+
+> Now where roaming sends a buddy walking, the spot the switch hooks into:
+
+> The explore-mode switch (`.buddy explore <mode>`) is the exact precedent.
+> Reading it:
+
+> Reading how the explorer builds its grid of heights over the mesh, to fill the
+> path grid the same way:
+
+> Another session (journal-and-linode) is active here; its claims don't touch
+> the buddy module. Claiming the files I'm about to edit:
+
+> First, one addition to the core: in game the grid is only an approximation of
+> the mesh, so when the mesh refuses a flow or A* step, the cell ahead is closed
+> in their grid and they plan again.
+
+> Now the server side. Checking the includes and helpers the recorder's command
+> uses:
+
+> Writing the server side: the switch, the grid filled from the mesh, and the
+> step-by-step walk.
+
+> Now the hook in the roam action, just before it walks the mesh path:
+
+> The editor can't see the server's headers. Trying a real syntax check of the
+> new file with the server build's own compile flags:
+
+> Syntax-checking the new server code against the shadow build's real compile
+> flags (read-only, no build):
+
+> The shadow build has no modules. Building a syntax-only check by hand from the
+> source tree's header folders:
+
+> One real fault in my file: the command table's type needs the server's
+> chat-command namespace. Checking how the beds file brings it in:
+
+> No errors in module code. Making sure the check really got through the whole
+> file (not stopped early on a header):
+
+> Both parse to the end with no errors in module code (your compile is the real
+> test). Checking whether the patch copies new module files on its own:
+
+> The patch copies the whole module folder, so the new files ride along.
+> Updating the issue, then checking the branch copy:
+
+> The world copy finished; characters are copying now. Next, the army of 64.
+> Reading its plan and the existing stand-in code:
+
+> Still designing the army: working out how stand-ins can roam round you the way
+> your own buddies do. Finding where the buddy roster lives:
+
+> The bot module drops a random bot's master when the bot isn't in a group.
+> Checking whether stand-ins count as random bots there:
+
+> Stand-in accounts aren't on the bot module's random list, so a master given to
+> them stays. Checking what the other roster users would do with 64 extra
+> "buddies" (the party code especially):
+
+> Exposing two small things from the stand-in maker (whether one is still in its
+> first moments, and dismissing one), then the army itself:
+
+> Now the army itself:
+
+> The test realm is made: `pathtest`, realm 7, copied from basic in 25 minutes.
+> Now wiring the army into the roaming pass and the loader:
+
+> Syntax-checking all four changed server files to their ends:
+
+> The write-path gate needs literal paths; putting the check in a small script
+> in the scratchpad:
+
+> Three parse clean. The stand-in file needs a header one of our core patches
+> adds; finding it:
+
+> All four parse to the end. Now the issues. Reading the branch issue's current
+> state:
+
+> `config/branches` mirrors databases that exist only on this machine, so it
+> belongs out of git (a fresh clone would list branches it doesn't have).
+> Checking .gitignore:
+
+> Two `logs-` paths are tracked, so a blanket log ignore would mislead; removing
+> that line:
+
+> Committing the branch tool (script work, not part of the compiled server):
+
+> One gap: the server may not create its logs folder itself. Making the launcher
+> create it:
+
+*[commit] 55059d7ac in wow-chat-2026 - Realm branches: a test realm made on demand from a living one*
+
+> Committed (55059d7ac). Updating the army issue to say what is written:
+
+> Checking whether the module's README lists its commands:
+
+I've built the three things you asked for, but none of the game-side part has
+been through your compile yet, so nothing has run in game.
+
+**1. The five ways to find a path, inside the buddy module** (committed,
+fd2f990d6)
+- The same five as the sandbox (orbit, flow field, A*, potential field, learn
+  the map) now exist as arithmetic the module can use.
+- A new quick test walks all five over three made-up courses: a long wall with a
+  gap, a cup that traps anyone walking straight at a point behind it, and a
+  grove of trees.
+- Its first runs found four real faults, now fixed:
+  - diagonal steps slipped through the corners of walls;
+  - the line-of-sight check missed lines that clipped a corner;
+  - orbit's stuck check cut every walk-round short, so it backed out forever;
+  - potential's kick lasted one step, and the bot was pulled straight back into
+    the dip.
+- All 38 checks now pass.
+- The potential field still can't get round the long wall or out of the cup.
+  That's a limit of the method (forces only, no route, no memory), not a bug,
+  and the test checks it so any change is noticed.
+- Speed on the courses: flow and A* arrive fastest and never bump a wall. Learn
+  takes about 3–4 times as long. Orbit takes about 8–10 times as long: two
+  minutes for a 60-yard wall.
+
+**2. The test realm** (committed, 55059d7ac)
+- `scripts/branch-realm basic pathtest` copied basic's world, characters and
+  bots into new databases, with realm 7 for game masters only. It took 25
+  minutes.
+- No server was copied: the launcher runs basic's installed server pointed at
+  the copy.
+
+**3. The switch and the army** (written; this waits for your compile before
+committing)
+- **`.buddy path <orbit|flow|astar|potential|learn|mesh>`** picks the way for
+  your buddies. "mesh" is today's walking and the default.
+  - With a way picked, each step is a straight walk. If the navigation mesh says
+    a step would cross a wall, the step isn't walked and the way is told.
+  - `.buddy path` on its own shows a table of how each way has done.
+- **`.buddy army [count]`** (default 64) and **`.buddy army dismiss`**.
+  - Your own buddies in the world count first, and random stand-ins fill the
+    rest, four every two seconds.
+  - Your buddies coming and going displace stand-ins.
+  - Each stand-in takes you as its master, so it roams your area as one of your
+    buddies. That is how I made them "one clan".
+  - It works only on a test realm and refuses anywhere else.
+- The four changed server files pass a syntax-only check against the server's
+  headers. Only your compile really tests them.
+
+**To try it:**
+1. Run `scripts/compile`, then install, for **basic**. The test realm uses
+   basic's installed server.
+2. Run `scripts/worldserver --profile pathtest`. It stops any other world server
+   first.
+3. Log in to the realm "pathtest", type `.buddy army`, then `.buddy path flow`
+   (or any other way). `.buddy path` shows the comparison.
+
+The same compile also carries this session's earlier live map stream, which is
+still uncommitted.
+
+One question before you try it: the stand-ins follow you as their master, but
+they aren't grouped with you (64 is more than a raid of 40). Should they be put
+into five-person parties among themselves, so their healers heal each other?
+
+Reminder: guarding the disks against bit rot is still waiting for you to start
+on it.
+
+--------------------------------------------------------------------------------
+
+### User Request 93
+
+Yeah we should treat them like as if we had 64 buddy-bots. For the test scene,
+that's exactly what we'll do.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 93
+
+> Recording your answer, then checking what the module does with an owner's
+> buddies in groups, since "treat them as 64 buddies" means the army should go
+> wherever buddies go.
+
+> One knock-on fault: the army counts "your own buddies" from the roster, which
+> now includes the stand-ins themselves, so it would think it was full and stop.
+> Fixing that count to skip the army's own:
+
+> Writing the decision into the party issue: your own 2026-09-27 rule already
+> says a far-party buddy leaves "when it could join the player's party", so the
+> change follows it.
+
+> Mending the gem chooser's reading too, then answering whether stand-ins need
+> gems. Reading what the gem chooser does and how a stand-in is geared:
+
+> The stand-in file needs the gem header included; adding it and checking all
+> the changed files:
+
+> That one error is a function another of our patches adds to the bot module at
+> build time, so it is expected in this check; everything I changed parses.
+> Updating the army issue to match:
+
+> Saving your working rule word for word, as the standing rules ask:
+
+Done; none of it is compiled yet.
+
+**Do the stand-ins need gems?** Yes, and they mostly had them already. basic's
+gear has sockets at every level. A new stand-in is made the way a buddy is: its
+sockets are filled free, chosen by its talent shape and role. A kept stand-in
+raised to a new level is re-geared, and that fills them again. Three things were
+broken, and I've fixed them:
+- **Gems found later** (looted or mailed) are handed round the clan to whoever
+  gains most. The chooser read each member's talent shape from the buddies'
+  table only, so a stand-in counted as "no plan" and was scored generically. It
+  now reads the stand-in's own table, which holds the same two numbers (shape
+  and role).
+- **Buying gems at the auction house** had the same problem and the same fix.
+- **A raised stand-in's PvP necklace, rings and trinkets** were given after its
+  sockets were filled, so their sockets stayed empty. They're now gemmed too.
+
+The same read also fixed the dungeon draw, which had been counting every
+stand-in as a damage dealer.
+
+**Treated as 64 buddies:** the army is now part of your buddy list everywhere:
+roaming, parties, orders, following, the map page and the dungeon draw. One
+knock-on fault came with it: the army's count of "your own buddies" now included
+the stand-ins themselves, so it would think it was full. That's fixed.
+
+**Grouping:** four buddies join your party as before. Until now, any other buddy
+within 74 yards of you, with your party full, was in no group at all. Now,
+whenever your party has no free seat, buddies near you form five-person parties
+among themselves by nearness, as far-away buddies already did. A buddy only
+leaves one of those parties when a seat in yours is free; that follows your rule
+from 2026-09-27, "when it could join the player's party." With your usual few
+buddies, nothing changes. The proximity party issue records the change.
+
+All the changed files pass the syntax-only check. The one error it reports is a
+function another of our patches adds to the bot module at build time.
+
+I've saved your rule, "address things when we find them," with your other words
+in the conversation asides notes.
+
+To test it, the steps haven't changed: compile and install basic, then
+`scripts/worldserver --profile pathtest`, then `.buddy army` and `.buddy path
+<way>` in game.
+
+--------------------------------------------------------------------------------
+
+### User Request 94
+
+Great. The compilation will have to wait for tomorrow - what other fixes can we
+work on? Where are we at with the PvP battleground scenes? What kind of
+pathfinding do we have built for them?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 94
+
+Battleground scenes are designed and tested as plain Lua, but none of it runs in
+game yet. Their pathfinding is road-following, not any of the five ways we just
+built.
+
+**Where the battleground scenes stand**
+
+| Piece | State |
+|---|---|
+| Arathi Basin match: home draw, win at 1,600, the next match a minute later | Lua rules only, tested |
+| Stand-in squads: trios, leaving every 12 seconds, tanks waiting at home | Lua rules only, tested |
+| Routes: the roads as a map of crossings; at each one a squad takes the next road in turn, never the one it came by | Lua rules only, tested |
+| Formations: triangle, diamond and line along the road | Lua rules only, tested |
+| Base bonuses that grow while a base is held | Lua rules only, tested |
+| Battleground fronts: lines that push, sections, each bot keeping its place in the line | Lua rules only, with animated pictures; on a side branch, not yet merged |
+| Alterac Valley full match; the sealed Arathi test | not started |
+| Buddies joining your battleground queues | built, never compiled |
+
+That's 64 Arathi checks passing, and a comparison page for each open question.
+Three things block all of it:
+- the test realm for the scenes (cc-test) has never been built;
+- there is no scene runner to set a match up and read the result back;
+- nothing hands the Lua rules to bots in a real match.
+
+**Pathfinding in battlegrounds today**
+- **In a real match**, the bot module plays each bot alone. It picks its own
+  objective and walks hand-placed road paths to it (15 roads in Arathi Basin).
+  The river isn't among them.
+- **The planned Arathi squads** walk those same 15 roads, copied from the bot
+  module. The new part is the choosing at each crossing, plus walking in
+  formation.
+- **The planned fronts** don't plan routes at all. They are forces along a push
+  line: each bot keeps its place in its section of the line.
+- **The five ways don't reach battlegrounds.** In any instance, buddies switch
+  from roaming to following, and the path switch only acts on roaming. So
+  `.buddy path` changes nothing inside a match.
+
+**Fixes we can do tonight without a compile, most valuable first**
+1. **Mend the sandbox's corner-cutting.** Its flow field and A* probably have
+   the same corner faults the offline test found in the module version. Fixing
+   them keeps the page you watch in line with what the game will do, and you can
+   see the result tonight.
+2. **A test for the branch tool**, on a tiny made-up source database instead of
+   the 25-minute basic copy.
+3. **Merge the fronts work from its side branch**, so the battleground rules
+   live in one place.
+4. **Give the battleground roads to the five ways.** In a match, a squad's way
+   from one crossing to the next could be walked by the chosen way instead of
+   the fixed road, on the test realm. This one is the most different from the
+   others, and it needs your design first.
+
+A question on 4, because it decides how the battlegrounds get built: the roads
+in Arathi Basin are where players actually fight, while the five ways would find
+their own lines across open ground. Should a squad keep to the roads and use a
+way only to get round what blocks it, or leave the roads whenever a way finds a
+shorter line?
 
 --------------------------------------------------------------------------------
 
