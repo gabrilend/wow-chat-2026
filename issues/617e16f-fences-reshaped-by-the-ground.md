@@ -31,6 +31,16 @@ The owner, 2026-10-28, after the ground sandbox:
 > though, if it's fully separate from another part of that sub-zone, then
 > it should be split into two. Or, the same, but accessible from afar.
 
+And later the same evening:
+
+> also, if a player is in any of multiple sub-zones, they will all be
+> considered valid. So, if a person is in a venn-diagram style shape in
+> the center of two semi-overlapping zones, then both of them are
+> wandering targets potentially. But if they move into just one and not
+> the other, or out of both, then the buddy-bots will move to follow
+> their master. That's it, for now. They fight monsters along the way,
+> unless they're more than half a zone away.
+
 ## Current Behavior
 
 **Built 2026-10-28 in the ground sandbox** (steps 1-5; pictures 028,
@@ -53,6 +63,14 @@ The owner, 2026-10-28, after the ground sandbox:
 - Seen: the Witchwing Slayer area is one part of 102,396 square yards;
   the Venture Co. Supervisors' (over Boulder Lode Mine) is six.
 
+- **Overlaps built** (pictures 036-039): the player in fences of more
+  than one name joins the parts they stand in (`joinParts`, kept by which
+  parts it joins); every outline of those names lit, each part drawn;
+  reach is reaching any of them. Bots outside the area take monsters on
+  their way unless more than half the zone's size from the player. Test
+  address: `at=X,Y` puts the player there (the Barrens' Razorfen
+  Battleguard and Thornweaver overlap at 2236,4631).
+
 Not built: the walls remembered per bot (open question 1).
 
 ## Intended Behavior
@@ -71,6 +89,16 @@ Not built: the walls remembered per bot (open question 1).
   outside of the zone, then, well, we've found it's edge"). The other
   parts are the same area, drawn and waiting: "accessible from afar"
   (the player walking into one makes it the part in play).
+- **Overlapping fences, all at once.** The player standing where two or
+  more fences overlap (of different monsters) makes every one of them
+  the wandering area: the parts the player stands in, together, one area
+  (its middle the parts' middle by size, its reach the farthest of any
+  of them on each bearing, "inside" meaning inside any). Moving into
+  only one of them, or out of all, changes the area, and the bots follow
+  to the new one (or follow the player, outside every fence).
+- **Fights on the way.** A bot outside the area, on its way, takes the
+  monsters it passes as it would inside; unless it is more than half the
+  zone's size from the player, when it just keeps going.
 - **Mental walls.** Where a step meets blocked ground or a doodad, the
   bot keeps that obstacle on one side and walks round it (orbits it),
   rather than trying left and right in turn; it keeps to that side while

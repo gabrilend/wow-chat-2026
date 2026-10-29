@@ -13,7 +13,7 @@
                font: 13px/1.4 system-ui, sans-serif; }
   canvas { display: block; width: 100vw; height: 100vh; cursor: crosshair; }
   #panel { position: fixed; top: 10px; left: 10px; background: var(--panel); padding: 10px 12px; border-radius: 8px;
-           width: 270px; max-height: calc(100vh - 40px); overflow: auto; }
+           width: 340px; max-height: calc(100vh - 40px); overflow: auto; }
   #panel h1 { font-size: 15px; margin: 0 0 6px; }
   #panel label { display: flex; justify-content: space-between; align-items: center; margin: 4px 0; gap: 8px; }
   #panel select, #panel input[type=range] { width: 140px; }
@@ -2535,6 +2535,7 @@ let bots = [];
 function enterZone(zi) {
   areaCache.clear(); inPlay = null; orbitSign = 1; lastEdgeMove = null;   // a new zone: its areas worked out afresh
   known.clear();                                             // and its map of known open ground and walls (617e16h)
+  comboCache.clear();                                        // and its joined overlaps (617e16f)
   zoneIdx = zi;
   const z = C.data.zones[zi];
   // its ground: here already (named in the address, so written in as the
@@ -2842,7 +2843,38 @@ function partFor(f) {
   let best = area.parts.find(p => p.contains(player.x, player.y));
   if (!best) best = area.parts.reduce((a, p) => Math.hypot(p.cx - player.x, p.cy - player.y) < Math.hypot(a.cx - player.x, a.cy - player.y) ? p : a);
   best.areaRef = area;
+  best.names = [best.name];
   return best;
+}
+// Overlapping fences (the owner, 2026-10-28: "if a person is in a
+// venn-diagram style shape in the center of two semi-overlapping zones,
+// then both of them are wandering targets"): the parts the player stands
+// in, one per fence name, joined into one area shaped like a part: inside
+// any of them; its middle their middles weighted by size; its reach on
+// each bearing the farthest point of any of them from that middle. Kept by
+// which parts it joins, so the same overlap is the same area each step.
+const comboCache = new Map();
+function joinParts(parts) {
+  const key = parts.map(p => p.name + "#" + p.id).sort().join("|");
+  if (comboCache.has(key)) return comboCache.get(key);
+  const area = parts.reduce((a, p) => a + p.area, 0);
+  const c = { parts, names: parts.map(p => p.name), name: parts.map(p => p.name).join(" + "),
+              spawns: parts.reduce((a, p) => a + p.spawns, 0), area,
+              cx: parts.reduce((a, p) => a + p.cx * p.area, 0) / area, cy: parts.reduce((a, p) => a + p.cy * p.area, 0) / area,
+              contains: (x, y) => parts.some(p => p.contains(x, y)) };
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+  for (const p of parts) for (const [x, y] of p.poly) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  c.poly = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+  c.R = new Float32Array(72);
+  const st = GROUND.step;
+  for (let b = 0; b < 72; b++) {
+    const dx = Math.cos(b * Math.PI / 36), dy = Math.sin(b * Math.PI / 36);
+    let far = 0;
+    for (let t = 0; t < 1200; t += st / 2) if (c.contains(c.cx + dx * t, c.cy + dy * t)) far = t;
+    c.R[b] = Math.max(far, st);
+  }
+  comboCache.set(key, c);
+  return c;
 }
 // }}}
 
@@ -2881,13 +2913,20 @@ function stepMobs() {
 // to (in front of its monster). A bot without a fight takes the nearest
 // living monster within ENGAGE that no other bot has, on the surface and
 // in the part in play.
+// On the way (the owner, 2026-10-28: "They fight monsters along the way,
+// unless they're more than half a zone away"): a bot outside the area
+// takes a monster it passes too, unless it is more than half the zone's
+// size from the player, when it takes none and keeps going.
 function fightStep(b, dt, f) {
   if (!b.fight) {
+    const zone = C.data.zones[zoneIdx], half = Math.max(zone.X1 - zone.X0 + 1, zone.Y1 - zone.Y0 + 1) * SQ / 2;
+    const away = !f || !f.contains || !f.contains(b.x, b.y);
+    if (away && Math.hypot(b.x - player.x, b.y - player.y) > half) return null;
     let best = null, bd = ENGAGE;
     for (const mb of mobs) {
       if (!mb.alive || mb.fighter || mb.under) continue;
       const d = Math.hypot(mb.x - b.x, mb.y - b.y);
-      if (d < bd && (!f || !f.contains || f.contains(mb.x, mb.y))) { best = mb; bd = d; }
+      if (d < bd && (away || !f.contains || f.contains(mb.x, mb.y))) { best = mb; bd = d; }
     }
     if (!best) return null;
     best.fighter = b; b.fight = best; b.fightLeft = best.ttk;
@@ -2937,6 +2976,12 @@ function catchUp(f) {
 }
 function reachOf(f) {
   const g = GROUND;
+  if (g && f && f.parts) {                                    // joined parts: reaching any of them
+    if (f.reach) return f.reach;
+    const all = new Uint8Array(g.cols * g.rows);
+    for (const p of f.parts) { const r = reachOf(p); if (r) for (let k = 0; k < all.length; k++) all[k] |= r[k]; }
+    return (f.reach = all);
+  }
   if (!g || !f || !f.areaRef) return null;
   if (f.reach) return f.reach;
   const a = f.areaRef, reach = new Uint8Array(g.cols * g.rows), queue = new Int32Array(g.cols * g.rows);
@@ -3066,22 +3111,40 @@ function stepFlock(dt) {
     // other. Its side is kept while it is still against the obstacle (met
     // again within WALL_MEMORY seconds), then let go, and its target pulls
     // it straight again once the way is clear.
-    // Known walls (617e16h), learned by getting stuck, are walls too.
-    const walled = (x, y) => blocked(x, y) || knownWall(x, y) || (f && f.contains && f.contains(b.x, b.y) && !f.contains(x, y));
+    // Known walls (617e16h), learned by getting stuck, are walls too. Buffers
+    // (left by bumping) are clearance a bot keeps if it can: the way round is
+    // looked for first avoiding them, and only if there is none, through them
+    // (as hard walls they sealed narrow passages: picture 038, 220 steps a
+    // second with no way at all). A bot on a straight crossing walks through
+    // buffers from the start.
+    const hard = (x, y) => blocked(x, y) || knownWall(x, y) || (f && f.contains && f.contains(b.x, b.y) && !f.contains(x, y));
+    const soft = (x, y) => hard(x, y) || (b.wstate !== "cross" && knownBuffer(x, y));
     const nx = b.x + b.vx * dt, ny = b.y + b.vy * dt;
-    if (walled(nx, ny) && !blocked(b.x, b.y)) {
+    if (soft(nx, ny) && !blocked(b.x, b.y)) {
       const sides = b.wallSide ? [b.wallSide, -b.wallSide] : (Math.random() < 0.5 ? [1, -1] : [-1, 1]);
       let found = 0;
-      for (const sgn of sides) {
-        for (let k = 1; k <= 8; k++) {
-          const a = sgn * k * Math.PI / 9, ca = Math.cos(a), sa = Math.sin(a);
-          const vx = b.vx * ca - b.vy * sa, vy = b.vx * sa + b.vy * ca;
-          if (!walled(b.x + vx * dt, b.y + vy * dt)) { b.vx = vx; b.vy = vy; found = sgn; break; }
+      for (const walled of [soft, hard]) {
+        if (!walled(nx, ny)) break;                           // only a buffer ahead, and none could be avoided: straight on
+        for (const sgn of sides) {
+          for (let k = 1; k <= 8; k++) {
+            const a = sgn * k * Math.PI / 9, ca = Math.cos(a), sa = Math.sin(a);
+            const vx = b.vx * ca - b.vy * sa, vy = b.vx * sa + b.vy * ca;
+            if (!walled(b.x + vx * dt, b.y + vy * dt)) { b.vx = vx; b.vy = vy; found = sgn; break; }
+          }
+          if (found) break;
         }
         if (found) break;
       }
+      if (!found && !hard(nx, ny)) found = b.wallSide || 1;  // through the buffer, as it was heading
       if (found) { steer.turned++; b.wallSide = found; b.wallFor = WALL_MEMORY; }
       else { b.vx = 0; b.vy = 0; steer.stopped++; }
+      // where it met the obstacle (617e16h: a bump leaves a buffer); only a
+      // real one (steep ground, a doodad, a known wall, the edge): a buffer
+      // met is not a bump, or buffers would breed buffers (seen 2026-10-28,
+      // picture 036: 133 bumps, 532 buffer cells, the flock jammed)
+      if (blocked(nx, ny) || knownWall(nx, ny) || (f && f.contains && f.contains(b.x, b.y) && !f.contains(nx, ny))) {
+        b.touched = true; b.touchX = nx; b.touchY = ny;
+      }
     } else if (b.wallSide && (b.wallFor -= dt) <= 0) b.wallSide = 0;
     b.x += b.vx * dt; b.y += b.vy * dt;
     learnOpen(b.x, b.y);
@@ -3114,10 +3177,28 @@ const WALL_MEMORY = 1.5;                                      // seconds a bot k
 const PROG_WINDOW = 1, FULL_SHARE = 0.6, STUCK_SHARE = 0.25, GOOD_WINDOWS = 3;
 const BACK_FIRST = 2, BACK_MAX = 64, KNOWN_CELL = 2;
 const known = new Map();
-const stuck = { events: 0, backedYards: 0, deepest: 0 };
+const stuck = { events: 0, backedYards: 0, deepest: 0, bumps: 0 };
 const cellKey = (x, y) => Math.floor(x / KNOWN_CELL) + "," + Math.floor(y / KNOWN_CELL);
+// 3 in known: a buffer, the clearance round something a bot bumped (the
+// owner: "touching objects in this way, implies given buffer spaces that
+// bots route around or walk through if going on a straight shape").
+// BUMP_SHARE: a second's progress under this share of what was meant, with
+// the walls having turned the bot aside, is a bump; BUFFER_R: the cells
+// round the touch, each way, made buffer (1: a 3 x 3 patch, 6 yards).
+const BUMP_SHARE = 0.9, BUFFER_R = 1;
 function knownWall(x, y) { return known.get(cellKey(x, y)) === 2; }
-function learnOpen(x, y) { known.set(cellKey(x, y), 1); }
+function knownBuffer(x, y) { return known.get(cellKey(x, y)) === 3; }
+// Standing proves a cell open, and mends a wrong wall; but not a buffer:
+// a crossing walks through buffers, and that doesn't make them less near
+// the thing they keep clear of.
+function learnOpen(x, y) { const k = cellKey(x, y); if (known.get(k) !== 3) known.set(k, 1); }
+function leaveBuffer(x, y) {
+  const i0 = Math.floor(x / KNOWN_CELL), j0 = Math.floor(y / KNOWN_CELL);
+  for (let i = i0 - BUFFER_R; i <= i0 + BUFFER_R; i++) for (let j = j0 - BUFFER_R; j <= j0 + BUFFER_R; j++) {
+    const k = i + "," + j;
+    if (known.get(k) !== 2) known.set(k, 3);
+  }
+}
 function trackProgress(b, mx, my, dt) {
   if (b.pw === undefined || b.backLeft > 0) {                // a new window (and none measured while backing up)
     b.pw = 0; b.want = 0; b.mvx = 0; b.mvy = 0; b.px = b.x; b.py = b.y;
@@ -3134,10 +3215,15 @@ function trackProgress(b, mx, my, dt) {
     b.bx = -ux; b.by = -uy;
     known.set(cellKey(b.x + ux * KNOWN_CELL, b.y + uy * KNOWN_CELL), 2);
     stuck.events++; stuck.backedYards += b.backLeft; stuck.deepest = Math.max(stuck.deepest, b.stuckN);
-  } else if (got >= 0.6 * b.want) {
-    if (++b.goodWins >= GOOD_WINDOWS) { b.stuckN = 0; b.goodWins = 0; }
-  } else b.goodWins = 0;
-  b.pw = 0; b.want = 0; b.mvx = 0; b.mvy = 0; b.px = b.x; b.py = b.y;
+  } else {
+    // less than it meant, short of stuck, and the walls turned it: a bump
+    if (b.touched && b.want >= FULL_SHARE * SPEED * b.pw && got < BUMP_SHARE * b.want) {
+      leaveBuffer(b.touchX, b.touchY); stuck.bumps++;
+    }
+    if (got >= 0.6 * b.want) { if (++b.goodWins >= GOOD_WINDOWS) { b.stuckN = 0; b.goodWins = 0; } }
+    else b.goodWins = 0;
+  }
+  b.pw = 0; b.want = 0; b.mvx = 0; b.mvy = 0; b.px = b.x; b.py = b.y; b.touched = false;
 }
 // The share of the part in play known open: its known-open cells' area
 // over its walkable area.
@@ -3193,6 +3279,11 @@ function wanderTarget(b, f, dt) {
       const off = (Math.random() * 2 - 1) * AIM_SPREAD * R, d = Math.max(r, 0.01), px = -ry / d, py = rx / d;
       const ax = f.cx + px * off - b.x, ay = f.cy + py * off - b.y, al = Math.max(Math.hypot(ax, ay), 0.01);
       b.wstate = "cross"; b.hx = ax / al; b.hy = ay / al; wander.crossings++;
+      // its time: three times as long as walking to the far side should take
+      // (its own reach plus the far side's, at full speed); a crossing that
+      // can't get there (a pocket walled by steep ground: picture 037, 35 of
+      // 36 crossing at once, pushing at the walls) ends at a decision point anyway
+      b.crossFor = 3 * (r + edgeAt(f, Math.atan2(b.hy, b.hx))) / SPEED;
     } else {
       if (r > R * 1.05) return [f.cx, f.cy];
       const ta = th + b.wdir * LEAD, Ra = edgeAt(f, ta) * b.wdepth;
@@ -3200,8 +3291,9 @@ function wanderTarget(b, f, dt) {
     }
   }
   if (b.wstate === "cross") {
-    // past the middle and near the far edge: the decision point
-    if (rx * b.hx + ry * b.hy > 0 && r > R * 0.85) {
+    // past the middle and near the far edge, or out of time: the decision point
+    b.crossFor = (b.crossFor || 0) - dt;
+    if ((rx * b.hx + ry * b.hy > 0 && r > R * 0.85) || b.crossFor <= 0) {
       const level = GROUND && GROUND.level !== undefined ? GROUND.level : null;
       const turn = s => { const a = s * ASIDE_TURN, ca = Math.cos(a), sa = Math.sin(a); return [b.hx * ca - b.hy * sa, b.hx * sa + b.hy * ca]; };
       const [lx, ly] = turn(1), [qx, qy] = turn(-1);
@@ -3280,8 +3372,17 @@ function stepPlayer(dt) {
   // the fence holding the player: the smallest of those it stands in
   let best = -1;
   fences.forEach((f, i) => { if (inside(f, player.x, player.y) && (best < 0 || f.area < fences[best].area)) best = i; });
-  // the part in play (617e16f): the walkable part of that fence's name the player is in
-  const part = partFor(fences[best]);
+  // the part in play (617e16f): the walkable part of that fence's name the
+  // player is in; standing where fences of different names overlap, all of
+  // their parts, joined (the owner: "they will all be considered valid")
+  let part = partFor(fences[best]);
+  if (part && part.areaRef) {
+    const names = [...new Set(fences.filter(f => !f.contains && inside(f, player.x, player.y)).map(f => f.name))];
+    if (names.length > 1) {
+      const parts = names.map(n => partFor(fences.find(f => f.name === n && !f.contains))).filter(p => p && p.areaRef && p.contains(player.x, player.y));
+      if (parts.length > 1) part = joinParts(parts);
+    }
+  }
   if (best !== active || part !== inPlay) {
     active = best; inPlay = part || null;
     const p = inPlay;
@@ -3375,7 +3476,9 @@ function measure() {
     let walls = 0; for (const v of known.values()) if (v === 2) walls++;
     const share = knownShare(f);
     lines.push(`stuck           ${stuck.events} times, backed up ${Math.round(stuck.backedYards)} yd, deepest ${stuck.deepest} in a row`);
+    let buffers = 0; for (const v of known.values()) if (v === 3) buffers++;
     lines.push(`mapped          ${share === null ? "-" : Math.round(100 * share) + "% of the part known open"}, ${walls} known walls`);
+    lines.push(`bumps           ${stuck.bumps}, ${buffers} buffer cells round them`);
   }
   // wanderers (617e16d): since the page began, crossings, the turns aside
   // by the ground (down or up from where they stood), orbit reversals
@@ -3481,18 +3584,21 @@ function draw() {
   // the area in play (617e16f): its walkable parts on the ground's points,
   // the part in play filled, the others of the same name faint ("accessible
   // from afar"); drawn through a transform, as the ground is
-  if (inPlay && inPlay.areaRef && GROUND) {
-    const a = inPlay.areaRef, g = GROUND;
-    paintArea(a, inPlay, T);
+  // (overlapping fences joined: each joined part drawn the same way)
+  for (const p of inPlay && GROUND ? (inPlay.parts || [inPlay]) : []) {
+    if (!p.areaRef) continue;
+    const a = p.areaRef, g = GROUND;
+    paintArea(a, p, T);
     const [ax, ay] = yd2px(g.sx0 + (a.c0 - 0.5) * g.step, g.sy0 + (a.r0 - 0.5) * g.step);
     const [bx, by] = yd2px(g.sx0 + (a.c0 + a.w - 0.5) * g.step, g.sy0 + (a.r0 + a.h - 0.5) * g.step);
     ctx.save(); ctx.translate(ax, ay); ctx.scale((bx - ax) / a.w, (by - ay) / a.h); ctx.drawImage(a.canvas, 0, 0); ctx.restore();
   }
-  // known walls (617e16h): each a dark red KNOWN_CELL square, once a yard is over a pixel
+  // known walls (617e16h): each a dark red KNOWN_CELL square; buffers left by
+  // bumping, amber; once a yard is over a pixel
   if (known.size && cam.z / SQ > 1) {
-    ctx.fillStyle = "rgba(170,20,20,0.85)";
     for (const [k, v] of known) {
-      if (v !== 2) continue;
+      if (v !== 2 && v !== 3) continue;
+      ctx.fillStyle = v === 2 ? "rgba(170,20,20,0.85)" : "rgba(240,170,40,0.45)";
       const [i, j] = k.split(",").map(Number);
       const [p0, q0] = yd2px(i * KNOWN_CELL, j * KNOWN_CELL), [p1, q1] = yd2px((i + 1) * KNOWN_CELL, (j + 1) * KNOWN_CELL);
       ctx.fillRect(Math.min(p0, p1), Math.min(q0, q1), Math.max(1, Math.abs(p1 - p0)), Math.max(1, Math.abs(q1 - q0)));
@@ -3504,7 +3610,7 @@ function draw() {
     f.poly.forEach(([x, y], k) => { const [px, py] = yd2px(x, y); k ? ctx.lineTo(px, py) : ctx.moveTo(px, py); });
     ctx.closePath();
     // every outline of the name in play lit (merged by name, 617e16f); filled only when no walkable part is drawn
-    if (inPlay && f.name === inPlay.name) { if (!inPlay.areaRef) { ctx.fillStyle = T.fenceFill; ctx.fill(); } ctx.lineWidth = 2.5; ctx.strokeStyle = T.fenceOn; }
+    if (inPlay && (inPlay.names || [inPlay.name]).includes(f.name)) { if (!inPlay.areaRef && !inPlay.parts) { ctx.fillStyle = T.fenceFill; ctx.fill(); } ctx.lineWidth = 2.5; ctx.strokeStyle = T.fenceOn; }
     else { ctx.lineWidth = 1; ctx.strokeStyle = T.fence; }
     ctx.stroke();
   });
@@ -3605,7 +3711,7 @@ $("live").onchange = () => {
   if (live.on) { pollLive(); live.timer = setInterval(pollLive, 1000); } else { live.chars.clear(); $("liveN").textContent = "off"; }
 };
 $("tail").oninput = () => { $("tailN").textContent = $("tail").value + " s"; };
-$("slope").oninput = () => { $("slopeN").textContent = $("slope").value + "°"; paintGround(); inPlay = null; active = -2; stepPlayer(0); };   // the areas are worked out again for the new limit
+$("slope").oninput = () => { $("slopeN").textContent = $("slope").value + "°"; paintGround(); inPlay = null; active = -2; comboCache.clear(); stepPlayer(0); };   // the areas are worked out again for the new limit
 $("formN").oninput = () => { $("formNN").textContent = $("formN").value; };
 $("formTurn").onchange = () => { $("formTurnN").textContent = $("formTurn").checked ? "turning" : "rigid"; };
 $("shade").onchange = () => paintGround();
@@ -3665,6 +3771,9 @@ if (Q.has("zone")) {
     // them north of the player by 1.2 times the catching-up distance (a
     // quarter of the continent's size: 5000 yards, the first try, was under
     // Kalimdor's quarter, and nothing happened)
+    // at=X,Y: the player (and the bots round them) at that spot, in screen
+    // yards (617e16f's test of overlapping fences)
+    if (Q.has("at")) { const [ax, ay] = Q.get("at").split(",").map(Number); player.x = player.tx = ax; player.y = player.ty = ay; spawnBots(bots.length, ax, ay, 25); stepPlayer(0); }
     if (Q.get("start") === "scatter") $("scatter").onclick();
     if (Q.get("start") === "far") { const far = Math.max(C.W, C.H) * SQ * CATCH_SHARE * 1.2;
       for (const b of bots) { b.x = player.x + (Math.random() - 0.5) * 20; b.y = player.y - far + (Math.random() - 0.5) * 20; } }

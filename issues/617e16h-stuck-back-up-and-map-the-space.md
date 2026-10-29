@@ -22,6 +22,14 @@ The owner, 2026-10-28, watching the ground sandbox:
 > trying until we've fully mapped out the available space. Only then can
 > we properly route-pathfind to things.
 
+And, the same evening, after the first build:
+
+> notice how I said *less than* not stuck. If we're bumping into
+> something, then we need to give it more clearance, or else we're
+> potentially likely to get stuck. So, touching objects in this way,
+> implies given buffer spaces that bots route around or walk through if
+> going on a straight shape.
+
 ## Current Behavior
 
 **Built 2026-10-28 in the ground sandbox** (steps 1-3; pictures 034, 035),
@@ -41,6 +49,17 @@ The owner, 2026-10-28, watching the ground sandbox:
   known open, the known walls (picture 035: stuck twice, 38% known open
   after four minutes).
 
+- **Bumps and buffers** (pictures 036-039): a second with under 0.9 of
+  the progress meant, while a real obstacle (steep ground, a doodad, a
+  known wall, the edge) turned the bot, is a bump: the 3 x 3 cells round
+  the touch become buffer (drawn amber). Buffers are kept clear when a
+  way round exists, crossed when none does, and walked through by a bot
+  on a straight crossing; standing in one doesn't clear it. Tried and
+  mended on the way: brushing a buffer first counted as a bump (buffers
+  bred buffers, 036); as hard walls buffers sealed narrow passages (038).
+- Crossings (617e16d) now end at a decision point after three times the
+  time the walk should take, if the far side can't be reached (037).
+
 Not built: step 4, routes over the known cells (open question 1).
 
 ## Intended Behavior
@@ -58,7 +77,15 @@ Not built: step 4, routes over the known cells (open question 1).
   known open; the cell just ahead of a bot that got stuck is a known wall,
   and every bot walks round known walls from then on, as it does round
   steep ground. The map is kept while the player stays in the zone.
-- **Seen and measured**: known walls drawn (dark red), the share of the
+- **Bumping leaves a buffer** (the owner's second message). Less
+  progress than meant, short of stuck, while the walls turned it aside,
+  means the bot touched something. The cells round where it touched
+  become a **buffer**: bots steer round buffers as they do round walls,
+  except a bot on a straight crossing (a wanderer crossing the fence),
+  which walks through. A bot standing in a buffer doesn't clear it (a
+  crossing walks through buffers all the time); a wall cell a bot stands
+  in is still proven open.
+- **Seen and measured**: known walls drawn (dark red), buffers (amber), the share of the
   part in play known open on the panel, stuck events and back-ups
   counted.
 - **Then routes** (after the map; the owner: "Only then can we properly
