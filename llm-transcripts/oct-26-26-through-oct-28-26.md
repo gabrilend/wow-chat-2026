@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-28 21:23:02
+Generated on: 2026-10-28 21:34:19
 Models: claude-opus-5-5
 
 ## Contents
@@ -8414,6 +8414,99 @@ the routes as they find it.
 Should routes start now, from the terrain plus what the bots have learned? Or
 only once the bots themselves have walked most of an area, say four-fifths of
 it?
+
+--------------------------------------------------------------------------------
+
+### User Request 80
+
+so, I noticed a problem, there's some sub-zones that are so large they're
+covering essentially the entire map, meaning the buddy-bots have too far of a
+distance to roam. Can you help me figure out how to select only the
+appropriately sized ones? Maybe by zone text or sub-zone name or similar? So...
+two types of fences... one is the monster spawners, the other is the sub-zone
+area that you're in. Gosh that means... they'd always be anywhere in the
+sub-zone that all the monsters that you're in the spawning area of can visit.
+OMG can you make that pls
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 80
+
+> Writing it down first. Two kinds of fence:
+> - **Monster fences:** where each kind of monster spawns.
+> - **The sub-zone:** the named area you're standing in, from the game's own
+>   map, such as "The Crossroads" or "Field of Giants".
+>
+> The bots wander only where both hold: the ground in your current sub-zone that
+> is inside the spawn areas of the monsters you're standing among. That cuts the
+> giant merged areas (like the Zhevra Runners' 179,000 square yards) down to
+> your neighbourhood.
+
+> Now the code: the continent keeps each square's sub-zone, and an area is
+> worked out per monster name and sub-zone.
+
+> Next, the panel names your sub-zone, and its squares are shaded faintly on the
+> map:
+
+*[commit] dff82b5eb in wow-chat-2026 - *
+
+> **[Asked the user]**
+>
+> *Q1 — Big areas:* Standing in a zone's generic sub-zone ("The Barrens": the
+> ground between named places), the area stays huge. What should limit it there?
+> - A radius round you (Recommended) — Only the area's ground within a set
+>   distance of the player counts (say 150 yards), whatever the sub-zone; the
+>   bots wander your neighbourhood of it. Simple, always bounded.
+> - Your monster cluster — Only the one cluster of spawns (the fence) you're
+>   standing in, not every fence of that monster merged across the zone; merging
+>   by name stays only for fences that touch.
+> - Both — Your own cluster, and within it only the ground within a set
+>   distance of you.
+> → **Answered:** your monster cluster. we have to be careful, at what level
+> of granularity do we segment the monster clusters? The Barrens is massive. It
+> makes sense to rarely come across your buddies. But, you will come across
+> other bot's as well, so it's okay. But, if you're in a specific quest zone to
+> fight a specific monster, or maybe in one of the oasises or the various camps
+> around the crossroads... gosh there's a lot of areas. I LOVE WORLD OF WARCRAFT
+> there's so much variety everywhere! anyway if you're in one of those smaller
+> sub-zones, then you will have a smaller focus area. Then, your buddy-bots will
+> all come join you. they of your kind will thrive and prosper until there's a
+> whole host of you around the watering hole. This is good and proper.
+> Eventually, you will move on, but not after having your share of plunder.
+
+> Now the code: the area is built from your own cluster and whichever clusters
+> of the same monster touch it, instead of every cluster of that monster in the
+> zone.
+
+*[commit] f0d6bb37b in wow-chat-2026 - *
+
+Built: the bots now wander only your own monster cluster, plus any same-monster
+clusters touching it, cut to your sub-zone and to walkable ground (commit
+f0d6bb37b). In the middle of the Barrens that makes the Zhevra Runner area 41
+spawns instead of 83.
+
+It didn't shrink the area, though: still 103,056 square yards. A cluster joins
+any of that monster's spawns within 90 yards of each other, and Zhevra Runners
+are spread so evenly that the chain runs about 900 yards. Your watering-hole
+passage is in the notes, word for word.
+
+So the size of the area now comes down to how finely spawns are split into
+clusters, the granularity you said to be careful with. Three ways to cut it,
+most likely to work first:
+1. **Cap a cluster's size.** Keep the 90-yard joining, but split any cluster
+   wider than a set size (say 250 yards) into pieces of about that size. Big
+   open herds get split up; small camps like the oases and around the Crossroads
+   stay whole.
+2. **Join only closer spawns**, say within 45 yards instead of 90. Clusters get
+   smaller everywhere. On Oct 28 this made fences too small for 36 bots to
+   circle in, but bots now spread over the whole area instead of circling, so
+   that may matter less now.
+3. **Clusters by camp.** Split a cluster wherever it crosses into another named
+   sub-zone, so each oasis or camp keeps its own. The generic "The Barrens"
+   ground stays as large as before.
+
+Which should it be? And for 1 or 2, does 250 yards (or 45 yards) sound about
+right?
 
 --------------------------------------------------------------------------------
 

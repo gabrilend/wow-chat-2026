@@ -49,7 +49,11 @@ The owner, 2026-10-28, on the fish-school sandbox:
   when zoomed in; a bot's step onto blocked ground is turned aside, 20
   degrees at a time, left and right in turn, up to 140. The panel adds
   steps turned aside and stopped a second, the fence's open share, the
-  zone's doodads and level.
+  zone's doodads and level. The tool checks every script of the page
+  parses (Node) before any picture. Controls: scroll to zoom, hold the
+  middle button and drag to pan (the owner, 2026-10-28: "drag the map
+  with middle click just panning"; the browser's own middle-button
+  scrolling is kept off the map).
 - **Drawn the right way round.** The fish-school sandbox draws the world
   mirrored left to right (the game's y points west, so the squares' Y
   grows eastward, and the page put larger Y on the left: Orgrimmar left

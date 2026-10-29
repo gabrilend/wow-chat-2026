@@ -48,7 +48,7 @@
   <div id="where"></div>
   <div id="measures"></div>
 </div>
-<div id="hint">Click a zone to fly there. In a zone, click to move the player (white). Scroll to zoom; zoom out for the world. Red ground is too steep; dark marks are trees, rocks and buildings.</div>
+<div id="hint">Click a zone to fly there. In a zone, click to move the player (white). Scroll to zoom, middle-drag to pan; zoom out for the world. Red ground is too steep; dark marks are trees, rocks and buildings.</div>
 <script>
 /*SANDBOX_DATA*/
 </script>
@@ -1591,7 +1591,20 @@ cv.addEventListener("wheel", e => {
     if (zi >= 0) enterZone(zi);
   }
 }, { passive: false });
-$("close").onclick = () => { if (inPlay) glideTo(fenceFit(inPlay), 900); else if (zoneIdx >= 0) glideTo(zoneFit(zoneIdx), 900); };
+// Panning: hold the middle button and drag (the owner, 2026-10-28: "drag
+// the map with middle click just panning"). The camera's centre moves with
+// the pointer, at the zoom's scale; any glide stops. The browser's own
+// middle-button scrolling and paste are kept off the map.
+let pan = null;                                              // { x, y }: the pointer's last place while panning
+cv.addEventListener("mousedown", e => { if (e.button === 1) { e.preventDefault(); glide = null; pan = { x: e.clientX, y: e.clientY }; } });
+addEventListener("mousemove", e => {
+  if (!pan) return;
+  cam.cx -= (e.clientX - pan.x) / cam.z; cam.cy -= (e.clientY - pan.y) / cam.z;
+  pan = { x: e.clientX, y: e.clientY };
+});
+addEventListener("mouseup", e => { if (e.button === 1) pan = null; });
+cv.addEventListener("auxclick", e => { if (e.button === 1) e.preventDefault(); });
+$("close").onclick =() => { if (inPlay) glideTo(fenceFit(inPlay), 900); else if (zoneIdx >= 0) glideTo(zoneFit(zoneIdx), 900); };
 $("world").onclick = () => { zoneIdx = -1; fences = []; bots = []; active = -1; $("where").textContent = C.data.name; glideTo(worldFit()); };
 $("scatter").onclick = () => { if (zoneIdx < 0) return; const z = C.data.zones[zoneIdx]; for (const b of bots) {
   const c = z.Y0 - C.Y0 + Math.random() * (z.Y1 - z.Y0 + 1), r = z.X0 - C.X0 + Math.random() * (z.X1 - z.X0); [b.x, b.y] = yardsOf(c, r); b.vx = b.vy = 0; } };
