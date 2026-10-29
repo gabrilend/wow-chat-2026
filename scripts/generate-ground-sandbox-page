@@ -65,6 +65,27 @@ for _ in h:lines() do zones = zones + 1 end
 h:close()
 print(("generate-ground-sandbox-page: %d bytes -> %s (%d zones' ground beside it)"):format(#page, OUT, zones))
 
+-- {{{ the page's scripts parse (Node), before any picture of it
+-- A slip in the template (an 'else' left without its 'if', 2026-10-28)
+-- breaks the page's main script, and a picture taken then shows a page
+-- with no simulation. Each <script> of the written page is handed to
+-- Node's parser; any that fails stops the tool, naming it, before a
+-- picture is taken.
+do
+    local check = DIR .. "/tmp/shared-memory/ground-sandbox-parse.js"
+    local cf = assert(io.open(check, "w"))
+    cf:write([[
+const s = require("fs").readFileSync(process.argv[2], "utf8"); let bad = 0;
+[...s.matchAll(/<script>([\s\S]*?)<\/script>/g)].forEach((m, i) => {
+  try { new Function(m[1]); } catch (e) { bad++; console.log(`generate-ground-sandbox-page: the page's script ${i} doesn't parse: ${e.message}`); } });
+process.exit(bad ? 1 : 0);
+]])
+    cf:close()
+    local r = os.execute(("node '%s' '%s'"):format(check, OUT))
+    if r ~= true and r ~= 0 then io.stderr:write("generate-ground-sandbox-page: the page is written but broken (above); no picture taken\n"); os.exit(1) end
+end
+-- }}}
+
 -- {{{ --screenshot: photographed with the given settings, filed
 if SHOT then
     local cmd = string.format("'%s/scripts/file-screenshot' --dir '%s' --name ground-sandbox --made %q"
