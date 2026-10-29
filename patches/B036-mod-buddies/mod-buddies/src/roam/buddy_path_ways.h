@@ -45,19 +45,22 @@ namespace BuddyPath
 {
     struct P { float x = 0, y = 0; };
 
-    enum class Way : uint8_t { Orbit, Flow, AStar, Potential, Learn };
+    // Paint: the painted map (617o8, roam/buddy_paint_paths.h), walked by the
+    // server side itself (buddies_path.cpp), not by this file's Walker: its
+    // map is kept per region of the world and shared by every buddy there.
+    enum class Way : uint8_t { Orbit, Flow, AStar, Potential, Learn, Paint };
 
     // {{{ the way's name and back
     inline char const* WayName(Way w)
     {
         switch (w) { case Way::Orbit: return "orbit"; case Way::Flow: return "flow"; case Way::AStar: return "astar";
-                     case Way::Potential: return "potential"; case Way::Learn: return "learn"; }
+                     case Way::Potential: return "potential"; case Way::Learn: return "learn"; case Way::Paint: return "paint"; }
         return "orbit";
     }
     // false when `name` is no way (the caller says so; nothing is assumed)
     inline bool WayFromName(std::string const& name, Way& out)
     {
-        for (Way w : { Way::Orbit, Way::Flow, Way::AStar, Way::Potential, Way::Learn })
+        for (Way w : { Way::Orbit, Way::Flow, Way::AStar, Way::Potential, Way::Learn, Way::Paint })
             if (name == WayName(w)) { out = w; return true; }
         return false;
     }
@@ -493,6 +496,8 @@ namespace BuddyPath
                 if (now < kickUntil) return { at.x + kick.x * 4.0f, at.y + kick.y * 4.0f };
                 return PotentialStep(at, target, blocked);
             }
+            case Way::Paint:
+                break;                                          // walked by buddies_path.cpp's painted map, never here
             }
             return Toward(at, target, 4.0f);
         }

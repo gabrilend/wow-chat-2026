@@ -118,8 +118,43 @@ A* and learn wobble. Two causes:
 Bots on the painted map still bunch at one narrow notch (picture 067),
 where three of them explore a peninsula (617e16i).
 
-Not built yet: the C++ core (step 4), keeping the paint between runs
-(step 5).
+**Step 4 built 2026-10-29**: the C++ twin,
+`patches/B036-mod-buddies/mod-buddies/src/roam/buddy_paint_paths.h`, step
+for step the script's. Its test, `scripts/test-buddy-paint-paths`, runs the
+page's own courses with the same random numbers, and all 12 checks hold.
+Beside the script's numbers:
+- the same space through the gap (4.2 yards, 2.0 without);
+- the same thin-wall rounding (0.6 against 1.6);
+- the same 20,707 cells opened a plan;
+- a spread of 3.2 yards against 3.3;
+- plans in 2.7 ms against 4.0;
+- the pillar runs differ in detail (the two languages' sine and cosine
+  differ in the last digit, and long walks drift apart), and both learn
+  the field.
+
+**Step 5, in game, written 2026-10-29, not yet compiled**: `.buddy path
+paint` (the buddy module's path switch, `buddies_path.cpp`; `Way::Paint`
+in `roam/buddy_path_ways.h`).
+- **One map per region.** The world is cut into 512-yard regions, each
+  with 96 yards of margin, a yard a cell. A region's map is made when a
+  buddy first walks there by the painted map, and is shared by every buddy
+  there. At most 6 are kept, the least recently used let go first.
+- **It starts knowing nothing.** Each tick a buddy paints the cell it
+  stands in. A step the navigation mesh refuses paints the spot where the
+  straight leaves the mesh, found by halving the straight four times, and
+  the buddy plans again.
+- **Lanes, the crowd and arcs.** Each buddy gets a lane and a replanning
+  jitter from its character number, the crowd is remade each second a
+  region, and the followed point is re-aimed every half second (arcs as
+  short straights).
+- **Its limit.** A trip whose start or goal is off its region's map (about
+  190 yards near a border) is given up and the reason given, as a waypoint
+  the mesh refuses is.
+- **Checked.** `.buddy path` counts its walks in the same table. A
+  syntax-only check against the server's headers passes.
+
+Not built: keeping the paint between runs (it is lost at a restart;
+question 1).
 
 Before this, the five ways (617o7) each lacked something asked for here:
 - "learn the map" remembers bumps, but each plan ignores walls' nearness
