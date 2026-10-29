@@ -951,6 +951,11 @@ function wedgeTarget(b, f, dt) {
   }
   return b.wp || [f.cx, f.cy];
 }
+// (Tried 2026-10-29 and undone: choosing a wedge's waypoint as the least-
+// walked of five, by the painted map's counts, with other bots' waypoints
+// counted against it. Coverage rose barely, 27-28% against 26%, and spacing
+// fell to 15.8 and 14.1 yards from about 19, since several bots chased the
+// same fresh corner. Pictures 079-080; 617o8 records it.)
 function circulate(b, f, dt) {
   if (!f || !f.contains) { b.move = null; return null; }
   const s = sectorOf(f, b.x, b.y);

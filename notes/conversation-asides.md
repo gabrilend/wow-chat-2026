@@ -201,3 +201,32 @@ version kept, and the party remade from it.)
 > prosper until there's a whole host of you around the watering hole.
 > This is good and proper. Eventually, you will move on, but not after
 > having your share of plunder.
+
+## 2026-10-29, on the army of stand-ins (issue 617e17)
+
+When the stand-ins were found to be missing from the gem chooser and the
+dungeon draw, and only noted as gaps:
+
+> We should address things when we find them instead if we are building
+> functionality that uses them
+
+And, asked whether the stand-ins should be grouped among themselves:
+
+> Yeah we should treat them like as if we had 64 buddy-bots. For the test
+> scene, that's exactly what we'll do.
+
+> Buddy-bot stand-ins should be sorted into groups correctly
+
+> Also they absolutely need to know the gem chooser to know how to hear
+> themselves. Remind yourself of their gear profiles, and tell me if they
+> need gems?
+
+## 2026-10-29, while pathfinding was worked on in the owner's absence
+
+Sent from a moment of downtime, just after asking that writes outside the
+project wait in the RAM drive for permission while they are away (now in
+CLAUDE.md), word for word:
+
+> "use my programming agent" she says as she shares her claude.md files
+> and projects with inspirational architecture "build my projects for me
+> with a shared license" suffers in the beyond []fieldl.

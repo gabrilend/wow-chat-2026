@@ -258,3 +258,16 @@ We can make arcs between way points if necessary"):
    22.6 yards from run to run. Coverage leans slightly to no premium,
    within that noise. So a stronger trail effect would have to be judged
    by eye, or over longer runs.
+
+   Also tried and undone the same day: choosing each wedge waypoint as the
+   least-walked of five (by the paint's counts, other bots' waypoints
+   counted against it), exploration's "least paint" (617e6) inside the
+   wedges. Coverage rose barely (27%, 28%) and spacing fell to 15.8 and
+   14.1 yards, since several bots chased the same fresh corner (pictures
+   079-080). The template keeps a note of it where it was.
+4. **Tiny parts of an area** (picture 078): on the Burning Steppes'
+   Firegut fence the part in play was a 260-square-yard pocket, and all 36
+   bots were crammed into it (spacing 2 yards, 155 degrees turned a yard).
+   No way of finding a path spreads 36 bots through a sliver. Should a
+   part that small be skipped as the part in play (the bots taking the
+   next part), or take only as many bots as it has room for?
