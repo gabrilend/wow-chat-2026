@@ -505,6 +505,146 @@ function partFor(f) {
   best.names = [best.name];
   return best;
 }
+// {{{ peninsulas (issue 617e16i)
+// A peninsula is walkable ground joined to the rest of its part only
+// through a narrow way: a room behind a door, a pocket up a gully. Found
+// on the area's own grid (the ground's points): the part's points shrunk
+// by ERODE points each way (a way narrower than about twice that is cut),
+// the pieces the shrunk ground falls into, each grown back over the part's
+// points (every point to the piece that reaches it first). The largest
+// piece is the main body; every other piece of at least PEN_MIN points is
+// a peninsula; its points touching the main body's are its door. Worked
+// out once per part. Each peninsula: { cells (area grid indices), size,
+// cx, cy (middle), dx, dy (its door's middle), seen (Uint8Array over its
+// cells), seenN, explorers (bots in it now) }; the part's penOf: area grid
+// index -> peninsula number, or -1.
+const ERODE = 2, PEN_MIN = 15, SEE = 2;                      // points: the shrink, the least peninsula, sight each way
+function peninsulasOf(p) {
+  if (p.pens) return p.pens;
+  const a = p.areaRef, w = a.w, h = a.h, mine = q => a.label[q] === p.id;
+  // the shrink: a point stays if every point within ERODE of it is the part's
+  const core = new Uint8Array(w * h);
+  for (let r = 0; r < h; r++) for (let c = 0; c < w; c++) {
+    if (!mine(r * w + c)) continue;
+    let keep = true;
+    for (let dr = -ERODE; dr <= ERODE && keep; dr++) for (let dc = -ERODE; dc <= ERODE; dc++) {
+      const rr = r + dr, cc = c + dc;
+      if (rr < 0 || cc < 0 || rr >= h || cc >= w || !mine(rr * w + cc)) { keep = false; break; }
+    }
+    if (keep) core[r * w + c] = 1;
+  }
+  // its pieces, then grown back over the part from all pieces at once
+  const owner = new Int32Array(w * h).fill(-1), queue = new Int32Array(w * h), sizes = [];
+  let head = 0, tail = 0;
+  for (let s = 0; s < w * h; s++) {
+    if (!core[s] || owner[s] >= 0) continue;
+    const id = sizes.length; let n = 0, qh = tail;
+    owner[s] = id; queue[tail++] = s;
+    while (qh < tail) {
+      const q = queue[qh++], qc = q % w; n++;
+      for (const nb of [qc + 1 < w ? q + 1 : -1, qc > 0 ? q - 1 : -1, q + w < w * h ? q + w : -1, q - w]) {
+        if (nb >= 0 && core[nb] && owner[nb] < 0) { owner[nb] = id; queue[tail++] = nb; }
+      }
+    }
+    sizes.push(n);
+  }
+  while (head < tail) {                                      // growing back: every piece outward at once
+    const q = queue[head++], qc = q % w;
+    for (const nb of [qc + 1 < w ? q + 1 : -1, qc > 0 ? q - 1 : -1, q + w < w * h ? q + w : -1, q - w]) {
+      if (nb >= 0 && mine(nb) && owner[nb] < 0) { owner[nb] = owner[q]; queue[tail++] = nb; }
+    }
+  }
+  let main = 0; sizes.forEach((n, i) => { if (n > sizes[main]) main = i; });
+  const g = GROUND, st = g.step, at = q => [g.sx0 + (a.c0 + q % w) * st, g.sy0 + (a.r0 + Math.floor(q / w)) * st];
+  const pens = [], penOf = new Int16Array(w * h).fill(-1), byPiece = new Map();
+  for (let q = 0; q < w * h; q++) {
+    const o = owner[q];
+    if (o < 0 || o === main) continue;
+    if (!byPiece.has(o)) byPiece.set(o, []);
+    byPiece.get(o).push(q);
+  }
+  for (const cells of byPiece.values()) {
+    if (cells.length < PEN_MIN) continue;
+    const id = pens.length, pen = { id, cells, size: cells.length, seen: new Uint8Array(cells.length), seenN: 0, explorers: 0, index: new Map() };
+    let sx = 0, sy = 0, dx = 0, dy = 0, nd = 0;
+    cells.forEach((q, i) => {
+      pen.index.set(q, i); penOf[q] = id;
+      const [x, y] = at(q); sx += x; sy += y;
+      const qc = q % w;
+      for (const nb of [qc + 1 < w ? q + 1 : -1, qc > 0 ? q - 1 : -1, q + w < w * h ? q + w : -1, q - w]) {
+        if (nb >= 0 && owner[nb] === main) { dx += x; dy += y; nd++; break; }
+      }
+    });
+    pen.cx = sx / cells.length; pen.cy = sy / cells.length;
+    // a peninsula touching the main body nowhere (joined only through
+    // another peninsula): its door is its middle
+    pen.dx = nd ? dx / nd : pen.cx; pen.dy = nd ? dy / nd : pen.cy;
+    pens.push(pen);
+  }
+  p.penOf = penOf; p.pens = pens; p.cellAt = at;
+  return pens;
+}
+// Seeing: every peninsula point within SEE points of a bot is seen.
+function see(p, x, y) {
+  const a = p.areaRef, g = GROUND, c = Math.round((x - g.sx0) / g.step) - a.c0, r = Math.round((y - g.sy0) / g.step) - a.r0;
+  for (let dr = -SEE; dr <= SEE; dr++) for (let dc = -SEE; dc <= SEE; dc++) {
+    const rr = r + dr, cc = c + dc;
+    if (rr < 0 || cc < 0 || rr >= a.h || cc >= a.w) continue;
+    const q = rr * a.w + cc, pid = p.penOf[q];
+    if (pid < 0) continue;
+    const pen = p.pens[pid], i = pen.index.get(q);
+    if (!pen.seen[i]) { pen.seen[i] = 1; pen.seenN++; }
+  }
+}
+function penAt(p, x, y) {
+  const a = p.areaRef, g = GROUND, c = Math.round((x - g.sx0) / g.step) - a.c0, r = Math.round((y - g.sy0) / g.step) - a.r0;
+  if (r < 0 || c < 0 || r >= a.h || c >= a.w) return null;
+  const pid = p.penOf[r * a.w + c];
+  return pid >= 0 ? p.pens[pid] : null;
+}
+// The parts in play's peninsulas (one part, or each of joined parts).
+function partsInPlay() { return inPlay && GROUND ? (inPlay.parts || [inPlay]).filter(p => p.areaRef) : []; }
+// A bot's exploring, each step: returns the point it walks to, or null.
+// A bot already exploring a peninsula walks to its nearest unseen corner
+// (chosen again every second), and is done when every corner is seen. A
+// bot not exploring, within DOOR_NEAR yards of a peninsula's door that
+// isn't seen whole and has fewer than MAX_EXPLORERS in it, goes in. The
+// player inside a peninsula (617e16i: "they treat it like an instance, as
+// if they were tanks"): every bot explores that one, ahead of the player,
+// corner by corner.
+const DOOR_NEAR = 15, MAX_EXPLORERS = 3;
+const explore = { entered: 0, done: 0 };
+function exploreTarget(b, dt) {
+  const parts = partsInPlay();
+  if (!parts.length) { b.pen = null; return null; }
+  for (const p of parts) { peninsulasOf(p); see(p, b.x, b.y); }
+  // the player in a peninsula: an instance, every bot its tank
+  let inst = null, instPart = null;
+  for (const p of parts) { const pn = penAt(p, player.x, player.y); if (pn) { inst = pn; instPart = p; } }
+  if (inst && inst.seenN < inst.size && b.pen !== inst) { if (b.pen) b.pen.explorers--; b.pen = inst; b.penPart = instPart; inst.explorers++; b.penPick = 0; }
+  if (!b.pen) {
+    for (const p of parts) for (const pen of p.pens) {
+      if (pen.seenN >= pen.size || pen.explorers >= MAX_EXPLORERS) continue;
+      if (Math.hypot(pen.dx - b.x, pen.dy - b.y) < DOOR_NEAR) { b.pen = pen; b.penPart = p; pen.explorers++; b.penPick = 0; explore.entered++; break; }
+    }
+    if (!b.pen) return null;
+  }
+  const pen = b.pen;
+  if (pen.seenN >= pen.size) { pen.explorers--; b.pen = null; explore.done++; return null; }
+  if ((b.penPick -= dt) <= 0 || !b.penGoal || pen.seen[b.penGoalI]) {
+    let best = -1, bd = 1e9;
+    pen.cells.forEach((q, i) => {
+      if (pen.seen[i]) return;
+      const [x, y] = b.penPart.cellAt(q), d = Math.hypot(x - b.x, y - b.y);
+      if (d < bd) { bd = d; best = i; }
+    });
+    if (best < 0) return null;
+    b.penGoal = b.penPart.cellAt(pen.cells[best]); b.penGoalI = best; b.penPick = 1;
+  }
+  return b.penGoal;
+}
+// }}}
+
 // Overlapping fences (the owner, 2026-10-28: "if a person is in a
 // venn-diagram style shape in the center of two semi-overlapping zones,
 // then both of them are wandering targets"): the parts the player stands
@@ -724,6 +864,9 @@ function stepFlock(dt) {
     // A fight overrides the wandering (617e16g): walking up to its monster,
     // or standing in front of it until it is dead. Formation members hold
     // their places and don't take fights.
+    // Exploring a peninsula (617e16i) overrides the wandering; a fight
+    // (below) overrides exploring.
+    if (bi >= formed) { const ex = exploreTarget(b, dt); if (ex) [tx, ty] = ex; }
     if (bi >= formed) {
       const st = fightStep(b, dt, f);
       if (st === "standing") { b.vx = 0; b.vy = 0; return; }
@@ -1138,6 +1281,13 @@ function measure() {
     let buffers = 0; for (const v of known.values()) if (v === 3) buffers++;
     lines.push(`mapped          ${share === null ? "-" : Math.round(100 * share) + "% of the part known open"}, ${walls} known walls`);
     lines.push(`bumps           ${stuck.bumps}, ${buffers} buffer cells round them`);
+    // peninsulas (617e16i)
+    const pens = partsInPlay().flatMap(p => p.pens || []);
+    if (pens.length) {
+      const whole = pens.filter(pn => pn.seenN >= pn.size).length, inside = pens.reduce((s, pn) => s + pn.explorers, 0);
+      const inst = partsInPlay().some(p => p.pens && penAt(p, player.x, player.y));
+      lines.push(`peninsulas      ${pens.length} found, ${whole} seen whole, ${inside} bots exploring${inst ? "; the player is in one: an instance" : ""}`);
+    }
   }
   // wanderers (617e16d): since the page began, crossings, the turns aside
   // by the ground (down or up from where they stood), orbit reversals
@@ -1251,6 +1401,19 @@ function draw() {
     const [ax, ay] = yd2px(g.sx0 + (a.c0 - 0.5) * g.step, g.sy0 + (a.r0 - 0.5) * g.step);
     const [bx, by] = yd2px(g.sx0 + (a.c0 + a.w - 0.5) * g.step, g.sy0 + (a.r0 + a.h - 0.5) * g.step);
     ctx.save(); ctx.translate(ax, ay); ctx.scale((bx - ax) / a.w, (by - ay) / a.h); ctx.drawImage(a.canvas, 0, 0); ctx.restore();
+    // its peninsulas (617e16i): unseen corners violet, seen ones faint,
+    // painted again each second; each door a violet ring
+    if (p.pens && p.pens.length) {
+      if (!p.penCanvas) { p.penCanvas = document.createElement("canvas"); p.penCanvas.width = a.w; p.penCanvas.height = a.h; p.penPainted = -1; }
+      if (simT - p.penPainted >= 1 || p.penPainted < 0) {
+        const o = p.penCanvas.getContext("2d"), img = o.createImageData(a.w, a.h);
+        for (const pen of p.pens) pen.cells.forEach((q, i) => img.data.set(pen.seen[i] ? [170, 110, 255, 40] : [170, 110, 255, 120], q * 4));
+        o.putImageData(img, 0, 0); p.penPainted = simT;
+      }
+      ctx.save(); ctx.translate(ax, ay); ctx.scale((bx - ax) / a.w, (by - ay) / a.h); ctx.drawImage(p.penCanvas, 0, 0); ctx.restore();
+      ctx.strokeStyle = "#c08cff"; ctx.lineWidth = 2;
+      for (const pen of p.pens) { const [dx, dy] = yd2px(pen.dx, pen.dy); ctx.beginPath(); ctx.arc(dx, dy, 6, 0, 6.283); ctx.stroke(); }
+    }
   }
   // known walls (617e16h): each a dark red KNOWN_CELL square; buffers left by
   // bumping, amber; once a yard is over a pixel

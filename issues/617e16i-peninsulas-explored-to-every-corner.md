@@ -25,9 +25,25 @@ The owner, 2026-10-28:
 
 ## Current Behavior
 
-The walkable parts (617e16f) are one shape each; nothing tells a room or
-a dead-end pocket joined to the rest by a narrow neck from open ground,
-and the bots wander them all alike.
+**Built 2026-10-28 in the ground sandbox** (steps 1-4, first cut;
+picture 040), `scripts/templates/ground-sandbox.html`'s peninsulas section:
+- Found per walkable part: shrunk by 2 points each way (about 8 yards, so
+  a way under about 16 yards wide is cut), the shrunk ground's pieces,
+  grown back over the part all at once; every piece but the largest, of
+  15 points or more, is a peninsula; its door the middle of its points
+  touching the main body.
+- Seen: every peninsula point within 2 points of a bot. A bot within 15
+  yards of the door of a peninsula not seen whole, with fewer than 3 bots
+  in it, goes in, walks to its nearest unseen point (chosen again each
+  second) and leaves when all are seen. A fight comes before exploring.
+- The player in a peninsula not seen whole: every bot explores it (the
+  instance), each to its own nearest unseen point.
+- Drawn: unseen points violet, seen faint, doors violet rings. Panel:
+  found, seen whole, bots exploring, and "an instance" when the player
+  is in one. The Witchwing Slayer area has one, seen whole within four
+  minutes.
+
+The tank's order (open question 2) is the nearest unseen point for now.
 
 ## Intended Behavior
 
