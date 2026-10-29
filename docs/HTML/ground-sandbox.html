@@ -3370,6 +3370,12 @@ function trackProgress(b, mx, my, dt) {
     b.backLeft = Math.min(BACK_FIRST * Math.pow(2, b.stuckN - 1), BACK_MAX);
     b.bx = -ux; b.by = -uy;
     known.set(cellKey(b.x + ux * KNOWN_CELL, b.y + uy * KNOWN_CELL), 2);
+    // A wanderer stuck on a crossing or turning aside has come to a far
+    // side it can't pass: that is its decision point, not something to try
+    // again (picture 042: crossings aimed past the area's edge met it again
+    // and again, doubling their back-ups)
+    if (b.wstate === "cross") b.crossFor = 0;
+    if (b.wstate === "aside") b.asideFor = 0;
     stuck.events++; stuck.backedYards += b.backLeft; stuck.deepest = Math.max(stuck.deepest, b.stuckN);
   } else {
     // less than it meant, short of stuck, and the walls turned it: a bump
