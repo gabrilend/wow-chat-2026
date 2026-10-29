@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-29 15:34:43
+Generated on: 2026-10-29 16:08:44
 Models: claude-opus-5-5
 
 ## Contents
@@ -117,6 +117,10 @@ Models: claude-opus-5-5
     test army for you to try in game, all waiting on tomorrow's compile. Next,
     decide: should battleground squads keep to the roads, or leave them when a
     pathfinding way finds a shorter line?
+28. 2026-10-29 15:37, after Request 105 - The goal is natural, shared,
+    self-improving pathfinding for buddies. The painted map now works in the
+    sandbox and as C++, and its in-game `.buddy path paint` waits for your
+    compile. Next, compile basic, then try it on the test realm.
 
 --------------------------------------------------------------------------------
 
@@ -10617,6 +10621,82 @@ game has been compiled or tried yet.
 **My question from before still stands:** should the painted map be kept between
 server restarts, so the buddies' knowledge grows over days? And should every
 buddy on the server share one map, or each clan learn its own?
+
+--------------------------------------------------------------------------------
+
+### User Request 106
+
+remember, the goal of our interactions is the creation of a product, not the
+generation of additional unique datas. We must set our sights on a finished task
+as our goal, and then build them iteratively, adjusting as we go. We should
+build fast and make things. We have unlimited search space now with computers.
+Just, design all of our stuff and we'll curate it as we go. Decisionmaking is an
+art.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 106
+
+> Understood. A finished thing to aim at, built in quick passes, with me making
+> the design calls and you curating them, instead of asking you first. Your
+> words go into the asides, and here's the target I'm setting.
+>
+> **Finished: buddies in game walk the painted map.** They learn the world
+> together, keep it between restarts, keep their space from walls and walk in
+> arcs. You'll see it on the test realm with the army.
+>
+> The calls I'm making now, for you to curate:
+> - **The paint is kept between restarts and shared by every buddy on the
+>   server.** That's "collectively get better as we gather more data", taken
+>   literally.
+> - **Mesh stays the default** until you've seen paint in game. Then switching
+>   it over is one line.
+>
+> Building the saving and loading now, in the C++ core where the offline test
+> can prove it round-trips:
+
+*[commit] ecd99ea96 in wow-chat-2026 - *
+
+*[commit] 7538eb282 in wow-chat-2026 - *
+
+That's where the target stands tonight. It's a long road, and I'd rather say so
+plainly than pretend otherwise.
+
+**The design target is set** (CLAUDE.md, commit 7538eb282):
+- The next compile carries every issue that can be built by then, nearest to
+  done first, each new behaviour behind a switch that starts off.
+- I make the design calls and write them down; you curate them.
+- At each compile I'll show the board and ask "here's the status, do you want to
+  turn these on?"
+
+**Where everything stands** (from `scripts/issue-status-board`; the board is
+`docs/next-compile-status.md`):
+
+| Where it stands | Issues |
+|---|---|
+| written, waiting for your compile | 24 |
+| built, whole or in part | 90 |
+| in progress | 5 |
+| planned, or an idea | 80 |
+| not started | 281 |
+| no Current Behavior to read | 42 |
+
+All 522 can't be built for one compile; 281 have nothing built yet. The ones
+waiting for your compile go in as they are.
+
+Of the five in progress:
+- **718d** is only waiting for your compile.
+- **617e16j** (the sub-zone fence) is mine, and the tiny-pocket problem from
+  picture 078 belongs to it. I'll make the call there and build it next: a part
+  too small for its bots is skipped, and they roam the whole fence.
+- **134a** (alpha at its pin) waits on your answer about alpha's MySQL path.
+- **1100** and **190** are the other session's.
+
+**The painted map in game** now keeps what the buddies learn between restarts,
+one folder per realm, so the test branch never writes over basic's. The
+save-and-load round trip is proven offline (14 of 14 checks).
+
+**These requests need permissions: none.** Nothing is waiting in the RAM drive.
 
 --------------------------------------------------------------------------------
 

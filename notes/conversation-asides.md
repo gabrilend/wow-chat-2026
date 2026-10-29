@@ -241,3 +241,17 @@ After a day of measuring the ways to find a path, word for word:
 > adjusting as we go. We should build fast and make things. We have
 > unlimited search space now with computers. Just, design all of our
 > stuff and we'll curate it as we go. Decisionmaking is an art.
+
+## 2026-10-29, asking for an architecture of all the capabilities
+
+> Okay excellent can you build an architecture document that organizes
+> all of our capabilities into a structure that cooperates on concerns
+> and ambitions to be wrong?
+
+And, a moment later, alone:
+
+> ][tests][
+
+(Read, and built into the document as its core rule: the brackets face
+outward, so the tests stand between the parts, at every seam, holding
+two capabilities together, rather than inside any one of them.)
