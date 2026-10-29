@@ -1,0 +1,50 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-path-ways
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      the five ways to find a path all cross a grove, all but the potential field get round a wall and out of a cup, and the planning ways never bump a wall
+# quick-test: yes
+# ==== end of header ====
+# test-buddy-path-ways - checks the buddies' five ways to find a path (the
+# ways core, roam/buddy_path_ways.h) with no server (issue 617o7).
+#
+# For a general audience: the owner asked for several very different ways
+# for a buddy to find its way, each to be tried in the game by a switch.
+# The ways are plain arithmetic over a grid of walkable and blocked ground,
+# so this test builds them alone with the system compiler and walks each
+# one over three made-up courses: a long wall with a gap at one end, a
+# cup that traps anyone walking straight at a point behind it, and a grove
+# of scattered trees. Each must arrive, but for one known limit: the
+# potential field (no route, no memory) stays trapped by the wall and the
+# cup, and is checked to be, so a change to that is noticed. The two that
+# plan over the whole map must never bump a wall. It also checks the
+# owner's stuck rule and the doubling back-out on their own.
+#
+# Usage: scripts/test-buddy-path-ways [PROJECT_DIR]
+# Builds into tmp/tmp/ (the executable tier). Exits non-zero when any
+# check fails.
+
+set -uo pipefail
+
+# {{{ configuration
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+CORE="${DIR}/patches/B036-mod-buddies/mod-buddies/src/roam"
+SOURCE="${DIR}/tests/buddy-path-ways/path-check.cpp"
+EXEC_DIR="${DIR}/tmp/tmp"
+BINARY="${EXEC_DIR}/buddy-path-check"
+# }}}
+
+[[ -d "${DIR}/tmp" ]] || { echo "ERROR: ${DIR}/tmp missing (the project's link to /tmp/<project>)"; exit 1; }
+mkdir -p "${EXEC_DIR}"
+
+if ! g++ -std=c++17 -O2 -Wall -Wextra -Werror -I"${CORE}" "${SOURCE}" -o "${BINARY}"; then
+    echo "test-buddy-path-ways: the ways core did not build alone (above); nothing was checked"
+    exit 1
+fi
+"${BINARY}"
+# ==== footer of test-buddy-path-ways ====
+# lines:      50
+# ==== end of footer ====

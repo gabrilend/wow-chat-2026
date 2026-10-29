@@ -42,9 +42,49 @@ a hung flow-field run). Three minutes each on the Witchwing Slayer area:
 | potential field | none | 0 | 14.7 yd |
 | learn the map | 2,919 routes | 60 a second | 18.8 yd |
 
-Not built: step 2's headless comparison tool, step 3 the module switch,
-step 4 trying them in game. In game, a buddy still walks the server's
-navigation mesh path to wherever its behaviours send it.
+**Step 3, its first half, built 2026-10-28**: the five in the buddy
+module's own arithmetic, with no server code
+(`patches/B036-mod-buddies/mod-buddies/src/roam/buddy_path_ways.h`): a
+grid of open and blocked cells; the flow field, A* (for "learn", over the
+learned cells alone), the potential step, the stuck check, the doubling
+back-out and the walk round; and a walker, one per buddy, holding its way
+and what it remembers between steps, which gives the next point to walk to
+and is told when the world refused a step. The A* here plans over the grid
+of cells, not over a sparse skeleton graph as Intended Behavior says: the
+same answer at this size, simpler to build first; the skeleton is still
+open. Its quick test, `scripts/test-buddy-path-ways`
+(`tests/buddy-path-ways/path-check.cpp`), walks all five over three
+made-up courses on an 80-yard grid (a 60-yard wall with a gap, a cup open
+toward the start with the target behind it, a grove of single trees),
+with a world that refuses blocked ground as the mesh does. Its first runs
+found four faults, each now fixed and commented where it was:
+
+- a diagonal step past a wall's end slipped through the corner of a
+  blocked cell (flow stood at the wall's end ten minutes): a diagonal now
+  needs both cells beside it open;
+- the line check sampled points and missed a line clipping a corner (A*
+  walked into a cup's rim): it now walks every cell the line crosses;
+- orbit's stuck check fired a second into each walk round (walking round
+  isn't getting closer) and backed it out again, forever: the check waits
+  while it backs out or walks round, for up to 15 seconds, as in the
+  sandbox;
+- potential's kick lasted one step and was pulled straight back into the
+  dip: it now holds its direction 1.5 seconds, as in the sandbox.
+
+What the test measures now (`scripts/test-buddy-path-ways` prints it,
+steps of half a second): flow and A* arrive by the shortest way and never
+bump; learn arrives in 3 to 4 times their steps, bumping as it learns;
+orbit arrives in about 8 to 10 times their steps (two minutes for the
+wall); the potential field crosses the grove but stays trapped by the wall
+and the cup. That last is the method's own limit (forces with no route and
+no memory of where it has been), not a fault: the test checks that it is
+trapped, so a change shows.
+
+Not built: step 2's headless comparison tool; the second half of step 3,
+the server side (the grid filled from the navigation mesh, the switch
+command, the walker's point handed to the buddy's movement); step 4 trying
+them in game. In game, a buddy still walks the server's navigation mesh
+path to wherever its behaviours send it.
 
 ## Intended Behavior
 
@@ -98,3 +138,10 @@ Each is built twice:
 
 1. Which measures decide the better way: least stuck, least wasted
    walking, most even spread, or how it looks (the owner's eye)?
+2. The potential field can't get round a long wall or out of a cup: keep
+   it as it is (a way that shows what forces alone do), or give it a
+   memory (cells it has stood in push too, so it can't sink back into the
+   same dip)? With the memory it is no longer "no map at all".
+3. The sandbox's flow and A* may cut the same corners the module's first
+   version did (diagonals past a wall's end, sampled line checks): mend
+   them there too, so the sandbox and the game agree?
