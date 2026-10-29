@@ -3198,6 +3198,47 @@ function unstick(b, f) {
 }
 // }}}
 
+// {{{ circulation: no cocoons (issue 617e16k)
+// The owner, 2026-10-28: "if they're staying in the same quadrant of the
+// spawn zone for too long, then we know they're not circulating. We want
+// them to spread out and be dynamically spread throughout the subzone."
+// The area in play is cut into SECTORS by bearing round its middle; each
+// bot keeps its sector (b.sector) and how long it has been in it
+// (b.sectorFor). In one sector longer than CIRCULATE seconds: it picks the
+// sector with the fewest bots now (a random one among equals, never its
+// own), a walkable point of the area in it (40 tries at random bearings
+// and depths in that sector), and walks there through buffers (b.move),
+// until within MOVE_ARRIVE yards or MOVE_LIMIT seconds have passed.
+const SECTORS = 8, CIRCULATE = 30, MOVE_ARRIVE = 8, MOVE_LIMIT = 60;
+const circulation = { moves: 0 };                            // not "circ": measure() has a local of that name
+function sectorOf(f, x, y) {
+  const a = Math.atan2(y - f.cy, x - f.cx);                  // -pi .. pi
+  return Math.min(SECTORS - 1, Math.floor((a + Math.PI) / (2 * Math.PI) * SECTORS));
+}
+function circulate(b, f, dt) {
+  if (!f || !f.contains) { b.move = null; return null; }
+  const s = sectorOf(f, b.x, b.y);
+  if (s !== b.sector) { b.sector = s; b.sectorFor = 0; } else b.sectorFor = (b.sectorFor || 0) + dt;
+  if (b.move) {
+    b.move.left -= dt;
+    if (Math.hypot(b.move.x - b.x, b.move.y - b.y) < MOVE_ARRIVE || b.move.left <= 0) { b.move = null; b.sectorFor = 0; }
+    else return [b.move.x, b.move.y];
+  }
+  if (b.sectorFor < CIRCULATE) return null;
+  const count = new Array(SECTORS).fill(0);
+  for (const o of bots) if (o.sector !== undefined) count[o.sector]++;
+  const others = count.map((n, i) => i).filter(i => i !== s), least = Math.min(...others.map(i => count[i]));
+  const choices = others.filter(i => count[i] === least), want = choices[Math.floor(Math.random() * choices.length)];
+  b.sectorFor = 0;
+  for (let t = 0; t < 40; t++) {
+    const a = -Math.PI + (want + Math.random()) * 2 * Math.PI / SECTORS, r = Math.random() * edgeAt(f, a);
+    const x = f.cx + Math.cos(a) * r, y = f.cy + Math.sin(a) * r;
+    if (f.contains(x, y) && !blocked(x, y)) { b.move = { x, y, left: MOVE_LIMIT }; circulation.moves++; return [x, y]; }
+  }
+  return null;
+}
+// }}}
+
 // {{{ the flock
 // Each bot, each step:
 //   in a fence: circles its middle (the turning chosen: clockwise,
@@ -3251,6 +3292,9 @@ function stepFlock(dt) {
     // Exploring a peninsula (617e16i) overrides the wandering; a fight
     // (below) overrides exploring.
     if (bi >= formed) { const ex = exploreTarget(b, dt); if (ex) [tx, ty] = ex; }
+    // Circulating (617e16k): a bot too long in one sector moves to the
+    // emptiest one; not while it explores a peninsula.
+    if (bi >= formed && !b.pen) { const mv = circulate(b, f, dt); if (mv) [tx, ty] = mv; }
     if (bi >= formed) {
       const st = fightStep(b, dt, f);
       if (st === "standing") { b.vx = 0; b.vy = 0; return; }
@@ -3306,7 +3350,7 @@ function stepFlock(dt) {
     // (steepAt), known walls, buffers, the edge. The doodads it doesn't know
     // until it has been refused by one (below).
     const hard = (x, y) => steepAt(x, y) || knownWall(x, y) || (f && f.contains && f.contains(b.x, b.y) && !f.contains(x, y));
-    const soft = (x, y) => hard(x, y) || (b.wstate !== "cross" && knownBuffer(x, y));
+    const soft = (x, y) => hard(x, y) || (b.wstate !== "cross" && !b.move && knownBuffer(x, y));   // a move to another sector walks through buffers too (617e16k)
     const nx = b.x + b.vx * dt, ny = b.y + b.vy * dt;
     if (soft(nx, ny) && !steepAt(b.x, b.y)) {
       const sides = b.wallSide ? [b.wallSide, -b.wallSide] : (Math.random() < 0.5 ? [1, -1] : [-1, 1]);
@@ -3685,6 +3729,11 @@ function measure() {
     let buffers = 0; for (const v of known.values()) if (v === 3) buffers++;
     lines.push(`mapped          ${share === null ? "-" : Math.round(100 * share) + "% of the part known open"}, ${walls} known walls`);
     lines.push(`caught          ${stuck.bumps} times; ${steer.refused} steps refused by the world; ${buffers} buffer cells on the tracks that led there`);
+    // circulation (617e16k): moves to the emptiest sector, and the bots per sector now
+    if (f && f.contains) {
+      const count = new Array(SECTORS).fill(0); for (const b of bots) if (b.sector !== undefined) count[b.sector]++;
+      lines.push(`circulating     ${circulation.moves} moves; bots a sector now ${Math.min(...count)} to ${Math.max(...count)} (${count.join(" ")})`);
+    }
     // peninsulas (617e16i)
     const pens = partsInPlay().flatMap(p => p.pens || []);
     if (pens.length) {
