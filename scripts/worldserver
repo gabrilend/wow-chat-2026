@@ -98,17 +98,30 @@ show_help() {
 
 # {{{ get_profile_paths
 get_profile_paths() {
+    # A realm branch (issue 136d, config/branches: name source realm made)
+    # runs its source's installed server: SERVER_PROFILE is the profile
+    # whose server it is (followed through branches of branches), PROFILE
+    # stays the branch's own name (its logs, its realm). BRANCH_REALM: the
+    # branch's realm id, empty when PROFILE is no branch.
+    SERVER_PROFILE="${PROFILE}"; BRANCH_REALM=""
+    local line
+    for _ in 1 2 3 4 5 6 7 8; do
+        line="$(grep "^${SERVER_PROFILE} " "${DIR}/config/branches" 2>/dev/null)"
+        [[ -n "${line}" ]] || break
+        [[ -n "${BRANCH_REALM}" ]] || BRANCH_REALM="$(echo "${line}" | awk '{print $3}')"
+        SERVER_PROFILE="$(echo "${line}" | awk '{print $2}')"
+    done
     # vanilla shares source-beta with release/beta — see issue 148.
-    case "${PROFILE}" in
+    case "${SERVER_PROFILE}" in
         release) AC_CODE_DIR="${DIR}/source-beta"  ;;
         beta)    AC_CODE_DIR="${DIR}/source-beta"  ;;
         vanilla) AC_CODE_DIR="${DIR}/source-beta"  ;;
         basic)   AC_CODE_DIR="${DIR}/source-beta"  ;;
         cc-test) AC_CODE_DIR="${DIR}/source-beta"  ;;
         alpha)   AC_CODE_DIR="${DIR}/source-alpha" ;;
-        *)       echo "ERROR: Unknown profile '${PROFILE}'"; exit 1 ;;
+        *)       echo "ERROR: Unknown profile '${PROFILE}' (not a profile, and not a branch in config/branches)"; exit 1 ;;
     esac
-    INSTALL_DIR="${DIR}/installed-files-${PROFILE}"
+    INSTALL_DIR="${DIR}/installed-files-${SERVER_PROFILE}"
     MYSQL_DIR="${DIR}/mysql/installed-files"
 }
 # }}}
@@ -247,8 +260,33 @@ if [[ -f "${INSTALL_DIR}/bin/.build-type" ]] && [[ "$(cat "${INSTALL_DIR}/bin/.b
     DEBUG_MODE=1
 fi
 
-echo "Starting worldserver (profile: ${PROFILE})"
+echo "Starting worldserver (profile: ${PROFILE}$([[ -n "${BRANCH_REALM}" ]] && echo ", a branch of ${SERVER_PROFILE}"))"
 export LD_LIBRARY_PATH="${MYSQL_DIR}/lib:${LD_LIBRARY_PATH}"
+
+# A branch (issue 136d): its source's server, told by environment overrides
+# (the server reads AC_<SETTING> for any setting before its files, module
+# settings too) which databases, realm and logs are the branch's. The
+# connection strings are the source's own with only the database renamed,
+# so no password is written anywhere new.
+if [[ -n "${BRANCH_REALM}" ]]; then
+    B_SUFFIX="${PROFILE//-/_}"
+    B_CONF="${INSTALL_DIR}/etc"
+    b_info() { grep -m1 "^$1" "$2" | sed 's/^[^"]*"\(.*\)"$/\1/' | sed "s/;[^;]*\$/;$3/"; }
+    export AC_WORLD_DATABASE_INFO="$(b_info WorldDatabaseInfo "${B_CONF}/worldserver.conf" "acore_world_${B_SUFFIX}")"
+    export AC_CHARACTER_DATABASE_INFO="$(b_info CharacterDatabaseInfo "${B_CONF}/worldserver.conf" "acore_characters_${B_SUFFIX}")"
+    export AC_PLAYERBOTS_DATABASE_INFO="$(b_info PlayerbotsDatabaseInfo "${B_CONF}/modules/playerbots.conf" "acore_playerbots_${B_SUFFIX}")"
+    export AC_REALM_ID="${BRANCH_REALM}"
+    export AC_LOGS_DIR="${DIR}/logs-${PROFILE}"
+    mkdir -p "${AC_LOGS_DIR}"                       # the server writes there, but doesn't make it
+    # a test realm: the buddy module's test-only commands (the army of
+    # 617e17) work here and nowhere else (its setting Buddies.TestRealm,
+    # in no settings file, so the server reads it from here)
+    export AC_BUDDIES_TEST_REALM=1
+    for v in AC_WORLD_DATABASE_INFO AC_CHARACTER_DATABASE_INFO AC_PLAYERBOTS_DATABASE_INFO; do
+        [[ "${!v}" == *";acore_"* ]] || { echo "ERROR: branch ${PROFILE}: could not form ${v} from ${SERVER_PROFILE}'s settings"; exit 1; }
+    done
+    echo "  branch ${PROFILE}: realm ${BRANCH_REALM}, databases acore_*_${B_SUFFIX}, logs logs-${PROFILE}"
+fi
 cd "${INSTALL_DIR}/bin"
 
 # Normal path: exec the binary directly. Debug path: hand it to the crash

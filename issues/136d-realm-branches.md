@@ -23,22 +23,52 @@ asked whether to copy basic or reuse a realm:
 
 ## Current Behavior
 
-A profile is defined in several places by hand (the update, install and
-profiles scripts' tables, `_profile_db_name` in the install helpers, the
-patch groups, its config patches), and built from source by the owner's
-compile. There is no way to make a new realm from an existing one's
-state.
+**Built 2026-10-28.** `scripts/branch-realm SOURCE NAME` makes a branch:
+the source's three databases (world, characters, bots; their names read
+from the source's installed settings) dumped in one transaction each and
+streamed straight into new ones named for the branch, and a realm-list row
+copied from the source's with the next free id, offline, game masters
+only. A failure drops every database that run made and says what was
+copied before it. The branch is a line in `config/branches` (name, source,
+realm id, when made); `--list` shows them, `--drop NAME` deletes a
+branch's databases, its realm row and its line. Nothing of the server is
+copied: `scripts/worldserver --profile NAME` runs the source's installed
+server with environment settings the server reads in place of its files'
+(`AC_WORLD_DATABASE_INFO` and the other two connections, each the
+source's own with only the database name changed, so no password is
+written anywhere new; `AC_REALM_ID`; `AC_LOGS_DIR`, logs-NAME; and
+`AC_BUDDIES_TEST_REALM=1`, which opens the buddy module's test-only
+commands), and `scripts/set-active-realm` finds a branch's realm id in
+the branch list. One realm runs at a time: the launcher stops any other
+world server first.
+
+The first branch, `pathtest` from basic (realm 7), took 25 minutes
+(1,513 s), most of it the world database. The first try failed on MySQL's
+own transaction ids carried in the dump (ERROR 3546), now left out of it.
+
+Not built: making a branch faster (copying the world database's files
+rather than replaying it row by row), and a test of the tool on a small
+made-up source.
 
 ## Intended Behavior
 
 - **A branch is a new realm made from a living one, on demand**:
-  `scripts/branch-realm SOURCE NAME` takes the source profile's installed
-  server (linked, not copied, where it can be: the binaries are the
-  same) and its databases as they are at that moment (world, characters,
-  bots: copied table by table into `acore_*_<name>`), gives it a realm
-  entry of its own (its own port), its own config (the source's, with the
-  databases, port and realm id changed), and records it as a branch of
-  SOURCE.
+  `scripts/branch-realm SOURCE NAME` copies the source profile's
+  databases as they are at that moment (world, characters, bots, into
+  `acore_*_<name>`), gives it a realm entry of its own (game masters only,
+  for testing), and records it in `config/branches` (name, source, realm
+  id, when). Nothing of the server is copied: a branch runs its source's
+  installed server, told by environment overrides (the server reads
+  `AC_<SETTING>` for any setting, module settings included: its databases,
+  its realm id, its logs folder) that it is the branch. (The server reads
+  module settings from the folder compiled into it, so a copied settings
+  file alone would have left the branch on its source's bot database;
+  found 2026-10-28 in `Config.cpp`'s `GetConfigPath`.)
+- **Running one**: `scripts/worldserver --profile NAME` finds NAME in the
+  branch list and starts its source's server with the overrides;
+  `scripts/set-active-realm NAME` flips its realm online. One realm runs at
+  a time on this computer (the launcher stops any other first), so a
+  branch runs instead of its source, on the same ports.
 - **Dynamic, not stored**: a branch is cheap to make and to throw away
   (`scripts/branch-realm --drop NAME`), made again from the source's
   living state whenever wanted; nothing about it is written into the

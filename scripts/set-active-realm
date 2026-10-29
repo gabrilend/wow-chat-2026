@@ -48,8 +48,13 @@ case "${PROFILE}" in
     basic)    ACTIVE_ID=5 ;;
     cc-test)  ACTIVE_ID=6 ;;
     *)
-        echo "ERROR: unknown profile '${PROFILE}' (expected release|beta|vanilla|alpha|basic|cc-test)"
-        exit 1
+        # a realm branch (issue 136d): its realm id is in config/branches
+        # (name source realm-id made); its row was made by scripts/branch-realm
+        ACTIVE_ID="$(grep "^${PROFILE} " "${DIR}/config/branches" 2>/dev/null | awk '{print $3}')"
+        if [[ -z "${ACTIVE_ID}" ]]; then
+            echo "ERROR: unknown profile '${PROFILE}' (expected release|beta|vanilla|alpha|basic|cc-test, or a branch in config/branches)"
+            exit 1
+        fi
         ;;
 esac
 # }}}

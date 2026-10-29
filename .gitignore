@@ -162,6 +162,11 @@ logs-vanilla
 # as a change to commit)
 .profile
 
+# The realm branches (issue 136d): each line names databases that exist
+# only in this machine's MySQL, made by scripts/branch-realm; a fresh
+# checkout has none
+config/branches
+
 # basic's install dir and log symlink, derived like vanilla's above
 installed-files-basic/
 logs-basic
