@@ -44,6 +44,33 @@ files that don't require touching shared files."
   `E*` patch, most Lua scripts and their tests), so most work can be split by
   file without meeting.
 
+### Writes outside the project while the owner is away
+
+The owner, 2026-10-29: "please write all changes to external directories
+into your local project RAM drive, and then when the user returns present
+them to them after they respond. Say "these requests need permissions:
+[then list them]" and then as soon as they respond, make your first task
+be to ask for those permissions. Then, continue to the rest of the work."
+
+- **While the owner is away**, a change meant for a folder outside this
+  project is not written there; that write's permission question would
+  wait unanswered, or be answered by a stray keypress. Instead the change
+  is written in full into the project's RAM drive,
+  `tmp/shared-memory/outside-writes/`, under the same path it is meant
+  for. For example, `/mnt/mtwo/programming/ai-playground/kobot/docs/x.md`
+  goes to `tmp/shared-memory/outside-writes/mnt/mtwo/programming/ai-playground/kobot/docs/x.md`.
+  Each one is listed, with why it is needed, in
+  `tmp/shared-memory/outside-writes/LIST.md`.
+- **When the owner returns**, the agent waits until they have written
+  something, then says "these requests need permissions:" and lists them:
+  where each goes and what it is for.
+- **As soon as they respond**, the first task is to ask for those
+  permissions (the outside-write question for each folder). Each one
+  granted is copied into its place from the RAM drive. Then the rest of
+  the work continues.
+- The RAM drive empties at a reboot. If the machine may restart before
+  the owner returns, say so in the status.
+
 ## Project Overview
 
 Everland Ghostsong is a WoW 3.3.5a private server with custom roguelike survival mechanics. The world is empty by default - monsters spawn around players (ambush system), treasure spawns, and traveler NPCs wander the world. Players use playerbots as AI companions.
