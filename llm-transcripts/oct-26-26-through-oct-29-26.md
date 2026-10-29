@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-29 16:25:28
+Generated on: 2026-10-29 16:33:59
 Models: claude-opus-5-5
 
 ## Contents
@@ -125,6 +125,10 @@ Models: claude-opus-5-5
     carries every described issue, each behind a switch that starts off, with
     buddies walking the painted map in game. Next I'll fix the sub-zone fence so
     tiny pockets no longer trap all 36 bots.
+30. 2026-10-29 16:28, after Request 107 - Goal: buddies walking the painted map
+    in game, plus building everything the issues describe. The architecture
+    document is committed. Next, the compile is yours: compile and install
+    basic, then try `.buddy army` and `.buddy path paint` on pathtest.
 
 --------------------------------------------------------------------------------
 
@@ -10778,6 +10782,79 @@ agents and has another session's unsaved edits in it, so it needs its turn.
 
 I can also publish this document as a page you can read or share, if that's
 useful.
+
+--------------------------------------------------------------------------------
+
+### User Request 108
+
+Yes I'd like to see the html, both as a file and a claude artifact. Then can you
+identify common patterns and write guidance for each section as you think about
+how it might turn out, as you guide it to a positive turnout.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 108
+
+> Both, then the guidance. First, checking whether the project already has a
+> tool that turns its documents into its styled HTML pages, since pages here are
+> made by tools, not by hand:
+
+> The page is built with 14 sections in its contents. Checking that the nested
+> lists in the contracts came through right, before taking one look at it:
+
+> Fixed: the nine contracts are one numbered list again. One look at the page
+> before publishing:
+
+> It reads well: the contents on the left, the seven rings with the tests dashed
+> in every seam, and `][tests][` at the centre. Publishing it as the artifact:
+
+> An anchor didn't match: the script stopped before writing anything. Finding
+> the exact wording at the end of the contracts:
+
+> All 12 guidance blocks are in, plus the eight patterns, and the page is
+> regenerated. Republishing to the same link:
+
+> Filing the page picture's notes and committing the page, its generator, and
+> the guided document:
+
+*[commit] 81c5b1df3 in wow-chat-2026 - *
+
+The page is ready, with the patterns and guidance added. I took one look at it
+before adding them (picture 081).
+
+- **Artifact:** https://claude.ai/artifact/4K4Kn8pPKKaizuxGe4oHQq (private to
+  you until you share it)
+- **File:** `docs/HTML/capability-architecture.html`, made from
+  `docs/capability-architecture.md` by
+  `scripts/generate-capability-architecture-page`. Change the document and run
+  the tool to remake it. Committed as 81c5b1df3.
+
+**The eight patterns.** Each one in the document comes with how it goes wrong,
+the early sign, and how to steer it:
+
+| Pattern | How it goes wrong | How to steer it |
+|---|---|---|
+| Twins (core, server, page) | the page drifts from the game | same courses and random numbers on both; change the core first |
+| Learning from refusal | over-learning; a wall that stays after the world changed | never paint a bot's own place; next, let unbumped walls fade |
+| Generated, not written | stale output | every generated file names its maker; a test remakes and compares it |
+| Races | noise taken for a winner | run each setting twice; call it only when the gap beats the spread |
+| Switches | sprawl | list them on the board; ask about any off for three compiles |
+| Shared ground | collisions, silent failures | claim first, commit small, check each commit landed |
+| Your words as the specification | misreading | keep your words beside my reading; show results early |
+| Offline first, server later | uncompiled work piling up | check the glue against the server's headers; try every switch on a branch realm |
+
+**Every section also has "how it may turn out, and how to steer it."** For
+example:
+- The rings warn against a part reaching across two of them.
+- Minds misbehave as crowds, so judge them by crowd measures and fix the cause,
+  not the steering.
+- Views must show the numbers that could embarrass a capability.
+
+It ends with the next four things to build, in order:
+1. Compile and walk the switch, the painted map and the army on the test realm.
+2. Let painted walls fade when nobody has bumped them for a long time.
+3. Add a seam test for the dungeon draw and party grouping.
+4. Give the 42 silent issues a line of Current Behavior.
 
 --------------------------------------------------------------------------------
 
