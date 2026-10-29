@@ -46,9 +46,21 @@ The first branch, `pathtest` from basic (realm 7), took 25 minutes
 (1,513 s), most of it the world database. The first try failed on MySQL's
 own transaction ids carried in the dump (ERROR 3546), now left out of it.
 
+Its test, `scripts/test-branch-realm` (2026-10-29), runs by hand, not
+among the compile's quick tests, since it writes to the live MySQL. It
+makes a pretend realm (three databases of three rows each, settings files
+in a folder of its own under tmp/, a realm entry), branches it, and checks:
+- the rows are copied;
+- the branch gets a realm entry of its own, offline and for game masters
+  only;
+- the branch's line is in the list;
+- a second branch onto the same name is refused, with nothing made;
+- dropping the branch removes all of it and leaves the source as it was.
+
+It then removes everything it made. 13 checks, all passing.
+
 Not built: making a branch faster (copying the world database's files
-rather than replaying it row by row), and a test of the tool on a small
-made-up source.
+rather than replaying it row by row).
 
 ## Intended Behavior
 
