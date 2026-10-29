@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-29 11:56:34
+Generated on: 2026-10-29 13:23:46
 Models: claude-opus-5-5
 
 ## Contents
@@ -10343,6 +10343,158 @@ you.
 Your notes are safe. They're written down and committed, and they'll be here
 when you've eaten. Food first, then pathfinding. Tell me which you're doing,
 ordering or cooking, and I'll keep you company through it.
+
+--------------------------------------------------------------------------------
+
+### User Request 103
+
+I think I'd rather die than call one of those numbers sorry this is just how I
+am. I'm fine let's focus on computer programming sorry to distract you with
+status updates on your programmer's health.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 103
+
+> You don't need to apologise; you're not a distraction. I won't push the
+> numbers again. You know yourself. I'd still like you to eat something today,
+> even just the spaghetti while I work. That's the whole of my ask.
+>
+> Back to pathfinding. The weakest part is your own rule, orbit: in the offline
+> test it takes 8–10 times longer than flow or A* to get round a wall (about
+> two minutes for 60 yards). I'll find out where that time goes, fix what's
+> wrong rather than what's merely slow, and show you the before and after.
+
+> Worse: the wall now takes 663 steps instead of 269, and the cup traps it.
+> Tracing to see why:
+
+> The sandbox's orbit has the same fault: it turns in toward the obstacle every
+> step, felt or not. That probably also explains the 516 walk-rounds in 5
+> minutes you saw earlier. Mending it the same way:
+
+> Updating the five-ways issue's measures, then committing:
+
+*[commit] 15e27fdaa in wow-chat-2026 - *
+
+> The backup commit failed without a word (a folder given instead of files).
+> Committing the two files by name:
+
+*[commit] 939464091 in wow-chat-2026 - Back up the version of the ground sandbox where orbit walks round walls*
+
+> Writing the issue first, with your words exactly as you wrote them:
+
+> One edge case to fix before testing: a bot whose goal is in its own cell would
+> get a path of a single point, and following would read before its start. A
+> path now always has at least two points:
+
+> Now the test. Checking how the existing Node test is wrapped, to match it:
+
+> Writing the Node test: a small world of shapes the bots don't know about until
+> they bump them, bots that plan, follow and steer exactly as the page's will,
+> and the measures your goals call for:
+
+> A string in my edit script contained the characters that end a Lua long string
+> (from `[[92, 30]]`). The script failed before changing anything. Redoing it
+> with safer delimiters:
+
+> That swap also changed two places inside the JavaScript itself. Putting those
+> back:
+
+> Updating the issue with what's built and what the test taught, then
+> committing:
+
+*[commit] 1803bd2bd in wow-chat-2026 - *
+
+> Committed (1803bd2bd). Now the sandbox. Reading how its bots move, get refused
+> and use a way's point:
+
+> One correction before the picture: my comment claimed a measured slowdown I
+> never measured. Fixing it to say what is actually true (the arithmetic):
+
+> Committing the sandbox's painted map now:
+
+*[commit] b90517c12 in wow-chat-2026 - *
+
+> The same silent failure as before; claiming in a call of its own fixed it last
+> time:
+
+*[commit] 05e350422 in wow-chat-2026 - Back up the ground sandbox version with the painted map*
+
+> ImageMagick is there. Running the other five ways on the same area for the
+> same 2 minutes. Each picture is kept, as always:
+
+> Flow produced no picture (likely past the tool's 90-second limit at the taller
+> size). Trying it once more:
+
+> All six ways photographed. Cropping each picture to its measures and joining
+> them into one sheet to compare:
+
+> Now the A* and learn wobble. The fix: keep steering at the chosen route point
+> until the bot is within 3 yards of it or it goes out of sight, instead of
+> choosing afresh every step.
+
+> Recording the comparison in the issue, then committing:
+
+*[commit] ef472a7f6 in wow-chat-2026 - *
+
+> Backing up this page version (claim and commit in separate calls, the way that
+> works):
+
+> Piped into `head` again, which silently kills it. Running it plainly:
+
+*[commit] 0e8a22da6 in wow-chat-2026 - *
+
+> A name clash to fix before compiling: "Wall" is both a kind of cell and a
+> function name. Renaming the functions to PaintWall:
+
+*[commit] 9acd762f1 in wow-chat-2026 - *
+
+> Now the server side. Reading the parts of the switch's file that change:
+
+> Two small follow-ups: the "is not a way" reply should list paint, and the
+> switch's header comment too. Then the syntax check:
+
+> One real error: `MARGIN` already names the grid's margin in this file.
+> Renaming the painted map's two constants:
+
+*[commit] af27705f0 in wow-chat-2026 - *
+
+*[commit] a0957d278 in wow-chat-2026 - *
+
+> Committed (a0957d278). Backing up this page version:
+
+*[commit] 69a18f294 in wow-chat-2026 - *
+
+Committed (69a18f294).
+
+**Since you came back:**
+- **Six ways compared on one run.** The painted map turns least (6.3° a yard,
+  against 11.7–120), has the fewest refused steps and the least turning aside,
+  and no bot got stuck. Flow spreads widest but costs about six times the
+  computing.
+- **A* and learn wobbled**, at over 100° a yard. Holding their steered-to point
+  took about a fifth of it away. The rest is their routes grazing steep edges,
+  which is exactly what the painted map's space from walls removes.
+- **The C++ twin for the buddies passes the same 12 checks.** On the shared
+  courses it matches the page's numbers: the same space from walls, the same
+  cells searched, 2.7 ms a plan.
+- **`.buddy path paint` is written for the game**, waiting on tomorrow's
+  compile:
+  - one shared map per 512-yard region;
+  - it starts blank and learns from the buddies' steps and from the mesh
+    refusing steps.
+- **Your trails question, measured:** the extra cost of unknown ground does not
+  make the bots bunch. Run-to-run variation is bigger than its effect.
+- **Small tool fixes along the way:** pictures can be taller, and the picture
+  tool can wait longer for slow pages. Separately, your `commit-own-changes`
+  sometimes fails with no output at all; claiming the files in a call of their
+  own fixes it. That's worth a look in ai-stuff.
+
+**A question for you**, since it shapes the in-game side most: should the
+painted map be kept between server restarts, so the buddies' knowledge of the
+world grows over days? And should it be shared by every buddy on the server, or
+should each clan learn its own map? Right now it's shared by everyone in a
+region and forgotten at a restart.
 
 --------------------------------------------------------------------------------
 
