@@ -1390,7 +1390,7 @@ function wayStep(b, tx, ty, dt) {
 // (a straight line to it clear of the same) and is closer to it than where
 // the orbit began; after ORBIT_LIMIT seconds it turns round (the other way
 // round the obstacle), and after two turns it gives up and walks on.
-const ORDER_SAME = 3, ORDER_ARRIVE = 6, ABLE_SHARE = 0.5, ORBIT_IN = 1.3, ORBIT_LIMIT = 15;
+const ORDER_SAME = 3, ORDER_ARRIVE = 6, ABLE_SHARE = 0.5, ORBIT_IN = 1.3, ORBIT_LIMIT = 15, ORBIT_FEEL = 4.5, ORBIT_ROUND = 0.52;
 const orbits = { begun: 0, sight: 0, flips: 0, gaveUp: 0 };
 function unpathable(x, y, f) {
   return steepAt(x, y) || knownDoodadAt(x, y) || knownWall(x, y) || (f && f.contains && !f.contains(x, y));
@@ -1455,12 +1455,32 @@ function orbitStep(b, tx, ty, dt) {
     if (++o.turns > 2) { b.orbit = null; b.snap = null; orbits.gaveUp++; return null; }
     o.side = -o.side; o.t = simT; orbits.flips++;
   }
-  // along the obstacle: from the heading turned in toward it, turn away until 2 yards ahead are clear
-  const sp = Math.hypot(b.vx, b.vy);
-  if (sp > 0.5) o.h = Math.atan2(b.vy, b.vx);
+  // Along the obstacle, keeping it on o.side (the module's orbit, roam/
+  // buddy_path_ways.h, the same rule): first walk in at the target until
+  // the way ahead is blocked (it backed out first, so the obstacle is some
+  // yards off), then turn side-on; from then on feel for the wall beside it
+  // (within ORBIT_FEEL yards): felt, hug it (from the heading turned in
+  // toward it, turn away until 2 and 4 yards ahead are clear); not felt
+  // (past its end), round the corner by ORBIT_ROUND. Until 2026-10-29 it
+  // turned in every step, felt or not, and walked rings 3 yards across
+  // when the wall was out of reach (the module's offline test found it).
+  const clear = a => !unpathable(b.x + Math.cos(a) * 2, b.y + Math.sin(a) * 2, f) && !unpathable(b.x + Math.cos(a) * 4, b.y + Math.sin(a) * 4, f);
+  const go = a => { o.h = a; return [b.x + Math.cos(a) * 4, b.y + Math.sin(a) * 4]; };
+  if (!o.touched) {
+    const a = Math.atan2(ty - b.y, tx - b.x);
+    if (clear(a)) return go(a);
+    o.touched = true; o.h = a - o.side * Math.PI / 2;
+  } else {
+    const sp = Math.hypot(b.vx, b.vy);
+    if (sp > 0.5) o.h = Math.atan2(b.vy, b.vx);
+  }
+  const ws = o.h + o.side * Math.PI / 2;
+  let felt = false;
+  for (let r = 1.5; r <= ORBIT_FEEL && !felt; r += 1.5) felt = unpathable(b.x + Math.cos(ws) * r, b.y + Math.sin(ws) * r, f);
+  if (!felt && clear(o.h + o.side * ORBIT_ROUND)) return go(o.h + o.side * ORBIT_ROUND);
   for (let k = 0; k <= 16; k++) {
     const a = o.h + o.side * ORBIT_IN - o.side * k * Math.PI / 12;
-    if (!unpathable(b.x + Math.cos(a) * 2, b.y + Math.sin(a) * 2, f)) { o.h = a; return [b.x + Math.cos(a) * 4, b.y + Math.sin(a) * 4]; }
+    if (clear(a)) return go(a);
   }
   return null;
 }

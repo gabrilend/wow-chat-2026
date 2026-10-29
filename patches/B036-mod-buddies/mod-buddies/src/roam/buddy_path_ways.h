@@ -213,7 +213,8 @@ namespace BuddyPath
     // Learn: a step from `at` toward `to` fell short: the cell it was going
     // into is learned (the next one along, if that is the cell it stands in).
     // True when something new was learned.
-    inline bool Learn(Grid& g, P at, P to)
+    // CellAhead: the cell a step from `at` toward `to` was going into
+    inline int CellAhead(Grid const& g, P at, P to)
     {
         int q = g.Cell(to);
         if (q == g.Cell(at))
@@ -221,6 +222,11 @@ namespace BuddyPath
             float d = std::max(std::hypot(to.x - at.x, to.y - at.y), 0.01f);
             q = g.Cell({ at.x + (to.x - at.x) / d * g.step, at.y + (to.y - at.y) / d * g.step });
         }
+        return q;
+    }
+    inline bool Learn(Grid& g, P at, P to)
+    {
+        int q = CellAhead(g, at, to);
         if (q < 0 || g.learned[q]) return false;
         g.learned[q] = 1;
         return true;
@@ -288,19 +294,34 @@ namespace BuddyPath
         }
     };
 
-    // Walking round: keep the obstacle on `side` (+1 or -1): from the
-    // heading turned IN toward it, turn away 15 degrees at a time until the
-    // points 2 and 4 yards on are clear (4: the point it then walks to). Done when the target is in a clear line and
-    // nearer than where the orbit began.
-    static constexpr float ORBIT_IN = 1.3f;
+    // Walking round: keep the obstacle on `side` (+1 or -1; the wall's side
+    // is the heading turned a quarter `side`-wise). It begins by walking
+    // at the target again until the way ahead is blocked (it backed out
+    // first, so the obstacle is some yards off), then turns side-on to it
+    // (a quarter away from it) and from then on, each step, feels for the
+    // wall beside it (a blocked point within FEEL yards on its wall side):
+    //   felt: it hugs it: from the heading turned IN toward the wall, turn
+    //         away 15 degrees at a time until the points 2 and 4 yards on
+    //         are clear (4: the point it then walks to);
+    //   not felt (past the wall's end): it turns toward the wall's side by
+    //         ROUND, rounding the corner, if that is clear; else as above.
+    // Done when the target is in a clear line and nearer than where the
+    // orbit began. Until 2026-10-29 it turned in by ORBIT_IN every step,
+    // felt or not: a yard or two off the wall nothing stopped the turn,
+    // and it walked a ring 3 yards across until its time ran out (the
+    // offline test: orbit took 8 to 10 times flow's steps round a wall).
+    // Beginning side-on straight away (the first mend) left it rounding a
+    // corner it had never touched, in a ring 15 yards across: hence the
+    // walk in first (`touched`).
+    static constexpr float ORBIT_IN = 1.3f, FEEL = 4.5f, ROUND = 0.52f;
     struct Orbit
     {
-        bool on = false;
+        bool on = false, touched = false;
         int side = 1;
         float heading = 0, fromDist = 0;
         void Begin(P at, P target, int sideIn)
         {
-            on = true; side = sideIn;
+            on = true; touched = false; side = sideIn;
             heading = std::atan2(target.y - at.y, target.x - at.x);
             fromDist = std::hypot(target.x - at.x, target.y - at.y);
         }
@@ -309,6 +330,26 @@ namespace BuddyPath
         {
             float d = std::hypot(target.x - at.x, target.y - at.y);
             if (d < fromDist - 0.5f && lineClear(at, target)) { on = false; return false; }
+            auto clear = [&](float a) {
+                return !blocked({ at.x + std::cos(a) * 2.0f, at.y + std::sin(a) * 2.0f }) && !blocked({ at.x + std::cos(a) * 4.0f, at.y + std::sin(a) * 4.0f });
+            };
+            if (!touched)
+            {
+                // walking in at the target until the way ahead is blocked
+                float a = std::atan2(target.y - at.y, target.x - at.x);
+                if (clear(a)) { heading = a; out = { at.x + std::cos(a) * 4.0f, at.y + std::sin(a) * 4.0f }; return true; }
+                touched = true; heading = a - float(side) * 1.5708f;   // side-on: the obstacle beside it
+            }
+            float wallSide = heading + float(side) * 1.5708f;
+            bool felt = false;
+            for (float r = 1.5f; r <= FEEL && !felt; r += 1.5f)
+                felt = blocked({ at.x + std::cos(wallSide) * r, at.y + std::sin(wallSide) * r });
+            if (!felt)
+            {
+                // past the wall's end: round the corner, gently
+                float a = heading + float(side) * ROUND;
+                if (clear(a)) { heading = a; out = { at.x + std::cos(a) * 4.0f, at.y + std::sin(a) * 4.0f }; return true; }
+            }
             for (int k = 0; k <= 16; ++k)
             {
                 float a = heading + float(side) * ORBIT_IN - float(side) * float(k) * 3.14159265f / 12.0f;
@@ -455,10 +496,21 @@ namespace BuddyPath
             }
             return Toward(at, target, 4.0f);
         }
-        // the walk from `at` toward `intended` fell short: learn says the cell ahead blocks
+        // the walk from `at` toward `intended` fell short. Learn: the cell
+        // ahead is learned to block (its whole way of knowing). Flow and A*:
+        // their grid was wrong there (in game it is filled from the mesh a
+        // cell's width apart, and a thin wall between two cell middles can
+        // hide), so the cell ahead is closed and they plan again; the
+        // offline test's grid is the world itself, so there it never happens.
+        // Orbit and potential: nothing (they feel their way each step).
         void Fell(Grid& g, P at, P intended)
         {
             if (way == Way::Learn && Learn(g, at, intended)) ++learnedCount;
+            if (way == Way::Flow || way == Way::AStar)
+            {
+                int q = CellAhead(g, at, intended);
+                if (q >= 0 && q != g.Cell(at) && g.open[q]) { g.open[q] = 0; flowTarget = routeTarget = -1; }
+            }
         }
     };
     // }}}

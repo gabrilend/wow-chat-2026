@@ -69,13 +69,24 @@ found four faults, each now fixed and commented where it was:
   while it backs out or walks round, for up to 15 seconds, as in the
   sandbox;
 - potential's kick lasted one step and was pulled straight back into the
-  dip: it now holds its direction 1.5 seconds, as in the sandbox.
+  dip: it now holds its direction 1.5 seconds, as in the sandbox;
+- orbit's walk round (2026-10-29, the owner asking which part of
+  pathfinding to iron out) turned in toward the obstacle every step,
+  felt or not: a yard or two off the wall after backing out, nothing
+  stopped the turn and it walked rings 3 yards across until its 15
+  seconds ran out (269 steps round the wall). Now it walks in at its
+  target until the way is blocked, turns side-on, hugs what it feels
+  beside it within 4.5 yards, and rounds a corner by 30 degrees a step
+  once it no longer feels it (121 steps). A first mend that began
+  side-on at once never met the wall and rounded a corner it had never
+  touched, in a ring 15 yards across (663 steps). The sandbox page's
+  orbit had the same fault and has the same mend (picture 065).
 
 What the test measures now (`scripts/test-buddy-path-ways` prints it,
 steps of half a second): flow and A* arrive by the shortest way and never
 bump; learn arrives in 3 to 4 times their steps, bumping as it learns;
-orbit arrives in about 8 to 10 times their steps (two minutes for the
-wall); the potential field crosses the grove but stays trapped by the wall
+orbit arrives in about 4 times their steps round the wall (121 steps), 8
+round the cup (189); the potential field crosses the grove but stays trapped by the wall
 and the cup. That last is the method's own limit (forces with no route and
 no memory of where it has been), not a fault: the test checks that it is
 trapped, so a change shows.
