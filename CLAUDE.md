@@ -44,6 +44,32 @@ files that don't require touching shared files."
   `E*` patch, most Lua scripts and their tests), so most work can be split by
   file without meeting.
 
+### The design target: the next compile builds every described issue
+
+The owner, 2026-10-29: "remember, the goal of our interactions is the
+creation of a product, not the generation of additional unique datas. We
+must set our sights on a finished task as our goal, and then build them
+iteratively, adjusting as we go. We should build fast and make things. ...
+Just, design all of our stuff and we'll curate it as we go. Decisionmaking
+is an art." Then: "okay let's set it as a design target - the very next
+compile will include all of the currently described issue files. If some
+are unneeded, they can be built and decided on / enabled later. "here's
+the status. Do you want to turn these on? [summary of status]" etc."
+
+- **The aim of every stretch of work**: build the issues as they are
+  written, nearest to done first, so the next compile carries as many as
+  can be made by then. Each new behaviour comes behind a switch that
+  starts off (a module setting, a profile's patch, a command), so being
+  built and being on are separate decisions.
+- **Design calls are the agent's**, made and written down (in the issue,
+  with why), for the owner to curate. A question that would stop work is
+  answered with the agent's best call, and asked afterwards.
+- **At each compile** the agent shows the board that
+  `scripts/issue-status-board` writes from the issue files themselves, and
+  asks: "here's the status. Do you want to turn these on?" It lists what
+  is built and off, what is built and on, what is part-built, and what is
+  not started.
+
 ### Writes outside the project while the owner is away
 
 The owner, 2026-10-29: "please write all changes to external directories

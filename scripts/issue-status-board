@@ -1,0 +1,139 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- issue-status-board - writes the board shown at each compile: every open
+-- issue, where it stands, and the question "Do you want to turn these on?"
+--
+-- For a general audience: the owner set a target on 2026-10-29: "the very
+-- next compile will include all of the currently described issue files. If
+-- some are unneeded, they can be built and decided on / enabled later.
+-- "here's the status. Do you want to turn these on? [summary of status]"".
+-- This makes that summary from the issue files themselves, so it is never
+-- written by hand and never stale. Each open issue (issues/*.md, not the
+-- completed ones, not the phase progress files) is read for its title, its
+-- "State:" line, and the first lines of its Current Behavior, and sorted:
+--   waiting   written, waiting for the owner's compile ("not yet compiled")
+--   built     built, whole or in part, and running (or tested offline)
+--   going     in progress
+--   planned   planned, a plan only, or an idea
+--   fresh     not started ("Not built.")
+--   unclear   none of those words found: the issue should say
+-- An issue may also carry a "- Switch: ..." line in its Status, naming the
+-- setting or command that turns it on; the board lists it, since built and
+-- on are separate decisions (CLAUDE.md, the design target).
+--
+-- Reads:  issues/*.md
+-- Writes: docs/next-compile-status.md (the board), and prints the counts
+-- Usage:  scripts/issue-status-board [PROJECT_DIR] [--print]
+--         scripts/issue-status-board --help
+--   --print: also print every issue's line, grouped, to the terminal
+--------------------------------------------------------------------------------
+
+-- {{{ configuration
+local DIR, PRINT = "/mnt/kaun/wow-chat-2026", false
+for _, a in ipairs(arg) do
+    if a == "--help" then
+        print("issue-status-board [PROJECT_DIR] [--print]: writes docs/next-compile-status.md, the board of every open")
+        print("  issue and where it stands (waiting for the compile, built, going, planned, fresh, unclear), and prints")
+        print("  the counts. --print: every issue's line too, grouped.")
+        os.exit(0)
+    elseif a == "--print" then PRINT = true
+    elseif a:sub(1, 2) == "--" then io.stderr:write("issue-status-board: unknown option " .. a .. "\n"); os.exit(1)
+    else DIR = a end
+end
+local OUT = DIR .. "/docs/next-compile-status.md"
+-- }}}
+
+-- {{{ reading one issue
+local function read(path) local f = io.open(path); if not f then return nil end local s = f:read("*a"); f:close(); return s end
+local GROUPS = { "waiting", "built", "going", "planned", "fresh", "unclear" }
+local NAMES = {
+    waiting = "Written, waiting for the compile",
+    built   = "Built (whole or in part)",
+    going   = "In progress",
+    planned = "Planned, a plan only, or an idea",
+    fresh   = "Not started",
+    unclear = "Unclear (the issue should say where it stands)",
+}
+-- the group, from the State line first, then the Current Behavior. `now` is
+-- its opening line, `cb` the whole section (nil when the issue has none).
+-- An issue whose Current Behavior only describes the world as it is (most
+-- older issues: "Players control their character manually") has nothing
+-- built yet: fresh. One with no Current Behavior at all is unclear.
+local function groupOf(state, now, cb)
+    local s, c, all = (state or ""):lower(), (now or ""):lower(), (cb or ""):lower()
+    if all:find("not yet compiled") or all:find("waiting for the owner's compile") or all:find("waits for the owner's compile") then return "waiting" end
+    if s:find("will not") then return nil end                       -- retracted: not on the board
+    if s:find("planned") or s:find("plan only") or s:find("^plan") or s:find("an idea") or s:find("a goal") or s:find("deferred") then return "planned" end
+    if c:match("^%*?%*?not built") or c:match("^not started") then return "fresh" end
+    local built = all:find("%*%*built") or all:find("built 20%d%d") or all:find("built and") or all:find("written and")
+                  or all:find("is built") or all:find("are built") or all:find("now built")
+    if s:find("in progress") or c:find("in progress") then return built and "built" or "going" end
+    if s:find("built") or s:find("done") or built then return "built" end
+    if cb then return "fresh" end
+    return "unclear"
+end
+-- }}}
+
+-- {{{ every open issue
+local rows, counts = {}, {}
+for _, g in ipairs(GROUPS) do counts[g] = 0 end
+local ls = io.popen("ls '" .. DIR .. "/issues/' | grep '\\.md$' | grep -v 'progress\\.md$'")
+for name in ls:lines() do
+    local text = read(DIR .. "/issues/" .. name) or ""
+    local title = text:match("^#%s*([^\n]+)") or name
+    local state = text:match("\n%-%s*State:%s*([^\n]+)") or text:match("\n%*%*State%*%*:?%s*([^\n]+)")
+    local switch = text:match("\n%-%s*Switch:%s*([^\n]+)")
+    local now = text:match("## Current Behavior%s*\n%s*\n?([^\n]+)") or ""
+    local cb = text:match("## Current Behavior%s*\n(.-)\n## ") or text:match("## Current Behavior%s*\n(.*)$")
+    local g = groupOf(state, now, cb)
+    if g then
+        counts[g] = counts[g] + 1
+        rows[#rows + 1] = { g = g, name = name, title = title, state = state, switch = switch, now = now }
+    end
+end
+ls:close()
+table.sort(rows, function(a, b) return a.name < b.name end)
+-- }}}
+
+-- {{{ the board
+local out = {}
+local function w(s) out[#out + 1] = s end
+w("<!-- docs/next-compile-status.md - GENERATED by scripts/issue-status-board from issues/*.md (the design target in CLAUDE.md); don't edit, run it again. -->")
+w("# Next Compile: Where Every Issue Stands")
+w("")
+w("The owner, 2026-10-29: \"the very next compile will include all of the currently described issue files. If some are unneeded, they can be built and decided on / enabled later. \"here's the status. Do you want to turn these on? [summary of status]\"\"")
+w("")
+w("| Where it stands | Issues |")
+w("|---|---:|")
+for _, g in ipairs(GROUPS) do w(("| %s | %d |"):format(NAMES[g], counts[g])) end
+w(("| **All open** | **%d** |"):format(#rows))
+w("")
+w("**Do you want to turn these on?** The issues built and waiting for the compile, each with its switch where it names one:")
+w("")
+for _, g in ipairs(GROUPS) do
+    w("## " .. NAMES[g])
+    w("")
+    local any = false
+    for _, r in ipairs(rows) do
+        if r.g == g then
+            any = true
+            local line = "- **" .. r.name:gsub("%.md$", "") .. "**: " .. r.title:gsub("^%S+%s*%-%s*", "")
+            if r.switch then line = line .. " (switch: " .. r.switch .. ")" end
+            if r.state then line = line .. " [state: " .. r.state .. "]" end
+            w(line)
+        end
+    end
+    if not any then w("(none)") end
+    w("")
+end
+local f = assert(io.open(OUT, "w")); f:write(table.concat(out, "\n"), "\n"); f:close()
+-- }}}
+
+print(("issue-status-board: %d open issues -> %s"):format(#rows, OUT:sub(#DIR + 2)))
+for _, g in ipairs(GROUPS) do print(("  %-8s %4d  %s"):format(g, counts[g], NAMES[g])) end
+if PRINT then
+    for _, g in ipairs(GROUPS) do
+        print("\n" .. NAMES[g])
+        for _, r in ipairs(rows) do if r.g == g then print("  " .. r.name:gsub("%.md$", "") .. "  " .. (r.switch and ("[" .. r.switch .. "] ") or "") .. r.title) end end
+    end
+end
