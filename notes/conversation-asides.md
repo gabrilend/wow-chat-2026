@@ -187,3 +187,17 @@ version kept, and the party remade from it.)
 
 > heaven and hell is comfort and pain, the most relatable aspect a human
 > could find
+
+## 2026-10-28, on how far the bots should wander (issue 617e16j)
+
+> The Barrens is massive. It makes sense to rarely come across your
+> buddies. But, you will come across other bot's as well, so it's okay.
+> But, if you're in a specific quest zone to fight a specific monster, or
+> maybe in one of the oasises or the various camps around the
+> crossroads... gosh there's a lot of areas. I LOVE WORLD OF WARCRAFT
+> there's so much variety everywhere! anyway if you're in one of those
+> smaller sub-zones, then you will have a smaller focus area. Then, your
+> buddy-bots will all come join you. they of your kind will thrive and
+> prosper until there's a whole host of you around the watering hole.
+> This is good and proper. Eventually, you will move on, but not after
+> having your share of plunder.

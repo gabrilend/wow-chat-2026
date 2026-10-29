@@ -59,3 +59,23 @@ Barrens' Zhevra Runners: 179,340 square yards walkable in one part).
    named places). Standing there, the cut does little. Should a cap on
    size apply too (say the area within some distance of the player), or
    the nearest named sub-zone be used?
+   **Answered 2026-10-28: the player's monster cluster.** "your monster
+   cluster. we have to be careful, at what level of granularity do we
+   segment the monster clusters? The Barrens is massive. It makes sense to
+   rarely come across your buddies. But, you will come across other bot's
+   as well, so it's okay. But, if you're in a specific quest zone to fight
+   a specific monster, or maybe in one of the oasises or the various camps
+   around the crossroads ... if you're in one of those smaller sub-zones,
+   then you will have a smaller focus area. Then, your buddy-bots will all
+   come join you. they of your kind will thrive and prosper until there's
+   a whole host of you around the watering hole. This is good and proper.
+   Eventually, you will move on, but not after having your share of
+   plunder." (The whole passage is kept in `notes/conversation-asides.md`.)
+   Built as: the area is the cluster (fence) the player stands in, with
+   the same monster's clusters that touch it, no longer every cluster of
+   that monster in the zone; still cut to the sub-zone and the walkable
+   ground.
+2. **The clusters' granularity**: a cluster is the spawns of one monster
+   lying within 90 yards of each other (`LINK` in
+   `scripts/generate-fish-sandbox-data`). Finer (smaller clusters, the
+   bots closer together) or coarser?

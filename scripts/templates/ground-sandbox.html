@@ -426,15 +426,31 @@ function subOf(x, y) {
   return col < 0 || row < 0 || col >= C.W || row >= C.H ? -1 : C.subAt[row * C.W + col];
 }
 function subName(s) { return s < 0 ? "-" : C.data.zones[Math.floor(s / 4096)].subzones[s % 4096 - 1].name; }
-// An area per monster name and sub-zone: a point counts only if it is in
-// sub-zone `sub` (the player's), so a monster living all over a zone gives
-// only its spawn ground in the player's sub-zone ("anywhere in the sub-zone
-// that all the monsters that you're in the spawning area of can visit").
-// sub -1 (the player off every square): no cut.
+// The player's monster cluster (617e16j, the owner's answer: "your monster
+// cluster"): the fences of monster `name` the player stands in, and every
+// fence of the same monster touching one of them (a corner of either
+// inside the other), and so on outward; no longer every fence of that
+// monster in the zone, which made areas as big as the zone. Returns the
+// fences (outlines, not parts).
+function clusterOf(name) {
+  const same = fences.filter(f => f.name === name && !f.contains);
+  const touch = (a, b) => a.poly.some(([x, y]) => inside(b, x, y)) || b.poly.some(([x, y]) => inside(a, x, y));
+  const group = same.filter(f => inside(f, player.x, player.y));
+  for (let grew = true; grew; ) {
+    grew = false;
+    for (const f of same) if (!group.includes(f) && group.some(gf => touch(gf, f))) { group.push(f); grew = true; }
+  }
+  return group;
+}
+// An area per monster cluster and sub-zone: a point counts only if it is
+// in one of the cluster's fences, walkable, and in sub-zone `sub` (the
+// player's: "anywhere in the sub-zone that all the monsters that you're in
+// the spawning area of can visit"). sub -1 (the player off every square):
+// no cut.
 function areaOf(name, sub) {
-  const g = GROUND, key = name + "|" + $("slope").value + "|" + sub;
+  const group = clusterOf(name);
+  const g = GROUND, key = name + "|" + group.map(f => fences.indexOf(f)).sort((a, b) => a - b).join(",") + "|" + $("slope").value + "|" + sub;
   if (areaCache.has(key)) return areaCache.get(key);
-  const group = fences.filter(f => f.name === name && !f.contains);
   let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
   for (const f of group) for (const [x, y] of f.poly) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
   const st = g.step;
