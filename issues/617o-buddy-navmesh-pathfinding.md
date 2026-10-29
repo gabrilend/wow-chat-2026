@@ -8,7 +8,8 @@
 - Sub-issues: 617o1 (the mesh decides), 617o2 (rooms and tunnels on the
   mesh), 617o3 (baked distance maps), 617o4 (steering toward moving
   targets, and the turn rule), 617o5 (climbing for a view, circling what
-  blocks it)
+  blocks it), 617o6 (layered ways), 617o7 (five ways to find a path, side
+  by side, in the sandbox and in game)
 - Priority: High (buddies walk through walls and stand stuck)
 
 ## Origin
@@ -28,6 +29,10 @@ and lerping the orientation to the intended direction over 2/5ths of a
 second." On the four stages: "okay let's build all four of these then
 recompile. It's okay if they don't work, we'll test the behavior
 bit-by-bit."
+
+## Sub-issues added
+
+- 617o6 (2026-10-28): layered ways: one-way drops, flight, water, gaps.
 
 ## Current Behavior
 

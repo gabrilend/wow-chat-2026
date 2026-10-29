@@ -6,7 +6,7 @@
 - Parent: 617
 - Blocked by: 617c
 - Priority: Medium
-- Sub-issues: 617e1 (the buddy roam strategy), 617e2 (the roaming core in game), 617e3 (creatures, chests and gathering nodes), 617e4 (town visits, with area-change travel), 617e5 (fighting together), 617e6 (exploration modes in game), 617e7 (a zone seen from above), 617e8 (following the owner across maps: boats, zeppelins, the Dark Portal), 617e9 (boarding recordings: the owner's own embarks replayed by buddies), 617e10 (closer in danger), 617e11 (passing each other: swerving and greeting), 617e12 (hand-drawn battle areas: the Valley of Trials in three), 617e13 (spread through the questing sub-zone, measured); death handling, tunnels and the exploration ("painting") design stay here until split
+- Sub-issues: 617e1 (the buddy roam strategy), 617e2 (the roaming core in game), 617e3 (creatures, chests and gathering nodes), 617e4 (town visits, with area-change travel), 617e5 (fighting together), 617e6 (exploration modes in game), 617e7 (a zone seen from above), 617e8 (following the owner across maps: boats, zeppelins, the Dark Portal), 617e9 (boarding recordings: the owner's own embarks replayed by buddies), 617e10 (closer in danger), 617e11 (passing each other: swerving and greeting), 617e12 (hand-drawn battle areas: the Valley of Trials in three), 617e13 (spread through the questing sub-zone, measured), 617e14 (the world watched from above), 617e15 (places conquered), 617e16 (the sandboxes), 617e17 (an army of sixty-four, on the test realm); death handling, tunnels and the exploration ("painting") design stay here until split
 
 ## Origin
 
@@ -864,6 +864,9 @@ Verbatim:
 - **617**, **617c**; **601**, **611**, **613** (beta's Lua behaviors)
 
 ## Open Questions
+
+Gathered 2026-10-28 into 617's own list (question 1), merged with the
+same questions from other sub-issues; answers are written back here.
 
 - **Keep in view: the bot module's travel mesh** (owner, 2026-09-29: "travel
   mesh will come in handy later, don't lose track of it"). mod-playerbots

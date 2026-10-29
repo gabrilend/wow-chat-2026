@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-28 23:03:23
+Generated on: 2026-10-28 23:09:10
 Models: claude-opus-5-5
 
 ## Contents
@@ -8979,6 +8979,77 @@ eager. Two settings decide that, and both are guesses:
 
 Watch it with the Stuck check slider and tell me whether the cyan rings show up
 where you'd expect someone to walk round something, or too often.
+
+--------------------------------------------------------------------------------
+
+### User Request 88
+
+remember it should double it's "backup distance" anytime it's trying to back out
+of something it's stuck on. this distance should be reset when they've travelled
+farther on the forward axis than the place they were foremost stuck. That's when
+they can relax, because they've solved the most stuck forwardmost spot.
+[questing mob slain most recently]
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 88
+
+> Recording your words first, the bracket included. I can't place it yet, so
+> I'll ask about it at the end.
+
+> Next, the back-out movement itself, a white ring while backing out (cyan while
+> orbiting), and the panel line:
+
+> Restored to the committed orbiting version. Redoing this round's edits with
+> the Edit tool:
+
+*[commit] 070d6d077 in wow-chat-2026 - *
+
+> Committing the page backup on its own:
+
+> No output at all this time, and nothing committed. Running it again and
+> reading its exit code:
+
+*[commit] b34cb20dd in wow-chat-2026 - Back up the back-out version of the ground sandbox as a page*
+
+Backing out with doubling is in, and stuck bots now back out before they orbit
+(commit 070d6d077, page backup b34cb20dd). The first five-minute run shows the
+stuck check firing far too often.
+
+**How it works:**
+- **When stuck:** a bot backs straight away from its target, then orbits the
+  obstacle.
+- **Doubling:** each time it's stuck, the back-out distance doubles: 2, 4, 8, up
+  to 64 yards.
+- **Relaxing:** the bot remembers the forwardmost spot where it got stuck. Once
+  it has travelled past that spot toward its target, the distance resets to 2
+  yards. A later stuck spot further forward replaces the remembered one.
+- **On the map:** a white ring means backing out, a cyan ring means orbiting.
+
+**Five minutes in the harpy hills (picture 056):**
+
+| Stuck | Yards backed out | Orbits begun | Ended by seeing the way |
+|---|---|---|---|
+| 448 | 7,470 (about 17 each, so it's doubling) | 443 | 39 |
+
+The rest of the orbits ended because the bot's target changed: a wedge waypoint
+was replaced. That suggests the 1-second check is triggering on ordinary
+turning.
+
+**Two slips along the way, both fixed:**
+- One of my edits came back with an empty line search and overwrote the whole
+  sandbox template. I restored it from its last commit and redid the edits.
+- The backup commit failed silently again whenever its message was piped in. It
+  works with the message written to a file, so I'll do it that way from now on.
+
+Two questions:
+1. What did you mean by "[questing mob slain most recently]"? My guess: when a
+   bot kills a quest monster, the place it died marks the bot's new forwardmost
+   point, so its back-out distance resets. Or did you mean something else?
+2. Should I loosen the stuck test? Two options:
+   - only count a bot as stuck if it got less than a third of what it could have
+     walked toward its target, instead of half;
+   - or only check orders that have lasted at least 2 seconds.
 
 --------------------------------------------------------------------------------
 

@@ -10,6 +10,8 @@
 - 136a — unified realmlist: one login and one realm row per profile
 - 136b — every profile running at once: own databases and ports, so the
   realm list shows them all and any can be up beside the others
+- 136d — realm branches: a new realm made on demand from any living
+  profile's install and databases (2026-10-28)
 
 ## User-facing reference
 
