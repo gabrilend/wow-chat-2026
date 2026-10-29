@@ -10,7 +10,8 @@
 - Priority: High
 - Sub-issues: 617e16a (positions streamed from the world server), 617e16b
   (the judging machinery), 617e16c (the sandbox on the ground), 617e16d
-  (wanderers who choose their own crossings), 617e16e (formations)
+  (wanderers who choose their own crossings), 617e16e (formations),
+  617e16f (fences reshaped by the ground)
 - State: in progress (the page, its data, its flock, the live players and
   the human half of the judging built 2026-10-28; the machine judge waits
   on the image pipeline's repair)

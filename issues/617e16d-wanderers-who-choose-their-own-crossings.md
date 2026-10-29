@@ -112,3 +112,16 @@ As read from the owner's words (the readings are open questions 1-2):
    there. What should the bots do when the player nears the fence's edge:
    follow toward that edge, gather to them, or start drifting toward the
    next fence?
+   **Answered 2026-10-28:** "then they should change their rotation
+   around the central axis direction. If they instead make the same
+   motion (turning towards conclusively ninety degrees or near it or
+   consistently toward it) then they cross through the center of the zone
+   to it's far edge." Built as: the player arriving near the edge of the
+   part in play (past four fifths of its reach on that bearing) reverses
+   every bot's orbit; arriving near the edge again with a move in the
+   same direction as the last (within 45 degrees: "the same motion")
+   sends the wanderers through the middle to the far edge instead. See
+   question 3.
+3. **"the same motion"**: whose, and which: the player's move repeated
+   (as built), or the player's path turning by about ninety degrees each
+   time ("turning towards conclusively ninety degrees or near it")?

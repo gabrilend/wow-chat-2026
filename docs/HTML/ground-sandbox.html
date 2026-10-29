@@ -2530,6 +2530,7 @@ let zoneIdx = -1, fences = [], active = -1;
 const player = { x: 0, y: 0, tx: 0, ty: 0, speed: 7 };       // screen yards; walks 7 yards a second
 let bots = [];
 function enterZone(zi) {
+  areaCache.clear(); inPlay = null; orbitSign = 1; lastEdgeMove = null;   // a new zone: its areas worked out afresh
   zoneIdx = zi;
   const z = C.data.zones[zi];
   // its ground: here already (named in the address, so written in as the
@@ -2588,6 +2589,7 @@ function edgeAt(f, th) {                                    // the fence's dista
   return f.R[i] * (1 - k) + f.R[(i + 1) % 72] * k;
 }
 function inside(f, x, y) {
+  if (f.contains) return f.contains(x, y);                    // a walkable part (617e16f): its own points
   let c = false;
   for (let i = 0, j = f.poly.length - 1; i < f.poly.length; j = i++) {
     const [xi, yi] = f.poly[i], [xj, yj] = f.poly[j];
@@ -2727,6 +2729,110 @@ function openShareOf(f) {
 }
 // }}}
 
+// {{{ areas: a fence's name, its walkable parts (issue 617e16f)
+// An area is every fence of one monster in the zone (merged by their
+// shared name), less the ground steeper than the limit, on the ground's
+// own points; its walkable points are gathered into connected parts
+// (four neighbours), and parts smaller than MIN_PART points dropped. Each
+// part is shaped like a fence for the flock: name, spawns, cx/cy (its
+// points' middle), R (its reach along 72 bearings: the farthest of its
+// points along each), area (square yards), poly (its bounding box, for
+// the camera), contains(x, y) (the point nearest is one of its own).
+// Worked out once per name and limit; the zone or the limit changing
+// starts again. inPlay: the part the player stands in (or, standing on
+// none of its points, the nearest); null outside every fence.
+const MIN_PART = 12;
+const areaCache = new Map();
+let inPlay = null;
+function areaOf(name) {
+  const g = GROUND, key = name + "|" + $("slope").value;
+  if (areaCache.has(key)) return areaCache.get(key);
+  const group = fences.filter(f => f.name === name && !f.contains);
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+  for (const f of group) for (const [x, y] of f.poly) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  const st = g.step;
+  const c0 = Math.max(0, Math.floor((x0 - g.sx0) / st)), c1 = Math.min(g.cols - 1, Math.ceil((x1 - g.sx0) / st));
+  const r0 = Math.max(0, Math.floor((y0 - g.sy0) / st)), r1 = Math.min(g.rows - 1, Math.ceil((y1 - g.sy0) / st));
+  const w = c1 - c0 + 1, h = r1 - r0 + 1, walk = new Uint8Array(w * h), label = new Int32Array(w * h).fill(-1);
+  for (let r = 0; r < h; r++) for (let c = 0; c < w; c++) {
+    const k = (r0 + r) * g.cols + (c0 + c), x = g.sx0 + (c0 + c) * st, y = g.sy0 + (r0 + r) * st;
+    if (!g.steep[k] && g.h[k] !== NO_GROUND && group.some(f => inside(f, x, y))) walk[r * w + c] = 1;
+  }
+  // connected parts, by flood from each unlabelled walkable point
+  const parts = [], stack = [];
+  for (let s = 0; s < w * h; s++) {
+    if (!walk[s] || label[s] >= 0) continue;
+    const id = parts.length, cells = [];
+    label[s] = id; stack.push(s);
+    while (stack.length) {
+      const q = stack.pop(), qc = q % w, qr = (q - qc) / w;
+      cells.push(q);
+      for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nc = qc + dc, nr = qr + dr;
+        if (nc < 0 || nr < 0 || nc >= w || nr >= h) continue;
+        const n = nr * w + nc;
+        if (walk[n] && label[n] < 0) { label[n] = id; stack.push(n); }
+      }
+    }
+    parts.push(cells);
+  }
+  const keep = [];
+  parts.forEach((cells, id) => {
+    if (cells.length < MIN_PART) { for (const q of cells) label[q] = -1; return; }
+    let sx = 0, sy = 0, px0 = 1e9, px1 = -1e9, py0 = 1e9, py1 = -1e9;
+    for (const q of cells) {
+      const x = g.sx0 + (c0 + q % w) * st, y = g.sy0 + (r0 + Math.floor(q / w)) * st;
+      sx += x; sy += y; px0 = Math.min(px0, x); px1 = Math.max(px1, x); py0 = Math.min(py0, y); py1 = Math.max(py1, y);
+    }
+    const p = { name, id, spawns: group.reduce((a, f) => a + f.spawns, 0), cx: sx / cells.length, cy: sy / cells.length,
+                area: cells.length * st * st, size: cells.length, poly: [[px0, py0], [px1, py0], [px1, py1], [px0, py1]] };
+    p.contains = (x, y) => {
+      const c = Math.round((x - g.sx0) / st) - c0, r = Math.round((y - g.sy0) / st) - r0;
+      return c >= 0 && r >= 0 && c < w && r < h && label[r * w + c] === id;
+    };
+    p.R = new Float32Array(72);
+    for (let b = 0; b < 72; b++) {                           // the farthest of its points along each bearing
+      const dx = Math.cos(b * Math.PI / 36), dy = Math.sin(b * Math.PI / 36);
+      let far = 0;
+      for (let t = 0; t < 900; t += st / 2) if (p.contains(p.cx + dx * t, p.cy + dy * t)) far = t;
+      p.R[b] = Math.max(far, st);
+    }
+    keep.push(p);
+  });
+  keep.sort((a, b) => b.size - a.size);
+  keep.forEach((p, i) => { p.rank = i; p.of = keep.length; });
+  // the picture: the part in play filled, the others faint (painted per part in play)
+  const area = { name, parts: keep, c0, r0, w, h, label, canvas: document.createElement("canvas"), painted: -1 };
+  area.canvas.width = w; area.canvas.height = h;
+  areaCache.set(key, area);
+  return area;
+}
+function paintArea(area, part, T) {
+  if (area.painted === part.id) return;
+  const o = area.canvas.getContext("2d"), img = o.createImageData(area.w, area.h), px = img.data;
+  const on = hex(T.fenceOn.length === 7 ? T.fenceOn : "#ffd400");
+  for (let q = 0; q < area.w * area.h; q++) {
+    const id = area.label[q];
+    if (id < 0) continue;
+    px.set([on[0], on[1], on[2], id === part.id ? 55 : 22], q * 4);
+  }
+  o.putImageData(img, 0, 0);
+  area.painted = part.id;
+}
+// The part in play from the player's place: in the fence (polygon) holding
+// the player, the area of its name, the part whose points the player
+// stands on, or the nearest part's middle.
+function partFor(f) {
+  if (!f || !GROUND) return f;
+  const area = areaOf(f.name);
+  if (!area.parts.length) return f;                         // nothing walkable: the outline as it was
+  let best = area.parts.find(p => p.contains(player.x, player.y));
+  if (!best) best = area.parts.reduce((a, p) => Math.hypot(p.cx - player.x, p.cy - player.y) < Math.hypot(a.cx - player.x, a.cy - player.y) ? p : a);
+  best.areaRef = area;
+  return best;
+}
+// }}}
+
 // {{{ the flock
 // Each bot, each step:
 //   in a fence: circles its middle (the turning chosen: clockwise,
@@ -2742,7 +2848,7 @@ const SPEED = 5, LEAD = 0.45, SEP = 4, ALIGN_R = 14, BANDS = 6;
 const bandSeen = new Float32Array(BANDS);                    // recent crossings per depth band, decaying
 function stepFlock(dt) {
   const turnSel = +$("turn").value;
-  const f = fences[active];
+  const f = inPlay;                                          // the part in play (617e16f), or the fence as it was
   for (let i = 0; i < BANDS; i++) bandSeen[i] *= Math.exp(-dt / 30);
   const formed = stepPatrol(dt, f);                          // how many bots hold formation places (617e16e)
   bots.forEach((b, bi) => {
@@ -2753,7 +2859,7 @@ function stepFlock(dt) {
       [tx, ty] = wanderTarget(b, f, dt);
     } else if (f) {
       const rx = b.x - f.cx, ry = b.y - f.cy, th = Math.atan2(ry, rx), r = Math.hypot(rx, ry), R = edgeAt(f, th);
-      const dir = turnSel === 0 ? b.own : turnSel;
+      const dir = (turnSel === 0 ? b.own : turnSel) * orbitSign;   // orbitSign: turned round by the player at the edge
       b.nextPick -= dt;
       if (b.nextPick <= 0) {                               // the least-crossed band lately
         let best = 0; for (let k = 1; k < BANDS; k++) if (bandSeen[k] < bandSeen[best]) best = k;
@@ -2799,20 +2905,35 @@ function stepFlock(dt) {
     // open way is taken and kept as the bot's heading. No open way: it
     // stops this step. A bot already standing on blocked ground (spawned
     // there, or the limit moved under it) walks on unchecked until it is off.
+    // Mental walls (617e16f): the part in play's edge is a wall too, for a
+    // bot inside it ("If we find ourselves outside of the zone, then, well,
+    // we've found it's edge"). Meeting one, the bot keeps the obstacle on
+    // one side and walks round it: it turns to its side (b.wallSide), 20
+    // degrees at a time up to 160, and only if that side is shut tries the
+    // other. Its side is kept while it is still against the obstacle (met
+    // again within WALL_MEMORY seconds), then let go, and its target pulls
+    // it straight again once the way is clear.
+    const walled = (x, y) => blocked(x, y) || (f && f.contains && f.contains(b.x, b.y) && !f.contains(x, y));
     const nx = b.x + b.vx * dt, ny = b.y + b.vy * dt;
-    if (blocked(nx, ny) && !blocked(b.x, b.y)) {
-      let found = false;
-      for (let k = 1; k <= 7 && !found; k++) for (const sgn of [1, -1]) {
-        const a = sgn * k * Math.PI / 9, ca = Math.cos(a), sa = Math.sin(a);
-        const vx = b.vx * ca - b.vy * sa, vy = b.vx * sa + b.vy * ca;
-        if (!blocked(b.x + vx * dt, b.y + vy * dt)) { b.vx = vx; b.vy = vy; found = true; break; }
+    if (walled(nx, ny) && !blocked(b.x, b.y)) {
+      const sides = b.wallSide ? [b.wallSide, -b.wallSide] : (Math.random() < 0.5 ? [1, -1] : [-1, 1]);
+      let found = 0;
+      for (const sgn of sides) {
+        for (let k = 1; k <= 8; k++) {
+          const a = sgn * k * Math.PI / 9, ca = Math.cos(a), sa = Math.sin(a);
+          const vx = b.vx * ca - b.vy * sa, vy = b.vx * sa + b.vy * ca;
+          if (!walled(b.x + vx * dt, b.y + vy * dt)) { b.vx = vx; b.vy = vy; found = sgn; break; }
+        }
+        if (found) break;
       }
-      if (found) steer.turned++; else { b.vx = 0; b.vy = 0; steer.stopped++; }
-    }
+      if (found) { steer.turned++; b.wallSide = found; b.wallFor = WALL_MEMORY; }
+      else { b.vx = 0; b.vy = 0; steer.stopped++; }
+    } else if (b.wallSide && (b.wallFor -= dt) <= 0) b.wallSide = 0;
     b.x += b.vx * dt; b.y += b.vy * dt;
   });
 }
 const steer = { turned: 0, stopped: 0, since: 0 };            // counted between measures
+const WALL_MEMORY = 1.5;                                      // seconds a bot keeps to its side of a wall
 // }}}
 
 // {{{ wanderers: each its own crossings (issue 617e16d)
@@ -2913,7 +3034,7 @@ function stepPatrol(dt, f) {
   if (f) {
     if (patrol.ang === null) patrol.ang = Math.atan2(patrol.y - f.cy, patrol.x - f.cx) || 0;
     const R = edgeAt(f, patrol.ang) * 0.75;
-    patrol.ang += PATROL_SPEED * dt / Math.max(R, 5);
+    patrol.ang += orbitSign * PATROL_SPEED * dt / Math.max(R, 5);
     nx = f.cx + Math.cos(patrol.ang) * edgeAt(f, patrol.ang) * 0.75; ny = f.cy + Math.sin(patrol.ang) * edgeAt(f, patrol.ang) * 0.75;
   } else {
     patrol.ang = null;
@@ -2942,10 +3063,39 @@ function stepPlayer(dt) {
   // the fence holding the player: the smallest of those it stands in
   let best = -1;
   fences.forEach((f, i) => { if (inside(f, player.x, player.y) && (best < 0 || f.area < fences[best].area)) best = i; });
-  if (best !== active) {
-    active = best;
-    $("where").textContent = C.data.zones[zoneIdx].name + (best >= 0 ? " — " + fences[best].name + " (" + fences[best].spawns + " spawns)" : " — outside every fence: the bots follow");
+  // the part in play (617e16f): the walkable part of that fence's name the player is in
+  const part = partFor(fences[best]);
+  if (best !== active || part !== inPlay) {
+    active = best; inPlay = part || null;
+    const p = inPlay;
+    $("where").textContent = C.data.zones[zoneIdx].name + (p ? " — " + p.name + " (" + p.spawns + " spawns" +
+      (p.of ? `; part ${p.rank + 1} of ${p.of}, ${Math.round(p.area)} sq yd walkable` : "") + ")" : " — outside every fence: the bots follow");
   }
+}
+// The player's dot has jumped (a click). Arriving near the edge of the
+// part in play (past EDGE_NEAR of its reach on that bearing) turns every
+// bot's orbit round; arriving near the edge again with a move in the same
+// direction as the last (within 45 degrees: "the same motion") sends the
+// wanderers through the middle to the far edge instead (617e16d, the
+// owner's answer of 2026-10-28).
+const EDGE_NEAR = 0.8;
+let orbitSign = 1, lastEdgeMove = null;
+const edgeEvents = { reversed: 0, crossed: 0 };
+function playerMoved(ox, oy) {
+  const p = inPlay;
+  if (!p) { lastEdgeMove = null; return; }
+  const th = Math.atan2(player.y - p.cy, player.x - p.cx), r = Math.hypot(player.x - p.cx, player.y - p.cy);
+  if (r < EDGE_NEAR * edgeAt(p, th)) { lastEdgeMove = null; return; }
+  const mx = player.x - ox, my = player.y - oy, ml = Math.hypot(mx, my) || 1, move = [mx / ml, my / ml];
+  if (lastEdgeMove && move[0] * lastEdgeMove[0] + move[1] * lastEdgeMove[1] > Math.cos(Math.PI / 4)) {
+    for (const b of bots) if (b.wstate === "orbit") b.crossIn = 0;
+    edgeEvents.crossed++;
+  } else {
+    orbitSign = -orbitSign;
+    for (const b of bots) if (b.wdir) b.wdir = -b.wdir;
+    edgeEvents.reversed++;
+  }
+  lastEdgeMove = move;
 }
 // }}}
 
@@ -2953,7 +3103,7 @@ function stepPlayer(dt) {
 const cover = { cells: new Map(), size: 5 };
 let simT = 0;
 function measure() {
-  const f = fences[active];
+  const f = inPlay;                                          // the part in play (617e16f), or the fence as it was
   const lines = [];
   // turning: each bot's angle round the fence's middle, 30 s ago to now
   let cw = 0, ccw = 0, circ = 0;
@@ -2993,6 +3143,8 @@ function measure() {
     lines.push(`fence open      ${f ? Math.round(100 * openShareOf(f)) + "%" : "-"} (not steep, no doodad)`);
     lines.push(`zone doodads    ${GROUND.rects.length / 4}`);
     lines.push(`zone level      ${GROUND.level !== undefined ? GROUND.level.toFixed(1) + " yd (walkable ground's average)" : "-"}`);
+    if (f && f.of) lines.push(`area            part ${f.rank + 1} of ${f.of}, ${Math.round(f.area)} sq yd`);
+    lines.push(`player at edge  ${edgeEvents.reversed} reversed, ${edgeEvents.crossed} crossed`);
   } else lines.push(`ground          ${zoneIdx >= 0 ? "none for this zone (generate-ground-sandbox-data)" : "-"}`);
   // wanderers (617e16d): since the page began, crossings, the turns aside
   // by the ground (down or up from where they stood), orbit reversals
@@ -3095,12 +3247,23 @@ function draw() {
       }
     }
   }
+  // the area in play (617e16f): its walkable parts on the ground's points,
+  // the part in play filled, the others of the same name faint ("accessible
+  // from afar"); drawn through a transform, as the ground is
+  if (inPlay && inPlay.areaRef && GROUND) {
+    const a = inPlay.areaRef, g = GROUND;
+    paintArea(a, inPlay, T);
+    const [ax, ay] = yd2px(g.sx0 + (a.c0 - 0.5) * g.step, g.sy0 + (a.r0 - 0.5) * g.step);
+    const [bx, by] = yd2px(g.sx0 + (a.c0 + a.w - 0.5) * g.step, g.sy0 + (a.r0 + a.h - 0.5) * g.step);
+    ctx.save(); ctx.translate(ax, ay); ctx.scale((bx - ax) / a.w, (by - ay) / a.h); ctx.drawImage(a.canvas, 0, 0); ctx.restore();
+  }
   // fences
   fences.forEach((f, i) => {
     ctx.beginPath();
     f.poly.forEach(([x, y], k) => { const [px, py] = yd2px(x, y); k ? ctx.lineTo(px, py) : ctx.moveTo(px, py); });
     ctx.closePath();
-    if (i === active) { ctx.fillStyle = T.fenceFill; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = T.fenceOn; }
+    // every outline of the name in play lit (merged by name, 617e16f); filled only when no walkable part is drawn
+    if (inPlay && f.name === inPlay.name) { if (!inPlay.areaRef) { ctx.fillStyle = T.fenceFill; ctx.fill(); } ctx.lineWidth = 2.5; ctx.strokeStyle = T.fenceOn; }
     else { ctx.lineWidth = 1; ctx.strokeStyle = T.fence; }
     ctx.stroke();
   });
@@ -3158,7 +3321,7 @@ cv.addEventListener("click", e => {
   const zi = (col >= 0 && row >= 0 && col < C.W && row < C.H) ? C.zoneAt[Math.floor(row) * C.W + Math.floor(col)] : -1;
   if (zoneIdx < 0) { if (zi >= 0) enterZone(zi); return; }
   // the player is there at once (the owner, 2026-10-28: "the player click dot should move instantly")
-  if (zi === zoneIdx) { const [x, y] = yardsOf(col, row); player.x = player.tx = x; player.y = player.ty = y; }
+  if (zi === zoneIdx) { const [x, y] = yardsOf(col, row), ox = player.x, oy = player.y; player.x = player.tx = x; player.y = player.ty = y; playerMoved(ox, oy); stepPlayer(0); }
   else if (zi >= 0) enterZone(zi);
 });
 cv.addEventListener("wheel", e => {
@@ -3175,7 +3338,7 @@ cv.addEventListener("wheel", e => {
     if (zi >= 0) enterZone(zi);
   }
 }, { passive: false });
-$("close").onclick = () => { if (fences[active]) glideTo(fenceFit(fences[active]), 900); else if (zoneIdx >= 0) glideTo(zoneFit(zoneIdx), 900); };
+$("close").onclick = () => { if (inPlay) glideTo(fenceFit(inPlay), 900); else if (zoneIdx >= 0) glideTo(zoneFit(zoneIdx), 900); };
 $("world").onclick = () => { zoneIdx = -1; fences = []; bots = []; active = -1; $("where").textContent = C.data.name; glideTo(worldFit()); };
 $("scatter").onclick = () => { if (zoneIdx < 0) return; const z = C.data.zones[zoneIdx]; for (const b of bots) {
   const c = z.Y0 - C.Y0 + Math.random() * (z.Y1 - z.Y0 + 1), r = z.X0 - C.X0 + Math.random() * (z.X1 - z.X0); [b.x, b.y] = yardsOf(c, r); b.vx = b.vy = 0; } };
@@ -3186,7 +3349,7 @@ $("live").onchange = () => {
   if (live.on) { pollLive(); live.timer = setInterval(pollLive, 1000); } else { live.chars.clear(); $("liveN").textContent = "off"; }
 };
 $("tail").oninput = () => { $("tailN").textContent = $("tail").value + " s"; };
-$("slope").oninput = () => { $("slopeN").textContent = $("slope").value + "°"; paintGround(); };
+$("slope").oninput = () => { $("slopeN").textContent = $("slope").value + "°"; paintGround(); inPlay = null; active = -2; stepPlayer(0); };   // the areas are worked out again for the new limit
 $("formN").oninput = () => { $("formNN").textContent = $("formN").value; };
 $("formTurn").onchange = () => { $("formTurnN").textContent = $("formTurn").checked ? "turning" : "rigid"; };
 $("shade").onchange = () => paintGround();
@@ -3249,7 +3412,7 @@ if (Q.has("zone")) {
       if (Math.round(simT * 20) % 10 === 0) { const keep = +$("tail").value; for (const b of bots) { b.tail.push([simT, b.x, b.y]); while (b.tail.length && simT - b.tail[0][0] > keep) b.tail.shift(); } }
       if (Math.round(simT * 20) % 20 === 0) measure();
     }
-    if (Q.get("view") === "fence" && fences[active]) Object.assign(cam, fenceFit(fences[active]));
+    if (Q.get("view") === "fence" && inPlay) Object.assign(cam, fenceFit(inPlay));
   }
 }
 draw();                                      // once now: a screenshot may come before the first frame

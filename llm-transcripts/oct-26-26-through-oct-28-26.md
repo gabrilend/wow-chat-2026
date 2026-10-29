@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-28 17:24:31
+Generated on: 2026-10-28 17:50:03
 Models: claude-opus-5-5
 
 ## Contents
@@ -7643,6 +7643,249 @@ and none waits on an open question:
 6 can be Lua, which runs without one. 5 is the biggest.
 
 Which should I start on?
+
+--------------------------------------------------------------------------------
+
+### User Request 73
+
+the screenshots you're taking should go in the development history btw not ram
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 73
+
+> Fixing one thing before running it: this machine's LuaJIT reports a command's
+> success as `true`, not `0`, which tripped an earlier tool this session.
+
+Next, the exact commands that took the earlier pictures, from this session's
+record, so each one's notes can say what made it:
+
+--------------------------------------------------------------------------------
+
+### User Request 74
+
+[Image: original 2400x450, displayed at 2000x375. Multiply coordinates by 1.20
+to map to original image.]
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 74
+
+> All 13 are filed (007–019). Next, checking one notes file reads correctly,
+> especially the line on what changed since an earlier picture:
+
+> The notes read correctly. Next, making the tools that take pictures file them
+> on their own, starting with the judging run. Here is where it saves its
+> pictures:
+
+> Now the lever map's page tool gets a `--screenshot` option that photographs
+> the page it just wrote and files the picture:
+
+> Trying the new option for real. It files picture 020:
+
+> The tool filed its own picture, and the notes caught that the page tool itself
+> changed since 019. Filling in 020's two written sections:
+
+> Now a quick test for the filer, run in a scratch folder: numbering in order,
+> noticing a changed source, and not losing a number on a failed filing.
+
+> The filer's test runs clean now. Next, which data on disk can give the
+> ground's steepness and the doodads (trees, rocks, buildings):
+
+> Writing the sub-issue for the ground-aware copy before building it:
+
+> Archiving the sandbox as it stands, page and template, dated:
+
+> test-file-screenshot needs its quick-test header first, so the compile runs
+> it:
+
+> Claiming the files written by commands, then committing the sandbox, its
+> archive, the judging run, the filer and pictures 007–020:
+
+*[commit] 61645b6c7 in wow-chat-2026 - Keep the fish-school sandbox, archived, and every screenshot in the history folder*
+
+> Committed as 61645b6c7: the archive is in git. Next, the ground sandbox.
+> First, how the sandbox's page holds a zone and steers its bots:
+
+> Height lookups are fast: 160,000 in under a quarter second. Writing the ground
+> data generator:
+
+> The model files match the server's reader: a version mark, then the model
+> header, then the first group's box. Writing the generator:
+
+> The heights came out (1.7 MB for the Barrens), but no doodads at all. Next,
+> what the tiles give: how many models, and where they land after the coordinate
+> change:
+
+> Now that every spawn has a box, a tree or rock should take the turned box from
+> its own model file, and only buildings use the placed box. Swapping the order
+> of the two branches:
+
+> 18,221 doodads in the Barrens now, but 7,922 left out as "off the ground" is
+> suspiciously many. It may mean the model files' axes aren't the order I
+> assumed. Checking a few models' boxes:
+
+> I'm removing the model-box reader and making every spawn use its placed box,
+> in one pass:
+
+> 21,776 doodads in the Barrens now, with 3,860 large structures and 4,004
+> high-up things (lamps, roof pieces) left out. Fixing the header's description
+> to match:
+
+> The data side is done. Now the page. Reading the rest of the sandbox template
+> (panel, drawing, input) before copying it:
+
+> I left a broken leftover block in that test (the RESULT lines). Removing it:
+
+> With `node -e`, the extra arguments start one place earlier than I counted, so
+> the test loaded the zone file as the decoder. Fixing the two positions:
+
+> Now the edits to the copy: title and panel first.
+
+> Next, the ground itself in the page: unpacking, steepness, the shaded picture,
+> and the test for whether a point blocks walking.
+
+> Next, the turn-aside in the flock's step: a bot whose next step would land on
+> blocked ground tries turning a little each way, wider each time, and takes the
+> first open way.
+
+> Next, opening a zone: its ground is used at once if its file is already loaded
+> (named in the address); otherwise the file is fetched and painted when it
+> arrives.
+
+> Next, the slider and shading controls, and the two new address settings for
+> headless runs:
+
+> Now the page's own tool: it joins the template, the sandbox's data and the
+> decoder, and can photograph and file the result:
+
+> Before photographing it, a syntax check of the page's scripts with Node:
+
+> The heights are smooth and flat there, so the fault is in the page's
+> arithmetic or orientation. Next, the page's own steepness at the Crossroads,
+> worked out in Node from the decoded file:
+
+> Counts are per zone now: the Barrens leaves out 481 large structures, Durotar
+> 301. Next, two pictures: the Witchwing harpy fence close up, and the Barrens
+> whole, to see the hill shading.
+
+> You're away, so I'm finishing the mirror fix, then writing down everything you
+> just said before building any of it. First a rebuild and a picture to check
+> that east is on the right now:
+
+> Next, a search for the orange-and-blue MoBA-like game you mentioned, while the
+> issue gets written:
+
+> `hero-less-moba` is a likely match. Next, whether its colours are orange, blue
+> and grey, against a few other game folders:
+
+> It has a formations module of its own (`src/052-formations`). Next, the
+> renderer's team colours, to confirm it's the orange-and-blue game, and what
+> its formations do:
+
+> Both issues are written, with my readings of the parts I wasn't sure of marked
+> as questions for when you're back. Now building. First the click: the dot
+> jumps instead of walking.
+
+> Now the flock's step, which the wanderers and formations both go into:
+
+> Next, the flock's step rewritten so each bot's target comes from its own mode:
+> formation member, wanderer, or the original orbit.
+
+> Next, the pieces around that core: the zone's level (worked out when the
+> ground is painted), the patrol starting at the player, and the panel's new
+> controls.
+
+> Next, the controls' handlers, the address settings, the panel's measures, and
+> formation members drawn in their own colour:
+
+> Building and syntax-checking, then two pictures. One shows wanderers in the
+> Zhevra Runner fence after three minutes; the other adds an eight-bot wedge
+> patrolling round them.
+
+> Next, each issue's Current Behavior updated to say what's built. First the
+> ground sandbox:
+
+> Next: the parent issue's list of sub-issues, a quick-test header for the
+> decoder test, and a check of the new issue files.
+
+> All three check clean. Committing: the ground sandbox, its tools and test, the
+> issues, pictures 021–027 and your asides. The 50 MB of zone ground files
+> stay out until you decide (open question 4).
+
+*[commit] 20e5cf27c in wow-chat-2026 - The flock on the real ground: hills, cliffs too steep to climb, and the trees and rocks in the way*
+
+> Committed as 20e5cf27c. Last, the image pipeline:
+
+Your screenshots now go into `development-history/`, numbered and with notes.
+The sandbox is archived, and its copy now runs on the world's real ground. The
+image pipeline repair also finished.
+
+**Screenshots.** A new tool files each picture under the next number in
+`development-history/`, with notes on what made it and what changed since the
+last one. The judging run and the page tools now file their pictures as they
+take them. The 14 earlier pictures moved out of RAM into 007–020, and today's
+are 021–027.
+
+**Archive.** `docs/HTML/archive/fish-sandbox-2026-10-28.html` (and its template)
+is the sandbox as it was. It's committed, along with the live sandbox itself,
+which had never been committed.
+
+**Ground sandbox.** To open it:
+```
+firefox /mnt/kaun/wow-chat-2026/docs/HTML/ground-sandbox.html
+```
+- **Heights:** the real ground every 4 yards for all 50 zones, shown as hill
+  shading.
+- **Slopes:** ground steeper than a **Steepest** slider (50° to start) is red,
+  and the bots won't step on it.
+- **Doodads:** trees, rocks, fences and huts come from the server's own
+  collision data, and the bots turn aside round them. Big structures like towns
+  and bridges are left out, since bots walk inside them.
+- **Mirror bug:** the old sandbox draws the world mirrored left to right
+  (Orgrimmar ends up left of Thunder Bluff). The new page puts east on the
+  right.
+- **A find:** the Barrens' largest fence is mostly a mine. Two-thirds of its
+  monsters are 100–170 yards underground, so the bots were stuck on the hill
+  above it.
+
+**Your newer requests, built in that page:**
+- The player dot jumps to where you click.
+- **Wanderers** (in the Turning list): each bot orbits on its own clock. Every
+  40–120 seconds it crosses the fence in a straight line through its own point
+  near the middle. At the far side it turns toward the zone's average ground
+  height (110.6 yards in the Barrens). Three turns against its orbit reverse it.
+  My first try had every bot aim at the exact middle and made a starburst; the
+  paths now tangle and loop.
+- **Formations:** line, column, wedge, ring or square, set to keep facing north
+  or to turn with the patrol's heading. They patrol round the fence and hold
+  their places to within about 3 yards.
+
+**The game you were looking for** is
+`/home/ritz/programming/ai-stuff/hero-less-moba/`: orange, blue and grey teams,
+with transcripts from Sep 1–15. Its waves march out already in ranks, which I
+noted as the precedent in the formations issue.
+
+**Image pipeline:** finished, and ready to start with
+`/mnt/kaun/stable-diffusion/run`. It needed two fixes, neither committed in that
+folder:
+- ffmpeg couldn't find its own libraries.
+- PyAV was held below version 19, which needs ffmpeg 9.
+
+Your asides about Uber Eats credits and dancing through life are kept in the
+notes.
+
+Not committed: the 50 MB of zone ground files, which the tool rebuilds in about
+10 seconds. Whether they belong in git is a question in the issue.
+
+Commits: 86603258 (levers), 61645b6c7 (sandbox, archive, screenshots), 20e5cf27c
+(ground sandbox).
+
+One question to start: your sentence "if the player is nearing the edge of the
+sub-zone they're wandering in, the one they're clearing of monsters…" stopped
+there. When the player nears the fence's edge, what should the bots do? Follow
+toward that edge, gather round the player, or start drifting toward the next
+fence?
 
 --------------------------------------------------------------------------------
 
