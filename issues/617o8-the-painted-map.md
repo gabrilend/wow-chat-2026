@@ -246,3 +246,15 @@ We can make arcs between way points if necessary"):
    ahead and turning at most 240 degrees a second. Which feel natural?
 3. **Trails**: should well-walked ground grow cheaper, so trails form
    (natural, as deer paths are), or would that undo the spreading?
+   Measured 2026-10-29 on the sandbox (pictures 067 and 074-076; the
+   address can now set the map's numbers, `paint.UNKNOWN=0`):
+
+   | Unknown premium | Spacing (yd) | Covered |
+   |---|---|---|
+   | 15% (as now) | 19.1, 19.3 | 26%, 26% |
+   | none | 22.6, 19.0 | 27%, 28% |
+
+   The premium is not what bunches the bots: one setting varies 19.0 to
+   22.6 yards from run to run. Coverage leans slightly to no premium,
+   within that noise. So a stronger trail effect would have to be judged
+   by eye, or over longer runs.

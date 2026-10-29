@@ -4289,7 +4289,11 @@ function paintMapFor(f) {
   let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
   for (const [x, y] of f.poly) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
   x0 -= 8; y0 -= 8; x1 += 8; y1 += 8;
-  const M = PaintPaths.make(Math.ceil(x1 - x0) + 1, Math.ceil(y1 - y0) + 1, 1, x0, y0, {});
+  // the address may set the map's numbers by name (paint.UNKNOWN=0, paint.WANT=3, ...), to compare
+  // them on the same run (617o8's questions 2 and 3)
+  const opt = {};
+  for (const [k, v] of new URLSearchParams(location.hash.slice(1))) if (k.startsWith("paint.")) opt[k.slice(6)] = +v;
+  const M = PaintPaths.make(Math.ceil(x1 - x0) + 1, Math.ceil(y1 - y0) + 1, 1, x0, y0, opt);
   PaintPaths.setGround(M, paintKind(f));
   M.canvas = document.createElement("canvas"); M.canvas.width = M.w; M.canvas.height = M.h;
   return (f.paintMap = M);
