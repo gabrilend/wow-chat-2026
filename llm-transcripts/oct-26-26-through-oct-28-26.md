@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-28 21:13:32
+Generated on: 2026-10-28 21:23:02
 Models: claude-opus-5-5
 
 ## Contents
@@ -8348,6 +8348,72 @@ One question, since it sets which rooms count: what width should count as a
 door? Right now a way under about 16 yards wide makes what's behind it a
 peninsula. Narrower would catch only real doorways and gullies; wider would also
 catch broad valley necks.
+
+--------------------------------------------------------------------------------
+
+### User Request 79
+
+hmmm, bots are still bumping into walls. they don't seem to be backing up at
+all. Can you be sure to save all of these versions as git commits, every time
+you change something? for this intense design process.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 79
+
+> The cause is in how a bot judges "where it meant to go". It used the bot's
+> speed after the walls had already turned it. A bot sliding along a wall
+> therefore counted as making good progress, so it was almost never judged stuck
+> and almost never backed up. "Meant" should be the way to its target. A bot
+> scraping along a wall gets little progress toward the target, and backs up.
+>
+> I'll also commit every single change from here on in this design process, each
+> with its own picture. Fixing:
+
+> Making backing up visible too, so you can see it happen: a bot backing up gets
+> a white ring.
+
+> Now they back up, a lot. 861 times in four minutes and 18,046 yards in all,
+> and many bots are ringed at once. That's version 041. Committing it now, as
+> you asked, before changing anything else:
+
+*[commit] 249eab26b in wow-chat-2026 - *
+
+*[commit] 0fe8a1fe5 in wow-chat-2026 - *
+
+> Still tuning the back-up rule, one committed version at a time. Next: a
+> wanderer stuck while crossing or turning aside has reached a far side, so it
+> decides there instead of retrying.
+
+*[commit] 8a50883db in wow-chat-2026 - *
+
+Bots now back up, but too often, and the rest can't be fixed by backing up. That
+needs routes round obstacles.
+
+**Why they never backed up:** a bot judged its progress by its own velocity
+after the walls had turned it. So a bot scraping along a wall looked like it was
+getting where it meant to go. It's now judged against the straight way to its
+target, and each bot backing up shows a white ring.
+
+I committed each version as its own commit with its own picture, as you asked:
+
+| Commit | Picture | Change | What it showed |
+|---|---|---|---|
+| 249eab26b | 041 | Judge progress toward the target; white ring when backing up | Backing up starts, far too much: 861 times, 18,046 yards in four minutes |
+| 0fe8a1fe5 | 042 | Any try that isn't stuck resets the doubling; no judging within 4 yards of the target | Still too much: 968 times, mostly wanderers stuck against the area's edge |
+| 8a50883db | 043 | A wanderer stuck while crossing treats that spot as its far side and turns there | Crossings work (83, up from 46), but 961 back-ups remain inside the area |
+
+**What's left:** most remaining back-ups happen at the steep red patches inside
+the area. When a bot's target is behind a patch, backing up and trying again
+goes straight back into the patch, each time twice as far. It needs a route
+round, and you said routes come after the space is mapped. The page already
+knows from the terrain which ground is walkable, so bots could route round steep
+patches now. What they learn by bumping (walls and clearance) would be added to
+the routes as they find it.
+
+Should routes start now, from the terrain plus what the bots have learned? Or
+only once the bots themselves have walked most of an area, say four-fifths of
+it?
 
 --------------------------------------------------------------------------------
 

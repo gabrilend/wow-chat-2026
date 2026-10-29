@@ -2486,7 +2486,9 @@ function buildContinent(i, themeName) {
       if (z >= 0 && ((c + 1 < W && zoneAt[r * W + c + 1] !== z) || (r + 1 < H && zoneAt[(r + 1) * W + c] !== z))) o.fillRect(c, r, 1, 1);
     }
   }
-  C = { data: d, X0, Y0, Y1, W, H, zoneAt, canvas: oc };
+  // subAt (617e16j): each square's sub-zone, as zone index x 4096 + the
+  // sub-zone's number in its zone (its name: zones[zi].subzones[v - 1])
+  C = { data: d, X0, Y0, Y1, W, H, zoneAt, subAt, canvas: oc };
 }
 function hex(h) { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
 // game yards -> screen yards, and screen yards -> the continent picture's pixels
@@ -2758,8 +2760,20 @@ function openShareOf(f) {
 const MIN_PART = 12;
 const areaCache = new Map();
 let inPlay = null;
-function areaOf(name) {
-  const g = GROUND, key = name + "|" + $("slope").value;
+// The sub-zone fence (617e16j): the sub-zone a point is in (zone index x
+// 4096 + its number), -1 off every square.
+function subOf(x, y) {
+  const [pc, pr] = pixOf(x, y), col = Math.floor(pc), row = Math.floor(pr);
+  return col < 0 || row < 0 || col >= C.W || row >= C.H ? -1 : C.subAt[row * C.W + col];
+}
+function subName(s) { return s < 0 ? "-" : C.data.zones[Math.floor(s / 4096)].subzones[s % 4096 - 1].name; }
+// An area per monster name and sub-zone: a point counts only if it is in
+// sub-zone `sub` (the player's), so a monster living all over a zone gives
+// only its spawn ground in the player's sub-zone ("anywhere in the sub-zone
+// that all the monsters that you're in the spawning area of can visit").
+// sub -1 (the player off every square): no cut.
+function areaOf(name, sub) {
+  const g = GROUND, key = name + "|" + $("slope").value + "|" + sub;
   if (areaCache.has(key)) return areaCache.get(key);
   const group = fences.filter(f => f.name === name && !f.contains);
   let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
@@ -2770,7 +2784,7 @@ function areaOf(name) {
   const w = c1 - c0 + 1, h = r1 - r0 + 1, walk = new Uint8Array(w * h), label = new Int32Array(w * h).fill(-1);
   for (let r = 0; r < h; r++) for (let c = 0; c < w; c++) {
     const k = (r0 + r) * g.cols + (c0 + c), x = g.sx0 + (c0 + c) * st, y = g.sy0 + (r0 + r) * st;
-    if (!g.steep[k] && g.h[k] !== NO_GROUND && group.some(f => inside(f, x, y))) walk[r * w + c] = 1;
+    if (!g.steep[k] && g.h[k] !== NO_GROUND && (sub < 0 || subOf(x, y) === sub) && group.some(f => inside(f, x, y))) walk[r * w + c] = 1;
   }
   // connected parts, by flood from each unlabelled walkable point
   const parts = [], stack = [];
@@ -2798,7 +2812,7 @@ function areaOf(name) {
       const x = g.sx0 + (c0 + q % w) * st, y = g.sy0 + (r0 + Math.floor(q / w)) * st;
       sx += x; sy += y; px0 = Math.min(px0, x); px1 = Math.max(px1, x); py0 = Math.min(py0, y); py1 = Math.max(py1, y);
     }
-    const p = { name, id, spawns: group.reduce((a, f) => a + f.spawns, 0), cx: sx / cells.length, cy: sy / cells.length,
+    const p = { name, id, sub, spawns: group.reduce((a, f) => a + f.spawns, 0), cx: sx / cells.length, cy: sy / cells.length,
                 area: cells.length * st * st, size: cells.length, poly: [[px0, py0], [px1, py0], [px1, py1], [px0, py1]] };
     p.contains = (x, y) => {
       const c = Math.round((x - g.sx0) / st) - c0, r = Math.round((y - g.sy0) / st) - r0;
@@ -2838,7 +2852,7 @@ function paintArea(area, part, T) {
 // stands on, or the nearest part's middle.
 function partFor(f) {
   if (!f || !GROUND) return f;
-  const area = areaOf(f.name);
+  const area = areaOf(f.name, subOf(player.x, player.y));    // cut to the player's sub-zone (617e16j)
   if (!area.parts.length) return f;                         // nothing walkable: the outline as it was
   let best = area.parts.find(p => p.contains(player.x, player.y));
   if (!best) best = area.parts.reduce((a, p) => Math.hypot(p.cx - player.x, p.cy - player.y) < Math.hypot(a.cx - player.x, a.cy - player.y) ? p : a);
@@ -2995,7 +3009,7 @@ function exploreTarget(b, dt) {
 // which parts it joins, so the same overlap is the same area each step.
 const comboCache = new Map();
 function joinParts(parts) {
-  const key = parts.map(p => p.name + "#" + p.id).sort().join("|");
+  const key = parts.map(p => p.name + "#" + p.sub + "#" + p.id).sort().join("|");
   if (comboCache.has(key)) return comboCache.get(key);
   const area = parts.reduce((a, p) => a + p.area, 0);
   const c = { parts, names: parts.map(p => p.name), name: parts.map(p => p.name).join(" + "),
@@ -3547,8 +3561,11 @@ function stepPlayer(dt) {
   if (best !== active || part !== inPlay) {
     active = best; inPlay = part || null;
     const p = inPlay;
-    $("where").textContent = C.data.zones[zoneIdx].name + (p ? " — " + p.name + " (" + p.spawns + " spawns" +
-      (p.of ? `; part ${p.rank + 1} of ${p.of}, ${Math.round(p.area)} sq yd walkable` : "") + ")" : " — outside every fence: the bots follow");
+    // the zone, the sub-zone the player is in (617e16j), the monsters, the part
+    $("where").textContent = C.data.zones[zoneIdx].name + ", " + subName(subOf(player.x, player.y)) +
+      (p ? " — " + p.name + " (" + p.spawns + " spawns" +
+      (p.of ? `; part ${p.rank + 1} of ${p.of}, ${Math.round(p.area)} sq yd walkable` :
+       p.area ? `; ${Math.round(p.area)} sq yd walkable` : "") + ")" : " — outside every fence: the bots follow");
   }
 }
 // The player's dot has jumped (a click). Arriving near the edge of the
@@ -3772,6 +3789,22 @@ function draw() {
       ctx.save(); ctx.translate(ax, ay); ctx.scale((bx - ax) / a.w, (by - ay) / a.h); ctx.drawImage(p.penCanvas, 0, 0); ctx.restore();
       ctx.strokeStyle = "#c08cff"; ctx.lineWidth = 2;
       for (const pen of p.pens) { const [dx, dy] = yd2px(pen.dx, pen.dy); ctx.beginPath(); ctx.arc(dx, dy, 6, 0, 6.283); ctx.stroke(); }
+    }
+  }
+  // the sub-zone fence (617e16j): the player's sub-zone's squares shaded
+  // white, faintly, on the continent's own picture grid (one pixel a
+  // square); painted again only when the player's sub-zone changes
+  {
+    const s = subOf(player.x, player.y);
+    if (s >= 0) {
+      if (C.subShown !== s) {
+        if (!C.subCanvas) { C.subCanvas = document.createElement("canvas"); C.subCanvas.width = C.W; C.subCanvas.height = C.H; }
+        const o = C.subCanvas.getContext("2d"), img = o.createImageData(C.W, C.H);
+        for (let q = 0; q < C.W * C.H; q++) if (C.subAt[q] === s) img.data.set([255, 255, 255, 34], q * 4);
+        o.putImageData(img, 0, 0); C.subShown = s;
+      }
+      const [sx0, sy0] = toCanvas(0, 0);
+      ctx.drawImage(C.subCanvas, sx0, sy0, C.W * cam.z, C.H * cam.z);
     }
   }
   // known walls (617e16h): each a dark red KNOWN_CELL square; buffers left by
