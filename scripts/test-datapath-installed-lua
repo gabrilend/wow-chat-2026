@@ -45,17 +45,19 @@ done
 FAILS=0
 CHECKED=0
 
-# {{{ the folder E001 links, read from E001 itself
-# Its line: local LUA_SRC="${DIR}/src/lua-${PROFILE}"; read rather than
-# assumed, so a change to the install's mapping is followed here.
+# {{{ the folder E001 links, asked of E001 itself
+# E001's own _e001_lua_src says which folder a profile's server loads (its
+# own src/lua-<profile>, or another's: release runs beta's); the file is
+# sourced (it only defines functions) and asked, so a change to the
+# install's mapping is followed here. E001's header says which profiles
+# it runs for at all: a profile not among them never gets its link mended.
 E001="${DIR}/patches/E001-lua-script-symlinks.sh"
-LUA_SRC_LINE="$(grep -m1 'local LUA_SRC="${DIR}/' "${E001}")"
-if [[ -z "${LUA_SRC_LINE}" ]]; then
-    echo "  FAIL: ${E001} no longer names its folder as LUA_SRC=\"\${DIR}/...\"; teach this test its new shape"
+source "${E001}"
+if ! declare -F _e001_lua_src > /dev/null; then
+    echo "  FAIL: ${E001} no longer defines _e001_lua_src (the folder a profile loads); teach this test its new shape"
     exit 1
 fi
-LUA_SRC_PATTERN="${LUA_SRC_LINE#*\$\{DIR\}/}"
-LUA_SRC_PATTERN="${LUA_SRC_PATTERN%\"*}"
+E001_PROFILES=" $(grep -m1 '^# profiles:' "${E001}" | sed 's/^# profiles:[[:space:]]*//') "
 # }}}
 
 # {{{ check_tree
@@ -66,7 +68,8 @@ LUA_SRC_PATTERN="${LUA_SRC_PATTERN%\"*}"
 check_tree() {
     local tree="$1" profile="$2"
     local link="${tree}/bin/lua_scripts/custom"
-    local want="${DIR}/${LUA_SRC_PATTERN//\$\{PROFILE\}/${profile}}"
+    local want
+    want="$(_e001_lua_src "${profile}")"
     CHECKED=$((CHECKED + 1))
     if [[ ! -L "${link}" ]]; then
         # no link: the install never ran E001 for this tree, or it was removed
@@ -81,7 +84,12 @@ check_tree() {
         echo "  FAIL: ${link}"
         echo "        points at ${have}$([[ -d "${have}" ]] || echo " (which does not exist)")"
         echo "        the install would link ${want}"
-        echo "        to mend: scripts/install --profile ${profile} (its Lua step relinks it)"
+        # the advice: a reinstall mends it only if E001 runs for this profile
+        if [[ "${E001_PROFILES}" == *" ${profile} "* ]]; then
+            echo "        to mend: scripts/install --profile ${profile} (its Lua step relinks it)"
+        else
+            echo "        to mend: E001 doesn't run for ${profile} (its header's profiles:${E001_PROFILES% }); add it there first"
+        fi
         FAILS=$((FAILS + 1))
     elif [[ ! -d "${want}" ]]; then
         # the right name, but nothing there: the profile has no scripts folder
@@ -116,5 +124,5 @@ fi
 echo "test-datapath-installed-lua: ${FAILS} of ${CHECKED} installed Lua links are wrong"
 exit 1
 # ==== footer of test-datapath-installed-lua ====
-# lines:     120
+# lines:     128
 # ==== end of footer ====

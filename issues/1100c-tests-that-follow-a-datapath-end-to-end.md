@@ -78,5 +78,17 @@ was not changed.
   beta? And release: should it have its own `src/lua-release`, or share
   `src/lua-beta` (the CLAUDE.md list says release shares source-beta,
   which is the C++ tree, not the Lua)?
+  **2026-10-28:** release shares `src/lua-beta`, as its own page says
+  (`docs/profiles/release.md`: "The full wow-chat Lua corpus
+  (`src/lua-beta/`) runs on this profile"). E001 now runs for release
+  and asks one function which folder a profile loads (`_e001_lua_src`:
+  release, beta's; every other profile, its own); this test asks the
+  same function, and its advice now says when E001 doesn't run for a
+  profile at all. The installed links mend on each profile's next
+  install (`scripts/install --profile beta`, `--profile release`: the
+  owner's to run). Asked about release, the owner turned to alpha:
+  "we should ensure that the old pinned azerothcore we have for that
+  profile is fully functional, then we should bring it to compatibility
+  with the current version", meaning alpha's pinned-old fork: issue 134a.
 - **The plus sign's 200 yards**: keep wow-chat-1's shape, or should a
   still player's monsters also come from 120-160 (a ring)?

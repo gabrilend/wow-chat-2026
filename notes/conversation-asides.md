@@ -182,3 +182,8 @@ version kept, and the party remade from it.)
 > everyone must stay exercised. I interact with the world like a song or a
 > dance, because I believe everything's conscious, if not alive. But when
 > alive, they are a performance art. so, dancing through life.
+
+## 2026-10-28, while the release profile's Lua links were being looked into
+
+> heaven and hell is comfort and pain, the most relatable aspect a human
+> could find

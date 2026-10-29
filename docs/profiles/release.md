@@ -80,6 +80,7 @@ lowest priority first, each line its header's own (`scripts/plan-patches release
 
 | priority | id    | kind     | about                                                                      |
 | -------: | ----- | -------- | -------------------------------------------------------------------------- |
+|     1010 | E001  | install  | Create symlinks from install dir to the profile-specific Lua source        |
 |     1040 | E004  | install  | Create RAM-backed log directory symlink                                    |
 |     1060 | E006  | install  | Initialize config files (.dist -> .conf) and apply profile-specific values |
 |     1100 | C001  | settings | Database Connections                                                       |

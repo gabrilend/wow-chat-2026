@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==== header: 7 lines, footer: 3 lines ====
 # id:         E001
-# profiles:   basic beta cc-test vanilla
+# profiles:   basic beta cc-test release vanilla
 # priority:   1010
 # kind:       install
 # about:      Create symlinks from install dir to the profile-specific Lua source
@@ -44,9 +44,30 @@
 #
 # Parallelizable: Yes (unique directory)
 # Uses TARGET_INSTALL_DIR (defaults to INSTALL_DIR, can be set to INSTALL_DIR_SHADOW)
+
+# {{{ _e001_lua_src
+# The Lua folder a profile's server loads (printed). Each profile owns
+# src/lua-<profile>, except those named here, which run another's:
+#   release runs beta's: docs/profiles/release.md, "The full wow-chat Lua
+#     corpus (src/lua-beta/) runs on this profile" (release is a strict
+#     subset of beta). Until 2026-10-28 release wasn't among E001's
+#     profiles at all, so its link kept pointing at the src/lua renamed
+#     away on 2026-06-02 and its server loaded none of the project's Lua.
+# scripts/test-datapath-installed-lua asks this same function, so the
+# install and the check can't disagree.
+_e001_lua_src() {
+    local profile="$1"
+    case "${profile}" in
+        release) echo "${DIR}/src/lua-beta" ;;          # release: beta's corpus
+        *)       echo "${DIR}/src/lua-${profile}" ;;    # every other profile: its own
+    esac
+}
+# }}}
+
 patch_E001_lua_script_symlinks() {
     local TARGET="${TARGET_INSTALL_DIR:-${INSTALL_DIR}}"
-    local LUA_SRC="${DIR}/src/lua-${PROFILE}"
+    local LUA_SRC
+    LUA_SRC="$(_e001_lua_src "${PROFILE}")"
     # A missing per-profile Lua directory means the profile was never set
     # up (or its name is misspelled). This used to warn and create an empty
     # directory, which booted a worldserver with no custom scripts and no
@@ -54,8 +75,9 @@ patch_E001_lua_script_symlinks() {
     if [[ ! -d "${LUA_SRC}" ]]; then
         echo "  [E001] ERROR: Lua source directory missing: ${LUA_SRC}"
         echo "         profile='${PROFILE}'; nothing was linked into ${TARGET}/bin/lua_scripts/"
-        echo "         to debug: does src/lua-${PROFILE}/ exist in git? (every profile"
-        echo "         owns one, even if it holds only a README); is .profile spelled right?"
+        echo "         to debug: does ${LUA_SRC#${DIR}/}/ exist in git? (every profile owns"
+        echo "         one, even if it holds only a README, or runs another's: _e001_lua_src);"
+        echo "         is .profile spelled right?"
         return 1
     fi
     mkdir -p "${TARGET}/bin/lua_scripts"
@@ -104,5 +126,5 @@ unpatch_E001_lua_script_symlinks() {
 }
 # -- }}}
 # ==== footer of E001 ====
-# lines:      108
+# lines:      130
 # ==== end of footer ====

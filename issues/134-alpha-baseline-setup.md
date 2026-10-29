@@ -5,6 +5,7 @@
 - Completed: 2026-04-10
 - Priority: Critical
 - Phase: Foundation
+- Sub-issues: 134a (alpha working at its pin, then brought current; 2026-10-28)
 
 ## Goal
 
