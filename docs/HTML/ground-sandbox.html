@@ -3245,7 +3245,10 @@ function stepFlock(dt) {
     // so it was hardly ever stuck and hardly ever backed up (the owner,
     // 2026-10-28: "bots are still bumping into walls. they don't seem to be
     // backing up at all"). Backing up: what it means is the back-up itself.
-    const meantX = b.backLeft > 0 ? b.vx : dx / dl * want, meantY = b.backLeft > 0 ? b.vy : dy / dl * want;
+    // Within ARRIVED yards of its target it means nothing: arriving isn't
+    // being stuck.
+    const aim = b.backLeft > 0 ? 1 : dl > ARRIVED ? want / dl : 0;
+    const meantX = b.backLeft > 0 ? b.vx : dx * aim, meantY = b.backLeft > 0 ? b.vy : dy * aim;
     // The ground (issue 617e16c): a step that would land on blocked ground
     // (too steep, or in a doodad) is turned aside, 20 degrees at a time,
     // left and right in turn (the smaller turn first), up to 140; the first
@@ -3316,14 +3319,18 @@ const WALL_MEMORY = 1.5;                                      // seconds a bot k
 // at least FULL_SHARE of full speed but got under STUCK_SHARE of it: stuck.
 // Stuck the n-th time in a row: back up BACK_FIRST x 2^(n-1) yards (at most
 // BACK_MAX), straight away from where it meant to go; the cell just ahead
-// becomes a known wall. GOOD_WINDOWS good windows in a row (most of what it
-// meant, got) and the count starts again.
+// becomes a known wall. "If it happens again" is the very next try: one
+// window that isn't stuck and the count starts again (it was three good
+// windows in a row; a bot going round a wall to a target behind it rarely
+// gets three, so its back-ups doubled to 64 yards: picture 041, 18,046
+// yards backed up in four minutes). ARRIVED: within this many yards of
+// its target a bot means nothing, and isn't judged.
 //
 // known: the zone's map the bots share, KNOWN_CELL-yard cells by "i,j": 1
 // open (a bot has stood there), 2 a wall (a bot got stuck facing it). A bot
 // standing in a cell marked a wall proves it open, so a wrong mark (stuck
 // in a crowd, not on a wall) mends itself. Started afresh with each zone.
-const PROG_WINDOW = 1, FULL_SHARE = 0.6, STUCK_SHARE = 0.25, GOOD_WINDOWS = 3;
+const PROG_WINDOW = 1, FULL_SHARE = 0.6, STUCK_SHARE = 0.25, ARRIVED = 4;
 const BACK_FIRST = 2, BACK_MAX = 64, KNOWN_CELL = 2;
 const known = new Map();
 const stuck = { events: 0, backedYards: 0, deepest: 0, bumps: 0 };
@@ -3369,8 +3376,7 @@ function trackProgress(b, mx, my, dt) {
     if (b.touched && b.want >= FULL_SHARE * SPEED * b.pw && got < BUMP_SHARE * b.want) {
       leaveBuffer(b.touchX, b.touchY); stuck.bumps++;
     }
-    if (got >= 0.6 * b.want) { if (++b.goodWins >= GOOD_WINDOWS) { b.stuckN = 0; b.goodWins = 0; } }
-    else b.goodWins = 0;
+    b.stuckN = 0; b.goodWins = 0;                            // not stuck this try: the doubling starts again
   }
   b.pw = 0; b.want = 0; b.mvx = 0; b.mvy = 0; b.px = b.x; b.py = b.y; b.touched = false;
 }
