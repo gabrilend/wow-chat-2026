@@ -52,6 +52,22 @@ counted as stuck, after the measure was turned toward the target):
 > bots come across it and let it be known. This is how you pathfind
 > through dynamic environments, you navigate and then it is known.
 
+And then, replacing backing up with orbiting:
+
+> okay how about this - if a buddy is on an uninterrupted or redirected
+> movement order for a second or more (configurable, down usually) then
+> we test - are they in a state where they haven't travelled as far as
+> they probably should have been able to? Basically, snapshot their
+> position every second or so, and the position where they were standing.
+> Then do a range check from that position to the target position. if
+> that's less than the distance they were able to have travelled, then
+> they're stuck on something and need to orbit the obstacle in front of
+> them. We can tell they're obstacles because they're unpathable on the
+> map. Those things. Orbit around them, either clockwise or
+> counter-clockwise. until you get to a position on the other side that
+> is in line-of-sight of a forward position on the path you're trying to
+> follow. Then you should move along that.
+
 ## Current Behavior
 
 **Built 2026-10-28 in the ground sandbox** (pictures 034-047, every

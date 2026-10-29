@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-28 22:08:45
+Generated on: 2026-10-28 22:53:22
 Models: claude-opus-5-5
 
 ## Contents
@@ -101,6 +101,10 @@ Models: claude-opus-5-5
     and the player experience, and I just answered whether players can get a
     pop-up dialogue at login (yes, nothing built yet). Next: your choice on
     whether that window carries the news itself or points to a mailbox letter.
+24. 2026-10-28 22:11, after Request 85 - Goal: make the buddy bots spread and
+    wander naturally in the ground sandbox; the new "wedges" mode is built,
+    committed and backed up. Next: watch it and tell me whether the 30-second
+    move rate and the reversal and jump-across chances feel right.
 
 --------------------------------------------------------------------------------
 
@@ -8816,6 +8820,80 @@ firefox /mnt/kaun/wow-chat-2026/docs/HTML/archive/ground-sandbox/index.html
 The numbers I chose are guesses and need your eye: a move every 30 seconds,
 about 1 in 7 moves reversed, about 1 in 10 jumping across the arena. Do they
 feel right when you watch?
+
+--------------------------------------------------------------------------------
+
+### User Request 86
+
+now they're just uncomfortably rubbing up against anything they can touch. Are
+they horny? oh god tell me they are
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 86
+
+> Not horny, I'm afraid, just nearsighted. Two things make them hug everything:
+> 1. **They look only one step ahead,** about a quarter of a yard. So they turn
+>    away from a wall only when they're already touching it, then slide along
+>    it.
+> 2. **They push into trees for a whole second.** Since the last change they
+>    don't know about doodads until refused, and they kept pushing until the
+>    one-second check came round: 61,206 refused steps in five minutes.
+>
+> The fix:
+> 1. Look 2 yards ahead when steering, so they turn away before touching
+>    anything.
+> 2. Learn a doodad on the first refused step. The spot becomes a known wall at
+>    once, so the very next step avoids it.
+
+> Now the two small functions behind that, and the comment above the refusal
+> brought up to date:
+
+> Still working on the rubbing: the steering now checks the whole stretch ahead.
+> Rebuilding and photographing:
+
+*[commit] b786c90a6 in wow-chat-2026 - *
+
+> The backup commit didn't land again. It fails whenever it runs in the same
+> command right after the claim, and works when run on its own. Running it on
+> its own:
+
+*[commit] 47bb95dc0 in wow-chat-2026 - *
+
+Not horny, I'm afraid, just nearsighted, and they've stopped rubbing. In five
+minutes they now hit something 104 times, down from 61,206, and there's no
+rubbing in the latest picture. Committed as b786c90a6, with the page backup as
+47bb95dc0.
+
+**What caused it:**
+1. **They looked a quarter of a yard ahead,** so a bot only turned once it was
+   already touching something, then slid along it.
+2. **They didn't know about trees and rocks** (since the last change) until they
+   bumped one, and then kept pushing into it for up to a second before reacting.
+
+**What fixed it:**
+- **Looking ahead:** a bot checks its next step, 1 yard and 2 yards ahead, and
+  turns before it touches anything.
+- **Being shown the obstacle:** when a bot walks into a tree or rock, it and
+  every other bot learn that object's whole outline at once and steer round it
+  from then on. Learned objects are drawn orange. So each tree or rock is hit
+  only once.
+
+**Two tries didn't work, kept as pictures 052–053:**
+- Marking the spot it hit as a wall: the spot was usually the square the bot was
+  standing in, and standing there wiped the mark straight away.
+- Checking only the point 2 yards ahead: that jumped right over thin tree
+  trunks.
+
+**Side effect:** the bots spread further apart, about 20 yards on average, up
+from 15.
+
+**Backups:** there are now 17 saved versions. The backup commit twice failed
+silently when run straight after another command, so I now check each one
+landed. You can browse them at:
+```
+firefox /mnt/kaun/wow-chat-2026/docs/HTML/archive/ground-sandbox/index.html
+```
 
 --------------------------------------------------------------------------------
 

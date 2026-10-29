@@ -39,6 +39,7 @@
   <label>Shape turns <input id="formTurn" type="checkbox" checked><span id="formTurnN">turning</span></label>
   <label>Tails <input id="tail" type="range" min="0" max="120" value="40"><span id="tailN">40 s</span></label>
   <label>Steepest <input id="slope" type="range" min="15" max="85" value="50"><span id="slopeN">50°</span></label>
+  <label>Stuck check <input id="check" type="range" min="0.25" max="3" step="0.25" value="1"><span id="checkN">1 s</span></label>
   <label>Ground <select id="shade"><option value="2" selected>hills and blocks</option><option value="1">hills</option><option value="0">flat</option></select></label>
   <label>Live players <input id="live" type="checkbox"><span id="liveN">off</span></label>
   <div>
@@ -3369,6 +3370,11 @@ function stepFlock(dt) {
       if (st === "standing") { b.vx = 0; b.vy = 0; return; }
       if (st) [tx, ty] = st;
     }
+    // The order and the orbit (617e16h): the target is the bot's movement
+    // order; a bot not getting closer to it as fast as it could orbits the
+    // obstacle until it can see a point ahead on its way (orbitStep).
+    // Formation members hold places, not orders.
+    if (bi >= formed) { const ob = orbitStep(b, tx, ty, dt); if (ob) [tx, ty] = ob; }
     // Toward the target. A formation member slows as it nears its place
     // (it should stand in it, not circle it) and hurries when behind; it
     // keeps only a body's width from others (its places are 3 yards apart)
@@ -3391,10 +3397,8 @@ function stepFlock(dt) {
     b.vx += ax * Math.min(1, dt * 2.2); b.vy += ay * Math.min(1, dt * 2.2);
     const sp = Math.hypot(b.vx, b.vy), cap = member ? SPEED * 1.5 : f ? SPEED : SPEED * 1.6;
     if (sp > cap) { b.vx *= cap / sp; b.vy *= cap / sp; }
-    // Backing up (617e16h): a bot found stuck walks straight back the way
-    // it came until its back-up distance is used up (the walls below still
-    // have their say), then tries again.
-    if (b.backLeft > 0) { b.vx = b.bx * SPEED; b.vy = b.by * SPEED; b.backLeft -= SPEED * dt; }
+    // (Backing up when stuck, 2026-10-28 versions 041-054, gave way to
+    // orbiting the obstacle: orbitStep, before the target is steered to.)
     // The ground (issue 617e16c): a step that would land on blocked ground
     // (too steep, or in a doodad) is turned aside, 20 degrees at a time,
     // left and right in turn (the smaller turn first), up to 140; the first
@@ -3476,6 +3480,83 @@ const WALL_MEMORY = 1.5;                                      // seconds a bot k
 const LOOK_AHEAD = 2;                                         // yards a bot looks ahead when steering (617e16h)
 // }}}
 
+// {{{ orbiting what holds a bot back (issue 617e16h, the owner's rule)
+// "if a buddy is on an uninterrupted or redirected movement order for a
+// second or more (configurable, down usually) then we test - are they in a
+// state where they haven't travelled as far as they probably should have
+// been able to? ... snapshot their position every second or so ... range
+// check from that position to the target position. if that's less than the
+// distance they were able to have travelled, then they're stuck on
+// something and need to orbit the obstacle in front of them ... Orbit
+// around them, either clockwise or counter-clockwise. until you get to a
+// position on the other side that is in line-of-sight of a forward
+// position on the path you're trying to follow. Then you should move along
+// that."
+//
+// The order: the bot's target this step (b.order). The same order while
+// the target stays within ORDER_SAME yards of where it was. Each "Stuck
+// check" seconds (the panel's slider, 1 to start) of the same order: how
+// much closer it got to the target, against ABLE_SHARE of how far it could
+// have walked (full speed for that time). Less, and still more than
+// ORDER_ARRIVE yards away: stuck, an orbit begins, clockwise or
+// counter-clockwise at random. (Caught by the world, trackProgress, starts
+// one too.)
+//
+// Orbiting: each step it heads along the obstacle, keeping it on one side:
+// from its heading turned ORBIT_IN toward the obstacle's side, it turns away
+// 15 degrees at a time until 2 yards ahead are clear of what the map marks
+// unpathable (what it knows: steep ground, doodads it has been shown, known
+// walls, the area's edge). It leaves the orbit when it can see its target
+// (a straight line to it clear of the same) and is closer to it than where
+// the orbit began; after ORBIT_LIMIT seconds it turns round (the other way
+// round the obstacle), and after two turns it gives up and walks on.
+const ORDER_SAME = 3, ORDER_ARRIVE = 6, ABLE_SHARE = 0.5, ORBIT_IN = 1.3, ORBIT_LIMIT = 15;
+const orbits = { begun: 0, sight: 0, flips: 0, gaveUp: 0 };
+function unpathable(x, y, f) {
+  return steepAt(x, y) || knownDoodadAt(x, y) || knownWall(x, y) || (f && f.contains && !f.contains(x, y));
+}
+function inSight(b, tx, ty, f) {
+  const d = Math.hypot(tx - b.x, ty - b.y), n = Math.ceil(d);
+  for (let i = 1; i < n; i++) if (unpathable(b.x + (tx - b.x) * i / n, b.y + (ty - b.y) * i / n, f)) return false;
+  return true;
+}
+function startOrbit(b, tx, ty) {
+  b.orbit = { side: Math.random() < 0.5 ? 1 : -1, tx, ty, fromD: Math.hypot(tx - b.x, ty - b.y), t: simT, turns: 0,
+              h: Math.atan2(ty - b.y, tx - b.x) };
+  orbits.begun++; stuck.events++;
+}
+function orbitStep(b, tx, ty, dt) {
+  const f = inPlay, d = Math.hypot(tx - b.x, ty - b.y);
+  b.order = [tx, ty];
+  if (!b.orbit) {
+    // the same order? (snapshot: where it stood, how far from the target, when)
+    if (!b.snap || Math.hypot(b.snap.tx - tx, b.snap.ty - ty) > ORDER_SAME) { b.snap = { tx, ty, d, t: simT }; return null; }
+    const check = +$("check").value, el = simT - b.snap.t;
+    if (el < check) return null;
+    const closer = b.snap.d - d;
+    if (d > ORDER_ARRIVE && closer < ABLE_SHARE * SPEED * el) startOrbit(b, tx, ty);
+    b.snap = { tx, ty, d, t: simT };
+    if (!b.orbit) return null;
+  }
+  const o = b.orbit;
+  // the order changed far from the orbit's: the orbit is for that order only
+  if (Math.hypot(o.tx - tx, o.ty - ty) > ORDER_SAME * 4) { b.orbit = null; b.snap = null; return null; }
+  if (d < o.fromD - 0.5 && inSight(b, tx, ty, f)) { b.orbit = null; b.snap = null; orbits.sight++; return null; }
+  if (simT - o.t > ORBIT_LIMIT) {
+    if (++o.turns > 2) { b.orbit = null; b.snap = null; orbits.gaveUp++; return null; }
+    o.side = -o.side; o.t = simT; orbits.flips++;
+  }
+  // along the obstacle: from the heading turned in toward it, turn away until 2 yards ahead are clear
+  const sp = Math.hypot(b.vx, b.vy);
+  if (sp > 0.5) o.h = Math.atan2(b.vy, b.vx);
+  for (let k = 0; k <= 16; k++) {
+    const a = o.h + o.side * ORBIT_IN - o.side * k * Math.PI / 12;
+    if (!unpathable(b.x + Math.cos(a) * 2, b.y + Math.sin(a) * 2, f)) { o.h = a; return [b.x + Math.cos(a) * 4, b.y + Math.sin(a) * 4]; }
+  }
+  return null;
+}
+// }}}
+
 // {{{ stuck: back up, try again, and map the space (issue 617e16h)
 // The owner, 2026-10-28: "if they're moving at full speed in a direction
 // but they aren't making progress moving in that direction, then that means
@@ -3502,9 +3583,9 @@ const LOOK_AHEAD = 2;                                         // yards a bot loo
 // mark mends itself); standing in a buffer doesn't clear it, since a
 // crossing walks through buffers. Started afresh with each zone.
 const PROG_WINDOW = 1, FULL_SHARE = 0.6;
-const BACK_FIRST = 2, BACK_MAX = 64, KNOWN_CELL = 2;
+const KNOWN_CELL = 2;
 const known = new Map();
-const stuck = { events: 0, backedYards: 0, deepest: 0, bumps: 0 };
+const stuck = { events: 0, deepest: 0, bumps: 0 };
 const cellKey = (x, y) => Math.floor(x / KNOWN_CELL) + "," + Math.floor(y / KNOWN_CELL);
 function knownWall(x, y) { return known.get(cellKey(x, y)) === 2; }
 function knownBuffer(x, y) { return known.get(cellKey(x, y)) === 3; }
@@ -3527,10 +3608,9 @@ function learnOpen(x, y) { const k = cellKey(x, y); if (known.get(k) !== 3) know
 // time in a row. A window not caught starts the doubling again.
 const CAUGHT_SHARE = 0.95, TRACK_CELLS = 3;
 function trackProgress(b, mx, my, dt) {
-  if (b.pw === undefined || b.backLeft > 0) {                // a new window (and none measured while backing up)
+  if (b.pw === undefined) {                                 // a new window
     b.pw = 0; b.want = 0; b.mvx = 0; b.mvy = 0; b.px = b.x; b.py = b.y; b.refusedX = undefined;
     if (b.stuckN === undefined) { b.stuckN = 0; b.goodWins = 0; }
-    if (b.backLeft > 0) return;
   }
   b.pw += dt; b.want += Math.hypot(mx, my); b.mvx += mx; b.mvy += my;   // the inputs, as moves
   if (b.pw < PROG_WINDOW) return;
@@ -3538,8 +3618,9 @@ function trackProgress(b, mx, my, dt) {
   const got = (b.x - b.px) * ux + (b.y - b.py) * uy;          // how far it got along its inputs' way
   if (b.want >= FULL_SHARE * SPEED * b.pw && got < CAUGHT_SHARE * Math.min(b.want, ml)) {
     b.stuckN++; b.goodWins = 0;
-    b.backLeft = Math.min(BACK_FIRST * Math.pow(2, b.stuckN - 1), BACK_MAX);
-    b.bx = -ux; b.by = -uy;
+    // no longer backing up: an orbit round what holds it (orbitStep, the
+    // owner's rule of 2026-10-28) is what a caught bot does now
+    if (!b.orbit && b.order) startOrbit(b, b.order[0], b.order[1]);
     const wx = b.refusedX !== undefined ? b.refusedX : b.x + ux * KNOWN_CELL, wy = b.refusedX !== undefined ? b.refusedY : b.y + uy * KNOWN_CELL;
     known.set(cellKey(wx, wy), 2);
     // the track that led there, dispreferred: the last TRACK_CELLS cells back along it
@@ -3554,7 +3635,7 @@ function trackProgress(b, mx, my, dt) {
     // and again, doubling their back-ups)
     if (b.wstate === "cross") b.crossFor = 0;
     if (b.wstate === "aside") b.asideFor = 0;
-    stuck.events++; stuck.backedYards += b.backLeft; stuck.deepest = Math.max(stuck.deepest, b.stuckN);
+    stuck.deepest = Math.max(stuck.deepest, b.stuckN);       // (startOrbit counts the event)
   } else {
     b.stuckN = 0; b.goodWins = 0;                            // not caught this try: the doubling starts again
   }
@@ -3813,7 +3894,7 @@ function measure() {
   {
     let walls = 0; for (const v of known.values()) if (v === 2) walls++;
     const share = knownShare(f);
-    lines.push(`stuck           ${stuck.events} times, backed up ${Math.round(stuck.backedYards)} yd, deepest ${stuck.deepest} in a row`);
+    lines.push(`stuck           ${stuck.events} times (orbits begun ${orbits.begun}, left by sight ${orbits.sight}, turned round ${orbits.flips}, given up ${orbits.gaveUp})`);
     let buffers = 0; for (const v of known.values()) if (v === 3) buffers++;
     lines.push(`mapped          ${share === null ? "-" : Math.round(100 * share) + "% of the part known open"}, ${walls} known walls`);
     lines.push(`caught          ${stuck.bumps} times; ${steer.refused} steps refused by the world; ${buffers} buffer cells on the tracks that led there`);
@@ -4027,7 +4108,8 @@ function draw() {
     const [px, py] = yd2px(b.x, b.y);
     ctx.beginPath(); ctx.arc(px, py, rpx, 0, 6.283); ctx.fillStyle = colour; ctx.fill();
     // backing up (617e16h): a white ring, so it can be seen happening
-    if (b.backLeft > 0) { ctx.beginPath(); ctx.arc(px, py, rpx * 2.2, 0, 6.283); ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5; ctx.stroke(); }
+    // orbiting an obstacle (617e16h): a cyan ring
+    if (b.orbit) { ctx.beginPath(); ctx.arc(px, py, rpx * 2.2, 0, 6.283); ctx.strokeStyle = "#5ef0ff"; ctx.lineWidth = 1.5; ctx.stroke(); }
   });
   ctx.shadowBlur = T.glow; ctx.shadowColor = T.player;
   const [ppx, ppy] = yd2px(player.x, player.y);
@@ -4109,6 +4191,7 @@ $("live").onchange = () => {
 $("tail").oninput = () => { $("tailN").textContent = $("tail").value + " s"; };
 $("slope").oninput = () => { $("slopeN").textContent = $("slope").value + "°"; paintGround(); inPlay = null; active = -2; comboCache.clear(); stepPlayer(0); };   // the areas are worked out again for the new limit
 $("formN").oninput = () => { $("formNN").textContent = $("formN").value; };
+$("check").oninput = () => { $("checkN").textContent = $("check").value + " s"; };   // seconds of one order between stuck checks (617e16h)
 $("formTurn").onchange = () => { $("formTurnN").textContent = $("formTurn").checked ? "turning" : "rigid"; };
 $("shade").onchange = () => paintGround();
 $("theme").onchange = () => { buildContinent(+$("continent").value, $("theme").value); };
@@ -4142,6 +4225,7 @@ resize();
 const Q = new URLSearchParams(location.hash.slice(1));
 if (Q.has("slope")) { $("slope").value = Q.get("slope"); $("slopeN").textContent = Q.get("slope") + "°"; }
 if (Q.has("shade")) $("shade").value = Q.get("shade");
+if (Q.has("check")) { $("check").value = Q.get("check"); $("checkN").textContent = Q.get("check") + " s"; }   // check: seconds between stuck checks
 //   form: a formation (line, column, wedge, ring, square); formN: how many
 //     bots form it; formTurn=0: rigid (617e16e); turn=2: wanderers (617e16d)
 if (Q.has("form")) $("form").value = Q.get("form");
