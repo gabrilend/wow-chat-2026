@@ -13,7 +13,10 @@
 **Built 2026-10-27**: `scripts/generate-zone-maps [--map M]` reads the
 server's map files (each ~33-yard square's sub-zone label) and the client's
 area table (names, and which area is inside which), and writes one file
-per zone, `assets/zone-maps/<map>-<zone>.lua`: the zone's name, its box of
+per zone, `assets/zone-maps/<map>-<zone>.lua` (ocean squares left out
+since 2026-10-28, read from the map files' water section: the sea along a
+coast carries the coast's label, and drew as great rectangles; that left
+81 zones with land, from 196): the zone's name, its box of
 squares, each square's sub-zone, the sub-zones' names, and each
 sub-zone's tint, chosen so touching sub-zones differ (617e7's six tints of
 grey, darker and nudged toward red, green or blue). A square's zone is the

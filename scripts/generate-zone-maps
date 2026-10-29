@@ -11,6 +11,7 @@
 -- scripts/generate-barrens-data's way (617e7) made for every zone:
 --   the server's map files (data-files/maps/MMMXXYY.map): each ~33-yard
 --     square's area label (a sub-zone, or a zone itself where it has none);
+--   (ocean squares are left out: the map files' water section marks them);
 --   the client's area table (data-files/dbc/AreaTable.dbc): names, and
 --     which area is inside which; a square's zone is the top of its area's
 --     parent chain.
@@ -32,7 +33,12 @@ local DIR, MAPS_WANTED = "/mnt/kaun/wow-chat-2026", {}
 do
     local i = 1
     while i <= #arg do
-        if arg[i] == "--map" then i = i + 1; MAPS_WANTED[#MAPS_WANTED + 1] = tonumber(arg[i])
+        if arg[i] == "--help" then
+            -- the usage lines of the header above, as they stand
+            local f = io.open(arg[0]); local text = f:read("*a"); f:close()
+            io.write((text:match("%-%- (Usage:.-)\n\nlocal") or "see the header of " .. arg[0]):gsub("\n%-%- ?", "\n"), "\n")
+            os.exit(0)
+        elseif arg[i] == "--map" then i = i + 1; MAPS_WANTED[#MAPS_WANTED + 1] = tonumber(arg[i])
         elseif arg[i] == "--one" then i = i + 1; MAPS_WANTED = { tonumber(arg[i]) }; ONE = true
         else DIR = arg[i] end
         i = i + 1
@@ -70,8 +76,13 @@ ffi.cdef [[
 typedef struct { uint32_t magic, version, build, areaOffset, areaSize, heightOffset, heightSize,
                  liquidOffset, liquidSize, holesOffset, holesSize; } zm_map_header;
 typedef struct { uint32_t fourcc; uint16_t flags; uint16_t gridArea; } zm_area_header;
+typedef struct __attribute__((packed)) { uint32_t fourcc; uint8_t flags; uint8_t liquidFlags; uint16_t liquidType;
+                 uint8_t offsetX, offsetY, width, height; float liquidLevel; } zm_liquid_header;
 ]]
 local MAP_AREA_NO_AREA = 1
+-- the water section (the server's GridTerrainData): per square a type and
+-- flags, or (MAP_LIQUID_NO_TYPE) one set of flags for the whole tile
+local MAP_LIQUID_NO_TYPE, MAP_LIQUID_TYPE_OCEAN = 0x01, 0x02
 -- }}}
 
 -- {{{ local function read_dbc(path)
@@ -112,7 +123,7 @@ end
 -- {{{ the squares of this map, bucketed by zone
 local MAP_ID = MAPS_WANTED[1]
 local by_zone = {}                                   -- zone -> { [X * 1024 + Y] = area }
-local files = 0
+local files, seas = 0, 0
 do
     local ls = io.popen(("ls '%s' | grep '^%03d[0-9][0-9][0-9][0-9]\\.map$'"):format(MAPS, MAP_ID))
     for name in ls:lines() do
@@ -123,12 +134,26 @@ do
         local p = ffi.cast("const uint8_t*", data)
         local mh = ffi.cast("const zm_map_header*", p)
         if mh.magic ~= 0x5350414D or mh.version ~= 9 then error("generate-zone-maps: ERROR " .. name .. " is not a version-9 map file") end
+        -- ocean squares are left out (2026-10-28): the sea round a coast
+        -- carries the coast's zone label, and drew as great rectangles of
+        -- "zone" out to the tile's edge on the sandbox page
+        local ocean = {}
+        if mh.liquidOffset ~= 0 then
+            local lh = ffi.cast("const zm_liquid_header*", p + mh.liquidOffset)
+            if bit.band(lh.flags, MAP_LIQUID_NO_TYPE) ~= 0 then
+                if bit.band(lh.liquidFlags, MAP_LIQUID_TYPE_OCEAN) ~= 0 then for i = 0, 255 do ocean[i] = true end end
+            else
+                local lf = ffi.cast("const uint8_t*", p + mh.liquidOffset + ffi.sizeof("zm_liquid_header") + 512)
+                for i = 0, 255 do if bit.band(lf[i], MAP_LIQUID_TYPE_OCEAN) ~= 0 then ocean[i] = true end end
+            end
+        end
         if mh.areaOffset ~= 0 then
             local ah = ffi.cast("const zm_area_header*", p + mh.areaOffset)
             local ids = (bit.band(ah.flags, MAP_AREA_NO_AREA) == 0) and ffi.cast("const uint16_t*", p + mh.areaOffset + ffi.sizeof("zm_area_header")) or nil
             for i = 0, 255 do
                 local id = ids and ids[i] or ah.gridArea
-                if id ~= 0 then
+                if ocean[i] then seas = seas + 1
+                elseif id ~= 0 then
                     local z = zone_of(id)
                     local lx, ly = math.floor(i / 16), i % 16
                     by_zone[z] = by_zone[z] or {}
@@ -221,5 +246,5 @@ for zone, squares in pairs(by_zone) do
     f:close()
     written, squares_total = written + 1, squares_total + n
 end
-print(("generate-zone-maps: map %d: %d zones, %d squares, from %d map files -> %s/%d-*.lua"):format(MAP_ID, written, squares_total, files, OUT:sub(#DIR + 2), MAP_ID))
+print(("generate-zone-maps: map %d: %d zones, %d squares (%d ocean squares left out), from %d map files -> %s/%d-*.lua"):format(MAP_ID, written, squares_total, seas, files, OUT:sub(#DIR + 2), MAP_ID))
 -- }}}

@@ -3,7 +3,7 @@
 -- Square (X, Y): the server's ~33-yard squares; X grows southward, Y westward. Row r is X0 + r - 1,
 -- column c is Y1 - c + 1 (north up, east right). A row: index*count runs over `subzones` (0: not the zone).
 return {
-    map = 1, zone = 493, name = "Moonglade", squares = 1864,
+    map = 1, zone = 493, name = "Moonglade", squares = 1833,
     X0 = 253, X1 = 299, Y0 = 560, Y1 = 607, square_yards = 33.333331, grid_yards = 533.3333,
     subzones = {
         { id = 493, name = "Moonglade", tint = 1 },
@@ -13,10 +13,10 @@ return {
         { id = 2363, name = "Stormrage Barrow Dens", tint = 3 },
     },
     rows = {
-        "1*38,0*10",
-        "1*38,0*10",
-        "1*38,0*10",
-        "1*38,0*10",
+        "1*27,0*21",
+        "1*30,0*18",
+        "1*31,0*17",
+        "1*32,0*4,1*1,0*11",
         "1*38,0*10",
         "1*38,0*10",
         "1*38,0*10",
