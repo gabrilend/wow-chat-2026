@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-28 21:34:19
+Generated on: 2026-10-28 21:38:40
 Models: claude-opus-5-5
 
 ## Contents
@@ -8507,6 +8507,79 @@ most likely to work first:
 
 Which should it be? And for 1 or 2, does 250 yards (or 45 yards) sound about
 right?
+
+--------------------------------------------------------------------------------
+
+### User Request 81
+
+can we make it so we can drag the map with middle click just panning
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 81
+
+> Adding middle-button drag panning to the ground sandbox:
+
+> A screenshot can't show dragging, so picture 046 only shows the new hint line.
+> Filing its notes, adding the control to the issue, and committing:
+
+*[commit] a974d6287 in wow-chat-2026 - *
+
+Middle-click drag panning is in the ground sandbox: hold the middle button and
+drag, and the map follows the pointer at the current zoom. It only pans and
+doesn't move the player. I've only checked that the page's code loads; the drag
+itself can't be shown in a screenshot, so try it after reloading:
+```
+firefox /mnt/kaun/wow-chat-2026/docs/HTML/ground-sandbox.html
+```
+- **Scroll wheel:** still zooms.
+- **Firefox's own middle-click behaviour:** its autoscroll and paste are turned
+  off over the map.
+- **The hint line** at the bottom now mentions it.
+
+Committed as a974d6287. The original fish sandbox doesn't have this; it's one
+paste if you want it there too.
+
+When you're back on the bot areas: should big clusters be capped at a size
+(about 250 yards), joined only from closer spawns (45 yards instead of 90), or
+split by named sub-zone?
+
+--------------------------------------------------------------------------------
+
+### User Request 82
+
+I don't understand. they're walking around ,and dropping a red pixel every once
+in a while? what's up wtih that?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 82
+
+Those red dots are **known walls**, from the stuck rule you asked for. When a
+bot decides it's stuck, it backs up and marks the 2-yard square just in front of
+it as a wall on the map all the bots share. From then on every bot steers round
+that square. They show as small dark red squares, which at your zoom look like
+single pixels.
+
+Most of them are false walls. Since my last stuck fix, a bot counts as stuck
+whenever it makes little progress *toward its target*. A bot walking round a
+steep patch to reach something behind it also makes little progress toward the
+target, so it gets judged stuck in open ground and drops a wall on perfectly
+walkable land. That's why they appear while the bots are just walking around. A
+false wall clears itself if a bot later stands on that square, but meanwhile the
+bots steer round empty ground.
+
+The amber squares you may also see are the "clearance" patches left by bumps.
+
+How it could be fixed, most likely first:
+1. **Mark a wall only on a real blockage.** Drop a wall only when the bot barely
+   moved at all in that second, or when the square ahead is actually steep or
+   has a tree in it. Detours still trigger a back-up but leave no marks.
+2. **Keep the marks but stop drawing them.** They'd still steer the bots, just
+   out of sight.
+3. **Drop walls entirely** and keep only the back-up-and-try-again part.
+
+Which do you want? I'd go with the first.
 
 --------------------------------------------------------------------------------
 

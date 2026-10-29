@@ -30,6 +30,28 @@ And, the same evening, after the first build:
 > implies given buffer spaces that bots route around or walk through if
 > going on a straight shape.
 
+And, seeing red marks dropped on open ground (known walls from detours
+counted as stuck, after the measure was turned toward the target):
+
+> it's moving, in some direction, and has moved farther than it's
+> distance would suggest. Or rather, it has moved less far than it's
+> capability would suggest after following it's path. Basically... after N
+> seconds or moments, draw a line to your position you were N seconds or
+> moments ago. Then, if you made less progress to your goal than your
+> intended movement input array (the array of movement actions you've
+> sent to the server to deterministically update your location) the
+> client sends both, "here's the keypresses, and here's the position" and
+> if they ever differ, the server wins, and pulls the client back. It's
+> very jarring.
+>
+> ... anyway, if you made less progress, as a bot, we know you're not
+> cheating. Instead, you must have been caught on something, or the
+> geometry disagreed with your movement resolution pathfinding duties
+> believed. And so, you should try and walk around that section.
+> disprefer the movement track that got you onto that path. let other
+> bots come across it and let it be known. This is how you pathfind
+> through dynamic environments, you navigate and then it is known.
+
 ## Current Behavior
 
 **Built 2026-10-28 in the ground sandbox** (steps 1-3; pictures 034, 035),

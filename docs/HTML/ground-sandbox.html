@@ -2717,6 +2717,19 @@ function paintGround() {
 // Whether a bot's middle may stand at (x, y): not on ground steeper than
 // the limit (the nearest height point's), not inside a doodad's grown
 // footprint. Off the zone's grid, nothing is known: open.
+// What the bots know and what the world holds (617e16h, the owner: "the
+// geometry disagreed with your movement resolution pathfinding duties
+// believed"): a bot steers by what it knows, the ground's steepness (as the
+// navigation mesh knows it) and what bots have learned (known walls,
+// buffers); the world holds that and the doodads too, and a step into one
+// is refused (the server pulling the client back). blocked() is the world;
+// steepAt() is the part of it a bot knows before it bumps into anything.
+function steepAt(x, y) {
+  const g = GROUND; if (!g) return false;
+  const c = Math.round((x - g.sx0) / g.step), r = Math.round((y - g.sy0) / g.step);
+  if (c < 0 || r < 0 || c >= g.cols || r >= g.rows) return false;
+  return g.steep[r * g.cols + c] === 1;
+}
 function blocked(x, y) {
   const g = GROUND; if (!g) return false;
   const c = Math.round((x - g.sx0) / g.step), r = Math.round((y - g.sy0) / g.step);
@@ -3269,16 +3282,6 @@ function stepFlock(dt) {
     // it came until its back-up distance is used up (the walls below still
     // have their say), then tries again.
     if (b.backLeft > 0) { b.vx = b.bx * SPEED; b.vy = b.by * SPEED; b.backLeft -= SPEED * dt; }
-    // What it meant to do this step: straight for its target at the speed it
-    // wants (617e16h). Not its velocity: the walls turn that along them, and
-    // a bot scraping along a wall then counted as getting where it meant,
-    // so it was hardly ever stuck and hardly ever backed up (the owner,
-    // 2026-10-28: "bots are still bumping into walls. they don't seem to be
-    // backing up at all"). Backing up: what it means is the back-up itself.
-    // Within ARRIVED yards of its target it means nothing: arriving isn't
-    // being stuck.
-    const aim = b.backLeft > 0 ? 1 : dl > ARRIVED ? want / dl : 0;
-    const meantX = b.backLeft > 0 ? b.vx : dx * aim, meantY = b.backLeft > 0 ? b.vy : dy * aim;
     // The ground (issue 617e16c): a step that would land on blocked ground
     // (too steep, or in a doodad) is turned aside, 20 degrees at a time,
     // left and right in turn (the smaller turn first), up to 140; the first
@@ -3299,10 +3302,13 @@ function stepFlock(dt) {
     // (as hard walls they sealed narrow passages: picture 038, 220 steps a
     // second with no way at all). A bot on a straight crossing walks through
     // buffers from the start.
-    const hard = (x, y) => blocked(x, y) || knownWall(x, y) || (f && f.contains && f.contains(b.x, b.y) && !f.contains(x, y));
+    // All of this is the bot's own steering, by what it knows: steep ground
+    // (steepAt), known walls, buffers, the edge. The doodads it doesn't know
+    // until it has been refused by one (below).
+    const hard = (x, y) => steepAt(x, y) || knownWall(x, y) || (f && f.contains && f.contains(b.x, b.y) && !f.contains(x, y));
     const soft = (x, y) => hard(x, y) || (b.wstate !== "cross" && knownBuffer(x, y));
     const nx = b.x + b.vx * dt, ny = b.y + b.vy * dt;
-    if (soft(nx, ny) && !blocked(b.x, b.y)) {
+    if (soft(nx, ny) && !steepAt(b.x, b.y)) {
       const sides = b.wallSide ? [b.wallSide, -b.wallSide] : (Math.random() < 0.5 ? [1, -1] : [-1, 1]);
       let found = 0;
       for (const walled of [soft, hard]) {
@@ -3320,20 +3326,21 @@ function stepFlock(dt) {
       if (!found && !hard(nx, ny)) found = b.wallSide || 1;  // through the buffer, as it was heading
       if (found) { steer.turned++; b.wallSide = found; b.wallFor = WALL_MEMORY; }
       else { b.vx = 0; b.vy = 0; steer.stopped++; }
-      // where it met the obstacle (617e16h: a bump leaves a buffer); only a
-      // real one (steep ground, a doodad, a known wall, the edge): a buffer
-      // met is not a bump, or buffers would breed buffers (seen 2026-10-28,
-      // picture 036: 133 bumps, 532 buffer cells, the flock jammed)
-      if (blocked(nx, ny) || knownWall(nx, ny) || (f && f.contains && f.contains(b.x, b.y) && !f.contains(nx, ny))) {
-        b.touched = true; b.touchX = nx; b.touchY = ny;
-      }
     } else if (b.wallSide && (b.wallFor -= dt) <= 0) b.wallSide = 0;
-    b.x += b.vx * dt; b.y += b.vy * dt;
+    // The bot's input this step (its "keypresses"), and the world's answer:
+    // a step into anything the world holds that the bot didn't know (a tree,
+    // a rock, a hut) is refused, and the bot stays where it was (the server
+    // pulling the client back). Both are kept, and compared each window
+    // (trackProgress). A bot already standing in one (spawned there) walks
+    // out unrefused.
+    const stepX = b.vx * dt, stepY = b.vy * dt;
+    if (blocked(b.x + stepX, b.y + stepY) && !blocked(b.x, b.y)) { b.refusedX = b.x + stepX; b.refusedY = b.y + stepY; steer.refused++; }
+    else { b.x += stepX; b.y += stepY; }
     learnOpen(b.x, b.y);
-    trackProgress(b, meantX, meantY, dt);
+    trackProgress(b, stepX, stepY, dt);
   });
 }
-const steer = { turned: 0, stopped: 0, since: 0 };            // counted between measures
+const steer = { turned: 0, stopped: 0, refused: 0, since: 0 };   // counted between measures
 const WALL_MEMORY = 1.5;                                      // seconds a bot keeps to its side of a wall
 // }}}
 
@@ -3344,62 +3351,71 @@ const WALL_MEMORY = 1.5;                                      // seconds a bot k
 // try again. If it happens again, then they back up twice as far, and so
 // on, and keep trying until we've fully mapped out the available space."
 //
-// Each bot, over each PROG_WINDOW seconds: how far it meant to go (its
-// speed before the walls, summed) and how far it got along that way. Meant
-// at least FULL_SHARE of full speed but got under STUCK_SHARE of it: stuck.
-// Stuck the n-th time in a row: back up BACK_FIRST x 2^(n-1) yards (at most
-// BACK_MAX), straight away from where it meant to go; the cell just ahead
-// becomes a known wall. "If it happens again" is the very next try: one
-// window that isn't stuck and the count starts again (it was three good
-// windows in a row; a bot going round a wall to a target behind it rarely
-// gets three, so its back-ups doubled to 64 yards: picture 041, 18,046
-// yards backed up in four minutes). ARRIVED: within this many yards of
-// its target a bot means nothing, and isn't judged.
+// How a bot is judged caught (its inputs against where it got), and what
+// it does then, is written above trackProgress. Earlier measures, each a
+// committed version: the bot's velocity after the walls turned it (a bot
+// scraping along a wall looked fine: never backed up); the straight way to
+// its target (a detour round a patch looked stuck: false walls dropped on
+// open ground, picture 041-043, "dropping a red pixel every once in a
+// while"); three good windows to reset the doubling (back-ups grew to 64
+// yards). The bots also knew every doodad before, so nothing ever refused
+// them; now they know only steep ground until refused (steepAt).
 //
 // known: the zone's map the bots share, KNOWN_CELL-yard cells by "i,j": 1
-// open (a bot has stood there), 2 a wall (a bot got stuck facing it). A bot
-// standing in a cell marked a wall proves it open, so a wrong mark (stuck
-// in a crowd, not on a wall) mends itself. Started afresh with each zone.
-const PROG_WINDOW = 1, FULL_SHARE = 0.6, STUCK_SHARE = 0.25, ARRIVED = 4;
+// open (a bot has stood there), 2 a wall (a step was refused there), 3 a
+// buffer (the track that led to a refusal: dispreferred, walked round when
+// a way round exists; the owner: "touching objects in this way, implies
+// given buffer spaces that bots route around or walk through if going on a
+// straight shape"). A bot standing in a wall cell proves it open (a wrong
+// mark mends itself); standing in a buffer doesn't clear it, since a
+// crossing walks through buffers. Started afresh with each zone.
+const PROG_WINDOW = 1, FULL_SHARE = 0.6;
 const BACK_FIRST = 2, BACK_MAX = 64, KNOWN_CELL = 2;
 const known = new Map();
 const stuck = { events: 0, backedYards: 0, deepest: 0, bumps: 0 };
 const cellKey = (x, y) => Math.floor(x / KNOWN_CELL) + "," + Math.floor(y / KNOWN_CELL);
-// 3 in known: a buffer, the clearance round something a bot bumped (the
-// owner: "touching objects in this way, implies given buffer spaces that
-// bots route around or walk through if going on a straight shape").
-// BUMP_SHARE: a second's progress under this share of what was meant, with
-// the walls having turned the bot aside, is a bump; BUFFER_R: the cells
-// round the touch, each way, made buffer (1: a 3 x 3 patch, 6 yards).
-const BUMP_SHARE = 0.9, BUFFER_R = 1;
 function knownWall(x, y) { return known.get(cellKey(x, y)) === 2; }
 function knownBuffer(x, y) { return known.get(cellKey(x, y)) === 3; }
-// Standing proves a cell open, and mends a wrong wall; but not a buffer:
-// a crossing walks through buffers, and that doesn't make them less near
-// the thing they keep clear of.
 function learnOpen(x, y) { const k = cellKey(x, y); if (known.get(k) !== 3) known.set(k, 1); }
-function leaveBuffer(x, y) {
-  const i0 = Math.floor(x / KNOWN_CELL), j0 = Math.floor(y / KNOWN_CELL);
-  for (let i = i0 - BUFFER_R; i <= i0 + BUFFER_R; i++) for (let j = j0 - BUFFER_R; j <= j0 + BUFFER_R; j++) {
-    const k = i + "," + j;
-    if (known.get(k) !== 2) known.set(k, 3);
-  }
-}
+// The window's test (the owner, 2026-10-28: "after N seconds or moments,
+// draw a line to your position you were N seconds or moments ago. Then, if
+// you made less progress to your goal than your intended movement input
+// array ... you must have been caught on something, or the geometry
+// disagreed with your movement resolution pathfinding duties believed. And
+// so, you should try and walk around that section. disprefer the movement
+// track that got you onto that path. let other bots come across it and let
+// it be known."): each step's input (the move the bot issued, sx, sy) is
+// summed over the window; the line from the window's start to where the bot
+// is now is what it got. Got less, along its inputs' way, than CAUGHT_SHARE
+// of what it put in, while moving at all (at least FULL_SHARE of full
+// speed): caught. Then the refused spot (where the world turned its step
+// back; or, none known, the cell just ahead) becomes a known wall; the
+// track it came along to it, the last TRACK_CELLS cells, becomes buffer
+// (dispreferred, so others walk round); and it backs up, twice as far each
+// time in a row. A window not caught starts the doubling again.
+const CAUGHT_SHARE = 0.95, TRACK_CELLS = 3;
 function trackProgress(b, mx, my, dt) {
   if (b.pw === undefined || b.backLeft > 0) {                // a new window (and none measured while backing up)
-    b.pw = 0; b.want = 0; b.mvx = 0; b.mvy = 0; b.px = b.x; b.py = b.y;
+    b.pw = 0; b.want = 0; b.mvx = 0; b.mvy = 0; b.px = b.x; b.py = b.y; b.refusedX = undefined;
     if (b.stuckN === undefined) { b.stuckN = 0; b.goodWins = 0; }
     if (b.backLeft > 0) return;
   }
-  b.pw += dt; b.want += Math.hypot(mx, my) * dt; b.mvx += mx * dt; b.mvy += my * dt;
+  b.pw += dt; b.want += Math.hypot(mx, my); b.mvx += mx; b.mvy += my;   // the inputs, as moves
   if (b.pw < PROG_WINDOW) return;
   const ml = Math.hypot(b.mvx, b.mvy) || 1, ux = b.mvx / ml, uy = b.mvy / ml;
-  const got = (b.x - b.px) * ux + (b.y - b.py) * uy;          // how far it got along the way it meant
-  if (b.want >= FULL_SHARE * SPEED * b.pw && got < STUCK_SHARE * b.want) {
+  const got = (b.x - b.px) * ux + (b.y - b.py) * uy;          // how far it got along its inputs' way
+  if (b.want >= FULL_SHARE * SPEED * b.pw && got < CAUGHT_SHARE * Math.min(b.want, ml)) {
     b.stuckN++; b.goodWins = 0;
     b.backLeft = Math.min(BACK_FIRST * Math.pow(2, b.stuckN - 1), BACK_MAX);
     b.bx = -ux; b.by = -uy;
-    known.set(cellKey(b.x + ux * KNOWN_CELL, b.y + uy * KNOWN_CELL), 2);
+    const wx = b.refusedX !== undefined ? b.refusedX : b.x + ux * KNOWN_CELL, wy = b.refusedX !== undefined ? b.refusedY : b.y + uy * KNOWN_CELL;
+    known.set(cellKey(wx, wy), 2);
+    // the track that led there, dispreferred: the last TRACK_CELLS cells back along it
+    for (let t = 1; t <= TRACK_CELLS; t++) {
+      const k = cellKey(b.x - ux * KNOWN_CELL * t, b.y - uy * KNOWN_CELL * t);
+      if (known.get(k) !== 2) known.set(k, 3);
+    }
+    stuck.bumps++;
     // A wanderer stuck on a crossing or turning aside has come to a far
     // side it can't pass: that is its decision point, not something to try
     // again (picture 042: crossings aimed past the area's edge met it again
@@ -3408,13 +3424,9 @@ function trackProgress(b, mx, my, dt) {
     if (b.wstate === "aside") b.asideFor = 0;
     stuck.events++; stuck.backedYards += b.backLeft; stuck.deepest = Math.max(stuck.deepest, b.stuckN);
   } else {
-    // less than it meant, short of stuck, and the walls turned it: a bump
-    if (b.touched && b.want >= FULL_SHARE * SPEED * b.pw && got < BUMP_SHARE * b.want) {
-      leaveBuffer(b.touchX, b.touchY); stuck.bumps++;
-    }
-    b.stuckN = 0; b.goodWins = 0;                            // not stuck this try: the doubling starts again
+    b.stuckN = 0; b.goodWins = 0;                            // not caught this try: the doubling starts again
   }
-  b.pw = 0; b.want = 0; b.mvx = 0; b.mvy = 0; b.px = b.x; b.py = b.y; b.touched = false;
+  b.pw = 0; b.want = 0; b.mvx = 0; b.mvy = 0; b.px = b.x; b.py = b.y; b.refusedX = undefined;
 }
 // The share of the part in play known open: its known-open cells' area
 // over its walkable area.
@@ -3672,7 +3684,7 @@ function measure() {
     lines.push(`stuck           ${stuck.events} times, backed up ${Math.round(stuck.backedYards)} yd, deepest ${stuck.deepest} in a row`);
     let buffers = 0; for (const v of known.values()) if (v === 3) buffers++;
     lines.push(`mapped          ${share === null ? "-" : Math.round(100 * share) + "% of the part known open"}, ${walls} known walls`);
-    lines.push(`bumps           ${stuck.bumps}, ${buffers} buffer cells round them`);
+    lines.push(`caught          ${stuck.bumps} times; ${steer.refused} steps refused by the world; ${buffers} buffer cells on the tracks that led there`);
     // peninsulas (617e16i)
     const pens = partsInPlay().flatMap(p => p.pens || []);
     if (pens.length) {
