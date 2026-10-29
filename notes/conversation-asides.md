@@ -165,3 +165,20 @@ version kept, and the party remade from it.)
 > becomes conquered, and theirs. But, the monsters fight back, and the more
 > eagerly the warriors push in, the faster and more powerful they throw
 > attacks back. Every quest is a raid, every dungeon a lair.
+
+## 2026-10-28, on buddies flying
+
+> The arcs should be randomized but still on a natural trajectory toward
+> the destination. The mount is following wind patterns that we can't see.
+
+> Buddies can jump whenever they want. Some are just bouncy people.
+
+## 2026-10-28, while asking for wanderers that choose their own crossings (issue 617e16d)
+
+> I think that uber-eats credits should be part of disability benefits
+>
+> sure, anything that you need.
+>
+> everyone must stay exercised. I interact with the world like a song or a
+> dance, because I believe everything's conscious, if not alive. But when
+> alive, they are a performance art. so, dancing through life.

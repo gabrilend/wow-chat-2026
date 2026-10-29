@@ -1,0 +1,25 @@
+# 022-ground-sandbox
+
+## What made it
+- scripts/generate-ground-sandbox-page --screenshot 'continent=1&zone=The%20Barrens&theme=night%20sea&sim=120&turn=1&fence=2&view=fence' (photographed: headless Firefox, 1600x900, file:///mnt/kaun/wow-chat-2026/docs/HTML/ground-sandbox.html#continent=1&zone=The%20Barrens&theme=night%20sea&sim=120&turn=1&fence=2&view=fence)
+- Commit: 61645b6 (with uncommitted changes to its sources)
+- Filed: 2026-10-28 17:42 by scripts/file-screenshot
+
+| Source | Fingerprint (BLAKE2b, first 16) |
+|---|---|
+| `scripts/templates/ground-sandbox.html` | 533f47df406c6eff |
+| `scripts/templates/ground-decode.js` | dba89933b746be94 |
+| `scripts/generate-ground-sandbox-data` | 112d6512921268f3 |
+| `scripts/generate-ground-sandbox-page` | 47187b0abf6f6e73 |
+
+## What changed since the previous picture
+- `scripts/templates/ground-sandbox.html`: unchanged since 021-ground-sandbox
+- `scripts/templates/ground-decode.js`: unchanged since 021-ground-sandbox
+- `scripts/generate-ground-sandbox-data`: changed since 021-ground-sandbox
+- `scripts/generate-ground-sandbox-page`: unchanged since 021-ground-sandbox
+
+## What it shows
+The Witchwing Slayer fence (the harpies' hills), night sea, after 120 s: red ridges all round in contour-like bands; inside the yellow fence the bots' green tails wind between small red patches; the panel: 89% of the fence open, 144 steps turned aside a second, fence covered 15%.
+
+## The story so far
+The owner called the fish-school sandbox delightful but not quite it, and asked (2026-10-28) for an archived copy and a new one on the world's real ground: slopes over a limit unpathable, doodads avoided (issue 617e16c). The sandbox was archived and committed; a new tool reads every zone's heights from the map files and every collision box from the server's collision files; a new page shades the hills, paints ground steeper than a slider's limit red, and turns the bots aside from both. A fairer fence: bots move freely, steering round the ridges inside it.

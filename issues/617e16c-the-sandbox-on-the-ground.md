@@ -23,10 +23,42 @@ The owner, 2026-10-28, on the fish-school sandbox:
 
 ## Current Behavior
 
-The fish-school sandbox (`docs/HTML/fish-sandbox.html`) flocks its bots
-over flat zone squares: the ground's shape, hills and cliffs, trees,
-rocks and buildings are not in it. Being built (2026-10-28): the archive
-copy and the ground sandbox.
+**Built 2026-10-28** (pictures 021-027 in `development-history/`):
+- **The archive**: `docs/HTML/archive/fish-sandbox-2026-10-28.html` and
+  `scripts/templates/archive/fish-sandbox-2026-10-28.html`, each folder
+  with a README; committed (61645b6c7).
+- **The data**: `scripts/generate-ground-sandbox-data` writes
+  `docs/HTML/ground-sandbox/zone-<map>-<zone>.js` for every zone of the
+  two continents (50 zones, 6 processes at a time, about 10 seconds, 50 MB
+  in all): heights every 4.17 yards (`scripts/lib/map-heights.lua`) as
+  tenths of a yard, stored as differences, gzipped, base64; and each
+  collision footprint near the ground, from the collision tiles'
+  **placed boxes** (every spawn carries one; the models' own files hold
+  no usable box for doodads, all zeros). Left out: structures wider than
+  40 yards, and boxes wholly above head height or below the ground (the
+  Barrens: 21,776 kept, 481 large and 4,004 off the ground left out).
+- **The decoder**: `scripts/templates/ground-decode.js`, a small inflater
+  of its own (synchronous, so a headless screenshot waits for it),
+  inlined into the page; `scripts/test-ground-decode` checks 400 points
+  of Durotar against the map files (all match to a tenth of a yard).
+- **The page**: `docs/HTML/ground-sandbox.html` (template
+  `scripts/templates/ground-sandbox.html`, built by
+  `scripts/generate-ground-sandbox-page`, `--screenshot SETTINGS` files a
+  picture). Hill shading over the zone; ground steeper than the
+  **Steepest** slider (50 degrees to start) in red; doodads as dark marks
+  when zoomed in; a bot's step onto blocked ground is turned aside, 20
+  degrees at a time, left and right in turn, up to 140. The panel adds
+  steps turned aside and stopped a second, the fence's open share, the
+  zone's doodads and level.
+- **Drawn the right way round.** The fish-school sandbox draws the world
+  mirrored left to right (the game's y points west, so the squares' Y
+  grows eastward, and the page put larger Y on the left: Orgrimmar left
+  of Thunder Bluff). The ground sandbox puts east on the right.
+
+Seen in the pictures: the largest Barrens fence (Venture Co. Supervisor)
+is mostly a mine: two thirds of its spawns are 100-170 yards under the
+ground, and the steep red is the hill above. Fences mix cave and surface
+spawns (open question 2).
 
 ## Intended Behavior
 
@@ -79,3 +111,15 @@ copy and the ground sandbox.
    in them). Should a town's buildings block instead, each building by
    its own pieces (a model's groups), at the cost of reading each model's
    pieces?
+2. **Fences under the ground**: a fence built from spawns partly in a
+   cave (the Barrens' Venture Co. Supervisors in Boulder Lode Mine) puts
+   surface bots over a hill. Should fences take only spawns standing on
+   the surface (within a few yards of the terrain's height), with caves
+   as fences of their own (617e12's cave layers)?
+3. **The mirror**: fix the fish-school sandbox too (its live page; the
+   archive stays as it was), and check the zone renderer
+   (`scripts/render-zone`, 617e14c) and the zone data's note ("Y grows
+   westward") for the same mistake?
+4. **The ground files in git**: 50 MB for the two continents, made in
+   ten seconds by the tool. Commit them (the page works from a fresh
+   copy), or leave them out and make them on install?
