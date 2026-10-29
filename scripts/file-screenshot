@@ -16,7 +16,8 @@
 -- given here or filled in after.
 --
 -- It can also take the picture itself: --url and --window photograph a page
--- with headless Firefox.
+-- with headless Firefox, which may take 90 seconds (FILE_SCREENSHOT_WAIT in
+-- the environment: that many instead).
 --
 -- Usage: scripts/file-screenshot [--dir DIR] --name NAME --made "COMMAND"
 --            [--source FILE]... [--shows TEXT] [--story TEXT]
@@ -38,7 +39,8 @@ local function usage(code)
     print("             and compared with the last picture that named the same file")
     print("  --shows    what it shows, part by part; --story the arc of the project so far")
     print("  PNG        a picture already taken (copied, the original left alone)")
-    print("  --url      a page to photograph with headless Firefox, at --window (default 1400x900)")
+    print("  --url      a page to photograph with headless Firefox, at --window (default 1400x900);")
+    print("             it may take 90 seconds, or FILE_SCREENSHOT_WAIT's (in the environment)")
     os.exit(code)
 end
 local i = 1
@@ -94,8 +96,12 @@ if opt.url then
     if not w then io.stderr:write("file-screenshot: --window is WIDTHxHEIGHT: " .. opt.window .. "\n"); os.remove(HISTORY .. "/" .. base .. ".info.md"); os.exit(1) end
     local profile = DIR .. "/tmp/shared-memory/file-screenshot/firefox-profile"
     os.execute("mkdir -p " .. q(profile))
-    local log = sh(string.format("timeout 90 firefox --headless --no-remote --profile %s --window-size=%s,%s --screenshot %s %s 2>&1",
-        q(profile), w, h, q(png), q(opt.url)))
+    -- how long Firefox may take: 90 seconds, or FILE_SCREENSHOT_WAIT's (a
+    -- page that plays minutes of its simulation before its picture, such as
+    -- the ground sandbox's flow field, can need longer, 2026-10-29)
+    local wait = tonumber(os.getenv("FILE_SCREENSHOT_WAIT") or "") or 90
+    local log = sh(string.format("timeout %d firefox --headless --no-remote --profile %s --window-size=%s,%s --screenshot %s %s 2>&1",
+        wait, q(profile), w, h, q(png), q(opt.url)))
     opt.made = opt.made .. string.format(" (photographed: headless Firefox, %sx%s, %s)", w, h, opt.url)
     if not io.open(png, "rb") then
         os.remove(HISTORY .. "/" .. base .. ".info.md")

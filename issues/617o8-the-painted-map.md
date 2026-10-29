@@ -80,8 +80,46 @@ What the first runs taught, each fixed and commented where it happened:
    walls beside the start, and a bot with no clear point ahead steps to
    the most open ground beside it.
 
-Not built yet: the sandbox page (step 3), the C++ core (step 4), keeping
-the paint between runs (step 5).
+**Step 3 built 2026-10-29**: "painted map" in the ground sandbox's
+Pathfinding list (pictures 066-067). One map per part in play, a yard a
+cell, built when first used. Steep ground (by the slider) and the part's
+edge are known from the start. Each bot:
+- plans at most when the map says to, six plans a step at most;
+- follows its route in a lane of its own;
+- paints the ground it walks;
+- when refused, paints the doodad it hit and plans again.
+
+The crowd is remade each second. The paint is drawn (walked ground gold,
+learned walls orange), and routes as the curves walked.
+
+The six ways on one run (the Barrens' Witchwing Slayer area, 36 bots,
+wedges, 120 seconds; pictures 067-073; turning = degrees turned a yard
+walked, measured for every way since this issue):
+
+| Way              | Turning | Stuck | Refused | Turned aside /s | Spacing yd | Covered | Real time |
+|------------------|--------:|------:|--------:|----------------:|-----------:|--------:|----------:|
+| painted map      |     6.3 |     0 |      54 |              24 |       19.1 |     26% |     16 s  |
+| flow field       |    11.7 |     0 |      93 |              45 |       24.6 |     26% |    108 s  |
+| orbit            |    13.4 |   224 |      53 |              45 |       12.9 |     23% |           |
+| potential field  |    18.3 |     0 |      75 |              80 |       18.9 |     25% |           |
+| learn the map    |   113.1 |     0 |      64 |             103 |       16.5 |     20% |           |
+| graph and A*     |   120.4 |     0 |      63 |              63 |       22.5 |     20% |           |
+
+(Real time: seconds the picture tool took for the 120 seconds of play.)
+
+A* and learn wobble. Two causes:
+- **The steered-to point flipped from step to step.** Now it is held
+  while more than 3 yards off and in sight: A* fell to 92.9 (picture 073).
+- **Their routes graze steep edges.** They keep no distance, so each step
+  the bot's own look-ahead turns it off the edge and its route point pulls
+  it back. This is the "rubbing" the owner saw on 2026-10-28, and the
+  painted map's space from walls is what removes it.
+
+Bots on the painted map still bunch at one narrow notch (picture 067),
+where three of them explore a peninsula (617e16i).
+
+Not built yet: the C++ core (step 4), keeping the paint between runs
+(step 5).
 
 Before this, the five ways (617o7) each lacked something asked for here:
 - "learn the map" remembers bumps, but each plan ignores walls' nearness

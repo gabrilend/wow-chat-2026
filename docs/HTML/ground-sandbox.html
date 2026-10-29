@@ -4206,13 +4206,22 @@ function astarStep(b, tx, ty, f, learnOnly) {
     b.routePts = b.route ? b.route.map(q => P.at(q)) : null;
   }
   if (!b.routePts) return null;
-  // pulled tight: the farthest point of the route still in sight
+  // pulled tight, and held: the point steered to is kept while the bot is
+  // more than 3 yards from it and it stays in sight on the same route; only
+  // then is the farthest route point in sight chosen again. Choosing afresh
+  // every step (until 2026-10-29) flipped between points round an obstacle,
+  // step by step: 120 degrees turned a yard walked (picture 069), the bots
+  // visibly wobbling; the painted map, which follows a point along its
+  // route, turned 6.3.
+  if (b.pick && b.pickRoute === b.route && Math.hypot(b.pick[0] - b.x, b.pick[1] - b.y) > 3 &&
+      planSight(P, b.x, b.y, b.pick[0], b.pick[1], learnOnly)) return b.pick;
   let pick = null;
   for (let i = b.routePts.length - 1; i >= 0; i--) {
     const [x, y] = b.routePts[i];
     if (Math.hypot(x - b.x, y - b.y) < 40 && planSight(P, b.x, b.y, x, y, learnOnly)) { pick = [x, y]; break; }
   }
-  return pick || (b.routePts[1] || b.routePts[0]);
+  b.pick = pick || (b.routePts[1] || b.routePts[0]); b.pickRoute = b.route;
+  return b.pick;
 }
 // learning: a refused step teaches the planning point it fell on (or, if
 // that is where the bot stands, the next one along the step)
