@@ -1056,8 +1056,12 @@ function stepFlock(dt) {
     b.vx += ax * Math.min(1, dt * 2.2); b.vy += ay * Math.min(1, dt * 2.2);
     const sp = Math.hypot(b.vx, b.vy), cap = member ? SPEED * 1.5 : f ? SPEED : SPEED * 1.6;
     if (sp > cap) { b.vx *= cap / sp; b.vy *= cap / sp; }
-    // (Backing up when stuck, 2026-10-28 versions 041-054, gave way to
-    // orbiting the obstacle: orbitStep, before the target is steered to.)
+    // Backing out (stuckAt): straight away from its target until its back-up
+    // distance is used, then the orbit it was given begins (orbitStep).
+    if (b.backLeft > 0) {
+      b.vx = b.bx * SPEED; b.vy = b.by * SPEED; b.backLeft -= SPEED * dt;
+      if (b.backLeft <= 0 && b.pendingOrbit) { startOrbit(b, b.pendingOrbit[0], b.pendingOrbit[1]); b.pendingOrbit = null; }
+    }
     // The ground (issue 617e16c): a step that would land on blocked ground
     // (too steep, or in a doodad) is turned aside, 20 degrees at a time,
     // left and right in turn (the smaller turn first), up to 140; the first
@@ -1179,13 +1183,42 @@ function inSight(b, tx, ty, f) {
   for (let i = 1; i < n; i++) if (unpathable(b.x + (tx - b.x) * i / n, b.y + (ty - b.y) * i / n, f)) return false;
   return true;
 }
+// Backing out first, twice as far each time (the owner: "it should double
+// it's "backup distance" anytime it's trying to back out of something it's
+// stuck on. this distance should be reset when they've travelled farther on
+// the forward axis than the place they were foremost stuck."): stuck, a bot
+// backs straight away from its target b.backDist yards (BACK_FIRST, then
+// doubling up to BACK_MAX), then orbits. Its forwardmost stuck spot
+// (b.front: the spot S and the forward axis u, from S toward the target
+// then) is kept: a new stuck spot further along that axis replaces it.
+// Once the bot stands more than FRONT_PASS yards past S along u, it has
+// solved the forwardmost spot: the back-up distance goes back to BACK_FIRST
+// and the spot is let go ("That's when they can relax").
+const BACK_FIRST = 2, BACK_MAX = 64, FRONT_PASS = 1;
+const backing = { times: 0, yards: 0, relaxed: 0, deepest: BACK_FIRST };
+function stuckAt(b, tx, ty) {
+  const d = Math.max(Math.hypot(tx - b.x, ty - b.y), 0.01), ux = (tx - b.x) / d, uy = (ty - b.y) / d;
+  if (!b.front || (b.x - b.front.x) * b.front.ux + (b.y - b.front.y) * b.front.uy > 0) b.front = { x: b.x, y: b.y, ux, uy };
+  b.backDist = b.backDist || BACK_FIRST;
+  b.backLeft = b.backDist; b.bx = -ux; b.by = -uy; b.pendingOrbit = [tx, ty];
+  backing.times++; backing.yards += b.backDist; backing.deepest = Math.max(backing.deepest, b.backDist);
+  b.backDist = Math.min(b.backDist * 2, BACK_MAX);
+  stuck.events++;
+}
+function relaxIfPast(b) {
+  if (b.front && (b.x - b.front.x) * b.front.ux + (b.y - b.front.y) * b.front.uy > FRONT_PASS) {
+    b.front = null; b.backDist = BACK_FIRST; backing.relaxed++;
+  }
+}
 function startOrbit(b, tx, ty) {
   b.orbit = { side: Math.random() < 0.5 ? 1 : -1, tx, ty, fromD: Math.hypot(tx - b.x, ty - b.y), t: simT, turns: 0,
               h: Math.atan2(ty - b.y, tx - b.x) };
-  orbits.begun++; stuck.events++;
+  orbits.begun++;                                           // (stuckAt counts the stuck event)
 }
 function orbitStep(b, tx, ty, dt) {
   const f = inPlay, d = Math.hypot(tx - b.x, ty - b.y);
+  relaxIfPast(b);                                           // past its forwardmost stuck spot: the back-up distance resets
+  if (b.backLeft > 0) return null;                          // backing out: no orders judged now
   b.order = [tx, ty];
   if (!b.orbit) {
     // the same order? (snapshot: where it stood, how far from the target, when)
@@ -1193,7 +1226,7 @@ function orbitStep(b, tx, ty, dt) {
     const check = +$("check").value, el = simT - b.snap.t;
     if (el < check) return null;
     const closer = b.snap.d - d;
-    if (d > ORDER_ARRIVE && closer < ABLE_SHARE * SPEED * el) startOrbit(b, tx, ty);
+    if (d > ORDER_ARRIVE && closer < ABLE_SHARE * SPEED * el) { stuckAt(b, tx, ty); b.snap = null; return null; }   // back out first; the orbit follows
     b.snap = { tx, ty, d, t: simT };
     if (!b.orbit) return null;
   }
@@ -1279,7 +1312,7 @@ function trackProgress(b, mx, my, dt) {
     b.stuckN++; b.goodWins = 0;
     // no longer backing up: an orbit round what holds it (orbitStep, the
     // owner's rule of 2026-10-28) is what a caught bot does now
-    if (!b.orbit && b.order) startOrbit(b, b.order[0], b.order[1]);
+    if (!b.orbit && !(b.backLeft > 0) && b.order) stuckAt(b, b.order[0], b.order[1]);   // back out, then orbit
     const wx = b.refusedX !== undefined ? b.refusedX : b.x + ux * KNOWN_CELL, wy = b.refusedX !== undefined ? b.refusedY : b.y + uy * KNOWN_CELL;
     known.set(cellKey(wx, wy), 2);
     // the track that led there, dispreferred: the last TRACK_CELLS cells back along it
@@ -1553,7 +1586,8 @@ function measure() {
   {
     let walls = 0; for (const v of known.values()) if (v === 2) walls++;
     const share = knownShare(f);
-    lines.push(`stuck           ${stuck.events} times (orbits begun ${orbits.begun}, left by sight ${orbits.sight}, turned round ${orbits.flips}, given up ${orbits.gaveUp})`);
+    lines.push(`stuck           ${stuck.events} times; backed out ${backing.times} (${Math.round(backing.yards)} yd, longest ${backing.deepest} yd), relaxed ${backing.relaxed}`);
+    lines.push(`orbits          ${orbits.begun} begun, ${orbits.sight} left by sight, ${orbits.flips} turned round, ${orbits.gaveUp} given up`);
     let buffers = 0; for (const v of known.values()) if (v === 3) buffers++;
     lines.push(`mapped          ${share === null ? "-" : Math.round(100 * share) + "% of the part known open"}, ${walls} known walls`);
     lines.push(`caught          ${stuck.bumps} times; ${steer.refused} steps refused by the world; ${buffers} buffer cells on the tracks that led there`);
@@ -1769,6 +1803,8 @@ function draw() {
     // backing up (617e16h): a white ring, so it can be seen happening
     // orbiting an obstacle (617e16h): a cyan ring
     if (b.orbit) { ctx.beginPath(); ctx.arc(px, py, rpx * 2.2, 0, 6.283); ctx.strokeStyle = "#5ef0ff"; ctx.lineWidth = 1.5; ctx.stroke(); }
+    // backing out (617e16h): a white ring
+    if (b.backLeft > 0) { ctx.beginPath(); ctx.arc(px, py, rpx * 2.2, 0, 6.283); ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5; ctx.stroke(); }
   });
   ctx.shadowBlur = T.glow; ctx.shadowColor = T.player;
   const [ppx, ppy] = yd2px(player.x, player.y);

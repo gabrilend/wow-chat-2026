@@ -68,6 +68,14 @@ And then, replacing backing up with orbiting:
 > is in line-of-sight of a forward position on the path you're trying to
 > follow. Then you should move along that.
 
+And, keeping backing up beside the orbit:
+
+> remember it should double it's "backup distance" anytime it's trying to
+> back out of something it's stuck on. this distance should be reset when
+> they've travelled farther on the forward axis than the place they were
+> foremost stuck. That's when they can relax, because they've solved the
+> most stuck forwardmost spot. [questing mob slain most recently]
+
 ## Current Behavior
 
 **Built 2026-10-28 in the ground sandbox** (pictures 034-047, every

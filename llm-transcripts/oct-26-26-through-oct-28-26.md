@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-28 22:53:22
+Generated on: 2026-10-28 23:03:23
 Models: claude-opus-5-5
 
 ## Contents
@@ -8894,6 +8894,91 @@ landed. You can browse them at:
 ```
 firefox /mnt/kaun/wow-chat-2026/docs/HTML/archive/ground-sandbox/index.html
 ```
+
+--------------------------------------------------------------------------------
+
+### User Request 87
+
+okay how about this - if a buddy is on an uninterrupted or redirected movement
+order for a second or more (configurable, down usually) then we test - are they
+in a state where they haven't travelled as far as they probably should have been
+able to? Basically, snapshot their position every second or so, and the position
+where they were standing. Then do a range check from that position to the target
+position. if that's less than the distance they were able to have travelled,
+then they're stuck on something and need to orbit the obstacle in front of them.
+We can tell they're obstacles because they're unpathable on the map. Those
+things. Orbit around them, either clockwise or counter-clockwise. until you get
+to a position on the other side that is in line-of-sight of a forward position
+on the path you're trying to follow. Then you should move along that.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 87
+
+> Your rule as I understand it:
+> - **The test:** while a bot keeps the same movement order, snapshot its
+>   position every second (configurable, usually lower). Compare how much closer
+>   to its target it got with how far it could have walked in that time. If it
+>   got less, it's stuck.
+> - **The response:** orbit the obstacle in front of it, meaning the ground the
+>   map marks as unwalkable. Go clockwise or counter-clockwise until it reaches
+>   a spot with a clear line of sight to a point ahead on its path, then carry
+>   on along the path.
+>
+> That replaces backing up. It's also what a detour round a steep patch needs,
+> which backing up never handled. Writing it into the issue first:
+
+> Replacing the back-up in the caught test with starting an orbit:
+
+> Next, the configurable check interval: a "Stuck check" slider on the panel,
+> plus an address setting for headless runs.
+
+*[commit] 17b139d36 in wow-chat-2026 - *
+
+> The backup commit failed silently again. Running it with its full output to
+> see why:
+
+*[commit] 0d1590d14 in wow-chat-2026 - Back up the orbiting version of the ground sandbox as a page*
+
+The orbiting is in (commit 17b139d36, page backup 0d1590d14). A bot that isn't
+getting closer to its target as fast as it could now walks round the obstacle
+instead of backing up.
+
+**How it works:**
+- **The check:** while a bot keeps the same target, its position is snapshotted
+  once a second. A new **Stuck check** slider sets how often, from a quarter
+  second to 3 seconds. If it got closer by less than half of what it could have
+  walked in that time, it's stuck.
+- **The orbit:** it circles the obstacle in front of it, clockwise or
+  counter-clockwise at random. It keeps the unwalkable ground on one side: steep
+  ground, trees and rocks it has been shown, known walls, the area's edge.
+- **Leaving the orbit:** once it's closer to its target than where the orbit
+  began and has a clear line of sight to it, it walks straight on.
+- **If it runs long:** after 15 seconds it turns round and circles the other
+  way. After two turns it gives up and carries on.
+- **On the map:** orbiting bots wear a cyan ring.
+
+**Five minutes in the harpy hills (picture 055):**
+- 516 orbits started. How many ended by line of sight versus by giving up is cut
+  off at the panel's edge, so I can't tell you yet.
+- Scraping along walls dropped from 185 turn-asides a second to 55.
+- Bots hit an unknown tree or rock only 124 times.
+
+**Why the backups kept failing:** I was piping the commit tool's output into
+`head`, which cut it off before it finished. It's fixed by not trimming that
+output.
+
+516 orbits in five minutes is about three per bot per minute, which may be too
+eager. Two settings decide that, and both are guesses:
+- **The progress needed:** a bot counts as stuck if it gets closer by less than
+  half its walking distance. Raising that to two-thirds would make bots orbit
+  more readily; lowering it to a third would make them orbit only when nearly
+  stopped.
+- **The minimum distance:** checks only apply while a bot is more than 6 yards
+  from its target.
+
+Watch it with the Stuck check slider and tell me whether the cyan rings show up
+where you'd expect someone to walk round something, or too often.
 
 --------------------------------------------------------------------------------
 
