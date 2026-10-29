@@ -1,0 +1,638 @@
+<!doctype html>
+<!-- GENERATED_NOTE -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Battleground Sandbox</title>
+<style>
+  :root { --panel: rgba(20, 22, 26, 0.86); --ink: #e8e8e8; --dim: #9aa0a6; --accent: #e8c547;
+          --side0: #4f9dff; --side1: #ff5a4f; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #111; color: var(--ink);
+               font: 13px/1.4 system-ui, sans-serif; }
+  canvas { display: block; width: 100vw; height: 100vh; cursor: grab; }
+  #panel { position: fixed; top: 10px; left: 10px; background: var(--panel); padding: 10px 12px; border-radius: 8px;
+           width: 340px; max-height: calc(100vh - 40px); overflow: auto; }
+  #panel h1 { font-size: 15px; margin: 0 0 6px; }
+  #panel a { color: var(--accent); }
+  #panel label { display: flex; justify-content: space-between; align-items: center; margin: 4px 0; gap: 8px; }
+  #panel select, #panel input[type=range] { width: 140px; }
+  #panel button { margin: 3px 3px 0 0; padding: 4px 8px; border-radius: 5px; border: 1px solid #555; background: #2a2d33; color: var(--ink); cursor: pointer; }
+  #panel button:hover { border-color: var(--accent); }
+  .bar { height: 8px; border-radius: 4px; background: #333; margin: 2px 0 6px; overflow: hidden; }
+  .bar div { height: 100%; }
+  #score { margin: 6px 0; }
+  #measures { font-variant-numeric: tabular-nums; white-space: pre; color: var(--dim); margin-top: 6px; }
+  #hint { position: fixed; bottom: 10px; left: 10px; color: var(--dim); background: var(--panel); padding: 4px 8px; border-radius: 6px; }
+  @media (max-width: 600px) { #panel { width: calc(100vw - 44px); } }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="panel">
+  <h1>Battleground sandbox: Arathi Basin</h1>
+  <div><a href="ground-sandbox.html">the ground sandbox</a> &middot; issue 617e16l</div>
+  <label>A side <input id="side" type="range" min="3" max="30" value="15"><span id="sideN">15</span></label>
+  <label>Speed <select id="speed"><option value="1">1x</option><option value="4" selected>4x</option><option value="10">10x</option></select></label>
+  <label>Notice <input id="notice" type="range" min="15" max="60" value="40"><span id="noticeN">40 yd</span></label>
+  <label>Ranged at <input id="ranged" type="range" min="10" max="35" value="25"><span id="rangedN">25 yd</span></label>
+  <label>Breaking off <input id="brk" type="range" min="0" max="0.3" step="0.01" value="0.05"><span id="brkN">5% a second</span></label>
+  <label>Lean from foes <input id="lean" type="range" min="0" max="2" step="0.1" value="0.6"><span id="leanN">0.6</span></label>
+  <label>Steepest <input id="slope" type="range" min="15" max="85" value="50"><span id="slopeN">50°</span></label>
+  <div><button id="again">New match</button><button id="fit">Whole field</button></div>
+  <div id="score"></div>
+  <div id="measures"></div>
+</div>
+<div id="hint">Blue and red: the two sides (square a tank, cross a healer, dot a damage dealer; a ring a guard). Circles: the bases, filled by who holds them, an arc while one is taken. Scroll to zoom, drag to pan.</div>
+<script>
+/*BG_DATA*/
+/*GROUND_DECODE*/
+window.GROUND_FILE = null;
+function GROUND_LOADED(g) { GROUND_FILE = g; }
+document.write('<script src="battleground-sandbox/zone-529-3358.js"><\/script>');
+</script>
+<script>
+"use strict";
+// {{{ the page, in short
+// Arathi Basin, two sides playing a match as the bots would (issue 617e16l).
+// The owner, 2026-10-29: "They should play the same way the bots would -
+// running around and circle orbiting their foes at their preferred range.
+// Also moving away from groups of enemies and toward groups of allies, when
+// presented with the option. And sometimes when successful breaking off to
+// do the objective - no enemies to fight means you won the battle, so go and
+// claim your prize." And: "A squad should path find as we designed in the
+// PvP settings": the squads' rules are 176a2b's, their roads 176a2c's.
+//
+// The parts, in order below: the ground (heights, steep ground, doodads,
+// as the ground sandbox has them); the match (homes drawn, bases,
+// resources, the win, the next match); squads (trios leaving home every 12
+// seconds, a tank per base taken, the dead back on the graveyard wave);
+// the roads taken in turn; fighting (orbiting at the role's range, leaning
+// from bunched foes toward allies, healing, breaking off); the objective
+// (assault, 60 seconds, guard); drawing; the loop; the panel.
+//
+// All positions are in screen yards: x east, y south (the game's -y, -x).
+// }}}
+
+const $ = id => document.getElementById(id);
+const cv = $("c"), ctx = cv.getContext("2d");
+let W = 0, H = 0;
+
+// {{{ numbers (each a guess, 617e16l question 1; the panel's sliders move the marked ones)
+// ROLE: per role, its range (yards it orbits its foe at; "ranged" from the
+// slider), health, damage a second, healing a second, and where it holds
+// its place in a squad's shape. SPEED: running, yards a second.
+const ROLE = {
+  tank:   { range: 3,  hp: 260, dps: 6,  hps: 0,  melee: true  },
+  melee:  { range: 3,  hp: 160, dps: 14, hps: 0,  melee: true  },
+  ranged: { range: 25, hp: 150, dps: 12, hps: 0,  melee: false },   // range: the "Ranged at" slider
+  healer: { range: 28, hp: 150, dps: 3,  hps: 16, melee: false },
+};
+const SPEED = 7, MELEE_REACH = 5, SPELL_REACH = 32, HEAL_REACH = 40;
+const DEPART_EVERY = 12, WAVE_EVERY = 30, ASSAULT_TIME = 60, FLAG_REACH = 8, GUARD_LEASH = 30;
+const NEXT_MATCH = 60, WIN_AT = 1600, BREAK_FOR = 12, SPACING = 4;
+// resources by bases held (BattlegroundAB.h): [amount, every seconds]; 0 bases: none
+const TICK = [null, [10, 12], [10, 9], [10, 6], [10, 3], [30, 1]];
+const BASES = ["Stables", "Gold Mine", "Blacksmith", "Lumber Mill", "Farm"];
+const HOMES = ["north-west home", "south-east home"];
+// }}}
+
+// {{{ the ground (as the ground sandbox's, 617e16c)
+// G: sx0, sy0, step, cols, rows (the height points' grid), h (Int16Array,
+// tenths of a yard, -32768 none), slope (degrees), steep (by the slider),
+// rects (doodad footprints grown by a body's half-width), buckets (8-yard
+// cells to the doodads in them), canvas (the shaded picture).
+const NO_GROUND = -32768, BODY_R = 0.6, BUCKET = 8;
+let G = null;
+function loadGround() {
+  const g = GROUND_FILE; if (!g) return null;
+  g.h = decodeHeights(g.heights, g.cols * g.rows); delete g.heights;
+  const { cols, rows, step, h } = g, sl = new Float32Array(cols * rows);
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    const k = r * cols + c;
+    if (r === 0 || c === 0 || r === rows - 1 || c === cols - 1) { sl[k] = 90; continue; }
+    const e = h[k + 1], w = h[k - 1], s = h[k + cols], n = h[k - cols];
+    if (h[k] === NO_GROUND || e === NO_GROUND || w === NO_GROUND || s === NO_GROUND || n === NO_GROUND) { sl[k] = 90; continue; }
+    sl[k] = Math.atan(Math.hypot((e - w) / (20 * step), (s - n) / (20 * step))) * 180 / Math.PI;
+  }
+  g.slope = sl; g.steep = new Uint8Array(cols * rows);
+  const nd = g.doodads.length / 8;
+  g.rects = new Float32Array(nd * 4); g.buckets = new Map();
+  for (let i = 0; i < nd; i++) {
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    for (let k = 0; k < 8; k += 2) { const x = g.doodads[i * 8 + k], y = g.doodads[i * 8 + k + 1]; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+    g.rects.set([x0 - BODY_R, y0 - BODY_R, x1 + BODY_R, y1 + BODY_R], i * 4);
+    for (let bi = Math.floor(x0 / BUCKET); bi <= Math.floor(x1 / BUCKET); bi++)
+      for (let bj = Math.floor(y0 / BUCKET); bj <= Math.floor(y1 / BUCKET); bj++) {
+        const key = bi + "," + bj; if (!g.buckets.has(key)) g.buckets.set(key, []); g.buckets.get(key).push(i);
+      }
+  }
+  g.canvas = document.createElement("canvas"); g.canvas.width = cols; g.canvas.height = rows;
+  return g;
+}
+// hills shaded as a dark veil (light from the north-west), steep ground in
+// brown (red is a side's colour here)
+function paintGround() {
+  const g = G; if (!g) return;
+  const limit = +$("slope").value, { cols, rows, step, h, slope, steep } = g;
+  const o = g.canvas.getContext("2d"), img = o.createImageData(cols, rows), px = img.data;
+  for (let k = 0; k < cols * rows; k++) {
+    steep[k] = slope[k] > limit ? 1 : 0;
+    if (h[k] === NO_GROUND) continue;
+    const c = k % cols, r = (k - c) / cols;
+    if (steep[k]) { px.set([150, 95, 45, 170], k * 4); continue; }
+    if (c === 0 || r === 0 || c === cols - 1 || r === rows - 1) continue;
+    const gx = (h[k + 1] - h[k - 1]) / (20 * step), gy = (h[k + cols] - h[k - cols]) / (20 * step);
+    const lit = (gx * 0.5 + gy * 0.5 + 0.707) / Math.hypot(gx, gy, 1);
+    px.set([20, 40, 30, Math.max(0, Math.min(220, (1 - lit) * 240))], k * 4);
+  }
+  o.putImageData(img, 0, 0);
+}
+function steepAt(x, y) {
+  const g = G; if (!g) return false;
+  const c = Math.round((x - g.sx0) / g.step), r = Math.round((y - g.sy0) / g.step);
+  if (c < 0 || r < 0 || c >= g.cols || r >= g.rows) return true;
+  return g.steep[r * g.cols + c] === 1;
+}
+function doodadAt(x, y) {
+  const g = G; if (!g) return false;
+  const list = g.buckets.get(Math.floor(x / BUCKET) + "," + Math.floor(y / BUCKET));
+  if (list) for (const i of list) { const q = i * 4; if (x >= g.rects[q] && x <= g.rects[q + 2] && y >= g.rects[q + 1] && y <= g.rects[q + 3]) return true; }
+  return false;
+}
+const blocked = (x, y) => steepAt(x, y) || doodadAt(x, y);
+// }}}
+
+// {{{ the roads (176a2c)
+// The bot module's 15 roads between the seven places. At each place, the
+// roads there; a squad's choices are every road but the one it came by,
+// taken in turn: one pointer per side, per place, per road arrived by (-1:
+// arrived by none, at a home or a base it appeared at).
+const roadsAt = {};
+for (const p in BG.places) roadsAt[p] = [];
+BG.roads.forEach((r, i) => { roadsAt[r.from].push(i); roadsAt[r.to].push(i); });
+let pointers;                                   // [side] -> "place|arrivedBy" -> next index
+function nextRoad(side, place, arrivedBy) {
+  const choices = roadsAt[place].filter(i => i !== arrivedBy);
+  if (!choices.length) return arrivedBy;        // a dead end: back the way it came
+  const key = place + "|" + arrivedBy, k = pointers[side].get(key) || 0;
+  pointers[side].set(key, (k + 1) % choices.length);
+  return choices[k % choices.length];
+}
+// the points of road i walked from `place`, in order
+function roadFrom(i, place) { const r = BG.roads[i]; return r.from === place ? r.pts : r.pts.slice().reverse(); }
+function otherEnd(i, place) { const r = BG.roads[i]; return r.from === place ? r.to : r.from; }
+// }}}
+
+// {{{ the match (176a2a)
+// home[side]: the place it starts from (drawn each match); bases: name ->
+// { owner (-1 none, 0, 1), assaulter (-1, 0, 1), left (seconds of the
+// assault), x, y }; res[side]: resources; nextTick[side]: when its next
+// resources come; over: seconds since the win (null while playing).
+let units, squads, home, bases, res, nextTick, simT, nextDepart, nextWave, over, winner, tanksWaiting, deadWaiting;
+let tally;                                      // kills, deaths, captures, breaks per side
+let nextId = 1;
+function newMatch() {
+  units = []; squads = []; simT = 0; nextDepart = 0; nextWave = WAVE_EVERY; over = null; winner = -1;
+  const flip = Math.random() < 0.5;
+  home = flip ? [HOMES[0], HOMES[1]] : [HOMES[1], HOMES[0]];
+  bases = {};
+  for (const b of BASES) { const [x, y] = BG.places[b]; bases[b] = { owner: -1, assaulter: -1, left: 0, x, y }; }
+  res = [0, 0]; nextTick = [0, 0]; tanksWaiting = [0, 0]; deadWaiting = [[], []];
+  pointers = [new Map(), new Map()];
+  tally = { kills: [0, 0], captures: [0, 0], breaks: [0, 0], departed: [0, 0] };
+  // the side's strength, as trios of two damage and a healer (176a2b), the
+  // rest one group; all waiting at home for the first departure
+  const n = +$("side").value;
+  for (let side = 0; side < 2; side++) for (let k = 0; k < n; k++) {
+    const role = k % 3 === 2 ? "healer" : (k % 6 < 1 ? "melee" : k % 2 ? "ranged" : "melee");
+    deadWaiting[side].push(makeUnit(side, role));
+  }
+  for (let side = 0; side < 2; side++) { for (const u of deadWaiting[side]) { u.spawnAt = home[side]; u.waveAt = 0; } }
+}
+function makeUnit(side, role) {
+  return { id: nextId++, side, role, hp: ROLE[role].hp, x: 0, y: 0, alive: false, squad: null,
+           orbit: Math.random() < 0.5 ? 1 : -1, target: null, guard: null, breakUntil: 0, place: null };
+}
+// }}}
+
+// {{{ squads (176a2b)
+// A squad: side, members (units), at (the place it is at or last left),
+// road (the road it walks, -1 none), pts (its points from `at`), along
+// (yards walked along it), arrivedBy (the road it came by), job ("walk",
+// "assault": at a base taking it).
+// Departures, every DEPART_EVERY seconds: the dead are given a place to
+// come back (a base the side holds and nobody assaults, drawn, else home;
+// one group a place, home taking any number) and appear on the next
+// graveyard wave; those at home leave as trios (two damage, a healer), or
+// all as one group when they don't divide so; waiting tanks go with them.
+function depart() {
+  for (let side = 0; side < 2; side++) {
+    const back = deadWaiting[side].filter(u => !u.spawnAt);
+    if (back.length) {
+      const held = BASES.filter(b => bases[b].owner === side && bases[b].assaulter < 0 && !deadWaiting[side].some(u => u.spawnAt === b));
+      const at = held.length ? held[Math.floor(Math.random() * held.length)] : home[side];
+      for (const u of back) { u.spawnAt = at; u.waveAt = nextWave; }
+    }
+  }
+}
+function wave() {
+  for (let side = 0; side < 2; side++) {
+    const ready = deadWaiting[side].filter(u => u.spawnAt && u.waveAt <= simT);
+    if (!ready.length) continue;
+    deadWaiting[side] = deadWaiting[side].filter(u => !ready.includes(u));
+    const byPlace = new Map();
+    for (const u of ready) {
+      // a base taken by the enemy while they waited: home instead
+      const p = BASES.includes(u.spawnAt) && bases[u.spawnAt].owner !== side ? home[side] : u.spawnAt;
+      if (!byPlace.has(p)) byPlace.set(p, []); byPlace.get(p).push(u);
+    }
+    for (const [place, list] of byPlace) {
+      const [px, py] = BG.places[place];
+      for (const u of list) {
+        const a = Math.random() * 6.283, r = 2 + Math.random() * 4;
+        Object.assign(u, { x: px + Math.cos(a) * r, y: py + Math.sin(a) * r, alive: true, hp: ROLE[u.role].hp, squad: null, target: null, guard: null, spawnAt: null });
+        units.includes(u) || units.push(u);
+      }
+      formSquads(side, list, place);
+    }
+  }
+}
+// trios when they divide evenly into two damage and a healer, else one group
+function formSquads(side, list, place) {
+  const healers = list.filter(u => u.role === "healer"), dmg = list.filter(u => u.role === "melee" || u.role === "ranged");
+  const tanks = list.filter(u => u.role === "tank");
+  const trios = healers.length && dmg.length === healers.length * 2 && healers.length * 3 + tanks.length === list.length ? healers.length : 0;
+  const groups = [];
+  if (trios) for (let k = 0; k < trios; k++) groups.push([dmg[2 * k], dmg[2 * k + 1], healers[k]]);
+  else groups.push(list.filter(u => u.role !== "tank"));
+  if (tanks.length) groups[0].unshift(...tanks);          // tanks lead the first squad out
+  for (const members of groups) if (members.length) makeSquad(side, members, place);
+}
+function makeSquad(side, members, place) {
+  const s = { side, members, at: place, road: -1, pts: null, along: 0, arrivedBy: -1, job: "walk" };
+  for (const u of members) u.squad = s;
+  squads.push(s); tally.departed[side] += members.length;
+  chooseRoad(s);
+}
+function chooseRoad(s) {
+  s.road = nextRoad(s.side, s.at, s.arrivedBy);
+  s.pts = roadFrom(s.road, s.at); s.along = 0; s.job = "walk";
+}
+// the squad's anchor: `along` yards down its road, and the road's heading there
+function anchor(s) {
+  let left = s.along;
+  for (let i = 1; i < s.pts.length; i++) {
+    const [x0, y0] = s.pts[i - 1], [x1, y1] = s.pts[i], d = Math.hypot(x1 - x0, y1 - y0);
+    if (left <= d) { const t = d ? left / d : 0; return [x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, Math.atan2(y1 - y0, x1 - x0), false]; }
+    left -= d;
+  }
+  const [x, y] = s.pts[s.pts.length - 1], [xp, yp] = s.pts[s.pts.length - 2] || [x - 1, y];
+  return [x, y, Math.atan2(y - yp, x - xp), true];
+}
+// each member's place in the squad's shape (176a2d): the first at the
+// anchor, the rest in pairs behind it, SPACING apart
+function spotOf(s, u, ax, ay, hd) {
+  const k = s.members.indexOf(u);
+  if (k <= 0) return [ax, ay];
+  const row = Math.ceil(k / 2), side = k % 2 ? 1 : -1;
+  const bx = -Math.cos(hd) * row * SPACING, by = -Math.sin(hd) * row * SPACING;
+  const px = -Math.sin(hd) * side * SPACING * 0.7, py = Math.cos(hd) * side * SPACING * 0.7;
+  return [ax + bx + px, ay + by + py];
+}
+// }}}
+
+// {{{ moving one step, refused by the ground (steep, a doodad)
+// Straight at (tx, ty) if the step is open; else the nearest open heading
+// within 90 degrees either way, in 30-degree turns; else it stays.
+function stepToward(u, tx, ty, dt, speedShare) {
+  const d = Math.hypot(tx - u.x, ty - u.y); if (d < 0.05) return;
+  const len = Math.min(d, SPEED * (speedShare || 1) * dt), a0 = Math.atan2(ty - u.y, tx - u.x);
+  // set down on blocked ground (a spawn spot on a slope): any step out is allowed
+  if (blocked(u.x, u.y)) { u.x += Math.cos(a0) * len; u.y += Math.sin(a0) * len; return; }
+  for (const turn of [0, 0.52, -0.52, 1.05, -1.05, 1.57, -1.57]) {
+    const a = a0 + turn, x = u.x + Math.cos(a) * len, y = u.y + Math.sin(a) * len;
+    if (!blocked(x, y)) { u.x = x; u.y = y; return; }
+  }
+}
+// }}}
+
+// {{{ fighting: orbiting at the role's range, leaning, healing, breaking off
+// A unit with an enemy within notice range fights. Its foe: the nearest
+// enemy (a healer's is the most hurt ally in reach instead, when there is
+// one). The orbit (the owner: "circle orbiting their foes at their
+// preferred range"): toward or away from the foe until at its range, and
+// round it, each unit turning its own way. The lean ("moving away from
+// groups of enemies and toward groups of allies, when presented with the
+// option"): with more than one enemy near, the unit turns its orbit the way
+// that leads away from where they bunch, and it is pushed away from them
+// and toward its allies' middle, by the "Lean from foes" slider. Breaking
+// off ("sometimes when successful breaking off to do the objective"):
+// while its side outnumbers the enemies near two to one, each second a
+// unit may (the slider's share) leave the fight for BREAK_FOR seconds and
+// go for its squad's objective.
+function near(u, side, reach) {
+  const out = [];
+  for (const v of units) if (v.alive && v.side === side && v !== u && Math.hypot(v.x - u.x, v.y - u.y) <= reach) out.push(v);
+  return out;
+}
+function fight(u, foes, friends, dt) {
+  const R = ROLE[u.role], range = u.role === "ranged" ? +$("ranged").value : R.range;
+  // the foe: the nearest enemy, kept while still in notice
+  if (!u.target || !u.target.alive || !foes.includes(u.target)) {
+    u.target = foes.reduce((a, b) => Math.hypot(a.x - u.x, a.y - u.y) <= Math.hypot(b.x - u.x, b.y - u.y) ? a : b);
+  }
+  const f = u.target, dx = f.x - u.x, dy = f.y - u.y, d = Math.max(Math.hypot(dx, dy), 0.01);
+  // healing first: the most hurt ally in reach
+  if (R.hps) {
+    const hurt = friends.concat([u]).filter(v => v.hp < ROLE[v.role].hp && Math.hypot(v.x - u.x, v.y - u.y) <= HEAL_REACH)
+      .sort((a, b) => a.hp / ROLE[a.role].hp - b.hp / ROLE[b.role].hp)[0];
+    if (hurt) hurt.hp = Math.min(ROLE[hurt.role].hp, hurt.hp + R.hps * dt);
+  }
+  // damage, within reach
+  if (d <= (R.melee ? MELEE_REACH : SPELL_REACH)) {
+    f.hp -= R.dps * dt;
+    if (f.hp <= 0 && f.alive) die(f, u);
+  }
+  // the orbit: radial to the range, tangential round the foe
+  const ux = dx / d, uy = dy / d, radial = Math.max(-1, Math.min(1, (d - range) / 4));
+  // the lean: choose the orbit's turn away from the enemies' middle, and push from it toward the allies'
+  let lx = 0, ly = 0;
+  const lean = +$("lean").value;
+  if (foes.length > 1 && lean > 0) {
+    let ex = 0, ey = 0; for (const v of foes) { ex += v.x; ey += v.y; } ex /= foes.length; ey /= foes.length;
+    const awayX = u.x - ex, awayY = u.y - ey, al = Math.max(Math.hypot(awayX, awayY), 0.01);
+    const tangentDot = (-uy * u.orbit) * awayX + (ux * u.orbit) * awayY;
+    if (tangentDot < -0.2 * al) u.orbit = -u.orbit;          // the other way round leads away from them
+    lx += awayX / al * lean * Math.min(1, (foes.length - 1) / 3); ly += awayY / al * lean * Math.min(1, (foes.length - 1) / 3);
+  }
+  if (friends.length && lean > 0) {
+    let fx = 0, fy = 0; for (const v of friends) { fx += v.x; fy += v.y; } fx /= friends.length; fy /= friends.length;
+    const tx = fx - u.x, ty = fy - u.y, tl = Math.hypot(tx, ty);
+    if (tl > 6) { lx += tx / tl * lean * 0.5; ly += ty / tl * lean * 0.5; }
+  }
+  const mx = ux * radial + (-uy) * u.orbit * 0.9 + lx, my = uy * radial + ux * u.orbit * 0.9 + ly;
+  stepToward(u, u.x + mx * 10, u.y + my * 10, dt);
+  u.orbiting = Math.abs(d - range) < 6;
+}
+function die(f, killer) {
+  f.alive = false; f.hp = 0; f.target = null; f.guard = null;
+  tally.kills[killer.side]++;
+  if (f.squad) { f.squad.members = f.squad.members.filter(v => v !== f); f.squad = null; }
+  deadWaiting[f.side].push(f); f.spawnAt = null;
+}
+// }}}
+
+// {{{ the objective: assaulting, taking, guarding (176a2b)
+// At a base not its side's, a squad stands at the banner; with no enemy
+// within FLAG_REACH of it, the banner is its side's to assault, and 60
+// seconds later (uncontested by a defender's click) the base is taken: a
+// tank appears at home for the next departure, and one of the squad stays
+// to guard. At a base its side holds that has no guard, one stays to guard.
+// A defender at its side's banner under assault, no enemy near it, takes it
+// back at once.
+function flagStep(dt) {
+  for (const name of BASES) {
+    const b = bases[name];
+    const at = [0, 1].map(s => units.filter(u => u.alive && u.side === s && Math.hypot(u.x - b.x, u.y - b.y) <= FLAG_REACH).length);
+    for (let s = 0; s < 2; s++) {
+      if (!at[s] || at[1 - s]) continue;
+      if (b.owner === s && b.assaulter === 1 - s) { b.assaulter = -1; b.left = 0; }              // defended
+      else if (b.owner !== s && b.assaulter !== s) { b.assaulter = s; b.left = ASSAULT_TIME; }   // assaulted
+    }
+    if (b.assaulter >= 0) {
+      b.left -= dt;
+      if (b.left <= 0) { b.owner = b.assaulter; b.assaulter = -1; tally.captures[b.owner]++; tanksWaiting[b.owner]++; }
+    }
+  }
+}
+function squadAtPlace(s) {
+  const place = otherEnd(s.road, s.at);
+  s.arrivedBy = s.road; s.at = place;
+  const b = bases[place];
+  if (b && b.owner !== s.side) { s.job = "assault"; return; }
+  if (b && b.owner === s.side && !units.some(u => u.alive && u.guard === place) && s.members.length > 1) {
+    const g = s.members.pop(); g.squad = null; g.guard = place;
+  }
+  chooseRoad(s);
+}
+// }}}
+
+// {{{ one step of the match
+function step(dt) {
+  if (!G) return;
+  simT += dt;
+  if (over !== null) { over += dt; if (over >= NEXT_MATCH) newMatch(); return; }
+  if (simT >= nextDepart) {
+    nextDepart = simT + DEPART_EVERY; depart();
+    // the waiting tanks join the next squad leaving home
+    for (let side = 0; side < 2; side++) while (tanksWaiting[side] > 0) {
+      tanksWaiting[side]--;
+      // it appears at home on the next wave, with whoever comes back there, and leads them out
+      const t = makeUnit(side, "tank"); t.spawnAt = home[side]; t.waveAt = nextWave; deadWaiting[side].push(t);
+    }
+  }
+  if (simT >= nextWave) nextWave += WAVE_EVERY;
+  wave();
+  const notice = +$("notice").value, brk = +$("brk").value;
+  for (const u of units) {
+    if (!u.alive) continue;
+    u.orbiting = false;
+    const foes = near(u, 1 - u.side, notice), friends = near(u, u.side, notice);
+    if (u.breakUntil > simT) { u.broke = true; } else u.broke = false;
+    if (foes.length && !u.broke) {
+      // winning by two to one: now and then break off for the objective
+      if (friends.length + 1 >= 2 * foes.length && Math.random() < brk * dt && (u.squad || u.guard)) {
+        u.breakUntil = simT + BREAK_FOR; tally.breaks[u.side]++; continue;
+      }
+      // a guard fights only near its banner
+      if (u.guard && Math.hypot(u.x - bases[u.guard].x, u.y - bases[u.guard].y) > GUARD_LEASH) { stepToward(u, bases[u.guard].x, bases[u.guard].y, dt); continue; }
+      u.fighting = true; fight(u, foes, friends, dt); continue;
+    }
+    u.fighting = false;
+    if (u.guard) {
+      const b = bases[u.guard];
+      // its base lost: it leaves from there as a squad of one, by the roads
+      if (b.owner !== u.side && b.assaulter !== u.side) { const p = u.guard; u.guard = null; makeSquad(u.side, [u], p); continue; }
+      const a = (u.id * 1.7 + simT * 0.05) % 6.283;
+      stepToward(u, b.x + Math.cos(a) * 4, b.y + Math.sin(a) * 4, dt, 0.4);
+    }
+  }
+  // squads: walk the road while none of them fights ("no enemies to fight
+  // means you won the battle, so go and claim your prize"); assault at a base
+  for (const s of squads) {
+    if (!s.members.length) continue;
+    const fighting = s.members.some(u => u.fighting);
+    if (s.job === "assault") {
+      const b = bases[s.at];
+      for (const u of s.members) if (!u.fighting) stepToward(u, b.x + (u.id % 3 - 1) * 2, b.y + (u.id % 2) * 2, dt);
+      if (b.owner === s.side) {                             // taken: one stays to guard, the rest go on
+        if (s.members.length > 1) { const g = s.members.pop(); g.squad = null; g.guard = s.at; }
+        chooseRoad(s);
+      }
+      continue;
+    }
+    if (!fighting) {
+      const slowest = Math.min(...s.members.map(u => { const [ax, ay] = anchor(s); return Math.hypot(u.x - ax, u.y - ay) > 10 ? 0.5 : 1; }));
+      s.along += SPEED * dt * slowest * 0.95;
+    }
+    const [ax, ay, hd, end] = anchor(s);
+    for (const u of s.members) {
+      if (u.fighting) continue;
+      if (u.broke) { stepToward(u, ...BG.places[otherEnd(s.road, s.at)].slice(0, 2), dt); continue; }
+      const [tx, ty] = spotOf(s, u, ax, ay, hd); stepToward(u, tx, ty, dt);
+    }
+    if (end && !fighting && s.members.every(u => Math.hypot(u.x - ax, u.y - ay) < 14)) squadAtPlace(s);
+  }
+  squads = squads.filter(s => s.members.length);
+  flagStep(dt);
+  // resources, by bases held
+  for (let side = 0; side < 2; side++) {
+    const n = BASES.filter(b => bases[b].owner === side).length;
+    if (!n) { nextTick[side] = simT + 1; continue; }
+    if (simT >= nextTick[side]) { res[side] = Math.min(WIN_AT, res[side] + TICK[n][0]); nextTick[side] = simT + TICK[n][1]; }
+    if (res[side] >= WIN_AT && over === null) { over = 0; winner = side; }
+  }
+}
+function nearestPlace(u) {
+  let best = home[u.side], bd = 1e9;
+  for (const p in BG.places) { const [x, y] = BG.places[p], d = Math.hypot(x - u.x, y - u.y); if (d < bd) { bd = d; best = p; } }
+  return best;
+}
+// }}}
+
+// {{{ drawing
+// cam: the middle (screen yards) and pixels a yard
+const cam = { x: 0, y: 0, s: 1 };
+function fitField() {
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+  for (const p in BG.places) { const [x, y] = BG.places[p]; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  cam.x = (x0 + x1) / 2 - 60; cam.y = (y0 + y1) / 2;
+  cam.s = Math.min(W / (x1 - x0 + 260), H / (y1 - y0 + 120));
+}
+const toPx = (x, y) => [(x - cam.x) * cam.s + W / 2, (y - cam.y) * cam.s + H / 2];
+const sideColour = s => s < 0 ? "#9aa0a6" : getComputedStyle(document.documentElement).getPropertyValue(s ? "--side1" : "--side0").trim();
+function draw() {
+  ctx.fillStyle = "#1b2a22"; ctx.fillRect(0, 0, W, H);
+  if (G) {
+    const [px, py] = toPx(G.sx0, G.sy0);
+    ctx.imageSmoothingEnabled = cam.s < 2;
+    ctx.drawImage(G.canvas, px - G.step * cam.s / 2, py - G.step * cam.s / 2, G.cols * G.step * cam.s, G.rows * G.step * cam.s);
+    // doodads, when close enough to see
+    if (cam.s > 0.9) {
+      ctx.fillStyle = "rgba(0,0,0,0.55)";
+      for (let i = 0; i < G.rects.length; i += 4) { const [a, b] = toPx(G.rects[i], G.rects[i + 1]); ctx.fillRect(a, b, (G.rects[i + 2] - G.rects[i]) * cam.s, (G.rects[i + 3] - G.rects[i + 1]) * cam.s); }
+    }
+  }
+  // roads
+  ctx.strokeStyle = "rgba(232,197,71,0.35)"; ctx.lineWidth = 2;
+  for (const r of BG.roads) { ctx.beginPath(); r.pts.forEach(([x, y], i) => { const [a, b] = toPx(x, y); i ? ctx.lineTo(a, b) : ctx.moveTo(a, b); }); ctx.stroke(); }
+  // places
+  ctx.font = "12px system-ui"; ctx.textAlign = "center";
+  for (const p in BG.places) {
+    const [x, y] = BG.places[p], [a, b] = toPx(x, y), base = bases && bases[p], r = Math.max(8, FLAG_REACH * cam.s);
+    const homeOf = home ? home.indexOf(p) : -1;
+    ctx.beginPath(); ctx.arc(a, b, r, 0, 6.283);
+    ctx.fillStyle = base ? (base.owner < 0 ? "rgba(154,160,166,0.35)" : sideColour(base.owner) + "88") : sideColour(homeOf) + "55";
+    ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = "#e8e8e8"; ctx.stroke();
+    if (base && base.assaulter >= 0) {
+      ctx.beginPath(); ctx.arc(a, b, r + 4, -Math.PI / 2, -Math.PI / 2 + 6.283 * (1 - base.left / ASSAULT_TIME));
+      ctx.strokeStyle = sideColour(base.assaulter); ctx.lineWidth = 4; ctx.stroke();
+    }
+    ctx.fillStyle = "#e8e8e8"; ctx.fillText(homeOf >= 0 ? (homeOf ? "Horde home" : "Alliance home") : p, a, b - r - 6);
+  }
+  // fights: a thin line from each fighter to its foe
+  ctx.lineWidth = 1;
+  for (const u of units) if (u.alive && u.fighting && u.target && u.target.alive) {
+    const [a, b] = toPx(u.x, u.y), [c, d] = toPx(u.target.x, u.target.y);
+    ctx.strokeStyle = sideColour(u.side) + "55"; ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(c, d); ctx.stroke();
+  }
+  // units: square a tank, cross a healer, dot a damage dealer; a ring a guard; white edge breaking off
+  for (const u of units) {
+    if (!u.alive) continue;
+    const [a, b] = toPx(u.x, u.y), r = Math.max(3, 1.2 * cam.s);
+    ctx.fillStyle = sideColour(u.side);
+    if (u.role === "tank") ctx.fillRect(a - r, b - r, 2 * r, 2 * r);
+    else if (u.role === "healer") { ctx.fillRect(a - r, b - r / 3, 2 * r, 2 * r / 3); ctx.fillRect(a - r / 3, b - r, 2 * r / 3, 2 * r); }
+    else { ctx.beginPath(); ctx.arc(a, b, r, 0, 6.283); ctx.fill(); }
+    if (u.guard) { ctx.beginPath(); ctx.arc(a, b, r + 3, 0, 6.283); ctx.strokeStyle = sideColour(u.side); ctx.lineWidth = 1.5; ctx.stroke(); }
+    if (u.broke) { ctx.beginPath(); ctx.arc(a, b, r + 1.5, 0, 6.283); ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.5; ctx.stroke(); }
+    // health, when hurt
+    const share = u.hp / ROLE[u.role].hp;
+    if (share < 0.99) { ctx.fillStyle = "#000a"; ctx.fillRect(a - 6, b + r + 2, 12, 2); ctx.fillStyle = "#7f7"; ctx.fillRect(a - 6, b + r + 2, 12 * share, 2); }
+  }
+  if (over !== null) {
+    ctx.fillStyle = "rgba(0,0,0,0.55)"; ctx.fillRect(0, H / 2 - 30, W, 60);
+    ctx.fillStyle = sideColour(winner); ctx.font = "bold 26px system-ui"; ctx.textAlign = "center";
+    ctx.fillText(`${winner ? "The Horde" : "The Alliance"} wins; the next match in ${Math.ceil(NEXT_MATCH - over)} s`, W / 2, H / 2 + 9);
+  }
+  measures();
+}
+function measures() {
+  if (!units) return;
+  const names = ["Alliance", "Horde"];
+  let sc = "";
+  for (let s = 0; s < 2; s++) {
+    const held = BASES.filter(b => bases[b].owner === s).length;
+    sc += `<div style="color:${sideColour(s)}">${names[s]} (${home[s]}): ${res[s]} of ${WIN_AT}, ${held} bases</div>` +
+          `<div class="bar"><div style="width:${res[s] / WIN_AT * 100}%;background:${sideColour(s)}"></div></div>`;
+  }
+  $("score").innerHTML = sc;
+  const row = (label, f) => (label + "            ").slice(0, 14) + [0, 1].map(s => String(f(s)).padStart(7)).join("");
+  const alive = s => units.filter(u => u.alive && u.side === s);
+  $("measures").textContent = [
+    "              Alliance  Horde",
+    row("in play", s => alive(s).length),
+    row("waiting", s => deadWaiting[s].length),
+    row("fighting", s => alive(s).filter(u => u.fighting).length),
+    row("orbiting", s => alive(s).filter(u => u.orbiting).length),
+    row("guarding", s => alive(s).filter(u => u.guard).length),
+    row("squads", s => squads.filter(q => q.side === s).length),
+    row("kills", s => tally.kills[s]),
+    row("bases taken", s => tally.captures[s]),
+    row("broke off", s => tally.breaks[s]),
+    `match time    ${Math.floor(simT / 60)}:${String(Math.floor(simT % 60)).padStart(2, "0")}`,
+  ].join("\n");
+}
+// }}}
+
+// {{{ the loop, the panel, input
+let last = 0;
+function frame(t) {
+  const dt = Math.min(0.1, (t - last) / 1000 || 0); last = t;
+  const n = +$("speed").value;
+  for (let k = 0; k < n; k++) step(dt);
+  draw(); requestAnimationFrame(frame);
+}
+function resize() { W = cv.width = innerWidth; H = cv.height = innerHeight; }
+addEventListener("resize", () => { resize(); draw(); });
+const labels = { side: v => v, notice: v => v + " yd", ranged: v => v + " yd", brk: v => Math.round(v * 100) + "% a second", lean: v => v, slope: v => v + "°" };
+for (const id in labels) $(id).oninput = () => { $(id + "N").textContent = labels[id]($(id).value); if (id === "slope") paintGround(); };
+$("again").onclick = () => newMatch();
+$("fit").onclick = () => fitField();
+cv.addEventListener("wheel", e => { e.preventDefault(); const k = e.deltaY < 0 ? 1.2 : 1 / 1.2; const wx = (e.clientX - W / 2) / cam.s + cam.x, wy = (e.clientY - H / 2) / cam.s + cam.y; cam.s *= k; cam.x = wx - (e.clientX - W / 2) / cam.s; cam.y = wy - (e.clientY - H / 2) / cam.s; }, { passive: false });
+let drag = null;
+cv.addEventListener("mousedown", e => { drag = [e.clientX, e.clientY, cam.x, cam.y]; });
+addEventListener("mouseup", () => { drag = null; });
+addEventListener("mousemove", e => { if (drag) { cam.x = drag[2] - (e.clientX - drag[0]) / cam.s; cam.y = drag[3] - (e.clientY - drag[1]) / cam.s; } });
+// }}}
+
+// {{{ start
+// The address settings (as the ground sandbox's): side, notice, ranged,
+// brk, lean, slope, speed set the panel; sim: seconds of play run at once
+// before the first picture (for headless pictures).
+resize();
+const Q = new URLSearchParams(location.hash.slice(1));
+for (const id of ["side", "notice", "ranged", "brk", "lean", "slope", "speed"]) if (Q.has(id)) { $(id).value = Q.get(id); $(id).oninput && $(id).oninput(); }
+G = loadGround();
+paintGround();
+newMatch(); fitField();
+if (!G) $("score").textContent = "Arathi Basin's ground did not load (battleground-sandbox/zone-529-3358.js beside the page).";
+const run = +(Q.get("sim") || 0);
+for (let t = 0; t < run; t += 0.1) step(0.1);
+draw();
+requestAnimationFrame(frame);
+// }}}
+</script>
+</body>
+</html>

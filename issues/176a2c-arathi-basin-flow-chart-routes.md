@@ -115,6 +115,13 @@ owner's table, written once as data, and each road between two crossings
 is walked and recorded in game by a game master (as the boarding
 recorder does for ships, `.buddy record`, 617e9), not derived.
 
+**These roads, not a planner** (the owner, 2026-10-29, asked whether a
+squad should keep to the roads and use one of the five ways to find a
+path (617o7) only round what blocks it, or leave the roads for a shorter
+line: "A squad should path find as we designed in the PvP settings").
+A squad's way is this rule's: the roads, taken in turn. The five ways
+are not used to choose it. The page of 617e16l plays it.
+
 **Starting anywhere.** Squads now also appear at bases their side holds
 (176a2b), so a route starts at any base or home, not only at home.
 
