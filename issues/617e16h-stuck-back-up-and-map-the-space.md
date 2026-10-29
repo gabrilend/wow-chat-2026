@@ -54,33 +54,41 @@ counted as stuck, after the measure was turned toward the target):
 
 ## Current Behavior
 
-**Built 2026-10-28 in the ground sandbox** (steps 1-3; pictures 034, 035),
-`scripts/templates/ground-sandbox.html`'s stuck section:
-- Each bot's second: how far it meant to go (speed before the walls) and
-  how far it got along that way; meant at least 0.6 of full speed but got
-  under a quarter of it: stuck. Backs up 2 yards straight away from where
-  it meant to go, then 4, 8 ... up to 64 while it keeps getting stuck;
-  three good seconds in a row start the count again. Not measured while
-  backing up, fighting, or standing in formation.
-- One map the zone's bots share, 2-yard cells: open where a bot has
-  stood, a wall where one got stuck facing (a bot standing in a wall cell
-  proves it open: wrong marks from a crowd mend themselves). Known walls
-  join the walls bots steer round. Started afresh with each zone.
-- Drawn: known walls as dark red squares. Panel: times stuck, yards
-  backed up, the deepest run of doubling, the share of the part in play
-  known open, the known walls (picture 035: stuck twice, 38% known open
-  after four minutes).
-
-- **Bumps and buffers** (pictures 036-039): a second with under 0.9 of
-  the progress meant, while a real obstacle (steep ground, a doodad, a
-  known wall, the edge) turned the bot, is a bump: the 3 x 3 cells round
-  the touch become buffer (drawn amber). Buffers are kept clear when a
-  way round exists, crossed when none does, and walked through by a bot
-  on a straight crossing; standing in one doesn't clear it. Tried and
-  mended on the way: brushing a buffer first counted as a bump (buffers
-  bred buffers, 036); as hard walls buffers sealed narrow passages (038).
-- Crossings (617e16d) now end at a decision point after three times the
-  time the walk should take, if the far side can't be reached (037).
+**Built 2026-10-28 in the ground sandbox** (pictures 034-047, every
+version a commit of its own), `scripts/templates/ground-sandbox.html`:
+- **What the bots know and what the world holds.** A bot steers by what
+  it knows: steep ground (as the navigation mesh knows it, `steepAt`), the
+  shared map's walls and buffers, the area's edge. The world holds that
+  and the doodads (trees, rocks, huts, `blocked`); a step into one is
+  refused, and the bot stays where it was (the server pulling the client
+  back).
+- **Caught: the owner's test.** Each second, the moves the bot put in
+  (summed) against the line from where it was to where it is: moving (at
+  least 0.6 of full speed) and getting under 0.95 of its inputs along
+  their way, it is caught. The refused spot becomes a known wall (no
+  refusal: the cell just ahead); the last 3 cells of the track that led
+  there become buffer (dispreferred); it backs up straight back, 2 yards,
+  then 4, 8 ... up to 64 while it keeps being caught; a second not caught
+  starts the doubling again. Not measured while backing up, fighting, or
+  standing in formation. A wanderer caught on a crossing or turning aside
+  takes it as its decision point (617e16d).
+- **The shared map**, 2-yard cells: open where a bot has stood, a wall
+  where a step was refused, buffer on the tracks that led there. Standing
+  in a wall cell proves it open (a wrong mark mends itself); standing in a
+  buffer doesn't clear it. Buffers are kept clear when a way round exists,
+  crossed when none does, walked through on a straight crossing.
+- Drawn: walls dark red, buffers amber, a bot backing up ringed white.
+  Panel: times caught, steps refused, buffer cells, yards backed up, the
+  share of the part known open (picture 047: caught 445 times, 28,960
+  steps refused, 131 known walls in four minutes).
+- The versions on the way, each kept: judged by the bot's velocity after
+  the walls turned it (scraping along a wall looked fine, never backed
+  up); by the straight way to the target (a detour looked stuck: false
+  walls on open ground, 041-043, "dropping a red pixel every once in a
+  while"); three good seconds to reset the doubling (back-ups grew to 64
+  yards); bumps from brushing buffers (buffers bred buffers, 036);
+  buffers as hard walls (sealed passages, 038). Crossings end after three
+  times the walk's time if the far side can't be reached (037).
 
 Not built: step 4, routes over the known cells (open question 1).
 
