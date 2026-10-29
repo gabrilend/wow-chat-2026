@@ -24,11 +24,27 @@ compile."
 
 ## Current Behavior
 
-One way, grown step by step in the ground sandbox (617e16h): steer
-straight for the target, turn aside from what is known to block, and when
-progress falls short, back out (doubling) and orbit the obstacle until the
-target is in sight. In game, a buddy walks the server's navigation mesh
-path to wherever its behaviours send it (the bot module's movement).
+**Step 1 built 2026-10-28** (pictures 057-061): the ground sandbox's
+"Pathfinding" choice (`way=` in the address) runs any of the five for
+every bot (`scripts/templates/ground-sandbox.html`, the five-ways
+section). The planning grid is the ground's points over the area in play's
+box. Flow fields are kept per target and per state of learned obstacles;
+A* routes are planned again when the target, the learned obstacles, or 5
+seconds pass (keying either on the map's open cells, which grow every
+step, made the first runs plan every step: 96,424 routes in three minutes,
+a hung flow-field run). Three minutes each on the Witchwing Slayer area:
+
+| Way | Routes or fields | Steps with no way | Spacing |
+|---|---|---|---|
+| orbit | (orbits: 055, 056) | low | 16-24 yd |
+| flow field | 5,310 fields | 0 | 13.8 yd |
+| graph and A* | 4,308 routes | 0 | 12.4 yd |
+| potential field | none | 0 | 14.7 yd |
+| learn the map | 2,919 routes | 60 a second | 18.8 yd |
+
+Not built: step 2's headless comparison tool, step 3 the module switch,
+step 4 trying them in game. In game, a buddy still walks the server's
+navigation mesh path to wherever its behaviours send it.
 
 ## Intended Behavior
 
