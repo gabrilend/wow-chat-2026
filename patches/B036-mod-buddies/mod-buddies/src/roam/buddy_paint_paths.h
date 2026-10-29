@@ -40,6 +40,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <functional>
 #include <limits>
 #include <vector>
@@ -537,6 +538,55 @@ namespace BuddyPaint
             CrowdAdd(M, b.x, b.y, W);
             if (b.path) CrowdAlong(M, *b.path, b.path->seg, b.x, b.y, W * 0.5);
         }
+    }
+    // }}}
+
+    // {{{ keeping the paint: what the bots learned, as bytes, and back
+    // The owner, 2026-10-29: "collectively get better at navigating as we
+    // gather more data": the paint outlives a restart. What is kept is what
+    // was learned, nothing that can be worked out again: the map's size and
+    // place, each cell's kind and its walks. Clearance is worked out again
+    // on loading (ClearAll); the crowd and the planner's memory start empty.
+    // The bytes: "BPNT", a version (1), w, h (int32), step, x0, y0 (double),
+    // then w*h kinds (one byte each), then w*h walks (two bytes each, low
+    // byte first). Load refuses (false, the map untouched) bytes that are not
+    // a map of exactly this size and place: a region's file belongs to that
+    // region alone.
+    inline std::vector<uint8_t> Save(Map const& M)
+    {
+        std::vector<uint8_t> out;
+        auto put = [&](void const* p, size_t n) { auto b = static_cast<uint8_t const*>(p); out.insert(out.end(), b, b + n); };
+        uint32_t version = 1;
+        int32_t w = M.w, h = M.h;
+        out.insert(out.end(), { 'B', 'P', 'N', 'T' });
+        put(&version, 4); put(&w, 4); put(&h, 4); put(&M.step, 8); put(&M.x0, 8); put(&M.y0, 8);
+        out.insert(out.end(), M.know.begin(), M.know.end());
+        for (uint16_t v : M.walks) { out.push_back(uint8_t(v & 0xff)); out.push_back(uint8_t(v >> 8)); }
+        return out;
+    }
+    inline bool Load(Map& M, std::vector<uint8_t> const& in)
+    {
+        size_t const head = 4 + 4 + 4 + 4 + 8 + 8 + 8, n = size_t(M.n);
+        if (in.size() != head + n + 2 * n || in[0] != 'B' || in[1] != 'P' || in[2] != 'N' || in[3] != 'T') return false;
+        uint32_t version; int32_t w, h; double step, x0, y0;
+        std::memcpy(&version, &in[4], 4); std::memcpy(&w, &in[8], 4); std::memcpy(&h, &in[12], 4);
+        std::memcpy(&step, &in[16], 8); std::memcpy(&x0, &in[24], 8); std::memcpy(&y0, &in[32], 8);
+        if (version != 1 || w != M.w || h != M.h || step != M.step || x0 != M.x0 || y0 != M.y0) return false;
+        int painted = 0, wallCells = 0, inside = 0;
+        for (size_t q = 0; q < n; ++q)
+        {
+            uint8_t k = in[head + q];
+            if (k > Outside) return false;
+            M.know[q] = k;
+            if (k == Painted) ++painted;
+            if (k == Wall) ++wallCells;
+            if (k != Outside) ++inside;
+            M.walks[q] = uint16_t(in[head + n + 2 * q] | (in[head + n + 2 * q + 1] << 8));
+        }
+        M.painted = painted; M.wallCells = wallCells; M.inside = inside;
+        ++M.version;                                   // every path planned on the old map is out of date
+        ClearAll(M);
+        return true;
     }
     // }}}
 }

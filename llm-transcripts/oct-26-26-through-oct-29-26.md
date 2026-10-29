@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-29 13:23:46
+Generated on: 2026-10-29 15:34:43
 Models: claude-opus-5-5
 
 ## Contents
@@ -10495,6 +10495,128 @@ painted map be kept between server restarts, so the buddies' knowledge of the
 world grows over days? And should it be shared by every buddy on the server, or
 should each clan learn its own map? Right now it's shared by everyone in a
 region and forgotten at a restart.
+
+--------------------------------------------------------------------------------
+
+### User Request 104
+
+firefox
+>   /mnt/kaun/wow-chat-2026/docs/HTML/archive/ground-sandbox/index.html
+
+[Image #47] 
+
+please save this to the development history archive
+
+--------------------------------------------------------------------------------
+
+### User Request 105
+
+[Image: source:
+/tmp/claude-1000/-mnt-kaun-wow-chat-2026/03547e04-6a50-4e0d-97ee-ae0ce7474312/images/47.png]
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 105
+
+> Filing your picture now. Finding the archived version's exact file name, so
+> the notes say precisely what it shows:
+
+> Understood. I'll keep working as if you're away. Filing your picture first: it
+> shows the 2026-10-28 23:06 version (070d6d0, the back-out version, from before
+> the five ways):
+
+*[commit] f8052c8d1 in wow-chat-2026 - *
+
+> Fence 0 there is the Firegut Ogre Mage area your picture shows. Running the
+> painted map on it with your picture's settings (clockwise, 2 minutes):
+
+> I'll write that rule into the project's CLAUDE.md now. First checking nobody
+> else has CLAUDE.md claimed or changed:
+
+*[commit] 636662b42 in wow-chat-2026 - *
+
+> Committed (636662b42). Letting go of my claim on CLAUDE.md, then the result of
+> the spreading change:
+
+> I've saved it word for word in the conversation asides, with what was
+> happening when it came, as the project keeps your words:
+
+> The asides file also holds the earlier entry from today, both mine. Filing
+> pictures 079–080's notes and recording the undone experiment in the issue:
+
+*[commit] 9b48e8534 in wow-chat-2026 - *
+
+> Committed (9b48e8534). Backing up this page version too:
+
+> That commit exited without doing anything and printed nothing: the tool's
+> silent failure again, this time after a long wait. Retrying once, with the
+> claim in its own call as before:
+
+*[commit] daee34c06 in wow-chat-2026 - Back up the ground sandbox version after the spreading experiment was undone*
+
+> Nobody else holds these files. Renaming with git so the history follows, then
+> updating the seven files that name it:
+
+> 15 references updated. Adding the reason beside the generator's output path,
+> so the name isn't "tidied" back later, then running the levers test and the
+> Lua-load test that caught the clash:
+
+> Still fixing yesterday's leftover test failures while you're away; one left.
+> Adding `.lever` to the command list, with its three forms:
+
+> Checking what the regenerated reference actually adds, since it reads every
+> command in the code:
+
+*[commit] 4b33c374e in wow-chat-2026 - The buddy levers load in game, and .lever is in the command reference*
+
+> Committed (4b33c374e). Checking the rename landed whole (the old name gone,
+> the new one in), then putting the two waiting descriptions back:
+
+I'm stopping here for now. The pathfinding work is committed, but nothing in the
+game has been compiled or tried yet.
+
+**While you were away:**
+- **Your picture** of the old version is saved as 077, with notes. It shows the
+  knot of small orbit rings on the Burning Steppes ledge, which is the fault
+  fixed today.
+- **Your away rule** is in CLAUDE.md: writes outside the project wait in
+  `tmp/shared-memory/outside-writes/` until you return. **These requests need
+  permissions: none.** Nothing is waiting.
+- **The painted map on your Burning Steppes fence:**
+  - With the player where the page puts them, the area in play is a
+    260-square-yard pocket, so all 36 bots were crammed into it (picture 078).
+  - That's a question about the area rules, not about finding a path, and it's
+    in the painted map's issue: should a part that small be skipped, or hold
+    only as many bots as fit?
+- **A spreading idea, tried and undone:** sending each bot to the least-walked
+  ground in its wedge made spacing worse (14–16 yards against about 19).
+  Several bots chased the same fresh corner. The issue records why.
+- **Two quick tests had failed after every commit since yesterday, from my
+  levers work.** Both are fixed (4b33c374e):
+  - The levers' list shared a file name with their code, and the game's Lua
+    engine refuses two files of the same name. The list is now
+    `data/buddy-lever-list.lua`.
+  - `.lever` is now in the GM command reference.
+
+  One test still fails, `test-datapath-installed-lua`: the installed Lua link
+  points at the beta folder. Your next `scripts/install --profile basic` fixes
+  it.
+- **For the ai-stuff tools:** `commit-own-changes` sometimes exits without
+  committing and prints nothing, once after a two-minute wait. Retrying, with
+  the claims in a call of their own, has always worked. I suspect it collides
+  with the background tests the previous commit started, but haven't confirmed
+  that.
+
+**Waiting for your compile (basic), then committed together:**
+- the path switch with all six ways, including `.buddy path paint`;
+- the army and the stand-in changes;
+- grouping and gems for stand-ins;
+- the live map stream;
+- the descriptions of `.buddy path` and `.buddy army`.
+
+**My question from before still stands:** should the painted map be kept between
+server restarts, so the buddies' knowledge grows over days? And should every
+buddy on the server share one map, or each clan learn its own?
 
 --------------------------------------------------------------------------------
 

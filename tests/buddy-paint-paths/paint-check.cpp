@@ -159,6 +159,18 @@ int main()
         check(r.maxTurn <= r.M.opt.TURN + 1e-6, line);
         std::snprintf(line, sizeof line, "pillars: smooth walking: under 8 degrees turned a yard (%.1f)", tpy);
         check(tpy < 8, line);
+        // keeping the paint: the learned field saved, loaded into a fresh map
+        // of the same size and place, comes back the same, clearance worked
+        // out again included; a map of another size refuses it
+        std::vector<uint8_t> bytes = Save(r.M);
+        Map fresh = Make(r.M.w, r.M.h, r.M.step, r.M.x0, r.M.y0);
+        bool loaded = Load(fresh, bytes);
+        bool same = loaded && fresh.know == r.M.know && fresh.walks == r.M.walks && fresh.clear == r.M.clear &&
+                    fresh.painted == r.M.painted && fresh.wallCells == r.M.wallCells;
+        std::snprintf(line, sizeof line, "keeping the paint: the learned field (%zu bytes) saved and loaded comes back cell for cell, clearance and all", bytes.size());
+        check(same, line);
+        Map other = Make(r.M.w + 1, r.M.h, r.M.step, r.M.x0, r.M.y0);
+        check(!Load(other, bytes) && other.wallCells == 0, "keeping the paint: a map of another size refuses it, untouched");
     }
     // }}}
     // {{{ 2. space from walls: a known wall with a 16-yard gap

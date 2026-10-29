@@ -230,3 +230,14 @@ CLAUDE.md), word for word:
 > "use my programming agent" she says as she shares her claude.md files
 > and projects with inspirational architecture "build my projects for me
 > with a shared license" suffers in the beyond []fieldl.
+
+## 2026-10-29, on how we work
+
+After a day of measuring the ways to find a path, word for word:
+
+> remember, the goal of our interactions is the creation of a product,
+> not the generation of additional unique datas. We must set our sights
+> on a finished task as our goal, and then build them iteratively,
+> adjusting as we go. We should build fast and make things. We have
+> unlimited search space now with computers. Just, design all of our
+> stuff and we'll curate it as we go. Decisionmaking is an art.
