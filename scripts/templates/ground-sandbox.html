@@ -39,7 +39,7 @@
   <label>Tails <input id="tail" type="range" min="0" max="120" value="40"><span id="tailN">40 s</span></label>
   <label>Steepest <input id="slope" type="range" min="15" max="85" value="50"><span id="slopeN">50°</span></label>
   <label>Stuck check <input id="check" type="range" min="0.25" max="3" step="0.25" value="1"><span id="checkN">1 s</span></label>
-  <label>Pathfinding <select id="way"><option value="orbit" selected>orbit</option><option value="flow">flow field</option><option value="astar">graph and A*</option><option value="potential">potential field</option><option value="learn">learn the map</option></select></label>
+  <label>Pathfinding <select id="way"><option value="orbit" selected>orbit</option><option value="flow">flow field</option><option value="astar">graph and A*</option><option value="potential">potential field</option><option value="learn">learn the map</option><option value="paint">painted map</option></select></label>
   <label>Ground <select id="shade"><option value="2" selected>hills and blocks</option><option value="1">hills</option><option value="0">flat</option></select></label>
   <label>Live players <input id="live" type="checkbox"><span id="liveN">off</span></label>
   <div>
@@ -64,6 +64,7 @@
 // the page is still being read, so it is there before the page counts as
 // loaded (a headless screenshot waits for that, and no longer).
 /*GROUND_DECODE*/
+/*PAINT_PATHS*/
 window.GROUND_FILES = {};
 function GROUND_LOADED(g) { GROUND_FILES[g.map + "-" + g.zone] = g; }
 // the continent's monsters (617e16g): monsters-<map>.js, by map
@@ -376,6 +377,7 @@ function paintGround() {
   }
   g.level = cnt ? sum / cnt : undefined;
   fenceOpen = null;                                          // the fence's open share is counted again
+  if (inPlay && inPlay.paintMap) PaintPaths.setGround(inPlay.paintMap, paintKind(inPlay));   // steep by the new limit; the paint kept
 }
 // Whether a bot's middle may stand at (x, y): not on ground steeper than
 // the limit (the nearest height point's), not inside a doodad's grown
@@ -988,6 +990,7 @@ function stepFlock(dt) {
   const formed = stepPatrol(dt, f);                          // how many bots hold formation places (617e16e)
   stepMobs();                                                // monsters coming back (617e16g)
   catchUp(f);                                                // the player far away: the bots appear near them
+  if (wayNow() === "paint" && f && f.contains && GROUND) paintBegin(f);   // the painted map (617o8)
   bots.forEach((b, bi) => {
     if (f && (b.unstickIn = (b.unstickIn || Math.random()) - dt) <= 0) { b.unstickIn = 1; unstick(b, f); }
     let tx, ty;
@@ -1142,8 +1145,19 @@ function stepFlock(dt) {
     // 2-yard cell a wall failed: it was often the cell the bot stood in, and
     // standing proves a cell open, so the mark was undone at once: 77,942
     // refused steps, picture 052.)
-    if (blocked(b.x + stepX, b.y + stepY) && !blocked(b.x, b.y)) { b.refusedX = b.x + stepX; b.refusedY = b.y + stepY; steer.refused++; revealAt(b.refusedX, b.refusedY); if (wayNow() === "learn") learnRefusal(b, b.refusedX, b.refusedY); }
-    else { b.x += stepX; b.y += stepY; }
+    if (blocked(b.x + stepX, b.y + stepY) && !blocked(b.x, b.y)) { b.refusedX = b.x + stepX; b.refusedY = b.y + stepY; steer.refused++; revealAt(b.refusedX, b.refusedY); if (wayNow() === "learn") learnRefusal(b, b.refusedX, b.refusedY);
+      if (wayNow() === "paint" && f && f.contains && GROUND) paintRefused(b, f); }
+    else {
+      b.x += stepX; b.y += stepY;
+      if (wayNow() === "paint" && f && f.paintMap) PaintPaths.walked(f.paintMap, b.x, b.y);
+      // smoothness, for every way (617o8): degrees the heading turned a yard walked
+      const sl = Math.hypot(stepX, stepY);
+      if (sl > 0.01) {
+        const hd = Math.atan2(stepY, stepX);
+        if (b.lastH !== undefined) { let d = hd - b.lastH; d -= Math.round(d / (2 * Math.PI)) * 2 * Math.PI; paintW.turn += Math.abs(d); paintW.yards += sl; }
+        b.lastH = hd;
+      }
+    }
     learnOpen(b.x, b.y);
     trackProgress(b, stepX, stepY, dt);
   });
@@ -1356,7 +1370,101 @@ function wayStep(b, tx, ty, dt) {
   if (way === "astar") return astarStep(b, tx, ty, f, false);
   if (way === "learn") return astarStep(b, tx, ty, f, true);
   if (way === "potential") return potentialStep(b, tx, ty, dt);
+  if (way === "paint") return paintStep(b, tx, ty, f);
   return null;
+}
+// }}}
+
+// {{{ the painted map (issue 617o8)
+// The owner, 2026-10-29: "we want bots to paint surfaces and collectively
+// get better at navigating as we gather more data. Also they should give
+// space to walls, less if they need something nearby or directly nearby
+// opposite the wall, and they should spread out through an area." The work
+// is scripts/templates/paint-paths.js (inlined above, tested alone by
+// scripts/test-paint-paths); this joins it to the sandbox:
+//   one map per part in play (f.paintMap), yard cells over its box and 8
+//   yards round it; steep ground (by the slider) and the part's edge known
+//   from the start, the doodads not, as for the other ways;
+//   each bot plans from where it is to its wandering's target when the map
+//   says to (a new target, a wall painted near its route, now and then for
+//   the crowd), at most PAINT_BUDGET plans a step (the rest wait a step);
+//   it is given a lane of its own (-1 to 1) and follows its route in it;
+//   it paints the cell it stands in each step; a refused step paints the
+//   doodad it hit (its footprint, grown by a body) and it plans again;
+//   the crowd (where bots stand and their routes run) is remade each second.
+const PAINT_BUDGET = 6;
+const paintW = { budget: 0, crowdAt: 0, drawnAt: -1, turn: 0, yards: 0 };
+function paintKind(f) { return (x, y) => !f.contains(x, y) ? PaintPaths.OUTSIDE : steepAt(x, y) ? PaintPaths.STEEP : PaintPaths.UNKNOWN; }
+function paintMapFor(f) {
+  if (f.paintMap) return f.paintMap;
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+  for (const [x, y] of f.poly) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  x0 -= 8; y0 -= 8; x1 += 8; y1 += 8;
+  const M = PaintPaths.make(Math.ceil(x1 - x0) + 1, Math.ceil(y1 - y0) + 1, 1, x0, y0, {});
+  PaintPaths.setGround(M, paintKind(f));
+  M.canvas = document.createElement("canvas"); M.canvas.width = M.w; M.canvas.height = M.h;
+  return (f.paintMap = M);
+}
+// once a step, before the bots: the plan budget, and the crowd each second
+function paintBegin(f) {
+  paintW.budget = PAINT_BUDGET;
+  const M = paintMapFor(f);
+  if (simT >= paintW.crowdAt) { PaintPaths.crowd(M, bots.map(b => ({ x: b.x, y: b.y, path: b.ppath }))); paintW.crowdAt = simT + 1; }
+}
+function paintStep(b, tx, ty, f) {
+  const M = paintMapFor(f), PP = PaintPaths;
+  if (b.lane === undefined) { b.lane = Math.random() * 2 - 1; b.jitter = Math.random() * 2; }
+  if (paintW.budget > 0 && PP.needsPlan(M, b.ppath, tx, ty, simT, b.jitter)) {
+    paintW.budget--;
+    b.ppath = PP.plan(M, b.x, b.y, tx, ty);
+    if (b.ppath) { b.ppath.at = simT; PP.crowdRoute(M, b.ppath, b.x, b.y); }
+  }
+  return b.ppath ? PP.follow(M, b.ppath, b.x, b.y, b.lane) : null;
+}
+// a refused step: the doodad holding the refused point (the footprints are
+// kept grown by a body already, GROUND.rects), or none (steep ground the
+// bot's own steering missed): painted for every bot, and this one plans again
+function paintRefused(b, f) {
+  const M = paintMapFor(f), g = GROUND, x = b.refusedX, y = b.refusedY;
+  let box = null;
+  const list = g && g.buckets.get(Math.floor(x / BUCKET) + "," + Math.floor(y / BUCKET));
+  if (list) for (const i of list) { const q = i * 4; if (x >= g.rects[q] && x <= g.rects[q + 2] && y >= g.rects[q + 1] && y <= g.rects[q + 3]) { box = [g.rects[q], g.rects[q + 1], g.rects[q + 2], g.rects[q + 3]]; break; } }
+  PaintPaths.refused(M, x, y, box, b.x, b.y);
+  b.ppath = null;
+}
+// the paint drawn (way "painted map"): walked ground gold, the more walked
+// the stronger; learned walls orange; unknown ground clear. The picture is
+// remade at most twice a second of play.
+function drawPaint(M, yd2px) {
+  if (simT - paintW.drawnAt >= 0.5 || paintW.drawnAt < 0) {
+    paintW.drawnAt = simT;
+    const o = M.canvas.getContext("2d"), img = o.createImageData(M.w, M.h), px = img.data;
+    for (let q = 0; q < M.n; q++) {
+      const k = M.know[q];
+      if (k === PaintPaths.PAINTED) px.set([232, 197, 71, Math.min(170, 40 + M.walks[q] * 3)], q * 4);
+      else if (k === PaintPaths.WALL) px.set([255, 120, 30, 230], q * 4);
+    }
+    o.putImageData(img, 0, 0);
+  }
+  const [ax, ay] = yd2px(M.x0 - M.step / 2, M.y0 - M.step / 2), [bx, by] = yd2px(M.x0 + (M.w - 0.5) * M.step, M.y0 + (M.h - 0.5) * M.step);
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.translate(ax, ay); ctx.scale((bx - ax) / M.w, (by - ay) / M.h);
+  ctx.drawImage(M.canvas, 0, 0);
+  ctx.restore();
+}
+// a bot's route as the curve it walks: through the middles of its straights,
+// each corner a quadratic bend (the arcs the following makes)
+function drawPaintRoute(b, yd2px) {
+  const p = b.ppath && b.ppath.pts; if (!p || p.length < 2) return;
+  ctx.beginPath();
+  let [x, y] = yd2px(b.x, b.y); ctx.moveTo(x, y);
+  for (let i = Math.max(1, b.ppath.seg + 1); i < p.length - 1; i++) {
+    const [cx1, cy1] = yd2px(p[i][0], p[i][1]), [mx, my] = yd2px((p[i][0] + p[i + 1][0]) / 2, (p[i][1] + p[i + 1][1]) / 2);
+    ctx.quadraticCurveTo(cx1, cy1, mx, my);
+  }
+  [x, y] = yd2px(p[p.length - 1][0], p[p.length - 1][1]); ctx.lineTo(x, y);
+  ctx.strokeStyle = "rgba(255,255,255,0.22)"; ctx.lineWidth = 1; ctx.stroke();
 }
 // }}}
 
@@ -1827,6 +1935,13 @@ function measure() {
     lines.push(`orbits          ${orbits.begun} begun, ${orbits.sight} left by sight, ${orbits.flips} turned round, ${orbits.gaveUp} given up`);
     // the way in use (617o7) and its own counts
     lines.push(`pathfinding     ${$("way").selectedOptions[0].text}: ${ways.plans} routes planned, ${ways.fields} flow fields, ${ways.learned} points learned, ${ways.kicks} kicks`);
+    if (wayNow() === "paint" && f && f.paintMap) {
+      const M = f.paintMap, st = M.stats;
+      const cl = bots.map(b => { const q = PaintPaths.cellOf(M, b.x, b.y); return q >= 0 ? M.clear[q] : 0; }).sort((a, b) => a - b);
+      lines.push(`painted map     ${(100 * M.painted / Math.max(1, M.inside)).toFixed(0)}% walked, ${M.wallCells} wall cells learned, ${st.bumps} refusals; ` +
+                 `${st.plans} plans, ${(st.ms / Math.max(1, st.plans)).toFixed(2)} ms each; bots ${cl[cl.length >> 1].toFixed(1)} yd from walls (median)`);
+    }
+    lines.push(`smoothness      ${(paintW.turn * 180 / Math.PI / Math.max(1, paintW.yards)).toFixed(1)} degrees turned a yard walked`);
     let buffers = 0; for (const v of known.values()) if (v === 3) buffers++;
     lines.push(`mapped          ${share === null ? "-" : Math.round(100 * share) + "% of the part known open"}, ${walls} known walls`);
     lines.push(`caught          ${stuck.bumps} times; ${steer.refused} steps refused by the world; ${buffers} buffer cells on the tracks that led there`);
@@ -1933,6 +2048,7 @@ function draw() {
     ctx.drawImage(g.canvas, 0, 0);
     ctx.restore();
     ctx.imageSmoothingEnabled = false;
+    if (wayNow() === "paint" && inPlay && inPlay.paintMap) drawPaint(inPlay.paintMap, yd2px);
     if (+$("shade").value === 2 && cam.z / SQ > 1) {
       ctx.fillStyle = T.doodad || "rgba(0,0,0,0.55)";
       const [vx0, vy0] = yardsOf(...fromCanvas(0, 0)), [vx1, vy1] = yardsOf(...fromCanvas(cv.width, cv.height));
@@ -2042,6 +2158,7 @@ function draw() {
     // backing up (617e16h): a white ring, so it can be seen happening
     // orbiting an obstacle (617e16h): a cyan ring
     if (b.orbit) { ctx.beginPath(); ctx.arc(px, py, rpx * 2.2, 0, 6.283); ctx.strokeStyle = "#5ef0ff"; ctx.lineWidth = 1.5; ctx.stroke(); }
+    if (wayNow() === "paint") drawPaintRoute(b, yd2px);
     // a planned route (617o7, graph and A*, learn the map): a faint line along it
     if (b.routePts && (wayNow() === "astar" || wayNow() === "learn")) {
       ctx.beginPath(); b.routePts.forEach(([x, y], k) => { const [qx, qy] = yd2px(x, y); k ? ctx.lineTo(qx, qy) : ctx.moveTo(qx, qy); });

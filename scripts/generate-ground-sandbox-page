@@ -11,14 +11,17 @@
 -- the page's template, the sandbox's zones and fences (the same data as the
 -- fish-school sandbox) and the heights' decoder into docs/HTML/ground-sandbox.html.
 --
--- Usage: scripts/generate-ground-sandbox-page [PROJECT_DIR] [--screenshot SETTINGS]
+-- Usage: scripts/generate-ground-sandbox-page [PROJECT_DIR] [--screenshot SETTINGS] [--window WxH]
 --        scripts/generate-ground-sandbox-page --help
 --   --screenshot SETTINGS: also photograph the page headless, driven by
 --     SETTINGS (the page's address settings, e.g.
 --     "continent=1&zone=The%20Barrens&theme=night%20sea&sim=120&fence=0&view=fence"),
 --     and file the picture in development-history/ (scripts/file-screenshot)
+--   --window WxH: the picture's size (default 1600x900); taller shows the
+--     whole panel of measures, which runs past 900 since the painted map's
+--     lines (617o8)
 
-local DIR, SHOT = "/mnt/kaun/wow-chat-2026", nil
+local DIR, SHOT, WINDOW = "/mnt/kaun/wow-chat-2026", nil, "1600x900"
 local i = 1
 while i <= #arg do
     local a = arg[i]
@@ -26,8 +29,10 @@ while i <= #arg do
         print("generate-ground-sandbox-page [PROJECT_DIR] [--screenshot SETTINGS]: writes docs/HTML/ground-sandbox.html")
         print("  (issue 617e16c). --screenshot SETTINGS: photograph it with those address settings")
         print("  (continent=1&zone=The%20Barrens&sim=120&fence=0&view=fence&slope=50) and file the picture.")
+        print("  --window WxH: the picture's size (default 1600x900; 1600x1300 shows the whole panel).")
         os.exit(0)
     elseif a == "--screenshot" then SHOT = arg[i + 1]; i = i + 2
+    elseif a == "--window" then WINDOW = arg[i + 1]; i = i + 2
     elseif a:sub(1, 2) == "--" then io.stderr:write("generate-ground-sandbox-page: unknown option " .. a .. "\n"); os.exit(1)
     else DIR = a; i = i + 1 end
 end
@@ -35,6 +40,7 @@ if SHOT == "" then io.stderr:write("generate-ground-sandbox-page: --screenshot n
 
 local TEMPLATE = DIR .. "/scripts/templates/ground-sandbox.html"
 local DECODE   = DIR .. "/scripts/templates/ground-decode.js"
+local PAINT    = DIR .. "/scripts/templates/paint-paths.js"          -- the painted map (617o8)
 local DATA     = DIR .. "/assets/fish-sandbox/sandbox-data.js"
 local OUT      = DIR .. "/docs/HTML/ground-sandbox.html"
 
@@ -58,6 +64,7 @@ put("<!-- GENERATED_NOTE -->", "<!-- docs/HTML/ground-sandbox.html - GENERATED b
     "     (issue 617e16c); each zone's ground is read from ground-sandbox/ beside it. Don't edit; run it again. -->")
 put("/*SANDBOX_DATA*/", read(DATA))
 put("/*GROUND_DECODE*/", read(DECODE))
+put("/*PAINT_PATHS*/", read(PAINT))
 local f = assert(io.open(OUT, "w")); f:write(page); f:close()
 local zones = 0
 local h = io.popen("ls '" .. DIR .. "/docs/HTML/ground-sandbox/' 2>/dev/null")
@@ -89,10 +96,10 @@ end
 -- {{{ --screenshot: photographed with the given settings, filed
 if SHOT then
     local cmd = string.format("'%s/scripts/file-screenshot' --dir '%s' --name ground-sandbox --made %q"
-        .. " --source scripts/templates/ground-sandbox.html --source scripts/templates/ground-decode.js"
+        .. " --source scripts/templates/ground-sandbox.html --source scripts/templates/ground-decode.js --source scripts/templates/paint-paths.js"
         .. " --source scripts/generate-ground-sandbox-data --source scripts/generate-ground-sandbox-page"
-        .. " --window 1600x900 --url 'file://%s#%s'",
-        DIR, DIR, "scripts/generate-ground-sandbox-page --screenshot '" .. SHOT .. "'", OUT, SHOT)
+        .. " --window %s --url 'file://%s#%s'",
+        DIR, DIR, "scripts/generate-ground-sandbox-page --screenshot '" .. SHOT .. "' --window " .. WINDOW, WINDOW, OUT, SHOT)
     local r = os.execute(cmd)
     if r ~= true and r ~= 0 then io.stderr:write("generate-ground-sandbox-page: the page is written, but its picture was not filed\n"); os.exit(1) end
 end

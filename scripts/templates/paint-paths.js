@@ -48,7 +48,8 @@ const PaintPaths = (function () {
     UNKNOWN:    0.15,   // unknown ground's premium over painted ground
     CROWD_W:    0.5,    // a bot's presence, or its route's, in extra cost a yard
     CROWD_AHEAD: 14,    // yards of each bot's route ahead counted in the crowd
-    CLEAR_CAP: 12.0,    // clearance is worked out no farther than this
+    CLEAR_CAP:  8.0,    // clearance is worked out no farther than this (what the space and the
+                        // lanes use; at 12 each wall cell stamped a window 25 cells across, at 8 one 17 across: half the work)
     LOOK:       6.0,    // yards ahead along the route the followed point runs (nearer when the
                         // straight to it isn't clear, down to 1.5)
     SAFE:       1.0,    // yards of clearance the straight to the followed point keeps
