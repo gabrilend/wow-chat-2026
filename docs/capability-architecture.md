@@ -27,6 +27,15 @@ that belongs to neither. Two cases from 2026-10-28 and 10-29:
   between pathfinding and the bots' own steering, found that A* and "learn
   the map" wobbled at over 100 degrees a yard. Neither part's own test
   could have seen either fault.
+**How it may turn out, and how to steer it.** The risk is a seam left
+bare. Every part passes its own tests, and the fault lives where two of
+them meet, unseen until a player finds it.
+- When two capabilities first touch, write the seam's test then, while
+  both are fresh.
+- When a fault is found at a seam, keep the test that would have caught
+  it.
+- Count the cards below that say "no seam test yet", and let the number
+  fall.
 
 ## The shape: seven rings
 
@@ -45,6 +54,11 @@ overrides it.
 
 The tests sit in the seams between every pair, and wrap the whole (the
 quick tests at each compile, the tests of each commit).
+**How it may turn out, and how to steer it.** The rings stay useful while
+each capability sits plainly in one. The drift to watch is a part
+reaching across two rings: a mind that rewrites knowledge, or a view that
+decides. When a card is hard to place, split the capability at its seam,
+and put a test there.
 
 ## The contracts: how the rings cooperate
 
@@ -97,6 +111,15 @@ of them by being wrong first.
    (`development-history/`). Programs that run unattended write a goodbye
    receipt of what they did. The record of being wrong is kept as carefully
    as the record of being right.
+**How it may turn out, and how to steer it.** Contracts erode quietly,
+one convenience at a time:
+- a generator someone hand-edits once;
+- a switch turned on by default "just for testing";
+- a page that computes something the core does not.
+
+When a contract is broken on purpose, change it here first, with why. When
+it is broken by accident, the seam test that missed it is the next thing
+to write.
 
 ## The method: ambitions to be wrong
 
@@ -122,6 +145,75 @@ visibly, and to keep what was learned.
 - **Prefer an error to a fallback.** A fallback hides being wrong. Where
   something can't be done, it says so, with what was done before it stopped
   (the owner's standing rule).
+**How it may turn out, and how to steer it.** Racing and measuring can
+turn into collecting numbers for their own sake. The owner said so on
+2026-10-29: "the goal of our interactions is the creation of a product,
+not the generation of additional unique datas." So:
+- each race ends in a decision that is written down, the losers kept
+  behind their switch or undone;
+- a measurement earns its place only when it can change what is built
+  next.
+
+## Common patterns, and guiding each to a good turnout
+
+The same eight shapes recur across the rings. Each has a typical way of
+going wrong, a sign that shows it early, and a way to steer.
+
+1. **Twins.** One behaviour written as a core, worn by the server and
+   mirrored on a page.
+   - Goes wrong by drifting, so the page shows what the game no longer
+     does.
+   - The sign is a page number that moves when the core's test didn't.
+   - Steer by running the same courses with the same random numbers on
+     both, and by changing the core first.
+2. **Learning from refusal.** The painted map, "learn the map", the stuck
+   rule.
+   - Goes wrong by over-learning: a bot painting itself in, a wall that is
+     really open, a fact that stays after the world changed.
+   - The sign is plans that find no way, or a region whose walls only
+     grow.
+   - Steer by never painting a bot's own place, squeezing out when boxed
+     in, and next, unlearning: a wall nobody has bumped for a long time
+     fades back to unknown.
+3. **Generated, not written.** Zone data, help rows, references, lists,
+   boards, pages.
+   - Goes wrong by going stale, since the generated file is right only
+     when made.
+   - The sign is a test that regenerates and compares, failing.
+   - Steer by giving every generated file a line naming its maker, and a
+     quick test that remakes it.
+4. **Races.** Several designs on the same ground.
+   - Goes wrong by mistaking noise for a difference (the trails runs
+     varied more from run to run than between settings).
+   - The sign is a winner that changes on a second run.
+   - Steer by running each setting at least twice, and calling a winner
+     only when the gap is wider than the spread.
+5. **Switches.** Built is not on.
+   - Goes wrong by sprawl: switches nobody remembers, paths nobody runs.
+   - The sign is a switch left off for many compiles.
+   - Steer by listing every switch on the board, and asking about any left
+     off for three compiles: turn it on, or take it out.
+6. **Shared ground.** Many agents, one folder.
+   - Goes wrong by collision, or by a silent failure (a commit tool that
+     printed nothing and committed nothing).
+   - The sign is uncommitted work that nobody claims.
+   - Steer by claiming before editing, committing small and often,
+     checking each commit landed, and saying who holds what.
+7. **The owner's words as the specification.** Every behaviour starts from
+   the owner's sentences, kept word for word.
+   - Goes wrong by misreading, or by reading too literally.
+   - The sign is a design the owner corrects ("notice how I said *less
+     than*").
+   - Steer by keeping the words beside the reading, acting on the best
+     reading, and showing the result early, so a misreading costs an
+     hour, not a week.
+8. **Offline first, server later.** A core checked alone, the server's
+   glue written blind until the owner compiles.
+   - Goes wrong by piling up uncompiled work.
+   - The sign is a growing "waiting for the compile" row on the board.
+   - Steer by syntax-checking the glue against the server's headers,
+     keeping it thin, and trying each new switch first on a branch realm
+     with the army.
 
 ## The capabilities, ring by ring
 
@@ -137,6 +229,11 @@ Each card: what it **claims**; what would prove it **wrong**; where we would
 | Collision models (data-files/vmaps) | the trees, rocks and buildings that block | a doodad missing, or a ghost one | the sandbox's refused steps | (always on) |
 | The world database (acore_world_*) | every creature, quest, item and spawn | a row disagreeing with the client | `test-quest-reward-has-a-giver`, `test-sql-mirror` | per profile |
 
+**How it may turn out, and how to steer it.** The ground is the steadiest
+ring, and it fails all at once when it fails: a client update, a map
+file read with the wrong layout, a mesh built for another version.
+- Treat its files as read-only, and every reader as a tested decoder.
+- When a reading looks wrong, suspect the reader before the world.
 ### 2. Knowledge
 
 | Capability | Claims | Wrong if | Seen in | Off |
@@ -148,6 +245,15 @@ Each card: what it **claims**; what would prove it **wrong**; where we would
 | Roads and crossings (176a2c) | the battleground's roads as a graph, taken in turn | a squad going back the way it came | `test-arathi-basin-rules` | the scene's settings |
 | Levers and the semantic map (638) | about 1,400 small things a buddy can do with its body, grouped by meaning | a lever the game won't do; a group that mixes meanings | `test-buddy-levers`, `test-lua-unique-names` | `.lever` (game masters) |
 
+**How it may turn out, and how to steer it.** Knowledge grows. That is its
+point and its danger: a belief that was true when made outlives the
+ground it was made from.
+- Name each fact's maker and date.
+- Remake facts rather than patch them.
+- Give learned knowledge a way to forget (the painted map's walls should
+  fade when unbumped; question 1 of 617o8 keeps them).
+- Prefer a little knowledge that is surely right to a lot that may be
+  wrong.
 ### 3. Rules
 
 | Capability | Claims | Wrong if | Seen in | Off |
@@ -159,6 +265,12 @@ Each card: what it **claims**; what would prove it **wrong**; where we would
 | Classes, talents and quests (phase 7) | each class's custom spells, talents every third of a level | a spell unlearnable, a point lost | `test-talent-builds`, `test-spell-designs`, `test-racial-quests` | per profile |
 | Progression and endgame (phase 8) | gear tiers, legendaries, world bosses | a tier skipped | `test-basic-legendaries`, `test-world-boss-countdown`, `test-gearsets` | per profile |
 
+**How it may turn out, and how to steer it.** Rules multiply across
+profiles, and their danger is meeting each other: a level cap, a talent
+rule and a drop table each fine alone, wrong together.
+- Keep rules as data with a gate per profile.
+- Test the gates, not just each rule (`test-profile-config-gates`).
+- When two rules fight, write which wins into the profile's page.
 ### 4. Minds
 
 | Capability | Claims | Wrong if | Seen in | Off |
@@ -172,6 +284,14 @@ Each card: what it **claims**; what would prove it **wrong**; where we would
 | Battleground squads and fronts (176a2, 629) | trios on the roads; fronts that hold lines | squads clumping; lines breaking | `test-arathi-basin-rules`, `test-battleground-front` | the scene |
 | Sargobras and the narrators (E066, phase 9) | a guide who answers by whispers | a choice made differently from his menus | `test-sargobras-follow`, `test-narrators` | the patch |
 
+**How it may turn out, and how to steer it.** Minds misbehave as crowds,
+not one by one: bunching, knots on a ledge, walking in rings, wobbling.
+Each bot does something sensible, and together it looks wrong.
+- Judge minds by crowd measures (spacing, coverage, stuck, turning) on
+  the same ground as a baseline.
+- Fix the cause in the mind, never by hiding the symptom in steering.
+- Watch the picture as well as the number: the owner's eye caught the
+  rubbing before any measure did.
 ### 5. Bodies
 
 | Capability | Claims | Wrong if | Seen in | Off |
@@ -181,6 +301,14 @@ Each card: what it **claims**; what would prove it **wrong**; where we would
 | Lua scripts on the game's engine (ALE, src/lua-*) | fast-changing rules without a compile | two files one name; a missing global | `test-beta-lua-load`, `test-lua-globals`, `test-lua-unique-names`, `test-ale-method-names` | the profile's Lua folder |
 | Settings and install steps (C0xx, E0xx) | each profile's values and its setup | a value on the wrong profile; a step out of order | `test-profile-config-gates`, `test-patch-plan`, `test-patch-undo-order` | the patch's header |
 
+**How it may turn out, and how to steer it.** Bodies fail loudly (a
+crash, a refused login) or quietly (an order the server ignores). The
+glue is where they hide.
+- Keep the glue thin, and the thinking in the cores.
+- Syntax-check every change against the server's headers before the
+  compile.
+- Start each new switch off, try it on a branch realm first, and read the
+  server's log after.
 ### 6. Views
 
 | Capability | Claims | Wrong if | Seen in | Off |
@@ -193,6 +321,12 @@ Each card: what it **claims**; what would prove it **wrong**; where we would
 | The board (CLAUDE.md, the design target) | where every issue stands | an issue on the wrong row | read at each compile | (generated) |
 | Development history | every picture, with its story | a picture without notes | `test-file-screenshot` | (always kept) |
 
+**How it may turn out, and how to steer it.** Views are how the owner
+decides, so a view that flatters is worse than none.
+- Show the measures that can embarrass a capability, beside the picture.
+- Keep every picture, wrong ones included.
+- Make each view from data a generator wrote, so the view can't invent.
+- When a view and the game disagree, believe the game, and mend the twin.
 ### 7. Operations
 
 | Capability | Claims | Wrong if | Seen in | Off |
@@ -208,6 +342,14 @@ Each card: what it **claims**; what would prove it **wrong**; where we would
 | Party checkpoint | a character saved, changed and restored comes back bit for bit | a table forgotten | `test-party-checkpoint` | (a tool) |
 | A player's journal | a player's journal opens with their password and nothing else | it opens for anyone | `test-journal-seal` | (a tool) |
 
+**How it may turn out, and how to steer it.** Operations decay at their
+edges: a hook missing after a fresh clone, a test that fails after every
+commit and is stopped being read, a tool that fails in silence.
+- Read the commit tests' reports, and fix a failure the day it appears
+  (three had been failing since the day before; two were this session's
+  own).
+- Make every tool say what it did.
+- Keep the board current at each compile.
 ## Where the rings are thinnest
 
 These are the gaps, not the strengths: where being wrong is most likely
@@ -227,6 +369,14 @@ and least seen.
   seam test yet" is a place to put one.
 - **Issues with no Current Behavior.** 42 open issues say nothing of where
   they stand, so the board can't place them.
+**How it may turn out, and how to steer it.** These are the next things to
+build, in this order, because each makes the others safer:
+1. Compile, and walk the path switch, the painted map and the army on the
+   test realm.
+2. Let painted walls fade when nobody has bumped them for a long time.
+3. A seam test for the dungeon draw and party grouping, on stand-ins.
+4. A sentence of Current Behavior in each of the 42 silent issues, so the
+   board can place them.
 
 ## Keeping this document true
 

@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-29 16:08:44
+Generated on: 2026-10-29 16:25:28
 Models: claude-opus-5-5
 
 ## Contents
@@ -121,6 +121,10 @@ Models: claude-opus-5-5
     self-improving pathfinding for buddies. The painted map now works in the
     sandbox and as C++, and its in-game `.buddy path paint` waits for your
     compile. Next, compile basic, then try it on the test realm.
+29. 2026-10-29 16:11, after Request 106 - The goal is that your next compile
+    carries every described issue, each behind a switch that starts off, with
+    buddies walking the painted map in game. Next I'll fix the sub-zone fence so
+    tiny pockets no longer trap all 36 bots.
 
 --------------------------------------------------------------------------------
 
@@ -10697,6 +10701,83 @@ one folder per realm, so the test branch never writes over basic's. The
 save-and-load round trip is proven offline (14 of 14 checks).
 
 **These requests need permissions: none.** Nothing is waiting in the RAM drive.
+
+--------------------------------------------------------------------------------
+
+### User Request 107
+
+Okay excellent can you build an architecture document that organizes all of our
+capabilities into a structure that cooperates on concerns and ambitions to be
+wrong?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 107
+
+> An architecture that "cooperates on concerns and ambitions to be wrong" is one
+> where every capability says what it believes, how it could be wrong, and where
+> we'd see it, and every part shares those findings with the others. That's how
+> today's work actually went: five ways raced side by side, wobble and rings
+> caught by measurement, an idea undone on its numbers. I'll build the document
+> from what the project really has, starting with what's written already:
+
+> Before committing, checking the tests I named for the less obvious cards
+> really check what I said they check:
+
+*[commit] c63ad4fb7 in wow-chat-2026 - *
+
+The architecture document is written and committed (c63ad4fb7) as
+`docs/capability-architecture.md`.
+
+**The core rule is your "][tests][".** The brackets face outward, so the tests
+stand between the parts rather than inside any one of them. Every place two
+capabilities meet is held by a check that belongs to neither, so a part being
+wrong shows up at the edge where it would hurt its neighbour. Today had two
+examples. The Lua load test caught my levers' name clash, and the six-way
+comparison caught A*'s wobble; neither part's own test could have seen either.
+
+**The shape is seven rings**, from what is to what we see:
+1. ground: the game's own files;
+2. knowledge: what our tools work out and the bots learn;
+3. rules: the game as we changed it;
+4. minds: what the bots decide;
+5. bodies: how that happens in the server;
+6. views: the pages and pictures;
+7. operations: building, running and keeping.
+
+Each ring builds on the one before and never overrides it.
+
+**The rings follow nine contracts**, each learned by being wrong first, for
+example:
+- the ground decides;
+- one core, three bodies (tested offline, worn by the server, mirrored on a
+  page);
+- built is not on;
+- refusal teaches.
+
+**Being wrong on purpose** means:
+- racing alternatives side by side;
+- measuring before believing;
+- undoing on numbers and keeping the note why;
+- making the call, then asking;
+- preferring an error to a fallback.
+
+**Every capability has a card**: what it claims, what would prove it wrong,
+which test would show it, and what turns it off. Every test named exists; I
+checked, and corrected three I had mismatched. Where a seam has no test yet, the
+card says so. The dungeon draw and party grouping are seen only in game.
+
+The document ends with **where the rings are thinnest**:
+- the minds written but not yet compiled;
+- a painted map that learns walls but never unlearns them;
+- the sandboxes running a twin copy of the code rather than the server's own;
+- the 42 issues that don't say where they stand.
+
+I haven't added it to the docs table of contents. That file belongs to all
+agents and has another session's unsaved edits in it, so it needs its turn.
+
+I can also publish this document as a page you can read or share, if that's
+useful.
 
 --------------------------------------------------------------------------------
 
