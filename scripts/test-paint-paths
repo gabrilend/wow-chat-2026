@@ -1,0 +1,33 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-paint-paths
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      the painted map: bots learn unknown pillars together, keep space from walls (less near their goal), spread through a gap, turn smoothly, plan fast
+# quick-test: yes
+# ==== end of header ====
+# test-paint-paths - checks the painted map (scripts/templates/paint-paths.js,
+# issue 617o8) with no browser.
+#
+# For a general audience: the owner asked for pathfinding where the bots
+# paint what they learn onto one shared map and get better together, keep
+# their distance from walls (less when what they need is near, even across
+# a wall), spread out, and walk naturally, in arcs. The script that does it
+# is the same one the ground sandbox page runs; this runs it in Node on
+# made-up courses with things the bots don't know about until they bump
+# them, and checks each of those asks with a number: bumps falling round by
+# round, yards kept from walls, the spread across a gap, degrees turned a
+# yard, and milliseconds a plan.
+#
+# Usage: scripts/test-paint-paths [PROJECT_DIR]
+# Exits non-zero when any check fails.
+
+set -uo pipefail
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+command -v node > /dev/null || { echo "test-paint-paths: node is not installed; nothing was checked"; exit 1; }
+node "${DIR}/tests/paint-paths/paint-check.js" "${DIR}"
+# ==== footer of test-paint-paths ====
+# lines:      33
+# ==== end of footer ====
