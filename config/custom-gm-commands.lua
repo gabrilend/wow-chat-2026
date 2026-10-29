@@ -140,6 +140,11 @@ return {
       source = "src/lua-basic/buddy-gm.lua", profiles = BASIC, system = "Companions",
       help = "Brings every dead buddy of a player back to life at you, at the player, or at the graveyard nearest the player that their side may use." },
     -- }}}
+    -- {{{ companions: levers (638)
+    { name = "lever", args = "<name|target> <lever> | <name|target> random [word] | find <word>", level = 1, console = true, kind = "lua",
+      source = "src/lua-basic/buddy-lever-command.lua", profiles = BASIC, system = "Companions",
+      help = "Pulls one of a buddy's some fourteen hundred levers (small things it does with its body: an emote, a pose, a hop, a step, a turn) on the buddy of that name, or your selected buddy (\"target\"). \"random\" pulls a random one, with a word only among the levers whose name or sentence holds it; \"find\" lists the levers whose name or sentence holds the word (the first twenty, and how many). Refused in a fight, while the buddy is being moved, or with no one to aim at." },
+    -- }}}
     -- {{{ items: gearsets (617r)
     { name = "gearset", beside = "gear", args = "<profile> <character> | <profile> buddies <partner>", level = 2, console = true, kind = "lua",
       source = "src/lua-basic/gearset-command.lua", profiles = BASIC, system = "Items and mail",

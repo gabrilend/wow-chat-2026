@@ -2,7 +2,7 @@
 
 Pulls a buddy's levers (issue 638): one small thing a buddy can do with its
 body, carried out with the server's own commands. The levers themselves are
-data (`data/buddy-levers.lua`, written by `scripts/generate-buddy-levers`).
+data (`data/buddy-lever-list.lua`, written by `scripts/generate-buddy-levers`).
 
 ## A lever (a record of the list)
 

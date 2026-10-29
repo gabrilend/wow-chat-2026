@@ -3,7 +3,7 @@
 --
 -- For a general audience: a lever is one small thing a buddy can do with its
 -- body (bow to its partner, sit, hop, turn to look at a passer-by); the list
--- of them is generated (data/buddy-levers.lua, by
+-- of them is generated (data/buddy-lever-list.lua, by
 -- scripts/generate-buddy-levers). This is the hand that pulls one: it finds
 -- who the lever is aimed at, checks the buddy may (not in a fight; standing
 -- still, for the ones that move it), and carries it out with the server's
@@ -182,7 +182,7 @@ for k in pairs(WAY) do M.WAY_KINDS[k] = true end
 -- }}}
 
 -- {{{ function M.pull
--- Pulls `lever` (a record of data/buddy-levers.lua) on `buddy` (Player).
+-- Pulls `lever` (a record of data/buddy-lever-list.lua) on `buddy` (Player).
 -- Returns true, or false and a sentence saying why not (no one to aim at,
 -- a need not met, a kind no way knows).
 function M.pull(buddy, lever, ctx)

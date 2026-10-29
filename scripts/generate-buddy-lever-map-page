@@ -9,7 +9,7 @@
 -- with the groups listed by name and a box to find levers. Making the map
 -- and drawing it are separate tools, so either can change alone.
 --
--- Reads:  src/lua-basic/data/buddy-levers.lua, src/lua-basic/data/buddy-lever-map.lua,
+-- Reads:  src/lua-basic/data/buddy-lever-list.lua, src/lua-basic/data/buddy-lever-map.lua,
 --         scripts/templates/buddy-lever-map.html
 -- Writes: docs/HTML/buddy-lever-map.html
 --         development-history/NNN-buddy-lever-map.png, with --screenshot
@@ -33,7 +33,7 @@ local json = require("dkjson")
 
 local TEMPLATE = DIR .. "/scripts/templates/buddy-lever-map.html"
 local OUT      = DIR .. "/docs/HTML/buddy-lever-map.html"
-local LEVERS   = dofile(DIR .. "/src/lua-basic/data/buddy-levers.lua")
+local LEVERS   = dofile(DIR .. "/src/lua-basic/data/buddy-lever-list.lua")
 local ok, MAP  = pcall(dofile, DIR .. "/src/lua-basic/data/buddy-lever-map.lua")
 if not ok then
     io.stderr:write("generate-buddy-lever-map-page: no map to draw (" .. tostring(MAP) .. "); scripts/generate-buddy-lever-map makes it\n")

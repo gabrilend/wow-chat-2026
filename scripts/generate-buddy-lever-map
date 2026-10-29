@@ -22,7 +22,7 @@
 -- share one point and one segment, and segments gather by what is done, not
 -- whom to.
 --
--- Reads:  src/lua-basic/data/buddy-levers.lua; the ollama server at
+-- Reads:  src/lua-basic/data/buddy-lever-list.lua; the ollama server at
 --         127.0.0.1:11434 (start it with `ollama serve`) and its model
 -- Writes: src/lua-basic/data/buddy-lever-map.lua
 --         tmp/shared-memory/buddy-lever-map/ (the requests, while it runs)
@@ -74,7 +74,7 @@ while i <= #arg do
 end
 package.path = LIBS .. "/?.lua;" .. package.path
 local json   = require("dkjson")
-local LEVERS = dofile(DIR .. "/src/lua-basic/data/buddy-levers.lua")
+local LEVERS = dofile(DIR .. "/src/lua-basic/data/buddy-lever-list.lua")
 local OUT    = DIR .. "/src/lua-basic/data/buddy-lever-map.lua"
 local WORK   = DIR .. "/tmp/shared-memory/buddy-lever-map"
 os.execute("mkdir -p '" .. WORK .. "'")

@@ -16,20 +16,25 @@
 -- meaning of those sentences.
 --
 -- Reads:  data-files/dbc/EmotesText.dbc, EmotesTextData.dbc, Emotes.dbc
--- Writes: src/lua-basic/data/buddy-levers.lua
+-- Writes: src/lua-basic/data/buddy-lever-list.lua
 -- Usage:  scripts/generate-buddy-levers [PROJECT_DIR]
 --         scripts/generate-buddy-levers --help
 --------------------------------------------------------------------------------
 
 local DIR = "/mnt/kaun/wow-chat-2026"
 if arg[1] == "--help" then
-    print("generate-buddy-levers [PROJECT_DIR]: writes src/lua-basic/data/buddy-levers.lua,")
+    print("generate-buddy-levers [PROJECT_DIR]: writes src/lua-basic/data/buddy-lever-list.lua,")
     print("every lever (one small thing a buddy can do) from the game's emote data and")
     print("this tool's own tables of poses and movements (issue 638).")
     os.exit(0)
 end
 if arg[1] and arg[1] ~= "" then DIR = arg[1] end
-local OUT = DIR .. "/src/lua-basic/data/buddy-levers.lua"
+-- buddy-lever-list, not buddy-levers: the game's Lua engine loads every
+-- file under lua_scripts/ and refuses a second file of the same name in
+-- another folder, and lib/buddy-levers.lua has that name (until 2026-10-29
+-- the list was data/buddy-levers.lua, and test-beta-lua-load failed on it
+-- after every commit)
+local OUT = DIR .. "/src/lua-basic/data/buddy-lever-list.lua"
 
 -- {{{ configuration
 -- Who an aimed lever can be aimed at. Each is a kind the puller finds at the

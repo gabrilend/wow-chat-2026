@@ -2,7 +2,7 @@
 -- buddy-lever-command.lua (issue 638) - game masters pull a buddy's levers
 --
 -- For a general audience: a buddy has some fourteen hundred levers, small
--- things it can do with its body (data/buddy-levers.lua, generated). This
+-- things it can do with its body (data/buddy-lever-list.lua, generated). This
 -- lets a game master pull any of them on any buddy, to see each one done:
 --
 --   .lever NAME LEVER          pull that lever on the buddy called NAME
@@ -31,7 +31,7 @@ end
 -- }}}
 
 local Levers = dofile(script_dir() .. "lib/buddy-levers.lua")
-local LIST   = dofile(script_dir() .. "data/buddy-levers.lua")
+local LIST   = dofile(script_dir() .. "data/buddy-lever-list.lua")
 local BY_ID  = Levers.index(LIST)
 -- The semantic map's segments, when it has been made (scripts/
 -- generate-buddy-lever-map); without it, WORD matches names and sentences.

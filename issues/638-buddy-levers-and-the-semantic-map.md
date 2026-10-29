@@ -32,7 +32,7 @@ it doesn't emote, sit, kneel (except at the fallen, 617v), hop or turn to
 look at anyone.
 
 **Built 2026-10-28 (steps 1-3), untried in game:**
-- `scripts/generate-buddy-levers` writes `src/lua-basic/data/buddy-levers.lua`:
+- `scripts/generate-buddy-levers` writes `src/lua-basic/data/buddy-lever-list.lua`:
   1414 levers today (the tool prints the counts): 1187 text emotes (each
   emote alone and at each of the four kinds of target, with the game's own
   lines; the eight lines that don't open with the doer are reworded
@@ -126,7 +126,7 @@ reach for different levers.
 1. **The lever generator**: `scripts/generate-buddy-levers`, reading the
    emote lists (`data-files/dbc/EmotesText.dbc`, `EmotesTextData.dbc`,
    `Emotes.dbc`) and its own tables of stand states, movements and
-   targets, writing `src/lua-basic/data/buddy-levers.lua`.
+   targets, writing `src/lua-basic/data/buddy-lever-list.lua`.
 2. **The puller**: `src/lua-basic/lib/buddy-levers.lua`, its table of
    ways by kind, and the game masters' command in a script of its own;
    a test that pulls every lever on a stand-in object that records the
