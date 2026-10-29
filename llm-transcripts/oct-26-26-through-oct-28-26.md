@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-28 21:38:40
+Generated on: 2026-10-28 21:49:05
 Models: claude-opus-5-5
 
 ## Contents
@@ -8580,6 +8580,106 @@ How it could be fixed, most likely first:
 3. **Drop walls entirely** and keep only the back-up-and-try-again part.
 
 Which do you want? I'd go with the first.
+
+--------------------------------------------------------------------------------
+
+### User Request 83
+
+yes no no we need - it's moving, in some direction, and has moved farther than
+it's distance would suggest. Or rather, it has moved less far than it's
+capability would suggest after following it's path. Basically... after N seconds
+or moments, draw a line to your position you were N seconds or moments ago.
+Then, if you made less progress to your goal than your intended movement input
+array (the array of movement actions you've sent to the server to
+deterministically update your location) the client sends both, "here's the
+keypresses, and here's the position" and if they ever differ, the server wins,
+and pulls the client back. It's very jarring.
+
+... anyway, if you made less progress, as a bot, we know you're not cheating.
+Instead, you must have been caught on something, or the geometry disagreed with
+your movement resolution pathfinding duties believed. And so, you should try and
+walk around that section. disprefer the movement track that got you onto that
+path. let other bots come across it and let it be known. This is how you
+pathfind through dynamic environments, you navigate and then it is known.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 83
+
+> Your rule, as I understand it:
+> - **The test:** every few moments, compare the line from where the bot was N
+>   moments ago to where it is now with the sum of the moves it actually issued.
+>   That's the bot's own "keypresses", not the way to its target.
+> - **What a shortfall means:** the world pulled it back, so the geometry
+>   disagreed with what the bot believed was walkable.
+> - **What follows:** the bot marks that spot, dispreferring the track that led
+>   into it, and walks round. The other bots learn it from the shared map.
+>
+> For that to mean anything, the sandbox needs what it doesn't have yet: a gap
+> between what a bot believes and what the world enforces. Today bots steer
+> round every tree perfectly, so input and result always match. So:
+> - **The bot's belief:** the terrain's steepness (as the real navigation mesh
+>   knows it), plus whatever has been learned.
+> - **The world's truth:** that plus the trees, rocks and huts.
+>
+> A step into a doodad gets pulled back, the shortfall is caught, and the red
+> marks land exactly on the obstacles bots ran into. Writing that into the stuck
+> issue first:
+
+> Now the code. First, splitting what the bots know (steep ground) from what the
+> world holds (steep ground and the doodads):
+
+> Now the movement itself. The bot steers by what it knows and issues its move,
+> and the world then accepts or refuses the step. The input and the result are
+> both recorded, so they can be compared.
+
+> Clearing out the old measure's leftovers, its settings and its description, so
+> the comments describe the code as it now works:
+
+> The check caught a name clash: `sx` already names the separation push in the
+> same block. Renaming the step's input to `stepX` and `stepY`:
+
+*[commit] 8f58264ca in wow-chat-2026 - *
+
+> The issue's Current Behavior still describes the old measure. Rewriting it to
+> match the code, as its own small commit:
+
+*[commit] 281bf6a47 in wow-chat-2026 - *
+
+Your rule is in, and the red marks now land only where bots actually ran into
+something (commit 8f58264ca, picture 047).
+
+**How it works now:**
+- **What a bot knows:** it steers by steep ground (what the real navigation mesh
+  knows) and the shared map. It doesn't know about trees, rocks and huts in
+  advance.
+- **What the world does:** a step into one of those is refused, and the bot
+  stays where it was, like a server pulling a client back.
+- **Your test:** every second, the moves a bot put in are compared with the line
+  from where it was to where it got. If it got less, it's caught:
+  - the refused spot becomes a red wall;
+  - the last stretch of track that led there turns amber, and the bots steer
+    round it when there's another way;
+  - the bot backs up, twice as far each time in a row.
+  - Every bot learns from the same map.
+- **Result over four minutes:** 445 catches and 131 walls, where there used to
+  be 716 walls dropped mostly on open ground.
+
+**Why there were red pixels before:** I had judged progress against the straight
+line to the bot's target. A bot walking round a steep patch made little
+straight-line progress, so it counted as stuck and dropped a wall on open
+ground.
+
+The issue now describes the new rule, with each earlier version and why it was
+replaced (commit 281bf6a47).
+
+**Still to settle:** 28,960 refused steps in those four minutes. A refused bot
+keeps pushing into the obstacle for the rest of its one-second window before it
+learns and backs up. What would you like?
+1. React to the first refused step at once.
+2. Keep the one-second check, but stop pushing after the first refusal while
+   waiting for it.
+3. Leave it.
 
 --------------------------------------------------------------------------------
 
