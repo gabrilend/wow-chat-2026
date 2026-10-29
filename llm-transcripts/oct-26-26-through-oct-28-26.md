@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-28 18:48:17
+Generated on: 2026-10-28 20:53:57
 Models: claude-opus-5-5
 
 ## Contents
@@ -93,6 +93,10 @@ Models: claude-opus-5-5
     movement, and the ground sandbox (real terrain, wanderers and formations) is
     built and committed. Next, I need your answer: what should bots do when the
     player nears the fence's edge?
+22. 2026-10-28 18:51, after Request 75 - We're making the buddy bots wander like
+    a school of fish, now on the real ground in the ground sandbox page. Next, I
+    need your answer: should each bot know every wall in its area from the
+    start, or only the walls it has bumped into itself?
 
 --------------------------------------------------------------------------------
 
@@ -7987,6 +7991,244 @@ of the area from the moment you enter it, and they're worked out again when you
 move to another area. Did you mean that instead, each bot should only know the
 walls it has bumped into itself, and keep its own memory of them for as long as
 it stays in that area?
+
+--------------------------------------------------------------------------------
+
+### User Request 76
+
+now can you use realistic monster spawning and make them stand in front of the
+monsters for equivalent time to how long it'd take a level appropriate stand-in
+defeat them? also if the dot is a certain distance away from the followers -
+like, 1/4th of the continent or so, it should appear directly in 100 yards at
+random from the destination pocket. And if they spawn like, in the mountains or
+whatever, then once they can guarantee that there's no way in, they'll get
+teleported onward a bit closer. We have similar, but different, examples of
+this, at the pathfinding document we made last month.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 76
+
+> Both new requests are going into the sandbox, starting with a new issue. Your
+> wall question stays open. First, two lookups: last month's pathfinding
+> document, and whether the project already has a damage-per-level table to time
+> the fights from.
+
+> That document dates from Oct 27–28, not last month. Next, the issues, for
+> the September design on teleporting buddies who can't find a way:
+
+> Nothing there matches. Next, the buddy module itself, which may already
+> teleport stuck or far-behind buddies, and its issues:
+
+> Next, the database's columns for monster health and respawn times:
+
+> Health is the level table's base for the creature's class and expansion, times
+> its own multiplier. Writing the issue first:
+
+> Moving the monster rule into a shared library first, so the fish sandbox and
+> the new monster data can't drift apart:
+
+> Same 2,119 fences, but the files differ at one byte. That may only be order,
+> since fences with equal spawn counts come out in whatever order the table walk
+> gives. Checking:
+
+> One kind of monster on the Eastern Kingdoms has no health in the level table.
+> The error should name it rather than just count it:
+
+> It's a training dummy, which has no health on purpose: it can't be killed.
+> Rule: a creature with zero health isn't a fight. It's left out by name and
+> reported each run, rather than stopping the tool.
+
+> Next, the monster section itself: the zone's spawns, their life and death, a
+> bot's fight, catching up from far, and the way out of dead ends.
+
+> Next, wiring that into the flock's step: monsters come back, the far catch-up,
+> the once-a-second dead-end check, and each bot's fight overriding its
+> wandering target.
+
+> Next, drawing the monsters and adding them to the panel:
+
+> That edit changed the block structure inside the measures, so I'm checking the
+> lines around it:
+
+> Wrapping up the monster work (checking three pictures, then committing), then
+> on to the broken Lua links.
+
+*[commit] 3ee53d0eb in wow-chat-2026 - *
+
+> Committed as 3ee53d0eb. On to the broken Lua links. First, what the links on
+> beta and release point at:
+
+> Issue 1100c already found this, and left the release question open. Running
+> its link check to see where things stand:
+
+> **[Asked the user]**
+>
+> *Q1 — Release Lua:* Release has no Lua folder of its own, so its install
+> never relinks its Lua. Release and beta share the same server source and the
+> same level cap (20). What Lua should release load?
+> - Share beta's (Recommended) — Release links to src/lua-beta, the same
+>   scripts beta runs (ambush, travellers, the design corpus). The install step
+>   learns that release reads beta's folder; one corpus to keep up.
+> - Own folder, beta's copy — A new src/lua-release, starting as a copy of
+>   src/lua-beta, so the two can drift apart from here.
+> - Own folder, empty — A new src/lua-release holding only a README: release
+>   runs no custom Lua until scripts are put there.
+> → **Answered:** we should ensure that the old pinned azerothcore we have for
+> that profile is fully functional, then we should bring it to compatibility
+> with the current version.
+
+> Keeping your line in the notes first:
+
+> Release has its world and characters databases, but no playerbots database,
+> and release ships mod-playerbots. Next, whether the old build's bot settings
+> expect one:
+
+> Those lines mix the shipped defaults with the live settings, and my masking
+> didn't hide the account part. Reading only the live files, showing just each
+> database's port and name:
+
+> The old build uses the database names from before each profile got its own
+> (`acore_world`, `acore_characters`, `acore_playerbots`), not the `_release`
+> ones. Next, whether those still exist:
+
+> **[Asked the user]**
+>
+> *Q1 — Old release:* Which old version of release should be made fully
+> working first, before bringing it up to the current version?
+> - Release's May 21 build — The server installed in installed-files-release,
+>   built 2026-05-21 and never rebuilt (five months older than basic's). Its
+>   databases are there; its Lua links point at a folder renamed in June. First
+>   step: relink its Lua and start it to see it boot.
+> - Project commit 1fc133a — Issue 130's 'release branch' (2025-02-24): the
+>   whole project as it was then, checked out in a folder of its own, built and
+>   run as the release baseline. The branch itself is gone; the commit remains.
+> - Alpha's pinned-old fork — source-alpha, an AzerothCore fork pinned to
+>   2024-09-18 with the original mod-eluna; documented as 'pinned-old'. Not
+>   installed at all yet (no installed-files-alpha).
+> → **Selected:** Alpha's pinned-old fork
+
+> Phase 1's three-digit numbers are used up (199 is taken), so this becomes a
+> sub-issue of 134, the alpha baseline: 134a.
+
+> The generated pages changed by one line each, both mine. Committing the link
+> fix, the issues and your line:
+
+*[commit] cf0a30664 in wow-chat-2026 - *
+
+The Lua links are fixed in the tool that makes them, but the installed links
+stay broken until you reinstall beta and release. To mend them:
+
+```
+scripts/install --profile beta
+scripts/install --profile release
+```
+
+**The fix** (commit cf0a30664):
+- **What was wrong:** both links pointed at `src/lua`, a folder renamed in June,
+  so neither server loaded any of the project's scripts. Beta's install step
+  already knew the right folder. Release was never on that step's list of
+  profiles, and has no Lua folder of its own.
+- **What changed:** release now runs that install step and is linked to
+  `src/lua-beta`, which is what release's own profile page says it runs. Which
+  folder each profile loads is now answered by one small function that both the
+  install step and the link check use, so they can't disagree again.
+- **Not yet tried:** the changed install step hasn't run in a real install.
+- **The link check** now says when a reinstall wouldn't mend a link at all,
+  instead of always telling you to reinstall.
+
+**Alpha's pinned-old fork:** I planned your two steps as issue 134a, under the
+existing alpha baseline issue, but built nothing yet. Where it stands:
+- `source-alpha` is AzerothCore from 2024-09-18 with the original Lua engine.
+  The update script doesn't hold it at that version, so an update could move it;
+  step 1 holds it there.
+- Alpha has never been installed, and its databases don't exist.
+- Its settings expect MySQL on port 3308, but our MySQL only listens on 3307.
+
+**Before that:** the monster work is committed (3ee53d0eb). The sandbox now has
+every real monster spawn. Fights last as long as a level-appropriate stand-in
+would take: a Zhevra Runner is about 9 seconds. Bots jump to within 100 yards of
+the player when they're a quarter of the continent away. Bots on ground that
+can't reach the area are moved onward toward it. The first catch-up test was set
+up too short and showed nothing; it's kept as picture 032, and 033 shows it
+working.
+
+Your line about heaven and hell is in the notes.
+
+One question to unblock alpha: alpha needs its own MySQL connection on port
+3308. Should that be a second port on the MySQL we already run (one process,
+simpler, but a crash takes down both), or a separate MySQL of its own (fully
+isolated, more to keep running)?
+
+--------------------------------------------------------------------------------
+
+### User Request 77
+
+is it possible to send a UI pop-up dialogue info panel to the players after they
+log in? Maybe a chat with Sargobras or Chromie, chosen at random? We want to, if
+it's their first time logging in, teach them how to play, and also give them
+updates on what's going around [rmail messages] and such.
+
+tell me how to view the thing in the HTML viewer?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 77
+
+> Checking two things before answering: whether the Lua engine can open a
+> dialogue window for a player with no creature nearby, and whether a login
+> welcome is already planned.
+
+Yes, it's possible without any client add-on. The Lua engine can open the game's
+own dialogue window (the panel you get when you talk to an NPC) on a player
+right after they log in.
+
+**How it would work:**
+- **The window** has the text page and clickable choices you know from NPCs:
+  "How do I…?", "What's new?", "Goodbye". Each choice can open another page,
+  so a first-time player can step through a short lesson.
+- **Sargobras or Chromie, at random:** the window shows the portrait of whoever
+  "speaks". The speaker has to be a creature standing near the player, or the
+  server rejects the player's choices. So the script would place the chosen
+  character invisibly beside the player for the length of the conversation, then
+  remove them. Sargobras already has an invisible form (from the
+  whisper-shortcut plan).
+- **First login versus later logins:** the server already marks a character's
+  first login. A first login gets the lesson; later logins get "what's new".
+- **The rmail news:** the window's text comes from a table in the world
+  database, and the game client caches each text by its number. So each news
+  update needs a new number, or players keep seeing the old text. A generator
+  tool would write those rows from the rmail messages.
+- **An alternative for news:** an in-game letter in the mailbox. It's readable
+  any time, stays until deleted, and has no cache problem. A blend could work:
+  the dialogue teaches and greets, and the news arrives as a letter it points
+  to.
+
+I haven't built any of it. If you want it, I'll write the issue file first.
+
+**Viewing the ground sandbox:**
+```
+firefox /mnt/kaun/wow-chat-2026/docs/HTML/ground-sandbox.html
+```
+- Click a zone on the map to fly there, then click anywhere in the zone to put
+  the player there. The bots gather to the area you're standing in.
+- Choose **wanderers** in the Turning list, and try a **Formation**. Move the
+  **Steepest** slider to watch red ground grow and shrink. Scroll the mouse
+  wheel to zoom.
+- The zone ground and monster files it reads are on disk beside it in
+  `docs/HTML/ground-sandbox/`, so it works on this machine. Those files aren't
+  committed yet.
+- To jump straight to a view:
+  ```
+  firefox "file:///mnt/kaun/wow-chat-2026/docs/HTML/ground-sandbox.html#continent=1&zone=The%20Barrens&turn=2&fence=4&view=fence"
+  ```
+
+If you meant a different page: `fish-sandbox.html` is the original flock,
+`archive/fish-sandbox-2026-10-28.html` is its archived copy, and
+`buddy-lever-map.html` is the lever map. All are in the same folder.
+
+Should the login window speak first and point to a letter for the news, or carry
+the news in the window itself?
 
 --------------------------------------------------------------------------------
 
