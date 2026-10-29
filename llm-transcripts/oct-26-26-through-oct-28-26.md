@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-28 15:35:06
+Generated on: 2026-10-28 17:24:31
 Models: claude-opus-5-5
 
 ## Contents
@@ -85,6 +85,10 @@ Models: claude-opus-5-5
     buddy questions, and 18 of the 40 are now answered and written into the
     issues. Next, you decide whether I build the sweep that lists herbs, ore and
     chests buddies can't reach yet, or we keep going through the questions.
+20. 2026-10-28 17:16, after Request 71 - Goal: give the buddy-bots many more
+    things to do. 1,414 body actions and a map grouping them by meaning are
+    built and committed; the image pipeline update is running again. Next: your
+    answer on whether idle buddies pick actions at random.
 
 --------------------------------------------------------------------------------
 
@@ -7011,6 +7015,634 @@ example said holy. Should it be:
 - whatever the group lacks (a healer if there's none);
 - the class's first spec;
 - random?
+
+--------------------------------------------------------------------------------
+
+### User Request 69
+
+/compact
+
+--------------------------------------------------------------------------------
+
+### Session Recap (written by the harness, not by either speaker)
+
+This session is being continued from a previous conversation that ran out of
+context. The summary below covers the earlier portion of the conversation.
+
+Summary:
+1. **Primary Request and Intent**
+
+   The project is Everland Ghostsong (wow-chat-2026): AzerothCore 3.3.5a, the
+   basic profile, buddy-bots (mod-buddies, patch B036). The owner is gabrilend
+   (she).
+
+   **Standing rules:**
+   - The owner runs scripts/compile, update and install.
+   - Use absolute paths and never change directory; a hook rejects `cd`.
+   - Write the issue file before the work. Commits go through
+     commit-own-changes, with transcripts riding along.
+   - Claim changes made by shell commands with claim-own-change.
+   - Explain in plain English.
+   - MySQL login: `--defaults-file=${DIR}/mysql/conf/client.cnf`, a private file
+     not in git. Never put a password on a command line.
+   - Never commit backups/one-time.
+   - Hooks reject writes to paths built from shell variables, so write out full
+     paths.
+
+   **New rules this session:**
+   - "if we create a patch file and it successfully compiles, that we can commit
+     that work" (recorded in CLAUDE.md).
+   - Compile: "only do our tests if the compilation fails. if we find nothing
+     wrong in the tests we try the compilation again, and if that doesn't work
+     then we try a design session" (built, issue 1100d).
+   - Test characters: "Only on a separate testing server. Not beta. We can use
+     basic for now… we should not allow players to connect unless they're a GM
+     account when we're doing these tests" (scripts/test-lock).
+   - DBM: "let's read them as a reference. We can find out WHAT they are paying
+     attention to, and then build our own tracking capabilities. We are using it
+     for buddy-bots. Be sure to credit them." Nothing of DBM is copied into the
+     project.
+   - "if it has an issue file, consider it planned, and build as much
+     functionality as you can without depending on the answer to an open
+     question."
+
+   **Current focus:** issue 617 (buddy bots). First "bring it up to date", then
+   "work through the open issues… coalesce them into fewer than SIXTY", then
+   "let's try and build features". The owner chose "More questions first".
+
+2. **Key Technical Concepts**
+   - **Buddy module and its behaviours:**
+     - New behaviour "buddy follow" (arc follow), registered with the bot module.
+     - New behaviour-set kinds in the peace-time pass: PLACE_ORDERED, and a set used when ordered to follow.
+     - sInstance uses "buddy follow" in place of the bot module's follow.
+   - **The follow core**, `roam/buddy_follow_core.h`:
+     - Trail, Offsets, PlaceFor, Places, ColumnPlaces.
+     - Assign: the least total walking, found by exhaustive search with pruning, so paths never cross.
+     - Decide: the rest/follow rule.
+     - ReadOrder: reads the follow order words.
+   - **The map stream:** a Boost.Asio listener on 127.0.0.1:8097 serving
+     `/positions` with CORS. The port is Buddies.MapStream.Port (0 turns it
+     off).
+   - **The fall-damage formula:** (0.018·h − 0.2426) × Rate.Damage.Fall (10
+     on every profile, C004). Falls under 13.5 yd do no damage; at full health a
+     buddy survives about 19 yd.
+   - **The navigation mesh:**
+     - Its steep flag NAV_GROUND_STEEP (0x10) marks 50–60°; bots avoid it.
+     - The waypoint slope limit is 50° (`WALK_SLOPE_DEGREES` in buddies_roam_ground.cpp).
+     - findDistanceToWall gives the width used for single file.
+   - **Zone data:** assets/zone-maps, from the map files with ocean squares
+     excluded via the liquid flag MAP_LIQUID_TYPE_OCEAN 0x02. That leaves 81
+     zones.
+   - **The fish sandbox page:** fences are the places one creature entry spawns.
+     Monsters are those not friendly to either side (FactionTemplate
+     IsFriendlyTo); spawns are linked within 90 yd and padded by 15 yd. The
+     flock circles clockwise, each bot at a depth that seeks the least-crossed
+     band. It runs headless through Firefox `--screenshot`, driven by the
+     address's hash parameters.
+   - **The judging machinery:** runs, `docs/judgements.tsv`, and Spearman
+     agreement between judges.
+   - **The image pipeline** (ComfyUI with SD1.5 Dreamshaper-8 at
+     /mnt/kaun/stable-diffusion): being repaired by an update with local builds.
+   - **The floor skeleton:** Zhang–Suen thinning plus a graph, in
+     exploration-compare.html via scripts/build-exploration-compare-page. Used
+     for the tank's dungeon routes.
+
+3. **Files and Code Sections** (created or changed this session)
+   - **CLAUDE.md:** the commit rule, and the MySQL credentials note.
+   - **docs:**
+     - pathfinding-questing-and-dungeons.md (the report);
+     - credits.md (new, DBM credit), listed in table-of-contents.md;
+     - balance-updates.md (slope entry);
+     - HTML/fish-sandbox.html (generated).
+   - **notes/conversation-asides.md:** the owner's poetry, kept verbatim.
+   - **Scripts:**
+     - mysql-client-options, test-mysql-client-options (rewrote 60 commands in 44 files);
+     - start-mysql (writes client.cnf when missing);
+     - party-checkpoint, test-party-checkpoint (its own row writer, floats exact);
+     - test-talent-builds;
+     - write-spell-design, test-spell-designs;
+     - watch-buddy-spread, test-watch-buddy-spread;
+     - movement-benchmark, lib/movement-judges.lua (+ .info.md), test-movement-benchmark;
+     - generate-zone-maps (ocean excluded), test-zone-maps;
+     - render-zone, animate-zone, test-render-zone;
+     - generate-fish-sandbox-data, generate-fish-sandbox-page, templates/fish-sandbox.html;
+     - judge-run, judge-compare, test-judge-compare;
+     - test-lock;
+     - test-buddy-follow-core, with tests/buddy-follow-core/follow-check.cpp.
+   - **scripts/compile:**
+     - TESTS_FIRST and TESTS_WHEN;
+     - a BUILD_FAILED flag (do_build returns 0 after setting it, so stop-on-error stays on inside it);
+     - tests after a failure, then a retry, then write_design_session_note;
+     - generate_buddy_gear starts MySQL itself.
+   - **check-buddies:** a hunter quiver rule.
+   - **B036 sources:**
+     - buddies_follow.cpp/.h (new; BuddyFollowSet/Stop/Refuse/Refused/Leader, BuddyFollowTrackAhead);
+     - buddies_map_stream.cpp (new);
+     - buddies_loader.cpp (AddSC_buddies_follow, AddSC_buddies_map_stream);
+     - buddies_roam_strategy.cpp (registration and the behaviour sets);
+     - buddies_orders.cpp (follow, go away and shoo orders by context: Heard::Say/Yell/Group/Whisper/Guild, guild chat hook);
+     - buddies_town.cpp (travel along the owner's track);
+     - buddies_navmesh.cpp/.h and roam/buddy_mesh_core.h (WallDistance);
+     - buddies_roam_ground.cpp (50° limit);
+     - buddies_kit.cpp (StowInOrdinaryBags, wrong-quiver swap).
+   - **Lua:**
+     - lib/buddy-talent-spender.lua (+ info.md; plan_build, build_cost, a rules table), copied to Sargobras's helpers;
+     - data/talent-builds.lua, spell-designs.lua, movement-benchmark-targets.lua, judge-variants.lua;
+     - world-positions-recorder.lua.
+   - **Issues created:**
+     - 148x and 148x1–5;
+     - 635 and 635a–e;
+     - 636, 637, 155z18;
+     - 617e14 and 617e14a–f;
+     - 617e15 (now deferred);
+     - 617e16 and 617e16a–b;
+     - 617o6 (layered ways: drops, jumps computed live, flight arcs, water, gaps, bounciness);
+     - 1100d, 1100e.
+   - **Issues updated:**
+     - many 617 sub-issues, each with a "Gathered 2026-10-28 into 617's own list" line plus answers;
+     - 168a moved to will-not-implement;
+     - 1100b, 1101, 617e5b (licence text and credits).
+   - **issues/617-buddy-bots.md:**
+     - Current Behavior rewritten, with a status table.
+     - A principle added: "the buddy-bots will eventually be able to do everything the players can".
+     - 40 coalesced Open Questions, with answers written under them.
+
+4. **Errors and fixes**
+   - **Lua os.execute returns (true, "exit", 0):** added a `ran()` helper.
+   - **Shell backticks in queries:** queries now go to MySQL on standard input.
+   - **mysqldump rounds floats:** replaced by the tool's own row writer (CAST to
+     DOUBLE, hex for text).
+   - **Greedy place assignment crossed paths:** replaced by the exhaustive
+     least-total search.
+   - **Ocean rectangles in the zone data:** liquid ocean squares are excluded.
+   - **Hex tint parsing on the page:** fixed.
+   - **Guard fences** (Theramore Marines): a faction friendliness filter.
+   - **Tiny fences:** LINK raised from 45 to 90.
+   - **The first headless screenshot was blank:** draw() is called synchronously
+     at start.
+   - **A separate Firefox profile** was needed for headless shots.
+   - **Stray `</content></invoke>` lines appeared in written files:** stripped.
+   - **A sea-zone heuristic** was replaced by the liquid flags.
+   - **A regenerated legendaries SQL** was restored from git.
+   - **A false positive in the password check** ("in-place"): the check now
+     requires `-u` and `-p` side by side.
+   - **The image pipeline update:** the Oct 10 run was killed mid-build, not
+     broken. It was relaunched with `--local-openblas --local-nasm --local-x264
+     --local-vpx --local-ffmpeg --local-python -y -j 6`, detached; output goes
+     to tmp/shared-memory/sd-update.out. Done when
+     `/mnt/kaun/stable-diffusion/.installed` exists.
+
+5. **Problem Solving**
+   - All 70 quick tests passed at the last full run.
+   - Commits made: 28b2748 (server), 7dd6089 (tools), 653156b (plans).
+   - Later work is uncommitted, waiting on the owner's compile:
+     - the compile change;
+     - the map stream;
+     - the zone-data regeneration (115 old files deleted);
+     - the sandbox;
+     - the judging machinery;
+     - the follow orders' later edits;
+     - the issues.
+   - The test lock: status and dry run work; the lock itself is untested (the
+     server is down).
+
+6. **All user messages** (key ones, in order)
+   - The task-list evaluation answers:
+     - commit after compile;
+     - DBM ("It's an addon");
+     - Northrend = basic's Outland;
+     - Chromie ability versions replaced by advanced;
+     - test-memory extras too much;
+     - why do buddies climb mountains;
+     - do the MySQL rewrite;
+     - fix tools, not instances;
+     - report only on the ideas she commented on;
+     - focus on pathfinding, questing and dungeons, no PvP.
+   - Vanilla: levels 41–60 scaled like Outland so level 40s beat Ragnaros, as
+     issue files only. Edges should be baked; the slope limit is a walker's;
+     heights are judged from the buddy. Is the referee a state machine? Her
+     following formation spec. DBM is the best and they want it.
+   - "A*B+(1-A)*C is a mathematical bit of storage"; BCI and iPod musings; the
+     magnet connector; "sith magic"; witches and shrines poem; the Mastermind
+     (ninjas, dark miasma, bow from the air, javelins); "I made this character
+     when I was thirteen"; mediporting. "make spaghetti… keep working… if we
+     made an issue file for it, consider it planned".
+   - Botanica party request: enhancement shaman with a 2H mace, ret paladin,
+     druid 2/3 Balance 1/3 Resto, priest 2/3 Shadow 1/3 Holy, bear tank;
+     required-talent builds; players in any seat; the moonfire moon; Starfall.
+     Paladin on 1H plus off-hand; shields lose stamina; Earthliving; totem
+     wisps.
+   - Tome haste idea held off; City of Heroes.
+   - "okay let's keep working on stuff that's important… if it has an issue
+     file, consider it planned…"
+   - The world renderer request (map per zone, ~36 bots, image recognition
+     judge); "use a pass through that system as a testing benchmark… [initiate
+     debug sequences]".
+   - Compile tests only on failure → retry → design session; "recompile a
+     life"; "oh it compiled".
+   - Good morning: pathfinding work? Renderer and the SD pipeline? Fish-school
+     flow, clockwise for now, fences for monster spawn areas, themes, a zoomable
+     world map.
+   - "The path finding should eventually be both clockwise and counter
+     clockwise… Can we build a patch for the world server that lets it stream
+     its player positions… yes please repair the image generation pipeline. I
+     can manually judge for now but we should build the judgement machinery…"
+   - "can we work on issue file 617 now?" → "first bring it up to date, then
+     work through the open issues… fewer than SIXTY… let's try and build
+     features."
+   - **Q&A answers, in order:**
+     - Arc follow when moving distances, close follow in combat or when specified.
+     - Buffs planned around any player, by messages and threats.
+     - Test server only; GM-only connections during tests.
+     - The DBM licence versus the RGPL.
+     - Test clan, with the player placed by click.
+     - Healers say ready / oom / mana.
+     - Never left behind; navigation must be easy.
+     - Selling via per-item Lua lists; quest items never reach buddies.
+     - Treat epics as normal items.
+     - Danger: elites, packs, levels, fights, close calls, healer mana.
+     - Weapon talents: buddies only, out of combat.
+     - Buff wishes are whispered to one buddy.
+     - Dungeon route: bosses in order, the WC murloc, random forks, the "skeletonized" pathfinding.
+     - Raids by hand; ranged weapons away in town too.
+     - Any player can say wait or go slower.
+     - The skeleton is on the HTML page.
+     - Closer in danger shrinks the radius.
+     - DPS who want speed pull more mobs; the tank adapts.
+     - Harmless hostile packs are cleared with AoE.
+     - Judgements chosen dynamically: Light or Wisdom.
+     - Every weapon kind its class can use, if affordable.
+     - "When would bots ever quest without a player?"
+     - The recorder keeps everyone for the last hour.
+     - Kneel at double the level; players too.
+     - The mage teleport is part of the route.
+     - Screen size depends on use.
+     - Clan-mates greet at login, walking to each, with chat ending 20% per /talk.
+     - Conquest: "I have no idea", then it's for dungeons and raids, deferred.
+     - Full stacks are kept over partial ones.
+     - Big-upgrade announcements; 10% of buddies congratulate; the congratulated says what it replaced.
+     - Far buddies quest outside the dungeon entrance and spread out.
+     - Gems stay in C++; valley vendors: no preference.
+     - Tuning by benchmark and judging; no numbers ("get a feel").
+     - The judge is about imagery and analogy, to be talked through.
+     - Baking needs context. Nodes are always reachable for players. Buddies will eventually do everything players can.
+     - Baking in layers: one-way drops, flight anywhere in arcs, underwater, gaps smoothed or orbited.
+     - The WC jump; account for the fall-damage setting; drop as far as survivable; random natural arcs, "wind patterns that we can't see".
+     - Jump arcs from standing to running, computed dynamically; "Some are just bouncy people"; random bounciness, tauren never.
+     - DBM: read as a reference, credit them.
+     - Openables yes, recipes yes, buy more; scrolls per inscription 155o.
+     - Buddies don't pass on loot.
+     - "player-partner".
+     - All bosses, order doesn't matter; failing includes missed duties.
+     - Blend of three trees, ensuring stats all three want; healing blends disprefer hit.
+     - 0–10% upgrades only if nobody else wants the item.
+     - Class books to clan members, otherwise auctioned.
+     - The owner takes loot turns; clans count as blocks; coin-only bodies don't count.
+     - Skip kneeling at empty corpses; outfits come back after a remake.
+     - Unspent points: use the talent plan.
+     - MC drops: "do whatever feels right".
+     - Sargobras default spec: "hang on, what's this about?"
+     - Prestige: talk to a faction leader, who congratulates, fade to black, reappear at that leader's starting zone with Sargobras greeting.
+
+7. **Pending Tasks**
+   - **Answer the Sargobras question** (617b2's origin, 2026-10-14). The owner
+     said: "/whisper Sargobras priest creates a holy priest named felicity".
+     Then continue the remaining 617 questions:
+     - 5–7 (drawn areas);
+     - 8 (roads);
+     - 16 (judge, to be talked through);
+     - 23 (stand-ins);
+     - 30 rest (the gallery's race and sex, the model files);
+     - 32 (Sargobras whisper);
+     - 36 rest (more than once, buddy levels, death knights, "someone familiar");
+     - 37 (reset);
+     - 617o6 Q (bounciness is answered).
+   - **Then build features**, as the owner asked:
+     - close follow;
+     - party buffs planning;
+     - healer and player pace words;
+     - per-item Lua lists;
+     - disabling epic mailing;
+     - loot rule changes;
+     - clan greetings;
+     - upgrade announcements;
+     - layered pathfinding (617o6);
+     - the recorder trimmed to an hour;
+     - the click-to-place test clan.
+   - **Watch the SD pipeline repair;** then build the machine judge.
+   - **After the owner's compile:**
+     - commit the pending work;
+     - check in game: the follow formation and orders, the map stream's live players, `.buddy spec Montahmu`, the benchmark on a walk.
+   - **Open from earlier:**
+     - the referee design choice;
+     - release's Lua folder;
+     - the Botanica party's rules (basic, past-cap, or advanced);
+     - who the five characters are;
+     - "recompile a life";
+     - the truncated "we also need the ability to…".
+
+8. **Current Work**
+
+   The current task is working through issue 617's coalesced open questions with
+   the owner, recording each answer in issues/617-buddy-bots.md (under the
+   question) and in each sub-issue. The last tool action wrote:
+   - the outfit answers (unspent points use the talent plan; only Molten Core
+     boss drops count);
+   - the prestige answer ("talking to a faction leader… fade-to-black…
+     re-appear at that faction leader's starting zone, with Sargobras ready to
+     greet them with a smile")
+
+   into 617, 617r and 617x. The owner's reply to the Sargobras default-spec
+   question was "hang on, what's this about?" and is not yet answered.
+
+9. **Optional Next Step**
+
+   Explain 617b2 to the owner, quoting its origin (2026-10-14): "let's add
+   whisper shortcuts to Sargobras, making him a stand-in or buddy account that
+   can be whispered… /whisper Sargobras priest creates a holy priest named
+   felicity for the player to adventure with." Then re-ask the default-spec
+   question, and continue the remaining 617 questions, per the owner's "More
+   questions first".
+
+If you need specific details from before compaction (like exact code snippets,
+error messages, or content you generated), read the full transcript at:
+/home/ritz/.claude/projects/-mnt-kaun-wow-chat-2026/03547e04-6a50-4e0d-97ee-ae0ce7474312.jsonl
+Continue the conversation from where it left off without asking the user any
+further questions. Resume directly — do not acknowledge the summary, do not
+recap what was happening, do not preface with "I'll continue" or similar. Pick
+up the last task as if the break never happened.
+
+--------------------------------------------------------------------------------
+
+`/compact` - Compacted (ctrl+o to see full summary)
+
+--------------------------------------------------------------------------------
+
+### User Request 70
+
+please continue
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 70
+
+> I'm finding out why the image pipeline repair stopped: ffmpeg finished
+> building, but the script's check still calls it unusable.
+
+> Each check needs running by hand to see which one fails.
+
+> Found it: the new ffmpeg can't find its own libraries. Next, where they went,
+> and whether the build sets a search path.
+
+> The library search path built into the program lists vpx, x264 and openblas,
+> but not ffmpeg's own library folder. Next, where that list is made.
+
+> **[Asked the user]**
+>
+> *Q1 — Outside:* Allow a write outside this session's folder, to
+> /mnt/kaun/stable-diffusion/libs/D006-ffmpeg.sh? [outside-write f4168e0d]
+> - Yes — Allow this one write.
+> - This time — Allow any write inside /mnt/kaun/stable-diffusion/libs until
+>   this session ends.
+> - Always — Allow any write inside /mnt/kaun/stable-diffusion/libs from now
+>   on, for sessions working in /mnt/kaun/wow-chat-2026 only.
+> - No — Keep it refused.
+> → **Selected:** Yes
+
+> The fix is in. The comment that explains why the line is there still needs a
+> second write to the same file:
+
+> **[Asked the user]**
+>
+> *Q1 — Outside:* Allow a write outside this session's folder, to
+> /mnt/kaun/stable-diffusion/libs/D006-ffmpeg.sh? [outside-write 65fd6af1]
+> - Yes — Allow this one write.
+> - This time — Allow any write inside /mnt/kaun/stable-diffusion/libs until
+>   this session ends.
+> - Always — Allow any write inside /mnt/kaun/stable-diffusion/libs from now
+>   on, for sessions working in /mnt/kaun/wow-chat-2026 only.
+> - No — Keep it refused.
+> → **Selected:** Yes
+
+> Relaunching the image pipeline update with the same options as before:
+
+> The update is running again in the background. Now the new request. First I'm
+> searching for existing issues about levers, semantic maps or embeddings.
+
+> Three embedding models are already downloaded on this machine:
+> nomic-embed-text, embeddinggemma and qwen3-embedding. Next, how buddies are
+> given things to do from Lua today.
+
+> The game data holds 252 text emotes (/bow, /wave and the rest) and 175
+> animations. Next, which of these ALE (the Lua engine) can make a character do.
+
+> Now the generator. First, how an existing Lua generator handles its project
+> folder setting and its help text, so this one matches.
+
+> The emote sentences carry no gender codes. 237 emotes can be aimed at someone
+> and 248 can be done alone. Writing the generator:
+
+> Two motions share a name: one plays once, one loops. The fix is to put the
+> kind in the lever's name, and the motion's number too if names still collide.
+
+> 1424 levers: 1196 text emotes, 135 motions, and 93 the tool makes itself
+> (poses, hops, steps, turns, circles). One motion is the game's empty "none",
+> so I'm filtering it out.
+
+> Now the part that carries a lever out. Two things to check first: what the
+> server's jump move takes, and how Lua finds the nearest creature and nearby
+> players.
+
+> The game's own meanings: dead 1 = alive only, hostile 0 = either side. Writing
+> the lever puller:
+
+> Next, a check that every Lua-engine method the puller calls really exists:
+
+> All of them exist. Next, the exact arguments of the move and timed-event
+> methods:
+
+> Both scripts would hear a `.buddies …` command, so next, what the existing
+> GM script does with words it doesn't know:
+
+> Unknown words get its usage message, so the levers get a command word of their
+> own, `.lever`. Writing the command script:
+
+> Writing the quick test. It pulls every generated lever on a stand-in buddy
+> that records what it was told to do:
+
+> Fixing the emote sentences that don't open with the doer's name ("OBJECTS!" is
+> fine: the game's line is "%s OBJECTS!").
+
+> 1414 levers, and all 13,078 checks pass. Next, the quick-test header, so the
+> compile runs this test:
+
+> Both added registry lines are this session's. Next, the semantic map: it needs
+> a JSON reader in Lua and the local model server.
+
+> dkjson (a Lua JSON library) is in the shared libraries. The model server takes
+> many sentences in one request, so the embedding runs as batches on the GPU.
+> Starting it:
+
+> The model answers. nomic-embed-text wants a task word in front of each
+> sentence; for grouping, that word is "clustering:". Next, how the gear gallery
+> loads dkjson, so the map tool can do the same:
+
+> Writing the map generator:
+
+> No shared page builder exists. The sandbox page is one file with its data
+> written in, so the map page follows that pattern: a template, and a tool that
+> joins it with the map data.
+
+> Filing the screenshot of the map page in the project's history of pictures.
+
+> The issue file checks clean and the command script parses. Committing this
+> piece now; the earlier work waiting on your compile stays out.
+
+> Committed as 86603258. Next, the image pipeline update:
+
+> The image pipeline needs one more fix, in its ComfyUI package step, which is
+> outside this project. It holds PyAV below version 19, because 19 only builds
+> against an ffmpeg that isn't released yet.
+
+> **[Asked the user]**
+>
+> *Q1 — Outside:* Allow a write outside this session's folder, to
+> /mnt/kaun/stable-diffusion/libs/D013-comfyui-packages.sh? [outside-write
+> 38e9705c]
+> - Yes — Allow this one write.
+> - This time — Allow any write inside /mnt/kaun/stable-diffusion/libs until
+>   this session ends.
+> - Always — Allow any write inside /mnt/kaun/stable-diffusion/libs from now
+>   on, for sessions working in /mnt/kaun/wow-chat-2026 only.
+> - No — Keep it refused.
+> → **Selected:** Yes
+
+> Your approval came after the permission request had expired, so it's asked
+> again:
+
+> **[Asked the user]**
+>
+> *Q1 — Outside:* Allow a write outside this session's folder, to
+> /mnt/kaun/stable-diffusion/libs/D013-comfyui-packages.sh? [outside-write
+> 12b43550]
+> - Yes — Allow this one write.
+> - This time — Allow any write inside /mnt/kaun/stable-diffusion/libs until
+>   this session ends.
+> - Always — Allow any write inside /mnt/kaun/stable-diffusion/libs from now
+>   on, for sessions working in /mnt/kaun/wow-chat-2026 only.
+> - No — Keep it refused.
+> → **Selected:** Yes
+
+> ComfyUI's line matches what the hold expects. Relaunching the update:
+
+I've given the buddies 1,414 levers, and the meaning map of them works. None of
+it has been tried in game yet, and no buddy pulls a lever on its own yet.
+
+**Your Sargobras answer** is recorded. A whispered class goes through exactly
+the same rules as one chosen at his menus, so the whisper is just his menus from
+afar.
+
+**The levers.** A lever is one small thing a buddy can do with its body. A tool
+writes them from the game's own data, so none are written by hand:
+- 1,187 are text emotes. Each emote is done alone and aimed at the partner, at a
+  fellow buddy, at a passing player, or at the nearest creature. They use the
+  game's own lines ("Felicity bows before Gabri.").
+- 134 are the game's looping or one-time motions, such as mining or eating
+  poses.
+- 93 the tool makes itself: sitting, sleeping, kneeling, weapons out or away,
+  turning to face someone, hops from straight up to a long leap, steps, and
+  small walked circles.
+
+A game master can pull any lever on a buddy with `.lever NAME LEVER`, pull a
+random one with `.lever NAME random hop`, or search the list with `.lever find
+bow`. The commands are live once the server loads its scripts again. A test
+pulls every lever on a stand-in buddy, and all 13,078 checks pass. It also
+caught two problems before any buddy hit them: some of the game's emote lines
+are empty, and eight put the name mid-sentence. I reworded those eight so the
+name comes first.
+
+**The meaning map.** The `nomic-embed-text` model already on your computer turns
+each lever's sentence into numbers, so sentences that mean similar things land
+close together. Those points are split into 19 groups, and each group is named
+from its own words. Some names are clear ("jump hop leap", "greet hello
+introduce", "warn enemy attacking"); some are rough ("bad check cold"). The map
+is drawn at `docs/HTML/buddy-lever-map.html`. Committed as 86603258.
+
+**The image pipeline** is running its update again in the background. It had
+stopped twice:
+- **ffmpeg** was built without its own library folder in its search path, so the
+  program couldn't start. Fixed in its build step.
+- **PyAV**, the Python library over ffmpeg, came in at version 19, which only
+  builds against ffmpeg 9. That isn't released, so PyAV is now held below 19.
+
+Both fixes are in the stable-diffusion folder and aren't committed there.
+
+**Not done:** the screenshot of the map page is still in
+`tmp/shared-memory/buddy-lever-map/page.png`. The pictures folder,
+`development-history/`, is claimed by another session. That session's box art is
+waiting on this same pipeline repair.
+
+Reminder: guarding the disks against bit rot is still on the list.
+
+Question 1 of 2: you said to give them levers "and then let them sort themselves
+into their world". Until that sorting is built, should an idle buddy pull a
+lever now and then at random from the groups that fit where it is? Or should
+levers be pulled only when a game master asks?
+
+--------------------------------------------------------------------------------
+
+### User Request 71
+
+4
+
+--------------------------------------------------------------------------------
+
+### User Request 72
+
+um... okay... so, uh, what meaningful features can we build or present? Can you
+tell me how to view the bot pathfinding page again?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 72
+
+There are two pathfinding pages. Open either in Firefox:
+
+```
+firefox /mnt/kaun/wow-chat-2026/docs/HTML/fish-sandbox.html
+firefox /mnt/kaun/wow-chat-2026/docs/HTML/exploration-compare.html
+```
+
+- **fish-sandbox.html** is the flock: buddies circling clockwise inside fences
+  drawn round where monsters spawn, on a world map you can zoom. When the world
+  server is running with the new map-stream patch, it can also show live player
+  positions.
+- **exploration-compare.html** is the floor skeleton: dungeon floors thinned to
+  centre lines and turned into a route graph, which the tank's dungeon routes
+  use.
+
+Features you'd see in game, most valuable first. Each already has an issue file,
+and none waits on an open question:
+
+1. **Close follow in combat.** Buddies use the arc formation while travelling
+   and pull in tight when a fight starts or when you say so.
+2. **Pace and mana words.** Healers say "ready", "oom" and how much mana they
+   have. Anyone can say "wait" or "go slower" and the group obeys.
+3. **Clan greetings at login.** Clan-mates walk over to each one who logs in and
+   greet them, and the chat tapers off by about a fifth with each exchange.
+4. **Upgrade announcements.** A buddy says when it gets a big upgrade, about 1
+   in 10 of the others congratulate it, and it says what the new item replaced.
+5. **Drops and jumps.** Buddies drop off ledges as far as they'd survive, and
+   make jumps like the Wailing Caverns gap, worked out live. Some buddies are
+   "bouncy", tauren never.
+6. **Fidgeting.** Idle buddies use the new levers on their own (a wave, a sit, a
+   hop) instead of standing still. This is the visible half of what I built
+   today.
+
+1, 2 and 4 are C++ changes to the buddy module, so they need your compile. 3 and
+6 can be Lua, which runs without one. 5 is the biggest.
+
+Which should I start on?
 
 --------------------------------------------------------------------------------
 

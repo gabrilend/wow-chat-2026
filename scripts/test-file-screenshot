@@ -1,0 +1,56 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-file-screenshot
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      the screenshot filer numbers pictures in order, notices a changed source, and uses up no number on a refused picture
+# quick-test: yes
+# ==== end of header ====
+# test-file-screenshot - checks the screenshot filer numbers pictures in
+# order, notices a changed source, and leaves nothing behind on a failure.
+#
+# For a general audience: every picture the project takes is kept in
+# development-history/ under the next number, with notes saying what changed
+# since the last picture (scripts/file-screenshot). This files pictures into
+# a scratch folder, not the real one: two in a row (numbered 001 and 002, the
+# second's notes saying its source is unchanged), then a third after the
+# source is edited (notes: changed), then a picture that doesn't exist
+# (refused, and no number used up by it).
+#
+# Usage: scripts/test-file-screenshot [PROJECT_DIR]
+
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+SCRATCH="${DIR}/tmp/shared-memory/test-file-screenshot"
+FILER="${DIR}/scripts/file-screenshot"
+checks=0; failed=0
+check() { checks=$((checks + 1)); if ! eval "$1"; then failed=$((failed + 1)); echo "FAIL: $2"; fi; }
+
+rm -rf "${SCRATCH}"
+mkdir -p "${SCRATCH}"
+printf 'one\n' > "${SCRATCH}/source.txt"
+magick -size 8x8 xc:red "${SCRATCH}/pic.png" || { echo "test-file-screenshot: ImageMagick could not make a test picture"; exit 1; }
+
+"${FILER}" --dir "${SCRATCH}" --name first  --made "test" --source source.txt "${SCRATCH}/pic.png" > /dev/null
+"${FILER}" --dir "${SCRATCH}" --name second --made "test" --source source.txt "${SCRATCH}/pic.png" > /dev/null
+printf 'two\n' > "${SCRATCH}/source.txt"
+"${FILER}" --dir "${SCRATCH}" --name third  --made "test" --source source.txt --shows "a red square" "${SCRATCH}/pic.png" > /dev/null
+"${FILER}" --dir "${SCRATCH}" --name missing --made "test" "${SCRATCH}/no-such.png" > /dev/null 2>&1
+refused=$?
+
+H="${SCRATCH}/development-history"
+check '[[ -f "${H}/001-first.png" && -f "${H}/001-first.info.md" ]]'  "the first picture is 001, with notes"
+check '[[ -f "${H}/002-second.png" ]]'                                "the second is 002"
+check '[[ -f "${H}/003-third.png" ]]'                                 "the third is 003"
+check 'grep -q "first picture that names it" "${H}/001-first.info.md"' "001 says its source is new"
+check 'grep -q "unchanged since 001-first" "${H}/002-second.info.md"'  "002 says its source is unchanged since 001"
+check 'grep -q "changed since 002-second" "${H}/003-third.info.md"'    "003 says its source changed since 002"
+check 'grep -q "a red square" "${H}/003-third.info.md"'                "003 carries what it shows"
+check '[[ ${refused} -ne 0 ]]'                                        "a missing picture is refused"
+check '[[ -z "$(ls "${H}" | grep missing)" && ! -e "${H}/004-missing.info.md" ]]' "a refused picture uses up no number"
+
+echo "${checks} checks, ${failed} failed"
+[[ ${failed} -eq 0 ]]
+# ==== footer of test-file-screenshot ====
+# lines:      56
+# ==== end of footer ====

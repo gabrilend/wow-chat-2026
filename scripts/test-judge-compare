@@ -1,0 +1,45 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-judge-compare
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      the judging comparer finds full agreement, full disagreement, and too few runs, on judgements whose answer is known
+# quick-test: yes
+# ==== end of header ====
+# test-judge-compare - checks scripts/judge-compare's agreement figure on
+# made-up judgements whose answer is known (issue 617e16b).
+#
+# For a general audience: a machine judge is trusted only as far as it
+# orders the runs as the owner does, so the figure that says so must be
+# right. Four runs judged by the owner; one machine judge ordering them the
+# same way (agreement 1.00), one ordering them backwards (-1.00), and one
+# that judged only two of them (too few to compare, and said so).
+#
+# Usage: scripts/test-judge-compare [PROJECT_DIR]
+
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+SCRATCH="${DIR}/tmp/shared-memory/test-judge-compare"
+CHECKS=0; FAILS=0
+check() { CHECKS=$((CHECKS + 1)); if grep -qF -- "$2" <<< "${OUT}"; then echo "ok   $1"; else echo "FAIL $1 (wanted \"$2\")"; FAILS=$((FAILS + 1)); fi; }
+mkdir -p "${SCRATCH}"
+F="${SCRATCH}/judgements.tsv"
+printf '# made up\n' > "${F}"
+for run_score in "a:2" "b:5" "c:7" "d:9"; do
+    run="${run_score%%:*}"; s="${run_score##*:}"
+    printf 'now\trun-%s\towner\tschool of fish\t%s\t\n' "${run}" "${s}" >> "${F}"
+    printf 'now\trun-%s\tsame\tschool of fish\t%s\t\n' "${run}" "$((s / 2))" >> "${F}"
+    printf 'now\trun-%s\tbackwards\tschool of fish\t%s\t\n' "${run}" "$((10 - s))" >> "${F}"
+done
+printf 'now\trun-a\tsparse\tschool of fish\t3\t\nnow\trun-b\tsparse\tschool of fish\t4\t\n' >> "${F}"
+OUT="$("${DIR}/scripts/judge-compare" "${DIR}" --file "${F}")"
+echo "${OUT}" | sed 's/^/    /'
+check "a judge ordering the runs as the owner does agrees at 1.00" "same: agrees with the owner's order at 1.00 over 4 runs"
+check "a judge ordering them backwards agrees at -1.00"            "backwards: agrees with the owner's order at -1.00 over 4 runs"
+check "a judge of two runs is too few to compare, and says so"     "sparse: 2 runs judged by both; 3 are needed"
+check "the runs are listed best first by the owner's score"        "$(grep -m1 '^run-' <<< "${OUT}" | grep -o '^run-d')"
+echo "test-judge-compare: ${CHECKS} checks, ${FAILS} failed"
+[[ ${FAILS} -eq 0 ]]
+# ==== footer of test-judge-compare ====
+# lines:      45
+# ==== end of footer ====

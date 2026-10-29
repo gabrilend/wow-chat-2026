@@ -1,0 +1,171 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- file-screenshot - keeps a screenshot in development-history/, numbered,
+-- with notes saying what made it and what changed since the last one
+--
+-- For a general audience: the owner keeps every picture the project takes of
+-- itself, in order, as a record of how it grew ("every screenshot taken
+-- during development is kept"; 2026-10-28: "the screenshots you're taking
+-- should go in the development history btw not ram"). Any tool that takes
+-- a picture hands it here. This gives it the next number in the folder
+-- (001-name.png, 002-name.png, ...) and writes a notes file beside it: the
+-- command that made it, the commit, a fingerprint of each source file the
+-- picture depends on, and, by comparing those fingerprints with the last
+-- picture that named the same files, which of them changed in between.
+-- "What it shows" and "The story so far" are written by whoever took it,
+-- given here or filled in after.
+--
+-- It can also take the picture itself: --url and --window photograph a page
+-- with headless Firefox.
+--
+-- Usage: scripts/file-screenshot [--dir DIR] --name NAME --made "COMMAND"
+--            [--source FILE]... [--shows TEXT] [--story TEXT]
+--            (PNG | --url URL [--window WxH])
+--        scripts/file-screenshot --help
+-- Prints the filed picture's path.
+--------------------------------------------------------------------------------
+
+-- {{{ the options
+local DIR = "/mnt/kaun/wow-chat-2026"
+local opt = { sources = {}, window = "1400x900" }
+local function usage(code)
+    print("file-screenshot [--dir DIR] --name NAME --made \"COMMAND\" [--source FILE]... [--shows TEXT]")
+    print("                [--story TEXT] (PNG | --url URL [--window WxH])")
+    print("  files a picture into development-history/ under the next number, with notes:")
+    print("  --name     a few dashed words (fish-sandbox-world); the number goes before it")
+    print("  --made     the command or steps that made the picture")
+    print("  --source   a file the picture depends on (repeat; relative to DIR); fingerprinted,")
+    print("             and compared with the last picture that named the same file")
+    print("  --shows    what it shows, part by part; --story the arc of the project so far")
+    print("  PNG        a picture already taken (copied, the original left alone)")
+    print("  --url      a page to photograph with headless Firefox, at --window (default 1400x900)")
+    os.exit(code)
+end
+local i = 1
+while i <= #arg do
+    local a, v = arg[i], arg[i + 1]
+    if     a == "--help"   then usage(0)
+    elseif a == "--dir"    then DIR = v; i = i + 2
+    elseif a == "--name"   then opt.name = v; i = i + 2
+    elseif a == "--made"   then opt.made = v; i = i + 2
+    elseif a == "--source" then opt.sources[#opt.sources + 1] = v; i = i + 2
+    elseif a == "--shows"  then opt.shows = v; i = i + 2
+    elseif a == "--story"  then opt.story = v; i = i + 2
+    elseif a == "--url"    then opt.url = v; i = i + 2
+    elseif a == "--window" then opt.window = v; i = i + 2
+    elseif a:sub(1, 2) == "--" then io.stderr:write("file-screenshot: unknown option " .. a .. " (--help lists them)\n"); os.exit(1)
+    else opt.png = a; i = i + 1 end
+end
+if not opt.name or not opt.made then io.stderr:write("file-screenshot: --name and --made are both needed\n"); usage(1) end
+if not opt.name:match("^[%w%-]+$") then io.stderr:write("file-screenshot: --name is dashed words only (letters, digits, -): " .. opt.name .. "\n"); os.exit(1) end
+if (opt.png and opt.url) or not (opt.png or opt.url) then io.stderr:write("file-screenshot: give one picture: a PNG file, or --url\n"); os.exit(1) end
+local HISTORY = DIR .. "/development-history"
+os.execute("mkdir -p '" .. HISTORY .. "'")
+-- }}}
+
+local function sh(cmd) local h = io.popen(cmd); local s = h:read("*a"); h:close(); return s end
+local function q(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
+
+-- {{{ the number
+-- The next free number across the folder. Two tools filing at once could
+-- pick the same one, so the notes file is created only if it doesn't exist
+-- yet (the shell's noclobber), and on a clash the next number is tried.
+local function reserve()
+    for _ = 1, 50 do
+        local highest = 0
+        for name in sh("ls " .. q(HISTORY)):gmatch("[^\n]+") do
+            local n = tonumber(name:match("^(%d%d%d)%-"))
+            if n and n > highest then highest = n end
+        end
+        local base = string.format("%03d-%s", highest + 1, opt.name)
+        local r = os.execute("set -C; : > " .. q(HISTORY .. "/" .. base .. ".info.md") .. " 2>/dev/null")
+        -- LuaJIT built with 5.2 compatibility answers true; plain 5.1 answers 0
+        if r == true or r == 0 then return base end
+    end
+    io.stderr:write("file-screenshot: could not reserve a number in " .. HISTORY .. " after 50 tries\n"); os.exit(1)
+end
+local base = reserve()
+local png  = HISTORY .. "/" .. base .. ".png"
+-- }}}
+
+-- {{{ the picture
+if opt.url then
+    local w, h = opt.window:match("^(%d+)x(%d+)$")
+    if not w then io.stderr:write("file-screenshot: --window is WIDTHxHEIGHT: " .. opt.window .. "\n"); os.remove(HISTORY .. "/" .. base .. ".info.md"); os.exit(1) end
+    local profile = DIR .. "/tmp/shared-memory/file-screenshot/firefox-profile"
+    os.execute("mkdir -p " .. q(profile))
+    local log = sh(string.format("timeout 90 firefox --headless --no-remote --profile %s --window-size=%s,%s --screenshot %s %s 2>&1",
+        q(profile), w, h, q(png), q(opt.url)))
+    opt.made = opt.made .. string.format(" (photographed: headless Firefox, %sx%s, %s)", w, h, opt.url)
+    if not io.open(png, "rb") then
+        os.remove(HISTORY .. "/" .. base .. ".info.md")
+        io.stderr:write("file-screenshot: Firefox wrote no picture for " .. opt.url .. "; its last words:\n" .. log:sub(-600) .. "\n"); os.exit(1)
+    end
+else
+    if not io.open(opt.png, "rb") then os.remove(HISTORY .. "/" .. base .. ".info.md"); io.stderr:write("file-screenshot: no picture at " .. opt.png .. "\n"); os.exit(1) end
+    os.execute("cp " .. q(opt.png) .. " " .. q(png))
+end
+-- }}}
+
+-- {{{ fingerprints, and what changed
+-- Each source's BLAKE2b, as a table row "| file | fingerprint |"; the last
+-- earlier notes file with a row for the same file says what it was then.
+local prints = {}
+for _, f in ipairs(opt.sources) do
+    local fp = sh("b2sum " .. q(DIR .. "/" .. f) .. " 2>&1"):match("^(%x+)")
+    if not fp then os.remove(HISTORY .. "/" .. base .. ".info.md"); os.remove(png); io.stderr:write("file-screenshot: cannot read source " .. f .. "\n"); os.exit(1) end
+    prints[#prints + 1] = { file = f, fp = fp:sub(1, 16) }
+end
+local earlier = {}
+for name in sh("ls " .. q(HISTORY) .. " | sort"):gmatch("[^\n]+") do
+    if name:match("%.info%.md$") and name ~= base .. ".info.md" then
+        local f = io.open(HISTORY .. "/" .. name)
+        local text = f and f:read("*a") or ""
+        if f then f:close() end
+        for file, fp in text:gmatch("\n| `([^`]+)` +| (%x+) +|") do earlier[file] = { fp = fp, pic = name:gsub("%.info%.md$", "") } end
+    end
+end
+local changes = {}
+for _, p in ipairs(prints) do
+    local e = earlier[p.file]
+    if not e then changes[#changes + 1] = "- `" .. p.file .. "`: first picture that names it"
+    elseif e.fp ~= p.fp then changes[#changes + 1] = "- `" .. p.file .. "`: changed since " .. e.pic
+    else changes[#changes + 1] = "- `" .. p.file .. "`: unchanged since " .. e.pic end
+end
+if #changes == 0 then changes[1] = "(no sources named)" end
+-- }}}
+
+-- {{{ the notes
+-- A folder that isn't a git repository (a test's scratch folder) has no
+-- commit to name: said so, rather than asking git and printing its refusal.
+local in_git = io.open(DIR .. "/.git", "r") ~= nil
+local commit = in_git and (sh("git -C " .. q(DIR) .. " rev-parse --short HEAD"):match("%S+") or "(no commit)") or "(not a git repository)"
+local dirty  = in_git and sh("git -C " .. q(DIR) .. " status --porcelain -- " .. table.concat((function() local t = {} for k, s in ipairs(opt.sources) do t[k] = q(s) end return t end)(), " ")) ~= ""
+local rows = {}
+for _, p in ipairs(prints) do rows[#rows + 1] = string.format("| `%s` | %s |", p.file, p.fp) end
+local f = assert(io.open(HISTORY .. "/" .. base .. ".info.md", "w"))
+f:write(string.format([[# %s
+
+## What made it
+- %s
+- Commit: %s%s
+- Filed: %s by scripts/file-screenshot
+
+| Source | Fingerprint (BLAKE2b, first 16) |
+|---|---|
+%s
+
+## What changed since the previous picture
+%s
+
+## What it shows
+%s
+
+## The story so far
+%s
+]], base, opt.made, commit, dirty and " (with uncommitted changes to its sources)" or "",
+    os.date("%Y-%m-%d %H:%M"), #rows > 0 and table.concat(rows, "\n") or "| (none named) | |",
+    table.concat(changes, "\n"), opt.shows or "(to be filled in)", opt.story or "(to be filled in)"))
+f:close()
+print(png)
+-- }}}

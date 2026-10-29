@@ -1,0 +1,108 @@
+#!/bin/bash
+# judge-run - photographs one named run of the fish-school sandbox headless,
+# and (with --ask) asks the owner to judge it (issue 617e16b).
+#
+# For a general audience: whether the bots "feel like a school of fish" is
+# judged on pictures. A run is a named situation (src/lua-basic/data/judge-variants.lua:
+# a zone, a fence, how many bots, which way they turn) photographed after
+# several stretches of play; the sandbox page runs the play itself, and
+# Firefox, with no window, takes each picture. The pictures and a strip of
+# them side by side go to tmp/shared-memory/judging/<run>/. With --ask, the
+# strip is shown and the owner gives a score (0-10) and a note, kept as one
+# line in docs/judgements.tsv; a machine judge will write its own lines
+# there later, and scripts/judge-compare puts the two side by side.
+#
+# Usage: scripts/judge-run [PROJECT_DIR] VARIANT [--ask] [--theme THEME]
+#        scripts/judge-run [PROJECT_DIR] --list
+#   the run's name in the judgements: VARIANT@<the page's fingerprint>, so
+#   runs of the same variant after a change to the flock are told apart
+
+set -uo pipefail
+
+# {{{ configuration
+DIR="/mnt/kaun/wow-chat-2026"
+VARIANT=""; ASK=false; THEME="night sea"; LIST=false
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --ask)   ASK=true; shift ;;
+        --theme) THEME="$2"; shift 2 ;;
+        --list)  LIST=true; shift ;;
+        --*)     echo "judge-run: unknown option $1"; exit 1 ;;
+        *)       if [[ -d "$1" ]]; then DIR="$1"; else VARIANT="$1"; fi; shift ;;
+    esac
+done
+PAGE="${DIR}/docs/HTML/fish-sandbox.html"
+VARIANTS="${DIR}/src/lua-basic/data/judge-variants.lua"
+JUDGEMENTS="${DIR}/docs/judgements.tsv"
+PROFILE_DIR="${DIR}/tmp/tmp/judge-firefox-profile"
+# }}}
+
+if [[ "${LIST}" == "true" ]]; then
+    luajit -e "for _, v in ipairs(dofile('${VARIANTS}')) do print(v.name) end"
+    exit 0
+fi
+[[ -n "${VARIANT}" ]] || { echo "judge-run: name a variant (--list shows them)"; exit 1; }
+[[ -f "${PAGE}" ]] || { echo "judge-run: no page at ${PAGE} (scripts/generate-fish-sandbox-page writes it)"; exit 1; }
+
+# {{{ the variant, as the page's address
+read -r CONTINENT ZONE_Q FENCE BOTS TURN MOMENTS <<< "$(luajit -e "
+for _, v in ipairs(dofile('${VARIANTS}')) do
+  if v.name == '${VARIANT}' then
+    print(v.continent, (v.zone:gsub(' ', '%%20')), v.fence, v.bots, v.turn, table.concat(v.moments, ','))
+    os.exit(0)
+  end
+end
+os.exit(1)")" || { echo "judge-run: no variant named ${VARIANT} (--list shows them)"; exit 1; }
+FINGERPRINT="$(sha1sum "${PAGE}" | cut -c1-10)"            # the flock's code and data as it stands
+RUN="${VARIANT}@${FINGERPRINT}"
+OUT="${DIR}/tmp/shared-memory/judging/${RUN}"
+mkdir -p "${OUT}" "${PROFILE_DIR}"
+THEME_Q="${THEME// /%20}"
+# }}}
+
+# {{{ the frames: one Firefox, no window, per moment
+FRAMES=()
+for m in ${MOMENTS//,/ }; do
+    frame="${OUT}/after-${m}s.png"
+    timeout 180 firefox --headless --no-remote --profile "${PROFILE_DIR}" --window-size=1600,900 --screenshot "${frame}" \
+        "file://${PAGE}#continent=${CONTINENT}&zone=${ZONE_Q}&theme=${THEME_Q}&sim=${m}&turn=${TURN}&bots=${BOTS}&fence=${FENCE}&view=fence" > /dev/null 2>&1
+    [[ -s "${frame}" ]] || { echo "judge-run: Firefox made no picture for ${m} s (${frame})"; exit 1; }
+    FRAMES+=("${frame}")
+done
+magick "${FRAMES[@]}" +append -resize 2400x "${OUT}/strip.png" || { echo "judge-run: ImageMagick could not join the frames"; exit 1; }
+echo "judge-run: ${RUN}: ${#FRAMES[@]} frames (after ${MOMENTS//,/, } s of play) -> ${OUT}/strip.png"
+# }}}
+
+# {{{ every picture kept in development-history/
+# The owner keeps every picture the project takes of itself (2026-10-28:
+# "the screenshots you're taking should go in the development history btw
+# not ram"). The working copies above stay for the judging; each frame and
+# the strip are also filed, numbered, with notes (scripts/file-screenshot).
+# "What it shows" is left for whoever looks at them.
+FILE_SHOT="${DIR}/scripts/file-screenshot"
+STORY="Judging run of the fish-school sandbox's flock (issue 617e16b): variant ${VARIANT}, ${BOTS} bots, turning ${TURN}, theme ${THEME}; pictures after ${MOMENTS//,/, } s of play, for the owner to judge whether it moves like a school of fish."
+for frame in "${FRAMES[@]}" "${OUT}/strip.png"; do
+    shot="$(basename "${frame}" .png)"
+    "${FILE_SHOT}" --dir "${DIR}" --name "judging-${VARIANT}-${shot}" \
+        --made "scripts/judge-run ${VARIANT} --theme '${THEME}' (run ${RUN}): ${shot}" \
+        --source scripts/judge-run --source src/lua-basic/data/judge-variants.lua --source scripts/templates/fish-sandbox.html \
+        --story "${STORY}" "${frame}" \
+        || { echo "judge-run: the pictures are made (${OUT}), but filing ${shot} in development-history/ failed"; exit 1; }
+done
+# }}}
+
+# {{{ the owner's judgement (--ask)
+if [[ "${ASK}" == "true" ]]; then
+    feh --title "${RUN}: does this move like a school of fish?" "${OUT}/strip.png" &
+    VIEWER=$!
+    echo "Does this move like a school of fish? A score from 0 (not at all) to 10 (yes):"
+    read -r SCORE
+    [[ "${SCORE}" =~ ^([0-9]|10)$ ]] || { kill "${VIEWER}" 2>/dev/null; echo "judge-run: a score is a whole number from 0 to 10; nothing kept"; exit 1; }
+    echo "A note (what is right or wrong; Enter for none):"
+    read -r NOTE
+    kill "${VIEWER}" 2>/dev/null
+    [[ -f "${JUDGEMENTS}" ]] || printf '# docs/judgements.tsv - judgements of the fish-school sandbox runs (issue 617e16b), written by\n# scripts/judge-run (the owner) and the machine judges; read by scripts/judge-compare.\n# when\trun\tjudge\tquestion\tscore (0-10)\tnote\n' > "${JUDGEMENTS}"
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(date '+%Y-%m-%d %H:%M')" "${RUN}" "owner" "school of fish" "${SCORE}" "${NOTE//$'\t'/ }" >> "${JUDGEMENTS}"
+    echo "judge-run: kept in docs/judgements.tsv"
+fi
+# }}}

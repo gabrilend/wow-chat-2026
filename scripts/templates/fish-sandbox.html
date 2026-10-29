@@ -1,0 +1,545 @@
+<!doctype html>
+<!-- GENERATED_NOTE -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fish-School Sandbox</title>
+<style>
+  :root { --panel: rgba(20, 22, 26, 0.86); --ink: #e8e8e8; --dim: #9aa0a6; --accent: #e8c547; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #111; color: var(--ink);
+               font: 13px/1.4 system-ui, sans-serif; }
+  canvas { display: block; width: 100vw; height: 100vh; cursor: crosshair; }
+  #panel { position: fixed; top: 10px; left: 10px; background: var(--panel); padding: 10px 12px; border-radius: 8px;
+           width: 270px; max-height: calc(100vh - 40px); overflow: auto; }
+  #panel h1 { font-size: 15px; margin: 0 0 6px; }
+  #panel label { display: flex; justify-content: space-between; align-items: center; margin: 4px 0; gap: 8px; }
+  #panel select, #panel input[type=range] { width: 140px; }
+  #panel button { margin: 3px 3px 0 0; padding: 4px 8px; border-radius: 5px; border: 1px solid #555; background: #2a2d33; color: var(--ink); cursor: pointer; }
+  #panel button:hover { border-color: var(--accent); }
+  #where { color: var(--accent); margin: 6px 0; min-height: 1.4em; }
+  #measures { font-variant-numeric: tabular-nums; white-space: pre; color: var(--dim); margin-top: 6px; }
+  #hint { position: fixed; bottom: 10px; left: 10px; color: var(--dim); background: var(--panel); padding: 4px 8px; border-radius: 6px; }
+  @media (max-width: 600px) { #panel { width: calc(100vw - 44px); } }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="panel">
+  <h1>Fish-school sandbox</h1>
+  <label>Continent <select id="continent"></select></label>
+  <label>Theme <select id="theme"></select></label>
+  <label>Bots <input id="bots" type="range" min="6" max="72" value="36"><span id="botsN">36</span></label>
+  <label>Speed <select id="speed"><option value="1">1x</option><option value="4" selected>4x</option><option value="10">10x</option></select></label>
+  <label>Turning <select id="turn"><option value="1">clockwise</option><option value="-1">anticlockwise</option><option value="0">each its own</option></select></label>
+  <label>Tails <input id="tail" type="range" min="0" max="120" value="40"><span id="tailN">40 s</span></label>
+  <label>Live players <input id="live" type="checkbox"><span id="liveN">off</span></label>
+  <div>
+    <button id="world">World</button>
+    <button id="scatter">Scatter bots</button>
+    <button id="close">Close up</button>
+    <button id="strip">Save a frame strip</button>
+  </div>
+  <div id="where"></div>
+  <div id="measures"></div>
+</div>
+<div id="hint">Click a zone to fly there. In a zone, click to move the player (white). Scroll to zoom; zoom out for the world.</div>
+<script>
+/*SANDBOX_DATA*/
+</script>
+<script>
+"use strict";
+// {{{ the page, in short
+// Data: window.SANDBOX (scripts/generate-fish-sandbox-data): continents,
+// their zones as grids of ~33-yard squares (rows north to south, columns
+// east to west of the game's Y), each zone's fences (where one kind of
+// monster spawns). Coordinates here are "screen yards": east right, south
+// down, sx = -y, sy = -x of the game's (x north, y west). Clockwise on the
+// screen is then an increasing angle (y grows down).
+// }}}
+
+const G = 533.3333, SQ = G / 16;                  // yards a grid, a square
+const cv = document.getElementById("c"), ctx = cv.getContext("2d");
+const $ = id => document.getElementById(id);
+
+// {{{ themes: ground tints (six, as 617e7), the outside, fences, bots, player
+const THEMES = {
+  "grey patchwork": { bg: "#686868", tints: tintsFrom([104,104,104], 0.90, 0.82, 9, 15), border: null,
+      fence: "rgba(232,197,71,0.55)", fenceOn: "#ffd400", fenceFill: "rgba(255,212,0,0.10)", bot: "#4ade80", player: "#ffffff", glow: 0 },
+  "parchment": { bg: "#d9c9a3", tints: ["#e9dcc0","#e3d3b0","#efe2c6","#ddcba5","#e6d6b6","#d4c196"], border: "rgba(80,60,30,0.35)",
+      fence: "rgba(150,105,20,0.55)", fenceOn: "#9b6a00", fenceFill: "rgba(180,130,20,0.12)", bot: "#2f6b2f", player: "#3b2a1a", glow: 0 },
+  "night sea": { bg: "#040b14", tints: ["#0b2236","#0e2a42","#09304a","#0c263f","#103550","#0a1f33"], border: "rgba(120,180,255,0.18)",
+      fence: "rgba(255,209,102,0.45)", fenceOn: "#ffd166", fenceFill: "rgba(255,209,102,0.08)", bot: "#9dff6b", player: "#ffffff", glow: 8 },
+  "ninja": { bg: "#000000", tints: ["#0d0d0d","#121212","#0b100b","#151515","#0f130f","#101010"], border: "rgba(57,255,20,0.22)",
+      fence: "rgba(255,230,0,0.45)", fenceOn: "#ffe600", fenceFill: "rgba(255,40,40,0.07)", bot: "#39ff14", player: "#ff2a2a", glow: 10 },
+};
+function tintsFrom(rgb, a, b, da, db) {                    // 617e7's: darker grey nudged toward r, g or b
+  const out = [];
+  for (const [k, d] of [[a, da], [b, db]]) for (let ch = 0; ch < 3; ch++) {
+    const v = rgb.map(c => c * k); v[ch] += d; out.push(`rgb(${v.map(Math.round).join(",")})`);
+  }
+  return out;
+}
+// }}}
+
+// {{{ the continent picture: one pixel a square, painted per theme
+let C = null;            // the continent in view: { data, X0, Y0, W, H, zoneAt, canvas }
+function buildContinent(i, themeName) {
+  const d = SANDBOX.continents[i], T = THEMES[themeName];
+  let X0 = 1e9, X1 = -1e9, Y0 = 1e9, Y1 = -1e9;
+  for (const z of d.zones) { X0 = Math.min(X0, z.X0); X1 = Math.max(X1, z.X1); Y0 = Math.min(Y0, z.Y0); Y1 = Math.max(Y1, z.Y1); }
+  const W = Y1 - Y0 + 1, H = X1 - X0 + 1;
+  const oc = document.createElement("canvas"); oc.width = W; oc.height = H;
+  const o = oc.getContext("2d"), img = o.createImageData(W, H);
+  const zoneAt = new Int16Array(W * H).fill(-1), subAt = new Int16Array(W * H).fill(-1);
+  const rgb = T.tints.map(css => css[0] === "#" ? hex(css) : css.match(/\d+/g).map(Number));   // "#rrggbb" or "rgb(r,g,b)"
+  d.zones.forEach((z, zi) => {
+    z.rows.forEach((row, r) => {
+      let c = 0;
+      for (const run of row.split(",")) {
+        const [v, n] = run.split("*").map(Number);
+        for (let k = 0; k < n; k++, c++) {
+          if (!v) continue;
+          const X = z.X0 + r, Y = z.Y1 - c;               // the square
+          const col = Y1 - Y, rowp = X - X0, at = rowp * W + col;
+          zoneAt[at] = zi; subAt[at] = zi * 4096 + v;
+          const t = rgb[(z.subzones[v - 1].tint - 1) % rgb.length];
+          img.data.set([t[0], t[1], t[2], 255], at * 4);
+        }
+      }
+    });
+  });
+  o.putImageData(img, 0, 0);
+  if (T.border) {                                       // zone outlines
+    o.fillStyle = T.border;
+    for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
+      const z = zoneAt[r * W + c];
+      if (z >= 0 && ((c + 1 < W && zoneAt[r * W + c + 1] !== z) || (r + 1 < H && zoneAt[(r + 1) * W + c] !== z))) o.fillRect(c, r, 1, 1);
+    }
+  }
+  C = { data: d, X0, Y0, Y1, W, H, zoneAt, canvas: oc };
+}
+function hex(h) { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+// game yards -> screen yards, and screen yards -> the continent picture's pixels
+const toScreen = (x, y) => [-y, -x];
+const pixOf = (sx, sy) => [C.Y1 + 1 - 16 * (32 + sx / G), 16 * (32 + sy / G) - C.X0];   // col, row (fractional)
+const yardsOf = (col, row) => [(-(32 - (C.Y1 + 1 - col) / 16)) * G, (-(32 - (row + C.X0) / 16)) * G];
+// }}}
+
+// {{{ the camera: centre (in picture pixels) and pixels per square, gliding
+const cam = { cx: 0, cy: 0, z: 1 }, camTo = { cx: 0, cy: 0, z: 1 };
+let glide = null;                                           // { from, to, t0, ms }
+function fit(c0, r0, c1, r1, margin) {
+  const w = cv.width, h = cv.height;
+  const z = Math.min(w / (c1 - c0 + 1), h / (r1 - r0 + 1)) * (margin || 0.9);
+  return { cx: (c0 + c1 + 1) / 2, cy: (r0 + r1 + 1) / 2, z };
+}
+function glideTo(t, ms) { glide = { from: { ...cam }, to: t, t0: performance.now(), ms: ms || 1400 }; }
+function worldFit() { return fit(0, 0, C.W - 1, C.H - 1, 0.95); }
+function zoneFit(zi) {
+  const z = C.data.zones[zi];
+  return fit(C.Y1 - z.Y1, z.X0 - C.X0, C.Y1 - z.Y0, z.X1 - C.X0, 0.85);
+}
+function fenceFit(f) {                                      // the fence and some ground round it
+  let c0 = 1e9, c1 = -1e9, r0 = 1e9, r1 = -1e9;
+  for (const [x, y] of f.poly) { const [c, r] = pixOf(x, y); c0 = Math.min(c0, c); c1 = Math.max(c1, c); r0 = Math.min(r0, r); r1 = Math.max(r1, r); }
+  const pad = Math.max(c1 - c0, r1 - r0) * 0.6;
+  return fit(c0 - pad, r0 - pad, c1 + pad - 1, r1 + pad - 1, 0.9);
+}
+function stepCamera(now) {
+  if (!glide) return;
+  const k = Math.min(1, (now - glide.t0) / glide.ms), e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+  const lz = Math.log(glide.from.z) + (Math.log(glide.to.z) - Math.log(glide.from.z)) * e;   // zoom glides in proportion
+  cam.z = Math.exp(lz);
+  cam.cx = glide.from.cx + (glide.to.cx - glide.from.cx) * e;
+  cam.cy = glide.from.cy + (glide.to.cy - glide.from.cy) * e;
+  if (k >= 1) glide = null;
+}
+const toCanvas = (col, row) => [(col - cam.cx) * cam.z + cv.width / 2, (row - cam.cy) * cam.z + cv.height / 2];
+const fromCanvas = (px, py) => [(px - cv.width / 2) / cam.z + cam.cx, (py - cv.height / 2) / cam.z + cam.cy];
+// }}}
+
+// {{{ the zone in play, its fences (in screen yards), the player, the bots
+let zoneIdx = -1, fences = [], active = -1;
+const player = { x: 0, y: 0, tx: 0, ty: 0, speed: 7 };       // screen yards; walks 7 yards a second
+let bots = [];
+function enterZone(zi) {
+  zoneIdx = zi;
+  const z = C.data.zones[zi];
+  fences = z.fences.map(f => {
+    const poly = [];
+    for (let i = 0; i < f.poly.length; i += 2) poly.push(toScreen(f.poly[i], f.poly[i + 1]));
+    return prepareFence({ name: f.name, spawns: f.spawns, poly });
+  });
+  // the player starts in the largest fence's middle (or the zone's middle)
+  const f0 = fences[0];
+  const [mc, mr] = [(C.Y1 - (z.Y0 + z.Y1) / 2), ((z.X0 + z.X1) / 2 - C.X0)];
+  const mid = f0 ? [f0.cx, f0.cy] : yardsOf(mc, mr);
+  player.x = player.tx = mid[0]; player.y = player.ty = mid[1];
+  spawnBots(+$("bots").value, player.x, player.y, 25);
+  glideTo(zoneFit(zi));
+  $("where").textContent = z.name + " — " + fences.length + " fences";
+}
+function prepareFence(f) {
+  // area centroid, area, and the distance to the fence along 72 bearings
+  let a = 0, cx = 0, cy = 0;
+  const p = f.poly;
+  for (let i = 0; i < p.length; i++) {
+    const [x0, y0] = p[i], [x1, y1] = p[(i + 1) % p.length], k = x0 * y1 - x1 * y0;
+    a += k; cx += (x0 + x1) * k; cy += (y0 + y1) * k;
+  }
+  a /= 2; cx /= (6 * a); cy /= (6 * a);
+  f.area = Math.abs(a); f.cx = cx; f.cy = cy;
+  f.R = new Float32Array(72);
+  for (let b = 0; b < 72; b++) f.R[b] = rayToPoly(cx, cy, b * Math.PI / 36, p);
+  return f;
+}
+function rayToPoly(cx, cy, th, p) {
+  const dx = Math.cos(th), dy = Math.sin(th);
+  let best = 0;
+  for (let i = 0; i < p.length; i++) {
+    const [x0, y0] = p[i], [x1, y1] = p[(i + 1) % p.length];
+    const ex = x1 - x0, ey = y1 - y0, den = dx * ey - dy * ex;
+    if (Math.abs(den) < 1e-9) continue;
+    const t = ((x0 - cx) * ey - (y0 - cy) * ex) / den, u = ((x0 - cx) * dy - (y0 - cy) * dx) / den;
+    if (t > 0 && u >= 0 && u <= 1) best = Math.max(best, t);
+  }
+  return best;
+}
+function edgeAt(f, th) {                                    // the fence's distance along bearing th, interpolated
+  const b = ((th / (Math.PI / 36)) % 72 + 72) % 72, i = Math.floor(b), k = b - i;
+  return f.R[i] * (1 - k) + f.R[(i + 1) % 72] * k;
+}
+function inside(f, x, y) {
+  let c = false;
+  for (let i = 0, j = f.poly.length - 1; i < f.poly.length; j = i++) {
+    const [xi, yi] = f.poly[i], [xj, yj] = f.poly[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c;
+  }
+  return c;
+}
+function spawnBots(n, x, y, r) {
+  bots = [];
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * 6.283, d = Math.sqrt(Math.random()) * r;
+    bots.push({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, vx: 0, vy: 0, depth: 0.2 + Math.random() * 0.7,
+                depthTo: Math.random(), nextPick: Math.random() * 8, own: Math.random() < 0.5 ? 1 : -1, tail: [], ang: [] });
+  }
+}
+// }}}
+
+// {{{ the flock
+// Each bot, each step:
+//   in a fence: circles its middle (the turning chosen: clockwise,
+//     anticlockwise, or each its own), aiming LEAD ahead on its circle at
+//     its own depth between the middle and the fence; its depth eases to a
+//     target re-chosen every 6-12 s as the least-crossed band of the fence
+//     lately (so the whole shape gets swept: "fills all the gaps");
+//   keeps SEP yards from its neighbours, and leans toward their heading
+//     (a school), more weakly;
+//   outside the fence: heads for its middle;
+//   no fence (the player outside all): follows the player, on a ring round them.
+const SPEED = 5, LEAD = 0.45, SEP = 4, ALIGN_R = 14, BANDS = 6;
+const bandSeen = new Float32Array(BANDS);                    // recent crossings per depth band, decaying
+function stepFlock(dt) {
+  const turnSel = +$("turn").value;
+  const f = fences[active];
+  for (let i = 0; i < BANDS; i++) bandSeen[i] *= Math.exp(-dt / 30);
+  for (const b of bots) {
+    let tx, ty;
+    if (f) {
+      const rx = b.x - f.cx, ry = b.y - f.cy, th = Math.atan2(ry, rx), r = Math.hypot(rx, ry), R = edgeAt(f, th);
+      const dir = turnSel === 0 ? b.own : turnSel;
+      b.nextPick -= dt;
+      if (b.nextPick <= 0) {                               // the least-crossed band lately
+        let best = 0; for (let k = 1; k < BANDS; k++) if (bandSeen[k] < bandSeen[best]) best = k;
+        b.depthTo = 0.12 + 0.83 * (best + Math.random()) / BANDS;
+        b.nextPick = 6 + Math.random() * 6;
+      }
+      b.depth += (b.depthTo - b.depth) * Math.min(1, dt * 0.25);
+      if (r > R * 1.05) { tx = f.cx; ty = f.cy; }
+      else {
+        const ta = th + dir * LEAD, Ra = edgeAt(f, ta) * b.depth;
+        tx = f.cx + Math.cos(ta) * Ra; ty = f.cy + Math.sin(ta) * Ra;
+        bandSeen[Math.min(BANDS - 1, Math.floor((r / Math.max(R, 1)) * BANDS))] += dt;
+      }
+    } else {
+      const a = Math.atan2(b.y - player.y, b.x - player.x);
+      tx = player.x + Math.cos(a) * 6; ty = player.y + Math.sin(a) * 6;
+    }
+    let dx = tx - b.x, dy = ty - b.y, dl = Math.hypot(dx, dy) || 1;
+    let ax = dx / dl * SPEED - b.vx, ay = dy / dl * SPEED - b.vy;
+    let sx = 0, sy = 0, avx = 0, avy = 0, na = 0;
+    for (const o of bots) {
+      if (o === b) continue;
+      const ox = b.x - o.x, oy = b.y - o.y, d = Math.hypot(ox, oy);
+      if (d < SEP && d > 0) { sx += ox / d * (SEP - d); sy += oy / d * (SEP - d); }
+      if (d < ALIGN_R) { avx += o.vx; avy += o.vy; na++; }
+    }
+    ax += sx * 1.6; ay += sy * 1.6;
+    if (na) { ax += (avx / na - b.vx) * 0.25; ay += (avy / na - b.vy) * 0.25; }
+    b.vx += ax * Math.min(1, dt * 2.2); b.vy += ay * Math.min(1, dt * 2.2);
+    const sp = Math.hypot(b.vx, b.vy), cap = f ? SPEED : SPEED * 1.6;
+    if (sp > cap) { b.vx *= cap / sp; b.vy *= cap / sp; }
+    b.x += b.vx * dt; b.y += b.vy * dt;
+  }
+}
+// }}}
+
+// {{{ the player and the fence in play
+function stepPlayer(dt) {
+  const dx = player.tx - player.x, dy = player.ty - player.y, d = Math.hypot(dx, dy);
+  if (d > 0.5) { const s = Math.min(d, player.speed * dt); player.x += dx / d * s; player.y += dy / d * s; }
+  // the fence holding the player: the smallest of those it stands in
+  let best = -1;
+  fences.forEach((f, i) => { if (inside(f, player.x, player.y) && (best < 0 || f.area < fences[best].area)) best = i; });
+  if (best !== active) {
+    active = best;
+    $("where").textContent = C.data.zones[zoneIdx].name + (best >= 0 ? " — " + fences[best].name + " (" + fences[best].spawns + " spawns)" : " — outside every fence: the bots follow");
+  }
+}
+// }}}
+
+// {{{ the measures, over the last minute
+const cover = { cells: new Map(), size: 5 };
+let simT = 0;
+function measure() {
+  const f = fences[active];
+  const lines = [];
+  // turning: each bot's angle round the fence's middle, 30 s ago to now
+  let cw = 0, ccw = 0, circ = 0;
+  for (const b of bots) {
+    if (f) b.ang.push([simT, Math.atan2(b.y - f.cy, b.x - f.cx)]);
+    while (b.ang.length && simT - b.ang[0][0] > 30) b.ang.shift();
+    let net = 0;
+    for (let i = 1; i < b.ang.length; i++) { let d = b.ang[i][1] - b.ang[i - 1][1]; d = (d + Math.PI) % (2 * Math.PI); if (d < 0) d += 2 * Math.PI; net += d - Math.PI; }
+    if (Math.abs(net) >= Math.PI) { circ++; if (net > 0) cw++; else ccw++; }
+  }
+  // covering: the fence's 5-yard cells a bot crossed within the minute
+  let covered = 0, total = 0;
+  if (f) {
+    for (const b of bots) cover.cells.set(Math.floor(b.x / cover.size) + "," + Math.floor(b.y / cover.size), simT);
+    let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+    for (const [x, y] of f.poly) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+    for (let x = Math.floor(x0 / 5); x <= x1 / 5; x++) for (let y = Math.floor(y0 / 5); y <= y1 / 5; y++) {
+      if (!inside(f, x * 5 + 2.5, y * 5 + 2.5)) continue;
+      total++;
+      const t = cover.cells.get(x + "," + y);
+      if (t !== undefined && simT - t <= 60) covered++;
+    }
+  }
+  // spacing: the median distance to the nearest other bot
+  const nn = bots.map(b => Math.min(...bots.filter(o => o !== b).map(o => Math.hypot(o.x - b.x, o.y - b.y)))).sort((a, b) => a - b);
+  lines.push(`bots            ${bots.length}`);
+  lines.push(`circling (30s)  ${circ} of ${bots.length}`);
+  lines.push(`  clockwise     ${cw}   anticlockwise ${ccw}`);
+  lines.push(`fence covered   ${total ? Math.round(100 * covered / total) : 0}% (last minute)`);
+  lines.push(`spacing         ${nn.length ? nn[Math.floor(nn.length / 2)].toFixed(1) : "-"} yd (median nearest)`);
+  $("measures").textContent = lines.join("\n");
+}
+// }}}
+
+// {{{ live players: the world server's stream (issue 617e16a)
+// Asked once a second at http://127.0.0.1:<port>/positions (the server's
+// Buddies.MapStream.Port, 8097 unless set; #port= in the address moves it).
+// Each character keeps a short tail of where it was. Each answer, and what
+// it shows: characters (drawn on their continent), or none / no answer
+// ("not streaming": the server is down, built without the stream, or on
+// another port).
+const live = { on: false, chars: new Map(), port: 8097, timer: null, said: "off" };
+async function pollLive() {
+  try {
+    const r = await fetch(`http://127.0.0.1:${live.port}/positions`, { cache: "no-store" });
+    const j = await r.json(), now = performance.now() / 1000, seen = new Set();
+    for (const c of j.characters) {
+      seen.add(c.g);
+      const e = live.chars.get(c.g) || { tail: [] };
+      Object.assign(e, c);
+      e.tail.push([now, c.x, c.y]);
+      while (e.tail.length && now - e.tail[0][0] > 60) e.tail.shift();
+      live.chars.set(c.g, e);
+    }
+    for (const g of [...live.chars.keys()]) if (!seen.has(g)) live.chars.delete(g);
+    live.said = j.characters.length + " in the world";
+  } catch (err) { live.said = "not streaming"; live.chars.clear(); }
+  $("liveN").textContent = live.said;
+}
+function drawLive(T) {
+  if (!live.on) return;
+  const now = performance.now() / 1000, r = Math.max(2.5, cam.z / SQ * 1.5);
+  for (const c of live.chars.values()) {
+    if (c.m !== C.data.map) continue;
+    const colour = c.k === "buddy" ? ownerColour(c.o) : (c.k === "bot" ? "#b8b8b8" : T.player);
+    ctx.fillStyle = colour;
+    for (const [t, x, y] of c.tail) {
+      const [sx, sy] = toScreen(x, y), [cc, rr] = pixOf(sx, sy), [px, py] = toCanvas(cc, rr);
+      ctx.globalAlpha = Math.max(0, 1 - (now - t) / 60) * 0.5; ctx.fillRect(px - 1, py - 1, 2, 2);
+    }
+    ctx.globalAlpha = c.d ? 0.4 : 1;
+    const [sx, sy] = toScreen(c.x, c.y), [cc, rr] = pixOf(sx, sy), [px, py] = toCanvas(cc, rr);
+    ctx.beginPath(); ctx.arc(px, py, c.k === "player" ? r * 1.4 : r, 0, 6.283); ctx.fill();
+    if (c.k === "player" && cam.z > 2) { ctx.globalAlpha = 1; ctx.font = "12px system-ui"; ctx.fillText(c.n, px + r * 2, py - r * 2); }
+  }
+  ctx.globalAlpha = 1;
+}
+function ownerColour(o) {                                  // a hue from the owner's number (as scripts/render-zone)
+  const h = (o * 0.6180339887) % 1;
+  return `hsl(${Math.round(h * 360)}, 85%, 60%)`;
+}
+// }}}
+
+// {{{ drawing
+function draw() {
+  const T = THEMES[$("theme").value], w = cv.width, h = cv.height;
+  ctx.fillStyle = T.bg; ctx.fillRect(0, 0, w, h);
+  ctx.imageSmoothingEnabled = false;
+  const [x0, y0] = toCanvas(0, 0);
+  ctx.drawImage(C.canvas, x0, y0, C.W * cam.z, C.H * cam.z);
+  if (zoneIdx < 0) { drawLive(T); return; }
+  const yd2px = (sx, sy) => { const [c, r] = pixOf(sx, sy); return toCanvas(c, r); };
+  // fences
+  fences.forEach((f, i) => {
+    ctx.beginPath();
+    f.poly.forEach(([x, y], k) => { const [px, py] = yd2px(x, y); k ? ctx.lineTo(px, py) : ctx.moveTo(px, py); });
+    ctx.closePath();
+    if (i === active) { ctx.fillStyle = T.fenceFill; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = T.fenceOn; }
+    else { ctx.lineWidth = 1; ctx.strokeStyle = T.fence; }
+    ctx.stroke();
+  });
+  // bots and their tails
+  const tailS = +$("tail").value, rpx = Math.max(2, cam.z / SQ * 1.2);
+  ctx.shadowColor = T.bot; ctx.shadowBlur = T.glow;
+  for (const b of bots) {
+    for (const [t, x, y] of b.tail) {
+      const a = 1 - (simT - t) / Math.max(tailS, 1);
+      if (a <= 0) continue;
+      const [px, py] = yd2px(x, y);
+      ctx.globalAlpha = a * 0.5; ctx.fillStyle = T.bot; ctx.fillRect(px - 1, py - 1, 2, 2);
+    }
+    ctx.globalAlpha = 1;
+    const [px, py] = yd2px(b.x, b.y);
+    ctx.beginPath(); ctx.arc(px, py, rpx, 0, 6.283); ctx.fillStyle = T.bot; ctx.fill();
+  }
+  ctx.shadowBlur = T.glow; ctx.shadowColor = T.player;
+  const [ppx, ppy] = yd2px(player.x, player.y);
+  ctx.beginPath(); ctx.arc(ppx, ppy, rpx * 1.6, 0, 6.283); ctx.fillStyle = T.player; ctx.fill();
+  ctx.shadowBlur = 0;
+  drawLive(T);
+}
+// }}}
+
+// {{{ the loop
+let last = performance.now(), tailClock = 0, measureClock = 0;
+function frame(now) {
+  const dt = Math.min(0.1, (now - last) / 1000) * +$("speed").value;
+  last = now;
+  stepCamera(now);
+  if (zoneIdx >= 0) {
+    for (let k = 0, n = Math.ceil(dt / 0.05), s = dt / n; k < n; k++) { stepPlayer(s); stepFlock(s); simT += s; }
+    tailClock += dt; measureClock += dt;
+    if (tailClock >= 0.5) {
+      tailClock = 0;
+      const keep = +$("tail").value;
+      for (const b of bots) { b.tail.push([simT, b.x, b.y]); while (b.tail.length && simT - b.tail[0][0] > keep) b.tail.shift(); }
+    }
+    if (measureClock >= 1) { measureClock = 0; measure(); }
+  }
+  draw();
+  requestAnimationFrame(frame);
+}
+// }}}
+
+// {{{ input: clicks, the wheel, the panel
+function resize() { cv.width = innerWidth; cv.height = innerHeight; }
+addEventListener("resize", () => { resize(); if (!glide) Object.assign(cam, zoneIdx >= 0 ? zoneFit(zoneIdx) : worldFit()); });
+cv.addEventListener("click", e => {
+  const [col, row] = fromCanvas(e.clientX, e.clientY);
+  const zi = (col >= 0 && row >= 0 && col < C.W && row < C.H) ? C.zoneAt[Math.floor(row) * C.W + Math.floor(col)] : -1;
+  if (zoneIdx < 0) { if (zi >= 0) enterZone(zi); return; }
+  if (zi === zoneIdx) { const [x, y] = yardsOf(col, row); player.tx = x; player.ty = y; }
+  else if (zi >= 0) enterZone(zi);
+});
+cv.addEventListener("wheel", e => {
+  e.preventDefault();
+  glide = null;
+  const [col, row] = fromCanvas(e.clientX, e.clientY);
+  const k = Math.exp(-e.deltaY * 0.0015);
+  cam.z *= k;
+  cam.cx = col - (e.clientX - cv.width / 2) / cam.z; cam.cy = row - (e.clientY - cv.height / 2) / cam.z;
+  const wf = worldFit();
+  if (zoneIdx >= 0 && cam.z < zoneFit(zoneIdx).z * 0.45) { zoneIdx = -1; fences = []; bots = []; active = -1; $("where").textContent = C.data.name; glideTo(wf, 900); }
+  else if (zoneIdx < 0 && cam.z > wf.z * 4) {
+    const zi = C.zoneAt[Math.floor(row) * C.W + Math.floor(col)];
+    if (zi >= 0) enterZone(zi);
+  }
+}, { passive: false });
+$("close").onclick = () => { if (fences[active]) glideTo(fenceFit(fences[active]), 900); else if (zoneIdx >= 0) glideTo(zoneFit(zoneIdx), 900); };
+$("world").onclick = () => { zoneIdx = -1; fences = []; bots = []; active = -1; $("where").textContent = C.data.name; glideTo(worldFit()); };
+$("scatter").onclick = () => { if (zoneIdx < 0) return; const z = C.data.zones[zoneIdx]; for (const b of bots) {
+  const c = C.Y1 - z.Y1 + Math.random() * (z.Y1 - z.Y0), r = z.X0 - C.X0 + Math.random() * (z.X1 - z.X0); [b.x, b.y] = yardsOf(c, r); b.vx = b.vy = 0; } };
+$("bots").oninput = () => { $("botsN").textContent = $("bots").value; if (zoneIdx >= 0) spawnBots(+$("bots").value, player.x, player.y, 25); };
+$("live").onchange = () => {
+  live.on = $("live").checked;
+  clearInterval(live.timer);
+  if (live.on) { pollLive(); live.timer = setInterval(pollLive, 1000); } else { live.chars.clear(); $("liveN").textContent = "off"; }
+};
+$("tail").oninput = () => { $("tailN").textContent = $("tail").value + " s"; };
+$("theme").onchange = () => { buildContinent(+$("continent").value, $("theme").value); };
+$("continent").onchange = () => { zoneIdx = -1; fences = []; bots = []; buildContinent(+$("continent").value, $("theme").value); glideTo(worldFit(), 600); $("where").textContent = C.data.name; };
+// a strip: 8 frames, half a second of play apart, side by side in two rows, saved as a PNG
+$("strip").onclick = async () => {
+  const frames = [];
+  for (let i = 0; i < 8; i++) { frames.push(await createImageBitmap(cv)); await new Promise(r => setTimeout(r, 500)); }
+  const s = document.createElement("canvas"), fw = Math.floor(cv.width / 2), fh = Math.floor(cv.height / 2);
+  s.width = fw * 4; s.height = fh * 2;
+  const sc = s.getContext("2d");
+  frames.forEach((f, i) => sc.drawImage(f, (i % 4) * fw, Math.floor(i / 4) * fh, fw, fh));
+  const a = document.createElement("a"); a.href = s.toDataURL("image/png"); a.download = "fish-strip-" + Date.now() + ".png"; a.click();
+};
+// }}}
+
+// {{{ start
+SANDBOX.continents.forEach((c, i) => $("continent").add(new Option(c.name, i)));
+Object.keys(THEMES).forEach(t => $("theme").add(new Option(t, t)));
+resize();
+// Driven from the address, so a run needs no person (a headless browser's
+// screenshot, the judge's frames): #continent=1&zone=The%20Barrens&theme=ninja&sim=120&turn=1&bots=36&fence=2&view=fence
+//   continent  its index (0 Eastern Kingdoms, 1 Kalimdor); zone: its name;
+//   theme; turn (1 clockwise, -1 anticlockwise, 0 each its own); bots;
+//   fence: put the player in that fence (by its rank, 0 the largest);
+//   sim: seconds of play run at once before the first picture;
+//   view=fence: the close-up of the fence in play (the judge's frames);
+//   live=1: the world server's stream on; port: its port (8097)
+const Q = new URLSearchParams(location.hash.slice(1));
+if (Q.has("theme") && THEMES[Q.get("theme")]) $("theme").value = Q.get("theme");
+if (Q.has("port")) live.port = +Q.get("port");
+if (Q.get("live") === "1") { $("live").checked = true; $("live").onchange(); }
+if (Q.has("turn")) $("turn").value = Q.get("turn");
+if (Q.has("bots")) { $("bots").value = Q.get("bots"); $("botsN").textContent = Q.get("bots"); }
+const startContinent = Q.has("continent") ? +Q.get("continent") : 0;
+$("continent").value = startContinent;
+buildContinent(startContinent, $("theme").value);
+Object.assign(cam, worldFit());
+$("where").textContent = C.data.name;
+if (Q.has("zone")) {
+  const zi = C.data.zones.findIndex(z => z.name === Q.get("zone"));
+  if (zi >= 0) {
+    enterZone(zi);
+    if (Q.has("fence") && fences[+Q.get("fence")]) { const f = fences[+Q.get("fence")]; player.x = player.tx = f.cx; player.y = player.ty = f.cy; spawnBots(bots.length, f.cx, f.cy, 25); }
+    glide = null; Object.assign(cam, zoneFit(zi));
+    stepPlayer(0);                                         // the fence in play, before the close-up asks for it
+    const run = +(Q.get("sim") || 0);
+    for (let t = 0; t < run; t += 0.05) {
+      stepPlayer(0.05); stepFlock(0.05); simT += 0.05;
+      if (Math.round(simT * 20) % 10 === 0) { const keep = +$("tail").value; for (const b of bots) { b.tail.push([simT, b.x, b.y]); while (b.tail.length && simT - b.tail[0][0] > keep) b.tail.shift(); } }
+      if (Math.round(simT * 20) % 20 === 0) measure();
+    }
+    if (Q.get("view") === "fence" && fences[active]) Object.assign(cam, fenceFit(fences[active]));
+  }
+}
+draw();                                      // once now: a screenshot may come before the first frame
+requestAnimationFrame(frame);
+// }}}
+</script>
+</body>
+</html>

@@ -12,15 +12,21 @@
 -- Reads:  src/lua-basic/data/buddy-levers.lua, src/lua-basic/data/buddy-lever-map.lua,
 --         scripts/templates/buddy-lever-map.html
 -- Writes: docs/HTML/buddy-lever-map.html
--- Usage:  scripts/generate-buddy-lever-map-page [PROJECT_DIR]
+--         development-history/NNN-buddy-lever-map.png, with --screenshot
+-- Usage:  scripts/generate-buddy-lever-map-page [PROJECT_DIR] [--screenshot]
 --         scripts/generate-buddy-lever-map-page --help
 
-if arg[1] == "--help" then
-    print("generate-buddy-lever-map-page [PROJECT_DIR]: writes docs/HTML/buddy-lever-map.html from")
-    print("the lever list and the semantic map (run generate-buddy-lever-map first; issue 638).")
-    os.exit(0)
+local DIR, SHOT = "/mnt/kaun/wow-chat-2026", false
+for _, a in ipairs(arg) do
+    if a == "--help" then
+        print("generate-buddy-lever-map-page [PROJECT_DIR] [--screenshot]: writes docs/HTML/buddy-lever-map.html")
+        print("from the lever list and the semantic map (run generate-buddy-lever-map first; issue 638).")
+        print("  --screenshot  also photograph the page and file the picture in development-history/")
+        os.exit(0)
+    elseif a == "--screenshot" then SHOT = true
+    elseif a:sub(1, 2) == "--" then io.stderr:write("generate-buddy-lever-map-page: unknown option " .. a .. "\n"); os.exit(1)
+    else DIR = a end
 end
-local DIR  = arg[1] or "/mnt/kaun/wow-chat-2026"
 local LIBS = "/home/ritz/programming/ai-stuff/libs/lua"
 package.path = LIBS .. "/?.lua;" .. package.path
 local json = require("dkjson")
@@ -59,3 +65,17 @@ if not a then io.stderr:write("generate-buddy-lever-map-page: the template has n
 page = page:sub(1, a - 1) .. json.encode(data) .. page:sub(b + 1)
 f = assert(io.open(OUT, "w")); f:write(page); f:close()
 print(("generate-buddy-lever-map-page: %d levers, %d segments, %d bytes -> %s"):format(#data.levers, #data.segments, #page, OUT))
+
+-- {{{ --screenshot: the page photographed and kept in development-history/
+-- (the owner keeps every picture the project takes of itself; filed and
+-- noted by scripts/file-screenshot, "What it shows" left to whoever looks)
+if SHOT then
+    local cmd = string.format("'%s/scripts/file-screenshot' --dir '%s' --name buddy-lever-map --made %q"
+        .. " --source scripts/generate-buddy-levers --source scripts/generate-buddy-lever-map"
+        .. " --source scripts/generate-buddy-lever-map-page --source scripts/templates/buddy-lever-map.html"
+        .. " --source src/lua-basic/data/buddy-lever-map.lua --window 1400x900 --url 'file://%s'",
+        DIR, DIR, "scripts/generate-buddy-lever-map-page --screenshot (" .. MAP.model .. ", " .. #data.segments .. " segments, seed " .. MAP.seed .. ")", OUT)
+    local r = os.execute(cmd)
+    if r ~= true and r ~= 0 then io.stderr:write("generate-buddy-lever-map-page: the page is written, but its picture was not filed (file-screenshot failed)\n"); os.exit(1) end
+end
+-- }}}
