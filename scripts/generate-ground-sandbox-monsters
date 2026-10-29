@@ -1,0 +1,114 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- generate-ground-sandbox-monsters - every monster spawn of the sandbox's
+-- continents, with what a fight against it needs (issue 617e16g)
+--
+-- For a general audience: the owner asked for the sandbox's bots to meet
+-- real monsters where the game puts them, and to stand at each for as long
+-- as killing it would take. This writes, per continent, every monster spawn
+-- (a creature not friendly to either side's players, not a critter, not a
+-- vendor or trainer: the sandbox's own rule, scripts/lib/monster-factions.lua)
+-- with its place, its height (a monster far below the ground is in a cave),
+-- the time it takes to come back, and per kind of monster its name, levels
+-- and health. Health is the server's own sum: the level table's base health
+-- for the monster's class and expansion (creature_classlevelstats, at the
+-- middle of its level range) times its own health multiplier.
+--
+-- Reads:  the basic world database (creature, creature_template,
+--         creature_classlevelstats), data-files/dbc/FactionTemplate.dbc
+-- Writes: docs/HTML/ground-sandbox/monsters-<map>.js
+-- Usage:  scripts/generate-ground-sandbox-monsters [PROJECT_DIR] [--map M]...
+--         scripts/generate-ground-sandbox-monsters --help
+--   --map: default 0 and 1 (the sandbox's continents)
+--------------------------------------------------------------------------------
+
+-- {{{ configuration
+local DIR, MAPS = "/mnt/kaun/wow-chat-2026", {}
+local i = 1
+while i <= #arg do
+    if arg[i] == "--help" then
+        print("generate-ground-sandbox-monsters [PROJECT_DIR] [--map M]...: writes docs/HTML/ground-sandbox/monsters-<map>.js,")
+        print("  every monster spawn of maps 0 and 1 (or those named) with its place, height and respawn time, and each")
+        print("  kind's name, levels and health (issue 617e16g).")
+        os.exit(0)
+    elseif arg[i] == "--map" then MAPS[#MAPS + 1] = tonumber(arg[i + 1]); i = i + 2
+    elseif arg[i]:sub(1, 2) == "--" then io.stderr:write("generate-ground-sandbox-monsters: unknown option " .. arg[i] .. "\n"); os.exit(1)
+    else DIR = arg[i]; i = i + 1 end
+end
+if #MAPS == 0 then MAPS = { 0, 1 } end
+local WORLD_DB = "acore_world_basic"
+local MYSQL    = DIR .. "/mysql/installed-files/bin/mysql --defaults-file=" .. DIR .. "/mysql/conf/client.cnf -h127.0.0.1 -P3307 -N -B " .. WORLD_DB
+local OUT_DIR  = DIR .. "/docs/HTML/ground-sandbox"
+local CRITTER  = 8                                    -- creature_template.type
+os.execute("mkdir -p '" .. OUT_DIR .. "'")
+local function die(m) io.stderr:write("generate-ground-sandbox-monsters: " .. m .. "\n"); os.exit(1) end
+local friendly_to_a_side = dofile(DIR .. "/scripts/lib/monster-factions.lua").friendly_to_a_side(DIR)
+-- }}}
+
+-- {{{ local function query(sql)
+-- The query goes to MySQL on its standard input (a file), not the command
+-- line, so its backquotes and quotes reach MySQL as written.
+local function query(sql)
+    local file = DIR .. "/tmp/shared-memory/ground-sandbox-monsters.sql"
+    local w = assert(io.open(file, "w")); w:write(sql, ";\n"); w:close()
+    local h = io.popen(MYSQL .. " < '" .. file .. "' 2>&1")
+    local rows = {}
+    for line in h:lines() do
+        if line:find("^ERROR") then die("MySQL said: " .. line .. "\n  in: " .. sql) end
+        local r = {}
+        for v in (line .. "\t"):gmatch("([^\t]*)\t") do r[#r + 1] = v end
+        rows[#rows + 1] = r
+    end
+    h:close()
+    return rows
+end
+-- }}}
+
+for _, map in ipairs(MAPS) do
+    -- the health: base health of its class at the middle of its levels, for
+    -- its expansion (exp 0, 1, 2: basehp0, 1, 2), times its multiplier
+    local rows = query(([[
+SELECT c.id, ct.name, ct.minlevel, ct.maxlevel, ct.faction,
+       ROUND(CASE ct.exp WHEN 2 THEN cls.basehp2 WHEN 1 THEN cls.basehp1 ELSE cls.basehp0 END * ct.HealthModifier),
+       ROUND(c.position_x, 1), ROUND(c.position_y, 1), ROUND(c.position_z, 1), c.spawntimesecs, ct.`rank`
+FROM creature c
+JOIN creature_template ct ON ct.entry = c.id
+LEFT JOIN creature_classlevelstats cls ON cls.level = FLOOR((ct.minlevel + ct.maxlevel) / 2) AND cls.class = ct.unit_class
+WHERE c.map = %d AND ct.type <> %d AND ct.npcflag = 0]]):format(map, CRITTER))
+    -- Two kinds of "no health", told apart:
+    --   no row in the level table for its class and level (the sum is NULL):
+    --     the data is incomplete, and the tool stops, naming each;
+    --   a health of 0 from its own multiplier (a training dummy): it can't be
+    --     killed, so it is no fight; left out, named on each run.
+    local kinds, kind_of, spawns, skipped, no_health, unkillable = {}, {}, {}, 0, 0, {}
+    for _, r in ipairs(rows) do
+        local hp = tonumber(r[6])
+        if friendly_to_a_side[tonumber(r[5])] then skipped = skipped + 1
+        elseif hp == 0 then unkillable[r[2]] = (unkillable[r[2]] or 0) + 1
+        else
+            local entry = r[1]
+            if not kind_of[entry] then
+                if not hp then
+                    no_health = no_health + 1
+                    io.stderr:write(("  no health: %s (entry %s, levels %s-%s, class row missing in creature_classlevelstats)\n"):format(r[2], entry, r[3], r[4]))
+                    hp = 0
+                end
+                kinds[#kinds + 1] = string.format("[%q,%s,%s,%d,%s]", r[2], r[3], r[4], hp, r[11])
+                kind_of[entry] = #kinds - 1
+            end
+            -- screen yards (the sandbox's: sx = -y, sy = -x), height, kind, respawn seconds
+            spawns[#spawns + 1] = string.format("%.1f,%.1f,%.1f,%d,%s", -tonumber(r[8]), -tonumber(r[7]), tonumber(r[9]), kind_of[entry], r[10])
+        end
+    end
+    if no_health > 0 then die(("%d kinds on map %d have no health in creature_classlevelstats (their class or level is missing there)"):format(no_health, map)) end
+    for name, n in pairs(unkillable) do print(("generate-ground-sandbox-monsters: map %d: left out, health 0 (can't be killed): %s (%d spawns)"):format(map, name, n)) end
+    local out = ("%s/monsters-%d.js"):format(OUT_DIR, map)
+    local f = assert(io.open(out, "w"))
+    f:write(("// docs/HTML/ground-sandbox/monsters-%d.js - GENERATED by scripts/generate-ground-sandbox-monsters (issue 617e16g)\n"):format(map))
+    f:write("// from " .. WORLD_DB .. "'s monster spawns. kinds: [name, min level, max level, health, rank]; spawns: 5 numbers\n")
+    f:write("// each (screen x, screen y, height, kind's index, respawn seconds). Don't edit; run it again.\n")
+    f:write(("MONSTERS_LOADED({ map: %d, kinds: [%s],\n  spawns: [%s] });\n"):format(map, table.concat(kinds, ","), table.concat(spawns, ",")))
+    f:close()
+    print(("generate-ground-sandbox-monsters: map %d: %d monster spawns of %d kinds (%d friendly spawns left out) -> %s"):format(
+        map, #spawns, #kinds, skipped, out))
+end

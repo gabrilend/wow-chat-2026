@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-28 17:50:03
+Generated on: 2026-10-28 18:48:17
 Models: claude-opus-5-5
 
 ## Contents
@@ -89,6 +89,10 @@ Models: claude-opus-5-5
     things to do. 1,414 body actions and a map grouping them by meaning are
     built and committed; the image pipeline update is running again. Next: your
     answer on whether idle buddies pick actions at random.
+21. 2026-10-28 17:53, after Request 74 - The goal is building buddy-bot
+    movement, and the ground sandbox (real terrain, wanderers and formations) is
+    built and committed. Next, I need your answer: what should bots do when the
+    player nears the fence's edge?
 
 --------------------------------------------------------------------------------
 
@@ -7886,6 +7890,103 @@ sub-zone they're wandering in, the one they're clearing of monsters…" stopped
 there. When the player nears the fence's edge, what should the bots do? Follow
 toward that edge, gather round the player, or start drifting toward the next
 fence?
+
+--------------------------------------------------------------------------------
+
+### User Request 75
+
+okay the sub-zones that players are wandering in need to be modified. If there's
+an impassible space, we should build a mental "wall" around it and pathfind
+around it as if it were a doodad or object by orbiting. If we find ourselves
+outside of the zone, then, well, we've found it's edge. Keeping in mind, some
+sub-zones can be interrupted by another - for example walking into a tunnel with
+it's own name, then walking out into the same zone but, in a different part. We
+need to be sure to be able to merge those zones because of their shared name.
+
+the mental wall should persist as long as the character is within it. It should
+modify the accessible parts of the sub-zone, the monster spawning zone, the area
+we're wandering within. So that we more properly path around and through our
+wanderings.
+
+though, if it's fully separate from another part of that sub-zone, then it
+should be split into two. Or, the same, but accessible from afar.
+
+
+
+<pasted_content id="12ab">
+>   One question to start: your sentence "if the player is nearing the
+>   edge of the sub-zone they're wandering in, the one they're clearing
+>   of monsters…" stopped there. When the player nears the fence's edge,
+>   what should the bots do? Follow toward that edge, gather round the
+>   player, or start drifting toward the next fence?
+</pasted_content id="12ab">
+
+
+then they should change their rotation around the central axis direction. If
+they instead make the same motion (turning towards conclusively ninety degrees
+or near it or consistently toward it) then they cross through the center of the
+zone to it's far edge.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 75
+
+> Before building, both answers go into the issues word for word, with my
+> readings. The first is a new piece (fences reshaped by the ground). The second
+> answers the wanderers issue's question about the player nearing the edge.
+
+> Both are written down. Building now, starting from the player's step, which
+> picks the fence in play:
+
+> Next, the area code: each fence name's walkable parts, worked out on the
+> ground's own points, and the part the player stands in.
+
+> Next, everything that used the old fence in play now uses the part in play:
+> the flock, the measures, the close-up and the address's view. The orbit and
+> the patrol follow the player-edge reversal.
+
+> Next, the steering. The part's edge counts as a wall for bots inside it, and a
+> bot keeps the obstacle on one side, as you described:
+
+> Next, drawing the parts: the part in play filled, the name's other parts
+> faint.
+
+> The merged fences should all light up together, outlined, with the walkable
+> fill showing what's reachable:
+
+> Both parse. Two pictures: the Witchwing Slayer fence, which has ridges inside
+> it, and the Venture Co. fence over the mine, both with wanderers.
+
+*[commit] e9e6c67f1 in wow-chat-2026 - *
+
+Both are built in the ground sandbox and committed (e9e6c67f1). Open the page to
+try them; the two new pictures are 028 and 029 in `development-history/`.
+
+**Wandering areas shaped by the ground**
+- **Merged by name:** every fence of one monster in the zone is now one area,
+  minus the ground too steep to walk.
+- **Split where it doesn't join:** that walkable ground is cut into separate
+  pieces where they don't touch. The piece you're standing in is the one the
+  bots wander. The others are drawn faintly, there to be walked to.
+- **Mental walls:** the edge of your piece is a wall, and so are cliffs and
+  trees. A bot that meets a wall keeps it on one side and walks round it,
+  holding that side while it's still against it.
+- **What it shows in the Barrens:** the harpy hills are a single piece of about
+  102,000 square yards. The Venture Co. fence over the mine breaks into six
+  pieces, and the player's piece there is a small pocket that the 36 bots fill
+  completely.
+
+**The player nearing the edge**
+- Arriving near the edge of your piece turns every bot's orbit the other way.
+- Arriving near the edge again, moving the same direction as last time (within
+  45°), sends the wanderers straight across to the far edge instead.
+
+One question, about the walls: you said the mental wall "should persist as long
+as the character is within it." I built it so that every bot knows all the walls
+of the area from the moment you enter it, and they're worked out again when you
+move to another area. Did you mean that instead, each bot should only know the
+walls it has bumped into itself, and keep its own memory of them for as long as
+it stays in that area?
 
 --------------------------------------------------------------------------------
 

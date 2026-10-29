@@ -43,41 +43,12 @@ local MIN_SPAWNS = 4                           -- fewer: not a fence
 local SPARE      = 15                          -- yards the outline is pushed out
 local MAX_FENCES = 60                          -- per zone, the largest
 local CRITTER    = 8                           -- creature_template.type
-local PLAYER_TEMPLATES = { 1, 2 }              -- the faction templates of a human and an orc player
 -- }}}
 
 -- {{{ monsters: not friendly to either side's players
--- The faction table's own rule (FactionTemplateEntry::IsFriendlyTo): a named
--- enemy faction is never a friend; a named friend faction is; else the
--- friendly masks meet. A spawn friendly to either side (guards, town folk,
--- a camp of Theramore Marines, which the first fences were made of) is not
--- a monster; neutral beasts (Plainstriders) are, as players quest on them.
-local friendly_to_a_side = {}
-do
-    local ffi = require("ffi")
-    local path = DIR .. "/data-files/dbc/FactionTemplate.dbc"
-    local fh = io.open(path, "rb") or error("generate-fish-sandbox-data: cannot open " .. path)
-    local d = fh:read("*a"); fh:close()
-    local p = ffi.cast("const uint8_t*", d)
-    local h = ffi.cast("const uint32_t*", p)
-    local recs, size = h[1], h[3]
-    local function u(r, i) return ffi.cast("const uint32_t*", p + 20 + r * size + i * 4)[0] end
-    local rows = {}
-    for r = 0, recs - 1 do
-        rows[u(r, 0)] = { faction = u(r, 1), our = u(r, 3), friendly = u(r, 4),
-                          enemies = { u(r, 6), u(r, 7), u(r, 8), u(r, 9) }, friends = { u(r, 10), u(r, 11), u(r, 12), u(r, 13) } }
-    end
-    local function friendly(e, p)
-        for i = 1, 4 do if e.enemies[i] ~= 0 and e.enemies[i] == p.faction then return false end end
-        for i = 1, 4 do if e.friends[i] ~= 0 and e.friends[i] == p.faction then return true end end
-        return bit.band(e.friendly, p.our) ~= 0 or bit.band(e.our, p.friendly) ~= 0
-    end
-    for id, e in pairs(rows) do
-        for _, t in ipairs(PLAYER_TEMPLATES) do
-            if rows[t] and friendly(e, rows[t]) then friendly_to_a_side[id] = true end
-        end
-    end
-end
+-- The rule lives in scripts/lib/monster-factions.lua (shared with
+-- scripts/generate-ground-sandbox-monsters, so the two agree).
+local friendly_to_a_side = dofile(DIR .. "/scripts/lib/monster-factions.lua").friendly_to_a_side(DIR)
 -- }}}
 
 local function die(m) io.stderr:write("generate-fish-sandbox-data: " .. m .. "\n"); os.exit(1) end
@@ -219,7 +190,15 @@ for _, map in ipairs(MAPS) do
                 end
             end
         end
-        table.sort(fences, function(a, b) return a.n > b.n end)
+        -- by size, then name, then place: a fixed order, so the fences kept at the
+        -- MAX_FENCES cut are the same every run (by size alone, ties came out in
+        -- the table walk's order and each run kept different ones; seen 2026-10-28)
+        table.sort(fences, function(a, b)
+            if a.n ~= b.n then return a.n > b.n end
+            if a.name ~= b.name then return a.name < b.name end
+            if a.cx ~= b.cx then return a.cx < b.cx end
+            return a.cy < b.cy
+        end)
         for k = MAX_FENCES + 1, #fences do fences[k] = nil end
         total_fences = total_fences + #fences
         local fjs = {}

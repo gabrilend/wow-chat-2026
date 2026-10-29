@@ -63,12 +63,15 @@
 /*GROUND_DECODE*/
 window.GROUND_FILES = {};
 function GROUND_LOADED(g) { GROUND_FILES[g.map + "-" + g.zone] = g; }
+// the continent's monsters (617e16g): monsters-<map>.js, by map
+window.MONSTER_FILES = {};
+function MONSTERS_LOADED(m) { MONSTER_FILES[m.map] = m; }
 (function () {
   const Q = new URLSearchParams(location.hash.slice(1));
   if (!Q.has("zone")) return;
   const c = SANDBOX.continents[Q.has("continent") ? +Q.get("continent") : 0];
   const z = c && c.zones.find(z => z.name === Q.get("zone"));
-  if (z) document.write(`<script src="ground-sandbox/zone-${c.map}-${z.zone}.js"><\/script>`);
+  if (z) document.write(`<script src="ground-sandbox/zone-${c.map}-${z.zone}.js"><\/script><script src="ground-sandbox/monsters-${c.map}.js"><\/script>`);
 })();
 // }}}
 </script>
@@ -200,7 +203,16 @@ function enterZone(zi) {
   else {
     const s = document.createElement("script");
     s.src = `ground-sandbox/zone-${C.data.map}-${z.zone}.js`;
-    s.onload = () => { if (zoneIdx === zi) { GROUND = groundFor(zi); paintGround(); } };
+    s.onload = () => { if (zoneIdx === zi) { GROUND = groundFor(zi); paintGround(); mobsUnder(); } };
+    document.head.appendChild(s);
+  }
+  // its monsters (617e16g): the continent's file, here already or fetched
+  mobs = [];
+  if (MONSTER_FILES[C.data.map]) mobsFor(zi);
+  else {
+    const s = document.createElement("script");
+    s.src = `ground-sandbox/monsters-${C.data.map}.js`;
+    s.onload = () => { if (zoneIdx === zi) mobsFor(zi); };
     document.head.appendChild(s);
   }
   fences = z.fences.map(f => {
@@ -492,6 +504,130 @@ function partFor(f) {
 }
 // }}}
 
+// {{{ monsters and fights (issue 617e16g)
+// mobs: the zone's monster spawns, each { x, y, z (screen yards, height),
+// name, level (the middle of its range), hp, respawn (seconds), ttk (seconds
+// a stand-in of its level takes to kill it), alive, backAt (simT it comes
+// back), fighter (the bot fighting it, or null), under (true: far below the
+// ground, in a cave: not a fight for the surface) }.
+// A stand-in's damage a second at level L: STANDIN_DPS (617e16g's open
+// question 1: a stated guess, about 21 at level 10, 83 at 30, 236 at 60).
+const STANDIN_DPS = L => 2 + 1.5 * L + 0.04 * L * L;
+const ENGAGE = 12, FRONT = 2.5, UNDER = 8;                   // yards: to notice one, to stand from it, below ground = a cave
+let mobs = [];
+const fights = { done: 0, secs: 0, catchups: 0, deadEnds: 0 };
+function mobsFor(zi) {
+  const m = MONSTER_FILES[C.data.map], sp = m.spawns;
+  mobs = [];
+  for (let i = 0; i < sp.length; i += 5) {
+    const x = sp[i], y = sp[i + 1], [pc, pr] = pixOf(x, y), col = Math.floor(pc), row = Math.floor(pr);
+    if (col < 0 || row < 0 || col >= C.W || row >= C.H || C.zoneAt[row * C.W + col] !== zi) continue;
+    const [name, lo, hi, hp] = m.kinds[sp[i + 3]], level = (lo + hi) / 2;
+    mobs.push({ x, y, z: sp[i + 2], name, level, hp, respawn: sp[i + 4], ttk: hp / STANDIN_DPS(level),
+                alive: true, backAt: 0, fighter: null, under: false });
+  }
+  mobsUnder();
+}
+function mobsUnder() {                                       // once the ground is here: which are in caves
+  for (const mb of mobs) { const g = groundHeight(mb.x, mb.y); mb.under = g !== null && g - mb.z > UNDER; }
+}
+function stepMobs() {
+  for (const mb of mobs) if (!mb.alive && simT >= mb.backAt) { mb.alive = true; mb.fighter = null; }
+}
+// A bot's fight, each step. Returns null (no fight: wander as usual),
+// "standing" (in front of its monster, killing it), or the point it walks
+// to (in front of its monster). A bot without a fight takes the nearest
+// living monster within ENGAGE that no other bot has, on the surface and
+// in the part in play.
+function fightStep(b, dt, f) {
+  if (!b.fight) {
+    let best = null, bd = ENGAGE;
+    for (const mb of mobs) {
+      if (!mb.alive || mb.fighter || mb.under) continue;
+      const d = Math.hypot(mb.x - b.x, mb.y - b.y);
+      if (d < bd && (!f || !f.contains || f.contains(mb.x, mb.y))) { best = mb; bd = d; }
+    }
+    if (!best) return null;
+    best.fighter = b; b.fight = best; b.fightLeft = best.ttk;
+  }
+  const mb = b.fight, dx = b.x - mb.x, dy = b.y - mb.y, d = Math.hypot(dx, dy) || 1;
+  if (d > FRONT + 0.8) return [mb.x + dx / d * FRONT, mb.y + dy / d * FRONT];
+  b.fightLeft -= dt;
+  if (b.fightLeft <= 0) {                                    // dead: back after its respawn time
+    mb.alive = false; mb.backAt = simT + mb.respawn; mb.fighter = null;
+    fights.done++; fights.secs += mb.ttk; b.fight = null;
+    return null;
+  }
+  return "standing";
+}
+function dropFight(b) { if (b.fight) { b.fight.fighter = null; b.fight = null; } }
+// }}}
+
+// {{{ catching up, and dead ends (issue 617e16g)
+// Far: the player more than CATCH_SHARE of the continent's size from the
+// bots' middle: every bot appears at a random walkable point of the part
+// in play within POCKET yards of its middle (30 tries; none walkable: the
+// middle itself).
+// Dead ends: from the part in play, every point of the zone's ground that
+// can walk to it (not steeper than the limit, joined by neighbours): reach.
+// A bot on a point outside reach can never get in, so it is moved onward:
+// to the first point in reach on its straight line to the part's middle.
+// Checked for each bot once a second.
+const CATCH_SHARE = 0.25, POCKET = 100;
+function catchUp(f) {
+  if (!f || !bots.length) return;
+  let mx = 0, my = 0;
+  for (const b of bots) { mx += b.x; my += b.y; }
+  mx /= bots.length; my /= bots.length;
+  const far = Math.max(C.W, C.H) * SQ * CATCH_SHARE;
+  if (Math.hypot(player.x - mx, player.y - my) <= far) return;
+  for (const b of bots) {
+    dropFight(b);
+    let x = f.cx, y = f.cy;
+    for (let t = 0; t < 30; t++) {
+      const a = Math.random() * 6.283, r = Math.sqrt(Math.random()) * POCKET;
+      const px = f.cx + Math.cos(a) * r, py = f.cy + Math.sin(a) * r;
+      if ((!f.contains || f.contains(px, py)) && !blocked(px, py)) { x = px; y = py; break; }
+    }
+    b.x = x; b.y = y; b.vx = b.vy = 0; b.tail = [];
+  }
+  fights.catchups++;
+}
+function reachOf(f) {
+  const g = GROUND;
+  if (!g || !f || !f.areaRef) return null;
+  if (f.reach) return f.reach;
+  const a = f.areaRef, reach = new Uint8Array(g.cols * g.rows), queue = new Int32Array(g.cols * g.rows);
+  let head = 0, tail = 0;
+  for (let q = 0; q < a.w * a.h; q++) if (a.label[q] === f.id) {
+    const k = (a.r0 + Math.floor(q / a.w)) * g.cols + (a.c0 + q % a.w);
+    reach[k] = 1; queue[tail++] = k;
+  }
+  while (head < tail) {
+    const k = queue[head++], c = k % g.cols;
+    for (const n of [c + 1 < g.cols ? k + 1 : -1, c > 0 ? k - 1 : -1, k + g.cols < g.cols * g.rows ? k + g.cols : -1, k - g.cols]) {
+      if (n < 0 || reach[n] || g.steep[n] || g.h[n] === NO_GROUND) continue;
+      reach[n] = 1; queue[tail++] = n;
+    }
+  }
+  f.reach = reach;
+  return reach;
+}
+function unstick(b, f) {
+  const reach = reachOf(f), g = GROUND;
+  if (!reach) return;
+  const at = (x, y) => { const c = Math.round((x - g.sx0) / g.step), r = Math.round((y - g.sy0) / g.step);
+                         return c < 0 || r < 0 || c >= g.cols || r >= g.rows ? -1 : r * g.cols + c; };
+  const k = at(b.x, b.y);
+  if (k < 0 || reach[k]) return;                             // in reach (or off the zone's grid: not known)
+  const dx = f.cx - b.x, dy = f.cy - b.y, d = Math.hypot(dx, dy);
+  for (let t = g.step; t < d; t += g.step / 2) {
+    const x = b.x + dx / d * t, y = b.y + dy / d * t, n = at(x, y);
+    if (n >= 0 && reach[n]) { dropFight(b); b.x = x; b.y = y; b.vx = b.vy = 0; fights.deadEnds++; return; }
+  }
+}
+// }}}
+
 // {{{ the flock
 // Each bot, each step:
 //   in a fence: circles its middle (the turning chosen: clockwise,
@@ -510,7 +646,10 @@ function stepFlock(dt) {
   const f = inPlay;                                          // the part in play (617e16f), or the fence as it was
   for (let i = 0; i < BANDS; i++) bandSeen[i] *= Math.exp(-dt / 30);
   const formed = stepPatrol(dt, f);                          // how many bots hold formation places (617e16e)
+  stepMobs();                                                // monsters coming back (617e16g)
+  catchUp(f);                                                // the player far away: the bots appear near them
   bots.forEach((b, bi) => {
+    if (f && (b.unstickIn = (b.unstickIn || Math.random()) - dt) <= 0) { b.unstickIn = 1; unstick(b, f); }
     let tx, ty;
     if (bi < formed) {                                       // a formation member: its place round the anchor
       [tx, ty] = placeOf(bi);
@@ -535,6 +674,14 @@ function stepFlock(dt) {
     } else {
       const a = Math.atan2(b.y - player.y, b.x - player.x);
       tx = player.x + Math.cos(a) * 6; ty = player.y + Math.sin(a) * 6;
+    }
+    // A fight overrides the wandering (617e16g): walking up to its monster,
+    // or standing in front of it until it is dead. Formation members hold
+    // their places and don't take fights.
+    if (bi >= formed) {
+      const st = fightStep(b, dt, f);
+      if (st === "standing") { b.vx = 0; b.vy = 0; return; }
+      if (st) [tx, ty] = st;
     }
     // Toward the target. A formation member slows as it nears its place
     // (it should stand in it, not circle it) and hurries when behind; it
@@ -805,6 +952,13 @@ function measure() {
     if (f && f.of) lines.push(`area            part ${f.rank + 1} of ${f.of}, ${Math.round(f.area)} sq yd`);
     lines.push(`player at edge  ${edgeEvents.reversed} reversed, ${edgeEvents.crossed} crossed`);
   } else lines.push(`ground          ${zoneIdx >= 0 ? "none for this zone (generate-ground-sandbox-data)" : "-"}`);
+  // monsters and fights (617e16g)
+  if (mobs.length) {
+    const alive = mobs.filter(m => m.alive && !m.under).length, dead = mobs.filter(m => !m.alive).length, cave = mobs.filter(m => m.under).length;
+    lines.push(`monsters        ${alive} alive, ${dead} dead, ${cave} in caves`);
+    lines.push(`fights          ${bots.filter(b => b.fight).length} now, ${fights.done} done, ${fights.done ? (fights.secs / fights.done).toFixed(1) : "-"} s each`);
+    lines.push(`caught up       ${fights.catchups}   out of dead ends ${fights.deadEnds}`);
+  } else lines.push(`monsters        ${zoneIdx >= 0 ? "none here (generate-ground-sandbox-monsters)" : "-"}`);
   // wanderers (617e16d): since the page began, crossings, the turns aside
   // by the ground (down or up from where they stood), orbit reversals
   if (+$("turn").value === 2) {
@@ -929,6 +1083,21 @@ function draw() {
   // bots and their tails
   const tailS = +$("tail").value, rpx = Math.max(2, cam.z / SQ * 1.2);
   ctx.shadowColor = T.bot; ctx.shadowBlur = T.glow;
+  // monsters (617e16g): alive a red diamond, being fought ringed, dead a
+  // faint cross, in a cave (far below the ground) a faint hollow diamond;
+  // only those on screen, and only once a square is over 6 pixels
+  if (mobs.length && cam.z > 6) {
+    const s = Math.max(2, Math.min(5, cam.z / SQ * 1.6));
+    for (const mb of mobs) {
+      const [px, py] = yd2px(mb.x, mb.y);
+      if (px < -10 || py < -10 || px > cv.width + 10 || py > cv.height + 10) continue;
+      ctx.beginPath(); ctx.moveTo(px, py - s); ctx.lineTo(px + s, py); ctx.lineTo(px, py + s); ctx.lineTo(px - s, py); ctx.closePath();
+      if (mb.under) { ctx.strokeStyle = "rgba(255,90,90,0.35)"; ctx.lineWidth = 1; ctx.stroke(); continue; }
+      if (!mb.alive) { ctx.strokeStyle = "rgba(255,90,90,0.30)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(px - s, py - s); ctx.lineTo(px + s, py + s); ctx.moveTo(px + s, py - s); ctx.lineTo(px - s, py + s); ctx.stroke(); continue; }
+      ctx.fillStyle = "#ff5a5a"; ctx.fill();
+      if (mb.fighter) { ctx.beginPath(); ctx.arc(px, py, s * 2, 0, 6.283); ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.2; ctx.stroke(); }
+    }
+  }
   // formation members (617e16e) in the fence's lit colour, the rest in the bots' own
   const formedN = $("form").value === "none" ? 0 : Math.min(+$("formN").value, bots.length);
   bots.forEach((b, bi) => {
@@ -1063,6 +1232,14 @@ if (Q.has("zone")) {
   if (zi >= 0) {
     enterZone(zi);
     if (Q.has("fence") && fences[+Q.get("fence")]) { const f = fences[+Q.get("fence")]; player.x = player.tx = f.cx; player.y = player.ty = f.cy; spawnBots(bots.length, f.cx, f.cy, 25); }
+    // start (617e16g's tests): scatter: the bots spread over the whole zone
+    // (some on ground walled off from the fence: the dead ends); far: all of
+    // them north of the player by 1.2 times the catching-up distance (a
+    // quarter of the continent's size: 5000 yards, the first try, was under
+    // Kalimdor's quarter, and nothing happened)
+    if (Q.get("start") === "scatter") $("scatter").onclick();
+    if (Q.get("start") === "far") { const far = Math.max(C.W, C.H) * SQ * CATCH_SHARE * 1.2;
+      for (const b of bots) { b.x = player.x + (Math.random() - 0.5) * 20; b.y = player.y - far + (Math.random() - 0.5) * 20; } }
     glide = null; Object.assign(cam, zoneFit(zi));
     stepPlayer(0);                                         // the fence in play, before the close-up asks for it
     const run = +(Q.get("sim") || 0);
