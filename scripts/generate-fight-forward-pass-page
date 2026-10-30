@@ -44,11 +44,11 @@ local function esc(s) return (tostring(s):gsub("&", "&amp;"):gsub("<", "&lt;"):g
 -- state: "built" (offline, tested), "part" (some of it), "todo"
 local LAYERS = {
     { "Rates",              "Health lost and gained per character, enemies' health falling, so the fight's time left.", "625h", "built" },
-    { "Marks to modifiers", "Every buff and debuff a multiplier on damage taken, healing received, damage dealt or haste, ending when it does.", "625f", "part" },
+    { "Marks to modifiers", "Every buff and debuff a multiplier on damage taken, healing received, damage dealt, haste, speed, ticks, absorbs and armour, ending when it does; empowering buffs already up as windows.", "625n", "built" },
     { "Attention",          "Whom each enemy attacks now and next, in the server's own order.", "625j", "built" },
-    { "Fight curves",       "Each character's health to the fight's end, by who holds the attention, marks wearing off and planned cooldowns.", "625j", "built" },
-    { "Plans",              "Each buddy's cooldown timeline, the tanks' swaps, the healer's plan, who gets each buff.", "625f 625i 625l", "part" },
-    { "Answers",            "Each answer a buddy could give now, tried as if given; its change to the curves in damage and health, handed to the draw.", "625d", "todo" },
+    { "Fight curves",       "Each character's health to the fight's end, by who holds the attention, marks wearing off, and enemies' casts landing as lumps.", "625j", "built" },
+    { "Plans",              "Each buddy's long cooldowns lined up (lockouts counted), the tanks' swaps; the healer's plan and who gets each buff still to come.", "625f 625i 625l", "part" },
+    { "Answers",            "Each answer a buddy could give now, tried as if given; its lean the share of the gap it closes (health first, then the group's time), handed to the draw.", "625n", "built" },
 }
 local STATE_LABEL = { built = "built, offline", part = "part built", todo = "not yet" }
 -- }}}
@@ -310,7 +310,7 @@ snapshotTables(),
 
 '<h2 id="layers">The six layers</h2>',
 '<p>Each step runs them in order, each reading the one before.</p>',
-'<figure>', table.concat(svg), '<figcaption>The snapshot enters at the top; the weighted draw takes the answers at the bottom. Green: built and tested offline. Gold: part built. Grey: not yet.</figcaption></figure>',
+'<figure>', table.concat(svg), '<figcaption>The snapshot enters at the top; the weighted draw takes the answers at the bottom. Green: built and tested offline (the server\'s side written, waiting for the compile, behind Buddies.ForwardPass). Gold: part built. Grey: not yet.</figcaption></figure>',
 layerList(),
 
 '<h2 id="desired">New, extended, desired</h2>',
