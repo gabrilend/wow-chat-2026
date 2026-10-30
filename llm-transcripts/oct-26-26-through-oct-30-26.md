@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-30 15:45:00
+Generated on: 2026-10-30 16:04:37
 Models: claude-opus-5-5
 
 ## Contents
@@ -214,6 +214,11 @@ Models: claude-opus-5-5
     thinking (cooldown timing, lockouts, threat and fight curves), all tested
     offline and committed. Tank swapping by fight curves just landed; next is
     the tank's load, meaning whether there's room to pull more.
+51. 2026-10-30 15:48, after Request 158 - We're building the buddies' fight
+    thinking, which works out each moment where everyone's health is heading and
+    which action helps most, so it's ready for your next compile. The offline
+    pieces are done; next I'll add kill time and gold cost to what the buddies
+    aim for.
 
 --------------------------------------------------------------------------------
 
@@ -16392,6 +16397,103 @@ cheapest price the buddy could get another for right now.
   - taking the snapshot when events happen;
   - the worker threads;
   - the verdict handed to the draw, behind a switch.
+
+--------------------------------------------------------------------------------
+
+### User Request 159
+
+okay let's keep going.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 159
+
+> Next are the other two parts of "desired": kill time and gold cost. Here's how
+> I'll put them in one unit:
+> - **Victory comes first**, measured as health short.
+> - **Everything else becomes seconds of the group's time.**
+>   - A faster kill is seconds saved.
+>   - Gold becomes the seconds it takes the group to earn it back, at its own
+>     gold per hour.
+>
+> So a potion that keeps someone alive is always worth drinking, while one drunk
+> when nobody is dying costs the group time for nothing.
+
+> 21 of 21 pass. Recording and committing.
+
+*[commit] 5f8e08463 in wow-chat-2026 - *
+
+> Writing the server half of the forward pass. Checking how this server version
+> wants unit and player hooks declared.
+
+> The damage hook reaches every unit script; the heal hook has to be switched on
+> by name. Looking up the module's own helpers for "is this a buddy" and "this
+> party's members".
+
+> Switches are documented in each file's header, as before. Writing the file.
+
+> Names all match. Registering it in the loader and running the compiler check
+> on a RAM copy.
+
+> One error: the bot module has its own `Event`. Naming ours in full.
+
+> The reference test passes (199 checks). Its earlier "aoe-loot missing" problem
+> is gone too. Recording the server step as built and waiting for your compile.
+
+> Committing the issue and ledger; the server file, its registration and the
+> reference files stay waiting for your compile.
+
+*[commit] 6e0702e53 in wow-chat-2026 - *
+
+Two more pieces are done.
+
+**Kill time and gold cost** (5f8e084, the step's test now 21 checks).
+- **Victory first:** each answer is scored first on the health it saves.
+- **Then the group's time:**
+  - a faster kill is seconds saved;
+  - gold used up counts as the seconds the group needs to earn it back, at its
+    own gold per hour.
+- **Checked:**
+  - Bloodlust brings a one-minute fight 12 seconds sooner.
+  - A potion is drunk when the tank is dying, whatever it costs.
+  - A potion isn't drunk when the tank is being healed faster than it's hurt;
+    there it would cost 20 seconds of earning for nothing.
+
+**The server side** (written and compiler-checked, waiting for your compile,
+behind `Buddies.ForwardPass`, off by default):
+- **Recording:** every hit and heal on a party member goes into that party's
+  minute, behind a lock because the map threads run in parallel.
+  - A plain attack counts as physical, and a spell or damage over time as magic.
+    The server's hook says what kind of damage it is but not its school, so a
+    physical ability like Mortal Strike will read as magic. That's noted as an
+    approximation.
+- **Snapshot:** while the party fights, the leader's own update takes a snapshot
+  at most every half second. It reads the game outside the lock.
+- **Workers:** a small pool of worker threads (2 by default) runs the step.
+- **`.buddy fight`** prints the latest verdict:
+  - boss or trash, and the time left;
+  - how much health the party is short;
+  - for each member: damage coming in, armour let-through, healing, and time to
+    death;
+  - whom each enemy attacks;
+  - which tank should hold the hardest hitter.
+
+The command is in the reference, which passes its 199 checks. The issue and
+ledger are committed (6e0702e). The server file waits with the others in the
+ledger's compile list.
+
+**Not built yet:**
+- Handing the verdict to the talent draw. Each buddy would try its own abilities
+  as answers (Shield Wall, Lay on Hands, taunts, Bloodlust), and the draw would
+  lean toward the best. Until then the buddies behave as before, and `.buddy
+  fight` shows what they would see.
+- Casts in progress, cooldowns and open windows (like Bloodlust running) aren't
+  read from the game yet.
+
+One thing for you: during my compiler check, buddies_crossing.cpp failed with
+"use of undeclared identifier 'StopByLand'". That's another session's file,
+which was being edited during the check. It may just have been caught
+mid-change, but it's worth a look before you compile.
 
 --------------------------------------------------------------------------------
 

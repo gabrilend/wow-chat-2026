@@ -27,10 +27,14 @@
 
 #include "buddies_curve.h"
 #include "buddies_fight_state.h"
+#include "buddies_window_buffs.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <limits>
+#include <map>
+#include <string>
 #include <vector>
 
 namespace BuddyForwardPass
@@ -269,9 +273,11 @@ namespace BuddyForwardPass
         double burstFactor = 1.0, burstLasts = 0.0;
         double gold = 0.0;
     };
-    inline double Worth(Snapshot const& s, Memory const& memory, Answer const& a, Verdict* after = nullptr)
+    // `known`: the verdict without the answer, when already worked out (it
+    // is the same for every answer tried at one moment: Leans passes it)
+    inline double Worth(Snapshot const& s, Memory const& memory, Answer const& a, Verdict* after = nullptr, Verdict const* known = nullptr)
     {
-        Verdict before = Step(s, memory);
+        Verdict before = known ? *known : Step(s, memory);
         Snapshot copy = s;
         if (a.burstLasts > 0.0 && a.burstFactor != 1.0) copy.windows.push_back({ 0.0, a.burstLasts, a.burstFactor });
         if (a.healed >= 0) copy.party[a.healed].health = std::min(copy.party[a.healed].maxHealth, copy.party[a.healed].health + a.heal);
@@ -307,20 +313,99 @@ namespace BuddyForwardPass
     // So a potion that keeps someone alive is always drunk (health first),
     // and one drunk when no one is dying costs time for nothing.
     struct Score { double health, seconds; };
-    inline Score Judge(Snapshot const& s, Memory const& memory, Answer const& a, double goldPerHour)
+    inline Score Judge(Snapshot const& s, Memory const& memory, Answer const& a, double goldPerHour, Verdict const* known = nullptr)
     {
-        Verdict before = Step(s, memory), after;
-        double health = Worth(s, memory, a, &after);
+        Verdict before = known ? *known : Step(s, memory), after;
+        double health = Worth(s, memory, a, &after, &before);
         double seconds = (before.leftKnown && after.leftKnown) ? before.left - after.left : 0.0;
         if (a.gold > 0.0 && goldPerHour > 0.0) seconds -= a.gold / (goldPerHour / 3600.0);
         return { health, seconds };
     }
+    // {{{ Lean
+    // An answer's lean for the draw, from its score: the share of the gap
+    // from extended to desired it closes. The gap is first the party's
+    // shortfall (health), then the fight's time left (seconds): an answer
+    // that saves health leans by the share of the shortfall it takes away
+    // (all of it: x2); one that saves none leans by the share of the time
+    // left it saves (an end 12 seconds sooner in a minute: x1.2), or away by
+    // the share it costs (a potion for nothing). Nothing either way: 1, the
+    // bot module's own order. Never below 0.05, so no answer is shut out.
+    inline double Lean(Score const& sc, Verdict const& base)
+    {
+        double f = sc.health > 1.0 ? 1.0 + sc.health / std::max(1.0, base.shortfall)
+                                   : 1.0 + sc.seconds / std::max(1.0, base.left);
+        return std::max(0.05, f);
+    }
+    // }}}
+
     // Better: whether `x` comes before `y`: more health first, then more
     // seconds (a hair's difference in health counts as none).
     inline bool Better(Score const& x, Score const& y)
     {
         if (std::fabs(x.health - y.health) > 1.0) return x.health > y.health;
         return x.seconds > y.seconds + 1e-6;
+    }
+    // }}}
+
+    // {{{ Leans
+    // Every answer one buddy (`b`, a member's index) could give now, tried
+    // and leaned (issue 625n, layer 6), by its abilities' names in lower case
+    // as the bot module names its casts. From the game's tables (the
+    // generated BUDDY_ABILITY_REACH, BUDDY_ABILITY_AURAS, BUDDY_THREAT_LEVERS
+    // and the window buffs):
+    //   a mark or heal that reaches only its caster on the buddy itself; one
+    //   that reaches another on whoever's curve ends soonest among those
+    //   attacked (no one attacked: the buddy itself);
+    //   a heal of -1, the caster's whole health (Lay on Hands);
+    //   a taunt on the hardest hitter;
+    //   an empowering buff (Bloodlust, Avenging Wrath) as a burst: its haste
+    //   and damage on the party's damage when it reaches others, on the
+    //   buddy's own share of the party's damage when only itself.
+    // Abilities that answer none of these aren't listed (the draw leaves
+    // them at 1). Heals are counted before the caster's healing bonuses, so
+    // they lean a little less than they will land: noted, not yet read.
+    inline std::string Lower(char const* s) { std::string o(s); std::transform(o.begin(), o.end(), o.begin(), [](unsigned char c) { return std::tolower(c); }); return o; }
+    inline std::map<std::string, double> Leans(Snapshot const& s, Memory const& memory, int b, double goldPerHour)
+    {
+        std::map<std::string, double> out;
+        if (b < 0 || static_cast<size_t>(b) >= s.party.size()) return out;
+        Verdict base = Step(s, memory);
+        Member const& me = s.party[b];
+        int worst = -1;
+        for (size_t i = 0; i < s.party.size(); ++i)
+            if (base.incoming[i] > 0.0 && (worst < 0 || base.timeToDeath[i] < base.timeToDeath[worst])) worst = static_cast<int>(i);
+        double partyDealt = 0.0;
+        for (Member const& m : s.party) partyDealt += memory.DealtPerSecond(m.id, s.t);
+        double myShare = partyDealt > 0.0 ? memory.DealtPerSecond(me.id, s.t) / partyDealt : 0.0;
+
+        for (BuddyAbilityReachRow const& r : BUDDY_ABILITY_REACH)
+        {
+            if (r.cls != me.cls) continue;
+            Answer a;
+            int target = r.self ? b : (worst >= 0 ? worst : b);
+            std::vector<BuddyMarks::AuraEffect> effects = BuddyMarks::OfAbility(r.cls, r.name);
+            if (!effects.empty() && r.lastsMs > 0) a.extras = { { target, effects, r.lastsMs / 1000.0 } };
+            if (r.heal == -1) { a.healed = target; a.heal = me.maxHealth; }
+            else if (r.heal > 0) { a.healed = target; a.heal = r.heal; }
+            for (BuddyWindow::Buff const& buff : BuddyWindow::BUFFS)
+                if (Lower(buff.name) == r.name)
+                {
+                    double g = (1.0 + buff.gives.haste) * (1.0 + buff.gives.damage);
+                    a.burstFactor = r.self ? 1.0 + myShare * (g - 1.0) : g;
+                    a.burstLasts  = r.lastsMs / 1000.0;
+                }
+            out[r.name] = Lean(Judge(s, memory, a, goldPerHour, &base), base);
+        }
+        if (base.strongest >= 0)
+            for (BuddyThreatLeverRow const& r : BUDDY_THREAT_LEVERS)
+                if (r.cls == me.cls && BuddyLockout::Lists(r.kinds, "taunt"))
+                {
+                    Answer a;
+                    a.taunter = b;
+                    a.enemy = base.strongest;
+                    out[r.name] = Lean(Judge(s, memory, a, goldPerHour, &base), base);
+                }
+        return out;
     }
     // }}}
 }

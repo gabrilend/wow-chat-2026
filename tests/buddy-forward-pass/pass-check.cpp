@@ -135,6 +135,20 @@ int main()
     check(Better(cn, cp), "so it isn't drunk");
     check(near(Judge(s, calm, potion, 0).seconds, 0), "a group with nothing earned yet: gold can't be weighed, and counts nothing");
 
+    // each buddy's answers, leaned by the share of the gap they close: the
+    // warrior tank (0), the paladin off-tank (1), the priest healer (2)
+    auto warrior = Leans(s, m, 0, PER_HOUR), paladin = Leans(s, m, 1, PER_HOUR), priest = Leans(s, m, 2, PER_HOUR);
+    std::printf("   (leans: shield wall %.3f; lay on hands %.3f, hand of reckoning %.3f; pain suppression %.3f, power word: shield %.3f, flash heal %.3f)\n",
+                warrior["shield wall"], paladin["lay on hands"], paladin["hand of reckoning"], priest["pain suppression"], priest["power word: shield"], priest["flash heal"]);
+    check(near(warrior["shield wall"], 1.0 + wWall / v.shortfall, 1e-6), "the tank's Shield Wall leans by the share of the shortfall it takes away");
+    check(paladin["lay on hands"] > 1.0 && priest["pain suppression"] > 1.0 && priest["power word: shield"] > 1.0 && priest["flash heal"] > 1.0,
+          "the paladin's Lay on Hands and the priest's Pain Suppression, shield and Flash Heal all lean toward the dying tank");
+    check(paladin["hand of reckoning"] > 1.0, "the paladin's taunt leans in too: the boss is better on it than on a tank under 2 seconds from dead");
+    check(near(warrior["taunt"], 1.0), "the tank's own taunt changes nothing (it holds the boss already): no lean");
+    check(warrior.count("mortal strike") && near(warrior["mortal strike"], 1.0), "Mortal Strike's mark lands on an enemy's healing, which these curves don't hold: no lean");
+    auto calmPriest = Leans(s, calm, 2, PER_HOUR);
+    check(near(calmPriest["flash heal"], 1.0) && near(calmPriest["pain suppression"], 1.0), "the tank healed faster than hurt: no lean toward the emergencies");
+
     std::printf("\n%d passed, %d failed\n", passed, failed);
     return failed == 0 ? 0 : 1;
 }

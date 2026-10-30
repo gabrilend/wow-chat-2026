@@ -10,8 +10,9 @@
   can start over), 625l (buffs given to who uses them most), 625m (pets),
   627 (the bots think only when something happens)
 - Priority: High
-- State: in progress (layers 1 to 5 and the step built offline; the
-  server's side written, waiting for the compile; the draw's hookup next)
+- State: in progress (all six layers built and tested offline; the
+  server's side, the draw's hookup included, written and waiting for the
+  compile; replays, casts, cooldowns and windows read from the game next)
 
 ## Origin
 
@@ -140,8 +141,31 @@ level, target, marks, the sorted threat list with each entry's state,
 taunt and melee reach). The snapshot and a copy of the minute go to a
 pool of worker threads, which run the step and keep the party's latest
 verdict; the pool stops at shutdown. `.buddy fight` prints it. Not read
-yet: casts in progress, cooldowns, the windows open. Not yet: the verdict
-handed to the talent draw (each buddy's answers tried and weighed).
+yet: casts in progress, cooldowns, the windows open, the group's gold per
+hour (gold counts nothing until it is).
+
+**Layer 6, the answers, built 2026-10-30** (the arithmetic committed and
+tested; its server half waiting for the compile with the rest). For each
+buddy, every answer its abilities give is tried and leaned (`Leans`): a
+mark or heal that reaches only its caster on the buddy itself, one that
+reaches another on whoever's curve ends soonest among those attacked; Lay
+on Hands as the caster's whole health; a taunt on the hardest hitter; an
+empowering buff as a burst on the party's damage (on the buddy's own
+share of it when the buff is its own). What each ability reaches, heals
+and how long it lasts is read from the game by the ability generator
+(`BUDDY_ABILITY_REACH`, 212 abilities; heals before the caster's bonuses).
+An answer leans by the share of the gap it closes (`Lean`): of the
+party's shortfall when it saves health (all of it: x2), else of the time
+left (a minute's fight ended 12 seconds sooner: x1.2), or away by what it
+costs; nothing either way, 1; never below 0.05. In the server the workers
+keep each buddy's leans, and the talent draw's multiplier multiplies each
+cast by its lean (fresh within 3 seconds), on while `Buddies.ForwardPass`
+is 1 even with the talent weights off. Checked (27 checks): on the
+made-up dying-tank fight the warrior's Shield Wall leans x1.28, the
+paladin's Lay on Hands x1.13 and its taunt x1.02, the priest's Pain
+Suppression x1.12; the tank's own taunt and Mortal Strike don't lean; in
+the calm fight nothing leans toward the emergencies. A party of four's
+leans take about 2.4 milliseconds.
 Nothing yet takes the snapshot, keeps the history, runs the layers on
 worker threads or hands their verdict to the draw. The page
 `docs/HTML/fight-forward-pass.html` (made by
@@ -258,9 +282,9 @@ its material.
    desired state's measures: health first, then the group's time (kill
    time, gold cost as time to earn it back).
 5. In the server: the snapshot taken on events, the worker pool, the
-   latest verdict kept per party and shown by `.buddy fight` (written,
-   waiting for the compile: `buddies_forward_pass.cpp`); the verdict read
-   by the draw, behind a switch; replay
+   latest verdict kept per party and shown by `.buddy fight`; each
+   buddy's leans read by the draw, behind the switch (written, waiting for
+   the compile: `buddies_forward_pass.cpp`, `buddies_talents.cpp`); replay
    logging.
 
 ## Open Questions
