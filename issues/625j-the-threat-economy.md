@@ -9,7 +9,7 @@
   hands), 625l (buffs given to who uses them most), 617z (tank-paced
   pulls), 617c3 (the dungeon draw)
 - Priority: Medium
-- State: in progress (the levers and attention built; the curve next)
+- State: in progress (the levers, attention and the curve built; the tank's load next)
 
 ## Origin
 
@@ -73,7 +73,7 @@ The pets' part is its own issue, 625m.
 The bot module's tanks taunt what they lose and its damage dealers hold
 back by fixed threat triggers ("medium threat").
 
-**Built 2026-10-30 (committed, offline):** steps 1 and 2.
+**Built 2026-10-30 (committed, offline):** steps 1 to 3.
 - The levers, read from the game's spell table by
   `scripts/generate-ability-data` (`BUDDY_THREAT_LEVERS`, and a table in
   `docs/ability-data.md`; 42 of them): what each ability's effects and
@@ -93,8 +93,19 @@ back by fixed threat triggers ("medium threat").
   threat kept). Checked by `scripts/test-buddy-threat` (23 checks),
   among them the shielded tank: passed over with its threat kept, the
   fury warrior tanking, the attention back with the tank's first act.
-Not yet: the curve (step 3), the tank's load, the off-tank, and the
-server reading each enemy's list.
+- Step 3, the curve: `buddies_curve.h`. The fight cut into stretches,
+  one holder of the attention in each; the holder loses the enemies'
+  damage (as much as it lets through) less the healing, which follows
+  whoever is hit and never lifts above most; the lowest point of each
+  curve, below nothing, is how much that character falls short of seeing
+  the end. Their sum, in health, is what a lever is weighed by. Checked
+  by `scripts/test-buddy-curve` (11 checks): a tank 10 seconds from dead
+  with 30 left is 4000 short; Lay on Hands leaves none short; Hand of
+  Protection with a fury warrior next in line 1700, so Lay on Hands is
+  favoured; with the priest next in line, Hand of Protection is worse than
+  nothing; the most durable after the tank is the fury warrior.
+Not yet: the tank's load, the off-tank, and the server reading each
+enemy's list, everyone's health, the damage coming in and the healing.
 
 ## Intended Behavior
 
