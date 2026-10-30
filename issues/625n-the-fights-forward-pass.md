@@ -10,8 +10,8 @@
   can start over), 625l (buffs given to who uses them most), 625m (pets),
   627 (the bots think only when something happens)
 - Priority: High
-- State: in progress (layers 1 to 5 built offline, 2 here and the rest in
-  their own issues; the snapshot and the frame that runs them next)
+- State: in progress (layers 1 to 5 and the step built offline; the
+  server's side written, waiting for the compile; the draw's hookup next)
 
 ## Origin
 
@@ -120,7 +120,28 @@ server from what the group has gained; nothing earned yet, gold counts
 nothing). Checked (21 checks in all): Bloodlust brings a minute's fight
 12 seconds sooner; a potion is drunk when the tank is dying, whatever it
 costs, and not when the tank is healed faster than hurt (20 seconds of
-earning for nothing). Not yet: the server's side (step 5).
+earning for nothing).
+
+**The server's side, written 2026-10-30, waiting for the owner's
+compile** (compiler-checked on a RAM copy; not committed until it
+compiles): `buddies_forward_pass.cpp`, behind `Buddies.ForwardPass` (0
+off; `Buddies.ForwardPass.Threads`, default 2). Each hit (the damage-dealt
+hook, after absorbs; a plain attack read as physical, a spell or tick as
+magic, the hook giving the kind of damage but not its school) and each
+heal (the heal hook, overhealing already left out) on someone in a party
+goes into that party's minute, behind a lock (the map threads run side by
+side). The party leader's own update, while the party fights and
+something has happened, takes a snapshot at most every half second,
+reading the game outside the lock: members on the leader's map (health,
+power, class, level, armour, role by the bot module's tank and healer
+tests, position, every aura's effects as the game holds them now, whose
+values already count their stacks), and the enemies attacking them (rank,
+level, target, marks, the sorted threat list with each entry's state,
+taunt and melee reach). The snapshot and a copy of the minute go to a
+pool of worker threads, which run the step and keep the party's latest
+verdict; the pool stops at shutdown. `.buddy fight` prints it. Not read
+yet: casts in progress, cooldowns, the windows open. Not yet: the verdict
+handed to the talent draw (each buddy's answers tried and weighed).
 Nothing yet takes the snapshot, keeps the history, runs the layers on
 worker threads or hands their verdict to the draw. The page
 `docs/HTML/fight-forward-pass.html` (made by
@@ -237,7 +258,9 @@ its material.
    desired state's measures: health first, then the group's time (kill
    time, gold cost as time to earn it back).
 5. In the server: the snapshot taken on events, the worker pool, the
-   double-buffered verdict read by the draw, behind a switch; replay
+   latest verdict kept per party and shown by `.buddy fight` (written,
+   waiting for the compile: `buddies_forward_pass.cpp`); the verdict read
+   by the draw, behind a switch; replay
    logging.
 
 ## Open Questions
