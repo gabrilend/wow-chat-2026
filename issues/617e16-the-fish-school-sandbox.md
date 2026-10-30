@@ -129,6 +129,14 @@ same questions from other sub-issues; answers are written back here.
    describe them. Scoring frames against "school of fish" pictures it
    makes (their embeddings compared) is one way; another is a model that
    reads pictures and answers questions (none is installed). Which?
+   **The owner, 2026-10-29:** "we judge it based on the apparent pattern
+   of the movement of the components." What is judged is the movement:
+   the pattern the moving parts (each bot, each group) make over time as
+   it looks, not a still frame's likeness to a picture. So the judge is
+   shown movement (a strip of frames, or each bot's trail over a stretch
+   of time drawn as one picture), and judged against the pattern
+   described in words and analogy (the 2026-10-28 answer). Whether a
+   model later learns to judge it the same way is still open.
 2. (Answered 2026-10-28) **Clockwise only?** "The path finding should
    eventually be both clockwise and counter clockwise. Right now we're
    isolating one direction until we get the pattern right, then we do

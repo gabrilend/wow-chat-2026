@@ -106,17 +106,17 @@ seat.
 - **Kept, not deleted** (owner, 2026-10-04: "you can scale them up to the
   next bracket and have them spawn the next time someone needs that
   particular race/class combination"): when the dungeon ends a stand-in
-  leaves the world and is kept, raised to the next level bracket (ten
-  levels) with its gear made again for that bracket.
+  leaves the world and is kept, raised one level (the owner, 2026-10-29:
+  "one level."; first planned as a ten-level bracket) with its gear made
+  again for that level.
 - **Levelling tracks** (owner, 2026-10-08: "There are situations when a
   stand-in might be lower level. Also it might end up being 1 level each
   match, we'll see. It's meant to roughly match the rate of player
   levelling, though maybe there should be some that go slow or fast, to
   make sure that everyone knows some stand-ins and are greeted with new
   ones too. parallel levelling tracks."): a stand-in only levels when it
-  is used, never while stored. The size of the step (a ten-level bracket,
-  or one level a match) is to be tuned so stand-ins as a whole climb
-  about as fast as players do. Each stand-in is on one of several
+  is used, never while stored, one level a match (decided 2026-10-29),
+  so stand-ins as a whole climb about as fast as players do. Each stand-in is on one of several
   parallel tracks, some slower and some faster than that rate, so a
   player keeps meeting stand-ins they already know, and new ones too.
 - **Reused anywhere above** ("They should be able to be chosen for *any*
@@ -159,10 +159,13 @@ seat.
 3. Gear and sockets by the kit's and 617j2's rules, plus the PvP jewellery
    search; a test listing what a stand-in of each class gets at levels 20,
    40 and 60.
-4. On the way out: out of the world, up a bracket, re-geared, kept in a
+4. On the way out: out of the world, up one level, re-geared, kept in a
    pool by race, class and role.
 
 ## Open Questions
+
+Gathered 2026-10-28 into 617's own list (question 23), merged with the
+same questions from other sub-issues; answers are written back here.
 
 - When a stand-in becomes a buddy (planned in 617t3), its weapon kinds follow
   617n: the kinds of the weapons it wore in battlegrounds and dungeons are
@@ -171,7 +174,8 @@ seat.
 1. Meta gems on white weapons: can white weapons carry a meta socket, and
    how would a player (or a stand-in) come by the meta gem?
 2. (Answered 2026-10-04) Kept, scaled up a bracket (ten levels), used
-   again for that race and class at any higher bracket.
+   again for that race and class at any higher bracket. (The step became
+   one level a match on 2026-10-29, question 7.)
 3. (Answered 2026-10-04) "Fewer than 4": the roster's buddies unlocked for
    the player's level; from 30 to 59, a missing tank or healer is filled
    by a stand-in in place of the farthest unneeded member.
@@ -182,8 +186,9 @@ seat.
    battlegrounds and arenas are filled by stand-ins only; players queue to
    the stock sizes.
 7. **The step per use**: a ten-level bracket (as above) or one level a
-   match ("it might end up being 1 level each match, we'll see")? And how
-   many tracks, at what speeds compared with a player?
+   match ("it might end up being 1 level each match, we'll see")?
+   **Answered 2026-10-29:** "one level." Still open: how many parallel
+   tracks, at what speeds compared with a player?
 8. (Answered 2026-10-08) **Players playing a stand-in** (owner,
    2026-10-08: "We should make it so players can play one too, any
    race-class that exists (which should probably end up being all of

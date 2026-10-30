@@ -445,6 +445,9 @@ despawn — which is fine, the next planning cycle re-populates it).
   mini-PCs, the existing hardware), in-server (no network, but the
   model and any crash live inside the world), or in-client (the
   player's GPU, W client only). See 916d.
+  **Answered 2026-10-29:** "we must be able to send to any endpoint."
+  No default: all three are built, and any request may go to any place
+  listed (916d, 916e).
 
 - **Guidance cadence in combat.** 5 seconds is a starting point. May be
   too aggressive for what's actually a strategic decision. Could go to

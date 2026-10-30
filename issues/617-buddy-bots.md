@@ -400,6 +400,9 @@ written back into its sub-issue. Things to check in game are listed after.
     pattern and then try and get it working by having the human relate to
     the behavior pattern with imagery and analogy, rather than specified
     code." To be talked through; open.
+    **And what is judged, 2026-10-29:** "we judge it based on the
+    apparent pattern of the movement of the components": the movement
+    over time (frame strips, trails), not still frames. In 617e16.
 17. **The benchmark's targets** (617e14f): numbers you choose, or the
     first runs you score highly?
 

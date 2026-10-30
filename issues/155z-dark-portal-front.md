@@ -116,10 +116,13 @@ owner), with the spawn mix, sizes and tuning as data. The guards' scaling
    from Hellfire's side toward the portal, allies pouring out of the
    portal down it?
 3. Are murlocs and furbolgs on the allied side, or a third side that
-   fights both?
+   fights both? **Answered 2026-10-29:** "murlocs and furlbogs fight for
+   Azeroth." They are on Azeroth's side, beside the allies.
 4. What happens to a player standing in a lane: stepped round (stated), but
    can a player be hit by, or hit, the fighters?
-5. Do kills here give experience, loot or reputation?
+5. Do kills here give experience, loot or reputation? **Answered
+   2026-10-29:** "kills give reputation only." No experience and no loot.
+   Still open: which faction's reputation.
 
 ## A stopgap, 2026-10-23: the wave demons halfway down
 

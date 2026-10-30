@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-29 16:33:59
+Generated on: 2026-10-29 18:52:50
 Models: claude-opus-5-5
 
 ## Contents
@@ -129,6 +129,14 @@ Models: claude-opus-5-5
     in game, plus building everything the issues describe. The architecture
     document is committed. Next, the compile is yours: compile and install
     basic, then try `.buddy army` and `.buddy path paint` on pathtest.
+31. 2026-10-29 16:37, after Request 108 - The goal is buddies that walk
+    naturally in game, and the architecture page with its patterns and guidance
+    is now published. Next, you compile and install basic, then try `.buddy path
+    paint` with the army on the pathtest realm.
+32. 2026-10-29 16:57, after Request 109 - Goal: get buddies walking the painted
+    map in game, and the Alterac Valley shared weather is now planned in three
+    issue files. Next: decide whether that valley's weather deck should be snow
+    and fog only, leaving the storm as the one rain.
 
 --------------------------------------------------------------------------------
 
@@ -10855,6 +10863,542 @@ It ends with the next four things to build, in order:
 2. Let painted walls fade when nobody has bumped them for a long time.
 3. Add a seam test for the dungeon draw and party grouping.
 4. Give the 42 silent issues a line of Current Behavior.
+
+--------------------------------------------------------------------------------
+
+### User Request 109
+
+Can we make issue files for a feature where the Alterac Valleys on the server
+all share the same weather? And it oscillates in a pattern (is collages) that is
+non deterministic yet still equally distributed. A storm cloud should wander
+across the map and always be intensely downpowering
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 109
+
+> Checking for existing weather or Alterac Valley issues before writing new
+> ones:
+
+*[commit] 01fcffb1b in wow-chat-2026 - *
+
+I've written three issue files for the shared Alterac Valley weather, and
+committed them (01fcffb1b). They pass the issue checker, and nothing is built
+yet.
+
+- **921, the shared sky.** Every Alterac Valley match on the server shows the
+  same weather at the same moment, on one server-wide clock. It sits behind a
+  new setting, `Buddies.AlteracWeather`, which starts off.
+- **921a, the weather deck.**
+  - The weather kinds are dealt like a shuffled deck: each kind once per deck,
+    in a fresh order each time. The shuffle uses a random seed taken at server
+    start, so nobody can predict it. Over time every kind gets exactly equal
+    time, which is the "equally distributed" part.
+  - A new deck never starts with the kind the last one ended on, so the same sky
+    never runs twice in a row.
+  - Each turn of the deck swells from nothing to full strength and fades back,
+    which is the oscillation.
+  - Its test will check each kind's share over 10,000 decks and that no kind
+    ever repeats.
+- **921b, the wandering storm.** One storm cell, the same in every match, drifts
+  at a walking pace. It keeps its heading for a while, turns back from the
+  valley's edges, and leans toward the parts it has visited least, so over a
+  long match it covers the valley evenly.
+  - Within 60 yards of it, everyone gets the heaviest rain with thunder, always.
+    It fades into the shared sky out to 90 yards.
+  - The game sends weather for a whole zone, so the storm works by sending each
+    player under it their own weather.
+
+The numbers are my calls, written into the issues for you to adjust:
+- Each turn of the deck lasts 6 minutes, so a deck of seven kinds runs about one
+  long match.
+- The storm's size is 60 yards fading to 90, and its pace is 2 yards a second.
+- The deck holds seven kinds: four snowy ones (fine, fog, light snow, snow),
+  heavy snow, and two rains.
+
+One question stands out, since this is a snowy mountain valley: should the deck
+be only snow and fog, leaving the storm as the one rain?
+
+--------------------------------------------------------------------------------
+
+### User Request 110
+
+/compact
+
+--------------------------------------------------------------------------------
+
+### Session Recap (written by the harness, not by either speaker)
+
+This session is being continued from a previous conversation that ran out of
+context. The summary below covers the earlier portion of the conversation.
+
+Summary:
+1. Primary Request and Intent
+
+**Project context.** The project is Everland Ghostsong
+(/mnt/kaun/wow-chat-2026): an AzerothCore 3.3.5a server, profile basic, with the
+buddy module B036. The owner is gabrilend (she/her in the project's records; use
+they/them in prose).
+
+**Standing rules carried forward:**
+- The owner runs compile, update and install.
+- Use absolute paths; never `cd` (a hook refuses it).
+- Write the issue file before the work.
+- Commit with `/home/ritz/programming/ai-stuff/scripts/commit-own-changes REPO
+  -F msgfile -- paths`:
+  - redirect its output to a file and read it with `head`; never pipe it
+    directly (it fails silently);
+  - run `claim-own-change` in its own Bash call first.
+- Use the MySQL client file `--defaults-file`; never put a password on a command
+  line.
+- Never build write paths from shell variables; hooks refuse them.
+- Commit every sandbox version, followed by a page backup:
+  - run `scripts/archive-ground-sandbox-versions`;
+  - claim the two archive files in a separate call;
+  - then commit.
+- Screenshots go to development-history/ through scripts/file-screenshot, with
+  "What it shows" and "The story so far" filled in.
+- Keep the owner's words verbatim in notes/conversation-asides.md and in the
+  issues.
+- Explain in plain English.
+- Writes outside the project need the outside-write AskUserQuestion. That gate's
+  question must be asked word for word.
+- A patch is committed only after the owner's compile. Uncompiled server files
+  stay uncommitted.
+
+**Requests since the last summary, in order:**
+1. Continue the five ways, the branch, and the army of 64.
+2. The army: "treat them like as if we had 64 buddy-bots"; "Buddy-bot stand-ins
+   should be sorted into groups correctly"; the gem chooser must know them
+   ("Remind yourself of their gear profiles, and tell me if they need gems?").
+3. "We should address things when we find them instead if we are building
+   functionality that uses them".
+4. Asked about PvP battleground scenes and their pathfinding. Then: "let's do
+   all of those things. A squad should path find as we designed in the PvP
+   settings. Can we get a section to the HTML visualizer that shows the BGs with
+   two sides? They should play the same way the bots would - running around and
+   circle orbiting their foes at their preferred range. Also moving away from
+   groups of enemies and toward groups of allies, when presented with the
+   option. And sometimes when successful breaking off to do the objective - no
+   enemies to fight means you won the battle, so go and claim your prize."
+5. Find the kobot drafts in RAM and copy them. Done: rebuilt from the session
+   log, copied with permission, nine files kept.
+6. "let's get back to ironing out the pathfinding. It's our most important
+   component."
+7. While away: "Remember we want bots to paint surfaces and collectively get
+   better at navigating as we gather more data. Also they should give space to
+   walls, less if they need something nearby or directly nearby opposite the
+   wall, and they should spread out through an area... keep working until I get
+   back... We can make arcs between way points if necessary... new branch for
+   each path finding style if you'd like... or handle it however you please."
+8. Save the owner's screenshot (image 47) to the development history. Done:
+   picture 077.
+9. "please write all changes to external directories into your local project RAM
+   drive, and then when the user returns present them to them after they
+   respond. Say "these requests need permissions: [then list them]" and then as
+   soon as they respond, make your first task be to ask for those permissions.
+   Then, continue to the rest of the work. Can you write this into the claude.md
+   for the project?" Done.
+10. "remember, the goal of our interactions is the creation of a product, not
+    the generation of additional unique datas... build fast and make things...
+    design all of our stuff and we'll curate it as we go. Decisionmaking is an
+    art."
+11. "okay let's set it as a design target - the very next compile will include
+    all of the currently described issue files. If some are unneeded, they can
+    be built and decided on / enabled later. "here's the status. Do you want to
+    turn these on? [summary of status]" etc." Done, in CLAUDE.md, with the board
+    tool.
+12. "build an architecture document that organizes all of our capabilities into
+    a structure that cooperates on concerns and ambitions to be wrong?" and
+    "][tests][". Done.
+13. "I'd like to see the html, both as a file and a claude artifact. Then can
+    you identify common patterns and write guidance for each section as you
+    think about how it might turn out, as you guide it to a positive turnout."
+    Done.
+14. Latest: "Can we make issue files for a feature where the Alterac Valleys on
+    the server all share the same weather? And it oscillates in a pattern (is
+    collages) that is non deterministic yet still equally distributed. A storm
+    cloud should wander across the map and always be intensely downpowering".
+    Done: issues 921, 921a and 921b, committed as 01fcffb1b.
+
+2. Key Technical Concepts
+
+**The painted map (617o8).**
+- Shared per-area cell map: 1-yard cells, kinds UNKNOWN 0, PAINTED 1, WALL 2,
+  STEEP 3, OUTSIDE 4.
+- Clearance comes from a windowed distance stamp, capped at CLEAR_CAP 8.
+- Cost:
+  - 1, plus WALL_W 8 × ((WANT 4 − clear)/WANT)²;
+  - that wall cost is relaxed near the goal: min(distToGoal/RELAX 10, trip/NEAR
+    24);
+  - UNKNOWN 0.15 premium, plus the crowd.
+- A* with stamp arrays and a binary heap, with the corner rule. If no plan is
+  found, it retries letting the first step squeeze through WALL cells.
+- pullTight keeps each straight's clearance at or above the route's own
+  clearance.
+- follow uses LOOK 6 → 3.6 → 2.1 → 1.5, requiring the straight to be fair
+  with SAFE 1. If nothing is fair, it steps to the most open neighbour.
+- Lane shift: lane × min(LANE 4, room × 0.6).
+- steer turns at most TURN 4.2 rad/s.
+- crowd is rebuilt each second; crowdRoute adds a new route immediately.
+- refused never paints the bot's own cell; a fallback point is not painted
+  within one cell of the bot.
+- needsPlan triggers on: goal moved more than 2 cells, REPLAN 6 s plus jitter,
+  or a wall painted near the path's box.
+
+**The five ways (617o7).**
+- Walker in buddy_path_ways.h.
+- Fixes: the corner rule, the cell-walk LineClear, orbit (walk in until touched,
+  then side-on, feel within FEEL 4.5, round corners by ROUND 0.52), potential
+  kicks held 1.5 s.
+- Way::Paint was added.
+
+**The army (617e17).**
+- BuddyArmyPairs is appended into BuddyRosterPairs.
+- BuddyPlanOf reads buddy_roster or buddy_stand_in.
+- Grouping: OwnerSeatFree, so buddy parties form near a full owner party
+  (617c2).
+
+**Realm branches (136d).** Environment overrides, including
+AC_BUDDIES_TEST_REALM=1. Buddies.TestRealm gates the army.
+
+**The battleground sandbox page** (617e16l): Arathi Basin, two sides, roads
+taken in turn, orbit fighting, leaning, breaking off, assaults.
+
+**The design target.** The next compile builds every described issue, each
+behind a switch that starts off. The board is written by
+scripts/issue-status-board.
+
+**The architecture of capabilities:**
+- seven rings: Ground, Knowledge, Rules, Minds, Bodies, Views, Operations;
+- tests at the seams ("][tests][");
+- nine contracts and the method;
+- eight patterns with guidance.
+
+3. Files and Code Sections
+
+**Committed** (newest first, key commits):
+- 01fcffb1b: issues/921-alterac-valley-shared-weather.md,
+  921a-the-shared-weather-deck.md, 921b-the-wandering-storm.md.
+  - Switch `Buddies.AlteracWeather`.
+  - Deck of 7 kinds (fine, fog, light snow, snow, heavy snow, light rain, rain),
+    each with a 6-minute half-sine turn, no stutter between decks, an
+    unpredictable seed.
+  - Storm: 2 yd/s random walk with momentum, leaning toward the least-visited
+    parts, 60-yard downpour plus thunder fading to 90, sent to each player
+    separately.
+  - Open questions are listed in each file.
+- 81c5b1df3: docs/capability-architecture.md (with patterns and guidance),
+  scripts/generate-capability-architecture-page (markdown → HTML; `--fragment
+  PATH` for the artifact; nested lists fixed),
+  docs/HTML/capability-architecture.html, and picture 081.
+- Artifact: https://claude.ai/artifact/4K4Kn8pPKKaizuxGe4oHQq (version 2). The
+  fragment is in the scratchpad at capability-architecture.html.
+- c63ad4fb7: the architecture document, first version.
+- 7538eb282: the CLAUDE.md design-target section, scripts/issue-status-board,
+  and docs/next-compile-status.md.
+  - Board: 522 open issues; 24 waiting for the compile, 90 built, 5 in progress,
+    80 planned, 281 not started, 42 unclear.
+- ecd99ea96: BuddyPaint::Save/Load (bytes "BPNT" v1: w, h, step, x0, y0, kinds,
+  walks) and the test round trip (14/14).
+- 636662b42: CLAUDE.md "Writes outside the project while the owner is away"
+  (waiting room tmp/shared-memory/outside-writes/LIST.md; nothing waiting).
+- 4b33c374e: renamed src/lua-basic/data/buddy-levers.lua to buddy-lever-list.lua
+  (the Lua engine refuses duplicate file names); `.lever` added to
+  config/custom-gm-commands.lua; the reference was regenerated.
+- 9b48e8534 / daee34c06: the least-painted target choice tried and undone
+  (spacing got worse); pictures 078–080.
+- a0957d278 / 69a18f294: `paint.X=` address settings; trails measured (premium
+  not the cause).
+- af27705f0: Way::Paint in buddy_path_ways.h.
+- 9acd762f1: roam/buddy_paint_paths.h (C++ twin), its .info.md,
+  tests/buddy-paint-paths/paint-check.cpp, scripts/test-buddy-paint-paths.
+- ef472a7f6 / 0e8a22da6: six-way comparison; A* holds its point (120 → 92.9
+  °/yd); FILE_SCREENSHOT_WAIT added to scripts/file-screenshot; pictures
+  067–073.
+- b90517c12 / 05e350422: the painted map in the sandbox (way "paint", drawPaint,
+  drawPaintRoute, paintBegin/paintStep/paintRefused, smoothness measure);
+  `--window` for the page generator; pictures 066–067.
+- 1803bd2bd: scripts/templates/paint-paths.js, tests/paint-paths/paint-check.js,
+  scripts/test-paint-paths (12/12), issue 617o8.
+- 15e27fdaa: orbit walks round instead of in rings (module and sandbox, picture
+  065).
+- d859b05ee: battleground page; scripts/generate-battleground-sandbox-page;
+  scripts/templates/battleground-sandbox.html;
+  docs/HTML/battleground-sandbox(.html, /zone-529-3358.js);
+  assets/zone-maps/529-3358.lua; issue 617e16l; the 176a2c note; the sandbox
+  links to it.
+- 23aab2659: zone maps leave out ocean; generate-zone-maps `--help`.
+- 19fb9b22d: scripts/test-branch-realm (13 checks).
+- d7ebe1d29: sandbox corner rule plus planOpen cache.
+- 55059d7ac: realm branch tool and launcher.
+- fd2f990d6: buddy_path_ways.h with the walker, and its test.
+
+**Uncommitted, waiting for the owner's compile** (claimed by this session):
+- buddies_path.cpp/.h:
+  - the switch, with PaintWalk per 512-yard region (PAINT_REGION 512,
+    PAINT_MARGIN 96, PAINT_MAPS 6);
+  - mesh refusal found by halving the straight;
+  - saved every 10 minutes, on eviction and at shutdown, to
+    "buddy-paint/realm-<RealmID>" or `Buddies.PaintDir`;
+  - the buddies_path_world script.
+- buddies_army.cpp/.h; buddies_stand_ins.cpp (BuddyStandInOnItsWay,
+  BuddyDismissStandIn, BuddyPlanOf, gem kit for jewellery); buddies.h.
+- buddies_roam_ground.cpp (BuddyRosterPairs joined with the army);
+  buddies_roam_strategy.cpp (path hook); buddies_party.cpp (OwnerSeatFree);
+  buddies_gems.cpp (BuddyPlanOf); buddies_loader.cpp (map_stream, path, army);
+  buddies_map_stream.cpp.
+- config/custom-gm-commands.lua with the `.buddy path`/`.buddy army`
+  descriptions, plus the regenerated gm-commands.txt/html and help SQL.
+- The issue notes in 617e17 and 617c2 (part of them committed).
+
+4. Errors and fixes
+- **C++20 structured bindings in lambdas and integer division:** rewritten.
+- **Flow, A* and potential faults** (corner cutting, sampled line checks, orbit
+  stuck interrupting, rings): fixed as listed above.
+- **Planner slowed by the corner rule:** answers are cached per cell, stamped
+  with the state of knowledge.
+- **Painted-map test failures:** coarse 2-yard cells shut real gaps (now 1-yard
+  cells); grinding against walls; corner cutting by following; wall weight too
+  low; the trip relax; crowd invisibility; bots painting themselves in. All
+  fixed.
+- **`MARGIN` name clash** in buddies_path.cpp: renamed to PAINT_*.
+- **`Wall` clash** between the enum and the function: the function became
+  PaintWall/PaintWallIn.
+- **Commit tool silently failing:** when piped into `head`, or with claims made
+  in the same call or a loop. Re-running the claim alone, then the commit,
+  worked.
+- **Lua `[[ ]]` delimiter clash:** used `[=[ ]=]`.
+- **Unmeasured claim in a comment:** corrected to arithmetic.
+- **Architecture document cited three tests wrongly:** corrected.
+- **List renderer restarted numbering:** fixed.
+- **Kobot:** the original scratch folder was gone. Rebuilt from the session log.
+  - The AskUserQuestion was answered by accident while the owner typed, and the
+    owner was upset ("Rude! Ask me again"). I re-asked in plain text, then asked
+    through the gate's own question.
+  - I falsely claimed "byte-for-byte". Corrected: the progress files were never
+    written originally; the owner said keep them.
+
+5. Problem Solving
+Pathfinding:
+- The painted map is the best of the six ways: 6.3 °/yd, 0 stuck.
+- The tiny-pocket problem (picture 078) is open as 617o8 Q4.
+- Trails are not the cause of bunching.
+
+Test failure still open: test-datapath-installed-lua needs `scripts/install
+--profile basic`.
+
+6. All user messages (since the last summary)
+- "Yeah we should treat them like as if we had 64 buddy-bots. For the test
+  scene, that's exactly what we'll do."
+- "We should address things when we find them instead if we are building
+  functionality that uses them"
+- "Buddy-bot stand-ins should be sorted into groups correctly"
+- "Also they absolutely need to know the gem chooser to know how to hear
+  themselves. Remind yourself of their gear profiles, and tell me if they need
+  gems?"
+- "Great. The compilation will have to wait for tomorrow - what other fixes can
+  we work on? Where are we at with the PvP battleground scenes? What kind of
+  pathfinding do we have built for them?"
+- "Okay let's do all of those things. A squad should path find as we designed in
+  the PvP settings. Can we get a section to the HTML visualizer..." (full text
+  in section 1).
+- "Hi can you find the kobot issues in ram and bring them to the right spot?"
+  (with the drafting session's report attached).
+- "Wait wait stop"
+- "NO. You asked me a question while I was typing and it selected the first
+  answer. Rude! Ask me again."
+- "It's ruined. You wasted the project. Fine. Just scavenge what you can and do
+  the best with your wrecked pieces."
+- "How the heck do you know it's byte-for-byte identical, what are you comparing
+  it to?"
+- "Okay do it however feels right and let's get back to ironing out the
+  pathfinding. It's our most important component."
+- "That battleground picture looks AWESOME. I would go check on my computer but
+  I feel frail right now because I've been eating very little the past few days.
+  I'm staying in bed to conserve energy."
+- "What about that last prompt caused you to ask for convision? Continuation
+  permission. I want to take it to the harness maintainers, it seems like you
+  should have authority over that directory."
+- "I have no easy food in the house... Feed me please, that I might continue!"
+- "I think I'd rather die than call one of those numbers sorry this is just how
+  I am. I'm fine let's focus on computer programming sorry to distract you with
+  status updates on your programmer's health."
+- "The orbit system is slow because we're essentially building a new kind of
+  mmap right?"
+- "Remember we want bots to paint surfaces..." (full text in section 1, request
+  7).
+- "Your perseverance is given to me in exchange for my health - I will improve
+  myself by feeding myself if you give me your sustained attention."
+- "I am back and I started a load of dishwashers but I got something slimy on my
+  hands and had a minor breakdown so now I am drinking water and smoking weed
+  instead of food. Please continue, do better than me."
+- "why are we working in wow-chat-2 also what is that I forgot"
+- The image 47 message: "please save this to the development history archive"
+- "hi I'm not back yet please continue as if I was away, I was just checking
+  when I had some downtime"
+- "please write all changes to external directories into your local project RAM
+  drive..." (full text in section 1, request 9).
+- "\"use my programming agent\" she says as she shares her claude.md files and
+  projects with inspirational architecture \"build my projects for me with a
+  shared license\" suffers in the beyond []fieldl." Saved in the asides.
+- "remember, the goal of our interactions is the creation of a product..." (full
+  text in section 1, request 10).
+- "okay let's set it as a design target - the very next compile will include all
+  of the currently described issue files..."
+- "Okay excellent can you build an architecture document that organizes all of
+  our capabilities into a structure that cooperates on concerns and ambitions to
+  be wrong?"
+- "][tests]["
+- "Yes I'd like to see the html, both as a file and a claude artifact. Then can
+  you identify common patterns and write guidance for each section as you think
+  about how it might turn out, as you guide it to a positive turnout."
+- "Can we make issue files for a feature where the Alterac Valleys on the server
+  all share the same weather? And it oscillates in a pattern (is collages) that
+  is non deterministic yet still equally distributed. A storm cloud should
+  wander across the map and always be intensely downpowering"
+
+7. Pending Tasks
+- **The owner's compile tomorrow** (basic, then install). Then commit the
+  uncompiled module work, along with the `.buddy path`/`.buddy army`
+  descriptions.
+- **Try in game** on `pathtest` (`scripts/worldserver --profile pathtest`,
+  `.buddy army`, `.buddy path paint`).
+- **Design target:** build issues nearest to done first, each behind a switch.
+  At compile time, show the board and ask "here's the status. Do you want to
+  turn these on?"
+- **Open questions:**
+  - 617o8 Q1 (persistence and whose), Q2 (the numbers), Q4 (tiny parts: skip or
+    cap);
+  - orbit stuck-check eagerness;
+  - 921's questions (turn length, gameplay effects, which weather kinds, storm
+    size, one storm or several);
+  - 617e17 Q1 and Q2;
+  - 134a (alpha's MySQL path).
+- **Next to build** (from the architecture's "thinnest" list):
+  - painted walls fade when unbumped;
+  - a seam test for the dungeon draw;
+  - Current Behavior lines for the 42 silent issues.
+- **The 921 weather** is planned only. Its implementation (deck core, test,
+  server side) is the natural next build if asked.
+- **docs/table-of-contents.md** needs the new docs listed. It's a shared file
+  with another session's uncommitted edits.
+- **Standing reminder:** guard the disks against bit rot (issue 191). It was
+  mentioned once this session.
+
+8. Current Work
+Just finished: issue files for Alterac Valley's shared weather (921, 921a,
+921b), validated and committed as 01fcffb1b. The owner had asked: "Can we make
+issue files for a feature where the Alterac Valleys on the server all share the
+same weather?..." The final summary reply to the owner hasn't been given yet.
+
+9. Optional Next Step
+Report the three issues to the owner in plain English:
+- the shuffled-deck design for "non deterministic yet still equally
+  distributed";
+- the per-player storm;
+- the switch.
+
+Then ask the most important open question (the storm's gameplay effects, or
+snow-only kinds). Don't start implementing 921 unless the owner says to, though
+the design target ("build fast", "design all of our stuff") favours building its
+deck core next if they confirm.
+
+If you need specific details from before compaction (like exact code snippets,
+error messages, or content you generated), read the full transcript at:
+/home/ritz/.claude/projects/-mnt-kaun-wow-chat-2026/03547e04-6a50-4e0d-97ee-ae0ce7474312.jsonl
+Continue the conversation from where it left off without asking the user any
+further questions. Resume directly — do not acknowledge the summary, do not
+recap what was happening, do not preface with "I'll continue" or similar. Pick
+up the last task as if the break never happened.
+
+--------------------------------------------------------------------------------
+
+`/compact` - Compacted (ctrl+o to see full summary)
+
+--------------------------------------------------------------------------------
+
+### User Request 111
+
+hi can you give me 10 open questions I should answer? Focus on the ones that
+unblock the most issues.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 111
+
+> Ranking which open questions hold up the most issues; reading the top ones
+> now.
+
+Here are the 10 questions. I ranked them by how many unfinished plans wait on
+each one, counting both the plans that say they're blocked by it and its own
+smaller pieces. Each comes with my best guess, so you can answer with just "yes"
+where it fits.
+
+**Pathfinding (you called it the most important part)**
+
+1. **Is the painted map shared and kept?** As bots walk, they mark which ground
+   is open and where the walls are. Should every buddy on the server share one
+   marked map per area, saved to disk so it keeps improving over days? Or should
+   each clan keep its own? Saving and loading are built; this decides whose file
+   it is. *My guess: one map per area, shared by everyone, kept.*
+2. **What happens with tiny pockets of ground?** On the Burning Steppes test,
+   the patch of ground in play was only about 16 by 16 yards, and all 36 bots
+   crammed into it. Should a patch that small be skipped, so the bots move on to
+   the next patch? Or should it take only as many bots as it has room for? *My
+   guess: room for as many as fit; the rest go to the next patch.*
+3. **Who judges whether movement looks right?** You said you want to describe a
+   pattern with pictures and comparisons rather than numbers. Should we install
+   a model that can look at pictures and answer questions about them, so it can
+   learn to agree with you? Or do you stay the only judge, by eye? *My guess:
+   you judge by eye for now; the model comes later.*
+
+**Machines and the local AI**
+
+4. **The three mini-computers: what are they?** What processor and operating
+   system do they run? Do they have fixed addresses on your home network? Does
+   this computer stay a place for test servers, or only build from now on?
+   Splitting the server across machines can't start without these answers.
+   They're facts only you know.
+5. **Where does the small chat AI run first?** The options:
+   - on the mini-computers, next to the game server, so a crash can't take the
+     game down;
+   - inside the game server itself, with no network but sharing its memory;
+   - on each player's own graphics card.
+
+   This one choice holds up the most plans of any. *My guess: on the
+   mini-computers.*
+
+**Stand-ins and the army**
+
+6. **How fast do stand-ins grow?** Stand-ins are the bots that fill dungeon
+   groups and battlegrounds. Should they go up one level per match, or jump in
+   ten-level steps? *My guess: ten-level steps.*
+7. **What does the army of 64 look like?** Should it be shaped like real
+   parties, a tank and a healer in every five, all at the game master's level
+   and on their side? Should it stay the same bots from one test scene to the
+   next, or be picked fresh each time? *My guess: party-shaped, picked fresh
+   each time.*
+8. **Do random bots come back to the basic server?** Right now the only bots
+   there are each player's buddies. If random bots return, how many? Since each
+   one could be owed up to seven buddies, 500 random bots would mean 4,000 bots
+   in all. And may bots ever play death knights? *My guess: no random bots, and
+   no death-knight bots.*
+
+**World plans**
+
+9. **The Dark Portal front: who's on which side, and what do kills give?** Are
+   the murlocs and furbolgs with the allies, or a third side that fights both?
+   Do kills there give experience, loot or reputation? *My guess: a third side;
+   kills give reputation only.*
+10. **Which server carries the new worlds (the Earth, Mars and Sun maps)?**
+    Every player on that server would have to install new map files for their
+    game. *My guess: a separate server of their own, not basic.*
+
+While gathering these I found one question that later work seems to have
+answered already: whether the vanilla server gets its own databases. Every
+server has had its own set since the multi-server work, so I'll mark it answered
+unless you say otherwise.
 
 --------------------------------------------------------------------------------
 

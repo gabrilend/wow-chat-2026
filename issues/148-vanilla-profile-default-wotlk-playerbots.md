@@ -590,7 +590,9 @@ parent's body, so they don't get lost in the prose.
 
 - Should vanilla use a dedicated `acore_*_vanilla` database namespace,
   or share with release/beta? (Recommendation above: dedicated, for
-  coexistence.)
+  coexistence.) **Settled by later work** (2026-10-29): every profile
+  has had its own databases since the every-profile-at-once work (136b,
+  `acore_world_<profile>` and its siblings), vanilla included.
 - Should the patch system have a `PHASE_BEGIN_PATCHES["vanilla"]`
   array distinct from release/beta, or is "compile-fix patches only"
   expressible as a tag/filter on the existing arrays?

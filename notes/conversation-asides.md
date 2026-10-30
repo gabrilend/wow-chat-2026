@@ -255,3 +255,31 @@ And, a moment later, alone:
 (Read, and built into the document as its core rule: the brackets face
 outward, so the tests stand between the parts, at every seam, holding
 two capabilities together, rather than inside any one of them.)
+
+## 2026-10-29, ten open questions answered
+
+Asked for "10 open questions I should answer? Focus on the ones that
+unblock the most issues", then answered them, word for word (the
+question each answers in brackets, and where it was written):
+
+- (the painted map shared by every buddy, saved, kept; 617o8) "yes yes
+  and yes"
+- (tiny pockets of ground; 617o8) "we do not have to have maps for the
+  floating asteroids in the Twisting Nether surrounding Outland. We can
+  figure those out as we go, no need to store a baked map for them."
+- (who judges movement; 617e16, 617) "we judge it based on the apparent
+  pattern of the movement of the components."
+- (the three mini-computers; 157, held by another session's claim, so
+  kept here until it is free) "they run alpine linux but I don't remember
+  much about them. We can reflash a new OS to them if we need to, and if
+  we can do it without a mouse-and-keyboard, over like SSH or something."
+- (where the chat model runs first; 916, 916d) "we must be able to send
+  to any endpoint"
+- (stand-ins' growth; 617t) "one level."
+- (the army of 64's makeup; 617e17, built the same day) "fully random
+  talent spec profile distribution."
+- (random bots on basic, bot death knights; 620) "no bots for now"
+- (the Dark Portal front; 155z) "murlocs and furlbogs fight for Azeroth."
+  and "kills give reputation only."
+- (which server carries the new worlds; 919, another session's unsaved
+  file, left as it is) "let's defer this for now"

@@ -125,8 +125,11 @@ Execution order:
   the only bots are each player's buddies. If random bots return, how many,
   and does the population governor (151) count their buddies too? 500
   random bots each owed up to seven buddies is 4,000 bots.
+  **Answered 2026-10-29:** "no bots for now." No random bots on basic;
+  the only bots there stay each player's buddies.
 - **Death knights.** Basic says no playerbot plays a death knight. Does
   that stay, or should a bot be able to make the soul trade with the
-  Acherus Sargobras (718) too?
+  Acherus Sargobras (718) too? **Answered 2026-10-29** with the same
+  "no bots for now": it stays; no bot death knights.
 - **Other profiles.** Buddies exist on basic and cc-test only. Do vanilla,
   beta and release need any of this, or is it basic's alone?

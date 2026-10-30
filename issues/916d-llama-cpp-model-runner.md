@@ -257,7 +257,15 @@ The server still decides everything; the client only lends its GPU:
 - **Which placement is the default?** The three LAN mini-PCs make
   "beside" the natural first one, and it keeps a library crash out of
   the worldserver. "in-server" removes the network but puts the model's
-  memory and any crash inside the world. Undecided.
+  memory and any crash inside the world.
+  **Answered 2026-10-29:** asked which comes first, the owner: "we must
+  be able to send to any endpoint." No one placement is the default: all
+  three are built, and every request may go to any place the server is
+  told of (any address for "beside", whether a mini-PC, a desktop, a
+  player's computer or a machine elsewhere; any W client; the server
+  itself). The one call above already takes the place per request; which
+  places are listed, and how requests are spread among them, is the
+  worker pool's (916e).
 - **in-client and the job broker: one route or two?** 916o's companion
   program reaches the server through its job broker (an outgoing
   connection of its own); this issue's in-client place goes through

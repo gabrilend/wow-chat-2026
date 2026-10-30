@@ -238,9 +238,13 @@ We can make arcs between way points if necessary"):
 
 ## Open Questions
 
-1. **Kept between runs, and whose**: should the paint be saved per area so
-   it grows over days, and shared by every buddy on the server, or each
-   clan its own?
+1. **Kept between runs, and whose** (answered 2026-10-29): asked whether
+   every buddy on the server should share one painted map per area,
+   saved to disk so it keeps improving over days, or each clan keep its
+   own, the owner: "yes yes and yes." One map per area, shared by every
+   buddy on the server, saved and kept. (The module already keeps one per
+   512-yard region of a map for the whole realm, saved every 10 minutes
+   and at shutdown, so this is what is built.)
 2. **The numbers**: wanted space 4 yards, relaxed within 10 yards of the
    goal; unknown ground 15% dearer; the crowd's weight; following 6 yards
    ahead and turning at most 240 degrees a second. Which feel natural?
@@ -271,3 +275,10 @@ We can make arcs between way points if necessary"):
    No way of finding a path spreads 36 bots through a sliver. Should a
    part that small be skipped as the part in play (the bots taking the
    next part), or take only as many bots as it has room for?
+   **The owner, 2026-10-29:** "we do not have to have maps for the
+   floating asteroids in the Twisting Nether surrounding Outland. We can
+   figure those out as we go, no need to store a baked map for them."
+   So small floating pieces of ground get no stored map ahead of time;
+   they are painted live as bots walk them. The Firegut pocket itself (a
+   small part of a big area, where many bots are sent at once) is still
+   to be asked again: how many bots it should take.
