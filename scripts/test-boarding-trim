@@ -1,0 +1,101 @@
+#!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-boarding-trim
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      check the cut of idle standing from boarding recordings
+-- quick-test: yes
+-- ==== end of header ====
+-- test-boarding-trim - checks scripts/lib/boarding-trim.lua (issue 617e8).
+--
+-- For a general audience: a recording of the way aboard a ship also holds
+-- standing still before setting off, after arriving and in between. The
+-- trimmer cuts those; this checks on made-up recordings that it cuts the
+-- standing and never a step that matters: a jump, a landing, or the step
+-- onto or off the deck.
+--
+-- Usage: scripts/test-boarding-trim [PROJECT_DIR] [--help]
+-- Exit status 0 if all pass.
+
+-- {{{ arguments
+if arg[1] == "--help" or arg[1] == "-h" then
+    print("Usage: scripts/test-boarding-trim [PROJECT_DIR]")
+    print("  Checks the boarding-recording trimmer (scripts/lib/boarding-trim.lua).")
+    os.exit(0)
+end
+local DIR  = arg[1] or "/mnt/kaun/wow-chat-2026"
+-- }}}
+local Trim = dofile(DIR .. "/scripts/lib/boarding-trim.lua")
+
+local fails, checks = {}, 0
+local function check(ok, what)
+    checks = checks + 1
+    if not ok then fails[#fails + 1] = what end
+    print((ok and "ok   " or "FAIL ") .. what)
+end
+-- a step: ms, x, flags (y, z, o fixed)
+local function st(ms, x, flags) return { ms = ms, flags = flags or 0, x = x, y = 0, z = 0, o = 0, jump_xy = 0, jump_z = 0 } end
+
+-- {{{ standing at the start and the end
+do
+    local rec = { st(0, 0), st(800, 0.1), st(2400, 0.2), st(3000, 1.5), st(3500, 3), st(4000, 4.5, 1), st(4600, 5, 1), st(7000, 5.1, 1) }
+    local out, r = Trim.trim(rec)
+    check(r.head_steps == 2 and r.head_ms == 2400, "the opening stand cut: 2 steps, 2.4 s (" .. r.head_steps .. ", " .. r.head_ms .. ")")
+    check(out[1].ms == 0 and out[1].x == 0.2, "the start is where it sets off, at 0 ms")
+    check(r.tail_steps == 1, "the closing stand on deck cut: 1 step (" .. r.tail_steps .. ")")
+    check(#out == 5 and out[#out].x == 5, "five steps kept, ending where it arrived")
+    local deck = false
+    for _, s in ipairs(out) do if s.flags == 1 then deck = true end end
+    check(deck, "the steps on the deck are kept")
+end
+-- }}}
+
+-- {{{ a pause in the middle
+do
+    local rec = { st(0, 0), st(500, 2), st(1000, 4), st(1200, 4.1), st(4000, 4.2), st(4500, 6), st(5000, 8) }
+    local out, r = Trim.trim(rec)
+    check(r.pauses == 1 and r.pause_ms == 3000 - Trim.SHORT_MS, "a 3 s stand in the middle shortened to " .. Trim.SHORT_MS .. " ms (" .. r.pauses .. ", " .. r.pause_ms .. ")")
+    check(out[#out].ms == 5000 - (3000 - Trim.SHORT_MS), "later steps come earlier by the time taken out (" .. out[#out].ms .. ")")
+    local mono = true
+    for i = 2, #out do mono = mono and out[i].ms >= out[i - 1].ms end
+    check(mono, "times still only go forward")
+end
+-- }}}
+
+-- {{{ what is never cut
+do
+    -- a jump from a standing start, and a landing at the end
+    local rec = { st(0, 0), st(900, 0.1, 2), st(1500, 3), st(2000, 3.1, 4), st(3000, 3.2) }
+    local out, r = Trim.trim(rec)
+    local jump, land = false, false
+    for _, s in ipairs(out) do
+        if s.flags == 2 then jump = true end
+        if s.flags == 4 then land = true end
+    end
+    check(jump and land, "a jump and a landing are kept even inside a stand")
+    -- the step onto the deck right beside the last ashore step
+    local rec2 = { st(0, 0), st(500, 2), st(600, 2.1, 1), st(5000, 2.2, 1) }
+    local out2 = Trim.trim(rec2)
+    local onto = false
+    for _, s in ipairs(out2) do if s.flags == 1 then onto = true end end
+    check(onto, "the step onto the deck is kept though it is a hair from the last step ashore")
+end
+-- }}}
+
+-- {{{ nothing to cut, and too short to cut
+do
+    local rec = { st(0, 0), st(500, 2), st(1000, 4) }
+    local out, r = Trim.trim(rec)
+    check(#out == 3 and r.head_steps == 0 and r.tail_steps == 0 and r.pauses == 0, "a recording with no standing is kept whole")
+    local one = Trim.trim({ st(0, 0) })
+    check(#one == 1, "a one-step recording is returned as it is")
+end
+-- }}}
+
+print(string.format("%d checks, %d failed", checks, #fails))
+print(#fails == 0 and "Result: all checks passed." or ("Result: " .. #fails .. " failure(s)."))
+os.exit(#fails == 0 and 0 or 1)
+-- ==== footer of test-boarding-trim ====
+-- lines:      101
+-- ==== end of footer ====

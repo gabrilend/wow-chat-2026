@@ -1,0 +1,108 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- trim-buddy-boardings - shows, and with --apply keeps, the cut of standing
+-- still from each boarding recording (issue 617e8).
+--
+-- For a general audience: a game master records the way aboard a boat or
+-- zeppelin by walking it (".buddy record start" / "stop", 617e9). The owner
+-- wants each recording cleaned "to just the specificly needed waypoints"
+-- after "a manual LLM scrutiny test", so that standing still at the start,
+-- at the end, or in between isn't copied by every buddy that boards. This
+-- prints each recording's cut (from scripts/lib/boarding-trim.lua) and its
+-- kept steps, for a person or an agent to look over; --apply then writes
+-- the kept steps in place of the old ones, one recording at a time, each
+-- in a transaction, after saving the old steps to the RAM drive. Run
+-- scripts/export-buddy-boardings afterwards to carry them into git.
+--
+-- Usage: scripts/trim-buddy-boardings [--dir PROJECT_DIR] [--apply] [--only N] [--help]
+--   (no option)  show every recording's cut and kept steps; changes nothing
+--   --apply      write the cut (asks nothing; the backup is in
+--                tmp/shared-memory/boarding-trim/)
+--   --only N     just recording number N
+--------------------------------------------------------------------------------
+
+-- {{{ arguments
+local DIR, APPLY, ONLY = "/mnt/kaun/wow-chat-2026", false, nil
+local i = 1
+while arg[i] do
+    if arg[i] == "--help" or arg[i] == "-h" then
+        print("Usage: scripts/trim-buddy-boardings [--dir PROJECT_DIR] [--apply] [--only N]")
+        print("  Shows each boarding recording's cut of standing still; --apply writes it (backup first).")
+        os.exit(0)
+    elseif arg[i] == "--dir"   then DIR = arg[i + 1]; i = i + 1
+    elseif arg[i] == "--apply" then APPLY = true
+    elseif arg[i] == "--only"  then ONLY = tonumber(arg[i + 1]); i = i + 1
+    else io.stderr:write("trim-buddy-boardings: unknown option " .. arg[i] .. " (see --help)\n"); os.exit(1) end
+    i = i + 1
+end
+-- }}}
+
+local Trim  = dofile(DIR .. "/scripts/lib/boarding-trim.lua")
+local MYSQL = DIR .. "/mysql/installed-files/bin/mysql --defaults-file=" .. DIR .. "/mysql/conf/client.cnf -h127.0.0.1 -P3307 -N -B acore_world_basic"
+
+-- {{{ local function query
+local function query(sql)
+    local p = io.popen(MYSQL .. ' -e "' .. sql .. '" 2>&1')
+    local rows = {}
+    for l in p:lines() do
+        if l:match("^ERROR") then
+            io.stderr:write("trim-buddy-boardings: MySQL said: " .. l .. "\n  to debug: is ./scripts/start-mysql running, and E045 installed (the boarding tables)?\n")
+            os.exit(1)
+        end
+        local m = {}
+        for v in (l .. "\t"):gmatch("([^\t]*)\t") do m[#m + 1] = v end
+        rows[#rows + 1] = m
+    end
+    p:close()
+    return rows
+end
+-- }}}
+
+local where = ONLY and (" WHERE id = " .. ONLY) or ""
+local recs = query("SELECT id FROM buddy_boarding" .. where .. " ORDER BY id")
+if #recs == 0 then
+    print("no boarding recordings" .. (ONLY and (" numbered " .. ONLY) or "") .. " in acore_world_basic.buddy_boarding; nothing to trim")
+    os.exit(0)
+end
+
+local BACKUP_DIR = DIR .. "/tmp/shared-memory/boarding-trim/"
+if APPLY then os.execute('mkdir -p "' .. BACKUP_DIR .. '"') end
+local COLS = "boarding, seq, ms, flags, x, y, z, o, jump_xy, jump_z"
+local changed = 0
+
+for _, r in ipairs(recs) do
+    local id = tonumber(r[1])
+    local rows = query("SELECT " .. COLS .. " FROM buddy_boarding_step WHERE boarding = " .. id .. " ORDER BY seq")
+    local steps = {}
+    for _, m in ipairs(rows) do
+        steps[#steps + 1] = { ms = tonumber(m[3]), flags = tonumber(m[4]), x = tonumber(m[5]), y = tonumber(m[6]), z = tonumber(m[7]),
+                              o = tonumber(m[8]), jump_xy = tonumber(m[9]), jump_z = tonumber(m[10]) }
+    end
+    local kept, rep = Trim.trim(steps)
+    local secs = function(list) return #list > 0 and (list[#list].ms - list[1].ms) / 1000 or 0 end
+    print(string.format("recording %d: %d steps, %.1f s -> %d steps, %.1f s (start: %d steps, %.1f s cut; end: %d steps cut; %d pauses, %.1f s taken out)",
+        id, #steps, secs(steps), #kept, secs(kept), rep.head_steps, rep.head_ms / 1000, rep.tail_steps, rep.pauses, rep.pause_ms / 1000))
+    for k, s in ipairs(kept) do
+        print(string.format("  %3d  %6d ms  flags %2d  (%.2f, %.2f, %.2f)  facing %.2f", k, s.ms, s.flags, s.x, s.y, s.z, s.o))
+    end
+    if APPLY and #kept ~= #steps or (APPLY and rep.pauses > 0) then
+        -- the old steps saved, then replaced in one transaction
+        local f = assert(io.open(BACKUP_DIR .. "recording-" .. id .. "-" .. os.date("%Y%m%d-%H%M%S") .. ".tsv", "w"))
+        f:write("-- the steps of boarding recording " .. id .. " before trim-buddy-boardings cut them: " .. COLS .. "\n")
+        for _, m in ipairs(rows) do f:write(table.concat(m, "\t"), "\n") end
+        f:close()
+        local values = {}
+        for k, s in ipairs(kept) do
+            values[#values + 1] = string.format("(%d,%d,%d,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f)", id, k - 1, s.ms, s.flags, s.x, s.y, s.z, s.o, s.jump_xy, s.jump_z)
+        end
+        query("START TRANSACTION; DELETE FROM buddy_boarding_step WHERE boarding = " .. id .. "; INSERT INTO buddy_boarding_step ("
+            .. COLS .. ") VALUES " .. table.concat(values, ",") .. "; COMMIT;")
+        changed = changed + 1
+        print("  written (the old steps saved in " .. BACKUP_DIR .. ")")
+    end
+end
+if APPLY then
+    print(string.format("%d recording(s) trimmed; carry them into git with scripts/export-buddy-boardings; the server reads them at its next start", changed))
+else
+    print("nothing written (shown only); --apply writes the cuts")
+end

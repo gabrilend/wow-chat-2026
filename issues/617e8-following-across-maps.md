@@ -363,9 +363,14 @@ the owner's map), and anything for instances (617c3).
   now, because we'll steadily improve it until it's fine." No stuck rule
   is added on the way to a dock; a buddy stuck there is a pathfinding
   fault, logged loudly with where and why, and mended in the pathfinding
-  (617o). Whether the town visits' own unstuck rule (617e4, a hop of up
-  to 30 yards after 90 seconds without 10 yards of progress) is a
-  fallback to remove by the same reasoning is asked in the next ten.
+  (617o). The town visits' own hop was removed by the same reasoning
+  (617e4). Built 2026-10-30, waiting for the compile: on the long walk to
+  a crossing, no 10-yard gain toward the crossing's place in 90 seconds
+  is one `mod-buddies: STUCK` error line naming where the buddy stands,
+  the crossing it was walking to, the yards left and why; it keeps
+  walking, never moved (the travel step in `buddies_town.cpp`,
+  `CrossingProgress`; a place moved more than 5 yards is a new leg,
+  measured afresh).
 - **Off the deck in a straight line**: stepping aboard and ashore walks a
   straight line, since the navigation mesh has no deck. A gangway with a
   bend, or a zeppelin tower's platform, may need more than one straight
@@ -391,3 +396,18 @@ the owner's map), and anything for instances (617c3).
     the nearer first, that no other character is walking; when none is
     free, the limit of walkers per path rises by one and it chooses
     again.
+  What exists (read 2026-10-30): the recorder (617e9, `.buddy record
+  start/stop`, built and in the module) already keeps every movement
+  report (steps, jumps, landings, facing, jump speeds), several
+  recordings per ship stop, and a boarding buddy already takes a
+  recording no other buddy holds, nearest first, else the nearest held
+  one (one more walker on it, as asked). No recording has been made yet
+  (`buddy_boarding` is empty). **Built 2026-10-30, the cleaning**:
+  `scripts/trim-buddy-boardings` shows each recording's cut and the steps
+  it keeps, for a person or an agent to read over, and with `--apply`
+  writes them (the old steps saved to `tmp/shared-memory/boarding-trim/`
+  first); the rule is `scripts/lib/boarding-trim.lua`: standing at the
+  start and the end cut, a stand of more than 1.5 s in the middle cut to
+  a quarter second, never a jump, a landing or the step onto or off the
+  deck; checked by `scripts/test-boarding-trim` (12 checks, a quick
+  test). Then `scripts/export-buddy-boardings` carries them into git.
