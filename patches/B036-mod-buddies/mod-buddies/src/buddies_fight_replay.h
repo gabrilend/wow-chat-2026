@@ -21,7 +21,7 @@
  *   C spell name readyIn                            one of its long abilities
  *   K spell secondsLeft stacks by n {aura amount misc period} x n
  *                                                   a mark, on the member or enemy before it
- *   N id health most rank level casting castLeft attacking
+ *   N id health most rank level casting castLeft attacking castDamage castOn
  *                                                   an enemy; its K and T lines follow it
  *   T who threat state taunt melee                  one entry of its threat list
  *   V shortfall left leftKnown                      the verdict the game worked out, to compare
@@ -82,7 +82,8 @@ namespace BuddyFightReplay
         }
         for (Enemy const& e : s.enemies)
         {
-            o << "N " << e.id << ' ' << e.health << ' ' << e.maxHealth << ' ' << int(e.rank) << ' ' << e.level << ' ' << e.casting << ' ' << e.castLeft << ' ' << e.attacking << '\n';
+            o << "N " << e.id << ' ' << e.health << ' ' << e.maxHealth << ' ' << int(e.rank) << ' ' << e.level << ' ' << e.casting << ' ' << e.castLeft << ' ' << e.attacking
+              << ' ' << e.castDamage << ' ' << e.castOn << '\n';
             marks(e.marks);
             for (ThreatEntry const& t : e.threat)
                 o << "T " << t.who << ' ' << t.entry.threat << ' ' << t.entry.state << ' ' << t.entry.taunt << ' ' << (t.entry.melee ? 1 : 0) << '\n';
@@ -162,7 +163,7 @@ namespace BuddyFightReplay
             else if (what == 'N')
             {
                 Enemy e; int rank = 0;
-                if (!(l >> e.id >> e.health >> e.maxHealth >> rank >> e.level >> e.casting >> e.castLeft >> e.attacking)) return fail("an enemy short of its fields");
+                if (!(l >> e.id >> e.health >> e.maxHealth >> rank >> e.level >> e.casting >> e.castLeft >> e.attacking >> e.castDamage >> e.castOn)) return fail("an enemy short of its fields");
                 e.rank = uint8_t(rank);
                 cur.snapshot.enemies.push_back(std::move(e));
                 lastMarks = &cur.snapshot.enemies.back().marks;

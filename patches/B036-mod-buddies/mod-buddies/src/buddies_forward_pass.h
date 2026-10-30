@@ -58,6 +58,7 @@ namespace BuddyForwardPass
     //               healing marks (they too ride on its curve)
     //   timeToDeath per member, holding what it holds now
     //   shortfall   the party's, in health: 0 is a curve toward victory
+    //   shortOf     per member: its own part of it
     //   strongest   the hardest-hitting enemy (an index; -1 none)
     //   tanks       which tank should hold it, and when it changes hands
     struct Verdict
@@ -65,7 +66,7 @@ namespace BuddyForwardPass
         BuddyPlan::Fight kind = BuddyPlan::Fight::Trash;
         double left = 0; bool leftKnown = false;
         std::vector<int> attention;
-        std::vector<double> hits, incoming, taken, healing, timeToDeath;
+        std::vector<double> hits, incoming, taken, healing, timeToDeath, shortOf;
         double shortfall = 0;
         int strongest = -1;
         BuddyCurve::SwapPlan tanks{ -1, -1.0, -1, 0.0 };
@@ -260,15 +261,31 @@ namespace BuddyForwardPass
                 {
                     BuddyMarks::Modifiers one = BuddyMarks::Of(x.effects);
                     holders[i].marks.push_back({ x.lasts, MarksTaken(one, physOn[i]), one.healed });
-                    holders[i].health = std::min(m.maxHealth, holders[i].health + one.absorb);    // a shield soaks as health would
+                    // a shield soaks as health would, on top of full health: it
+                    // raises the ceiling too (healing could then refill its part,
+                    // which a shield doesn't: a small kindness, noted)
+                    holders[i].health    += one.absorb;
+                    holders[i].maxHealth += one.absorb;
                 }
         }
+        // the enemies' casts in progress: each a lump of damage landing on
+        // its target when the cast ends, cut by the marks on it then
+        std::vector<std::vector<BuddyCurve::Lump>> lumpsOn(P);
+        for (Enemy const& e : s.enemies)
+        {
+            int on = e.castOn ? IndexOf(s, e.castOn) : -1;
+            if (on >= 0 && e.castDamage > 0.0) lumpsOn[on].push_back({ std::max(0.0, e.castLeft), 0, e.castDamage });
+        }
         v.shortfall = 0;
+        v.shortOf.assign(P, 0.0);
         for (size_t i = 0; i < P; ++i)
         {
             BuddyCurve::Fight f{ v.incoming[i], v.healing[i], v.left };
             v.timeToDeath[i] = BuddyCurve::TimeToDeath(holders[i], f);
-            if (v.incoming[i] > 0) v.shortfall += BuddyCurve::Shortfall({ holders[i] }, { { 0, v.left, 0, 0 } }, f);
+            std::vector<BuddyCurve::Stretch> held;
+            if (v.incoming[i] > 0) held.push_back({ 0, v.left, 0, 0 });
+            if (!held.empty() || !lumpsOn[i].empty()) v.shortOf[i] = BuddyCurve::Shortfall({ holders[i] }, held, f, lumpsOn[i]);
+            v.shortfall += v.shortOf[i];
         }
 
         // layer 5: which tank should hold the hardest hitter
@@ -436,8 +453,9 @@ namespace BuddyForwardPass
     // generated BUDDY_ABILITY_REACH, BUDDY_ABILITY_AURAS, BUDDY_THREAT_LEVERS
     // and the window buffs):
     //   a mark or heal that reaches only its caster on the buddy itself; one
-    //   that reaches another on whoever's curve ends soonest among those
-    //   attacked (no one attacked: the buddy itself);
+    //   that reaches another on whoever falls furthest short (no one short:
+    //   whoever's curve ends soonest among those attacked; no one attacked:
+    //   the buddy itself);
     //   a heal of -1, the caster's whole health (Lay on Hands);
     //   a taunt on the hardest hitter;
     //   an empowering buff (Bloodlust, Avenging Wrath) as a burst: its haste
@@ -452,9 +470,15 @@ namespace BuddyForwardPass
         if (b < 0 || static_cast<size_t>(b) >= s.party.size()) return out;
         Verdict base = Step(s, memory);
         Member const& me = s.party[b];
+        // whom an answer that reaches another goes to: whoever falls
+        // furthest short (a healer about to take a big cast counts, hit or
+        // not); no one short, whoever's curve ends soonest among those hit
         int worst = -1;
         for (size_t i = 0; i < s.party.size(); ++i)
-            if (base.incoming[i] > 0.0 && (worst < 0 || base.timeToDeath[i] < base.timeToDeath[worst])) worst = static_cast<int>(i);
+            if (base.shortOf[i] > 0.0 && (worst < 0 || base.shortOf[i] > base.shortOf[worst])) worst = static_cast<int>(i);
+        if (worst < 0)
+            for (size_t i = 0; i < s.party.size(); ++i)
+                if (base.incoming[i] > 0.0 && (worst < 0 || base.timeToDeath[i] < base.timeToDeath[worst])) worst = static_cast<int>(i);
         double partyDealt = 0.0;
         for (Member const& m : s.party) partyDealt += memory.DealtPerSecond(m.id, s.t);
         double myShare = partyDealt > 0.0 ? memory.DealtPerSecond(me.id, s.t) / partyDealt : 0.0;

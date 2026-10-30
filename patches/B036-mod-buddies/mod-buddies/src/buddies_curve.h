@@ -105,36 +105,60 @@ namespace BuddyCurve
     // Lost: alongside, what the party loses in all (each holder's health
     // at the start less at the end, healing counted): the damage the
     // healers' mana pays for (625h), compared when no one falls short.
+    // Lump: a hit landing at one moment on one character (`at` seconds from
+    // now, on `holder`): an enemy's cast in progress (625n). `amount` is
+    // before its marks: the marks on it when it lands multiply it (a Shield
+    // Wall raised in time softens it), whoever holds the attention.
+    struct Lump { double at; int holder; double amount; };
     struct Walk { double short_, lost; };
-    inline Walk Follow(std::vector<Holder> holders, std::vector<Stretch> const& stretches, Fight const& f);
-    inline double Shortfall(std::vector<Holder> holders, std::vector<Stretch> const& stretches, Fight const& f)
+    inline Walk Follow(std::vector<Holder> holders, std::vector<Stretch> const& stretches, Fight const& f, std::vector<Lump> const& lumps = {});
+    inline double Shortfall(std::vector<Holder> holders, std::vector<Stretch> const& stretches, Fight const& f, std::vector<Lump> const& lumps = {})
     {
-        return Follow(holders, stretches, f).short_;
+        return Follow(holders, stretches, f, lumps).short_;
     }
-    inline Walk Follow(std::vector<Holder> holders, std::vector<Stretch> const& stretches, Fight const& f)
+    inline Walk Follow(std::vector<Holder> holders, std::vector<Stretch> const& stretches, Fight const& f, std::vector<Lump> const& lumps)
     {
         double start = 0.0;
         for (Holder const& h : holders) start += h.health;
         std::vector<double> lowest(holders.size());
         for (size_t i = 0; i < holders.size(); ++i) lowest[i] = holders[i].health;
+        // the lumps land in time order: each before any stretch that starts
+        // at or after it, or at its moment inside its holder's own stretch
+        std::vector<bool> landed(lumps.size(), false);
+        auto land = [&](size_t k) {
+            Lump const& l = lumps[k];
+            landed[k] = true;
+            if (l.holder < 0 || static_cast<size_t>(l.holder) >= holders.size() || l.at >= f.left) return;
+            Holder& h = holders[l.holder];
+            double taken = 1.0;
+            for (Mark const& m : h.marks) if (l.at < m.until) taken *= m.taken;
+            h.health -= l.amount * taken;
+            lowest[l.holder] = std::min(lowest[l.holder], h.health);
+        };
         for (Stretch const& s : stretches)
         {
             double from = std::max(0.0, s.from), to = std::min(f.left, s.to);
+            for (size_t k = 0; k < lumps.size(); ++k) if (!landed[k] && lumps[k].at <= from) land(k);
             if (to <= from || s.holder < 0) continue;
             Holder& h = holders[s.holder];
-            // a stretch is cut where a mark wears off, so each piece loses
-            // at one steady rate
+            // a stretch is cut where a mark wears off, and where a lump lands
+            // on its holder, so each piece loses at one steady rate
             std::vector<double> edges = { from, to };
             for (Mark const& m : h.marks)
                 if (m.until > from && m.until < to) edges.push_back(m.until);
+            for (Lump const& l : lumps)
+                if (l.holder == s.holder && l.at > from && l.at < to) edges.push_back(l.at);
             std::sort(edges.begin(), edges.end());
             for (size_t e = 0; e + 1 < edges.size(); ++e)
             {
                 double loss = LossAt(h, edges[e], f.damage, f.healing, s.cut) * (edges[e + 1] - edges[e]);
                 h.health = std::min(h.maxHealth, h.health - loss);
                 lowest[s.holder] = std::min(lowest[s.holder], h.health);
+                for (size_t k = 0; k < lumps.size(); ++k)
+                    if (!landed[k] && lumps[k].holder == s.holder && lumps[k].at <= edges[e + 1]) land(k);
             }
         }
+        for (size_t k = 0; k < lumps.size(); ++k) if (!landed[k]) land(k);
         double sum = 0.0, end = 0.0;
         for (double l : lowest) sum += std::max(0.0, -l);
         for (Holder const& h : holders) end += h.health;

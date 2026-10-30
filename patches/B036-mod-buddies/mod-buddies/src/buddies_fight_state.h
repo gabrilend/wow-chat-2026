@@ -71,6 +71,9 @@ namespace BuddyFightState
 
     // Enemy: one of them. Rank: the game's creature rank (0 normal, 1 elite,
     // 2 rare elite, 3 boss, 4 rare); `attacking` whom it hits now (0 no one).
+    // A cast in progress: its spell, seconds left, the damage it will deal
+    // (its damage effects' values as the game works them out for this
+    // caster, before the target's marks) and on whom (0: no one known).
     struct Enemy
     {
         uint64_t id = 0;
@@ -78,6 +81,7 @@ namespace BuddyFightState
         uint8_t rank = 0;
         int level = 1;
         uint32_t casting = 0; double castLeft = 0;
+        double castDamage = 0; uint64_t castOn = 0;
         uint64_t attacking = 0;
         std::vector<Mark> marks;
         std::vector<ThreatEntry> threat;

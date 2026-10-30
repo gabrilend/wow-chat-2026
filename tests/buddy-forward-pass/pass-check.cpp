@@ -192,6 +192,22 @@ int main()
         check(!pw.count("arcane power") && near(pw["icy veins"], 1.0), "a mage who never learned Arcane Power doesn't hold Icy Veins for it");
     }
 
+    // an enemy's cast in progress: the boss 2 seconds from landing 20000
+    // on the priest (15000 health, no one hitting it), in the calm fight
+    // (the tank holding): the priest's own Pain Suppression and shield lean
+    // toward the priest now
+    {
+        Snapshot c = s;
+        c.enemies[0].casting = 99999; c.enemies[0].castLeft = 2; c.enemies[0].castDamage = 20000; c.enemies[0].castOn = HEALER;
+        Verdict vc = Step(c, calm);
+        check(near(vc.shortOf[2], 5000, 1e-6), "the priest, 15000 against a 20000 cast: 5000 short");
+        auto lc = Leans(c, calm, 2, PER_HOUR);
+        std::printf("   (the cast coming: pain suppression %.3f, power word: shield %.3f)\n", lc["pain suppression"], lc["power word: shield"]);
+        check(lc["pain suppression"] > 1.5 && lc["power word: shield"] > 1.0, "Pain Suppression (40% off) and the shield lean hard toward the priest about to be hit");
+        c.enemies[0].castOn = 0;
+        check(near(Step(c, calm).shortOf[2], 0), "a cast on no one known: nothing coming at the priest");
+    }
+
     std::printf("\n%d passed, %d failed\n", passed, failed);
     return failed == 0 ? 0 : 1;
 }

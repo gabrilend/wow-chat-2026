@@ -12,7 +12,7 @@
 - Priority: High
 - State: in progress (all six layers built and tested offline; the
   server's side, the draw's hookup included, written and waiting for the
-  compile; casts in progress and the group's gold per hour next)
+  compile)
 
 ## Origin
 
@@ -140,9 +140,8 @@ values already count their stacks), and the enemies attacking them (rank,
 level, target, marks, the sorted threat list with each entry's state,
 taunt and melee reach). The snapshot and a copy of the minute go to a
 pool of worker threads, which run the step and keep the party's latest
-verdict; the pool stops at shutdown. `.buddy fight` prints it. Not read
-yet: casts in progress, the group's gold per hour (gold counts nothing
-until it is).
+verdict; the pool stops at shutdown. `.buddy fight` prints it. Casts, cooldowns,
+windows and gold per hour are read too (below).
 
 **Layer 6, the answers, built 2026-10-30** (the arithmetic committed and
 tested; its server half waiting for the compile with the rest). For each
@@ -208,6 +207,24 @@ writes each party's fights into the logs folder (LogsDir) under
 step). Checked by `scripts/test-buddy-fight-replay` (6 checks): a made-up
 40-second fight written as played and replayed gives every verdict
 again, exactly; broken lines are named.
+
+**Casts in progress, 2026-10-30 (committed, offline; the server's reading
+waits for the compile):** each enemy's cast is a lump in the fight
+curves: its damage (its damage effects' values for that caster) landing
+on its target when the cast ends, cut by the marks on the target then,
+whoever holds the attention (`BuddyCurve::Lump`, landed in time order
+across the stretches). The verdict keeps each member's own shortfall, and
+an answer that reaches another goes to whoever falls furthest short (a
+healer about to take a big cast counts, hit or not). A shield's absorb
+sits above full health. Checked: the curve test 27 checks (a 9000 cast on
+an 8000 healer is 1000 short, none with a shield raised in time, and a
+shield gone a second before does nothing); the forward pass 37 (a 20000
+cast 2 seconds from the priest: Pain Suppression leans x2, Power Word:
+Shield x1.45). In the server: the current cast's time left, its target
+and its damage effects (a single target's; an area spell's other victims
+not yet counted). The group's gold per hour is measured too: its
+members' money together against when first seen fighting, after a
+minute.
 Nothing yet takes the snapshot, keeps the history, runs the layers on
 worker threads or hands their verdict to the draw. The page
 `docs/HTML/fight-forward-pass.html` (made by

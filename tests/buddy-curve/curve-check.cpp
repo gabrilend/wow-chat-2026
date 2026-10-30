@@ -93,6 +93,22 @@ int main()
           "healed half for 10 seconds (losing 350 a second), then whole (200): 5500 lost of 5000, 500 short");
     check(near(TimeToDeath(marked, { 500, 300, 20 }), 5000.0 / 350.0), "time to death counts the marks on now");
 
+    // lumps: a cast landing on someone at a moment
+    Holder healer{ 8000, 8000, 2.0 };
+    Fight quiet{ 500, 300, 30 };
+    check(near(Shortfall({ healer }, {}, quiet, { { 2, 0, 9000 } }), 1000), "a 9000 cast on an 8000 healer no one is hitting: 1000 short");
+    healer.marks = { { 12, 0.4, 1.0 } };
+    check(near(Shortfall({ healer }, {}, quiet, { { 2, 0, 9000 } }), 0), "a shield cutting it to 40% before it lands: none short");
+    healer.marks = { { 1, 0.4, 1.0 } };
+    check(near(Shortfall({ healer }, {}, quiet, { { 2, 0, 9000 } }), 1000), "a shield gone a second before it lands does nothing");
+    Holder held{ 2000, 8000, 1.0 };
+    check(near(Shortfall({ held }, { { 0, 30, 0, 0 } }, quiet, { { 5, 0, 1500 } }), 6000 + 1500 - 2000),
+          "on a tank losing 200 a second: the lump lands at its moment, 5500 short in all");
+    std::vector<Holder> two = { { 2000, 8000, 1.0 }, { 8000, 8000, 1.0 } };
+    check(near(Shortfall(two, { { 0, 10, 1, 0 }, { 10, 30, 0, 0 } }, quiet, { { 5, 0, 1500 } }), 3500),
+          "on the tank at 5 while the other holds until 10: it lands before the tank's own stretch (500 left, then 20 seconds at 200: 3500 short)");
+    check(near(Shortfall({ healer }, {}, quiet, { { 40, 0, 99999 } }), 0), "a cast landing after the fight's end counts nothing");
+
     std::printf("\n%d passed, %d failed\n", passed, failed);
     return failed == 0 ? 0 : 1;
 }
