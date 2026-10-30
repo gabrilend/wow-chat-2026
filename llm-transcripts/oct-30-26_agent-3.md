@@ -1,6 +1,6 @@
 # Conversation Summary: e143dbfe-ff43-48be-8bd4-4d54fd7a325d
 
-Generated on: 2026-10-30 09:03:31
+Generated on: 2026-10-30 09:12:10
 Models: claude-opus-5-5
 
 --------------------------------------------------------------------------------
@@ -126,6 +126,128 @@ right now. Talents change nothing about this.
 
 Answer as many or as few as you like, in any order. "Agree" on a number takes my
 suggestion.
+
+--------------------------------------------------------------------------------
+
+### User Request 2
+
+<pasted_content id="415d">
+> 9. How does a buddy know a boss's weak phase before the fight? From the boss
+> warnings' own
+>      tables, from what earlier fights taught, or both?
+>      My suggestion: both. The warning tables come first, and what fights taught adjusts the
+     timing.
+</pasted_content id="415d">
+
+
+we are going to build custom bosses eventually so we should build a system that
+learns. I think it's okay if the bots all learn at once, together, and remember.
+Then we can cache it and eventually turn off the system that learns for that
+specific boss once we really have it nailed down. The idea being that it would
+do so automatically.
+
+
+
+<pasted_content id="415d">
+> 10. Where do the "what each fight taught" logs live? In the RAM drive (cheap,
+> but lost at a
+>       reboot) or on disk in the project (kept, but growing)? And for how long?
+>       My suggestion: on disk, one small file per fight. RAM would lose the learning, which defeats
+      the point.
+</pasted_content id="415d">
+
+
+on disk, or maybe in RAM with a step after the boss that examines them, finds
+the crucial information datapoints, and clears most of the junk data like
+position updates and damage values and such.
+
+
+
+<pasted_content id="415d">
+> 6. A buddy's first weapon: random among what its class can use, or weighted by
+> its talent plan?
+>      My suggestion: weighted by the plan, so a sword-specialization warrior starts holding a
+     sword.
+</pasted_content id="415d">
+
+
+yeah weighted by the plan! Remember we need to calculate dynamically because
+sometimes we make buddies or stand-ins with odd levels like 56 and 23
+
+
+
+<pasted_content id="415d">
+> 8. Fast or slow weapons. One option is a small offline calculator. For each
+> talent shape and
+>      each speed band (fast, middling, slow), it adds up the expected damage of that shape's own
+>      abilities against a standard target, and writes a table of the preferred speed for each hand.
+>      Nothing would run in game. Is that worth building, or is damage per second plus the
+>      weapon-type preference enough?
+>      My suggestion: build it later. Damage per second is enough until buddies visibly hold the
+>      wrong speed.
+</pasted_content id="415d">
+
+
+how about instead we use the talent picking heuristic system that determines how
+often we use certain abilities, and cause certain abilities that contain certain
+texts like "weapon damage" or "weapon swing" or similar to favor faster or
+slower weapons depending on the type of ability it is and how often you use it
+and what it procs and... actually a lot of stuff, can you give me a short report
+on that?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 2
+
+> Writing your four answers into the issues, then the weapon-speed report.
+
+> Now the edits: question 9 (weak phase).
+
+> Question 10 (where the fight logs live):
+
+> Questions 6 and 8 in the gear issue:
+
+I've written your answers to questions 6, 8, 9 and 10 into the issues word for
+word, along with my reading of each. Nothing is committed yet. While they're
+uncommitted, those three issue files are marked as claimed by this session in
+the shared claims list, so other agents leave them alone.
+
+## Short report: which weapon speed each kind of ability wants
+
+I checked these rules in the server's own code. The good news is that your idea
+doesn't need tooltip words to work. Each ability's spell record already states
+how it uses the weapon, so the words can stay as a cross-check.
+
+| Kind of ability | Leans | Why |
+|---|---|---|
+| Plain auto-attack swings | neither | Damage per swing grows with speed, so damage per second stays the same either way. |
+| Abilities that add weapon damage (Mortal Strike, Sinister Strike, Backstab, Stormstrike, Obliterate) | slow | The weapon's own damage roll is bigger on a slow weapon with the same damage per second. Most of these count attack power at a fixed speed for the weapon type (dagger 1.7, other one-hander 2.4, two-hander 3.3, ranged 2.8), so only the weapon's roll favours slow. |
+| "On next swing" abilities (Heroic Strike, Cleave, Maul, Raptor Strike) | slow | A flat bonus is added to a swing that is already bigger. |
+| Fixed-chance effects on each hit (Deadly Poison, Combat Potency on the off hand) | fast | More hits mean more chances to trigger. |
+| Effects measured in "procs per minute" (Crusader-style enchants) | neither on swings, slow on abilities | The server's chance per hit is weapon speed × rate ÷ 60. On swings the speed cancels out. An instant ability is one hit at any speed, so a slow weapon's higher chance per hit is a pure gain. |
+| Extra attacks with a forced wait between them (Sword Specialization, Windfury Weapon) | slow | The wait limits how often they fire, so the size of each one decides, and size grows with speed. I haven't checked yet which of these actually have a wait. The proc table in the world database records it. |
+
+**How the system adds it up:** each ability's lean is multiplied by how often
+the buddy uses it (the talent weights). The sum gives each hand its own lean:
+fast, middling or slow. I wrote it in as a tie-breaker that comes after
+strength, so a buddy never passes up a clearly stronger weapon because of its
+speed.
+
+## New questions your answers raised
+
+- **Speed versus strength:** should a slightly weaker weapon at the right speed
+  ever beat a stronger one at the wrong speed? Or is speed only a tie-breaker?
+- **When a boss counts as learned:** what tells the system to stop learning a
+  boss? For example, the same weak phase in the last few fights, the timings
+  barely moving, or a set number of fights. And should you be able to switch a
+  boss's learning back on?
+- **Keeping the distilled fight notes:** forever (they're small), or only until
+  that boss's plan is cached? And should they go into git, so the learning
+  travels to other machines?
+
+Questions 1 to 5 and 7 from the first set are still open. The one that shapes
+the most is 4: should talents steer only your buddies, or every bot on the
+server?
 
 --------------------------------------------------------------------------------
 

@@ -6,7 +6,7 @@
 - Parent: 625 (buddies favour the abilities their talents touch)
 - Blocks: 625 step 3 (weights), 625b (gear by talents)
 - Priority: Medium
-- State: planned
+- State: in progress (the table built; set bonuses not yet)
 
 ## Origin
 
@@ -25,6 +25,19 @@ little unseen, like "all of your subtlety spells" or "weapon attacks" and
 similar."
 
 ## Current Behavior
+
+**The table is built (2026-10-30)**: `scripts/generate-talent-touches`
+reads Talent, TalentTab, Spell and SkillLineAbility from the client's
+files and writes `src/lua-basic/data/buddy-talent-touches.lua` (for each
+talent: the abilities it improves, how, and whether broadly) and the
+listing `docs/talent-touches.md`, to check by eye. 829 talents; 484
+improve at least one ability (2,843 links); a talent that is itself an
+ability (Insect Swarm, Swiftmend) is marked as such. Checked by
+`scripts/test-talent-touches` (a quick test): Improved Rejuvenation,
+Starlight Wrath (both Wrath and Starfire), Improved Heroic Strike,
+Insect Swarm, and Naturalist's physical damage reaching Shred but not
+Cat Form. Set bonuses (ItemSet.dbc) are not read yet. Nothing reads the
+table yet: the weights (625 step 3) come next.
 
 Nothing built (625 is an idea). Bots choose abilities by their strategy's
 fixed priorities; talents taken don't move them, and item set bonuses

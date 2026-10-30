@@ -1,0 +1,45 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-talent-touches
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      which abilities each talent improves, read from the game's own data: known talents touch exactly the abilities they should, and the written table is current
+# quick-test: yes
+# ==== end of header ====
+# test-talent-touches - checks scripts/generate-talent-touches (issue 625a)
+# against talents whose effects are known, and that the committed table
+# matches what the generator writes from the client's tables now.
+#
+# For a general audience: the table says, for every talent, which of the
+# class's abilities it improves. A few talents are checked by hand: Improved
+# Rejuvenation must improve Rejuvenation only; Starlight Wrath both Wrath
+# and Starfire (its icon shows only Wrath); Improved Heroic Strike Heroic
+# Strike's cost; Insect Swarm is an ability itself; Naturalist's physical
+# damage reaches Shred but not Cat Form.
+
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+OUT="${DIR}/tmp/shared-memory/test-talent-touches"
+mkdir -p "${OUT}"
+"${DIR}/scripts/generate-talent-touches" "${DIR}" --out "${OUT}/touches.lua" --listing "${OUT}/touches.md" > /dev/null || { echo "FAILED: the generator stopped"; exit 1; }
+
+fail=0
+check() { if grep -qF -- "$2" "${OUT}/touches.md"; then echo "ok: $1"; else echo "FAILED: $1 (expected: $2)"; fail=1; fi; }
+refuse() { if grep -qF -- "$2" "${OUT}/touches.md"; then echo "FAILED: $1 (found: $2)"; fail=1; else echo "ok: $1"; fi; }
+check  "Improved Rejuvenation improves Rejuvenation over time" "**Improved Rejuvenation** (row 4): Rejuvenation (over time)"
+check  "Starlight Wrath shortens both Wrath and Starfire"      "**Starlight Wrath** (row 1): Starfire (cast time); Wrath (cast time)"
+check  "Improved Heroic Strike lowers Heroic Strike's cost"     "**Improved Heroic Strike** (row 1): Heroic Strike (cost)"
+check  "Insect Swarm is an ability learned through the tree"    "**Insect Swarm** (row 5): an ability itself"
+check  "Naturalist's physical damage reaches Shred"             "Shred (damage; broad: every Physical ability)"
+refuse "Naturalist's physical damage skips Cat Form"            "Cat Form (damage"
+
+# the committed table must be what the generator writes now
+if cmp -s "${OUT}/touches.lua" "${DIR}/src/lua-basic/data/buddy-talent-touches.lua"; then
+    echo "ok: the committed table is current"
+else
+    echo "FAILED: src/lua-basic/data/buddy-talent-touches.lua is stale (run scripts/generate-talent-touches)"; fail=1
+fi
+exit ${fail}
+# ==== footer of test-talent-touches ====
+# lines:      45
+# ==== end of footer ====

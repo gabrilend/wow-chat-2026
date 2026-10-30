@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-30 09:03:21
+Generated on: 2026-10-30 09:06:06
 Models: claude-opus-5-5
 
 ## Contents
@@ -13605,6 +13605,56 @@ weight.
 
 Is that what concerned you, or was it something else about that part of the
 page?
+
+--------------------------------------------------------------------------------
+
+### User Request 133
+
+basically we want to take the embedding of the talent icon, and see what it most
+closely matches to. We shouldn't have a shortcut built in, it should arise
+naturally from our other systems.
+
+> Why that's fine: the icon isn't the source of truth. The game itself records
+> exactly
+> which spells each talent changes: a hidden set of flags, the same ones the
+> server uses to
+>   apply the talent.
+
+oh, we can probably just use this instead of the embedding system. More
+reliable, and we still get character from it. Maybe not as much character, but
+we can expand it later if needed.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 133
+
+> Decided: the game's own flags become the source, and the icon shortcut and the
+> word and embedding readings come out of the plan, kept as a possible later
+> expansion. Updating the talent plan.
+
+*[commit] 8b0603f8a in wow-chat-2026 - *
+
+I've updated the talents plan to match your decision and committed it
+(8b0603f8a). It now reads which abilities each talent improves only from the
+game's own tables, two ways:
+
+1. **The hidden flags** the server itself uses to apply talents. These say
+   exactly which spells a talent changes.
+2. **The broad targets**: talents aimed at a whole school of magic or a weapon
+   kind ("all your Shadow spells", "weapon attacks"), expanded to every ability
+   of the class that matches.
+
+The icon shortcut isn't built, and no rule matches a talent to an ability by a
+shared icon number. The icon and tooltip embeddings are recorded in the plan as
+a possible later expansion, if the game's data alone leaves the buddies feeling
+too plain.
+
+The talents page parked in `dormant/` still describes the old four-way plan;
+I've left it as it was.
+
+This table is the next thing in the order you approved. Should I build it now?
+It would be a generator that reads the game's spell and talent tables and lists,
+for every class, each talent and the abilities it improves.
 
 --------------------------------------------------------------------------------
 
