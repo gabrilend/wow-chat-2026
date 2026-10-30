@@ -39,6 +39,7 @@ uncommitted until the owner's compile builds it.
 | 921b | the wandering storm: `buddies_weather_storm.h`, the valley's cells (`scripts/generate-av-valley`, `buddies_av_valley_data.h`), the day-long test (committed); the storm in `buddies_weather.cpp` (waits); the weather page `docs/HTML/alterac-weather.html` by `scripts/generate-weather-page` (committed; picture 093) | the parent's `Buddies.AlteracWeather` | none (921b's size and count stay questions) | walk yes, server waits | the storm parts of `buddies_weather.cpp`, the storm header, valley data and generator, the page |
 | 617s5 | sidesteps round the target after an instant spell: `buddies_sidestep.h`, `tests/buddy-sidestep/`, `scripts/test-buddy-sidestep` (committed); `buddies_sidestep.cpp` and its registration (wait) | `Buddies.Sidestep` 0, 1 or 2 | **1** a share of the circle (melee 20-35%, ranged 10-20%) or **2** by distance (2-3 yards at 40 yards, less closer) | arithmetic yes, server waits | `buddies_sidestep*`, the registration line |
 | 617a7 | a game master resets a buddy, which comes back as a class its owner picks at Sargobras, with the same name, gender and race and its belongings by mail: the choice library's kept race, both copies, and its checks (committed); `buddies_reset.cpp`, the maker's kept name and gender, `BuddyFinishReset`, `BuddyMailOldGear` shared, Sargobras's menu, the roster's three columns, the command's entry (wait) | `.buddy reset <name>` (game masters) | none | library yes, the rest waits | `buddies_reset.cpp`, the maker's two arguments, the three columns, Sargobras's `owed_race` |
+| 617r | `.elite <partner>` removed: targets are geared only through `.gearset` (the owner, 2026-10-30); the Lua command no longer answers the short form, its test runs `.gearset elite buddies growth` (committed); the entry's removal from `config/custom-gm-commands.lua` and the regenerated reference rides with those files (waits, below) | (a removal) | none | Lua and test yes, reference waits | nothing: a removal |
 
 ## Choices waiting for the owner
 
@@ -72,7 +73,7 @@ issues.
 | `buddies_sidestep.cpp` | sidesteps (617s5) |
 | `buddies_reset.cpp`, `buddies_create.cpp`, `buddies_stage.cpp`, `patches/E066-sargobras/sargobras.lua`, `patches/E042-basic-buddy-roster/04-buddy-roster.apply.sql` | resetting a buddy (617a7) |
 | `buddies_loader.cpp` | registers the new scripts |
-| `config/custom-gm-commands.lua`, `docs/gm-commands.txt`, `docs/HTML/gm-commands.html`, `sql/*/34-custom-command-help.*.sql` | `.buddy path`, `.buddy army`, `.buddy wider`, `.buddy closer`, `.buddy weather` described |
+| `config/custom-gm-commands.lua`, `docs/gm-commands.txt`, `docs/HTML/gm-commands.html`, `sql/*/34-custom-command-help.*.sql` | `.buddy path`, `.buddy army`, `.buddy wider`, `.buddy closer`, `.buddy weather` described; `.elite` taken out |
 
 ## Not built, and why
 

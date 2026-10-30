@@ -7,7 +7,6 @@
 --
 --     .gearset <profile> <character>           that character
 --     .gearset <profile> buddies <partner>     every buddy of that partner
---     .elite <partner>                         short for: .gearset elite buddies <partner>
 --
 -- (or the same without the dot on the server console). For each one in the
 -- world: what it wears in each of the record's slots is destroyed and the
@@ -20,7 +19,10 @@
 -- This was the elite-only ".elite" command (elite-outfits.lua, 2026-10-04,
 -- first used to dress Growth's party); it became the general gearset
 -- command on 2026-10-05 (owner: "able to be referenced by certain chat
--- commands. The 'elite' group is just the first profile we made").
+-- commands. The 'elite' group is just the first profile we made"). Its
+-- shortcut, ".elite <partner>", was removed on 2026-10-30 (the owner: "We
+-- should only gear targets through the .gearset command"): ".gearset elite
+-- buddies <partner>" does the same.
 -- Checked offline by scripts/test-gearsets.
 --------------------------------------------------------------------------------
 
@@ -197,15 +199,9 @@ end
 -- (matched below), so the query can't be bent; the game keeps names as
 -- it shows them: capital first.
 local function on_command(event, player, command, handler)
-    local name, buddies, who
-    local partner = command:match("^elite%s+(%a+)%s*$")
-    if partner then
-        name, buddies, who = "elite", true, partner
-    else
-        name, who = command:match("^gearset%s+([%w%-]+)%s+buddies%s+(%a+)%s*$")
-        buddies = name ~= nil
-        if not name then name, who = command:match("^gearset%s+([%w%-]+)%s+(%a+)%s*$") end
-    end
+    local name, who = command:match("^gearset%s+([%w%-]+)%s+buddies%s+(%a+)%s*$")
+    local buddies = name ~= nil
+    if not name then name, who = command:match("^gearset%s+([%w%-]+)%s+(%a+)%s*$") end
     if not name then return end
     if player and player:GetGMRank() < GM_RANK then return end
     local say = player and function(text) player:SendBroadcastMessage(text) end

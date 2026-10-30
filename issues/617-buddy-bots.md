@@ -239,7 +239,7 @@ the gap is work to do, never a reason to steer round it.
 | 617o | buddy-navmesh-pathfinding | 617e | Plan and walk on the navigation mesh: no straight-line walks through walls, rooms measured on the mesh, baked distance maps for fixed goals, steering toward moving targets |
 | 617p | npc-awareness | 617e4, 617n | Buddies notice friendly NPCs within 100 yards, read what each offers from the creature itself, and use it (train, sell, repair, talk), taking turns at standing spots; works with NPCs spawned in game |
 | 617q | owner-renamed-partner | None | The word "owner" (a buddy's player) renamed "partner" in code, tables, logs, issues and docs |
-| 617r | elite-outfits | 617g | Elites: full Tier 1 and Molten Core or dungeon outfits per buddy type (race, class, role), the bannermen; ".elite <partner>" dresses a partner's buddies; Growth's party built and checked, not yet worn in game |
+| 617r | elite-outfits | 617g | Elites: full Tier 1 and Molten Core or dungeon outfits per buddy type (race, class, role), the bannermen; ".gearset elite buddies <partner>" dresses a partner's buddies (the ".elite" short form removed 2026-10-30); Growth's party built and checked, not yet worn in game |
 | 617s | compass-formation | 617o | In follow mode buddies hold a ring round their owner at their own compass places, the tank in front; ring radius commands; sidesteps in a fight; one buddy sent to a clicked spot; six sub-issues, planned |
 | 617t | dungeon-stand-ins | 617c3 | Fewer than four buddies: stand-in companions fill the dungeon group, exactly one tank and one healer, white gear in every slot (PvP jewellery where no white exists), sockets by class style; planned |
 | 617o6 | layered-ways-drops-flight-water-and-gaps | 617o3, 617o5 | Ways baked in layers and searched together: one-way drops, flight anywhere in arcs, swimming, and gaps smoothed or orbited; planned |
@@ -596,6 +596,11 @@ written back into its sub-issue. Things to check in game are listed after.
     same way that any other buddy. This whisper shortcut is just a way to
     interact with him from afar, or in an automated fashion." The whisper
     is his menus from afar, with the same rules.
+    **Answered 2026-10-30 (the rest):** his own account, the unseen guild
+    master's (630); one character with the faction rule patched for him;
+    a single Sargobras answers, the lowest level tier first; buddy names
+    are never asked for, drawn again until valid. Word for word in 617b2.
+    Question 32 is answered.
 33. **"Owner" or "partner"** (617q): "partner" or "player-partner" in
     names?
     **Answered 2026-10-28:** "player-partner". Question 33 is answered.

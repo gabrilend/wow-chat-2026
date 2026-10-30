@@ -128,12 +128,21 @@ above level 1: "Everything up to it's level." On quest and pet spells: "we
 can manually add the quest-reward spells and pet spells and such to the
 list of spells we teach to each class."
 
-1. **Town lessons, cheapest first.** The train errand gathers every lesson
-   the trainer can teach the buddy now, sorts them by cost (cheapest
-   first; equal costs by required level, then by the trainer's order, so a
-   rank is still learned before the rank that needs it), and buys them in
-   that order. The first lesson it can't afford ends the errand: it is
-   marked done and the visit moves to its next errand (debug log only).
+1. **Town lessons: all of them when it can pay, the best-suited first
+   when it can't** (changed 2026-10-30; the owner, word for word: "Can
+   we also write in that if they need to choose abilities to train
+   (because they don't have enough coin, they can't get all of them or
+   something) then they'll pick ones that their stat weights most align
+   with?"). The train errand gathers every lesson the trainer can teach
+   the buddy now. When its purse covers them all, it buys them all.
+   When it can't, it buys in order of how well each ability suits it:
+   how closely the stats the ability scales with match the buddy's own
+   stat weights (which come from the abilities it has learned and the
+   talents it took, 625), skipping what it can't afford and going on
+   down the list while anything left is affordable. A rank is still
+   learned before the rank that needs it. Lessons left unbought are
+   left for the next visit (debug log only). Before 2026-10-30 the
+   order was cheapest first, stopping at the first it couldn't afford.
 2. **Quest and pet spells at the trainer.** A per-class list of the class
    spells that quests reward, with the level each becomes available, is
    taught at the same class trainer visit, after the paid lessons, once the
@@ -159,7 +168,7 @@ list of spells we teach to each class."
    the level, and from the town's trainer and weapon master on visits.
    Found 2026-10-04: Growth's level-60 buddies, made before item 3 runs,
    had none of them, and the game refused their Tier 1 armour and their
-   bows and guns. `.elite` (617r) now teaches a missing proficiency before
+   bows and guns. `.gearset` (617r; then `.elite`, removed 2026-10-30) now teaches a missing proficiency before
    it equips an item and says so in its report; that is a mend, and this
    item is the fix.
 
@@ -198,6 +207,13 @@ list of spells we teach to each class."
    spell row and a valid trainer per race.
 
 ## Open Questions
+
+Gathered 2026-10-28 into 617's own list (question 29), merged with the
+same questions from other sub-issues; answers are written back here.
+
+- **Answered 2026-10-28** (617's question 29): at a weapon master a buddy
+  learns every weapon kind its class can use, as far as its purse allows
+  (replacing "up to its owner's count").
 
 - Weapon masters in the capitals (treated as any trainer, owner
   2026-10-15): does a buddy buy every weapon kind it can afford, or stop

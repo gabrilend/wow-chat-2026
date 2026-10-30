@@ -27,6 +27,16 @@
 -- Usage: scripts/test-gm-command-reference [PROJECT_DIR]
 --------------------------------------------------------------------------------
 
+-- --help prints the header above; checked first, or it would be read as the
+-- project folder (it was, until 2026-10-30)
+if arg[1] == "--help" or arg[1] == "-h" then
+    for line in io.lines(arg[0]) do
+        if not line:match("^%-%-") and not line:match("^#!") then break end
+        if not line:match("^%-%-%-%-%-") and not line:match("^#!") and not line:match("^%-%- ====") then print((line:gsub("^%-%- ?", ""))) end
+    end
+    os.exit(0)
+end
+
 local DIR = "/mnt/kaun/wow-chat-2026"
 if arg[1] and arg[1] ~= "" then DIR = arg[1] end
 package.path = DIR .. "/scripts/lib/?.lua;" .. package.path
@@ -127,5 +137,5 @@ print("")
 print(fails == 0 and ("All " .. checks .. " checks passed") or (fails .. " of " .. checks .. " checks failed"))
 os.exit(fails == 0 and 0 or 1)
 -- ==== footer of test-gm-command-reference ====
--- lines:      131
+-- lines:      141
 -- ==== end of footer ====
