@@ -13,6 +13,13 @@ See 617s (the owner's words, 2026-10-04, quoted in full there).
 
 ## Current Behavior
 
+**Built in the close follow's ring, 2026-10-30 (617s2; the core
+committed, the server side waits for the compile):** in the ring, a
+follower the bot module counts as a tank takes the front place, on the
+leader's facing; the rest share the other places by nearness
+(`BuddyFollow::AssignRing`, checked in `tests/buddy-follow-core`). Not in
+the arc follow (travelling), where the arc trails behind.
+
 Not built.
 
 ## Intended Behavior

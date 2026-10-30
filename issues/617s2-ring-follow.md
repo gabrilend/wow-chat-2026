@@ -17,6 +17,27 @@ Not built. Following is the bot module's own.
 
 ## Intended Behavior
 
+**Since 2026-10-28** (the owner, in 617's list, question 2: "When moving
+distances, we should do an "arc follow" which means they trail behind you.
+When doing a "close follow" in combat or when specified, they circle
+around you."): travelling is the arc follow (617e13, built); the ring is
+the close follow, used when asked ("circle me", "close follow") until a
+"follow me" or "go away", and, behind a switch, while the leader is in
+combat. Built 2026-10-30 as:
+- the ring's places: one per follower, evenly round the leader at
+  `ringYards` (4), the first on the leader's facing; a tank among the
+  followers takes that front place (617s3), the rest the places nearest
+  them (the arc follow's sharing);
+- a follower in the ring walks to its place when more than a yard and a
+  half off it, and otherwise faces the leader;
+- `Buddies.CloseFollow.InCombat`: 0 (the default) the ring only when
+  asked; 1 also while the leader is in combat (the two readings of "in
+  combat or when specified", for the owner to choose).
+
+The plan below, from 2026-10-04, is kept for what it says of the
+waypoints and the mesh, which the ring follows.
+
+
 Out of combat, in follow mode (the bot module's "follow" strategy on),
 each buddy steers toward its slot instead of the bot module's follow
 point. A buddy's waypoint moves only when the buddy reaches it (owner,

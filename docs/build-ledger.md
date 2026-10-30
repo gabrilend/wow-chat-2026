@@ -33,6 +33,7 @@ uncommitted until the owner's compile builds it.
 |-------|------|--------|--------|-----------|-------|
 | 625a | which abilities each talent improves, from the game's own data: `scripts/generate-talent-touches`, `src/lua-basic/data/buddy-talent-touches.lua`, `docs/talent-touches.md`, the module's `buddies_talent_touches_data.h`; `scripts/test-talent-touches` | (data) | none | yes | the generator, its outputs and test |
 | 625 | the talent weights and the weighted draw among a concern's answers: `buddies_talent_draw.h`, `tests/buddy-talent-draw/`, `scripts/test-buddy-talent-draw` (committed); `buddies_talents.cpp/.h` and their registration in `buddies_roam_strategy.cpp`, `buddies_loader.cpp` (waits) | `Buddies.TalentWeights` 0 off, 1 or 2 | **1** a fixed raise per talent point, or **2** the talent's own percent; and `Buddies.TalentWeights.Broad` **100** or **50** (a broad talent's share) | core yes, server waits | `buddies_talents.*`, the two registration lines, the draw header and its test |
+| 617s2, 617s3 | the close follow: a ring round the leader at 4 yards, a tank at the front, the rest sharing places by nearness; "circle me" / "close follow" start it, "follow me" / "go away" end it: `RingPlaces`, `AssignRing` and the order words in `roam/buddy_follow_core.h`, checks in `tests/buddy-follow-core` (committed); the step and orders in `buddies_follow.cpp/.h`, `buddies_orders.cpp` (waits) | the order words; `Buddies.CloseFollow.InCombat` 0 or 1 | **0** the ring only when asked, or **1** also while the leader is in combat | core yes, server waits | the ring block in the follow step, the two order words, `RingPlaces` and `AssignRing` |
 
 ## Choices waiting for the owner
 
@@ -43,6 +44,9 @@ uncommitted until the owner's compile builds it.
 2. **Broad talents** (625a, question 1): `Buddies.TalentWeights.Broad =
    100` (a talent for "all your Shadow spells" counts on each in full) or
    `= 50` (half).
+3. **The close follow in combat** (617s2, the two readings of "in combat
+   or when specified"): `Buddies.CloseFollow.InCombat = 0` (the ring only
+   when asked) or `= 1` (also while the leader fights).
 
 ## Not built, and why
 
@@ -50,3 +54,5 @@ Kept as each candidate is looked at.
 
 | Issue | Why not (yet) |
 |-------|---------------|
+| 617s1 | compass directions per roster slot: the ring shares places by nearness instead; build if the owner wants each buddy to keep its own compass point |
+| 625c, 625d | every tree's list in the trees' shares, and the moment's economy: large, next after the talent draw is seen in game |

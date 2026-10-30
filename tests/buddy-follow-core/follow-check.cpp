@@ -6,6 +6,7 @@
 #include "buddy_follow_core.h"
 #include <algorithm>
 #include <cstdio>
+#include <set>
 #include <numeric>
 
 using namespace BuddyFollow;
@@ -205,6 +206,28 @@ int main()
         check(ReadOrder("GO AWAY!", name, hard) == Order::GoAway && hard, "\"go away!\": and not again until the speaker logs out");
         check(ReadOrder("shoo!", name, hard) == Order::GoAway && !hard, "\"shoo\" sends them off, never the hard way");
         check(ReadOrder("follow the road home", name, hard) == Order::None, "ordinary chat with \"follow\" in it is no order");
+        check(ReadOrder("Circle me!", name, hard) == Order::Circle, "\"circle me\": the close follow (617s2)");
+        check(ReadOrder("close follow please", name, hard) == Order::Circle, "\"close follow\": the close follow too");
+    }
+    // }}}
+
+    // {{{ the ring (617s2, 617s3)
+    {
+        Point owner{ 100.0f, 100.0f, 0.0f };
+        std::vector<Place> ring = RingPlaces(owner, 0.0f, 4, 4.0f);
+        bool even = ring.size() == 4;
+        for (Place const& p : ring)
+            even = even && std::fabs(std::sqrt((p.at.x - 100.0f) * (p.at.x - 100.0f) + (p.at.y - 100.0f) * (p.at.y - 100.0f)) - 4.0f) < 0.01f;
+        check(even, "the ring: four places, each four yards from the owner");
+        check(std::fabs(ring[0].at.x - 104.0f) < 0.01f && std::fabs(ring[0].at.y - 100.0f) < 0.01f, "the first place is on the owner's facing (the front)");
+        // four followers all standing behind the owner; the third is the tank
+        std::vector<Point> at = { {95, 99, 0}, {95, 101, 0}, {94, 100, 0}, {96, 100, 0} };
+        std::vector<int> spot = AssignRing(at, ring, 2);
+        check(spot[2] == 0, "the tank takes the front place, wherever it stands");
+        std::set<int> used(spot.begin(), spot.end());
+        check(used.size() == 4 && !used.count(-1), "every follower gets its own place");
+        std::vector<int> noTank = AssignRing(at, ring, -1);
+        check(std::set<int>(noTank.begin(), noTank.end()).size() == 4, "with no tank the places are shared all the same");
     }
     // }}}
 

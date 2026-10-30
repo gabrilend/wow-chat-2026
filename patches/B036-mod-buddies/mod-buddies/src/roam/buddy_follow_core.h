@@ -59,6 +59,8 @@ struct Settings
     float    side         = 1.0f;    // yards to the side at the most ("within 1 yard of the trail")
     float    nearBack     = 1.0f;    // yards behind for the outermost places ("1-2 yards behind")
     float    farBack      = 2.0f;    // yards behind for a place on the trail itself
+    float    ringYards    = 4.0f;    // the close follow's ring round the owner (ours, 617s2)
+    float    ringSlack    = 1.5f;    // yards off its ring place before a follower walks back to it
     float    restYards    = 10.0f;   // following starts again only past this ("farther than 10 yards away")
     float    arriveYards  = 1.0f;    // at its place: following ends, rest begins (ours: the trail's own width)
     double   mingleChance = 0.10;    // at rest, the chance each look to mingle ("a 10% chance")
@@ -332,6 +334,49 @@ inline Decision Decide(State& st, Point const& me, Point const& owner, Place con
 }
 // }}}
 
+// {{{ RingPlaces
+// The close follow (617s2, the owner 2026-10-28: "When doing a "close
+// follow" in combat or when specified, they circle around you."): n
+// places evenly round the owner at `radius` yards, the first on the
+// owner's facing (the front, 617s3), each facing the owner.
+inline std::vector<Place> RingPlaces(Point const& owner, float ownerFacing, int n, float radius)
+{
+    std::vector<Place> out;
+    for (int i = 0; i < n; ++i)
+    {
+        float a = ownerFacing + 6.2831853f * float(i) / float(std::max(n, 1));
+        Place p;
+        p.at     = { owner.x + std::cos(a) * radius, owner.y + std::sin(a) * radius, owner.z };
+        p.facing = std::atan2(owner.y - p.at.y, owner.x - p.at.x);
+        out.push_back(p);
+    }
+    return out;
+}
+// }}}
+
+// {{{ AssignRing
+// The ring's sharing: a tank (its index among the followers, -1 for none)
+// takes the front place, 0 (617s3: "the tank walks ahead into the 110%
+// aggro reach first"); the rest share the other places as the arc follow
+// does (Assign: least total distance).
+inline std::vector<int> AssignRing(std::vector<Point> const& followers, std::vector<Place> const& places, int tank)
+{
+    if (tank < 0 || tank >= int(followers.size()) || places.empty())
+        return Assign(followers, places);
+    std::vector<Point> rest;
+    std::vector<int> restIndex;
+    for (int i = 0; i < int(followers.size()); ++i)
+        if (i != tank) { rest.push_back(followers[size_t(i)]); restIndex.push_back(i); }
+    std::vector<Place> others(places.begin() + 1, places.end());
+    std::vector<int> sub = Assign(rest, others);
+    std::vector<int> out(followers.size(), -1);
+    out[size_t(tank)] = 0;
+    for (size_t k = 0; k < sub.size(); ++k)
+        out[size_t(restIndex[k])] = sub[k] < 0 ? -1 : sub[k] + 1;
+    return out;
+}
+// }}}
+
 // {{{ ReadOrder
 // The words of a spoken follow order (617y, the owner 2026-10-23: "we have
 // to say "follow me" not just follow. We should be able to say "follow
@@ -341,8 +386,10 @@ inline Decision Decide(State& st, Point const& me, Point const& owner, Place con
 //   "follow me"         - Follow, name empty
 //   "follow <name>"     - Follow, name the lower-cased name
 //   "go away", "shoo"   - GoAway; hard when "go away" ends in "!"
+//   "circle me", "close follow" - Circle: follow the speaker in the ring
+//                         (617s2, 2026-10-30)
 //   anything else       - None (a bare "follow" among them)
-enum class Order : uint8_t { None, Follow, GoAway };
+enum class Order : uint8_t { None, Follow, GoAway, Circle };
 inline Order ReadOrder(std::string const& raw, std::string& name, bool& hard)
 {
     std::string msg = raw;
@@ -377,6 +424,8 @@ inline Order ReadOrder(std::string const& raw, std::string& name, bool& hard)
     }
     if (words.size() == 1 && words[0] == "shoo")
         return Order::GoAway;
+    if (words.size() == 2 && ((words[0] == "circle" && words[1] == "me") || (words[0] == "close" && words[1] == "follow")))
+        return Order::Circle;
     return Order::None;
 }
 // }}}
