@@ -317,3 +317,15 @@ buddies waiting to trade, designed 2026-10-15, are dropped):
      sets the buddy's level (a re-made tier, a rebirth) or its class
      changes; ordinary levelling keeps it.
    - stand-ins: "yes": never scared, never refusing a trip.
+   **The record's core built 2026-10-30** (`roam/buddy_solo_core.h`, plain
+   arithmetic, checked by `scripts/test-buddy-solo-record`, 18 checks):
+   the kinds come from the game's own creature classes (warrior, paladin,
+   rogue, mage: `unit_class`), the record per kind, replaced only by a fight
+   more in every one of its six numbers, judging by the record times the
+   allies near, forgetting all at once, stand-ins keeping none and always
+   brave. Not wired in yet: noting a solo kill (no help at all) and its
+   numbers, keeping the records on the buddy across logins and storage,
+   forgetting them when Sargobras sets the level, and asking it before a
+   selling trip; the other session's fight picture (`buddies_fight_state.h`,
+   damage taken and dealt per character) is where the fight's numbers
+   will come from.
