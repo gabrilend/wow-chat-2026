@@ -39,7 +39,11 @@ The owner, 2026-10-14:
   whisperer with the lowest tier answers aloud (a valley Sargobras counts
   lowest), or the character answers by whisper when none is present;
 - the faction rule: source patch B063 lets a whisper to Sargobras through
-  the cross-faction test (basic), every other one still refused.
+  the cross-faction test (basic), every other one still refused;
+- names (step 4): a buddy's name is drawn from every unused name of its
+  race and gender in a random order until one passes the server's rules
+  (`PickName`, `buddies_create.cpp`), no longer giving up after five
+  draws; waiting for the compile.
 
 **Not built (step 1): the character itself.** Nothing makes or logs in a
 character named Sargobras yet, so a whisper still finds nobody and the

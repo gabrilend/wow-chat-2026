@@ -92,6 +92,22 @@ edge are known from the start. Each bot:
 The crowd is remade each second. The paint is drawn (walked ground gold,
 learned walls orange), and routes as the curves walked.
 
+**The 2026-10-30 levers, built in the sandbox** (`scripts/templates/paint-paths.js`;
+the module's own map in `buddies_path.cpp` not yet, another session's file):
+- the unknown premium is 0 by default, kept as a lever (`UNKNOWN`);
+- **clutter**: the share of wall and steep cells within 6 yards of a point
+  (`CLUTTER_R`), 0 in the open, 1 boxed in;
+- the space wanted from walls shrinks with the clutter where the bot stands
+  when it plans, to 40% of the 4 yards fully boxed in (`CLUTTER_KEEP`), and
+  grows back as later plans are made in the open;
+- the followed point runs 6 yards ahead in the open and comes nearer with
+  clutter, to 2.5 yards boxed in (`LOOK_MIN`);
+- checked by `scripts/test-paint-paths` (14 checks, two new for clutter);
+  the thin-wall check now holds these levers at their old values, so it
+  still measures only what the goal's nearness relaxes (with the new
+  defaults the two runs came within 0.4 yards: 0.9 against 1.3);
+- the sandbox page rebuilt; not yet watched on a run or photographed.
+
 The six ways on one run (the Barrens' Witchwing Slayer area, 36 bots,
 wedges, 120 seconds; pictures 067-073; turning = degrees turned a yard
 walked, measured for every way since this issue):

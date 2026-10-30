@@ -45,13 +45,25 @@ const PaintPaths = (function () {
                         // the detour, and bots grazed it even with full space wanted)
     RELAX:     10.0,    // within this many yards (straight) of its goal, the wanted space fades
     NEAR:      24.0,    // a goal this near the bot (straight, even across a wall) relaxes the whole route
-    UNKNOWN:    0.15,   // unknown ground's premium over painted ground
+    UNKNOWN:    0.0,    // unknown ground's premium over painted ground: a lever, off since 2026-10-30
+                        // (the owner: "this would make sense if we were trying to find the fastest way
+                        // to walk somewhere, but it doesn't look very natural"; 0.15 before)
+    CLUTTER_R:  6.0,    // yards round a point in which its clutter is counted: the share of the
+                        // cells there that are wall or steep ground (0 open, 1 boxed in)
+    CLUTTER_KEEP: 0.4,  // the share of WANT kept at full clutter: the space wanted from walls
+                        // shrinks in cluttered ground and grows back in the open (the owner,
+                        // 2026-10-30: "on un-even terrain (lots of obstacles) the personal space
+                        // bubble is reduced until they navigate through that to a more open area")
     CROWD_W:    0.5,    // a bot's presence, or its route's, in extra cost a yard
     CROWD_AHEAD: 14,    // yards of each bot's route ahead counted in the crowd
     CLEAR_CAP:  8.0,    // clearance is worked out no farther than this (what the space and the
                         // lanes use; at 12 each wall cell stamped a window 25 cells across, at 8 one 17 across: half the work)
-    LOOK:       6.0,    // yards ahead along the route the followed point runs (nearer when the
-                        // straight to it isn't clear, down to 1.5)
+    LOOK:       6.0,    // yards ahead along the route the followed point runs, in the open (nearer when
+                        // the straight to it isn't clear, down to 1.5)
+    LOOK_MIN:   2.5,    // yards ahead at full clutter: the followed point comes nearer in clutter and
+                        // goes farther in the open (the owner, 2026-10-30: "nearer in clutter,
+                        // farther in the open."), so the bot traces a cluttered route's turns
+                        // and rounds an open one's corners
     SAFE:       1.0,    // yards of clearance the straight to the followed point keeps
     TURN:       4.2,    // radians a second, the most a bot turns (240 degrees)
     LANE:       4.0,    // yards to its own side of the route a bot walks, at most (and 60% of the room there)
@@ -203,20 +215,48 @@ const PaintPaths = (function () {
   }
   // }}}
 
+  // {{{ clutter: how boxed in the ground round (x, y) is, 0 to 1
+  // The share of the cells within CLUTTER_R yards that are wall or steep
+  // ground (what the bots have learned; unknown ground counts as open). Read
+  // by the space wanted from walls and by how far ahead a bot steers: both
+  // shrink in clutter and grow back in the open. A window of about 13 by 13
+  // cells at the defaults: cheap enough to ask once a plan and once a step.
+  function clutter(M, x, y) {
+    const q = cellOf(M, x, y); if (q < 0) return 0;
+    const R = Math.ceil(M.opt.CLUTTER_R / M.step), R2 = R * R, c0 = q % M.w, r0 = (q - c0) / M.w;
+    let all = 0, walled = 0;
+    for (let dr = -R; dr <= R; dr++) {
+      const r = r0 + dr; if (r < 0 || r >= M.h) continue;
+      for (let dc = -R; dc <= R; dc++) {
+        const c = c0 + dc; if (c < 0 || c >= M.w || dc * dc + dr * dr > R2) continue;
+        const k = M.know[r * M.w + c];
+        if (k === OUTSIDE) continue;                  // the area's edge is a fence in the mind, not clutter
+        all++; if (walling(k)) walled++;
+      }
+    }
+    return all ? walled / all : 0;
+  }
+  // the space wanted from walls at a clutter: WANT in the open, down to
+  // CLUTTER_KEEP of it fully boxed in
+  const wantAt = (M, cl) => M.opt.WANT * (1 - (1 - M.opt.CLUTTER_KEEP) * cl);
+  // }}}
+
   // {{{ the cost of a yard through cell q, for a bot going to (gx, gy)
   // trip: the plan's own relaxing, from how near the goal is to the bot in a
   // straight line (1 from NEAR yards up): a goal just across a wall relaxes
   // the whole way round it ("less if they need something nearby or directly
   // nearby opposite the wall"). Until 2026-10-29 only the cells within RELAX
   // of the goal relaxed, and a wall's end 20 yards off kept its full space.
-  function costAt(M, q, gx, gy, trip) {
-    const o = M.opt;
+  // want: the space wanted from walls on this plan (wantAt the start's
+  // clutter); WANT when not given.
+  function costAt(M, q, gx, gy, trip, want) {
+    const o = M.opt, W = want === undefined ? o.WANT : want;
     let cost = 1;
     const cl = M.clear[q];
-    if (cl < o.WANT) {
+    if (cl < W) {
       const dx = cx(M, q) - gx, dy = cy(M, q) - gy, dg = Math.sqrt(dx * dx + dy * dy);
       const relax = Math.min(dg >= o.RELAX ? 1 : dg / o.RELAX, trip === undefined ? 1 : trip);   // near the goal, less space kept
-      const f = (o.WANT - cl) / o.WANT;
+      const f = (W - cl) / W;
       cost += o.WALL_W * f * f * relax;
     }
     if (M.know[q] === UNKNOWN) cost += o.UNKNOWN;
@@ -287,6 +327,9 @@ const PaintPaths = (function () {
     if (++M.gen === 0xffffffff) { M.stamp.fill(0); M.shut.fill(0); M.gen = 1; }
     const gen = M.gen, tc = t % w, tr = (t - tc) / w;
     const trip = Math.min(1, Math.hypot(gx - sx, gy - sy) / M.opt.NEAR);
+    // the space wanted on this plan, from the clutter where the bot stands
+    // (a plan is made again as it walks, so it widens as the ground opens)
+    const want = wantAt(M, clutter(M, sx, sy));
     M.heapN = 0;
     M.g[s] = 0; M.came[s] = -1; M.stamp[s] = gen;
     const h0c = Math.abs(s % w - tc), h0r = Math.abs((s - s % w) / w - tr);
@@ -306,7 +349,7 @@ const PaintPaths = (function () {
         const out = q === s && squeeze;                       // the first step, squeezing: painted walls let through
         if (blocks(know[n]) && !(out && know[n] === WALL)) continue;
         if (k >= 4 && !out && (blocks(know[qr * w + nc]) || blocks(know[nr * w + qc]))) continue;
-        const ng = gq + (k >= 4 ? SQRT2 : 1) * st * costAt(M, n, gx, gy, trip);
+        const ng = gq + (k >= 4 ? SQRT2 : 1) * st * costAt(M, n, gx, gy, trip, want);
         if (M.stamp[n] !== gen || ng < M.g[n]) {
           M.stamp[n] = gen; M.g[n] = ng; M.came[n] = q;
           const hc = Math.abs(nc - tc), hr = Math.abs(nr - tr);
@@ -418,8 +461,11 @@ const PaintPaths = (function () {
   // the pillar it stood against, 2,894 refusals in a row).
   function follow(M, path, x, y, lane) {
     const o = M.opt;
+    // how far ahead, by the clutter where the bot stands: LOOK in the open,
+    // LOOK_MIN boxed in
+    const L = o.LOOK_MIN + (o.LOOK - o.LOOK_MIN) * (1 - clutter(M, x, y));
     let near = null;
-    for (const look of [o.LOOK, o.LOOK * 0.6, o.LOOK * 0.35, 1.5]) {
+    for (const look of [L, L * 0.6, L * 0.35, 1.5]) {
       const p = followAt(M, path, x, y, lane, look);
       if (fair(M, x, y, p[0], p[1], o.SAFE)) return p;
       if (lane) { const p0 = followAt(M, path, x, y, 0, look); if (fair(M, x, y, p0[0], p0[1], o.SAFE)) return p0; }
@@ -533,7 +579,7 @@ const PaintPaths = (function () {
   // }}}
 
   return { DEFAULTS, UNKNOWN, PAINTED, WALL, STEEP, OUTSIDE, make, cellOf, cx, cy, blocks, setGround, clearAll,
-           walked, wall, refused, costAt, plan, needsPlan, follow, steer, crowd, crowdRoute, fair };
+           walked, wall, refused, costAt, plan, needsPlan, follow, steer, crowd, crowdRoute, fair, clutter, wantAt };
 })();
 
 if (typeof module !== "undefined") module.exports = PaintPaths;

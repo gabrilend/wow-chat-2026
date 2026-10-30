@@ -158,12 +158,33 @@ function run(course, botsIn, trips, opt, limitS) {
   // across: a thin wall from the top edge down to y 40; start and goal 6 yards either side of it
   const thin = { w: 80, h: 60, shapes: [{ box: [39.5, 0, 40.5, 40], known: true }] };
   // how near the wall's end (40, 40) each passes: the least yards from the wall at any step
-  const lenOf = opt => { const q = run(thin, [{ x: 34, y: 20, goals: [[46, 20]] }], 1, Object.assign({ RELAX: 0.001 }, opt), 60); return { q, yards: q.yards }; };
+  // the levers set on 2026-10-30 are held as they were before it in both
+  // runs (no shrinking of space or look-ahead in clutter, CLUTTER_KEEP 1 and
+  // LOOK_MIN 6; the unknown premium at 0.15), so only the goal's nearness
+  // differs between them: with today's defaults the thin wall's clutter
+  // shrinks the "full space" run's space too, and without the premium the
+  // two runs come within 0.4 yards of each other (0.9 against 1.3)
+  const lenOf = opt => { const q = run(thin, [{ x: 34, y: 20, goals: [[46, 20]] }], 1, Object.assign({ RELAX: 0.001, CLUTTER_KEEP: 1, LOOK_MIN: 6, UNKNOWN: 0.15 }, opt), 60); return { q, yards: q.yards }; };
   const near = lenOf({}), wide = lenOf({ NEAR: 0.001 });
   const best = 2 * Math.hypot(6, 20.5);
   const closest = r => Math.min(...r.q.clear);
   console.log(`     across a thin wall: walked ${near.yards.toFixed(1)} yards, nearest the wall ${closest(near).toFixed(1)} (full space all the way: ${wide.yards.toFixed(1)} yards, nearest ${closest(wide).toFixed(1)}; the shortest round: ${best.toFixed(1)})`);
   check(near.q.unfinished === 0 && closest(near) < closest(wide) - 0.5 && near.yards < wide.yards, `across a thin wall: with the goal just across, the bot rounds the wall's end closer and shorter than keeping full space (${closest(near).toFixed(1)} against ${closest(wide).toFixed(1)} yards from the wall)`);
+}
+// }}}
+
+// {{{ 3b. clutter: the space wanted and the look ahead shrink in clutter, grow back in the open
+// (the owner, 2026-10-30: the space "is reduced until they navigate through
+// that to a more open area"; the followed point "nearer in clutter, farther
+// in the open")
+{
+  const M = PP.make(60, 60, 1, 0, 0, {});
+  PP.setGround(M, (x, y) => (x >= 28 && x <= 32 && y >= 10 && y <= 50) || (x >= 10 && x <= 50 && y >= 28 && y <= 32) ? PP.STEEP : PP.UNKNOWN);
+  const open = PP.clutter(M, 8, 8), cross = PP.clutter(M, 26, 26);
+  check(open === 0 && cross > 0.2, `clutter: none in the open (${open.toFixed(2)}), plenty in the crook of two walls (${cross.toFixed(2)})`);
+  const wOpen = PP.wantAt(M, open), wCross = PP.wantAt(M, cross);
+  check(wOpen === M.opt.WANT && wCross < wOpen && wCross >= M.opt.WANT * M.opt.CLUTTER_KEEP,
+    `clutter: the space wanted is full in the open (${wOpen.toFixed(1)} yards) and less in clutter (${wCross.toFixed(1)}), never under CLUTTER_KEEP of it`);
 }
 // }}}
 

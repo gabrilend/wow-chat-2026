@@ -85,21 +85,30 @@ static uint8 NameGroupFor(uint8 race, uint8 gender)
 
 // {{{ PickName
 // A random unused name from the bot module's list for this race and gender,
-// passing the server's own name rules. Empty when none is left.
+// passing the server's own name rules. Empty only when no name in the list
+// is left unused and valid.
+//
+// Drawn again until a valid one comes (owner, 2026-10-30, issue 617b2: "My
+// instinct is that we should just try again until we get a valid name."):
+// every unused name of the group is read once, in a random order, and the
+// first that passes the server's rules and isn't reserved is taken. Until
+// 2026-10-30 it gave up after five draws, so a list with many names the
+// server refuses could fail a buddy while valid names remained.
 static std::string PickName(uint8 race, uint8 gender)
 {
-    for (int tries = 0; tries < 5; ++tries)
+    QueryResult r = CharacterDatabase.Query(
+        "SELECT n.name FROM playerbots_names n LEFT JOIN characters c ON c.name = n.name "
+        "WHERE c.guid IS NULL AND n.gender = {} ORDER BY RAND()", NameGroupFor(race, gender));
+    if (!r)
+        return "";                                  // every name of the group is taken
+    do
     {
-        QueryResult r = CharacterDatabase.Query(
-            "SELECT n.name FROM playerbots_names n LEFT JOIN characters c ON c.name = n.name "
-            "WHERE c.guid IS NULL AND n.gender = {} ORDER BY RAND() LIMIT 1", NameGroupFor(race, gender));
-        if (!r)
-            return "";
         std::string name = (*r)[0].Get<std::string>();
         if (ObjectMgr::CheckPlayerName(name, true) == CHAR_NAME_SUCCESS && !sObjectMgr->IsReservedName(name))
             return name;
-    }
-    return "";
+        // refused by the server's rules or reserved: the next one
+    } while (r->NextRow());
+    return "";                                      // unused names remain, but none passes the rules
 }
 // }}}
 
@@ -312,7 +321,7 @@ uint32 BuddyMakeCharacter(uint32 account, uint8 race, uint8 cls, uint8 level, ui
     name = PickName(race, gender);
     if (name.empty())
     {
-        why = "no unused name is left in playerbots_names for this race and gender";
+        why = "no name in playerbots_names for this race and gender is both unused and allowed by the server's name rules";
         return 0;
     }
     BuddyLooks looks = PickLooks(race, gender);
