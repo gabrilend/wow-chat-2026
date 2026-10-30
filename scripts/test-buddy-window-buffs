@@ -1,0 +1,22 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-window-buffs
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      an empowering buff (Bloodlust and the like) is worth different amounts to different buddies, by what it gives and what moves their abilities
+# quick-test: yes
+# ==== end of header ====
+# test-buddy-window-buffs - compiles and runs
+# tests/buddy-window-buffs/window-check.cpp against the buddy module's
+# window buffs (issue 625f), with no server.
+
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+OUT="${DIR}/tmp/tmp"
+mkdir -p "${OUT}"
+g++ -std=c++17 -O1 -Wall -Wextra -Werror -I"${DIR}/patches/B036-mod-buddies/mod-buddies/src" \
+    "${DIR}/tests/buddy-window-buffs/window-check.cpp" -o "${OUT}/buddy-window-buffs" || exit 1
+nice -n 19 "${OUT}/buddy-window-buffs"
+# ==== footer of test-buddy-window-buffs ====
+# lines:      22
+# ==== end of footer ====

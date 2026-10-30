@@ -1,6 +1,6 @@
 # Conversation Summary: e143dbfe-ff43-48be-8bd4-4d54fd7a325d
 
-Generated on: 2026-10-30 12:16:24
+Generated on: 2026-10-30 12:28:53
 Models: claude-opus-5-5
 
 ## Contents
@@ -10,6 +10,10 @@ Models: claude-opus-5-5
    answers so far are written into the issues and onto a 22-item todo list.
    Next: answer the ten waiting questions, starting with buddies offering to
    trade.
+2. 2026-10-30 12:19, after Request 9 - Goal: answer the open questions blocking
+   basic's next compile, focused on Sargobras, pathfinding and questing. Your
+   answers are written into the issues, uncommitted. Next: tell me whether
+   "someone familiar" means picking from every past version of a buddy.
 
 --------------------------------------------------------------------------------
 
@@ -1665,6 +1669,65 @@ pick from?
    the rest back?
 2. **Where does "near" end for the selling threshold?** A distance in yards to
    the vendor, or a walking time (say, under a minute is near)?
+
+--------------------------------------------------------------------------------
+
+### User Request 10
+
+buddy-bots should only change race / gender if the players race / gender
+changes. So, I think Sargobras should only offer racially appropriate classes.
+If the player gets a race-change, then all the buddy-bots will attempt to change
+races if they can, randomly. If however it's a paladin and a blood elf or
+whatever, or a draenei shaman, then they won't be able to change race until they
+change class first.
+
+If they ever change back, they should return to the same appearance that they
+had originally.
+
+the buddy-bot, if given stuff, should not give it back. Eventually we can
+request things, but that requires LLM capability we don't have the hardware for
+yet. Not at scale, at least.
+
+"near" should be discrete, instead of relying on breakpoints and magic numbers,
+it should scale and be dynamically calculatable at any time with any conditions.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 10
+
+I've recorded all three answers word for word. Nothing is committed yet.
+
+- **Race and gender:** this is now a general rule in the buddy roster issue. A
+  buddy's race and gender change only when yours do, and Sargobras offers only
+  classes its race can play. When you change race, each buddy tries a random
+  race its class allows. Class-locked ones, like a blood elf paladin or a
+  draenei shaman, wait until they've changed class. Each buddy's original look
+  is kept, so changing back restores it exactly. This overturns the prestige
+  issue's old line about buddies changing race to fit a new class, and the issue
+  now says so.
+- **Trades:** a buddy keeps whatever you give it. Asking it for things back
+  waits until language-model capability is practical at scale.
+- **When to go sell:** there's no near/far boundary any more. My proposal: a
+  buddy goes when the sellable things it carries are at least as many as it
+  would loot during the walk there and back. The loot rate is measured on that
+  buddy, and the walk time comes from the path.
+  - A nearby vendor means a short trip, so a few items justify it. That's about
+    your 50%.
+  - A far vendor needs a lot, about your 80–90%.
+  - Full bags always send it.
+  - Nothing in it is a fixed number.
+
+## Two questions on those answers
+
+1. **"Discrete."** You wrote that "near" should be discrete, then described
+   something that scales and can be calculated at any time. I read that as
+   continuous, with no steps, which is what I wrote. Is that what you meant? Or
+   do you want a few distinct steps, each one calculated rather than fixed?
+2. **"Someone familiar."** Since a buddy keeps its race now, its past versions
+   differ only in class, spec and professions. For example: a priest, then a
+   mage after the first rebirth, then you ask for someone familiar. Does
+   Sargobras bring back only the latest version (the mage), or list every past
+   version for you to choose (the priest or the mage)?
 
 --------------------------------------------------------------------------------
 

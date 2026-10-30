@@ -9,7 +9,7 @@
   617e5b (boss fights by the warnings: the boss-mechanic economy)
 - Priority: High (the owner: "I am very excited to work on the action
   economy.")
-- State: planned; designed with the owner next
+- State: in progress (window values built; the timeline and its weights next)
 
 ## Origin
 
@@ -126,3 +126,17 @@ by its own measure, and the draw (625) weighs them together. Learning
 3. A use inside a window is worth m times a plain one: should m be what
    the window gives in numbers (Bloodlust's 30% haste: 1.3), or larger, to
    count the moment's importance (a weak phase, a burn) beyond its numbers?
+   **Answered 2026-10-30:** "technically this is something we'd
+   theorycraft and build reasonable answers for, but for now just give it
+   an appropriate value for each buff. Bloodlust for example can't be 1.3x
+   because some classes use haste rating more and value it more strongly.
+   Focus on the buff it provides and have it interface with the ability
+   economy." Built as `buddies_window_buffs.h`: each buff as what it
+   provides (read from the game's spell table: Bloodlust and Heroism 30%
+   haste, Power Infusion 20% casting speed and 20% cheaper, Avenging Wrath
+   20% damage and healing, and so on), each ability as how much each
+   provision moves it, and a buddy's m its abilities' factors weighed by
+   their share of its casts. Checked by `scripts/test-buddy-window-buffs`:
+   Bloodlust is worth 1.30 to a fire mage, 1.075 to an energy-bound rogue,
+   1.15 to an affliction warlock (its damage over time isn't hastened).
+   Starting values, kept for theorycraft to move.

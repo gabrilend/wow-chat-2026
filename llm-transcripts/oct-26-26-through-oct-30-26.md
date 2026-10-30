@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-30 12:05:14
+Generated on: 2026-10-30 12:27:36
 Models: claude-opus-5-5
 
 ## Contents
@@ -179,6 +179,10 @@ Models: claude-opus-5-5
     before your next compile. I moved send-a-buddy to the custom client and
     asked three questions about hybrid trees and the healing economy. Next:
     start the buddy reset once you reply.
+43. 2026-10-30 12:08, after Request 136 - Building every described issue in time
+    for your next compile; the buddy reset is done and waits for that compile.
+    Next: answer the two action-economy questions (how long to hold a cooldown,
+    and whether to plan casts ahead).
 
 --------------------------------------------------------------------------------
 
@@ -14181,6 +14185,165 @@ write there, which you can allow or leave for a client session.
 2. **Planning ahead:** should a buddy plan its next few casts ahead, the way a
    skilled player queues a rotation in their head? Or should it judge only the
    next cast, by what's ready now?
+
+--------------------------------------------------------------------------------
+
+### User Request 137
+
+> Buddy reset: built, and waits for your compile and install. The game master's
+> command is
+>   .buddy reset <name>, from a shell scripts/gm-command ".buddy reset <name>".
+
+make sure we update the gm-command list we made in HTML...
+
+> - Sargobras then offers only the classes that race can play, with no death
+> knight and no
+>     race choice.
+
+do we correctly handle the case where there are multiple sargobrases waiting for
+a player?
+
+> - The new buddy comes back with the same name and gender. It receives the old
+> one's mail,
+>     and the old character is deleted.
+
+make sure we use the same appearance options as well. Are those randomized for
+each buddy-bot upon being created for the first time?
+
+    - mana is measured as time to refill;
+
+in combat / out of combat behavior?
+
+
+
+<pasted_content id="12ab">
+> - The healer's seat: if the healer falls, whoever has some healing talents and
+> the most
+>     mana takes over until the fight ends. While the healer's mana is low, the others add
+>     cheap instant heals.
+</pasted_content id="12ab">
+
+
+this should also apply if the healer gets low on mana and can't cast spells.
+They should say "oom" or "mana" in an appropriate chat channel, and others can
+use that as the signal to jump in. What happens if a player is the healer?
+
+
+
+<pasted_content id="12ab">
+> - Learning that can start over: every starting number is kept, along with the
+> method that
+>     changes it. Learning can rerun from scratch as a batch, or each buddy can learn on its
+    own.
+</pasted_content id="12ab">
+
+
+this could be a strategem or something. The idea that we can "grow"
+functionality, and it must be re-learnable as it's underlying environment
+changes.
+
+> I read your answer about the busy healer as: the healer's duty comes first,
+> and the
+>   off-tree third gets made up in calmer moments. Tell me if that's wrong.
+
+that's right
+
+
+
+<pasted_content id="12ab">
+> 1. How long can a buddy hold a ready cooldown to line it up with another, or
+> with
+>      Bloodlust or a boss's weak phase, before it uses it anyway? A few seconds, or as long
+>      as the fight plan says?
+</pasted_content id="12ab">
+
+
+we want to maximize valuable uptime. Can you think of a way to do that?
+
+
+
+<pasted_content id="12ab">
+> 2. Planning ahead: should a buddy plan its next few casts ahead, the way a
+> skilled player
+>      queues a rotation in their head? Or should it judge only the next cast, by what's
+     ready now?
+</pasted_content id="12ab">
+
+
+this planning should be reflected in the weights that we dynamically adjust as
+the world around them changes and the situation they're addressing develops.
+Lots of number crunching, gotta use parallel threads for each buddy-bot and
+such...
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 137
+
+> Checking the command list first, then the multiple-Sargobras case, which I
+> suspect is a real fault.
+
+> Passes. Now your design answers into the plans. Checking whether the project
+> already has a strategems folder for the learning idea.
+
+> Recording the reset's two fixes in its plan, plus your words in the notes, and
+> committing.
+
+*[commit] ec5cceb36 in wow-chat-2026 - *
+
+I've worked through each point. One of them turned up a real fault in the reset,
+now fixed. Everything is written into the plans and committed (ec5cceb36),
+except the server code, which waits for your compile.
+
+- **Command list page:** it's regenerated with `.buddy reset`, `.buddy wider`,
+  `.buddy closer` and `.buddy weather`. It waits with the compile, so it never
+  describes commands that aren't built yet.
+- **Several Sargobrases: the case was broken, and is now fixed.** Each owed slot
+  has its own Sargobras, and each fills his own slot. But I had built his menu
+  from your lowest owed slot. If you were owed a reset slot and an ordinary one,
+  the wrong Sargobras could offer the reset's limited classes. Now the menu and
+  the pick choose the slot the same way, so each Sargobras offers what his own
+  slot takes.
+- **Appearance:** yes, a new buddy's skin, face, hair, hair colour and facial
+  hair are drawn at random from the game's own table. A reset buddy now copies
+  them from its old self instead, so it comes back looking the same.
+- **Mana in and out of combat:** the refill time uses whatever regeneration
+  applies at that moment.
+  - In combat it's slow: spirit only works after five seconds without casting.
+    So a healer's thrift depends on how much fight is left.
+  - Between fights it's fast, with drinking. A buddy low on mana drinks before
+    the next pull and says "mana" so the tank waits.
+- **Healer out of mana:** it says "oom" or "mana" in party chat, and the others
+  with healing talents lean toward healing until it says "ready".
+- **A player as healer:** they hold the healer's seat like a buddy would.
+  Buddies read the player's mana and hear the same words in party chat, but
+  never speak for them. If the player falls, a buddy takes the seat.
+- **Learning:** it's written as a strategem,
+  `strategems/grown-and-relearnable.md`. It keeps three things apart for good:
+  where the numbers started, how they're learned, and what was learned. That way
+  behaviour can be grown again whenever the world under it changes.
+- **Busy healer:** recorded as confirmed.
+
+**Most valuable uptime, my proposed way:**
+1. A cooldown's worth over the rest of the fight is the sum, over every use it
+   will still get, of what each use is worth when it lands. A use inside
+   Bloodlust or a boss's weak phase counts for more.
+2. Holding a ready cooldown is right only when the plan with the hold is worth
+   more than the plan without it.
+3. With T seconds of fight left and a C-second cooldown, there's room for about
+   T ÷ C more uses. A hold that costs one of those uses only pays if the window
+   gains more than that use was worth.
+
+In practice: short holds for big windows get taken, long holds that cost a use
+don't, and near the fight's end every cooldown gets used.
+
+**Planning:** it lives in the weights, as you said, worked out again as the
+fight changes. The working out runs off the server's main loop, on a pool of
+worker threads (one buddy's plan per task). Finished plans are handed to the
+draw.
+
+One new question: a use inside a window counts m times a plain one. Should m be
+what the window gives in numbers (Bloodlust's 30% haste makes m = 1.3)? Or
+should it be larger, to count a burn phase's importance beyond its numbers?
 
 --------------------------------------------------------------------------------
 

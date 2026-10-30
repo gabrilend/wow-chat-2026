@@ -45,6 +45,30 @@ the party or hands the role on.
   on mana says "oom" (out of mana) or "mana" in the party's chat; hearing
   it, the others with healing talents lean toward healing as below, until
   it says "ready" again (617z's words).
+- **Out of mana, the healer becomes something else for a while** (the
+  owner, 2026-10-30, word for word: "A healer buddy should be able to
+  utilize spirit (especially if they're a spirit class) to regenerate mana
+  if they need it. If for example they say "oom" then maybe they switch to
+  a DPS role and another more suitable player picks up healing if
+  necessary - though, with the quality of heals faltering while the true
+  healer is oom, there might need more help from the others. Then they can
+  Seal of Wisdom, feral scratch, or priest wand or whatever until they get
+  their mana back. Sometimes just hitting the enemy can get them judgement
+  of wisdom - paladins should prioritize wisdom over light if the healer's
+  mana is low."). So, once it has said "oom":
+  - **it stops casting**, so its spirit regenerates (past the game's five
+    seconds without casting), worth most to a spirit class (priests,
+    druids);
+  - **it fights instead, in the way that brings mana back**: a paladin
+    with Seal of Wisdom on and striking, a druid in a form scratching, a
+    priest with a wand (no spell cast, so spirit works);
+  - **another suitable healer takes the seat** while it recovers (the one
+    with healing talents and the most mana), and the others help more,
+    the heals being weaker meanwhile;
+  - **Judgement of Wisdom on the enemy**: anyone hitting it can give mana
+    back; paladins put Judgement of Wisdom up rather than Light while the
+    healer's mana is low;
+  - **back in the seat** when it says "ready".
 - **A player in the seat** (asked "What happens if a player is the
   healer?"; the agent's design, for the owner to curate): a player who
   heals (their talents, or what they cast) holds the seat like a buddy.

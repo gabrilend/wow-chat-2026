@@ -515,3 +515,13 @@ Word for word, each written into its plan:
   dynamically adjust as the world around them changes and the situation
   they're addressing develops. Lots of number crunching, gotta use
   parallel threads for each buddy-bot and such..."
+- (gm commands) "for the command list page, we have LOTS of commands. Make sure they're all represented."
+- (625i) "A healer buddy should be able to utilize spirit (especially if
+  they're a spirit class) to regenerate mana if they need it. ..." (in
+  full in 625i)
+- (625f) "for the new question, technically this is something we'd
+  theorycraft and build reasonable answers for, but for now just give it
+  an appropriate value for each buff. Bloodlust for example can't be 1.3x
+  because some classes use haste rating more and value it more strongly.
+  Focus on the buff it provides and have it interface with the ability
+  economy."
