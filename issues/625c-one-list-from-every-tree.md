@@ -91,3 +91,6 @@ shape but the last three plays as if all its points were in one tree.
 2. Which class should the owner describe first? The druid (its three
    trees answer the same concerns three ways) is the one the examples so
    far have used.
+   **Answered 2026-10-29** (the owner: "as we're playing I will describe
+   behavior and we will add it to the capabilities"): no order; each
+   class as the owner meets it in play.
