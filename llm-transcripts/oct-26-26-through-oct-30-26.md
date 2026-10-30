@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-30 08:48:45
+Generated on: 2026-10-30 09:03:21
 Models: claude-opus-5-5
 
 ## Contents
@@ -13472,6 +13472,139 @@ can redraw the originals exactly.
   for dormant work under Operations, plus one new weak spot: buddies still
   choose every ability from one fixed list. The published copy is updated too:
   https://claude.ai/artifact/4K4Kn8pPKKaizuxGe4oHQq
+
+--------------------------------------------------------------------------------
+
+### User Request 131
+
+<pasted_content id="12ab">
+> The full-size gifs and their scores are also only in RAM and
+> will be gone after a reboot. Shrunk copies are in git, and the gif tools can
+> redraw the
+>   originals exactly.
+</pasted_content id="12ab">
+
+
+the gif tools can redraw the originals exactly if we pin a specific version of
+the gif generator in the description of the gifs. Then we should have capability
+to automatically downgrade to that version, deterministically recreate the gifs,
+then re-apply updates to return to baseline. Ideally, in a separate branch or
+something. Then, we don't need the shrunk versions, we can always use the full
+versions, and archive in git the prompt that made them (inputs) and the pinned
+project version that did (parameters)
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 131
+
+> Checking whether the gif generator's version at drawing time can still be
+> pinned.
+
+> The generator hasn't changed since the drawing: it's at commit 9d32166e6 from
+> 28 October, with nothing uncommitted in its code, so this drawing can still be
+> pinned. Writing the plan, then the tools.
+
+> Adding the recipe to the renderer.
+
+> Now the redraw tool: it takes the pinned code out of the repository into RAM,
+> leaving the live generator untouched.
+
+> Proving determinism first: drawing the first set again with the pinned
+> renderer into a separate folder, and comparing against the original RAM gifs.
+
+> My mistake: write paths must be spelled out in full. Again with full paths.
+
+> Byte for byte: all 25 redrawn gifs are identical to the originals. Archiving
+> the scores and recipe in the project, then redrawing from the archive with the
+> pinned code taken out of the repository.
+
+> The archive works: all 25 redrawn byte for byte from the scores and recipe in
+> git, with the generator's own folder untouched. Removing the shrunk copies and
+> pointing the dormant pages at the redraw.
+
+*[commit] c5041510b in wow-chat-2026 - *
+
+It's built and committed (c5041510b). Git now keeps each set of gifs as its
+scores and a recipe, not the pictures, and any set can be redrawn full size,
+byte for byte.
+
+**How it works:**
+- **The recipe:** every drawing writes a recipe beside it. It records which
+  commit of the gif generator drew the set, plus a fingerprint of each score and
+  each gif.
+- **No uncommitted code:** if the generator's code has uncommitted changes, the
+  drawing stops and says so, because that version couldn't be redrawn later.
+- **The redraw tool** (`scripts/redraw-gifs`):
+  - checks the scores are unchanged;
+  - pulls the generator's code exactly as it was at the pinned commit straight
+    out of its repository, into a folder in the RAM drive;
+  - draws the set with that copy and checks every gif against the recipe.
+- **No branch needed:** the generator's own folder is never touched, so there's
+  nothing to downgrade and nothing to restore. The live version simply stays
+  where it is.
+
+**Proven on the first set:** the 25 ideas are kept in
+`assets/gifs/architecture-ideas/attempt-1/`, pinned to the generator at commit
+9d32166e6.
+- Drawn again with the pinned renderer, all 25 were identical to the originals.
+- Redrawn from the git copy with the code pulled from the repository, all 25
+  matched the recipe.
+
+The shrunk copies are gone from the parked answer pages. Their note now says how
+to redraw the gifs full size.
+
+One open question: the recipe names the generator's repository by its folder on
+this computer. Should it also record a remote address, so another computer could
+follow it once the gif generator lives in its own repository?
+
+--------------------------------------------------------------------------------
+
+### User Request 132
+
+Checked in the game's spell table: Improved Rejuvenation and Rejuvenation share
+icon 64. Starlight Wrath shares Wrath's icon (263) but also speeds Starfire,
+which the icon alone misses. So the icon finds a talent's main ability, not all
+of them.
+
+I'm concerned about this from the HTML, can you tell me about that? What are we
+using the icon for here?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 132
+
+The icon is one of four cross-checks for working out which of a buddy's
+abilities each talent improves, so the buddy can favour those abilities in a
+fight. It came from your suggestion to use "the embedding of the icon and the
+name and the text". Nothing is built yet; this is all plan.
+
+**What it does:** in the game's spell table, every spell, talents included, has
+an icon stored as a number. If a talent's icon number matches an ability's, the
+talent is almost always about that ability: Improved Rejuvenation and
+Rejuvenation are both icon 64. That's an exact number match, with no picture
+comparison and no embedding needed.
+
+**Why that sentence is in there:** it's a limit I found while checking the idea.
+A talent has only one icon, but some talents improve several abilities.
+Starlight Wrath uses Wrath's icon (263), yet it also speeds up Starfire, which
+the icon can't show. So the icon finds a talent's main ability, never the full
+list.
+
+**Why that's fine:** the icon isn't the source of truth. The game itself records
+exactly which spells each talent changes: a hidden set of flags, the same ones
+the server uses to apply the talent. Those flags catch Starfire. The icon and
+the tooltip words are only cross-checks:
+- **Where they agree with the flags,** the link is confirmed.
+- **Where only the icon or the words suggest a link,** it's set aside to be
+  looked at by eye before it counts.
+- **Where they disagree with the flags,** the flags win.
+
+That leaves one real risk: a talent drawn with an unrelated ability's icon. That
+would only ever produce a suggested link waiting for a look, never a wrong
+weight.
+
+Is that what concerned you, or was it something else about that part of the
+page?
 
 --------------------------------------------------------------------------------
 

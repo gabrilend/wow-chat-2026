@@ -464,3 +464,12 @@ Word for word, each written into its plan (in brackets):
   don't need the shrunk versions, we can always use the full versions, and
   archive in git the prompt that made them (inputs) and the pinned project
   version that did (parameters)"
+
+## 2026-10-30, talents read from the game's own data (625a)
+
+- "basically we want to take the embedding of the talent icon, and see
+  what it most closely matches to. We shouldn't have a shortcut built in,
+  it should arise naturally from our other systems."
+- "oh, we can probably just use this instead of the embedding system. More
+  reliable, and we still get character from it. Maybe not as much
+  character, but we can expand it later if needed."

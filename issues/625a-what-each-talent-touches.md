@@ -71,46 +71,36 @@ the buddy code loads. Re-generated when the game data changes (never, on
    Rejuvenation touches Rejuvenation; Sword Specialization touches no
    ability, it is a weapon talent: 625b).
 
-### Four readings of a talent, checked against each other (2026-10-29)
+### Read from the game's own data (decided 2026-10-30)
 
-The game's masks (above) are exact for what they cover, but they miss
-the broad talents, the "a little unseen" ones the owner named: those
-affect a whole school of magic ("all your Shadow spells": a school mask,
-not a family mask), every attack made with a weapon ("weapon attacks",
-"with daggers": a weapon class mask, or no mask at all), or every
-ability of a kind (finishing moves, bleeds, shapeshifts). So each talent
-rank, and each set bonus, is read four ways:
+The owner, 2026-10-30, on the icon: "basically we want to take the
+embedding of the talent icon, and see what it most closely matches to. We
+shouldn't have a shortcut built in, it should arise naturally from our
+other systems." And, told that the game records exactly which spells each
+talent changes: "oh, we can probably just use this instead of the
+embedding system. More reliable, and we still get character from it.
+Maybe not as much character, but we can expand it later if needed."
+
+So each talent rank, and each set bonus, is read two ways, both from the
+game's own tables, and nothing else:
 
 1. **The masks**: the same family with overlapping flags (the exact
    answer, what the server itself applies).
-2. **The broad targets**: an effect aimed at a school, a weapon kind or a
-   mechanic, expanded to every ability of the class that matches (all
-   its Shadow spells; all its abilities that strike with a weapon).
-3. **The icon**: a talent drawn with an ability's own icon is almost
-   always about that ability (Improved Rejuvenation wears Rejuvenation's
-   picture). The client's Spell.dbc gives each spell an icon number, so
-   this is an exact match on a number, not a picture comparison.
-   Checked 2026-10-29 in Spell.dbc: Improved Rejuvenation and
-   Rejuvenation share icon 64; Starlight Wrath shares Wrath's icon (263)
-   but also speeds Starfire, which the icon alone misses (the masks
-   catch it). So the icon finds a talent's main ability, not all of them.
-4. **The words**: the talent's tooltip text, read token by token:
-   - an ability's name appearing in it ("your Rejuvenation spell") ties
-     the two;
-   - category words ("weapon attacks", "finishing moves", "Shadow
-     spells", "bleed", a tree's name such as "Subtlety") are looked up in
-     a small table of phrases, each naming the abilities it covers;
-   - a text embedding (each text turned into a list of numbers, close
-     lists meaning close meanings) of the talent's text against each
-     ability's own text, as a fuzzy cross-check that catches what the
-     word table lacks. No text embedding model is installed yet; the
-     image pipeline's text encoder (its CLIP part) is one candidate, a
-     small sentence model another.
+2. **The broad targets**: an effect aimed at a school of magic, a weapon
+   kind or a mechanic, expanded to every ability of the class that
+   matches (all its Shadow spells; all its abilities that strike with a
+   weapon). These are the "a little unseen" ones the owner named ("all of
+   your subtlety spells", "weapon attacks"), which a family mask alone
+   misses.
 
-Where the readings agree, the link is sure. Where only the words or the
-embedding find a link, it is listed for a look by eye before it counts.
-Where the masks find one the words don't, the masks win (the server
-applies them whatever the text says).
+**Not built, kept as a later expansion** (planned 2026-10-29, set aside
+2026-10-30): reading a talent by its icon, and by its tooltip's words
+token by token with a text embedding. The icon was to be compared by an
+embedding of the picture, not by a shortcut (a talent and an ability
+sharing an icon number, as Improved Rejuvenation and Rejuvenation share
+icon 64: such a rule is not built in). If the game's data proves too
+plain for a buddy's character, the embeddings come back as an extra
+reading, checked against the masks.
 
 **The broad ones count for more** (the owner: "prioritize or increase in
 value the relationships that are a little unseen"): a talent that
@@ -129,3 +119,5 @@ spent in it.
    of that?
 2. Should the icon and the words count on their own (a link no mask
    shows), or only as a check of the masks and the broad targets?
+   **Answered 2026-10-30:** neither is built; the game's own data alone
+   (above), the embeddings kept for later.
