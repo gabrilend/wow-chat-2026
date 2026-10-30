@@ -107,8 +107,20 @@ has done. Its worth is the shortfall it takes away, in health. Checked by
 tank under 2 seconds from dead; Shield Wall worth about 52000, Lay on
 Hands 24000 (what it adds before the tank is full), the off-tank's taunt
 about 4000, and more when the tank carries a boss's debuff, the tanks'
-plan then handing the boss over. Not yet: the desired state's other
-measures (kill time, gold cost), and the server's side (step 5).
+plan then handing the boss over.
+
+**The desired state's measures, built 2026-10-30 (committed, offline):**
+an answer is judged in two parts, compared in order: the health it saves
+(the shortfall it takes away: victory first), then the group's time it
+saves, in seconds: seconds off the fight's end (an answer can bring a
+burst, the party's damage multiplied for a while, which the fight-length
+guess works through), less the gold it uses up as the seconds the group
+takes to earn that much back at its own gold per hour (measured by the
+server from what the group has gained; nothing earned yet, gold counts
+nothing). Checked (21 checks in all): Bloodlust brings a minute's fight
+12 seconds sooner; a potion is drunk when the tank is dying, whatever it
+costs, and not when the tank is healed faster than hurt (20 seconds of
+earning for nothing). Not yet: the server's side (step 5).
 Nothing yet takes the snapshot, keeps the history, runs the layers on
 worker threads or hands their verdict to the draw. The page
 `docs/HTML/fight-forward-pass.html` (made by
@@ -220,10 +232,10 @@ its material.
    types, beside the buffs (`buddies_marks.h`, the ability generator).
 3. The snapshot and the minute of events as plain data, with the running
    summaries, tested on made-up event streams.
-4. The layers joined into one step from snapshot to verdict, tested on
-   those streams (done, offline: `buddies_forward_pass.h`, the shortfall
-   as the first measure); the desired state's other measures (gold cost,
-   kill time).
+4. (Done, offline) The layers joined into one step from snapshot to
+   verdict, tested on those streams (`buddies_forward_pass.h`); the
+   desired state's measures: health first, then the group's time (kill
+   time, gold cost as time to earn it back).
 5. In the server: the snapshot taken on events, the worker pool, the
    double-buffered verdict read by the draw, behind a switch; replay
    logging.

@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-30 15:28:10
+Generated on: 2026-10-30 15:45:00
 Models: claude-opus-5-5
 
 ## Contents
@@ -16271,6 +16271,127 @@ forward pass runs when events arrive, not while a buddy stands idle.
 One question opened up: for "lower gold cost", which consumables should count
 (potions, food, flasks, reagents, ammunition, repairs)? And should each be
 priced at the vendor, or at the auction house when it's sold there?
+
+--------------------------------------------------------------------------------
+
+### User Request 158
+
+<pasted_content id="12ab">
+> One question opened up: for "lower gold cost", which consumables should count
+> (potions,
+> food, flasks, reagents, ammunition, repairs)? And should each be priced at the
+> vendor, or
+>   at the auction house when it's sold there?
+</pasted_content id="12ab">
+
+
+for whatever price the bot can acquire it by.
+
+can we start building?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 158
+
+> Recorded next. Then yes, building. In order:
+> 1. Every mark on a character read as what it does to them (more damage taken,
+>    less healing, haste and so on).
+> 2. The snapshot and a minute of events, with running summaries.
+> 3. The layers joined into one step from snapshot to verdict.
+>
+> These are the steps that can be built and tested before your compile; the
+> server part follows.
+
+> Checking the armour rule against the server's own code before testing it.
+
+> Right now: 18 pass. Updating the issue, checking the other tests that read the
+> generated data, and committing.
+
+*[commit] f38a5dbdc - Forward pass, layer 2: every mark on a character read as what it does to its fight curve*
+
+> 12 of 12 pass. The running sums match re-reading the whole minute to within
+> 4e-12 over 4000 uneven events. Recording and committing.
+
+*[commit] 0ee149820 - Forward pass: the snapshot of a fight, and a minute of events that never needs re-reading*
+
+> 15 of 15 pass, and the worths match my hand estimates: Shield Wall 52158, Lay
+> on Hands 24000, the off-tank's taunt 4063. Recording and committing.
+
+*[commit] ef6b1ede3 - Forward pass: one step from the fight's snapshot to the party's verdict, and answers tried as if given*
+
+> The code and test are committed (ef6b1ed), but my issue and ledger update
+> stopped on a text mismatch, so neither was changed. Checking the step's exact
+> wording.
+
+> No commit was made. Seeing why.
+
+> Another session committed in the meantime (c4b479c), and my commit printed
+> nothing. Checking whether that commit swept up my two files.
+
+> Their commit didn't take my files. My commit likely hit theirs mid-flight;
+> trying once more and showing all of its output.
+
+*[commit] 1255b107d in wow-chat-2026 - Forward pass issue and ledger: the step from snapshot to verdict recorded*
+
+The building has started, and three pieces of the forward pass are done, tested
+and committed. All of it runs outside the server for now.
+
+**1. Marks read as what they do** (f38a5db, 18 checks).
+- **What a mark can change:** every buff and debuff on a character adds up to:
+  - damage taken (physical and magic separately), and damage dealt;
+  - healing received;
+  - attack speed and cast speed, kept separate;
+  - movement speed;
+  - damage or healing ticking each second;
+  - a shield's absorb;
+  - armour.
+- **Armour** becomes a damage reduction by the server's own formula, which I
+  checked against its code.
+- **Abilities not yet cast:** the generator now writes every class ability's
+  aura effects (216 of them), such as Shield Wall at −60% damage taken and
+  Mortal Strike at −50% healing.
+- **A bug the test hid:** I first multiplied Bloodlust's two haste effects
+  together. One speeds attacks and the other casting, so they're now kept
+  separate.
+
+**2. The snapshot and the minute of events** (0ee1498, 12 checks).
+- **The snapshot** is the whole fight as plain data.
+- **The running sums:** each hit and heal goes into them as it arrives and comes
+  back out when it's older than a minute, so every rate is a single division.
+  Over 4000 uneven made-up events, the sums match re-reading the whole minute.
+
+**3. One step from snapshot to verdict, and answers tried as if given**
+(ef6b1ed, and 1255b10 for the issue text, which my editing script first left
+out, 15 checks).
+- **The verdict** gives, for each moment:
+  - whom each enemy attacks;
+  - each enemy's real damage before armour;
+  - how much damage each member lets through, and the healing they get;
+  - everyone's fight curve and the party's shortfall;
+  - which tank should hold the hardest hitter.
+- **Trying an answer:** it's run on a copy of the fight. A tried taunt moves the
+  healing along with the boss.
+- **In the made-up boss fight**, with the tank under 2 seconds from death, each
+  answer's worth (the health shortfall it removes) is:
+
+| Answer | Worth |
+|---|---:|
+| Shield Wall | about 52,000 |
+| Lay on Hands | 24,000 (what it adds before the tank is full) |
+| The off-tank's taunt | about 4,000 (more if the tank carries a boss's stacking debuff) |
+
+When the tank carries that debuff, the tanks' plan hands the boss to the
+off-tank.
+
+Your gold-cost answer is in the issue: every consumable used up counts, at the
+cheapest price the buddy could get another for right now.
+
+**Still to build:**
+- the other parts of "desired": kill time and gold cost;
+- the server side, which waits for your compile like the other server files:
+  - taking the snapshot when events happen;
+  - the worker threads;
+  - the verdict handed to the draw, behind a switch.
 
 --------------------------------------------------------------------------------
 

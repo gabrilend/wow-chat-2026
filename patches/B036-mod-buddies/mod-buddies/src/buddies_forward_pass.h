@@ -255,16 +255,25 @@ namespace BuddyForwardPass
     // taunt by `taunter` on `enemy` (its threat raised to the top, its
     // taunt on). Its worth is how much shortfall it takes away, in health:
     // the first measure of the desired state (625n).
+    // Also: `burst`, the party's damage multiplied by `burstFactor` for
+    // `burstLasts` seconds from now (Bloodlust: its window factor for the
+    // party, buddies_window_buffs.h), which brings the fight's end sooner;
+    // `gold`, what the answer uses up, in copper, at whatever price the buddy
+    // could get another for (a potion, a reagent; the owner: "for whatever
+    // price the bot can acquire it by.").
     struct Answer
     {
         std::vector<Extra> extras;
         int healed = -1; double heal = 0;
         int taunter = -1, enemy = -1;
+        double burstFactor = 1.0, burstLasts = 0.0;
+        double gold = 0.0;
     };
     inline double Worth(Snapshot const& s, Memory const& memory, Answer const& a, Verdict* after = nullptr)
     {
         Verdict before = Step(s, memory);
         Snapshot copy = s;
+        if (a.burstLasts > 0.0 && a.burstFactor != 1.0) copy.windows.push_back({ 0.0, a.burstLasts, a.burstFactor });
         if (a.healed >= 0) copy.party[a.healed].health = std::min(copy.party[a.healed].maxHealth, copy.party[a.healed].health + a.heal);
         if (a.taunter >= 0 && a.enemy >= 0)
         {
@@ -281,6 +290,37 @@ namespace BuddyForwardPass
         Verdict v = Step(copy, memory, a.extras);
         if (after) *after = v;
         return before.shortfall - v.shortfall;
+    }
+    // }}}
+
+    // {{{ Judge
+    // An answer against the desired state (625n: "besides victory, bots
+    // prefer lower gold cost (use fewer consumables) and faster time (3
+    // minute kill instead of 4)"), in two parts compared in order:
+    //   health   the shortfall it takes away: victory first
+    //   seconds  the group's time it saves: seconds off the fight's end (only
+    //            when the end can be seen), less the gold it uses up as the
+    //            seconds the group takes to earn that much back, at its own
+    //            gold per hour (`goldPerHour`, copper an hour, measured by
+    //            the server from what the group has gained; 0, nothing earned
+    //            yet: gold can't be weighed and counts nothing)
+    // So a potion that keeps someone alive is always drunk (health first),
+    // and one drunk when no one is dying costs time for nothing.
+    struct Score { double health, seconds; };
+    inline Score Judge(Snapshot const& s, Memory const& memory, Answer const& a, double goldPerHour)
+    {
+        Verdict before = Step(s, memory), after;
+        double health = Worth(s, memory, a, &after);
+        double seconds = (before.leftKnown && after.leftKnown) ? before.left - after.left : 0.0;
+        if (a.gold > 0.0 && goldPerHour > 0.0) seconds -= a.gold / (goldPerHour / 3600.0);
+        return { health, seconds };
+    }
+    // Better: whether `x` comes before `y`: more health first, then more
+    // seconds (a hair's difference in health counts as none).
+    inline bool Better(Score const& x, Score const& y)
+    {
+        if (std::fabs(x.health - y.health) > 1.0) return x.health > y.health;
+        return x.seconds > y.seconds + 1e-6;
     }
     // }}}
 }

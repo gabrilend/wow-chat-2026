@@ -105,6 +105,36 @@ int main()
     check(wTauntMarked > wTaunt, "with the tank debuffed, the off-tank's taunt is worth more");
     check(vm.tanks.holder == 1 || vm.tanks.to == 1, "the tanks' plan hands the boss to the paladin");
 
+    // the desired state beyond victory: seconds of the group's time
+    // Bloodlust, the party's damage x1.3 for 40 seconds: the boss's 60000
+    // falls 1300 a second for 40 (52000), the last 8000 in 8: 48 seconds,
+    // not 60
+    Answer lust; lust.burstFactor = 1.3; lust.burstLasts = 40;
+    Score sl = Judge(s, m, lust, 0);
+    check(near(sl.seconds, 12, 1e-6), "Bloodlust brings the end 12 seconds sooner");
+    check(sl.health > 0, "and a shorter fight leaves the dying tank less short too");
+
+    // a healing potion (4000 health, 2000 copper at the cheapest the buddy
+    // could get another), the group earning 36 gold an hour (100 copper a
+    // second): 20 seconds of its time
+    double const PER_HOUR = 360000;
+    Answer potion; potion.healed = 0; potion.heal = 4000; potion.gold = 2000;
+    Answer nothing;
+    Score sp = Judge(s, m, potion, PER_HOUR), sn = Judge(s, m, nothing, PER_HOUR);
+    check(sp.health > 0 && Better(sp, sn), "the tank dying: the potion is drunk, whatever it costs (health first)");
+    Memory calm;
+    for (int t = 1; t <= 30; ++t)
+    {
+        calm.Add({ double(t - 1), HIT, BOSS, TANK, 0, RAW * through, true });
+        calm.Add({ double(t - 1), HEAL, HEALER, TANK, 0, 9000, false });
+        calm.Sample(t, 90000 - 1000.0 * t);
+    }
+    calm.Forget(30);
+    Score cp = Judge(s, calm, potion, PER_HOUR), cn = Judge(s, calm, nothing, PER_HOUR);
+    check(near(cp.health, 0) && near(cp.seconds, -20, 1e-6), "the tank healed faster than hurt: the potion saves no one and costs 20 seconds of earning");
+    check(Better(cn, cp), "so it isn't drunk");
+    check(near(Judge(s, calm, potion, 0).seconds, 0), "a group with nothing earned yet: gold can't be weighed, and counts nothing");
+
     std::printf("\n%d passed, %d failed\n", passed, failed);
     return failed == 0 ? 0 : 1;
 }

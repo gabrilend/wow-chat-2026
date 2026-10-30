@@ -1,6 +1,6 @@
 # Conversation Summary: e143dbfe-ff43-48be-8bd4-4d54fd7a325d
 
-Generated on: 2026-10-30 15:31:19
+Generated on: 2026-10-30 15:48:24
 Models: claude-opus-5-5
 
 ## Contents
@@ -4433,6 +4433,134 @@ them in?
 
 The editor shows errors in the module files, but they come from its missing
 include paths, not from these changes.
+
+--------------------------------------------------------------------------------
+
+### User Request 31
+
+okay let's keep going, we got 33 more tasks to do...
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 31
+
+> Continuing down the list. Next: a buddy stuck on the way to a dock gets
+> reported loudly, with no fallback.
+
+> Generalizing the stuck report so it names any destination:
+
+> Next: instant attacks using the real weapon speed, as an off-by-default server
+> setting (the upstream-shaped design). Looking at how an earlier patch added a
+> setting.
+
+> Writing the real-weapon-speed source patch (off by default) and a config patch
+> to turn it on for basic.
+
+> Next: death knight buddies start with Black Mushrooms. Finding where the kit
+> hands out food.
+
+> Recording the mushrooms in their issue; then the teleport return, which is a
+> whole feature not yet started.
+
+> The teleport return needs a server spell script and a new database table;
+> that's bigger than this pass. Leaving it planned and moving on to weapon
+> skills at creation.
+
+> Rewriting the allowance (trained kinds only) and adding the maxing step:
+
+> Next: basic's respawn knob (the server's own player-count rule for monsters).
+> Checking the setting's stock values.
+
+> The server's own rule has two catches I'll report: it skips rares entirely,
+> and every buddy counts as a player in the zone. I'm writing the settings patch
+> off by default for now.
+
+> Taking the shields issue next: a self-contained data change I can generate and
+> check without a compile.
+
+> Writing the shield generator next. Exchange rates are my design call, kept as
+> levers.
+
+> Writing the generator:
+
+> Verifying the SQL on a scratch copy of the shields before writing the install
+> step:
+
+> Applied twice cleanly, no stamina left, and the revert is exact. Writing the
+> install step:
+
+*[commit] c4b479cec in wow-chat-2026 - Shields trade their stamina; respawns can quicken with the zone's crowd*
+
+> Next: the drop-rate table by monster rank and item quality. Checking the
+> server's loot hooks and basic's own rules file.
+
+> The existing drop rules (rares rolled several times, greens and epics
+> multiplied) are already in basic's rules file. I'll add the rank-by-quality
+> table on top of them.
+
+> Adding the rank-by-quality table:
+
+> Checking whether I can syntax-check single files against the real build
+> settings (no full compile):
+
+> Clean for the spells, creation and town files; the kit's only error is a
+> function another patch adds. Now basic's rules file:
+
+> All clean. Recording the drop table in its issue:
+
+> Next: buddies leaving quest items and quest objects for their owner. Checking
+> what the loot code already does with quest items.
+
+> Writing the source patch that keeps buddies off quest items and quest objects:
+
+> Recording it in the loot issue:
+
+Since the last report I've built six more items. All are written and
+syntax-checked against the build's own flags (not compiled), so they wait for
+your compile, uncommitted, except the shields and respawn steps, which are
+committed. I checked each new source patch by applying it twice and reverting it
+on scratch copies; the reverts were exact.
+
+**Waiting for your compile:**
+1. **Stuck on the way to a dock:** reported in the log like other stuck buddies,
+   measured toward the dock, never moved.
+2. **Real weapon speed:** a new server setting,
+   `Combat.InstantAttacks.RealWeaponSpeed`, off by default and written so it
+   could go upstream. A settings patch turns it on for basic once you name basic
+   in its header.
+3. **Death knight buddies:** they start with Black Mushrooms in place of the
+   vendor food.
+4. **Weapon skills at creation:** a new buddy gets the weapon it arrives with,
+   plus one extra kind for each weapon skill you trained (not the ones you
+   started with). All of them are set to the most its level allows.
+5. **Drops by monster rank and item quality:** a knob table in basic's rules
+   (rate and tries per rank and quality), all at stock until you add lines to
+   its settings patch.
+6. **Quest loot:** buddies leave quest items on corpses and never open quest
+   objects.
+
+**Committed, off until you name basic in their headers:**
+- **Shields:** stamina traded for spirit, mana every 5 seconds, or armour; 261
+  of 686 shields change. Checked on a scratch copy of the database: applying it
+  twice left no stamina on any shield, and the undo was exact.
+- **Respawns:** the server's own rule, where monsters respawn faster with more
+  characters in the zone. Two things I found in its code:
+  - it skips rares entirely, so it won't speed up the rares you asked about;
+  - every buddy counts as a player in the zone. So I set the threshold at 8
+    characters: one player with a full clan changes nothing, two such players
+    halve the wait.
+
+**Not done, and why:**
+- **Teleport return, live class change, level-up command:** each needs new
+  server pieces (a spell script and a table of remembered spots, the character
+  cache, a game master command). They're the next big items.
+- **The Sargobras character, the bots' real painted map, far parties, roaming by
+  sub-zone:** these live in buddy module files another session has claimed.
+
+That's about 15 source files waiting to be compiled. **Could you run a basic
+compile now?** Then I can read the log, commit what built, and the remaining
+large features will start from a known-good build. I'll keep going on non-server
+work while it runs, if you like.
 
 --------------------------------------------------------------------------------
 
