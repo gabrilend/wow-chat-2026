@@ -174,6 +174,24 @@ int main()
         check(OpenWindows(w, mw).empty(), "Avenging Wrath on the paladin, who has dealt nothing: no window on the party's damage");
     }
 
+    // the cooldown timeline in the leans: a mage (in the rogue's place)
+    // with Arcane Power ready now and Icy Veins ready in 10 seconds, a
+    // minute of the boss left: Arcane Power waits to go with Icy Veins (its
+    // 15 seconds inside Icy Veins' 20: worth 1.2 against 1 alone, and no
+    // second use fits either way), so it leans away to 1/1.2 now
+    {
+        Snapshot w = s;
+        w.party[3].cls = 8;
+        w.party[3].cooldowns = { { 12042, "arcane power", 0 }, { 12472, "icy veins", 10 } };
+        auto pw = PlanWeights(w, m, 3, Step(w, m));
+        std::printf("   (mage: arcane power %.3f, icy veins %.3f)\n", pw["arcane power"], pw["icy veins"]);
+        check(near(pw["arcane power"], 1.0 / 1.2, 1e-6), "Arcane Power ready now waits 10 seconds for Icy Veins: it leans away to 1/1.2");
+        check(near(Leans(w, m, 3, PER_HOUR)["arcane power"], 1.0 / 1.2, 1e-6), "and the mage's lean for it says so");
+        w.party[3].cooldowns = { { 12472, "icy veins", 0 } };
+        pw = PlanWeights(w, m, 3, Step(w, m));
+        check(!pw.count("arcane power") && near(pw["icy veins"], 1.0), "a mage who never learned Arcane Power doesn't hold Icy Veins for it");
+    }
+
     std::printf("\n%d passed, %d failed\n", passed, failed);
     return failed == 0 ? 0 : 1;
 }

@@ -12,7 +12,7 @@
 - Priority: High
 - State: in progress (all six layers built and tested offline; the
   server's side, the draw's hookup included, written and waiting for the
-  compile; replays, casts and cooldowns read from the game next)
+  compile; replays and casts in progress next)
 
 ## Origin
 
@@ -141,8 +141,8 @@ level, target, marks, the sorted threat list with each entry's state,
 taunt and melee reach). The snapshot and a copy of the minute go to a
 pool of worker threads, which run the step and keep the party's latest
 verdict; the pool stops at shutdown. `.buddy fight` prints it. Not read
-yet: casts in progress, cooldowns, the group's gold per hour (gold counts
-nothing until it is).
+yet: casts in progress, the group's gold per hour (gold counts nothing
+until it is).
 
 **Layer 6, the answers, built 2026-10-30** (the arithmetic committed and
 tested; its server half waiting for the compile with the rest). For each
@@ -178,6 +178,21 @@ counted once, where they still run. Checked (31 checks in all): Bloodlust
 on the rogue doing all the damage with 40 seconds left makes a minute's
 fight 66 seconds; Avenging Wrath on a paladin who has dealt nothing opens
 no window.
+
+**The cooldown timeline in the leans, 2026-10-30 (committed, offline;
+its server reading waits for the compile):** each buddy's long
+empowering cooldowns that it knows (90 seconds or more, in the window
+table) are lined up by the cooldown timeline (625f): each planned on the
+longer of its cooldown and its lockout on itself, ready when the
+snapshot says, lasting its aura, multiplying the buddy's worth by its
+haste and damage, the lockouts between them as blocks, the open windows
+outside, over the fight's time left, ending as its kind of fight ends
+(`PlanWeights`). Each one's lean is multiplied by its weight. The
+snapshot's cooldowns are every long ability the buddy knows at any rank,
+with its time to ready (0 ready), so nothing is held for one it hasn't
+learned. Checked (34 checks in all): a mage with Arcane Power ready and
+Icy Veins ready in 10 seconds leans away from Arcane Power to 1/1.2 now;
+one who never learned Arcane Power doesn't hold Icy Veins for it.
 Nothing yet takes the snapshot, keeps the history, runs the layers on
 worker threads or hands their verdict to the draw. The page
 `docs/HTML/fight-forward-pass.html` (made by

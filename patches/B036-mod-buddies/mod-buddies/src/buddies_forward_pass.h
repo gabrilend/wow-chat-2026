@@ -379,6 +379,56 @@ namespace BuddyForwardPass
     }
     // }}}
 
+    inline std::string Lower(char const* s) { std::string o(s); std::transform(o.begin(), o.end(), o.begin(), [](unsigned char c) { return std::tolower(c); }); return o; }
+
+    // {{{ PlanWeights
+    // One buddy's long empowering cooldowns (a cooldown of 90 seconds or
+    // more, in the window table: Avenging Wrath, Icy Veins, Arcane Power,
+    // Bloodlust ...) that it knows (the snapshot's cooldowns list them), lined
+    // up by the cooldown timeline (625f, LineUp): each
+    // planned on the longer of its cooldown and its lockout on itself, ready
+    // when the snapshot says (now, if it isn't waiting), lasting its aura's
+    // time, multiplying the buddy's worth by its haste and damage; the
+    // lockouts between them as blocks; the windows open now as outside
+    // windows; over the fight's time left, ending as a boss or trash fight
+    // ends. Out: each one's weight (1: use it now; less: holding is better).
+    inline std::map<std::string, double> PlanWeights(Snapshot const& s, Memory const& memory, int b, Verdict const& base)
+    {
+        std::map<std::string, double> out;
+        Member const& me = s.party[b];
+        std::vector<std::string> names;
+        std::vector<BuddyPlan::Own> own;
+        for (BuddyAbilityRow const& r : BUDDY_ABILITIES)
+        {
+            if (r.cls != me.cls || r.cooldownMs < 90000) continue;
+            for (BuddyWindow::Buff const& buff : BuddyWindow::BUFFS)
+            {
+                if (Lower(buff.name) != r.name) continue;
+                bool knows = false;
+                double ready = 0.0;
+                for (Cooldown const& c : me.cooldowns) if (c.name == r.name) { knows = true; ready = c.readyIn; }
+                if (!knows) continue;                                          // not learned: nothing planned round it
+                double lasts = 0.0;
+                for (BuddyAbilityReachRow const& x : BUDDY_ABILITY_REACH) if (x.cls == r.cls && std::string(x.name) == r.name) lasts = x.lastsMs / 1000.0;
+                double gain = (1.0 + buff.gives.haste) * (1.0 + buff.gives.damage);
+                own.push_back({ { BuddyLockout::EffectiveCooldownMs(r.name, r.cooldownMs) / 1000.0, ready, lasts }, gain, {} });
+                names.push_back(r.name);
+            }
+        }
+        for (size_t i = 0; i < own.size(); ++i)
+            for (size_t k = 0; k < own.size(); ++k)
+                if (i != k)
+                {
+                    uint32_t ms = BuddyLockout::BlocksOwnMs(names[i].c_str(), names[k].c_str());
+                    if (ms > 0) own[i].blocks.push_back({ k, ms / 1000.0 });
+                }
+        if (own.empty()) return out;
+        std::vector<BuddyPlan::Plan> plans = BuddyPlan::LineUp(own, OpenWindows(s, memory), base.left, BuddyPlan::Ending(base.kind));
+        for (size_t i = 0; i < own.size(); ++i) out[names[i]] = plans[i].weight;
+        return out;
+    }
+    // }}}
+
     // {{{ Leans
     // Every answer one buddy (`b`, a member's index) could give now, tried
     // and leaned (issue 625n, layer 6), by its abilities' names in lower case
@@ -396,7 +446,6 @@ namespace BuddyForwardPass
     // Abilities that answer none of these aren't listed (the draw leaves
     // them at 1). Heals are counted before the caster's healing bonuses, so
     // they lean a little less than they will land: noted, not yet read.
-    inline std::string Lower(char const* s) { std::string o(s); std::transform(o.begin(), o.end(), o.begin(), [](unsigned char c) { return std::tolower(c); }); return o; }
     inline std::map<std::string, double> Leans(Snapshot const& s, Memory const& memory, int b, double goldPerHour)
     {
         std::map<std::string, double> out;
@@ -427,6 +476,15 @@ namespace BuddyForwardPass
                     a.burstLasts  = r.lastsMs / 1000.0;
                 }
             out[r.name] = Lean(Judge(s, memory, a, goldPerHour, &base), base);
+        }
+        // the long empowering cooldowns, through the cooldown timeline (625f):
+        // each one's lean times its weight, how much worse using it now is
+        // than its best plan (held for a window, or lined up with the
+        // buddy's others, the lockouts between them counted)
+        for (auto const& [name, weight] : PlanWeights(s, memory, b, base))
+        {
+            auto it = out.find(name);
+            out[name] = (it == out.end() ? 1.0 : it->second) * weight;
         }
         if (base.strongest >= 0)
             for (BuddyThreatLeverRow const& r : BUDDY_THREAT_LEVERS)

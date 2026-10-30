@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <deque>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -41,8 +42,12 @@ namespace BuddyFightState
     // its effects as the game holds them (buddies_marks.h).
     struct Mark { uint32_t spell; double secondsLeft; uint32_t stacks; uint64_t by; std::vector<BuddyMarks::AuraEffect> effects; };
 
-    // Cooldown: an ability waiting, by spell id, and seconds until ready.
-    struct Cooldown { uint32_t spell; double readyIn; };
+    // Cooldown: one of the long abilities it knows (a cooldown of 90
+    // seconds or more), by the spell id it knows it at, its name in lower
+    // case (as the generated tables name it: ranks have different ids, one
+    // name), and seconds until ready (0: ready now). An ability it hasn't
+    // learned isn't listed, so nothing is planned round it.
+    struct Cooldown { uint32_t spell; std::string name; double readyIn; };
 
     // Member: one of the party, a pet included (`owner` its master's id; 0
     // for a character). Role: 0 damage, 1 tank, 2 healer. resourceKind: the
