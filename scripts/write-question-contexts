@@ -17,11 +17,17 @@
 -- a context that leaves a component out is sent back once with what is
 -- missing. Each context is kept as a small file with a fingerprint of the
 -- questions it explains, so only groups whose questions changed are
--- written again. Several writers run at once.
+-- written again. Writers run one at a time, in walkthrough order, each
+-- told what the contexts before it already explained, so the walkthrough
+-- doesn't explain the same thing twice (the owner, 2026-10-30: "if we
+-- don't do it with a single thread, then we'll find ourselves
+-- re-explaining things from the context"). Each context also names its
+-- key terms, each with a kind, which the pages colour and embolden.
 --
 -- Usage: scripts/write-question-contexts [DIR] [--jobs N] [--limit N] [--group ID] [--list] [--model NAME]
 --   DIR          the project root (default the hard-coded one below)
---   --jobs N     writers at once (default 4)
+--   --jobs N     writers at once (default 1: one at a time, in walkthrough order, so each
+--                knows what the contexts before it explained; more than one loses that)
 --   --limit N    write at most N groups this run (default all that need it)
 --   --group ID   write one group (what each worker runs)
 --   --list       print the groups, which need writing, and stop
@@ -36,7 +42,7 @@ local DIR = "/mnt/kaun/wow-chat-2026"
 local LIBS = "/home/ritz/programming/ai-stuff/libs/lua"
 
 -- {{{ arguments
-local jobs, limit, only, list, model = 4, nil, nil, false, "claude-sonnet-5-5"
+local jobs, limit, only, list, model = 1, nil, nil, false, "claude-sonnet-5-5"
 do
     local i = 1
     while i <= #arg do
@@ -119,7 +125,10 @@ local function groups_of(data)
     for _, g in ipairs(groups) do
         local parts = {}
         for _, q in ipairs(g.questions) do parts[#parts + 1] = q.key .. "\n" .. q.text end
-        g.fingerprint = fingerprint(table.concat(parts, "\n\n"))
+        -- the writer's version is in the fingerprint, so a change in how
+        -- contexts are written rewrites them all (2: written in order,
+        -- knowing what came before; with key terms)
+        g.fingerprint = fingerprint("writer 2\n" .. table.concat(parts, "\n\n"))
     end
     return groups
 end
@@ -146,12 +155,16 @@ local SCHEMA = json.encode({
         components = { type = "array", items = { type = "object",
             properties = { question = { type = "string" }, component = { type = "string" }, explained_by = { type = "string" } },
             required = { "question", "component", "explained_by" } } },
+        terms = { type = "array", items = { type = "object",
+            properties = { term = { type = "string" },
+                           kind = { type = "string", enum = { "mechanism", "number", "choice", "place", "decision" } } },
+            required = { "term", "kind" } } },
     },
-    required = { "context", "components" },
+    required = { "context", "components", "terms" },
 })
 
 -- {{{ local function prompt_for()
-local function prompt_for(g, missing)
+local function prompt_for(g, missing, before)
     local lines = {
         "You are writing one entry of a walkthrough of a software project: Everland Ghostsong, a World of Warcraft 3.3.5a private server (AzerothCore) with roguelike survival changes: an empty world where monsters spawn around players, treasure, wandering travellers, and \"buddies\", AI companion characters (built on the playerbots module) that follow and fight beside each player.",
         "",
@@ -167,7 +180,12 @@ local function prompt_for(g, missing)
     end
     lines[#lines + 1] = "First, for each question, list its components: every term, mechanism, number, earlier decision or choice a reader must understand to answer it."
     lines[#lines + 1] = "Then write the context: two to four short paragraphs of plain English that explain every component of every question. Rules: no issue numbers, no code names (functions, files, variables, settings by their code names); say what things do, by mechanism or analogy; name numbers with their units; for a choice, say what each option would bring. Do not answer the questions, and do not repeat them."
-    lines[#lines + 1] = "Finally, for each component, quote exactly the sentence of your context that explains it (\"explained_by\": copied character for character from the context)."
+    lines[#lines + 1] = "Then, for each component, quote exactly the sentence of your context that explains it (\"explained_by\": copied character for character from the context)."
+    lines[#lines + 1] = "Finally, list the key terms: the words and short phrases of the questions that matter most for answering them, each copied exactly as it appears in your context (so it can be highlighted there), each with a kind: mechanism (how something works), number (a quantity or setting), choice (an option the question offers), place (a place, creature or thing in the game), decision (something already decided)."
+    if before and #before > 0 then
+        lines[#lines + 1] = ""
+        lines[#lines + 1] = "This context follows others in the walkthrough. These were already explained earlier; don't explain them again (name them briefly if you need them, and explain only what is new): " .. table.concat(before, "; ")
+    end
     if missing then
         lines[#lines + 1] = ""
         lines[#lines + 1] = "A first attempt left these components unexplained, or quoted a sentence that is not in the context; make sure the new context explains each, and quote exactly: " .. missing
@@ -218,15 +236,34 @@ local function unexplained(g, result)
 end
 -- }}}
 
+-- {{{ local function explained_before()
+-- The components the contexts before this group explained, newest last,
+-- at most 300 (the writer's prompt has to stay short).
+local function explained_before(groups, g)
+    local seen, names = {}, {}
+    for _, h in ipairs(groups) do
+        if h.id == g.id then break end
+        local t = slurp(CONTEXTS .. "/" .. h.id .. ".json")
+        local c = t and json.decode(t)
+        for _, comp in ipairs(c and c.components or {}) do
+            local name = comp.component
+            if name and not seen[name:lower()] then seen[name:lower()] = true; names[#names + 1] = name end
+        end
+    end
+    while #names > 300 do table.remove(names, 1) end
+    return names
+end
+-- }}}
+
 -- {{{ local function write_group()
-local function write_group(g)
-    local result, err = ask(prompt_for(g))
+local function write_group(g, before)
+    local result, err = ask(prompt_for(g, nil, before))
     if not result then return false, err end
     local missing = unexplained(g, result)
     local tries = 1
     if #missing > 0 then
         log(g.id .. ": " .. #missing .. " components unexplained on the first try; asked again")
-        local again, err2 = ask(prompt_for(g, table.concat(missing, "; ")))
+        local again, err2 = ask(prompt_for(g, table.concat(missing, "; "), before))
         tries = 2
         if again then result, missing = again, unexplained(g, again) else return false, err2 end
     end
@@ -237,6 +274,14 @@ local function write_group(g)
         written_by = "scripts/write-question-contexts (issue 1102a): a context for these questions, for the open-questions walkthrough",
         group = g.id, fingerprint = g.fingerprint, questions = keys, written = os.date("%Y-%m-%d %H:%M"),
         model = model, tries = tries, context = result.context, components = result.components, unexplained = missing,
+        terms = (function()
+            -- only terms really in the context can be highlighted there
+            local kept = {}
+            for _, t in ipairs(result.terms or {}) do
+                if type(t.term) == "string" and t.term ~= "" and result.context:find(t.term, 1, true) then kept[#kept + 1] = t end
+            end
+            return kept
+        end)(),
     }, { indent = true }))
     f:close()
     return true, #missing == 0 and "every component explained" or (#missing .. " components still unexplained (kept, marked)")
@@ -257,7 +302,7 @@ os.execute("mkdir -p '" .. CONTEXTS .. "'")
 if only then
     for _, g in ipairs(groups) do
         if g.id == only then
-            local ok, said = write_group(g)
+            local ok, said = write_group(g, explained_before(groups, g))
             log(g.id .. ": " .. (ok and "" or "FAILED: ") .. said)
             os.exit(ok and 0 or 1)
         end

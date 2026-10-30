@@ -54,10 +54,22 @@ And, asked whether to write them all at once or a page at a time:
 - The open-questions page has a walkthrough order (the rings, then phase,
   then issue), showing answered questions too, and places each written
   context above the first question of its group.
-- **Not yet run**: starting writer sessions from the agent's own session
-  was refused by Claude Code's permission system on 2026-10-29. The owner
-  runs `scripts/write-question-contexts` (or allows it), then
-  `scripts/generate-answer-pages`.
+- **One writer at a time, in order** (the owner, 2026-10-30: "I'm
+  concerned that if we don't do it with a single thread, then we'll find
+  ourselves re-explaining things from the context. That's not ideal!"):
+  writers run in walkthrough order, each told the components the contexts
+  before it explained (the last 300), and asked not to explain them again.
+- **Key terms marked** (the owner, 2026-10-30: "can we make it so that
+  words in the question that are important will stand out in the context
+  with a color appropriate and bolded highlight?"): each context names its
+  key terms, copied exactly from it, each of a kind (mechanism, number,
+  choice, place, decision); the page shows them bold, coloured by kind.
+- **Run by the owner**: starting writer sessions from the agent's own
+  session is refused by Claude Code's permission system (2026-10-29 and
+  30). The owner ran three groups on 2026-10-30 (all components
+  explained); the full run is `scripts/write-question-contexts`, then
+  `scripts/generate-answer-pages`. The writer's version is in each
+  fingerprint, so the three are written again in order with key terms.
 
 ## Intended Behavior
 

@@ -430,3 +430,16 @@ Word for word, each written into its plan (in brackets):
   a character in the world for sizing relationship, then say "which parts
   should I walk on?" ... Maybe... rmaps, for ritz maps! like mmaps but with
   priority and labelling and route-finding details." (in full in 618a)
+
+## 2026-10-30, the walkthrough written in order; answers into the issues
+
+- (1102a) "also I'm concerned that if we don't do it with a single thread,
+  then we'll find ourselves re-explaining things from the context. That's
+  not ideal! Do you think this is valid? Also, can we make it so that
+  words in the question that are important will stand out in the context
+  with a color appropriate and bolded highlight?"
+- (1102) "alright I just answered some questions in the document. I'm
+  concerned because now it won't get delivered to the llm-transcripts, but
+  I guess that's okay. Let's just make sure that the stuff that's written
+  to this document (can you check on them by the way?) gets saved to the
+  issue files verbatim. That should do it..."

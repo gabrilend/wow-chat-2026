@@ -313,7 +313,41 @@ do
         if name:match("%.json$") then
             local c = json.decode(slurp(DIR .. "/docs/answer-pages/contexts/" .. name))
             if c and c.questions and c.questions[1] and c.context then
-                WALK.contexts[c.questions[1]] = { text = c.context, size = #c.questions }
+                -- each paragraph escaped, then its key terms marked: the
+                -- longest first, each occurrence swapped for a numbered
+                -- placeholder so a short term never marks inside a long
+                -- one, then the placeholders for coloured, bold marks
+                -- (the owner, 2026-10-30: "words in the question that are
+                -- important will stand out in the context with a color
+                -- appropriate and bolded highlight")
+                local terms = {}
+                for _, t in ipairs(c.terms or {}) do terms[#terms + 1] = t end
+                table.sort(terms, function(a, b) return #a.term > #b.term end)
+                local paras = {}
+                for para in (c.context .. "\n\n"):gmatch("(.-)\n%s*\n") do
+                    para = para:gsub("^%s+", ""):gsub("%s+$", "")
+                    if para ~= "" then
+                        local h = esc(para)
+                        local marks = {}
+                        for _, t in ipairs(terms) do
+                            local needle = esc(t.term)
+                            local out, from = {}, 1
+                            while true do
+                                local a, b = h:find(needle, from, true)
+                                if not a then break end
+                                out[#out + 1] = h:sub(from, a - 1)
+                                marks[#marks + 1] = "<mark class=\"t-" .. (t.kind or "mechanism") .. "\"><strong>" .. needle .. "</strong></mark>"
+                                out[#out + 1] = "\1" .. #marks .. "\2"
+                                from = b + 1
+                            end
+                            out[#out + 1] = h:sub(from)
+                            h = table.concat(out)
+                        end
+                        h = h:gsub("\1(%d+)\2", function(k) return marks[tonumber(k)] end)
+                        paras[#paras + 1] = h
+                    end
+                end
+                WALK.contexts[c.questions[1]] = { paras = paras, size = #c.questions }
             end
         end
     end
@@ -462,7 +496,7 @@ figure.gif figcaption:empty{display:none}h2{clear:both}
 .kept{background:var(--accent-soft);border-radius:4px;padding:.4rem .6rem;margin-top:.4rem;font-size:.92rem;white-space:pre-wrap}.kept .when{display:block;font-size:.75rem;color:var(--dim)}
 .said{font-size:.8rem;color:var(--dim);margin-top:.2rem}
 .source{font-size:.8rem;color:var(--dim);margin-top:3rem}
-.context{background:var(--accent-soft);border-left:4px solid var(--accent);border-radius:4px;padding:.6rem .9rem;margin:.8rem 0}.context .label{font:600 .72rem/1 var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:.3rem}.context p{margin:.4rem 0}
+.context{background:var(--accent-soft);border-left:4px solid var(--accent);border-radius:4px;padding:.6rem .9rem;margin:.8rem 0}.context .label{font:600 .72rem/1 var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:.3rem}.context p{margin:.4rem 0}.context mark{background:none;padding:0 .1em;border-radius:3px}.t-mechanism{color:#1f5fa8}.t-number{color:#8a5a00}.t-choice{color:#2f7d4a}.t-place{color:#6b3fa0}.t-decision{color:#a0335a}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .t-mechanism{color:#7fb3f0}:root:not([data-theme="light"]) .t-number{color:#e8c547}:root:not([data-theme="light"]) .t-choice{color:#6fcf8f}:root:not([data-theme="light"]) .t-place{color:#b99af0}:root:not([data-theme="light"]) .t-decision{color:#f08ab0}}.context .key{font-size:.75rem;color:var(--dim);margin-top:.3rem}
 @media (max-width:760px){.wrap{grid-template-columns:minmax(0,1fr);gap:.5rem}nav{position:static;max-height:none;border-bottom:1px solid var(--line)}figure.gif{float:none;margin:1rem auto;width:min(256px,100%)}}
 ]]
 
@@ -500,7 +534,7 @@ function render(){
       shownQ++;
       const ctx=WALK.contexts[it.id+"#"+q.n];
       if(ctx){const c=el("div","context");c.appendChild(el("div","label","Context for the next "+ctx.size+" question"+(ctx.size>1?"s":"")));
-        for(const para of ctx.text.split(/\n\s*\n/)){const pp=el("p");pp.textContent=para.trim();c.appendChild(pp);}card.appendChild(c);}
+        for(const para of ctx.paras){c.appendChild(el("p",null,para));}card.appendChild(c);}
       const d=el("div","q"+(q.answered?" answered":""));
       if(q.group&&q.group!==lastGroup){d.appendChild(el("div","group",q.group.replace(/</g,"&lt;")));lastGroup=q.group;}
       const head="<strong>"+q.n+".</strong> ";

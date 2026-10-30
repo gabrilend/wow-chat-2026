@@ -52,6 +52,14 @@ one of the compile's quick tests.
   (15 MB in all).
 - Pages 3 and 5 are the plans only; their simulators wait for the
   owner's approval.
+- **Answers reach the issues word for word** (the owner, 2026-10-30:
+  "Let's just make sure that the stuff that's written to this document
+  ... gets saved to the issue files verbatim."): `scripts/file-answers`
+  copies each answer from `notes/answers/` under its question in its
+  issue, quoted, with its date, after checking the question there still
+  reads as it did; `notes/answers/filed.txt` keeps it from being copied
+  twice. An answer whose question moved or changed is reported, not
+  placed. Run it after answering (the agent runs it when it next works).
 - Not done: the new documents are not yet in `docs/table-of-contents.md`
   (a shared file another session holds).
 

@@ -1,0 +1,64 @@
+{
+  "model":"claude-sonnet-5-5",
+  "tries":1,
+  "fingerprint":"d77b6918",
+  "context":"Buddies roam one named area at a time, and the areas the map files provide are often too big, so the plan is to cut each into smaller areas drawn as polygons, which are flat outlines given by a list of corner points. An AI model would draw them, looking at what a person would: the zone's map and minimap, a top-down picture, pictures of cliffs and lake shores, one picture per quest with its spawn points and regions laid over the ground, a database lookup on any creature's spawn point, and the area's wiki page. The unsettled part is how that runs: the model could draw one zone at a time, offline, with each drawing checked in a view of the zone from above before it is kept, which keeps bad outlines out but costs a human review per zone. The pictures themselves could come from the custom game client, which can render a scene to an image without opening a window, or from the project's own zone-view renderer, which already draws terrain from above for that review.\n\nEvery starting valley would be split into two or three areas, and every other zone too, using the kinds of monster living in each part (boars here, scorpions there, demons elsewhere) as the clue to where one area ends. In a town, including the plains round it, a buddy would pick its next target as whatever is nearest, either a monster to fight or a friendly townsperson to talk to, so it mostly fights and sometimes talks. How often \"sometimes\" happens is a number still to pick, for instance one target in five being a townsperson: a higher share makes towns livelier but slows the fighting. Buddies also have errands in towns, such as visiting a trainer, a vendor or a repairer, and the open point is whether a due errand still goes ahead of the nearest-target rule or becomes one more thing in the mix.\n\nSeparately, towns are already marked by hand-placed circles, inside which buddies do town things like errands and leisure instead of fighting. A drawn area carrying the nearest-target rule overlaps the circle on the Valley of Trials' town side, so either the drawn area's rule takes over inside the circle, letting buddies fight there, or the circle keeps meaning errands first and the rule applies only in the rest of the area.\n\nLast, where an area has almost no monsters and almost no friendly people, buddies would not roam but would follow their player, spread along an arc around them. For that, \"almost none\" needs a measure, such as the spawns inside the area divided by its size in square yards and compared with a threshold. The count could be taken once when the area is drawn, which is cheap and stable but blind to later changes, or live, which tracks what is actually alive near the player but costs work each time and can make buddies flip between roaming and the arc.",
+  "components":[{
+      "component":"Area as a polygon replacing oversized map-file areas",
+      "explained_by":"Buddies roam one named area at a time, and the areas the map files provide are often too big, so the plan is to cut each into smaller areas drawn as polygons, which are flat outlines given by a list of corner points.",
+      "question":"617e12#1"
+    },{
+      "component":"AI drawing from pictures, quest overlays, spawn queries, wiki pages",
+      "explained_by":"An AI model would draw them, looking at what a person would: the zone's map and minimap, a top-down picture, pictures of cliffs and lake shores, one picture per quest with its spawn points and regions laid over the ground, a database lookup on any creature's spawn point, and the area's wiki page.",
+      "question":"617e12#1"
+    },{
+      "component":"Which model and how it is run (one zone at a time, offline, reviewed from above before kept)",
+      "explained_by":"The unsettled part is how that runs: the model could draw one zone at a time, offline, with each drawing checked in a view of the zone from above before it is kept, which keeps bad outlines out but costs a human review per zone.",
+      "question":"617e12#1"
+    },{
+      "component":"How the pictures are made (custom client's windowless pictures vs zone view's renderer)",
+      "explained_by":"The pictures themselves could come from the custom game client, which can render a scene to an image without opening a window, or from the project's own zone-view renderer, which already draws terrain from above for that review.",
+      "question":"617e12#1"
+    },{
+      "component":"Town rule: nearest target, sometimes talk, mostly fight, plains included",
+      "explained_by":"In a town, including the plains round it, a buddy would pick its next target as whatever is nearest, either a monster to fight or a friendly townsperson to talk to, so it mostly fights and sometimes talks.",
+      "question":"617e12#2"
+    },{
+      "component":"How often 'sometimes' is (one in five)",
+      "explained_by":"How often \"sometimes\" happens is a number still to pick, for instance one target in five being a townsperson: a higher share makes towns livelier but slows the fighting.",
+      "question":"617e12#2"
+    },{
+      "component":"Errands (trainer, vendor, repair) coming first when due",
+      "explained_by":"Buddies also have errands in towns, such as visiting a trainer, a vendor or a repairer, and the open point is whether a due errand still goes ahead of the nearest-target rule or becomes one more thing in the mix.",
+      "question":"617e12#2"
+    },{
+      "component":"Town circles and their errands-first behaviour versus the drawn area's rule",
+      "explained_by":"Separately, towns are already marked by hand-placed circles, inside which buddies do town things like errands and leisure instead of fighting.",
+      "question":"617e12#3"
+    },{
+      "component":"Replace the circle's behaviour or keep errands first (town side of Valley of Trials)",
+      "explained_by":"A drawn area carrying the nearest-target rule overlaps the circle on the Valley of Trials' town side, so either the drawn area's rule takes over inside the circle, letting buddies fight there, or the circle keeps meaning errands first and the rule applies only in the rest of the area.",
+      "question":"617e12#3"
+    },{
+      "component":"Other starting valleys split into two or three areas; every zone split; monster kinds as clue",
+      "explained_by":"Every starting valley would be split into two or three areas, and every other zone too, using the kinds of monster living in each part (boars here, scorpions there, demons elsewhere) as the clue to where one area ends.",
+      "question":"617e12#4"
+    },{
+      "component":"Empty areas: buddies follow the player on an arc",
+      "explained_by":"Last, where an area has almost no monsters and almost no friendly people, buddies would not roam but would follow their player, spread along an arc around them.",
+      "question":"617e12#5"
+    },{
+      "component":"How 'almost none' is counted (spawns per square yard against a threshold)",
+      "explained_by":"For that, \"almost none\" needs a measure, such as the spawns inside the area divided by its size in square yards and compared with a threshold.",
+      "question":"617e12#5"
+    },{
+      "component":"Decided once at drawing time or live",
+      "explained_by":"The count could be taken once when the area is drawn, which is cheap and stable but blind to later changes, or live, which tracks what is actually alive near the player but costs work each time and can make buddies flip between roaming and the arc.",
+      "question":"617e12#5"
+    }],
+  "unexplained":[],
+  "written_by":"scripts/write-question-contexts (issue 1102a): a context for these questions, for the open-questions walkthrough",
+  "group":"617e12-q1",
+  "written":"2026-10-30 02:17",
+  "questions":["617e12#1","617e12#2","617e12#3","617e12#4","617e12#5"]
+}

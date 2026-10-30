@@ -155,12 +155,18 @@ two healers), it splits into two trios.
 1. **The pointers: per side, per match.** Each side has its own set,
    reset at each new match. Or should a side's pointers carry over from
    one match to the next, so the spread continues?
+   **Answered 2026-10-30 (on the answer page), the owner:**
+   > randomize them at match start.
 2. **Captured bases on the way:** when a squad reaches a base its side
    already holds, does it pass through by the rule, or might it stop to
    guard (176a2b's question 3)?
+   **Answered 2026-10-30 (on the answer page), the owner:**
+   > if it's missing members then any that are stationed there may join them to plunder beyond. Otherwise they will stay. So, a full group will stay, and sometimes singles will come along and say "hey let's go somewhere else" and they'll fill up to their groups of... 3 I think it was?
 3. **The goal:** "to reach the enemy base": once a squad stands at the
    enemy's home, what next? Turn round by the same rule toward their own
    home, fight there, or wait?
+   **Answered 2026-10-30 (on the answer page), the owner:**
+   > an enemy base like the farm, blacksmith, stables, etc, once you arrive you fight over it. If there's nobody to fight or if nobody is targeting you and you're near the flag, you can try and claim it. If you get interrupted then you fight again. If we've pushed them all the way back to their graveyard, then I guess just keep pushing and wait at their gate?
 5. (Answered 2026-10-08) **What "forward" means:** any road but the one
    just come by.
 6. **The crossings table above: complete and right?** Read as one map it

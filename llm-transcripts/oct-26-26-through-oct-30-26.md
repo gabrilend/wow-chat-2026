@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-29 23:47:45
+Generated on: 2026-10-30 02:29:08
 Models: claude-opus-5-5
 
 ## Contents
@@ -153,6 +153,15 @@ Models: claude-opus-5-5
     questions into pages you can answer on. The five architecture pages are
     built and running at http://127.0.0.1:8642/answer-pages/. Next: your look at
     the talents and weather plan pages, so I can build their simulators.
+37. 2026-10-30 00:02, after Request 125 - The goal is a question walkthrough
+    that explains the whole project, and its machinery is built and committed.
+    Next, you run `scripts/write-question-contexts --limit 3` to try three
+    contexts, since the permission system wouldn't let me run it.
+38. 2026-10-30 01:14, after Request 127 - We're building a walkthrough page that
+    explains every project question, and the context writer is ready but blocked
+    by permissions. Next, you run `!
+    /mnt/kaun/wow-chat-2026/scripts/write-question-contexts` (add `--limit 3` to
+    preview), or allow it for me.
 
 --------------------------------------------------------------------------------
 
@@ -13081,6 +13090,247 @@ committed (378a3968c). The answer pages are refreshed with the new questions.
 
 My suggested order for building next is the talent table, then the weather
 simulator, then the question contexts.
+
+--------------------------------------------------------------------------------
+
+### User Request 125
+
+> 1. Which class do you want to describe first? I'd suggest the druid, since its
+> three trees answer the same concerns three different ways.
+
+as we're playing I will describe behavior and we will add it to the
+capabilities. My job is to dance through the project, improving everything that
+I touch. Your job is to build it all in the background so I have something to
+dance across, and try to guide me toward the things that need the most guidance.
+
+> 2. Should the contexts be written for all thousand open questions in one long
+> run, or a page at a time, starting with the questions that unblock the most?
+
+just do all of them, you can take your time. Remember we're grouping them up
+together with shared contexts, and the idea is that if we had ALL the open
+questions from the entire project even those that have been answered, if we had
+those, then a user could walk through them one-by-one and fully customize the
+software. And, if a user read through every single properly sorted context with
+the properly sorted open questions underneath them, then they'd be able to
+understand completely and answer each and every question in the open questions
+document. So, it'd be like a single documentation page that listed in a couple
+short paragraphs, enough to understand a few simple questions. Then, it'd give
+more context, and a couple more questions. Then more context, then more
+questions, etc etc, and by the end, if we had all the open questions which we
+don't, then we'd be able to fully describe the project completely. Does that
+make sense?
+
+> 3. For routes forward: should the program answer questions about a picture
+> ("which ways go on from here?"), or paint a label on every pixel? I'd lean
+> towards both, the first for
+>      routes and the second for how the ground feels.
+
+it's not an interactive thing. We'd walk a bot around in the world on totally
+random parts of the map, essentially trying to display a character in the world
+for sizing relationship, then say "which parts should I walk on?" and then say
+"walk on this part because it looks flat and solid" (and the "flat" and "solid"
+and "this part" are all tool calls btw) or "don't walk on this part because of
+the flowers" etc. And they store data about that particular pictured piece of
+the terrain and geometry, and then we'd build it into our mmaps. Maybe... rmaps,
+for ritz maps! like mmaps but with priority and labelling and route-finding
+details.
+
+depending on the character, they can move throughout the world differently
+depending on their characteristics and role.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 125
+
+> Yes, that makes sense: the open-questions page becomes one walkthrough of the
+> whole project. A short context, the few questions it explains, the next
+> context, the next questions, and so on, answered ones included. Read top to
+> bottom, it would explain everything a person needs to customize their copy.
+> Writing all three answers in, then building the context writer.
+
+> Now the context writer. Checking how the gif generator starts its own headless
+> Claude sessions, to reuse a known-good way.
+
+> Exported 390 issues' questions. Writing the context writer.
+
+> 452 groups. Trying one group first: the painted map's questions.
+
+> The page script parses. Updating the plan's current behaviour and recording
+> your words, then committing.
+
+*[commit] 0518f6ebb in wow-chat-2026 - A walkthrough of every question, with a context writer to explain each group; rmaps planned; who does what*
+
+Your three answers are written in and committed (0518f6ebb), and the machinery
+for the question walkthrough is built. The contexts themselves aren't written
+yet, because the permission system refused to let me start the Claude sessions
+that write them.
+
+**The walkthrough:** your picture makes sense, and it's now the plan.
+- Every question in the project, answered ones too, in foundation-first order:
+  the architecture's rings, then phase, then issue.
+- Grouped into 452 groups of at most five related questions, with a short
+  plain-English context above each.
+- Read top to bottom, it should explain the project well enough to customize
+  every choice.
+- The plan also says the walkthrough grows: decisions the code made without
+  asking get added as answered questions when found, so it moves toward
+  describing the whole project.
+
+**What's built:**
+- **The question export:** every open issue's questions, in walkthrough order.
+- **The context writer**, `scripts/write-question-contexts`. For each group it
+  starts a read-only Claude session, which:
+  - lists each question's components (terms, mechanisms, numbers, earlier
+    decisions);
+  - writes two to four paragraphs explaining them, with no issue numbers or code
+    names;
+  - quotes the sentence that explains each component.
+
+  A check confirms every quote is really in the context. If anything is missing,
+  the group is asked once more. Each context is kept with a fingerprint, so a
+  rerun only rewrites groups whose questions changed. Four run at once.
+- **Page 1** has a "walkthrough" sort that shows answered questions too and
+  places each context above its group, once contexts exist.
+
+**What needs you:** I tried one trial group and the permission system refused:
+it judged that me starting background Claude sessions was something to leave to
+you. You can run it yourself from this prompt:
+
+1. `! /mnt/kaun/wow-chat-2026/scripts/write-question-contexts --limit 3` writes
+   three groups, so you can judge the writing first.
+2. `! /mnt/kaun/wow-chat-2026/scripts/generate-answer-pages` puts them on the
+   page.
+3. If they read well, run it again without `--limit` for all 452. That's a long
+   run, likely a couple of hours at four at a time, and it uses your Claude
+   usage.
+
+Alternatively, you could add a permission rule that lets me run it in the
+background.
+
+**rmaps** is in the routes-forward plan as you described it:
+- A bot stands at random spots with a character in the picture for scale.
+- The model is asked "which parts should I walk on?", and answers only through
+  tool calls: mark this part, with these words, walk or don't, and why.
+- Each answer is stored against that piece of ground.
+- The result is laid over the server's movement maps as "rmaps": what a place is
+  like and how much to prefer it, read differently by each character's traits
+  and role.
+
+**Who does what** is written into the design target in the project instructions,
+as you put it: you describe behaviour while playing and it goes straight into
+its plan; I build in the background and point you to what most needs your
+judgement. The walkthrough is meant to be the map of that.
+
+--------------------------------------------------------------------------------
+
+### User Request 126
+
+can you tell me about that first part? Explain it succinctly.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 126
+
+The walkthrough turns the project's scattered questions into one readable page.
+
+- **What goes in:** every question from every issue file, about 1,600 in all,
+  open and already-answered.
+- **The order:** the foundations come first (the game world, the rules), then
+  the things built on them (the buddies' minds and bodies, then the pages and
+  tools).
+- **The groups:** related questions sit together, at most five to a group, 452
+  groups in all.
+- **The context:** above each group, two to four plain paragraphs explain
+  everything those questions rest on, with no issue numbers or code names.
+
+A reader goes context, questions, context, questions, top to bottom. By the end
+they understand every choice the project has made or still has to make, and can
+answer each one their own way to customize their copy. The more decisions get
+written down as questions, the closer the page comes to describing the whole
+project.
+
+--------------------------------------------------------------------------------
+
+### User Request 127
+
+okay let's build them all please
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 127
+
+> Running one group first to check the writer works end to end, then all of them
+> in the background.
+
+I couldn't start it: the permission system refused again to let me launch the
+writer sessions, even with your go-ahead. It treats this session starting other
+Claude sessions in the background as something only you can allow.
+
+Two ways forward:
+
+1. **You run it** by typing this at the prompt. The `!` runs it as you, in this
+   session:
+   `! /mnt/kaun/wow-chat-2026/scripts/write-question-contexts`
+   It writes all 452 groups, four at a time; I'd guess a couple of hours, on
+   your Claude usage. Afterwards, `!
+   /mnt/kaun/wow-chat-2026/scripts/generate-answer-pages` puts them on the page.
+   If you'd rather judge the writing first, add `--limit 3` to the first
+   command.
+2. **You allow it for me** by adding a permission rule for that script to your
+   Claude Code settings. Then I can run it and keep going in the background
+   myself.
+
+The tool is ready either way. If a group fails, its reason goes to
+`tmp/shared-memory/question-contexts.log`, and a rerun only writes what's
+missing.
+
+--------------------------------------------------------------------------------
+
+### User Request 128
+
+<pasted_content id="12ab">
+$ /mnt/kaun/wow-chat-2026/scripts/write-question-contexts --limit 3
+2026-10-30 02:16:53 452 groups in all; writing 3, 4 at a time
+2026-10-30 02:17:19 176a2c-q6: every component explained
+2026-10-30 02:17:27 617e12-q1: every component explained
+2026-10-30 02:17:28 176a2c-q1: every component explained
+2026-10-30 02:17:28 done: 3 of 3 written this run
+</pasted_content id="12ab">
+
+
+alright how do I check them?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 128
+
+I've rebuilt the pages with the three contexts on them. To read them:
+
+1. Open http://127.0.0.1:8642/answer-pages/open-questions.html (the answer
+   server is still running).
+2. In "The questions", the Sort menu now starts on "walkthrough, with contexts".
+   Each context sits in a gold-edged box labelled "Context for the next N
+   questions", directly above its group.
+3. All three are near the top. Two are the Arathi Basin match's questions; the
+   third is the hand-drawn battle areas in the Valley of Trials, whose first
+   card is titled "Hand-Drawn Battle Areas".
+
+The raw files are `docs/answer-pages/contexts/176a2c-q1.json`, `176a2c-q6.json`
+and `617e12-q1.json`. Each holds the context and every component it was checked
+against.
+
+I read the battle-areas one. It runs four paragraphs, explains 13 components
+with none missing, and reads cleanly:
+- why areas get cut into drawn outlines;
+- what a model would look at to draw them;
+- the "nearest target, sometimes a townsperson" rule and what the share would
+  change;
+- the town circles' errands-first rule against the drawn area's rule;
+- how "almost no monsters" could be measured, once when the area is drawn or
+  live, and what each would bring.
+
+If they read well to you, the full run is the same command without `--limit`. It
+skips the three already written.
 
 --------------------------------------------------------------------------------
 

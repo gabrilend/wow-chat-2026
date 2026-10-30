@@ -1,0 +1,168 @@
+#!/usr/bin/env luajit
+-- file-answers - copies the answers typed into the answer pages into the
+-- issue files themselves, word for word, under the questions they answer.
+--
+-- For a general audience: the answer pages (issue 1102) keep each answer
+-- in a Markdown file per page (notes/answers/<page>.md). The issue files
+-- are where the project's decisions live, so each answer must reach its
+-- issue too. This tool reads every answers file, finds each answer's
+-- question in its issue (the issue, and the question's place in its Open
+-- Questions list), checks the question there still reads as it did when
+-- answered, and writes the answer beneath it, quoted exactly, with its date.
+-- A list of what has been filed (notes/answers/filed.txt) keeps an answer
+-- from being written twice. An answer whose question can't be found, or
+-- now reads differently, is not written: it is reported, to be placed by
+-- hand.
+--
+-- Usage: scripts/file-answers [DIR] [--dry-run]
+--   DIR        the project root (default the hard-coded one below)
+--   --dry-run  say what would be filed, write nothing
+--   --help     this text
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+
+-- {{{ arguments
+local dry = false
+do
+    for i = 1, #arg do
+        local a = arg[i]
+        if a == "--help" or a == "-h" then
+            for line in io.lines(arg[0]) do
+                if not line:match("^%-%-") and not line:match("^#!") then break end
+                print((line:gsub("^%-%- ?", "")))
+            end
+            os.exit(0)
+        elseif a == "--dry-run" then dry = true
+        elseif a:sub(1, 2) ~= "--" then DIR = a
+        else error("unknown option " .. a .. " (see --help)") end
+    end
+end
+-- }}}
+
+local ANSWERS = DIR .. "/notes/answers"
+local FILED   = ANSWERS .. "/filed.txt"
+
+-- {{{ local function slurp()
+local function slurp(path)
+    local f = io.open(path, "r")
+    if not f then return nil end
+    local t = f:read("*a")
+    f:close()
+    return t
+end
+-- }}}
+
+-- {{{ local function answers_in()
+-- One answers file's answers, as scripts/answer-server writes them: a
+-- "## date · issue question n" heading, a key line, the question quoted
+-- (lines starting ">"), then the answer.
+local function answers_in(text)
+    local out, pos = {}, 1
+    while true do
+        local s = text:find("\n## ", pos, true)
+        if not s then break end
+        local e = text:find("\n## ", s + 4, true) or (#text + 1)
+        local chunk = text:sub(s + 4, e - 1)
+        local when = chunk:match("^(%d+%-%d+%-%d+ %d+:%d+)")
+        local issue, n = chunk:match("<!%-%- key: (%w+)#(%d+) %-%->")
+        if when and issue then
+            local quoted, lines, stage = {}, {}, "head"
+            for line in (chunk .. "\n"):gmatch("([^\n]*)\n") do
+                if stage == "answer" then lines[#lines + 1] = line
+                elseif line:match("^>") then stage = "quote"; quoted[#quoted + 1] = line:gsub("^> ?", "")
+                elseif stage == "quote" then stage = "answer"; lines[#lines + 1] = line end
+            end
+            out[#out + 1] = { when = when, issue = issue, n = tonumber(n), question = table.concat(quoted, " "),
+                              answer = (table.concat(lines, "\n"):gsub("^\n+", ""):gsub("\n+$", "")) }
+        end
+        pos = e
+    end
+    return out
+end
+-- }}}
+
+-- {{{ local function issue_path()
+local function issue_path(issue)
+    for name in io.popen("ls '" .. DIR .. "/issues/'"):lines() do
+        if name:match("^" .. issue .. "%-") and name:match("%.md$") then return DIR .. "/issues/" .. name end
+    end
+end
+-- }}}
+
+-- {{{ local function file_one()
+-- Finds item n of the issue's Open Questions list, counted the way the
+-- answer pages count them (scripts/generate-answer-pages: an item is a line
+-- starting "1." or "- " at the left edge; indented lines after it are
+-- its continuation; prose between items ends the item; keep the two in
+-- step), and writes the answer after the item's last line.
+local function file_one(a)
+    local path = issue_path(a.issue)
+    if not path then return false, "no open issue " .. a.issue end
+    local text = slurp(path)
+    local lines = {}
+    for line in (text .. (text:sub(-1) == "\n" and "" or "\n")):gmatch("([^\n]*)\n") do lines[#lines + 1] = line end
+    local inside, count, startAt, endAt, indent = false, 0, nil, nil, "   "
+    for i, line in ipairs(lines) do
+        if line:match("^## ") then
+            if inside then break end
+            inside = line:match("^## Open [Qq]uestions") ~= nil
+        elseif inside then
+            if line:match("^%d+%.%s") or line:match("^%-%s") then
+                count = count + 1
+                if startAt and not endAt then endAt = i - 1 end
+                if count == a.n then startAt = i; indent = line:match("^%d") and "   " or "  " end
+            elseif startAt and not endAt and not line:match("^%s+%S") then
+                endAt = i - 1
+            end
+        end
+    end
+    if not startAt then return false, a.issue .. " has no question " .. a.n end
+    endAt = endAt or #lines
+    while endAt > startAt and lines[endAt]:match("^%s*$") do endAt = endAt - 1 end
+    -- the question must still read as it did: its first words, without the
+    -- number and the bold marks, must begin the quoted question
+    local itemText = table.concat(lines, " ", startAt, endAt):gsub("^%d+%.%s+", ""):gsub("^%-%s+", ""):gsub("%*", ""):gsub("%s+", " ")
+    local quoted = a.question:gsub("^%d+%.%s*", ""):gsub("%*", ""):gsub("%s+", " ")
+    local head = itemText:sub(1, 40)
+    if quoted:sub(1, #head) ~= head then
+        return false, a.issue .. " question " .. a.n .. " now reads \"" .. head .. "...\", not \"" .. quoted:sub(1, 40) .. "...\""
+    end
+    local add = { indent .. "**Answered " .. a.when:sub(1, 10) .. " (on the answer page), the owner:**" }
+    for l in (a.answer .. "\n"):gmatch("([^\n]*)\n") do add[#add + 1] = indent .. "> " .. l end
+    if not dry then
+        for k = #add, 1, -1 do table.insert(lines, endAt + 1, add[k]) end
+        local f = io.open(path, "w") or error("cannot write " .. path)
+        f:write(table.concat(lines, "\n"), "\n")
+        f:close()
+    end
+    return true, path:sub(#DIR + 2) .. " question " .. a.n
+end
+-- }}}
+
+-- {{{ the run
+local filed = {}
+for line in (slurp(FILED) or ""):gmatch("[^\n]+") do filed[line] = true end
+local newFiled, done, refused = {}, 0, 0
+for name in io.popen("ls '" .. ANSWERS .. "/' 2>/dev/null"):lines() do
+    if name:match("%.md$") then
+        for _, a in ipairs(answers_in(slurp(ANSWERS .. "/" .. name))) do
+            local id = a.issue .. "#" .. a.n .. " " .. a.when
+            if not filed[id] then
+                local ok, said = file_one(a)
+                print((ok and (dry and "would file: " or "filed: ") or "NOT FILED: ") .. said .. "  (" .. name .. ", " .. a.when .. ")")
+                if ok then done = done + 1; newFiled[#newFiled + 1] = id else refused = refused + 1 end
+            end
+        end
+    end
+end
+if not dry and #newFiled > 0 then
+    local f = io.open(FILED, "a") or error("cannot write " .. FILED)
+    if not slurp(FILED) or slurp(FILED) == "" then
+        f:write("# notes/answers/filed.txt - written by scripts/file-answers: each answer already copied into its issue (issue, question, when), so it is never copied twice\n")
+    end
+    f:write(table.concat(newFiled, "\n"), "\n")
+    f:close()
+end
+print(string.format("%d filed, %d not filed", done, refused))
+os.exit(refused == 0 and 0 or 1)
+-- }}}
