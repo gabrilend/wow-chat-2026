@@ -5,13 +5,13 @@ The owner, 2026-10-29: "the very next compile will include all of the currently 
 
 | Where it stands | Issues |
 |---|---:|
-| Written, waiting for the compile | 24 |
-| Built (whole or in part) | 90 |
-| In progress | 5 |
-| Planned, a plan only, or an idea | 80 |
-| Not started | 281 |
+| Written, waiting for the compile | 38 |
+| Built (whole or in part) | 86 |
+| In progress | 4 |
+| Planned, a plan only, or an idea | 88 |
+| Not started | 275 |
 | Unclear (the issue should say where it stands) | 42 |
-| **All open** | **522** |
+| **All open** | **533** |
 
 **Do you want to turn these on?** The issues built and waiting for the compile, each with its switch where it names one:
 
@@ -26,19 +26,33 @@ The owner, 2026-10-29: "the very next compile will include all of the currently 
 - **183-our-sql-after-upstreams**: Our SQL Runs After Upstream's, and Again After Each Pin Move
 - **189-patch-priority-queue**: Every Patch Says Its Own Priority, Run Through Gates [state: in progress (2026-10-20); the undo order is fixed, 189a under way]
 - **195-see-past-250-yards**: See Past 250 Yards [state: built 2026-10-20 as two settings, stock by default; waits on the]
+- **617a4-buddy-starting-kit**: Buddy Starting Kit
 - **617b1-buddy-entrance**: A Buddy's Entrance: From Behind Sargobras, a Wave or a Salute
+- **617c1-buddy-login-and-logout**: Buddy Login and Logout
 - **617c3-dungeon-draw**: The Dungeon Draw
 - **617d-buddy-quest-mirroring**: Buddy Quest Mirroring
+- **617e13-spread-through-the-questing-subzone**: Spread Through the Questing Sub-Zone, Measured [state: plan only; nothing built]
 - **617e17-an-army-of-sixty-four**: An Army of Sixty-Four [state: in progress (planning)]
 - **617e3-creatures-chests-and-nodes**: Creatures, Chests and Gathering Nodes
+- **617e4b-weapons-by-place**: Weapons by Place: Bare in Town, Sheathed in the Wilds, Drawn in Danger [state: built 2026-10-15; syntax-checked, not yet rebuilt, installed or run]
+- **617e5-fighting-together**: Fighting Together
 - **617e6-exploration-modes-in-game**: Exploration Modes in Game
 - **617e8-following-across-maps**: Following the Owner Across Maps
 - **617h-buddy-auction-house**: Buddy Town Errands and the Auction House
+- **617h1-selling-trip**: The Selling Trip: Full Bags Send a Buddy to a Vendor
 - **617i-buddy-battlegrounds**: Buddy Battlegrounds
 - **617j-buddy-loot-rolls-and-upgrades**: Buddy Loot Rolls and Upgrades
+- **617j2-gems-and-sockets**: Gems and Sockets: Buddies Gem Their Own Gear by Their Plan
+- **617j3-spirit-worth-in-gear-choice**: Spirit's Worth in a Buddy's Gear Choice
+- **617o1-mesh-decides**: The Mesh Decides Every Spot and Route
+- **617o2-rooms-on-the-mesh**: Rooms and Tunnels Measured on the Mesh
+- **617o4-steering-to-moving-targets**: Steering Toward Moving Targets
+- **617o5-vantage-and-orbiting**: Climbing for a View, Circling What Blocks It
 - **617o7-five-ways-to-find-a-path**: Five Ways to Find a Path, Side by Side [state: in progress]
 - **617o8-the-painted-map**: The Painted Map: Pathfinding That Learns, Keeps Its Distance and Spreads [state: in progress]
+- **617r2-buddy-kit-from-a-gearset**: Buddies Dressed from a Gearset
 - **623-buddies-offer-to-trade-when-you-stand-still**: Buddies Offer to Trade When You Stand Still [state: planned; open questions first]
+- **718d-talent-points-caught-up**: A Death Knight's Talent Points, Caught Up Over 55 to 60 [state: in progress: the rule is written, waiting for the owner's compile]
 - **720-hide-shoulders**: Hide Shoulders, Beside Hide Helm and Hide Cloak [state: built 2026-10-26; waiting for the compile and a look in game]
 - **803-monster-accuracy-level-cap**: Monster Accuracy Level Cap
 
@@ -54,6 +68,7 @@ The owner, 2026-10-29: "the very next compile will include all of the currently 
 - **1100c-tests-that-follow-a-datapath-end-to-end**: Tests That Follow a Data Path End to End [state: in progress (treasure and travellers not yet followed; open]
 - **1100d-tests-after-a-failed-build**: The Quick Tests After a Failed Build, Not Before [state: built 2026-10-28, not yet run by the owner]
 - **1100e-the-realm-locked-to-game-masters-while-testing**: The Realm Locked to Game Masters While Testing [state: built 2026-10-28; `status` and `--dry-run` tried, the lock itself]
+- **1103-pictures-redrawn-from-their-recipe**: Pictures Redrawn from Their Recipe [state: built; one open question]
 - **136d-realm-branches**: Realm Branches [state: in progress (planning)]
 - **155-basic-profile**: The Basic Profile
 - **155a-basic-profile-plumbing**: Basic Profile Plumbing
@@ -87,8 +102,6 @@ The owner, 2026-10-29: "the very next compile will include all of the currently 
 - **211a-druids-hearth-by-moonglade**: Druids Hearth by Moonglade [state: in progress (built offline; not yet seen in game; open questions]
 - **506-gear-gallery**: Gear Gallery
 - **617-buddy-bots**: Buddy Bots: Every Character Brings Companions
-- **617a4-buddy-starting-kit**: Buddy Starting Kit
-- **617c1-buddy-login-and-logout**: Buddy Login and Logout
 - **617c2-proximity-party**: The Proximity Party
 - **617c4-buddy-loyalty**: Buddy Loyalty
 - **617e1-buddy-roam-strategy**: The Buddy Roam Strategy
@@ -111,19 +124,16 @@ The owner, 2026-10-29: "the very next compile will include all of the currently 
 - **617e16l-battlegrounds-two-sides**: Battlegrounds, Two Sides, on the Page [state: in progress]
 - **617e2-roaming-core-in-game**: The Roaming Core in Game
 - **617e4-town-visits**: Town Visits
-- **617e4b-weapons-by-place**: Weapons by Place: Bare in Town, Sheathed in the Wilds, Drawn in Danger [state: built 2026-10-15; syntax-checked, not yet rebuilt, installed or run]
-- **617e5-fighting-together**: Fighting Together
 - **617e7-zone-view-from-above**: A Zone Seen From Above
 - **617g-buddy-talent-plans**: Buddy Talent Plans
-- **617j2-gems-and-sockets**: Gems and Sockets: Buddies Gem Their Own Gear by Their Plan
 - **617k-buddy-professions**: Buddy Professions
 - **617l-buddy-clan-guild**: A Guild for Each Clan
 - **617p-npc-awareness**: NPC Awareness: Buddies Notice and Use the People Around Them
 - **617r-elite-outfits**: Gearset Profiles (the first: "elite", the bannermen; the vanilla starter kit)
-- **617r2-buddy-kit-from-a-gearset**: Buddies Dressed from a Gearset
 - **617r5-gearset-gallery**: The Gearset Gallery
 - **617t1-stand-in-maker**: The Stand-in Maker
 - **621-a-strong-enchant-on-a-new-weapon**: A Strong Enchant on a New Weapon [state: built for buddies' kit weapons, 2026-10-15; syntax-checked, not yet]
+- **625a-what-each-talent-touches**: What Each Talent Touches, Read from the Game's Own Tables [state: in progress (the table built; set bonuses not yet)]
 - **635a-party-checkpoint-save-and-restore**: A Party Checkpoint: Save and Restore [state: in progress (the tool and its test built 2026-10-27; the]
 - **635b-talent-builds-with-required-talents**: Talent Builds with Required Talents [state: in progress (the planner and its test built 2026-10-27; the]
 - **638-buddy-levers-and-the-semantic-map**: Buddy Levers and the Semantic Map [state: in progress]
@@ -141,12 +151,13 @@ The owner, 2026-10-29: "the very next compile will include all of the currently 
 - **134a-alpha-working-at-its-pin-then-current**: Alpha Working at Its Pin, Then Brought Current [state: in progress (planning)]
 - **190-a-comment-free-copy-for-the-machines-intuition**: A Comment-Free Copy of the Project, for the Machine's Intuition [state: in progress; built, tested and live on GitHub; open questions 3]
 - **617e16j-the-sub-zone-fence**: The Sub-Zone Fence [state: in progress]
-- **718d-talent-points-caught-up**: A Death Knight's Talent Points, Caught Up Over 55 to 60 [state: in progress: the rule is written, waiting for the owner's compile]
 
 ## Planned, a plan only, or an idea
 
 - **1101-advanced-profile**: The Advanced Profile [state: plan only; nothing built]
 - **1101a-every-class-on-every-race**: Every Class on Every Race [state: plan only; nothing built]
+- **1102-architecture-pages-you-can-answer-on**: Architecture Pages You Can Answer On [state: dormant (deferred 2026-10-30; parked in `dormant/answer-pages/`)]
+- **1102a-context-written-for-each-group-of-questions**: Context Written for Each Group of Questions [state: dormant (deferred 2026-10-30; parked in `dormant/answer-pages/`)]
 - **1201-robot-search-party-left-4-dead**: Robot Search Party: a Left 4 Dead 2 Mod on Our Roaming Pattern [state: planned; open questions first]
 - **1202-robot-stage-show-for-children**: The Robot Stage Show: Talking Robots Perform for Children [state: planned; open questions first]
 - **148x-vanilla-41-to-60-as-the-endgame**: Vanilla: Levels 41-60 as the Endgame of a Level-40 Server [state: plan only (issue files, at the owner's ask); nothing built]
@@ -178,11 +189,11 @@ The owner, 2026-10-29: "the very next compile will include all of the currently 
 - **617a4a-dressed-from-the-valleys-vendors**: Dressed from the Valley's Vendors [state: plan only; nothing built]
 - **617a7-reset-a-buddy-keeping-name-and-race**: Reset a Buddy, Keeping Name and Race [state: planned; not built (on the session's to-do list to implement)]
 - **617c5-party-buffs-shared-out**: Party Buffs Shared Out [state: plan only; nothing built]
-- **617e13-spread-through-the-questing-subzone**: Spread Through the Questing Sub-Zone, Measured [state: plan only; nothing built]
 - **617e14-the-world-watched-from-above**: The World Watched From Above [state: in progress (617e14a, b, c, f built 2026-10-27; d, e plan only)]
 - **617e14d-bots-questing-unattended**: Bots Questing Unattended [state: plan only]
 - **617e14e-the-picture-judge**: The Picture Judge [state: plan only]
 - **617e15-places-conquered-and-the-monsters-push-back**: Places Conquered, and the Monsters Push Back [state: deferred (2026-10-28: "that's a later feature, let's defer it]
+- **617e18-buddies-point-the-way-to-the-next-quest**: Buddies Point the Way to the Next Quest [state: planned]
 - **617e4c-questing-roads-and-fishing-flocks**: Questing, Roads, and Fishing Flocks: Where Danger Is [state: planned; open questions first]
 - **617e5b-boss-fights-by-the-warnings**: Boss Fights by the Warnings [state: plan only; nothing built]
 - **617h2-every-item-a-buddy-carries**: Every Item a Buddy Carries, and When It Uses It [state: planned; open questions first]
@@ -194,11 +205,14 @@ The owner, 2026-10-29: "the very next compile will include all of the currently 
 - **617x-prestige-reborn-with-your-buddies**: Prestige: Reborn, With Your Buddies [state: planned; open questions below must be answered before building]
 - **617y-spoken-orders**: Spoken Orders: "go sell", "follow me", "follow so-and-so" [state: planned; open questions first]
 - **617z-tank-paced-pulls**: Tank-Paced Pulls: "go faster", "slow down" [state: planned; open questions first]
+- **618a-routes-forward-and-how-the-ground-feels**: Routes Forward, and How the Ground Feels (rmaps) [state: planned]
 - **622-a-buddy-keeps-a-record-of-its-weapons**: A Buddy Keeps a Record of Its Weapons [state: planned; open questions first]
 - **624-a-buddys-enhancements-by-level**: A Buddy's Enhancements by Level: Rings, Amulets, Enchants [state: planned; open questions first]
 - **625-buddies-favour-their-talented-abilities**: Buddies Favour the Abilities Their Talents Touch [state: an idea; the design is open]
-- **625a-what-each-talent-touches**: What Each Talent Touches, Read from the Game's Own Tables [state: planned]
 - **625b-gear-chosen-by-talents**: A Buddy's Weapon Preference, and the Talents That Follow It [state: planned; open questions first]
+- **625c-one-list-from-every-tree**: One List from Every Tree a Buddy Has Points In [state: planned]
+- **625d-choosing-by-the-moments-economy**: Choosing an Answer by the Moment's Economy [state: planned]
+- **625e-what-each-fight-taught**: What Each Fight Taught, Written Down to Be Read Later [state: planned: the log first; reading it is to be built later, from]
 - **626-a-keyboard-for-the-buddies**: A Keyboard for the Buddies, After the City of Heroes Binds [state: an idea; the design is open]
 - **627-the-bots-think-only-when-something-happens**: The Bots Think Only When Something Happens [state: planned; open questions first]
 - **628-buddies-wander-as-baked-npcs**: Buddies Wander as Baked NPCs [state: planned; open questions first]
@@ -225,6 +239,9 @@ The owner, 2026-10-29: "the very next compile will include all of the currently 
 - **721-class-trainers-and-tomes-of-any-ability**: Class Trainers, and Tomes of Any Ability [state: planned; open questions first]
 - **722-the-death-druid**: The Death Druid: Part Death Knight, Part Druid [state: an idea; open questions first]
 - **723-teleport-home-and-back**: Teleport There, and Back to Where You Were [state: planned; open questions first]
+- **921-alterac-valley-shared-weather**: Alterac Valley's Shared Weather, and the Storm That Wanders It (switch: the buddy module's setting `Buddies.AlteracWeather` (0 off, the) [state: planned]
+- **921a-the-shared-weather-deck**: The Shared Weather Deck (switch: `Buddies.AlteracWeather` (the parent's)) [state: planned]
+- **921b-the-wandering-storm**: The Wandering Storm (switch: `Buddies.AlteracWeather` (the parent's)) [state: planned]
 
 ## Not started
 
@@ -385,17 +402,11 @@ The owner, 2026-10-29: "the very next compile will include all of the currently 
 - **617e5a-kraken-in-game**: The Kraken in Game
 - **617f-buddy-selector-appearance**: The Buddy Selector's Appearance
 - **617g1-weapon-specialization-follows-the-weapon**: Weapon Specialization Follows the Weapon
-- **617h1-selling-trip**: The Selling Trip: Full Bags Send a Buddy to a Vendor
 - **617j1-loot-turns**: Loot Turns: Who Opens Which Corpse
-- **617j3-spirit-worth-in-gear-choice**: Spirit's Worth in a Buddy's Gear Choice
 - **617m-buddy-task-hunts**: Buddy Task Hunts: Crafting on Request
 - **617n-buddy-spell-learning**: Buddy Spell Learning
 - **617o-buddy-navmesh-pathfinding**: Buddy Pathfinding on the Navigation Mesh
-- **617o1-mesh-decides**: The Mesh Decides Every Spot and Route
-- **617o2-rooms-on-the-mesh**: Rooms and Tunnels Measured on the Mesh
 - **617o3-baked-distance-maps**: Baked Distance Maps for Fixed Goals
-- **617o4-steering-to-moving-targets**: Steering Toward Moving Targets
-- **617o5-vantage-and-orbiting**: Climbing for a View, Circling What Blocks It
 - **617q-owner-renamed-partner**: The Word "Owner" Renamed: A Buddy's Player Is Its Partner
 - **617r3-players-sorted-into-a-shape**: Players Sorted into a Talent Shape
 - **617r4-gearsets-on-creatures**: Gearsets on Creatures (the mirror image)

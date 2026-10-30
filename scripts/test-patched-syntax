@@ -116,6 +116,22 @@ for e in json.load(open(cc)):
         print(rel); break
 EOF2
 )
+    # No built sibling: the module was never built with these flags (the
+    # last build was another profile's, 2026-10-30: release has no buddy
+    # module). Borrow a built module's flags instead (the bot module's,
+    # which every buddy file includes from); the module's own folders are
+    # added to the include paths below. An approximation, said aloud.
+    if [[ -z "${sib}" && "${f}" == modules/* ]]; then
+        sib=$(python3 - "${CC_JSON}" <<'EOF3'
+import json, sys
+for e in json.load(open(sys.argv[1])):
+    rel = e['file'].split('/source-beta/',1)[-1].split('/source-alpha/',1)[-1]
+    if rel.startswith('modules/mod-playerbots/src/') and rel.endswith('.cpp'):
+        print(rel); break
+EOF3
+)
+        [[ -n "${sib}" ]] && echo "  [~] ${f}: no built sibling; borrowing another module's flags (${sib}), an approximation"
+    fi
     if [[ -n "${sib}" ]]; then BORROW["${f}"]="${sib}"; tus+=$'\n'"${f}"; else echo "  [?] ${f}: added, and no built sibling in ${dir_rel} to borrow flags from"; fi
 done
 tus=$(echo "${tus}" | grep . | sort -u)
@@ -168,6 +184,11 @@ for e in json.load(open(cc)):
         import os
         for top in ('src/server', 'src/common'):
             out += ['-I' + d for d, _, _ in os.walk(tree + '/' + top)]
+        # a module's file: every folder of its own module too (needed when
+        # its flags were borrowed from another module)
+        if target.startswith('modules/'):
+            mod = '/'.join(target.split('/')[:2])
+            out += ['-I' + d for d, _, _ in os.walk(tree + '/' + mod + '/src')]
         deps = tree + '/deps'
         for dep in sorted(os.listdir(deps)) if os.path.isdir(deps) else []:
             for sub in ('stub', 'include'):

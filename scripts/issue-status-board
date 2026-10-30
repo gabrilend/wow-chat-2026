@@ -62,6 +62,10 @@ local NAMES = {
 local function groupOf(state, now, cb)
     local s, c, all = (state or ""):lower(), (now or ""):lower(), (cb or ""):lower()
     if all:find("not yet compiled") or all:find("waiting for the owner's compile") or all:find("waits for the owner's compile") then return "waiting" end
+    -- written and checked by the compiler, but never built: an opening line
+    -- saying so ("**Written 2026-10-04, syntax-checked ..., not yet built**")
+    -- is waiting too (until 2026-10-30 these read as "not started")
+    if c:find("syntax%-checked") or c:find("not yet built") then return "waiting" end
     if s:find("will not") then return nil end                       -- retracted: not on the board
     if s:find("planned") or s:find("plan only") or s:find("^plan") or s:find("an idea") or s:find("a goal") or s:find("deferred") then return "planned" end
     if c:match("^%*?%*?not built") or c:match("^not started") then return "fresh" end

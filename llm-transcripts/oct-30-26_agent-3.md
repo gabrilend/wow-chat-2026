@@ -1,6 +1,6 @@
 # Conversation Summary: e143dbfe-ff43-48be-8bd4-4d54fd7a325d
 
-Generated on: 2026-10-30 09:12:10
+Generated on: 2026-10-30 10:33:34
 Models: claude-opus-5-5
 
 --------------------------------------------------------------------------------
@@ -248,6 +248,100 @@ speed.
 Questions 1 to 5 and 7 from the first set are still open. The one that shapes
 the most is 4: should talents steer only your buddies, or every bot on the
 server?
+
+--------------------------------------------------------------------------------
+
+### User Request 3
+
+okay new plan can you ask me the questions specifically related to the stuff
+that is blocking us from compiling basic? We just focus on basic, and only the
+things that are crucial, and broken or incompletely implemented. We should
+de-prioritize professions and stuff like the Dark Portal fight, that stuff can
+come later. We should increase in priority the Sargobras stuff and buddy-bot
+pathfinding and questing routines. Just open questions for now.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 3
+
+> Gathering open questions from the Sargobras, pathfinding and questing issues.
+
+Nothing I can find stops basic from compiling. Basic last built cleanly on
+10-27. Release builds from the same source and was built and put live on 10-29.
+A failure in the size-by-level module (it makes characters grow with level)
+broke the beta build on 10-28, but the release build after it went through, so
+that seems fixed. Twenty-four issues are written and waiting for a compile.
+
+So the real blockers are open questions on the work that isn't finished yet.
+Here are the ten that matter most under your new priorities.
+
+## Sargobras: whispering him from afar
+
+Background: whispering Sargobras will open his buddy-making menus from a
+distance, so you can make a buddy without walking to him. You've already said
+the buddy's spec is chosen by the usual rules. What's left is which character
+answers the whisper. A whisper in this game is addressed to a character name,
+and two characters on one realm can't share a name.
+
+1. **Which account does the whisperable Sargobras live on?** The stand-in
+   account (already a bot account with no owner), or a new account of his own?
+   *My call:* a new account of his own, so he can't get mixed up with the
+   stand-ins.
+2. **Both factions:** one Sargobras with the faction rule patched so both sides
+   can whisper him? Or two characters, Alliance and Horde, with slightly
+   different names?
+   *My call:* one, with the faction rule patched for him only.
+3. **"All of them respond":** every Sargobras near the person whispering, or
+   every Sargobras in the world?
+   *My call:* only the ones near them.
+4. **A buddy name that's already taken:** pick a random name instead, or refuse
+   and ask again?
+   *My call:* refuse and ask again, saying why.
+
+## Pathfinding: the painted map
+
+Background: buddies keep one shared map per area that gets "painted" as they
+walk it. It is saved to disk and improves over days, and each bot keeps a wanted
+distance from the others.
+
+5. **The numbers.** Do these feel natural, or should any change?
+   - each bot wants 4 yards of space (relaxed within 10 yards of its goal)
+   - unexplored ground costs 15% more to walk on
+   - a follower aims 6 yards ahead
+   - a bot turns at most 240° per second
+
+   *My call:* keep them for this compile and judge them by eye in game.
+6. **A tiny pocket of an area.** In one test, 36 bots were all sent into a
+   260-square-yard pocket by the Firegut fence and stood 2 yards apart. Should a
+   pocket that small be skipped, with the bots going on to the next part? Or
+   should it take only as many bots as fit, with the rest going elsewhere?
+   *My call:* take only as many as fit, at 4 yards each, and send the rest on.
+7. **Five ways to find a path, side by side.** When you compare them, what
+   decides which is better: getting stuck least, the least wasted walking, the
+   most even spread, or how it looks to you?
+   *My call:* how it looks to you first, with the measured numbers shown beside
+   each picture.
+8. **Stuck on the way to a dock or portal.** A buddy counts as stuck when it
+   gains less than 10 yards toward you in 90 seconds. While it's walking to a
+   dock or portal, the thing that matters is the dock, so right now the rule is
+   switched off there. Should it measure progress toward the dock instead?
+   *My call:* yes.
+
+## Questing and following
+
+9. **More than five followers in the arc follow.** When moving distances,
+   buddies trail behind you in an arc. You gave spacing for one to five buddies,
+   but a clan is seven. Spread evenly, seven end up a third of a yard apart,
+   which is narrower than a body. Should the arc grow wider, or should the extra
+   buddies form a second row behind the first?
+   *My call:* a second row.
+10. **Which monsters count as "quest monsters" when buddies spread through a
+    questing area?** Any quest's target, or only targets of quests you or your
+    buddies actually have?
+    *My call:* only quests someone in the group has, so the buddies spread over the monsters that move your quests along.
+
+One thing I'll ask a second time later, in different words: when you picture the
+painted map working well, what would you expect to see from above?
 
 --------------------------------------------------------------------------------
 
