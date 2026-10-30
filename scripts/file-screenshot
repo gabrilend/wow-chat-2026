@@ -21,17 +21,17 @@
 --
 -- Usage: scripts/file-screenshot [--dir DIR] --name NAME --made "COMMAND"
 --            [--source FILE]... [--shows TEXT] [--story TEXT]
---            (PNG | --url URL [--window WxH])
+--            (PNG | --url URL [--window W | WxH]; a width alone takes the whole page)
 --        scripts/file-screenshot --help
 -- Prints the filed picture's path.
 --------------------------------------------------------------------------------
 
 -- {{{ the options
 local DIR = "/mnt/kaun/wow-chat-2026"
-local opt = { sources = {}, window = "1400x900" }
+local opt = { sources = {}, window = "1400" }
 local function usage(code)
     print("file-screenshot [--dir DIR] --name NAME --made \"COMMAND\" [--source FILE]... [--shows TEXT]")
-    print("                [--story TEXT] (PNG | --url URL [--window WxH])")
+    print("                [--story TEXT] (PNG | --url URL [--window W | WxH])")
     print("  files a picture into development-history/ under the next number, with notes:")
     print("  --name     a few dashed words (fish-sandbox-world); the number goes before it")
     print("  --made     the command or steps that made the picture")
@@ -39,7 +39,8 @@ local function usage(code)
     print("             and compared with the last picture that named the same file")
     print("  --shows    what it shows, part by part; --story the arc of the project so far")
     print("  PNG        a picture already taken (copied, the original left alone)")
-    print("  --url      a page to photograph with headless Firefox, at --window (default 1400x900);")
+    print("  --url      a page to photograph with headless Firefox, at --window: a width alone (default 1400)\n"
+       .. "             takes the whole page, top to bottom, at full resolution; WxH takes that window only;")
     print("             it may take 90 seconds, or FILE_SCREENSHOT_WAIT's (in the environment)")
     os.exit(code)
 end
@@ -92,17 +93,22 @@ local png  = HISTORY .. "/" .. base .. ".png"
 
 -- {{{ the picture
 if opt.url then
+    -- a width alone: Firefox photographs the whole page, however tall, at
+    -- full resolution (the owner, 2026-10-29: "Make sure you take full
+    -- resolution screenshots"); WIDTHxHEIGHT: that window only, for pages
+    -- drawn to fit a window (the sandboxes' canvases)
     local w, h = opt.window:match("^(%d+)x(%d+)$")
-    if not w then io.stderr:write("file-screenshot: --window is WIDTHxHEIGHT: " .. opt.window .. "\n"); os.remove(HISTORY .. "/" .. base .. ".info.md"); os.exit(1) end
+    if not w then w = opt.window:match("^(%d+)$") end
+    if not w then io.stderr:write("file-screenshot: --window is WIDTH (the whole page) or WIDTHxHEIGHT: " .. opt.window .. "\n"); os.remove(HISTORY .. "/" .. base .. ".info.md"); os.exit(1) end
     local profile = DIR .. "/tmp/shared-memory/file-screenshot/firefox-profile"
     os.execute("mkdir -p " .. q(profile))
     -- how long Firefox may take: 90 seconds, or FILE_SCREENSHOT_WAIT's (a
     -- page that plays minutes of its simulation before its picture, such as
     -- the ground sandbox's flow field, can need longer, 2026-10-29)
     local wait = tonumber(os.getenv("FILE_SCREENSHOT_WAIT") or "") or 90
-    local log = sh(string.format("timeout %d firefox --headless --no-remote --profile %s --window-size=%s,%s --screenshot %s %s 2>&1",
-        wait, q(profile), w, h, q(png), q(opt.url)))
-    opt.made = opt.made .. string.format(" (photographed: headless Firefox, %sx%s, %s)", w, h, opt.url)
+    local log = sh(string.format("timeout %d firefox --headless --no-remote --profile %s --window-size=%s --screenshot %s %s 2>&1",
+        wait, q(profile), h and (w .. "," .. h) or w, q(png), q(opt.url)))
+    opt.made = opt.made .. string.format(" (photographed: headless Firefox, %s, %s)", h and (w .. "x" .. h) or (w .. " wide, the whole page"), opt.url)
     if not io.open(png, "rb") then
         os.remove(HISTORY .. "/" .. base .. ".info.md")
         io.stderr:write("file-screenshot: Firefox wrote no picture for " .. opt.url .. "; its last words:\n" .. log:sub(-600) .. "\n"); os.exit(1)
