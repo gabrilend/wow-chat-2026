@@ -7,7 +7,7 @@
 - Related: 625d (choosing by the moment's economy: its mana measure,
   which this refines), 625f (the action economy), 625i (the healer's seat)
 - Priority: Medium
-- State: planned
+- State: in progress (the fight-length guess built; the smooth curves and thrift next)
 
 ## Origin
 
@@ -33,9 +33,25 @@ And earlier: "the less mana we have, the more important mana economy is"
 
 ## Current Behavior
 
-Not built. The bot module's health bands (critical below 25%, low 45%,
-medium 65%, almost full 85%) are hard lines, and its one mana rule a
-switch at 60%.
+The smooth curves are not built: the bot module's health bands (critical
+below 25%, low 45%, medium 65%, almost full 85%) are hard lines, and its
+one mana rule a switch at 60%.
+
+**The fight's length, built 2026-10-30 (committed, offline):**
+`buddies_fight_length.h`. The rate is the slope of the straight line that
+best fits the enemies' health over the last seconds (so one big hit or a
+heal on an enemy moves it a little); fewer than two readings, or readings
+under a second apart, say nothing yet, and a rising health is no fall. The
+time left works through the bursts ahead stretch by stretch (between two
+burst edges the rate is steady); a party member dying or joining rescales
+the rate by their part of the party's damage. With no fall measured, the
+end is not known and the time left is endless; the agent's call for the
+server's side, when it is built: the cooldown timeline (625f) then plans
+over three of the buddy's longest cooldowns, long enough that nothing is
+used early for an end that isn't coming. Checked by
+`scripts/test-buddy-fight-length` (17 checks), the last two planning a
+cooldown over the guess. Not yet: reading the enemies' health in the
+server, and the thrift that weighs mana against the time left.
 
 ## Intended Behavior
 

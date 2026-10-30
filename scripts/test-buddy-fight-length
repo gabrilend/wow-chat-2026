@@ -1,0 +1,28 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-fight-length
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      a running guess at how long the fight has left, from the enemies' health falling, bursts counted
+# quick-test: yes
+# ==== end of header ====
+# test-buddy-fight-length - compiles and runs
+# tests/buddy-fight-length/fight-check.cpp against the buddy module's
+# fight-length guess (issue 625h), with no server.
+#
+# Usage: scripts/test-buddy-fight-length [DIR]   (--help: this text)
+
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+    sed -n '10,14p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+OUT="${DIR}/tmp/tmp"
+mkdir -p "${OUT}"
+g++ -std=c++17 -O1 -Wall -Wextra -Werror -I"${DIR}/patches/B036-mod-buddies/mod-buddies/src" \
+    "${DIR}/tests/buddy-fight-length/fight-check.cpp" -o "${OUT}/buddy-fight-length" || exit 1
+nice -n 19 "${OUT}/buddy-fight-length"
+# ==== footer of test-buddy-fight-length ====
+# lines:      28
+# ==== end of footer ====

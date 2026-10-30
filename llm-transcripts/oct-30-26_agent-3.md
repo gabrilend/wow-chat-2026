@@ -1,6 +1,6 @@
 # Conversation Summary: e143dbfe-ff43-48be-8bd4-4d54fd7a325d
 
-Generated on: 2026-10-30 13:26:22
+Generated on: 2026-10-30 13:38:19
 Models: claude-opus-5-5
 
 ## Contents
@@ -31,6 +31,10 @@ Models: claude-opus-5-5
    on buddies, Sargobras, pathfinding and questing, and your answers are
    recorded word for word but not committed. Next: answer the two new questions,
    how a buddy knows which foes it can beat and whether to cap random bots.
+7. 2026-10-30 13:29, after Request 17 - We're settling open questions so the
+   next basic compile can carry the buddy, Sargobras and pathfinding work. All
+   answers so far are recorded in the issues, uncommitted. Next: commit only my
+   changed lines, once you say go.
 
 --------------------------------------------------------------------------------
 
@@ -2514,6 +2518,106 @@ The todo list has 30 items. Nothing is committed yet.
 Another session has also edited the main buddy issue and the spell-learning
 issue since I started, both files I'm holding claims on. Its changes are fine,
 and I've left them alone.
+
+--------------------------------------------------------------------------------
+
+### User Request 18
+
+<pasted_content id="415d">
+> The radius-trigger issue from October already lists two more timers it could
+> replace: the
+> roaming buddies' look for monsters every second, and the noticing of people
+> around them every 5
+> seconds. With the radius trigger, a buddy's group changes only at the moment
+> it crosses 60, 70
+>   or 75 yards. Your "yes" to planning it is now in that issue.
+</pasted_content id="415d">
+
+
+buddies should be aware of everything within 70 yards of them. They should all
+be on the concern list. So, radius triggers only to put things up on the mental
+bulletin board, or remove them if they're far enough away. Though certain bosses
+might have more important issues and flag carriers in PvP should be entirely
+line-of-sight based (from the bot's head, not their feet)
+
+10 more questions? Focus on things that unblock issues.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 18
+
+> Recording two answers that follow from your "every bot" rule, then the
+> questions.
+
+I've recorded the bulletin board in the radius-trigger issue. Each bot gets a
+70-yard trigger that only pins things onto its concern list and unpins them, and
+decisions are made from the list. Bosses can matter from beyond 70 yards. In
+PvP, a flag carrier is on the list only while the bot can see it, with sight
+measured from head height.
+
+Two issues were each waiting on "every bot, or buddies only?":
+
+- the bots thinking only when something happens (a change to the bot module's
+  engine)
+- anyone who can heal keeping the group up
+
+Your rule from earlier today answers both, so I've marked them "every bot" as my
+reading, for you to correct.
+
+## Ten questions, each unblocking an issue
+
+**A dead buddy walks back to its body.** You described this in October: it
+releases 1–10 seconds after dying, unless someone nearby could resurrect it.
+
+1. **Who counts as "someone who could resurrect it"?** Any character on its side
+   with a resurrection spell (priest, paladin, shaman, druid), other buddies
+   included, within some distance?
+   *My call:* anyone on its side who knows one, within 40 yards.
+2. **How long does it wait for that person** before releasing anyway?
+   *My call:* until the fight around it ends, then 30 seconds more.
+3. **"Roll down or straight up tangent line to hills":** straight up and down
+   the slope, or along the hill's side at an even height, the way a road winds
+   around it?
+   *My call:* along the side, because that looks like walking.
+
+**Spoken orders**
+
+4. **"follow me" ends with "go away".** Does anything else end it: the person
+   logging out, entering a dungeon or town, or a time limit?
+   *My call:* also when the person logs out. Nothing else.
+
+**Buddies wandering as lightweight creatures** (a resting buddy shown as a
+simple creature to save the server's time)
+
+5. **The title under its name.** Each buddy needs its own creature record, which
+   can carry a title. Should it say whose buddy it is, like "<Gabrilend's
+   companion>"?
+   *My call:* yes, its clan's name.
+6. **Other players.** Can anyone right-click someone else's buddy and talk or
+   trade with it, or only its owner? Trading would let others take items from
+   that owner's buddy.
+   *My call:* talk yes, trade owner only.
+
+**The tank sets the pace in dungeons**
+
+7. **Where does the tank go next:** along a route learned for each dungeon
+   (packs in order, as a player learns them), or to the nearest pack it hasn't
+   fought yet?
+   *My call:* the nearest unfought pack, with a learned route later.
+8. **When the tank waits for mana or health, does it say so** ("Waiting for
+   mana."), the way buddies say "My bags are full."?
+   *My call:* yes, once per wait.
+
+**Others**
+
+9. **Group hearthstone.** When someone in a group hearths, the others get a
+   pop-up to come along. Random bots can't press a button. Do they always come,
+   never come, or come only when the person hearthing leads their group?
+   *My call:* only when that person is their leader.
+10. **The level-up command.** When a game master raises a player's level with
+    the command, do that player's buddies get anything too (trainer lessons, a
+    purse), or only the player?
+    *My call:* the buddies too, the same way. They're raised alongside.
 
 --------------------------------------------------------------------------------
 
