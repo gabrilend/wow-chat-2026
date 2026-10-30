@@ -1,6 +1,6 @@
 # Conversation Summary: e143dbfe-ff43-48be-8bd4-4d54fd7a325d
 
-Generated on: 2026-10-30 14:26:55
+Generated on: 2026-10-30 14:49:41
 Models: claude-opus-5-5
 
 ## Contents
@@ -39,6 +39,10 @@ Models: claude-opus-5-5
    next basic compile can build buddy pathfinding, questing and Sargobras work.
    Your answers are recorded in the issues, uncommitted. Next: answer the ten
    questions above, starting with who can resurrect a dead buddy.
+9. 2026-10-30 14:29, after Request 22 - We're answering open questions so more
+   basic-profile issues can be built in parallel; your answers are written into
+   the issues and the todo list has 33 buildable items. Next: answer the ten
+   questions waiting on screen, starting with the level-up command.
 
 --------------------------------------------------------------------------------
 
@@ -3084,6 +3088,151 @@ level in front of Ragefire, with her buddies, all in white gear)
     instead of releasing? Anyone on its side who knows a resurrection spell,
     other buddies included, within some distance, or only players?
     *My call:* anyone on its side who knows one, within 40 yards.
+
+--------------------------------------------------------------------------------
+
+### User Request 23
+
+1. Lowering a level, say 60 to 20. Are the character's skills (weapon skills,
+   professions)
+     lowered to match, or kept?
+
+lowered to match. if the player is 80% of the way to the max on that skill, they
+should be set to 80% of the max after the level adjustment.
+
+> 2. Gear on level-up: a fresh white gear set every time, or only when crossing
+> a tier (10, 20,
+>      30…), so better gear found in play isn't replaced?
+
+um... if we're using the level up / down command, then fresh white gear,
+properly gemmed and such. Remember, the gem weights might change depending on
+which talents we pick, but on the bright side since it's not tied to spec
+profile, we should be able to work it out for players too, if their level ever
+changes and we need to re-gear them. It should be continuous instead of based on
+tiers, so just replace it if necessary. Changing level should produce a
+character in white gear, with it's old gear mailed to it. If the old gear is
+white quality then it is not mailed to them.
+
+> 3. Weapon master lessons (10 silver each, like Staves or Guns): counted in the
+> purse, or skipped
+>      since buddies learn weapons free?
+
+buddies shouldn't learn weapons for free! They should be an errand they have to
+run in each capital city, if there's a trainer that teaches them something new.
+It should go through the exact same pipeline as the class ability trainer.
+
+> 4. The visiting trainer: seen only by that character, or by everyone nearby?
+> And how long does
+     it stay?
+
+the visiting trainer is just so that players don't have to visit extra cities to
+get their bots all trained up, as a matter of course. Though... it might be
+kinda neat if we could say to a bot "go train" and they would. Hmmmm let's just
+build it as if the visiting trainer were a static NPC that's always there, just
+like another trainer, and then we can re-assess later.
+
+>   5. Which level? 15 is the middle of Ragefire's 13–18.
+     My call: 15.
+
+let's do 13
+
+> 6. Birth is a shaman. Is she the group's healer, so the stand-ins fill tank
+> and damage?
+>      My call: yes, it tests a healer-led group.
+
+depends on how she sets her talents. She'll have two buddy-bots, and depending
+on if they're tank or dps or not, and how she builds her own spec, we'll know
+which stand-ins to spawn when she enters the instance. Not before. Also if she
+exits and leaves, it might generate new stand-ins for her. They leave once she's
+done with the dungeon.
+
+  7. Her leatherworking: just learned (skill 1), or raised to what level 15
+     allows?
+     My call: raised to her level's cap.
+
+is she a leatherworker?? I say don't worry about that for now. But... the level
+up script should worry about it, so, ugh, let's worry about it now. Okay so we
+should take any professions known by her and set them to the same ratio she had.
+Yes, this might enable us to skip for example an expensive blacksmithing
+learning process, if we take a level 5 blacksmith with like fuckin' 75
+blacksmithing or whatever and level them up to a level 60 blacksmith with 300.
+That's... fine for now. If we later come back and decide to store the highest
+level that a player has reached with that profession on that character, then we
+can, though I don't really want to.
+
+> 8. Picking a ring and necklace at a level: the best for its talent plan among
+> those of its
+>      level, or random among them, as weapon enchants are?
+
+suited to the talent plan. These are PvP rings and necklaces, and there aren't
+very many of them, so we can honestly just assign them manually.
+
+
+
+<pasted_content id="415d">
+> 9. Wrath materials: the belt buckle and socket recipes need Saronite Bars and
+> Eternal Earth or
+>      Shadow, which basic doesn't have. Make those obtainable somewhere in basic, or hand out the
+>      finished items (the buckle, the socketing items) instead of recipes?
+</pasted_content id="415d">
+
+
+if we can change the recipe to use azeroth materials like arcanite bars or
+similar, that would be great... But if not, then let's just leave this open
+until we do another profession pass.
+
+
+
+<pasted_content id="415d">
+> 10. Who counts as someone who could resurrect a dead buddy, making it wait
+> instead of releasing?
+>       Anyone on its side who knows a resurrection spell, other buddies included, within some
+>       distance, or only players?
+</pasted_content id="415d">
+
+
+anyone on their side who knows one. Within 70 yards probably.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 23
+
+All ten answers are recorded word for word:
+
+- **Level command:**
+  - Every skill, professions included, keeps its share of its maximum across a
+    level change, up or down: 80% stays 80%.
+  - Every use dresses the character in fresh white gear chosen by its exact
+    level (no tiers), gemmed by weights from the talents it picked, so players
+    get the same treatment.
+  - Old gear is mailed to the character, except white items.
+- **Trainers:**
+  - Weapon lessons count in the purse.
+  - Buddies pay for weapon lessons too, as a weapon-master errand in each
+    capital that works the same way as class lessons.
+  - The visiting trainer is built as an ordinary trainer that stays.
+- **Ragefire test:** level 13. Stand-ins are picked when Birth enters, from
+  whatever roles her talents and her two buddies leave open. Re-entering may
+  bring new ones, and they leave when she's done. Her professions follow the
+  level command's share rule.
+- **Rings and necklaces:** a hand-written table per talent plan.
+- **Wrath materials:** left open until the next profession pass. Here's what's
+  known. Basic already replaces spell data on the server, so the server could
+  accept Arcanite Bars. The stock client keeps its own copy of the recipe,
+  though, so it would still show and check for Saronite until the custom client.
+- **Resurrection:** anyone on the buddy's side who knows a resurrection spell,
+  within 70 yards.
+
+The todo list has 34 items. Nothing is committed yet.
+
+One question your answers raised. **Buddies get some weapon skills free today.**
+In October you decided a buddy always knows the weapon its kit hands it, plus
+random weapon skills up to your own count, and that's built. Now that weapon
+lessons are a paid errand like class lessons, should both free grants go? Or
+just the random extras, keeping the kit weapon's skill so a new buddy can use
+what it's holding?
+
+My call: keep the kit weapon's skill and drop the random extras.
 
 --------------------------------------------------------------------------------
 

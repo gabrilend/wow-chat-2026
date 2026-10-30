@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-30 14:26:52
+Generated on: 2026-10-30 14:44:28
 Models: claude-opus-5-5
 
 ## Contents
@@ -15625,6 +15625,133 @@ files:
 - reading health, ranks and marks during a fight;
 - the worker threads that redo each buddy's plan;
 - passing the result to the talent draw.
+
+--------------------------------------------------------------------------------
+
+### User Request 152
+
+make sure we add as a consequence of casting divine shield or divine protection
+or similar that all threat from the target is wiped. Because that's what
+happens, right? So, we shouldn't cast it on characters that we want to have
+threat on them. Unless they're critically dying, and then we'd favor Lay on
+Hands or similar instead, because both of them negate the "incoming damage on
+target" cost, but one of it does it by wiping threat and setting incoming
+(physical) damage to 0, while the other does it by giving the paladin's max hp
+as a heal. Both of these cause the simulation running in their head to no longer
+have a curve pointed toward "dead tank" and instead point (ideally) toward
+"victory" or similar.
+
+threat is something that has to be managed. This means it doesn't matter
+generally how much of it there is, but more importantly where is it stored. It's
+like a worker placement game, except with "threat" and "attention" and such.
+Threat is a value that builds up and can be wiped, attention is just... whoever
+it's targeting right now. For our bot's thought process, it's important to keep
+the attention onto a tank or a durable character - the more durable, the better.
+We have limited levers to impact that attention, including hunter misdirect and
+rogue Tricks of the Trade, but also things like BoP and such. Even hunter
+stealth / hunter pet taunts are important to consider (by the way, hunters
+should treat their pets abilities as their own for these purposes. They are free
+in the action economy, or rather, they cost 1 pet gcd or similar, while other
+abilities cost 1 hunter gcd and such. This is the case for anyone with a pet who
+behaves similarly, like warlocks. They should cast the pet abilities
+intentionally, for a specific goal, and they should ascertain those goals
+dynamically, as if they were any other ability.
+
+anyway, as I was saying before I got distracted by hunter / warlock pets, we
+should try and keep attention on the tanks, but we can adjust it to their
+benefit with various tools if we'd like and are able. If we BoP the main tank so
+they don't die, that can save a fight, even if a fury warrior has to tank for a
+moment while the tank replenishes. Rogues should feint and mages should vanish
+and whatever else we need to manage it correctly, with the end result being the
+composite curves of mathematics we create optimize toward a "victory" condition.
+These are multivariable equations, and they are very, very complicated. But, we
+can set them up so they process easily, just by dropping numbers in at the top
+and watching them rapidly filter down. The constraints are flexible, the inputs
+are not since they are derived from the environment, and the outcomes, ideally,
+are comprehensive and natural feeling bot behavior. We are less interested in
+optimizing for perfect output, and more toward feelings of serenity in flow,
+searching for familiarity and wholesome friendly.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 152
+
+> You asked whether Divine Shield wipes threat. Checking what this server
+> actually does before writing it down.
+
+> The answer is no, not in this server, though the result looks similar.
+> Checking two more details, then writing it up with your words.
+
+> Now the pets' issue. Searching first for an existing one.
+
+> The bot module currently leaves pets on the game's autocast (with a command to
+> toggle it). Writing the pets' issue.
+
+> The parent's sub-issue list stops at 625e; adding 625f through 625m so they're
+> all listed.
+
+> Committing the design first, then building the first step: the threat levers
+> read from the game's spell table.
+
+> The parent issue also holds another session's uncommitted answers; my lines
+> there were made with the edit tool, so only they will be taken. 625j's changes
+> are all mine.
+
+*[commit] e1cd2f8c7 - Threat economy: threat is where it is stored, attention is who is hit, and pets get their own lane*
+
+> 23 of 23 pass. Recording it and committing.
+
+*[commit] 3f38392e7 - Threat economy: the levers read from the game, and whom an enemy attacks worked out the server's way*
+
+Your threat model is written into the threat issue in your words, and the first
+two pieces are built and committed (e1cd2f8, 3f38392).
+
+**On Divine Shield, there's one correction.** In this server it doesn't wipe
+threat; it puts it on hold. I checked the server's threat code:
+- **While shielded:** an immune character (Divine Shield, Hand of Protection
+  against physical hitters, Ice Block) is passed over. Its threat is kept, and
+  the next in line gets attention, so a fury warrior tanks for a moment.
+- **While still shielded:** any threat it makes is lost.
+- **After the shield:** its first threatening act brings the kept threat back,
+  and attention returns to it.
+- **Divine Protection** is a 50% damage cut, not an immunity, so it doesn't move
+  attention at all.
+
+So the cost of shielding the tank is real but temporary: attention leaves for
+the length of the shield. Lay on Hands and Hand of Protection on a dying tank
+are now written into the issue as two ways to bend the same curve away from
+"dead tank":
+- **Lay on Hands** keeps attention where it is, so it's favoured.
+- **Hand of Protection** moves attention for a while. It's weighed by how long
+  the next character in line can hold it.
+
+**Built:**
+- **The threat levers, read from the game's spell table** by what their effects
+  do: 42 abilities.
+  - Most come straight from the table (Taunt, Growl, Misdirection, Tricks of the
+    Trade, Vanish, Feign Death, Feint, Hand of Salvation).
+  - Four act through the server's scripts (Righteous Defense, Death Grip,
+    Soulshatter, Invisibility), and each is cited.
+  - Divine Protection is correctly not on the list.
+  - The pets' abilities came along too (Growl, Torment, Suffering).
+- **Whom an enemy attacks, worked out the way the server does it.** Available
+  characters come before passed-over ones, then taunts, then threat. The current
+  target stays until someone beats its threat by 10% in melee range, or by 30%
+  at range.
+  - Each lever's effect can be tried in a buddy's head before spending it.
+  - 23 checks pass, including the shielded-tank sequence above.
+
+**Pets** now have their own issue, in your words: the pet's abilities count as
+the buddy's own, on a separate lane of time with its own global cooldown.
+
+**One open question** from the pets' issue: should the pet's plain attack (Claw,
+Bite, Firebolt) stay on the game's autocast as filler, with the buddy choosing
+only the abilities that have a purpose? Or should the buddy choose every pet
+ability itself?
+
+Next is the curve: each attention holder's time until death from their health,
+damage taken and healing received. Then each lever's worth is how much it bends
+that curve.
 
 --------------------------------------------------------------------------------
 

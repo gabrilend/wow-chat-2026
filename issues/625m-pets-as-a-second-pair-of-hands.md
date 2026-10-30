@@ -40,7 +40,8 @@ casts what is switched on whenever it can, with no aim.
   are answers the buddy weighs like its own, chosen for a goal it works
   out from the moment (a taunt to take an enemy off a healer, an
   interrupt on a cast that matters, a dispel of what hurts most), not left
-  to autocast.
+  to autocast. The plain attack (Claw, Bite, Firebolt: damage with no
+  other goal) stays on autocast as filler.
 - **Two lanes of time.** The pet has its own global cooldown and its own
   resource (focus, energy, mana), so in the action economy (625f) a pet's
   ability costs a pet global cooldown, not the buddy's: two lanes of
@@ -69,3 +70,6 @@ casts what is switched on whenever it can, with no aim.
 1. Should the buddy keep autocast on for the pet's plain attack ability
    (Claw, Bite, Firebolt: a filler with no goal beyond damage), and choose
    only the abilities with a purpose, or choose every pet ability itself?
+   **Answered 2026-10-30** (the owner, word for word): "the plain attack
+   can be autocast I guess." So the pet's plain attack stays on the
+   game's autocast as filler, and the buddy chooses the rest.
