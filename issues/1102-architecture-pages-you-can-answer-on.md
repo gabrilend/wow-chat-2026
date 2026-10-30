@@ -112,3 +112,11 @@ reading a page's answers back.
 1. Should answers also be sent from the pages published on claude.ai (they
    cannot reach this computer; they would keep answers in the page's own
    database for an agent to copy down), or are the local pages enough?
+   **Answered 2026-10-29:** "It's okay just the local ones are needed. A
+   user looking to customize their version of the project will use the
+   form included in their git repo copy of the cloned project." Local
+   only: the form travels with every copy of the project.
+
+Pages 3 and 5, the same day: "I'm sure your intuitions are correct about
+3 and 5." Approved: the talent table (625a) and the weather simulator
+(921) are built next.

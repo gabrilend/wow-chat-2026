@@ -40,7 +40,57 @@ cooldown) changes nothing about how often that ability is chosen. Seen
 the same day: the hunter Montahmu's strategy asked 41,000 times for
 Trueshot Aura, a talent it does not have.
 
+**How a concern becomes an ability today** (read 2026-10-29 in the bot
+module, `Engine.cpp` and the class strategies):
+- A **concern** is a trigger: "party member critical health" (below 25%
+  health), "low health" (45%), "medium health" (65%), "almost full
+  health" (85%); "medium aoe" (3 or more enemies within 8 yards);
+  "medium threat"; "enemy too close for spell"; and many more, set in
+  `playerbots.conf` and the triggers' own code.
+- Each fired concern offers its **answers** as a list of actions, each
+  with a fixed relevance number. The restoration druid, for a party
+  member at low health: tree form 21.5, Swiftmend 21.4, Wild Growth 21.3,
+  Nourish 21.2, Regrowth 21.1, Healing Touch 21.0. Rejuvenation is offered
+  only at "almost full health" (10.2).
+- Every tenth of a second the engine takes the most relevant answer that
+  is useful and possible (known, off cooldown, enough mana). So the order
+  is fixed: the same concern always gets the same first choice.
+- The spec decides which strategy, and so which list, a bot uses: the
+  module guesses the tree from the talents (a druid with two thirds in
+  Restoration and a third in Balance plays the whole Restoration list).
+- **The hook exists.** Before choosing, the engine multiplies each
+  answer's relevance by every **multiplier** a strategy registers
+  (`Multiplier::GetValue(action)`; the raid strategies use it to silence
+  actions in a phase). A buddy strategy's multiplier can scale an answer
+  by its talent weight without changing any class strategy.
+- **The catch:** a list's answers stand 0.1 apart (21.0 to 21.5). Any
+  multiplier above about 1.03 lifts Healing Touch over the whole list,
+  every time, so a plain multiplier turns "more often" into "always".
+
+The owner, 2026-10-29: "where we're at with NPCs using different
+abilities more or less frequently when multiple ways to address a concern
+are presented? Like, concern, ally low health, sub routine initiated heal
+the ally because can and specialized to, cast healing touch but not
+tejuvenation because that's how we're specced. Etc etc with more concerns
+being things like "enemy nearby" or "enemy nearby 3+ enemies" or "ally
+suddenly gained threat" or whatever."
+
 ## Intended Behavior
+
+**More or less often, not always** (2026-10-29, from the catch above):
+among the answers one concern offers, a buddy draws by chance, each
+answer's chance in proportion to its weight: its place in the list (the
+module's order, kept as the starting shape) times its talent weight. A
+druid deep in talents that improve Healing Touch casts it more often
+when an ally is low, and still casts the others sometimes ("Keep in mind
+we will always use some of them sometime", 2026-10-15). An answer that
+isn't possible right now (cooldown, mana) is passed over, and the draw
+is made again among the rest. The draw is made inside the buddy module's
+own multiplier, so the class strategies stay as upstream wrote them. It
+reorders answers only within one concern's band of relevance (a list's
+answers sit within about one point of each other), never across
+concerns: fleeing a melee enemy (39) still comes before healing at low
+health (21), and critical health (30 to 34) before low.
 
 **Stat weights from the talents taken.** A talent shape's weights are the
 starting point; the talents a buddy actually took move them: for each

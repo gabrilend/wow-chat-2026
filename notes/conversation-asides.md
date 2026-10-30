@@ -307,3 +307,20 @@ And the follow-ups the same evening, word for word:
   relationship associations. And then maybe prioritize or increase in
   value the relationships that are a little unseen, like "all of your
   subtlety spells" or "weapon attacks" and similar."
+
+## 2026-10-29, the answer pages, and abilities by concern
+
+- (whether the answer pages should also be answerable on claude.ai; 1102)
+  "It's okay just the local ones are needed. A user looking to customize
+  their version of the project will use the form included in their git
+  repo copy of the cloned project."
+- (pages 3 and 5, plans awaiting approval) "I'm sure your intuitions are
+  correct about 3 and 5."
+- (abilities chosen by concern; 625) "Now, can you tell me where we're at
+  with NPCs using different abilities more or less frequently when
+  multiple ways to address a concern are presented? Like, concern, ally
+  low health, sub routine initiated heal the ally because can and
+  specialized to, cast healing touch but not tejuvenation because that's
+  how we're specced. Etc etc with more concerns being things like "enemy
+  nearby" or "enemy nearby 3+ enemies" or "ally suddenly gained threat"
+  or whatever."
