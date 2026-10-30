@@ -54,7 +54,7 @@ where each stands:
 | System | Where its worth comes from now | Aligned |
 |--------|--------------------------------|---------|
 | The talent draw (625) | the game's spell flags; a raise per point | partly |
-| Window values (625f) | the game's buff numbers; per-kind shares by hand | partly |
+| Window values (625f) | the game's buff numbers, and each ability's profile from its own data (`scripts/generate-ability-data`) | yes (the shares of casts come at run time) |
 | Buff targeting (625l) | (planned from the roots) | planned |
 | Gear choice (617j, 625b) | the bot module's stat weights per class and spec | not yet |
 | Talent picks (617g) | the ten shapes, drawn at random | not yet |
@@ -66,10 +66,9 @@ where each stands:
 
 - The talent draw (625): talents' worth from the game's spell flags.
 - The window values (625f, `buddies_window_buffs.h`): a buff's gifts from
-  the game's table; how much each ability is moved by them is, for now,
-  set by hand per kind of ability (cast-time spells, energy-bound strikes,
-  damage over time), standing in for the ability's own cast time, global
-  cooldown and resource, to be read instead.
+  the game's table, and how much each ability is moved by them from the
+  ability's own cast time, channel, global cooldown, resource and ticks
+  (`scripts/generate-ability-data`, 768 abilities).
 - Buffs given to who uses them most (625l): each member's damage and
   health to come under the buff.
 - The healer's seat (625i), the threat economy (625j), the fight's length

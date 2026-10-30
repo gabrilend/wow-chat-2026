@@ -1,0 +1,189 @@
+#!/usr/bin/env luajit
+-- generate-ability-data - reads every class's abilities out of the game's
+-- own spell tables, as the roots the buddies' action economy weighs from
+-- (issue 625f; strategems/everything-is-damage-and-health.md).
+--
+-- For a general audience: how much a buff like Bloodlust is worth to a
+-- buddy depends on its abilities: a spell with a cast time is sped up by
+-- haste, a strike paid for with energy isn't, a damage-over-time spell's
+-- ticks aren't. Rather than set those by hand, this tool reads, for each
+-- class's learnable abilities (the top rank of each), what the game itself
+-- says: its cast time, cooldown, global cooldown, what it costs and in what
+-- resource, whether it is channelled, whether it hits at once or over time,
+-- whether it heals. It writes them as a header the buddy module compiles in,
+-- and a listing to read by eye.
+--
+-- Usage: scripts/generate-ability-data [DIR] [--out PATH] [--listing PATH]
+--   DIR            the project root (default the hard-coded one below)
+--   --out PATH     the header (default DIR/patches/B036-mod-buddies/mod-buddies/src/buddies_ability_data.h)
+--   --listing PATH the listing (default DIR/docs/ability-data.md)
+--   --help         this text
+-- Reads data-files/dbc/{Spell,SpellCastTimes,SkillLineAbility}.dbc
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+
+-- {{{ arguments
+local out, listing
+do
+    local i = 1
+    while i <= #arg do
+        local a = arg[i]
+        if a == "--help" or a == "-h" then
+            for line in io.lines(arg[0]) do
+                if not line:match("^%-%-") and not line:match("^#!") then break end
+                print((line:gsub("^%-%- ?", "")))
+            end
+            os.exit(0)
+        elseif a == "--out"     then out = arg[i + 1]; i = i + 1
+        elseif a == "--listing" then listing = arg[i + 1]; i = i + 1
+        elseif a:sub(1, 2) ~= "--" then DIR = a
+        else error("unknown option " .. a .. " (see --help)") end
+        i = i + 1
+    end
+end
+out     = out or (DIR .. "/patches/B036-mod-buddies/mod-buddies/src/buddies_ability_data.h")
+listing = listing or (DIR .. "/docs/ability-data.md")
+local DBC = DIR .. "/data-files/dbc/"
+-- }}}
+
+-- {{{ the game's numbers
+local CLASSES = {
+    { id = 1, name = "Warrior", family = 4 }, { id = 2, name = "Paladin", family = 10 }, { id = 3, name = "Hunter", family = 9 },
+    { id = 4, name = "Rogue", family = 8 }, { id = 5, name = "Priest", family = 6 }, { id = 6, name = "Death Knight", family = 15 },
+    { id = 7, name = "Shaman", family = 11 }, { id = 8, name = "Mage", family = 3 }, { id = 9, name = "Warlock", family = 5 },
+    { id = 11, name = "Druid", family = 7 },
+}
+local POWER = { [0] = "mana", [1] = "rage", [2] = "focus", [3] = "energy", [6] = "runic power", [-2] = "health" }
+-- what an effect does (SharedDefines.h SpellEffects): hits at once
+local DIRECT = { [2] = "damage", [9] = "damage", [10] = "heal", [17] = "damage", [31] = "damage", [58] = "damage", [121] = "damage", [67] = "heal" }
+-- auras that work over time (SpellAuraDefines.h): damage, heal, leech,
+-- damage by percent, a spell triggered each tick, a periodic dummy
+-- (227: a spell triggered each tick with a value, Mind Flay's)
+local PERIODIC = { [3] = "damage", [8] = "heal", [53] = "damage", [89] = "damage", [23] = "damage", [226] = "damage", [227] = "damage", [20] = "heal" }
+local ATTR0_PASSIVE, ATTR1_CHANNELED = 0x40, 0x4 + 0x40
+-- }}}
+
+-- {{{ local function load_dbc()
+local function u32(d, o) local a, b, c, e = d:byte(o + 1, o + 4); return a + b * 256 + c * 65536 + e * 16777216 end
+local function load_dbc(name)
+    local f = io.open(DBC .. name, "rb") or error("cannot open " .. DBC .. name)
+    local d = f:read("*a")
+    f:close()
+    if d:sub(1, 4) ~= "WDBC" then error(name .. " is not a WDBC file") end
+    local n, rs = u32(d, 4), u32(d, 12)
+    local strings = 20 + n * rs
+    local rows = {}
+    for r = 0, n - 1 do
+        local b = 20 + r * rs
+        rows[#rows + 1] = {
+            u = function(field) return u32(d, b + field * 4) end,
+            i = function(field) local v = u32(d, b + field * 4); return v >= 2147483648 and v - 4294967296 or v end,
+            s = function(field)
+                local s = strings + u32(d, b + field * 4)
+                return d:sub(s + 1, (d:find("\0", s + 1, true) or s + 1) - 1)
+            end,
+        }
+    end
+    return rows
+end
+-- }}}
+
+-- {{{ reading
+local CAST = {}
+for _, r in ipairs(load_dbc("SpellCastTimes.dbc")) do CAST[r.u(0)] = r.i(1) end
+local LEARNABLE = {}
+for _, r in ipairs(load_dbc("SkillLineAbility.dbc")) do LEARNABLE[r.u(2)] = true end
+-- Spell.dbc columns (DBCStructure.h SpellEntry): 0 id, 4 attributes, 5
+-- attributes ex, 28 cast time index, 29 cooldown, 30 category cooldown, 39
+-- spell level, 41 power type, 42 cost, 71-73 effects, 95-97 auras, 136 name,
+-- 204 cost in percent of base mana, 206 global cooldown, 208 family, 213
+-- damage class, 225 school mask
+local BY_CLASS = {}
+local familyOf = {}
+for _, c in ipairs(CLASSES) do familyOf[c.family] = c; BY_CLASS[c.id] = {} end
+for _, r in ipairs(load_dbc("Spell.dbc")) do
+    local id, fam = r.u(0), r.u(208)
+    local cls = familyOf[fam]
+    if cls and LEARNABLE[id] and bit.band(r.u(4), ATTR0_PASSIVE) == 0 then
+        -- the top rank: by the game's own "Rank N" label; a variant without
+        -- one (a proc, a test spell, an item's copy) only when the ability
+        -- has no labelled ranks at all (Rejuvenation's "Rank 13" over an
+        -- unlabelled same-named spell)
+        local name = r.s(136)
+        local level = r.u(39)
+        local rank = tonumber(r.s(153):match("^Rank (%d+)$") or "") or 0
+        local a = BY_CLASS[cls.id][name]
+        local better = not a or (rank > a.rank) or (rank == a.rank and level >= a.level)
+        if name ~= "" and better then
+            local direct, periodic, heal = false, false, false
+            for e = 0, 2 do
+                local eff, aura = r.u(71 + e), r.u(95 + e)
+                if DIRECT[eff] then direct = true; heal = heal or DIRECT[eff] == "heal" end
+                if PERIODIC[aura] then periodic = true; heal = heal or PERIODIC[aura] == "heal" end
+            end
+            BY_CLASS[cls.id][name] = {
+                name = name, id = id, level = level, rank = rank,
+                cast = math.max(0, CAST[r.u(28)] or 0),
+                cooldown = math.max(r.u(29), r.u(30)),
+                gcd = r.u(206),
+                power = r.i(41), cost = r.u(42), costPct = r.u(204),
+                channeled = bit.band(r.u(5), ATTR1_CHANNELED) ~= 0,
+                direct = direct, periodic = periodic, heal = heal,
+                dmgClass = r.u(213), school = r.u(225),
+            }
+        end
+    end
+end
+-- }}}
+
+-- {{{ writing
+local h, md, count = {}, {}, 0
+h[#h + 1] = "// buddies_ability_data.h - GENERATED by scripts/generate-ability-data from the client's Spell, SpellCastTimes and"
+h[#h + 1] = "// SkillLineAbility tables: every class's learnable abilities (the top rank of each) as the game says they are, the"
+h[#h + 1] = "// roots the action economy weighs from (issue 625f); don't edit, run it again."
+h[#h + 1] = "#ifndef MOD_BUDDIES_ABILITY_DATA_H\n#define MOD_BUDDIES_ABILITY_DATA_H\n\n#include <cstdint>\n"
+h[#h + 1] = "// one ability: its class, name in lower case (as a cast action names it), top rank's spell, cast time, cooldown and"
+h[#h + 1] = "// global cooldown (milliseconds), power type (0 mana, 1 rage, 2 focus, 3 energy, 6 runic power, -2 health), cost (rage and"
+h[#h + 1] = "// runic power in tenths, as the game keeps them; and cost as a percent of base mana), and flags: channelled, hits at"
+h[#h + 1] = "// once, works over time, heals"
+h[#h + 1] = "struct BuddyAbilityRow { uint8_t cls; char const* name; uint32_t spell; int32_t castMs; uint32_t cooldownMs; uint32_t gcdMs;"
+h[#h + 1] = "                         int8_t power; uint32_t cost; uint32_t costPct; uint8_t channeled, direct, periodic, heal; };\n"
+h[#h + 1] = "static BuddyAbilityRow const BUDDY_ABILITIES[] = {"
+md[#md + 1] = "<!-- docs/ability-data.md - GENERATED by scripts/generate-ability-data from the client's spell tables (issue 625f), to read by eye what the action economy weighs from; don't edit, run it again. -->"
+md[#md + 1] = "# Every Class's Abilities, as the Game Says"
+md[#md + 1] = ""
+md[#md + 1] = "The top rank of each learnable ability: cast time, cooldown and global cooldown in seconds, resource and cost, and what it does (*at once*, *over time*, *heals*, *channelled*)."
+for _, c in ipairs(CLASSES) do
+    local names = {}
+    for n in pairs(BY_CLASS[c.id]) do names[#names + 1] = n end
+    table.sort(names)
+    md[#md + 1] = ""
+    md[#md + 1] = "## " .. c.name
+    md[#md + 1] = ""
+    md[#md + 1] = "| Ability | Cast | Cooldown | Global | Cost | Does |"
+    md[#md + 1] = "|---|---:|---:|---:|---|---|"
+    for _, n in ipairs(names) do
+        local a = BY_CLASS[c.id][n]
+        h[#h + 1] = string.format("    { %d, %q, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d },", c.id, n:lower(), a.id, a.cast, a.cooldown, a.gcd,
+            a.power, a.cost, a.costPct, a.channeled and 1 or 0, a.direct and 1 or 0, a.periodic and 1 or 0, a.heal and 1 or 0)
+        local does = {}
+        if a.direct then does[#does + 1] = "at once" end
+        if a.periodic then does[#does + 1] = "over time" end
+        if a.heal then does[#does + 1] = "heals" end
+        if a.channeled then does[#does + 1] = "channelled" end
+        -- rage and runic power are kept in tenths (15 rage is 150)
+        local shown = (a.power == 1 or a.power == 6) and (a.cost / 10) or a.cost
+        local cost = a.costPct > 0 and (a.costPct .. "% base mana") or (a.cost > 0 and (shown .. " " .. (POWER[a.power] or "?")) or "free")
+        md[#md + 1] = string.format("| %s | %.1f | %.1f | %.1f | %s | %s |", n, a.cast / 1000, a.cooldown / 1000, a.gcd / 1000, cost, table.concat(does, ", "))
+        count = count + 1
+    end
+end
+h[#h + 1] = "};\n\n#endif"
+local f = io.open(out, "w") or error("cannot write " .. out)
+f:write(table.concat(h, "\n"), "\n")
+f:close()
+f = io.open(listing, "w") or error("cannot write " .. listing)
+f:write(table.concat(md, "\n"), "\n")
+f:close()
+print(string.format("%d abilities of %d classes written to %s and %s", count, #CLASSES, out, listing))
+-- }}}

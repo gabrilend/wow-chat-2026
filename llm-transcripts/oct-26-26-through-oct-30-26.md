@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-30 13:04:02
+Generated on: 2026-10-30 13:05:51
 Models: claude-opus-5-5
 
 ## Contents
@@ -14733,6 +14733,25 @@ the party changes or the player logs out.
 
 That answers the plan's last open question, so buff targeting is fully designed
 and ready to build once the action economy's timelines exist.
+
+--------------------------------------------------------------------------------
+
+### User Request 144
+
+yes and these cooldowns should only be like, 2+ minute cooldowns. Maybe 1.5
+minutes. Anything shorter is almost part of their rotation, and they can manage
+it themselves.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 144
+
+*[commit] 9d8785ca8 in wow-chat-2026 - *
+
+Done, and committed (9d8785ca8): only cooldowns of 90 seconds or more count
+toward a player's faith. Shorter ones are part of their rotation and are left to
+them. I took the lower of your two numbers, and it's set in one place, so
+changing it to 2 minutes later is a one-line edit.
 
 --------------------------------------------------------------------------------
 

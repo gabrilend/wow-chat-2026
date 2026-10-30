@@ -43,6 +43,18 @@ weighs the time a cast costs, or plans when cooldowns come back. The
 talent draw (625, built) and the economy plan (625d) weigh answers but
 not time.
 
+**Built so far (2026-10-30, committed, offline):** the window values
+(`buddies_window_buffs.h`), each buff's gifts read from the game; every
+class's abilities read from the game's tables by
+`scripts/generate-ability-data` (`buddies_ability_data.h`, listing
+`docs/ability-data.md`: 768 abilities, each one's cast time, cooldown,
+global cooldown, resource and cost, and whether it is channelled, hits
+at once, works over time or heals); each ability's profile for a window
+read from that data, nothing set by hand. Checked by
+`scripts/test-buddy-window-buffs`: from the data, Bloodlust is worth 1.30
+to a Fireball mage, 1.075 to a Sinister Strike rogue, 1.15 to a
+Corruption and Shadow Bolt warlock.
+
 ## Intended Behavior
 
 **Time is the currency.** Every answer costs time: the global cooldown it

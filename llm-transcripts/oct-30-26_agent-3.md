@@ -1,6 +1,6 @@
 # Conversation Summary: e143dbfe-ff43-48be-8bd4-4d54fd7a325d
 
-Generated on: 2026-10-30 13:05:07
+Generated on: 2026-10-30 13:15:09
 Models: claude-opus-5-5
 
 ## Contents
@@ -2189,6 +2189,134 @@ written into the trade issue as an open question until you answer.
 
 I've also recorded your answer on random bots: no cap of their own, you'll keep
 the random-bot count low.
+
+--------------------------------------------------------------------------------
+
+### User Request 16
+
+<pasted_content id="415d">
+> What exists: a recorder that, every 5 seconds, writes one line per character
+> in the world
+> (players, buddies, bots). Each line holds the time, who it is, which map, zone
+> and sub-zone, the
+> x, y, z position, and two yes/no flags: fighting and dead. It runs only on
+> Debug builds, writes
+> to the RAM drive, and hasn't been run yet. It knows that someone is fighting,
+> but not what
+>   they're fighting or how it went.
+</pasted_content id="415d">
+
+
+well this doesn't really help us in determining fighting capabilities. How about
+whenever a buddy-bot defeats a foe on their own entirely with no help at all, we
+record the conditions that the fight had, and they can estimate based on that?
+Things like... enemy health, enemy dps, how much health we lost in the fight,
+how much mana we spent, how long it took, if we used consumables (gold cost to
+fight), etc. Then, if we ever have a fight that is "more" or "better" in each of
+the parameters, we can replace the old record with the new one. Whenever the bot
+is changed in level, it should forget these datas, and whenever they change
+class, they forget the datas. If they go into storage they should remember, and
+stand-ins should never remember this stuff - they always are brave and vigilant.
+The bot is weighing several different economies for their abilities and stuff,
+so if we can provide them useful information about the various costs a
+particular monster would require to defeat, then we should try and generate that
+information without being wasteful. We don't need to track arcs or curves in the
+statistics for this, just what they can reasonably handle themselves.
+
+> - After the fight, a distilling step keeps only the crucial points. Those go
+> to disk in git,
+>     with a fingerprint of everything that makes up the fight, and the raw log is cleared.
+
+what information were we trying to learn from this again?
+
+can you ask me 10 more questions?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 16
+
+I've written down the solo record as you described it. It's in the trade issue
+and on the todo list.
+
+## What the fight log was for
+
+You asked for it on October 29. The question was whether a buddy's "how much
+have I been moving" measure should cover the whole fight or the last half
+minute. Your answer, word for word: "should reset when the phase changes. Also,
+we should remember, so write our learnings to a log file … to learn which
+fights and which phases require "lots of movement" and what that coincides with.
+We never want to forget how to generate these conclusions, but we can build the
+machinery from scratch whenever a new use-case arises."
+
+It's meant to learn two things:
+
+1. **Which boss phases make everyone move a lot, and what triggers it** (fire on
+   the ground, a summon, a cast). A buddy uses that to save its instant casts
+   for the moving stretches and its long casts for when it can stand still.
+2. **A boss's weak phase,** so buddies line up Bloodlust and their cooldowns for
+   it. Today you said this should be learned by all buddies together, cached,
+   and turned off by hand once a boss is tested.
+
+So it's about how a fight unfolds over time, not about what a buddy can beat.
+The solo record covers that now.
+
+## Ten more questions
+
+**The solo record**
+
+1. **"More or better in each parameter."** Say a new solo win had a foe with
+   more health but took less time. It's better in one way and not another. Does
+   it replace the old record, or only a win that beats it in every way?
+   *My call:* only one that beats it in every way, so the record never goes
+   down.
+2. **One record, or one per kind of foe?** A caster foe and a melee foe cost
+   differently: mana for interrupts, health from hits. Should a buddy keep a
+   single record, or one each for a few kinds (caster, melee, beast)?
+   *My call:* one per creature type the game already gives (beast, humanoid,
+   undead, and so on).
+3. **Judging a foe it has never fought.** The game data knows each creature's
+   health and damage. Should the buddy compare those numbers against its record
+   to decide whether it can win?
+   *My call:* yes, that's the whole estimate.
+4. **"No help at all."** Does a buff you cast on it before the fight count as
+   help? What about a heal from you during the fight?
+   *My call:* buffs before the fight don't count. Anything during the fight
+   does.
+5. **Forgetting at level change.** Buddies level with you, sometimes several
+   times an hour, and each level wipes the record. Is that intended? Or should
+   one level up keep the record (it only got stronger) and only a level down
+   forget it?
+   *My call:* keep it on level up, forget it on level down.
+6. **Stand-ins, always brave.** Does that mean a stand-in never refuses a trip
+   and never says "I'm scared", whatever the danger?
+   *My call:* yes.
+
+**The fight log**
+
+7. **Is the fight log still wanted,** now that its two purposes are clear
+   (movement per phase, weak phases)? Or should it wait until custom bosses are
+   being built?
+   *My call:* build the in-RAM log now, since it's cheap. Wait on the distilling
+   until custom bosses.
+
+**Groups and events**
+
+8. **The far party's leader.** Buddies too far from you form a group of their
+   own. Who leads it: the buddy with the lowest number (always the same one), or
+   whoever has been far the longest?
+   *My call:* the lowest number, so it's stable.
+9. **The radius event.** Today the server checks every 5 seconds how far each
+   buddy is from you. You designed a "radius" an object can own that triggers
+   functions when something enters it, and asked whether it would be fast. It
+   would be: it rides on the server's own "a unit moved" notices. In October you
+   said things should be triggered by something happening rather than looped.
+   Should I plan that server patch?
+   *My call:* yes. It removes the 5-second check entirely.
+10. **The army of 64.** For the planned scene jumps, I read your "fully random"
+    answer to mean the 64 stand-ins are redrawn (race, class, talent shape) at
+    each jump. Is that right, or should the same 64 carry from one jump to the
+    next?
+    *My call:* redrawn, as I read it.
 
 --------------------------------------------------------------------------------
 

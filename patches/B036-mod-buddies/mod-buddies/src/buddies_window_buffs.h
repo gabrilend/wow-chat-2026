@@ -16,17 +16,18 @@
  * in this version of the game). A buddy's window factor is its abilities'
  * factors, each weighed by its share of the buddy's casts.
  *
- * The buffs' gifts are the game's own numbers. How much each ability is
- * moved by them is, for now, set by hand per kind of ability: a stand-in
- * for the ability's own cast time, global cooldown, resource and ticks,
- * to be read from its data instead (the owner, 2026-10-30: "We want their
- * value to come cleanly from the roots of the weights that determine
- * their output"; strategems/everything-is-damage-and-health.md).
+ * The buffs' gifts are the game's own numbers, and so is how much each
+ * ability is moved by them: ProfileOf reads it from the ability's cast
+ * time, channel, global cooldown, resource and ticks (the generated
+ * buddies_ability_data.h), nothing set by hand (the owner, 2026-10-30: "We
+ * want their value to come cleanly from the roots of the weights that
+ * determine their output"; strategems/everything-is-damage-and-health.md).
  */
 
 #ifndef MOD_BUDDIES_WINDOW_BUFFS_H
 #define MOD_BUDDIES_WINDOW_BUFFS_H
 
+#include "buddies_ability_data.h"
 #include <cstdint>
 #include <vector>
 
@@ -80,6 +81,35 @@ namespace BuddyWindow
     //            it), 0 for one that can't
     // share: the ability's part of the buddy's casts in the window.
     struct Ability { float haste, damage, healing, crit, share; };
+    // }}}
+
+    // {{{ ProfileOf
+    // An ability's profile, read from the game's own data (the generated
+    // buddies_ability_data.h), not set by hand
+    // (strategems/everything-is-damage-and-health.md):
+    //   haste:   1 when time is what limits it: a cast time, a channel (its
+    //            ticks come faster), or a mana spell bound by the global
+    //            cooldown; 0 when energy or rage limit it (haste doesn't
+    //            refill them), or when it is an instant that only works
+    //            over time (its ticks aren't hastened in this version, so
+    //            casting it sooner gains nothing)
+    //   damage, healing: what it does
+    //   crit:    1 when it hits at once (a hit can strike critically)
+    // The melee and ranged auto attacks aren't spells: AUTO_ATTACK stands
+    // for them (haste speeds them, they hit at once, they deal damage).
+    static constexpr Ability AUTO_ATTACK = { 1.0f, 1.0f, 0.0f, 1.0f, 1.0f };
+    inline Ability ProfileOf(BuddyAbilityRow const& a, float share)
+    {
+        bool timeBound   = a.castMs > 0 || a.channeled || (a.gcdMs > 0 && a.power == 0);
+        bool tickOnly    = a.periodic && !a.direct && !a.channeled && a.castMs <= 0;
+        Ability p{};
+        p.haste   = (timeBound && !tickOnly) ? 1.0f : 0.0f;
+        p.damage  = a.heal ? 0.0f : 1.0f;
+        p.healing = a.heal ? 1.0f : 0.0f;
+        p.crit    = a.direct ? 1.0f : 0.0f;
+        p.share   = share;
+        return p;
+    }
     // }}}
 
     // {{{ Factor
