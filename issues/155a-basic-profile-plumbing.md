@@ -55,7 +55,7 @@ pieces of machinery each look up in their own table:
 | active selector | `.profile` | the word itself |
 | source tree choice | `case` blocks in `scripts/compile`, `install`, `apply-patches`, `authserver`, `worldserver`, `switch`, `redownload-source`, and `config/patches/C002-directory-paths.sh` | `source-beta` |
 | upstream repo, branch, pinned commit | `scripts/profiles`, `scripts/install`, `scripts/switch` | liyunfan1223 fork, `Playerbot` branch, unpinned |
-| module list | `scripts/profiles`, `scripts/install`, `scripts/compile` | playerbots, solo-lfg, aoe-loot, fireworks-on-level, ale |
+| module list | `scripts/profiles`, `scripts/install`, `scripts/compile`, `scripts/update` | playerbots, aoe-loot, ale (solo-lfg and fireworks-on-level left out 2026-10-30, the owner: "we should get area looting built into basic, the other two we can leave out") |
 | profile listing / help text | loops `for p in vanilla alpha release beta` in `scripts/profiles`; echo lines in `scripts/switch` | — |
 | database names | the database-name composer in `patches/E-patches.sh`; `config/patches/C001-database-connections.sh` | `acore_*_vanilla` |
 | realm id | `config/patches/C019-realm-id.sh`, `scripts/set-active-realm` (id and realmlist row) | 3 |

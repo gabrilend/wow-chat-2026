@@ -91,8 +91,11 @@ Design and build record: issue 155 and its sub-issues 155a–155f.
 
 ## Installed modules
 
-The same five as vanilla: mod-playerbots, mod-solo-lfg, mod-aoe-loot,
-mod-fireworks-on-level, mod-ale. The source tree is shared with release,
+Three, since 2026-10-30: mod-playerbots, mod-aoe-loot (area looting) and
+mod-ale, with the project's own buddy module beside them (B036). The owner,
+2026-10-30: "we should get area looting built into basic, the other two we
+can leave out" (mod-solo-lfg and mod-fireworks-on-level, which basic had
+shared with vanilla until then). The source tree is shared with release,
 beta and vanilla and pinned to the same commit (see `./scripts/profiles`).
 
 <!-- patch-lists: begin. Written by scripts/generate-patch-lists from the patches' headers (issue 189f): edit a header, then run it; do not edit by hand. -->

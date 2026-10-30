@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-30 12:27:36
+Generated on: 2026-10-30 12:36:11
 Models: claude-opus-5-5
 
 ## Contents
@@ -14344,6 +14344,107 @@ draw.
 One new question: a use inside a window counts m times a plain one. Should m be
 what the window gives in numbers (Bloodlust's 30% haste makes m = 1.3)? Or
 should it be larger, to count a burn phase's importance beyond its numbers?
+
+--------------------------------------------------------------------------------
+
+### User Request 138
+
+for the command list page, we have LOTS of commands. Make sure they're all
+represented.
+
+A healer buddy should be able to utilize spirit (especially if they're a spirit
+class) to regenerate mana if they need it. If for example they say "oom" then
+maybe they switch to a DPS role and another more suitable player picks up
+healing if necessary - though, with the quality of heals faltering while the
+true healer is oom, there might need more help from the others. Then they can
+Seal of Wisdom, feral scratch, or priest wand or whatever until they get their
+mana back. Sometimes just hitting the enemy can get them judgement of wisdom -
+paladins should prioritize wisdom over light if the healer's mana is low.
+
+for the new question, technically this is something we'd theorycraft and build
+reasonable answers for, but for now just give it an appropriate value for each
+buf.
+
+--------------------------------------------------------------------------------
+
+### User Request 139
+
+for the command list page, we have LOTS of commands. Make sure they're all
+represented.
+
+A healer buddy should be able to utilize spirit (especially if they're a spirit
+class) to regenerate mana if they need it. If for example they say "oom" then
+maybe they switch to a DPS role and another more suitable player picks up
+healing if necessary - though, with the quality of heals faltering while the
+true healer is oom, there might need more help from the others. Then they can
+Seal of Wisdom, feral scratch, or priest wand or whatever until they get their
+mana back. Sometimes just hitting the enemy can get them judgement of wisdom -
+paladins should prioritize wisdom over light if the healer's mana is low.
+
+for the new question, technically this is something we'd theorycraft and build
+reasonable answers for, but for now just give it an appropriate value for each
+buff. Bloodlust for example can't be 1.3x because some classes use haste rating
+more and value it more strongly. Focus on the buff it provides and have it
+interface with the ability economy.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 139
+
+> Checking the command list's coverage first: every command the project's code
+> defines, against the reference's descriptions.
+
+*[commit] f3801d63b in wow-chat-2026 - *
+
+Both are in the plans and committed (f3801d63b). The window values are built and
+tested; the healer design is a plan.
+
+**Command list page:** 709 commands are listed, the stock ones and all of ours,
+including the four new buddy commands. One gap: three modules on basic's list
+(area looting, fireworks on level-up, and solo dungeon finder) aren't in the
+source tree right now, probably dropped by the release build on the 29th. Their
+commands can't be read until they're back. Run `scripts/update` for basic before
+the next compile. Without it the compile builds without those three modules, and
+the command list stays short of their commands. Once they're back, regenerating
+the reference adds their commands.
+
+**Healer out of mana**, as you described it:
+- It says "oom", then stops casting so its spirit regenerates. That counts most
+  for spirit classes like priests and druids.
+- Meanwhile it fights in the way that brings mana back: a paladin striking with
+  Seal of Wisdom, a druid scratching in a form, a priest wanding.
+- The next most suitable healer (healing talents, most mana) takes the healer's
+  seat, and the others help more while heals are weaker.
+- Paladins put up Judgement of Wisdom rather than Light while the healer's mana
+  is low, so anyone hitting the enemy gives mana back.
+- It takes the seat back when it says "ready".
+
+**Window values per buff:** built and tested. Each buff is described by what it
+gives, read from the game's spell table:
+
+| Buff | What it gives |
+|---|---|
+| Bloodlust, Heroism | 30% haste |
+| Power Infusion | 20% casting speed, 20% cheaper |
+| Avenging Wrath | 20% damage and healing |
+| Arcane Power | 20% damage, 20% dearer |
+| Death Wish | 20% physical damage |
+| Innervate | mana only, so it belongs to the resource economy |
+
+Each ability says how much each kind of gift moves it. A buddy's value for the
+window is the average over its abilities, weighted by how often it casts each.
+For Bloodlust:
+- **Fire mage:** 1.30, since haste speeds every cast.
+- **Affliction warlock:** 1.15, because its damage-over-time spells aren't sped
+  up by haste in this version.
+- **Rogue:** 1.075, since its strikes are limited by energy and haste only
+  speeds its auto attacks.
+
+These are starting values, kept with their reasons so theorycraft can move them
+later.
+
+Next on the action economy is each buddy's timeline: when each ability comes
+back, and the weights it hands to the draw. I can start on that.
 
 --------------------------------------------------------------------------------
 

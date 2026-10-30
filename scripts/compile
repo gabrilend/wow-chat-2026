@@ -88,6 +88,12 @@ DEFAULT_PROFILE="${PROFILE}"
 THREADS="${THREADS:-4}"
 AUTO_VALIDATE=true
 RUN_TESTS=true
+# --tests-first: the quick tests before the build, as before 2026-10-28;
+# without it they run only when the build fails (issue 1100d)
+TESTS_FIRST=false
+# what a quick-test stop says was done: before the build nothing was
+# touched; after a failed build the trees are put back by the exit trap
+TESTS_WHEN="nothing was patched or built"
 # --retest: run every quick test, remembered passes or not (issue 1100b)
 RETEST=false
 # --bake: stop once promoted; without it the new server starts in this
@@ -111,7 +117,7 @@ declare -A PROFILE_MODULES=(
     ["beta"]="mod-ale mod-aoe-loot mod-grownup mod-playerbots"
     ["release"]="mod-ale mod-playerbots"
     ["vanilla"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
-    ["basic"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
+    ["basic"]="mod-playerbots mod-aoe-loot mod-ale"   # 2026-10-30, the owner: "we should get area looting built into basic, the other two we can leave out" (solo-lfg, fireworks-on-level)
     ["cc-test"]="mod-playerbots mod-ale"
 )
 # }}}
@@ -203,6 +209,10 @@ parse_args() {
                 RETEST=true
                 shift
                 ;;
+            --tests-first)
+                TESTS_FIRST=true
+                shift
+                ;;
             --bake)
                 BAKE=true
                 shift
@@ -237,8 +247,10 @@ show_help() {
     echo "  --debug            Build -O0 -g (Debug); the server then auto-runs the"
     echo "                     crash catcher, giving exact file:line in tmp/ traces"
     echo "  --no-validate      Skip auto-validation and promotion"
-    echo "  --skip-tests       Skip the quick tests run before building"
-    echo "                     (they start the project's MySQL if it is down)"
+    echo "  --skip-tests       Run no quick tests (by default they run when the"
+    echo "                     build fails; they start the project's MySQL if it is down)"
+    echo "  --tests-first      Run the quick tests before building, stopping on a"
+    echo "                     failure (the order before 2026-10-28)"
     echo "  --bake             Stop once promoted (without it, the new server"
     echo "                     starts here after promotion, its start-up hidden)"
     echo "  --retest           Run every quick test, even those whose files"
@@ -687,11 +699,11 @@ run_quick_tests() {
     "${DIR}/scripts/run-tests-in-parallel" "${DIR}" "${out}" "${QUICK_TESTS[@]}" || runner_status=$?
     if [[ ${runner_status} -eq 130 ]]; then
         # interrupted: every test was stopped; nothing was patched or built
-        echo "Compile stopped during the quick tests; nothing was patched or built."
+        echo "Compile stopped during the quick tests; ${TESTS_WHEN}."
         exit 130
     elif [[ ${runner_status} -ne 0 ]]; then
         # the runner itself broke (not a test failing): say so, don't guess
-        echo "ERROR: the quick-test runner exited ${runner_status}; nothing was patched or built"
+        echo "ERROR: the quick-test runner exited ${runner_status}; ${TESTS_WHEN}"
         echo "  to debug: ${DIR}/scripts/test-tests-stop-on-ctrl-c ${DIR}"
         exit 1
     fi
@@ -713,7 +725,7 @@ run_quick_tests() {
         }
     fi
     if [[ ${#failed[@]} -gt 0 ]]; then
-        echo "ERROR: ${#failed[@]} of ${#QUICK_TESTS[@]} quick tests failed; nothing was patched or built:"
+        echo "ERROR: ${#failed[@]} of ${#QUICK_TESTS[@]} quick tests failed; ${TESTS_WHEN}:"
         for t in "${failed[@]}"; do
             echo "  ${t}: tmp/shared-memory/compile-tests/${t}.log"
             tail -n 3 "${out}/${t}.log" | sed 's/^/      /'
@@ -723,6 +735,53 @@ run_quick_tests() {
     fi
     echo "All ${#QUICK_TESTS[@]} quick tests passed (logs: tmp/shared-memory/compile-tests/)"
     exec 8>&-    # the lock: a commit's tests may run while this builds
+}
+# }}}
+
+# {{{ write_design_session_note
+# The build failed twice and the quick tests found nothing (issue 1100d):
+# a design question, not a build one. What is known goes into a note for a
+# Claude Code session to start from: the compiler's error lines, the tests'
+# verdict, what differs from the last commit in the sources and patches, and
+# the last good build.
+write_design_session_note() {
+    local NOTE="${DIR}/tmp/shared-memory/design-session-${PROFILE}.md"
+    local ERROR_LOG="${BUILD_DIR_SHADOW}/compile-errors.log"
+    {
+        echo "# A design session: the ${PROFILE} build failed twice ($(date '+%Y-%m-%d %H:%M'))"
+        echo ""
+        echo "Written by scripts/compile (issue 1100d). The build failed, the quick tests"
+        if [[ "${RUN_TESTS}" == "true" && "${TESTS_FIRST}" != "true" ]]; then
+            echo "found nothing wrong (their logs: tmp/shared-memory/compile-tests/), and the build failed again."
+        else
+            echo "were not run (--skip-tests or --tests-first), and the build failed again."
+        fi
+        echo ""
+        echo "## The compiler's errors (the first 40)"
+        echo ""
+        echo '```'
+        grep -a -E "error:|Error [0-9]|FAILED" "${ERROR_LOG}" 2>/dev/null | head -40 || true
+        echo '```'
+        echo ""
+        echo "## What differs from the last commit (sources, patches, settings)"
+        echo ""
+        echo '```'
+        git -C "${DIR}" status --short -- patches config src scripts 2>/dev/null | head -60 || true
+        echo '```'
+        echo ""
+        echo "## The last good build"
+        echo ""
+        echo "$(cat "${DIR}/tmp/shared-memory/compile-${PROFILE}.goodbye" 2>/dev/null | grep -E '^(ended|verdict):' || echo 'none on record')"
+        echo ""
+        echo "Full error log: ${ERROR_LOG}"
+    } > "${NOTE}"
+    echo ""
+    echo "==============================================================================="
+    echo "THE BUILD FAILED TWICE, AND THE QUICK TESTS FOUND NOTHING: A DESIGN SESSION"
+    echo "==============================================================================="
+    echo "What is known is written to:"
+    echo "  ${NOTE}"
+    echo "Open a Claude Code session in ${DIR} and ask it to read that note."
 }
 # }}}
 
@@ -874,7 +933,8 @@ do_build() {
             echo "" >> "${ERROR_LOG}"
             echo "CMAKE FAILED at $(date)" >> "${ERROR_LOG}"
             print_build_failure
-            return 1
+            BUILD_FAILED=true                          # the caller tests, then builds again (issue 1100d)
+            return 0
         fi
     else
         echo ""
@@ -908,7 +968,8 @@ do_build() {
         echo "" >> "${ERROR_LOG}"
         echo "MAKE FAILED with exit code ${make_result} at $(date)" >> "${ERROR_LOG}"
         print_build_failure
-        return 1
+        BUILD_FAILED=true
+        return 0
     fi
 
     # Pre-install cleanup. cmake's
@@ -935,7 +996,8 @@ do_build() {
         echo "" >> "${ERROR_LOG}"
         echo "MAKE INSTALL FAILED with exit code ${install_result} at $(date)" >> "${ERROR_LOG}"
         print_build_failure
-        return 1
+        BUILD_FAILED=true
+        return 0
     fi
 
     # Post-install Lua script symlinks for the shadow install. Delegates
@@ -1139,9 +1201,12 @@ fi
 # functions and the per-profile lists; nothing is applied here.
 source "${DIR}/patches/patches.sh"
 
-# The quick tests, before anything is touched (run_quick_tests)
-COMPILE_STAGE="the quick tests"; echo "==== stage: the quick tests"
-[[ "${RUN_TESTS}" == "true" ]] && run_quick_tests
+# The quick tests before anything is touched, only with --tests-first
+# (issue 1100d: by default they run when the build fails, below)
+if [[ "${RUN_TESTS}" == "true" && "${TESTS_FIRST}" == "true" ]]; then
+    COMPILE_STAGE="the quick tests"; echo "==== stage: the quick tests"
+    run_quick_tests
+fi
 
 # Check if any modules were added since last cmake configure
 check_modules_configured
@@ -1196,11 +1261,16 @@ trap 'compile_status=$?; unapply_patches_begin || compile_status=1; leave_source
 # with the step's own words (a stale list would dress buddies wrongly).
 generate_buddy_gear() {
     case "${PROFILE}" in basic|cc-test) ;; *) return 0 ;; esac
+    # MySQL down: start it here (issue 1100a). Until 2026-10-28 the quick
+    # tests ran first and started it; they now run only after a failed
+    # build (issue 1100d), so this is the first step that needs it.
     if ! "${DIR}/mysql/installed-files/bin/mysqladmin" "--defaults-file=${DIR}/mysql/conf/client.cnf" --socket="${DIR}/mysql/databases/mysql.sock" \
             ping > /dev/null 2>&1; then
-        echo "ERROR: making the buddy gear lists needs the project's MySQL, and it isn't answering."
-        echo "       start it (./scripts/start-mysql) and compile again"
-        exit 1
+        echo "Making the buddy gear lists needs the project's MySQL, and it isn't answering: starting it."
+        if ! "${DIR}/scripts/start-mysql" "${DIR}"; then
+            echo "ERROR: MySQL did not start (above); nothing was patched or built"
+            exit 1
+        fi
     fi
     echo "Making the buddy gear lists and their gallery..."
     "${DIR}/scripts/translate-buddy-kit-to-gearset" "${DIR}" || { echo "ERROR: scripts/translate-buddy-kit-to-gearset failed (above)"; exit 1; }
@@ -1221,9 +1291,40 @@ apply_patches_begin
 # compiled get that build's timestamps back, so make skips them
 steady_patched_mtimes
 
-# Build
+# Build. When it fails (issue 1100d; the owner, 2026-10-28: "only do our
+# tests if the compilation fails. if we find nothing wrong in the tests we
+# try the compilation again, and if that doesn't work then we try a design
+# session"), each path:
+#   the build succeeds                     - on, no tests
+#   it fails, a quick test fails           - that test is named as the
+#                                            likely cause; stop (run_quick_tests)
+#   it fails, the tests pass (or are off)  - build once more
+#   it fails again                         - the design session's note; stop
+# do_build is called plainly, so stopping on an error stays on inside it
+# (an "if ! do_build" would switch that off for everything it calls); its
+# three compile failures (cmake, make, make install) set BUILD_FAILED and
+# return, and anything else that fails still ends the run as before.
 COMPILE_STAGE="building and installing (cmake, make, install)"; echo "==== stage: building and installing (cmake, make, install)"
+BUILD_FAILED=false
 do_build
+if [[ "${BUILD_FAILED}" == "true" ]]; then
+    if [[ "${RUN_TESTS}" == "true" && "${TESTS_FIRST}" != "true" ]]; then
+        COMPILE_STAGE="the quick tests, after a failed build"; echo "==== stage: the quick tests, after a failed build"
+        TESTS_WHEN="the build had failed, and the source trees are put back"
+        run_quick_tests
+        echo "The quick tests find nothing wrong: building once more."
+    else
+        echo "Building once more (no quick tests: --skip-tests or --tests-first)."
+    fi
+    COMPILE_STAGE="building again"; echo "==== stage: building again"
+    BUILD_FAILED=false
+    do_build
+    if [[ "${BUILD_FAILED}" == "true" ]]; then
+        COMPILE_STAGE="the design session's note"; echo "==== stage: the design session's note"
+        write_design_session_note
+        exit 1
+    fi
+fi
 
 # Clear trap and revert patches after successful build; then the trees are
 # reset to their commits whatever the reverts did (leave_source_trees_clean)

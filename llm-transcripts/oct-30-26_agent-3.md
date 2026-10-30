@@ -1,6 +1,6 @@
 # Conversation Summary: e143dbfe-ff43-48be-8bd4-4d54fd7a325d
 
-Generated on: 2026-10-30 12:28:53
+Generated on: 2026-10-30 12:37:57
 Models: claude-opus-5-5
 
 ## Contents
@@ -14,6 +14,10 @@ Models: claude-opus-5-5
    basic's next compile, focused on Sargobras, pathfinding and questing. Your
    answers are written into the issues, uncommitted. Next: tell me whether
    "someone familiar" means picking from every past version of a buddy.
+3. 2026-10-30 12:31, after Request 10 - We're answering the open questions
+   blocking the next basic compile, with every answer written word for word into
+   its issue and added to the todo list. Next: answer the two pending questions,
+   what "discrete" means for selling and how "someone familiar" works.
 
 --------------------------------------------------------------------------------
 
@@ -1728,6 +1732,60 @@ I've recorded all three answers word for word. Nothing is committed yet.
    mage after the first rebirth, then you ask for someone familiar. Does
    Sargobras bring back only the latest version (the mage), or list every past
    version for you to choose (the priest or the mage)?
+
+--------------------------------------------------------------------------------
+
+### User Request 11
+
+make sure that if we race change, then all the buddies will as well if they are
+able to. So, don't pick the same race they currently are, because it's a race
+*change*, not a race "random draw" or whatever.
+
+um that "when to go sell" rule isn't a good idea. If the buddy-bots inventory is
+full, they ask if they can go. when the party hears "go sell" then they can say
+like "my inventory is 65% full, and it's pretty close, so I'm just gonna go
+sell" and only take longer trips if it's full or near to it.
+
+1. sorry yes I meant continuous.
+
+2. class and professions should change at the same time. Sargobras only brings
+   the most recent version back. We just store one profile probably, then an
+   appearance set for each race they've visited.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 11
+
+> Now "someone familiar" in the prestige issue:
+
+All three answers are recorded word for word:
+
+- **Race change:** when you change race, every buddy that is able changes too,
+  always to a different race from the one it has now. Class-locked buddies (a
+  blood elf paladin, a draenei shaman) wait until they change class. Each buddy
+  keeps one appearance per race it has been, so changing back restores that
+  look.
+- **Selling:**
+  - I dropped my loot-rate rule.
+  - A buddy with full bags asks whether it can go and sell.
+  - On "go sell", each buddy weighs how full its bags are against how far its
+    vendor is, on a continuous scale. About half full is enough for a close
+    vendor; a far trip needs nearly full bags.
+  - The buddy says what it decided and why, like "my inventory is 65% full, and
+    it's pretty close, so I'm just gonna go sell".
+  - "everyone go sell" still sends them all.
+- **"Someone familiar":** Sargobras brings back only the most recent version.
+  Class and professions always change together. Each buddy stores one profile
+  plus an appearance for each race it has visited. I updated the prestige
+  issue's record step to match.
+
+This round's questions are all answered. Nothing is committed, and the todo list
+holds 27 items to build.
+
+Most of those issue files already had uncommitted changes from other sessions
+before today. When you want a commit, I'll stage only the lines I changed. I'm
+still marked as holding these files in the shared claims list, and I'll clear
+those marks once they're committed.
 
 --------------------------------------------------------------------------------
 

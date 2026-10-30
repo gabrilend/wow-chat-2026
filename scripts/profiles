@@ -75,7 +75,7 @@ declare -A PROFILE_MODULES=(
     ["release"]="mod-ale mod-playerbots"
     ["beta"]="mod-ale mod-aoe-loot mod-grownup mod-playerbots"
     ["vanilla"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
-    ["basic"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
+    ["basic"]="mod-playerbots mod-aoe-loot mod-ale"   # 2026-10-30, the owner: "we should get area looting built into basic, the other two we can leave out" (solo-lfg, fireworks-on-level)
     ["cc-test"]="mod-playerbots mod-ale"
 )
 # }}}
