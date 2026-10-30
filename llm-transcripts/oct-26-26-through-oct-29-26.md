@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-29 21:55:55
+Generated on: 2026-10-29 22:08:36
 Models: claude-opus-5-5
 
 ## Contents
@@ -145,6 +145,10 @@ Models: claude-opus-5-5
     unblock the most plans, then build them. Your answers are written in and
     committed, and the stand-in and army code waits for your compile. Next: tell
     me how many bots should fit on that small Burning Steppes shelf.
+35. 2026-10-29 21:59, after Request 117 - We're building five pages that show
+    each part of the project with its open questions and answer boxes, and I've
+    proposed 25 GIF ideas for them. Next, once you've reviewed those, we'll
+    write five generator prompts for each GIF.
 
 --------------------------------------------------------------------------------
 
@@ -12464,6 +12468,74 @@ its issue file when we build it.
    same moment.
 5. A heat map of the valley filling in evenly over a long time-lapse as the
    storm seeks the corners it has visited least.
+
+--------------------------------------------------------------------------------
+
+### User Request 118
+
+okay great can we put those into the gif generator and see what comes out?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 118
+
+> Found the gif generator. Its usual front door asks for typing in a terminal
+> and starts other Claude sessions, so I'm checking whether I can hand it
+> pictures to draw directly.
+
+> Writing the score composer now (the 25 ideas as light).
+
+> Now the renderer, which uses the generator's own code and writes a contact
+> sheet.
+
+> All 25 drew. Checking how they look.
+
+> Filing done; committing the two tools and the picture.
+
+*[commit] e45586845 - Pictures for the architecture pages, drawn by the gif generator*
+
+All 25 came out of the gif generator. To watch them move, open the contact
+sheet:
+
+`file:///mnt/kaun/wow-chat-2026/tmp/shared-memory/gifs/attempt-1/index.html`
+
+A still sheet of one frame from each, 3.8 seconds in, is filed as picture 082 at
+`development-history/082-architecture-gif-ideas-first-draw.png`.
+
+**How I got them through the generator:** I didn't use its usual front door, the
+`say` box. That one wants typing in a terminal and starts a new Claude session
+for every word it doesn't know (it knows only two so far). The generator also
+draws only in glowing light: arcs, lines, still points and filled shapes, in
+seven colours, with no text or icons. So I wrote two tools:
+- **The composer** translates each idea into strokes of light and works out the
+  positions (where the 64 figures land, which tile lights when). An attempt
+  number changes the random choices, which is ready for your five attempts per
+  gif.
+- **The renderer** draws the scores with the generator's own code, eight at a
+  time. It writes nothing into the generator's project.
+
+Both tools are committed (e45586845).
+
+**What reads well:**
+- 1c: the tile wall turning gold in a ripple from one corner.
+- 1e: the card tower re-sorting.
+- 2a: the bots and the gold cells they paint.
+- 4a: 64 figures dealt from the deck, mostly orange damage with a few blue tanks
+  and green healers.
+- 4e: the seats filling, green buddies first, then violet stand-ins.
+- 5b: the rain and snow falling.
+- 5e: the valley filling in.
+
+**What's weak:** a stroke here is a moving spark that leaves a fading trail, not
+a line that stays. So the structures that should stand still (the rings in 1a,
+the tree in 1b, the grid in 2b, the pie in 4b) show only as short trails at any
+moment. The generator's filled shapes do stay lit, so in the next round I'd draw
+anything that should stand as filled pieces.
+
+The gifs live on the RAM drive, so they'll be gone after a reboot. The tools can
+draw them again exactly.
+
+Ready for your five prompt ideas per gif when you are.
 
 --------------------------------------------------------------------------------
 
