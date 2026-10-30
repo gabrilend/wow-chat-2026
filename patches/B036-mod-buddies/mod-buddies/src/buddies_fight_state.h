@@ -47,11 +47,14 @@ namespace BuddyFightState
     // Member: one of the party, a pet included (`owner` its master's id; 0
     // for a character). Role: 0 damage, 1 tank, 2 healer. resourceKind: the
     // game's power type (0 mana, 1 rage, 3 energy, 6 runic power, 2 focus).
+    // Armour and level: what its physical damage taken comes from
+    // (buddies_marks.h, ArmourReduction).
     struct Member
     {
         uint64_t id = 0, owner = 0;
         double health = 0, maxHealth = 0, resource = 0, maxResource = 0;
         uint8_t resourceKind = 0, role = 0, cls = 0;
+        double armour = 0; int level = 1;
         double x = 0, y = 0, z = 0;
         uint32_t casting = 0; double castLeft = 0;
         std::vector<Cooldown> cooldowns;
@@ -68,6 +71,7 @@ namespace BuddyFightState
         uint64_t id = 0;
         double health = 0, maxHealth = 0;
         uint8_t rank = 0;
+        int level = 1;
         uint32_t casting = 0; double castLeft = 0;
         uint64_t attacking = 0;
         std::vector<Mark> marks;

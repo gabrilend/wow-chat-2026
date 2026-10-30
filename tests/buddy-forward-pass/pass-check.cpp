@@ -1,0 +1,110 @@
+// pass-check.cpp - checks buddies_forward_pass.h (issue 625n): one step
+// from a snapshot and its minute to the party's verdict, on a made-up boss
+// fight, and answers tried as if given, each worth the shortfall it takes
+// away.
+
+#include "buddies_forward_pass.h"
+
+#include <cmath>
+#include <cstdio>
+
+using namespace BuddyForwardPass;
+
+static int passed = 0, failed = 0;
+// {{{ check
+static void check(bool ok, char const* what)
+{
+    std::printf("%s: %s\n", ok ? "ok" : "FAILED", what);
+    (ok ? passed : failed)++;
+}
+// }}}
+
+static bool near(double a, double b, double by = 1e-6) { return std::fabs(a - b) < by; }
+
+uint64_t const TANK = 1, OFFTANK = 2, HEALER = 3, ROGUE = 4, BOSS = 100;
+double const RAW = 12000;                                                 // the boss's real damage a second
+
+// {{{ fight
+// A level 80 boss hitting a warrior tank (10000 armour, 6000 of 30000
+// health) for 12000 a second before armour; a priest healing the tank 4000
+// a second; a paladin off-tank (9000 armour, full at 28000) and a rogue
+// behind. Thirty seconds recorded; the boss's 60000 health falling 1000 a
+// second, so a minute left.
+static void fight(Snapshot& s, Memory& m)
+{
+    s.t = 30;
+    Member tank;    tank.id = TANK;       tank.cls = 1; tank.role = 1; tank.armour = 10000; tank.level = 80; tank.health = 6000;  tank.maxHealth = 30000;
+    Member off;     off.id = OFFTANK;     off.cls = 2;  off.role = 1;  off.armour = 9000;   off.level = 80;  off.health = 28000;  off.maxHealth = 28000;
+    Member healer;  healer.id = HEALER;   healer.cls = 5; healer.role = 2; healer.armour = 2000; healer.level = 80; healer.health = 15000; healer.maxHealth = 15000;
+    Member rogue;   rogue.id = ROGUE;     rogue.cls = 4; rogue.armour = 4000; rogue.level = 80; rogue.health = 18000; rogue.maxHealth = 18000;
+    s.party = { tank, off, healer, rogue };
+    Enemy boss; boss.id = BOSS; boss.rank = 3; boss.level = 80; boss.health = 60000; boss.maxHealth = 400000; boss.attacking = TANK;
+    boss.threat = { { TANK, { 10000, 2, 0, true } }, { OFFTANK, { 6000, 2, 0, true } }, { ROGUE, { 7000, 2, 0, true } }, { HEALER, { 3000, 2, 0, false } } };
+    s.enemies = { boss };
+    double through = 1.0 - BuddyMarks::ArmourReduction(10000, 80);
+    for (int t = 1; t <= 30; ++t)
+    {
+        m.Add({ double(t - 1), HIT, BOSS, TANK, 0, RAW * through, true });
+        m.Add({ double(t - 1), HEAL, HEALER, TANK, 0, 4000, false });
+        m.Sample(t, 90000 - 1000.0 * t);
+    }
+    m.Forget(s.t);
+}
+// }}}
+
+int main()
+{
+    Snapshot s; Memory m;
+    fight(s, m);
+    Verdict v = Step(s, m);
+    double through = 1.0 - BuddyMarks::ArmourReduction(10000, 80);
+    double loss = RAW * through - 4000;
+
+    check(v.kind == BuddyPlan::Fight::Boss, "a boss among the enemies: a boss fight");
+    check(v.leftKnown && near(v.left, 60, 1e-6), "the boss's 60000 health falling 1000 a second: a minute left");
+    check(v.attention[0] == 0, "the boss attacks the tank");
+    check(near(v.hits[0], RAW, 1e-3), "the boss's real damage read back through the tank's armour: 12000 a second");
+    check(near(v.taken[0], through) && near(v.healing[0], 4000), "the tank lets through 60% by armour, and is healed 4000 a second");
+    check(near(v.timeToDeath[0], 6000 / loss), "the tank, losing 3244 a second, dies in under 2 seconds");
+    check(near(v.shortfall, loss * 60 - 6000, 1e-3), "the party's curve points at a dead tank: the shortfall is a minute of that loss less its health");
+    check(v.strongest == 0, "the boss is the hardest hitter");
+
+    // answers, tried as if given: each worth the shortfall it takes away
+    Answer wall;  wall.extras = { { 0, BuddyMarks::OfAbility(1, "shield wall"), 12 } };
+    Answer loh;   loh.healed = 0; loh.heal = 28000;
+    Answer taunt; taunt.taunter = 1; taunt.enemy = 0;
+    double wWall = Worth(s, m, wall), wLoh = Worth(s, m, loh);
+    Verdict afterTaunt;
+    double wTaunt = Worth(s, m, taunt, &afterTaunt);
+    std::printf("   (worths: Shield Wall %.0f, Lay on Hands %.0f, the off-tank's taunt %.0f)\n", wWall, wLoh, wTaunt);
+    check(wWall > 0 && wLoh > 0, "Shield Wall and Lay on Hands both turn the curve");
+    check(near(wLoh, 24000, 1e-3), "Lay on Hands is worth what it adds before the tank's health is full: 24000");
+    check(afterTaunt.attention[0] == 1 && near(afterTaunt.healing[1], 4000) && near(afterTaunt.healing[0], 0),
+          "the off-tank's taunt: the boss turns to the paladin, and the healing follows it");
+    check(near(afterTaunt.hits[0], RAW, 1e-3), "a tried taunt doesn't change what the boss has done: still 12000 real");
+
+    // a debuff on the tank (+100% damage taken for 20 seconds, the kind a
+    // boss stacks on its tank): the taunt is worth more, and the tanks'
+    // plan hands the boss to the paladin
+    Snapshot marked = s;
+    marked.party[0].marks = { { 9999, 20, 1, BOSS, { { 87, 100, 127, 0, 1 } } } };
+    Memory m2;
+    {
+        double through2 = through * 2.0;
+        for (int t = 1; t <= 30; ++t)
+        {
+            m2.Add({ double(t - 1), HIT, BOSS, TANK, 0, RAW * through2, true });
+            m2.Add({ double(t - 1), HEAL, HEALER, TANK, 0, 4000, false });
+            m2.Sample(t, 90000 - 1000.0 * t);
+        }
+        m2.Forget(30);
+    }
+    Verdict vm = Step(marked, m2);
+    check(near(vm.hits[0], RAW, 1e-3), "the boss's real damage read back through the debuff too: still 12000");
+    double wTauntMarked = Worth(marked, m2, taunt);
+    check(wTauntMarked > wTaunt, "with the tank debuffed, the off-tank's taunt is worth more");
+    check(vm.tanks.holder == 1 || vm.tanks.to == 1, "the tanks' plan hands the boss to the paladin");
+
+    std::printf("\n%d passed, %d failed\n", passed, failed);
+    return failed == 0 ? 0 : 1;
+}

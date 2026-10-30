@@ -1,0 +1,28 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-forward-pass
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      one step of the fight's forward pass, snapshot to verdict, and answers tried as if given, each worth the shortfall it takes away
+# quick-test: yes
+# ==== end of header ====
+# test-buddy-forward-pass - compiles and runs
+# tests/buddy-forward-pass/pass-check.cpp against the buddy module's
+# forward pass (issue 625n), with no server.
+#
+# Usage: scripts/test-buddy-forward-pass [DIR]   (--help: this text)
+
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+    sed -n '10,14p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+OUT="${DIR}/tmp/tmp"
+mkdir -p "${OUT}"
+g++ -std=c++17 -O1 -Wall -Wextra -Werror -I"${DIR}/patches/B036-mod-buddies/mod-buddies/src" \
+    "${DIR}/tests/buddy-forward-pass/pass-check.cpp" -o "${OUT}/buddy-forward-pass" || exit 1
+nice -n 19 "${OUT}/buddy-forward-pass"
+# ==== footer of test-buddy-forward-pass ====
+# lines:      28
+# ==== end of footer ====
