@@ -23,7 +23,20 @@ The owner, 2026-10-27:
 
 ## Current Behavior
 
-Stock shields carry stamina like any armour. On basic's world database
+**Built 2026-10-30, off until basic is named in its header:** install
+step E075 (`patches/E075-basic-shields-without-stamina/`), its SQL written
+by `scripts/generate-basic-shield-stats-sql`: every shield with stamina
+loses it; holy ones (spirit or healing on them) get as much spirit, magic
+ones (intellect, spell power, spell damage, mana every 5 seconds) one mana
+every 5 seconds per 2.5 stamina, the rest 10 bonus armour per stamina
+(levers, logged in `docs/balance-updates.md`); the new stat takes the
+stamina's slot, or is added to the same stat already on the shield. On
+basic's database that day: 261 of 686 shields changed, 155 plain, 32 holy,
+74 magic. Applied twice and reverted on a scratch copy of the shields: no
+stamina left, and the revert exact. Light shields (defence) are not built
+(the owner: "let's worry about the "light" shields later").
+
+Before it: stock shields carry stamina like any armour. On basic's world database
 (read 2026-10-27), of the 301 green, blue and purple shields wearable at
 60 or below, 144 carry stamina, 53 spirit, and 16 defence or mana every 5
 seconds. So a shield's stamina competes with an off-hand item's, and a

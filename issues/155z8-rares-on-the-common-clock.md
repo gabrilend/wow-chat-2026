@@ -124,4 +124,17 @@ often as the monsters around it. World bosses (rank 3, 155j) keep theirs.
    Every monster, or rares only? **Answered 2026-10-30:** "let's just
    use their system for now, we can come back to ours later." The
    server's own setting (`Respawn.DynamicRateCreature`, by players in
-   the zone) for now; the 0.9-per-player rule is kept for later.
+   the zone) for now; the 0.9-per-player rule is kept for later. Written
+   2026-10-30 as settings patch C043 (rate 8, minimum 10 seconds;
+   profiles "none" until the owner names basic). Read in the server's
+   code the same day, two things to know:
+   - **it leaves rares and rare elites out** (and quest givers, world
+     bosses, anything in an instance), so it doesn't speed the rares
+     this issue is about; question 1's clock (each rare on its
+     neighbours' timer) is still their own step;
+   - **every character counts, buddies included**: one player and a clan
+     of seven is eight in the zone; the rate of 8 leaves one such player
+     unchanged, and two halve the wait.
+5. Should rares also quicken with players in the zone? The server's rule
+   skips them; the 0.9-per-player rule, or the server's rule with rares
+   let in (a small source change), would reach them.
