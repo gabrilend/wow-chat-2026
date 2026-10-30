@@ -16,8 +16,12 @@
  * in this version of the game). A buddy's window factor is its abilities'
  * factors, each weighed by its share of the buddy's casts.
  *
- * The numbers are starting values, kept with their reasons
- * (strategems/grown-and-relearnable.md): theorycraft may move them later.
+ * The buffs' gifts are the game's own numbers. How much each ability is
+ * moved by them is, for now, set by hand per kind of ability: a stand-in
+ * for the ability's own cast time, global cooldown, resource and ticks,
+ * to be read from its data instead (the owner, 2026-10-30: "We want their
+ * value to come cleanly from the roots of the weights that determine
+ * their output"; strategems/everything-is-damage-and-health.md).
  */
 
 #ifndef MOD_BUDDIES_WINDOW_BUFFS_H

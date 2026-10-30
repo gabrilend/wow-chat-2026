@@ -525,3 +525,11 @@ Word for word, each written into its plan:
   because some classes use haste rating more and value it more strongly.
   Focus on the buff it provides and have it interface with the ability
   economy."
+- (basic's modules) "we should get area looting built into basic, the other two we can leave out."
+- (625l, strategems/everything-is-damage-and-health.md) "those buffs are
+  neat. Buddies should cast them onto characters that can use them the
+  most ... Remember we don't want to specify exact values. ... at the end
+  of the day, EVERYTHING that we weigh collapses to just damage, and
+  health. It's just a question of whose it is, and what route through the
+  complicated combat ideaspace leads us to victory most assuredly." (in
+  full in 625l)

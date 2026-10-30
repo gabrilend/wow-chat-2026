@@ -139,4 +139,12 @@ by its own measure, and the draw (625) weighs them together. Learning
    their share of its casts. Checked by `scripts/test-buddy-window-buffs`:
    Bloodlust is worth 1.30 to a fire mage, 1.075 to an energy-bound rogue,
    1.15 to an affliction warlock (its damage over time isn't hastened).
-   Starting values, kept for theorycraft to move.
+   Starting values, kept for theorycraft to move. **Then, the same day:**
+   "Remember we don't want to specify exact values. We want their value
+   to come cleanly from the roots of the weights that determine their
+   output - at the end of the day, EVERYTHING that we weigh collapses to
+   just damage, and health." The buffs' gifts are the game's own numbers;
+   how much each ability is moved by them (set by hand per kind of
+   ability) is to be read from the ability's own data (cast time, global
+   cooldown, resource, ticks), and the window's worth said in damage and
+   health (`strategems/everything-is-damage-and-health.md`).

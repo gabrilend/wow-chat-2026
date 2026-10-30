@@ -1,6 +1,6 @@
 # Conversation Summary: e143dbfe-ff43-48be-8bd4-4d54fd7a325d
 
-Generated on: 2026-10-30 12:37:57
+Generated on: 2026-10-30 12:45:16
 Models: claude-opus-5-5
 
 ## Contents
@@ -18,6 +18,10 @@ Models: claude-opus-5-5
    blocking the next basic compile, with every answer written word for word into
    its issue and added to the todo list. Next: answer the two pending questions,
    what "discrete" means for selling and how "someone familiar" works.
+4. 2026-10-30 12:41, after Request 11 - We're answering open questions on what
+   blocks the next basic compile, focused on Sargobras, pathfinding and
+   questing. Every answer so far is in its issue file, and nothing is committed.
+   Next: commit just my changes when you say so.
 
 --------------------------------------------------------------------------------
 
@@ -1786,6 +1790,95 @@ Most of those issue files already had uncommitted changes from other sessions
 before today. When you want a commit, I'll stage only the lines I changed. I'm
 still marked as holding these files in the shared claims list, and I'll clear
 those marks once they're committed.
+
+--------------------------------------------------------------------------------
+
+### User Request 12
+
+keep in mind that if we're in the depths of Outland or similar, a buddy-bot
+might not be able to make it back alone to go sell. So they might refuse, if
+they're the only one, and say "I'm scared" and then sufficient buddy-bots can
+join them until they feel safe enough to make it. Prioritizing those with the
+fewest remaining inventory slots, or rather, those who have the most to sell.
+Remember, everytime a buddy-bot picks up an item, they decide immediately what
+they want to do with it, and only update this plan if a new items plan would
+change based on whether or not they did something different with it, like hold
+onto it (a pearl for a recipe they know for example) or if they sold it (finally
+have enough money to buy that 2h axe from the AH) etc.
+
+Can you ask me 10 additional questions?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 12
+
+Recorded:
+
+- **"I'm scared":** a buddy whose way to the vendor is too dangerous alone
+  refuses and says "I'm scared". Buddies with the most to sell join it until the
+  group feels safe for the way, judged live, and then they go together.
+- **Item plans:** each item gets its plan the moment it's picked up. A plan is
+  revisited only when a newer item's plan depends on it, like the pearl for a
+  recipe or the money for the two-handed axe. The plans are what the selling,
+  earmarking and full-bags asking all read.
+
+Both are in their issues word for word and on the todo list.
+
+## Ten more open questions
+
+**Going to sell when it's dangerous**
+
+1. **How does a buddy judge "safe enough"?** One way: compare the group's
+   combined strength (levels and roles) against the strongest monsters along the
+   route, as seen right now. Or something else you picture?
+   *My call:* group strength against the route's live danger, with a healer
+   counting extra.
+2. **Who stays with you?** If several buddies leave to sell, should enough
+   always stay with you, so you're never left alone deep in Outland? Or can they
+   all go if they all need to?
+   *My call:* at least half stay, and whoever has the least to sell stays first.
+3. **The hearthstone.** Buddies keep their hearthstones. Should a scared buddy
+   hearth to town to sell when its hearthstone is ready, instead of walking?
+   Then it rejoins you the way it would after any separation.
+   *My call:* yes, when it's ready. It's what a player would do.
+4. **Scared with no one to go with.** If no one can join it, does the buddy stop
+   picking up low-value things until a trip becomes possible? Or does it keep
+   looting and give things away to make room?
+   *My call:* it keeps looting the most valuable things and drops plans for the
+   cheapest.
+
+**Item plans**
+
+5. **The list of plans.** I wrote: wear it, keep it for a recipe, keep it to
+   use, earmark it for you, give it to a clan-mate, sell to a vendor, auction
+   it. Should "disenchant it" be added for buddies with enchanting, or anything
+   else?
+   *My call:* add disenchanting.
+6. **Seeing the plans.** Should you be able to see a buddy's plans for what it
+   carries, for example a command that lists each item and what it's for? Or is
+   that only for logs?
+   *My call:* a game master command, useful for checking the plans in game.
+
+**Bots with buddies of their own** (by your rule that everything works for every
+bot)
+
+7. **How is a bot's clan named?** From a list of names, from the bot's own name
+   ("Matis's Kin"), or chosen by the bot itself?
+   *My call:* from its own name.
+8. **When an alt bot leaves your party to adventure alone, do its buddies go
+   with it** as its own group?
+   *My call:* yes, the same as yours do with you.
+9. **Random bots:** do they get buddies too, or are they owners with no buddies?
+   There can be hundreds of random bots, and each buddy is a whole extra
+   character on the server.
+   *My call:* allowed by the same rules, behind a cap you set for server load.
+
+**Exploring**
+
+10. **The four ways of exploring a place.** Today each buddy is given one of
+    four exploring patterns in turn, by its character number. Should you be able
+    to pick the pattern per buddy instead, or should it stay automatic?
+    *My call:* automatic, with a command to override it for testing.
 
 --------------------------------------------------------------------------------
 
