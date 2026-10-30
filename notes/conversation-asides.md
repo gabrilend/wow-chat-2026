@@ -443,3 +443,24 @@ Word for word, each written into its plan (in brackets):
   I guess that's okay. Let's just make sure that the stuff that's written
   to this document (can you check on them by the way?) gets saved to the
   issue files verbatim. That should do it..."
+
+## 2026-10-30, the experiment parked; pictures kept as their recipe
+
+- (dormant/, CLAUDE.md) "there is a zero percent chance I'm going to
+  remember to use these tools. Let's mark them as "dormant" and archive
+  them for now. I think it'll just be easier if we go through the issue
+  file open questions in groups of 10, with sufficient context to read
+  them. Can you do the cleanup from this experiment and prune our
+  architecture to a reasonable and ordered state? I'm going to have
+  another session in parallel answer questions with me for a bit, so
+  they'll be updated as we go, don't worry about them too much."
+- (on clearing the RAM drive) "clear the ram? did we save the relevant
+  parts yet?"
+- (1103) "the gif tools can redraw the originals exactly if we pin a
+  specific version of the gif generator in the description of the gifs.
+  Then we should have capability to automatically downgrade to that
+  version, deterministically recreate the gifs, then re-apply updates to
+  return to baseline. Ideally, in a separate branch or something. Then, we
+  don't need the shrunk versions, we can always use the full versions, and
+  archive in git the prompt that made them (inputs) and the pinned project
+  version that did (parameters)"

@@ -1,0 +1,32 @@
+{
+  "written_by": "scripts/render-gif-scores: how these gifs were drawn, so scripts/redraw-gifs can draw them again byte for byte (issue 1103)",
+  "drawn": "2026-10-30 08:53",
+  "generator": { "repository": "/mnt/mtwo/programming/ai-stuff", "folder": "gif-generator", "commit": "9d32166e6e5b2729ba168daa069e69831ec4e873" },
+  "gifs": [
+    { "id": "1a", "score_sha256": "fc723fff2fe9925453a62fb67850e122de770d20b7106ffa33c317c8c0ebb0d7", "gif_sha256": "c196f628d5fd28fedbe556eb55346d96662bdb67aea20da80ddbc4c02570bf79", "bytes": 948728 },
+    { "id": "1b", "score_sha256": "8007220c85ac2c704aea2225606547368883a36dcf40e42b265554f6bbcc1107", "gif_sha256": "62232badfbb3e569e0226d0c9c6868c42b2df32ea7526fbb8c0ac889709d5018", "bytes": 526954 },
+    { "id": "1c", "score_sha256": "b76406e764125455a6f69edcfe4e0d306f3f3f385ae21111f9a7c4b45be8e241", "gif_sha256": "e2de6c7702ba60bdcb2fa97aadc27b259fc9926344939f5370539679566485b0", "bytes": 4909261 },
+    { "id": "1d", "score_sha256": "4319b099f5c2d7f7f0f4ce6cd005a29e1b7538658f6ba715b6ff77bb7e7b2b53", "gif_sha256": "389855762b42e870c5e295f255d695abbbcac78837c3fd2f8c5b378594eead04", "bytes": 603042 },
+    { "id": "1e", "score_sha256": "30b138fd9ec9b0c4f7eb56b15ca68fd05805b5e344ad895ec2ec6318405513e0", "gif_sha256": "857f6d6d00ca92342a37b3e6e778b0ae78f03c2e43bd7d271258d1ce9d12cbaa", "bytes": 385538 },
+    { "id": "2a", "score_sha256": "3eeec0ac2494eb95b479689a872c07e211a7d66589e28f10440d7ebb0df4dea7", "gif_sha256": "5f6d11c034cdc44bffa06b8ca931a6ad8a04db697898268a37e09a39fda959e2", "bytes": 809050 },
+    { "id": "2b", "score_sha256": "f02cb4a20bdfccb046d4fea80c2ff8cb5a9084b557e16502c871534bfb28a115", "gif_sha256": "c743ee2126545d892251913ef50d983decdb6af48df3ffd11dd23d7fe72c74c8", "bytes": 697159 },
+    { "id": "2c", "score_sha256": "3db26bde422b1d23c2dc0d53137bffc5e2cc12e618fc5f40d44f7f381f91b88c", "gif_sha256": "a2c4ac333368c2ea7ebeb79792c915719c6f1cb4606d97cb990859d8b4908f9c", "bytes": 1796566 },
+    { "id": "2d", "score_sha256": "3dd6b94c2a9866e92cdc9f2828675054dafc074e9808add6319d6d009971510c", "gif_sha256": "bae7c906c3e2fc4ebd785581c54599a1494d1ba3d7c06ce0736339edf31d39ef", "bytes": 232512 },
+    { "id": "2e", "score_sha256": "c853ee00f3defdb7627452161094c91a2c0d8f6c60c18f04b842ddb455ddebcd", "gif_sha256": "c6b367bf21fb80ce555b53bdce2587679edb4eaa4bc1a7f1e589994e9c0d601b", "bytes": 843614 },
+    { "id": "3a", "score_sha256": "bb15570ee9b0bf2da65774adacafd97579cee77e43f40fad690bad846917dc39", "gif_sha256": "124eb7b12a0ee78702c64add3085cb12e21fc1099944ced5af3ed03423486ab8", "bytes": 369835 },
+    { "id": "3b", "score_sha256": "a3d5646c4243e911e62ba66cb6ca238288e35e11bce2b0260162042ae160ab82", "gif_sha256": "e3823ba6ccae3e7f88250f99e6db641d04d730fbc0d0cd4bd6aa14723e61373e", "bytes": 179078 },
+    { "id": "3c", "score_sha256": "2ee7200ea863873a4598eb39cf8d4ca7d345c093982a4db35e408d394eced942", "gif_sha256": "2f197b61b8598fe823072028f5ac9fc90944259217c7d20941aec914adb9f08a", "bytes": 576525 },
+    { "id": "3d", "score_sha256": "b9ab82100ed28d847860af201b3cd04d8aaebb024fde15c275815b276ddacdd7", "gif_sha256": "5831ed9b8b47f54867934715be43d104c7b3f7387eedf0fab23eac2df3acda77", "bytes": 215763 },
+    { "id": "3e", "score_sha256": "a1049a43d7621de4ad42abf307d2015fdbd7755718b10c91c9237c148e7cfe0a", "gif_sha256": "9310fa96701846dbd2837e2da05b1d4f68c36c63701347e71fb269ba89408395", "bytes": 890943 },
+    { "id": "4a", "score_sha256": "b0f2e488ccb63fc76eed10c5ca78cc59544ef1982a26c6be2f1665f8a9859828", "gif_sha256": "00189dc6c646187dabc212c5660e114159e4a8d314cd0bbced46cc226f5495a5", "bytes": 1472383 },
+    { "id": "4b", "score_sha256": "3a0406b89b2941dba8181c7f35777b688f0c9615c8ecf8a6f38db358a3a9f379", "gif_sha256": "30b5290a8843a485a90b18d040a5c19dd8f45d6cf65f5b79657babcc91a540e6", "bytes": 379898 },
+    { "id": "4c", "score_sha256": "b08c68f03b68d35dc985f97f227c2e1f888d48c850f4bb6e1fae45d755117442", "gif_sha256": "850b5b187b488c7b08918920d4ae1eff79bb5e48f383cae11953642d16248c25", "bytes": 591323 },
+    { "id": "4d", "score_sha256": "997d9cce45c0f3a490f4778ddac9d2b3e8bab508eb365585bb041b17f50dd068", "gif_sha256": "0f763f82f1db306412237174021af5a27ad10ca05c7c913ac2fb41a6500521e4", "bytes": 267094 },
+    { "id": "4e", "score_sha256": "e168aff1d8f75c0cc8794cd03199a521cac2a560952368205863ebf790d5321e", "gif_sha256": "69b153e8a89b00a8d80c8b3d949d22dbdd8e7c821274e8da80a4e1fe1e0c954f", "bytes": 1123969 },
+    { "id": "5a", "score_sha256": "9746afc0a362b4080a47cd6049e8e712901a91db46710b8b153ca75c9003ff63", "gif_sha256": "975ea5a500ec03438fc083937a0d64e3cfc661906f31bc8207f6f198d6646968", "bytes": 362571 },
+    { "id": "5b", "score_sha256": "285a72c15225c69821f4ca59adf81436c77f55b0a9bd73b94608b81c70c641c5", "gif_sha256": "d2bd3eea16d60c4b49cdf072f9de8be04cbe64a2abbe5a0cc007b4060fb371ca", "bytes": 1538566 },
+    { "id": "5c", "score_sha256": "1b011bcf0bb3fb5b9309428eceb3c12445ae0d89b7a964eb5f639f14bdd5ff0f", "gif_sha256": "f4447e6a2933228c345af5ee24e92b024c7e12ddb76f1a1c272dc9b688aa8bf4", "bytes": 626615 },
+    { "id": "5d", "score_sha256": "e0f46acb3e7b5ee5fd6bbbe301e43d693b083779271830d5b3a18d0e1fbb27f0", "gif_sha256": "6ead2cca5c7b60013ff7f809fddff50f24abf17db1ca71b295f380b9a9509f50", "bytes": 1703865 },
+    { "id": "5e", "score_sha256": "97cdde3207e92c5ba0044bf67075b7f19ab5327645add6a156c4d90a57f745f5", "gif_sha256": "b65f32a005a4fdb9bdf9ddd3fa6f1051ca90c8bb8be788633b20bdb167f63d9c", "bytes": 1523475 }
+  ]
+}

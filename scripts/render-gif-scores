@@ -10,7 +10,12 @@
 -- folder in this project's RAM drive, and a page (index.html) shows every
 -- gif with the idea it was drawn from, grouped by the page it is for.
 -- A score the generator refuses is reported with the generator's own
--- reasons, and the others carry on.
+-- reasons, and the others carry on. Beside the gifs it writes a recipe
+-- (recipe.json): the generator's repository, its folder and the commit it
+-- was at, and each gif's and score's fingerprint, so the same gifs can be
+-- drawn again byte for byte by scripts/redraw-gifs (issue 1103). A
+-- generator whose code has uncommitted changes can't be pinned, so the
+-- drawing stops and says so.
 --
 -- Usage: scripts/render-gif-scores [DIR] [--scores PATH] [--jobs N] [--gen PATH] [--one SCORE OUT]
 --   DIR           the project root (default the hard-coded one below)
@@ -19,6 +24,8 @@
 --   --jobs N      how many drawn at once (default 8)
 --   --gen PATH    the gif generator (default /mnt/mtwo/programming/ai-stuff/gif-generator)
 --   --one S O     draw one score S into gif O (what each worker runs)
+--   --no-recipe   draw without pinning or writing a recipe (what scripts/redraw-gifs
+--                 uses: it draws with a copy of the pinned code, outside any repository)
 --   --help        this text
 -- The contact sheet reads each score's "-- idea:" and "-- page:" lines.
 
@@ -26,7 +33,7 @@ local DIR = "/mnt/kaun/wow-chat-2026"
 local GEN = "/mnt/mtwo/programming/ai-stuff/gif-generator"
 
 -- {{{ arguments
-local scores, jobs, one, oneOut
+local scores, jobs, one, oneOut, noRecipe
 do
     local i = 1
     while i <= #arg do
@@ -41,6 +48,7 @@ do
         elseif a == "--jobs"   then jobs = tonumber(arg[i + 1]) or error("--jobs takes a number"); i = i + 1
         elseif a == "--gen"    then GEN = arg[i + 1]; i = i + 1
         elseif a == "--one"    then one, oneOut = arg[i + 1], arg[i + 2]; i = i + 2
+        elseif a == "--no-recipe" then noRecipe = true
         elseif a:sub(1, 2) ~= "--" then DIR = a
         else error("unknown option " .. a .. " (see --help)") end
         i = i + 1
@@ -77,6 +85,37 @@ if one then
 end
 -- }}}
 
+-- {{{ local function sh()
+local function sh(cmd)
+    local p = io.popen(cmd)
+    local out = p:read("*a")
+    p:close()
+    return (out:gsub("%s+$", ""))
+end
+-- }}}
+
+-- {{{ local function sha256()
+local function sha256(path) return (sh("sha256sum '" .. path .. "'"):match("^(%x+)")) end
+-- }}}
+
+-- {{{ the pin
+-- The generator's repository, its folder in it, and its commit; refused
+-- when its code (the folder's src/) has changes not committed, since the
+-- recipe could not be followed.
+local pin
+if not noRecipe then
+    local top = sh("git -C '" .. GEN .. "' rev-parse --show-toplevel")
+    if top == "" then error(GEN .. " is not in a git repository, so this drawing can't be pinned (--no-recipe draws it anyway)") end
+    local folder = GEN:sub(#top + 2)
+    local dirty = sh("git -C '" .. top .. "' status --porcelain -- '" .. folder .. "/src'")
+    if dirty ~= "" then
+        error("the gif generator's code has uncommitted changes, so this drawing can't be pinned to a version:\n" .. dirty
+            .. "\n(commit them in its repository first, or draw with --no-recipe)")
+    end
+    pin = { repository = top, folder = folder, commit = sh("git -C '" .. top .. "' rev-parse HEAD") }
+end
+-- }}}
+
 -- {{{ every score, eight at a time
 local outDir = scores:gsub("/[^/]+/?$", "")
 local list = {}
@@ -94,6 +133,36 @@ for _, name in ipairs(list) do
 end
 f:close()
 local ok = os.execute("xargs -P " .. jobs .. " -I{} sh -c '{}' < '" .. cmdFile .. "'")
+-- }}}
+
+-- {{{ the recipe
+-- Written only when every score was drawn: the pin, and each gif's and
+-- score's fingerprint, in the order the scores are listed.
+if pin then
+    local entries, all = {}, true
+    for _, name in ipairs(list) do
+        local gifPath = outDir .. "/" .. name:gsub("%.lua$", ".gif")
+        local g = io.open(gifPath, "rb")
+        if g then
+            local bytes = #g:read("*a")
+            g:close()
+            entries[#entries + 1] = string.format('    { "id": "%s", "score_sha256": "%s", "gif_sha256": "%s", "bytes": %d }',
+                name:gsub("%.lua$", ""), sha256(scores .. "/" .. name), sha256(gifPath), bytes)
+        else
+            all = false
+        end
+    end
+    if all then
+        local r = io.open(outDir .. "/recipe.json", "w") or error("cannot write " .. outDir .. "/recipe.json")
+        r:write("{\n",
+            '  "written_by": "scripts/render-gif-scores: how these gifs were drawn, so scripts/redraw-gifs can draw them again byte for byte (issue 1103)",\n',
+            string.format('  "drawn": "%s",\n', os.date("%Y-%m-%d %H:%M")),
+            string.format('  "generator": { "repository": "%s", "folder": "%s", "commit": "%s" },\n', pin.repository, pin.folder, pin.commit),
+            '  "gifs": [\n', table.concat(entries, ",\n"), "\n  ]\n}\n")
+        r:close()
+        print("recipe: " .. outDir .. "/recipe.json (generator " .. pin.commit:sub(1, 9) .. ")")
+    end
+end
 -- }}}
 
 -- {{{ the contact sheet

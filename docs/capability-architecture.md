@@ -320,7 +320,7 @@ glue is where they hide.
 | The GM command reference | every command, its level and words | a command undescribed | `test-gm-command-reference` | (generated) |
 | The board (CLAUDE.md, the design target) | where every issue stands | an issue on the wrong row | read at each compile | (generated) |
 | Development history | every picture, with its story | a picture without notes | `test-file-screenshot` | (always kept) |
-| Pictures drawn as light (the gif tools) | an idea drawn as a short animated gif, by the sibling gif generator's own code | a gif that shows something other than its idea | the contact sheet, by eye; `development-history/` | (tools: `compose-architecture-gifs`, `render-gif-scores`) |
+| Pictures drawn as light (the gif tools, 1103) | an idea drawn as a short animated gif by the sibling gif generator, kept as its scores and a recipe pinning the generator's version, redrawn byte for byte on demand | a redraw that differs from its recipe | `redraw-gifs` checks every gif's fingerprint; the contact sheet, by eye | (tools: `compose-architecture-gifs`, `render-gif-scores`, `redraw-gifs`) |
 
 **How it may turn out, and how to steer it.** Views are how the owner
 decides, so a view that flatters is worse than none.

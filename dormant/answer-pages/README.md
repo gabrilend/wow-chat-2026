@@ -48,3 +48,10 @@ straight into the issues by the agent.
 Move the files back to where they lived (`git mv`), then run
 `scripts/generate-answer-pages` and `scripts/answer-server` as the issues
 describe. The scripts name their old paths, so they only work from there.
+
+The pages' gifs are not kept here (2026-10-30, issue 1103: the inputs
+and the pinned generator version are kept, not the pictures). Draw them
+full size, byte for byte as they first were, with
+`scripts/redraw-gifs assets/gifs/architecture-ideas/attempt-1`, and copy
+the gifs it makes into `HTML/gifs/` (the page generator also copies them
+from the RAM drive when it runs).

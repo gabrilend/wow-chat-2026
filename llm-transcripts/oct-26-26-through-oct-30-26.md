@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-30 02:38:57
+Generated on: 2026-10-30 08:48:45
 Models: claude-opus-5-5
 
 ## Contents
@@ -162,6 +162,11 @@ Models: claude-opus-5-5
     by permissions. Next, you run `!
     /mnt/kaun/wow-chat-2026/scripts/write-question-contexts` (add `--limit 3` to
     preview), or allow it for me.
+39. 2026-10-30 02:42, after Request 129 - We're building a page that walks
+    through every project question with plain explanations, so you can answer
+    and customize everything; the writer is ready and your answers now reach the
+    issues. Next, run `scripts/write-question-contexts`, then
+    `scripts/generate-answer-pages`.
 
 --------------------------------------------------------------------------------
 
@@ -13404,6 +13409,69 @@ then
 
 One of your answers asked "groups of... 3 I think it was?" Yes: the Arathi Basin
 plans say squads of three (one place also mentions a squad of two).
+
+--------------------------------------------------------------------------------
+
+### User Request 130
+
+there is a zero percent chance I'm going to remember to use these tools. Let's
+mark them as "dormant" and archive them for now. I think it'll just be easier if
+we go through the issue file open questions in groups of 10, with sufficient
+context to read them. Can you do the cleanup from this experiment and prune our
+architecture to a reasonable and ordered state? I'm going to have another
+session in parallel answer questions with me for a bit, so they'll be updated as
+we go, don't worry about them too much.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 130
+
+> Stopping the answer server, then looking at everything the experiment touched.
+
+> The experiment's pieces only show up in its own two issues, the project
+> instructions and the notes, so the move is clean. Moving it into
+> `dormant/answer-pages/` with git, so its history follows.
+
+> Moved: 43 files, history kept. Writing the dormant folder's notes on what's
+> parked, why, and how to wake it.
+
+> Updating the published copy of the architecture page too.
+
+> Nothing in RAM is deleted. Answering you first, then committing the moves,
+> which keep everything.
+
+*[commit] 0ceb6b694 in wow-chat-2026 - The answer pages parked whole in dormant/; open questions go ten at a time in conversation*
+
+Nothing was cleared: you stopped the RAM step before it ran, and everything that
+matters is now saved in git (0ceb6b694).
+
+**Saved in git:**
+- The whole experiment, moved into `dormant/answer-pages/` with its history: the
+  five pages, their gifs, the stories, the three trial contexts, and the four
+  tools. A short README there says what each piece is, why it sleeps, where it
+  lived, and how to wake it.
+- Your answers in `notes/answers/`, already filed word for word into the Arathi
+  Basin issue.
+- Both issues for the experiment, marked dormant and deferred, with your words
+  on why.
+
+**What the RAM step would have removed** were three scratch files:
+- a 650 KB copy of every question, which a tool makes fresh from the issue files
+  at any time;
+- two short lists of commands, used to run jobs several at a time.
+
+Nothing in them was unique. The full-size gifs and their scores are also only in
+RAM and will be gone after a reboot. Shrunk copies are in git, and the gif tools
+can redraw the originals exactly.
+
+**The architecture is tidied:**
+- The project instructions now say open questions are gone through in
+  conversation, ten related ones at a time, with enough context to answer them,
+  and each answer written into its issue word for word.
+- The architecture document gains a card for the gif tools under Views and one
+  for dormant work under Operations, plus one new weak spot: buddies still
+  choose every ability from one fixed list. The published copy is updated too:
+  https://claude.ai/artifact/4K4Kn8pPKKaizuxGe4oHQq
 
 --------------------------------------------------------------------------------
 
