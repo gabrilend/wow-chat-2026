@@ -1,6 +1,6 @@
 # Conversation Summary: e143dbfe-ff43-48be-8bd4-4d54fd7a325d
 
-Generated on: 2026-10-30 11:25:15
+Generated on: 2026-10-30 11:36:46
 Models: claude-opus-5-5
 
 --------------------------------------------------------------------------------
@@ -1134,6 +1134,168 @@ whatever is nearest)
 Sources:
 - [Seal of Command –
   warcraft.wiki.gg](https://warcraft.wiki.gg/wiki/Seal_of_Command)
+
+--------------------------------------------------------------------------------
+
+### User Request 7
+
+let's defer the smap until after the next compile, because it has a lengthy data
+generation phase. We don't have to write that into the issue files we can just
+keep it in mind.
+
+  2. How many picture spots per zone?
+
+as many as we need to paint the whole picture. If we take an additional picture
+and it doesn't give us new information even though it's from a new angle, then
+it's probably fine. If two attempts disagree, then it might be an angle thing,
+so we should approach that area from multiple extra angles until we can figure
+it out. Maybe also we zoom in the character until they can see the details more
+clearly about that specific area.
+
+> 3. Does Q (depth from the nearest exit) also cover buildings, crypts and
+> instances?
+
+yes, yes, and yes.
+
+
+
+<pasted_content id="415d">
+> 4. Name a few things you picture buddies doing while you stand still. For
+> example: sitting,
+>      stretching, inspecting their gear, fishing if there's water, poking at the nearest crate,
+>      talking to each other. Whatever comes to mind is enough to start building.
+</pasted_content id="415d">
+
+
+let's put this on hold until after the next compile, because it's just flavor.
+
+> 5. When a buddy's errand is due (trainer, vendor, repair), does it still come
+> first in town? Or
+>      does it wait while the buddy fights and talks with whatever is nearest?
+
+they should fight their way to their errands, as if they were bots travelling
+toward a distant ally on the other side of a zone or something.
+
+> 6. How often is "sometimes talk"? For example, one target in five being a
+> townsperson instead of
+     a monster.
+
+it is rare that monsters will be in capital cities, but it's more common for
+them to be in regular towns. Typically there will be guards to assist, so if the
+guards are fighting something then the buddy-bots should help out until there's
+no monsters around, then they can converse. Though, in some cases the monsters
+continuously spawn, so we should make sure that they do eventually prioritize
+their errands over fighting, to get them done. Think like... the entrance room
+in ICC. The monsters there spawn continuously, but a bot from a party parked in
+front of a boss waiting for them to "go sell" will appreciate it if they
+complete their business and then immediately return.
+
+
+
+<pasted_content id="415d">
+> 7. Can an area wrap around another one? The first cut of the Valley of Trials
+> has the boars'
+>      area wrapping around both sides of the scorpids. You drew three areas: the cave, the middle
+>      upper area, and the town side. Is a wrapping area fine, or must each area be one solid piece
+>      on one side?
+</pasted_content id="415d">
+
+
+with multiple spawn-zones, we defer to the sub-zone text - for example if you
+enter a cave it shrinks the map to very small that they can wander in because
+they must stay in the same sub-zone. But they can wander anywhere inside that
+sub-zone that has the same monster spawns as the player is in.
+
+> 8. Pointing the way to the next quest: buddies already hint by where they
+> stand. Should they
+>      also say it sometimes, like "the murlocs we need are down by the shore"?
+
+nah
+
+
+
+<pasted_content id="415d">
+> 9. A bot owner's Sargobras. When a bot player meets Sargobras to choose its
+> buddies, should he
+>      still sit by a campfire and tell jokes afterward, even though no person is there to hear him?
+>      Or should he leave at once?
+</pasted_content id="415d">
+
+
+the bot listens.
+
+> 10. Quiet areas. An area marked as having almost no monsters and almost no
+> friendly people: is
+>       that counted once when the area is drawn, or live as creatures come and go?
+
+danger should be assessed spontaneously.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 7
+
+> Answers recorded; updating the todo list to mark the deferrals.
+
+The answers are recorded word for word. The todo list now has 22 items. The smap
+and the resting activities are marked as waiting until after the next compile,
+and I've left that deferral out of the issue files, as you asked. Nothing is
+committed yet.
+
+## Ten more open questions
+
+**Buddies offering to trade when you stand still.** This is written and waiting
+for the compile, but its four questions were never answered. The idea: when you
+stand still long enough, a buddy opens a trade window with you.
+
+1. **What does a buddy put in the window?** Items that would be upgrades for
+   you, things it doesn't need (trade goods, greens), gold, or nothing, leaving
+   you to fill it by asking?
+   *My call:* upgrades for you first, then its spare trade goods.
+2. **How long is "standing still too long", and how long does the offer stay
+   open?**
+   *My call:* 20 seconds still, open for 30.
+3. **Does it say something as it opens the window,** such as a line out loud or
+   a whisper?
+   *My call:* a short whisper, so you know why the window opened.
+4. **When you put an item in its window, does it always accept, or judge it?**
+   For example, accepting an upgrade and refusing junk.
+   *My call:* it judges by its own stat weights, the same weights that pick its
+   gear.
+
+**Buddies in town**
+
+5. **Between targets in town, should buddies drift from nearest thing to nearest
+   thing, or also keep circling** the way they do while roaming?
+   *My call:* drift only. The circling is for open ground.
+6. **The town circle.** Today a town visit has a circle of errand spots
+   (trainer, vendor, repair) that buddies walk between. Your answer last round
+   (fight your way to errands, help the guards, then talk) seems to replace
+   "errands first, nothing else". Does that answer cover it, or should the
+   circle stay a separate rule?
+   *My call:* your answer covers it, and I'll write it that way.
+
+**Talents steering abilities** (still open from the first round, asked a little
+differently)
+
+7. **How strongly does one talent point pull a buddy toward an ability?** A
+   fixed nudge per point, or as much as the talent changes the ability (a talent
+   adding 15% damage pulls 15%)?
+   *My call:* a fixed nudge. Talents that cut cost or cooldown have no clean
+   percentage.
+8. **Do talents steer only your buddies, or every bot on the server?** Every bot
+   would mean a patch to the bot module.
+   *My call:* buddies only for now, behind a switch.
+
+**Stand-ins and prestige**
+
+9. **A stand-in becoming a buddy.** When a stand-in from a battleground or
+   dungeon joins you as a buddy, does it fill one of your owed buddy slots or
+   replace an existing buddy? And does it keep its gear?
+   *My call:* it fills an owed slot and keeps its gear.
+10. **Prestige more than once?** You decided that a player retires by talking to
+    a faction leader and reappears in that faction's starting zone, with
+    Sargobras waiting. Can a player do that again and again, or only once?
+    *My call:* again and again, each time noted on the character.
 
 --------------------------------------------------------------------------------
 

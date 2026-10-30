@@ -64,6 +64,13 @@ shape but the last three plays as if all its points were in one tree.
   healer, dps) are meant to perform as well". Each class's concerns and
   their answers per tree are written from the owner's description, one
   class at a time, as data the buddy strategy reads.
+- **States count** (the owner, 2026-10-30, on Furor, Natural
+  Shapeshifter and warrior stances: "we should treat various states as
+  important"): leaving a form or stance for another tree's answer is
+  weighed as a trip, in 625g.
+- **When the role is busy** (the owner's answer about a dying ally, in
+  625i): the role's duty first; a healer's seat passes on if the healer
+  falls.
 - **Concerns stay separate.** Merging lists never mixes priorities across
   concerns (625: fleeing at 39 before healing at 21).
 

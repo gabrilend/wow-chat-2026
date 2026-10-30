@@ -473,3 +473,23 @@ Word for word, each written into its plan (in brackets):
 - "oh, we can probably just use this instead of the embedding system. More
   reliable, and we still get character from it. Maybe not as much
   character, but we can expand it later if needed."
+
+## 2026-10-30, the economies (625f to 625k)
+
+Word for word, each written into its plan:
+
+- (625g) "the hybrid tree shares looks great. Though a feral druid can
+  often do cool things if they have things like Natural Shapeshifter and
+  Furor - we should treat various states as important. ... once we build a
+  sufficiently discrete and clear system then it should resolve such
+  things naturally." (in full in 625g)
+- (625f, 625j, 625k) "Remember... there's multiple economies we need to
+  balance. ... I am very excited to work on the action economy." (in full
+  in 625f)
+- (625i) "if the healer is dead or incapacitated and can't be revived
+  mid-combat through a combat rez or something, then those with healing
+  talents are encouraged to heal more to keep things going. ..." (in full
+  in 625i)
+- (625h) "smoothly. Also those breakpoints should be smoothed as well."
+- (625h) "yes a trash mob fight for example might not require a
+  long-duration stretch of healing, ..." (in full in 625h)
