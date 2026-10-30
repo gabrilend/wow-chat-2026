@@ -1,6 +1,6 @@
 # Conversation Summary: e143dbfe-ff43-48be-8bd4-4d54fd7a325d
 
-Generated on: 2026-10-30 10:56:02
+Generated on: 2026-10-30 11:07:55
 Models: claude-opus-5-5
 
 --------------------------------------------------------------------------------
@@ -641,6 +641,282 @@ page picks the area. It's on the todo list.
     the nearest stop of that ship instead? Or should it plan a full route over
     walking, boats and portals, like the route search you described for crossing
     between continents?
+
+--------------------------------------------------------------------------------
+
+### User Request 5
+
+<pasted_content id="415d">
+> It isn't Heroic Strike. I checked the game's spell file. Heroic Strike uses
+> the plain "add
+> weapon damage" effect, and its flat bonus lands on your next real swing. The
+> fixed-speed rule is
+> a separate effect kind. When an ability uses it, the server counts the
+> attack-power part of the
+> hit as if the weapon had a fixed speed: 1.7 for a dagger, 2.4 for other
+> one-handers, 3.3 for a
+> two-hander, 2.8 for ranged. The weapon's own damage roll is still the real
+> weapon's.
+>
+>   Player abilities with the fixed-speed kind:
+>
+>   - Warrior: Mortal Strike, Overpower, Whirlwind, Devastate
+>   - Rogue: Sinister Strike, Backstab, Ambush, Hemorrhage
+>   - Paladin: Crusader Strike
+>   - Death knight: Obliterate, Plague Strike
+>   - Hunter: Aimed Shot
+</pasted_content id="415d">
+
+
+that seems dumb and wrong. We should use the actual weapon speed.
+
+
+
+<pasted_content id="415d">
+> 1. A whisper that isn't a command. In October you said that once a player has
+> added Sargobras as
+>      a friend, any message to him opens his dialogue menu. Today you said whispers work his menus
+>      without opening them. When someone whispers him something that isn't a command, should his
+>      menu appear, or should he reply with the list of commands he understands?
+</pasted_content id="415d">
+
+
+oh, um hmmmmmm... let's defer that for now. We can just have the players click
+on him for now.
+
+
+
+<pasted_content id="415d">
+> 2. "Sargobras has logged off." When you log in as the only member of your
+> guild online, the game
+>      sometimes shows the guild's own "Sargobras has logged off" line, as if he left the moment
+>      you arrived. How often: every lone login, one in a few, or once a day per character?
+</pasted_content id="415d">
+
+
+I realized this would never trigger since guilds are just clans? Maybe we should
+wait until we develop a system where a player can be in another player's guild.
+So, defer this as well.
+
+
+
+<pasted_content id="415d">
+> 3. Bot players choosing buddies. Bots that play as owners also get buddies
+> from Sargobras.
+>      Should a bot's controlling player be able to whisper the choice for it ("Sargobras:
+>      paladin")? Or does the bot always choose for itself?
+</pasted_content id="415d">
+
+
+the bot always chooses for itself.
+
+
+
+<pasted_content id="415d">
+> 4. The point a bot steers toward. A bot's planned route is a chain of one-yard
+> squares. It
+>      doesn't step from square to square. It steers toward a point on the route 6 yards ahead of
+>      itself, like a driver looking down the road instead of at the bumper. A farther point gives
+>      rounder, lazier corners that cut inside bends. A nearer point traces every turn exactly and
+>      looks twitchy. Should 6 yards stay, become a lever, or change with the ground (nearer in
+>      clutter, farther in the open)?
+</pasted_content id="415d">
+
+
+nearer in clutter, farther in the open.
+
+
+
+<pasted_content id="415d">
+> 5. A name for the "visual map". This is the stand-in walking the world taking
+> pictures from at
+>      least two angles to paint the ground ahead of time. "vmaps" is taken: it's the server's
+>      existing line-of-sight data. Some options: "sight map", "the survey", "the album", "eye map".
+>      Or a name of your own?
+</pasted_content id="415d">
+
+
+smap works
+
+
+
+<pasted_content id="415d">
+> 6. Trails. Should ground that has been walked often get cheaper to walk, so
+> worn paths form the
+>      way deer trails do? In tests, the cost settings changed coverage less than ordinary
+>      run-to-run variation did. So the answer would come from watching, not from numbers.
+</pasted_content id="415d">
+
+
+yes, but this waits on the smaps to identify trails and such.
+
+
+
+<pasted_content id="415d">
+> 7. The "forces only" way. One of the five ways uses no map at all. Bots are
+> pushed away from
+>      walls and pulled toward their goal. It can't get around a long wall or climb out of a dip.
+>      Should it stay pure, as a demonstration of what forces alone do? Or should it get a memory,
+>      where squares it has stood in push it away so it can't sink back into the same dip?
+</pasted_content id="415d">
+
+
+it's a routine that we should enter at certain points to navigate through the
+terrain it is suited to, and switched out of if we need to do something like get
+around a long wall our climb out of a dip. How we determine those states is
+solvable, for example a small dip can be detected by saying "oh are a bunch of
+points 1, 3, and 5 yards away from me much higher proportionally than the Y
+value I possess?" or similar, but it might have problems with being stuck in a
+canyon, which are plentiful in World of Warcraft.
+
+
+
+<pasted_content id="415d">
+> 8. Ties on flat ground. On a flat floor, going around an obstacle on the left
+> costs exactly the
+>      same as on the right, so the last bit of computer rounding picks the side. Should a tie
+>      always go to a fixed side, such as the buddy's own circling direction, so the choice is made
+     on purpose?
+</pasted_content id="415d">
+
+
+it should randomly pick within like a 10% margin. So if it's marginally equal it
+should just pick one randomly. Or defer to the smap.
+
+
+
+<pasted_content id="415d">
+> 9. The town-visit unstuck hop. Today, a buddy in town that gains less than 10
+> yards in 90
+>      seconds is hopped to a random spot within 30 yards. By your answer about docks, that's a
+>      fallback that hides the real fault. Should it be removed, so a stuck buddy stays stuck and
+>      gets reported loudly with where and why?
+</pasted_content id="415d">
+
+
+yeah. we'll sweep it up in the logs and work on it when we can.
+
+
+
+<pasted_content id="415d">
+> 10. An island buddy. You're on a dock and your buddy is on the same continent,
+> but it is neither
+>       at your dock nor at another stop of your ship. It walks toward your dock, which may have no
+>       land route (for example Rut'theran Village, the island across from Darnassus). Should it
+>       look for the nearest stop of that ship instead? Or should it plan a full route over walking,
+>       boats and portals, like the route search you described for crossing between continents?
+</pasted_content id="415d">
+
+
+route search. Same machinery.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 5
+
+> Writing a new issue for weapon speed in instant attacks (none exists yet),
+> then recording the other nine answers.
+
+> Now the Sargobras answers (1-3):
+
+> Pathfinding answers (4-8) into the painted map, five ways and roaming core
+> issues:
+
+I've recorded all ten answers word for word. I also added four more build items
+to the todo list (fifteen in total). Nothing is committed yet.
+
+Two things came up while recording:
+
+- **The town-visit unstuck hop is still in the buddy module's town code.** The
+  issue now says it is to be removed, with stuck buddies logged instead, and the
+  removal is on the todo list.
+- **Using real weapon speed is a game rule change, so it got a new issue of its
+  own** under combat rules: "Instant Attacks Count Attack Power by the Real
+  Weapon Speed".
+
+**About offering it upstream:** AzerothCore aims to play the way 3.3.5a did, and
+the fixed speed is how 3.3.5a played. So they'd likely refuse a change to the
+default. A server setting that starts off is the shape they'd most likely
+accept. If we build it that way here, our patch and the contribution are the
+same code: the patch adds the setting, and basic's config turns it on. I've
+written it into the new issue that way.
+
+## Ten more open questions
+
+**Real weapon speed**
+
+1. **Who gets it: every player on basic, or only buddies and bots?** It changes
+   every warrior, rogue, paladin, death knight and hunter instant attack. For
+   example, at 3,000 attack power, Mortal Strike with a 3.8-speed two-hander
+   adds 814 damage from attack power instead of 707, about 107 more per hit.
+   Daggers barely change: they're 1.4 to 1.8 against the fixed 1.7.
+   *My call:* every player, so buddies and players play by one rule.
+2. **When to offer it upstream:** right away as an off-by-default setting, or
+   after it has been played on basic for a while?
+   *My call:* after playing it, so we can include what we learned about how it
+   plays.
+
+**The forces-only routine**
+
+3. **Telling a canyon from a dip.** Your test (ground at 1, 3 and 5 yards well
+   above the buddy's own height) catches both, but a buddy in a canyon should
+   keep walking along it. One way: a dip has high ground ringing it on all
+   sides, a canyon only on two opposite sides, open along its length. Or wait
+   for the smap to say which is which?
+   *My call:* the ring test now, as a lever, with the smap correcting it later.
+
+**The smap**
+
+4. **What takes the pictures?** The stand-in is a bot, so it has no eyes.
+   Something has to draw the world from where it stands. The options:
+   - the custom client's windowless picture mode, moved to each of the
+     stand-in's spots
+   - an ordinary game client driven by a script
+   - drawing straight from the map files (heights, ground textures, models), the
+     way the zone view from above already works
+
+   *My call:* the custom client. It draws exactly what players see, and it
+   already makes pictures without a window.
+5. **Which ground first?** Basic's starting valleys and their zones, or wherever
+   the logs show buddies getting stuck most?
+   *My call:* stuck spots first. Each one is a known fault waiting for data.
+
+**Roads (buddies walking between questing areas)**
+
+6. **Where do roads come from?**
+   - the road textures drawn in the map files
+   - the paths that wandering guards and caravans walk
+   - flight-path routes
+   - points placed by hand with a tool
+   - a mix of these
+
+   *My call:* the road textures first, since every road a player sees is one,
+   with the guard and caravan paths to confirm.
+7. **Is a road's danger a number or a yes/no?** As a number, a road through
+   quest land could be "a little" dangerous, counted from how many danger layers
+   overlap there and how strongly.
+   *My call:* a number.
+
+**Caves and tunnels (read from the server's walking mesh, which covers cave
+floors too)**
+
+8. **What makes a passage a tunnel rather than a cave?** One mouth against two
+   or more (a dead end against a through-way), or long and narrow against
+   opening into rooms, or both?
+   *My call:* mouths decide, and width against length only describes the shape.
+9. **A cave under a hill shares its map squares with the hillside above it.**
+   Should each square get a second layer (one area on the surface, another
+   below), or should a cave be kept as an exception described by its mouth and
+   floor outline?
+   *My call:* a second layer. It's one rule that also covers cellars and crypts.
+
+**Following**
+
+10. **The mingle.** When you stop, following buddies rest within 10 yards of
+    you. Each one rolls a one-in-ten chance to wander a little, every 5 seconds.
+    Five seconds was our guess. Does it feel right, or should it be slower or
+    faster?
+    *My call:* keep 5 seconds as a lever and judge it in game.
 
 --------------------------------------------------------------------------------
 

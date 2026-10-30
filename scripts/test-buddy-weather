@@ -4,7 +4,7 @@
 # profiles:   all
 # priority:   10
 # kind:       test
-# about:      Alterac Valley's shared weather deck: each kind exactly its share, no kind twice running, turns swell and fade, slush trades rain for snow
+# about:      Alterac Valley's shared weather deck and wandering storm: each kind exactly its share, no kind twice running, slush trades rain for snow; the storm stays in the valley and covers it evenly
 # quick-test: yes
 # ==== end of header ====
 # test-buddy-weather - compiles and runs tests/buddy-weather/weather-check.cpp
@@ -15,7 +15,10 @@ OUT="${DIR}/tmp/tmp"
 mkdir -p "${OUT}"
 g++ -std=c++17 -O2 -Wall -Wextra -Werror -I"${DIR}/patches/B036-mod-buddies/mod-buddies/src" \
     "${DIR}/tests/buddy-weather/weather-check.cpp" -o "${OUT}/buddy-weather" || exit 1
-nice -n 19 "${OUT}/buddy-weather"
+nice -n 19 "${OUT}/buddy-weather" || exit 1
+g++ -std=c++17 -O2 -Wall -Wextra -Werror -I"${DIR}/patches/B036-mod-buddies/mod-buddies/src" \
+    "${DIR}/tests/buddy-weather/storm-check.cpp" -o "${OUT}/buddy-storm" || exit 1
+nice -n 19 "${OUT}/buddy-storm"
 # ==== footer of test-buddy-weather ====
-# lines:      21
+# lines:      24
 # ==== end of footer ====
