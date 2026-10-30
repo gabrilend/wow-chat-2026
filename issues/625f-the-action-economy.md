@@ -64,18 +64,40 @@ cooldown can still be worth if it is ready then (never used again, or used
 at some moment within one cooldown from then and ready again a cooldown
 later; a hold longer than a whole cooldown is never better, since using it
 now and again at the held moment beats it). A use is worth the windows'
-factor over the time it keeps working, cut short at the fight's end. What
-comes out: the worth of using it the moment it is ready, the best plan's
+factor over the time it keeps working. **What the fight's end means
+depends on the fight** (the owner, 2026-10-30, word for word: "for trash
+mobs, yes it diminishes the value. But for a boss, even if it's the end
+of the fight we still wanna burn it down as fast as we can, so use
+everything."): against trash a buff counts only the part before the end,
+and a cooldown still ready when the fight ends is worth a plain use in
+the next pack, less the longer it would still be cooling then (so a
+20-second buff isn't spent on a pack 10 seconds from dead; a single
+strike, landing whole, still is); against a boss a buff counts whole
+however near the end, and nothing is kept for after. What comes out: the worth of using it the moment it is ready, the best plan's
 worth, its first use and every use, and the weight (the first over the
 second: 1 when using it at once is best, less the more holding gains).
 Lining up: a buddy's own cooldowns are planned with each other's planned
-uses as windows, three passes, longest cooldown first. Checked by
-`scripts/test-buddy-cooldown-plan` (18 checks): a 10-second wait for
-Bloodlust that costs no use is taken; a wait that costs a whole use is
-taken only for a window worth more than the lost use (x2.5, not x1.3);
-nothing is held for nothing; near the end everything is used; a
-120-second cooldown waits for a 180-second one and its second use slides
-to meet the other's second. Not yet: the worker threads, the fight's
+uses as windows, three passes, longest cooldown first.
+
+**Kept quick** (the owner, 2026-10-30: "sounds performance intensive,
+maybe someday we can make this stuff into equations rather than discrete
+checks. For now this is fine."). Trying every moment within a cooldown
+for every step cost about 90 milliseconds for a 30-minute plan of three
+cooldowns. Now each use's worth comes from running totals of the windows'
+factor (a long buff's average is one subtraction), and the best next use
+from a running maximum (a queue of moments, each better than all earlier
+ones after it, so no moment is looked at twice): about 1 millisecond, and
+0.1 for a 5-minute fight. The step-by-step way is kept in the test as the
+reference, and 400 random fights agree with it. Equations in place of the
+steps (each window's edges as the only moments worth trying) stay the
+later direction.
+
+Checked by `scripts/test-buddy-cooldown-plan` (25 checks): a 10-second
+wait for Bloodlust that costs no use is taken; a wait that costs a whole
+use is taken only for a window worth more than the lost use (x2.5, not
+x1.3); nothing is held for nothing; a boss's end burns everything; trash's
+end keeps a long buff for the next pack; a 120-second cooldown waits for a
+180-second one and its second use slides onto the other's second. Not yet: the worker threads, the fight's
 length (625h's estimate), the windows from the party's buffs and a boss's
 phases, and the weight handed to the talent draw's multiplier, all in the
 server and waiting for those.

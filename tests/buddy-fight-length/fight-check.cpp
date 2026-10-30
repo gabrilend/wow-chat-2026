@@ -65,10 +65,17 @@ int main()
 
     // the cooldown timeline plans over this guess: a 120-second cooldown
     // with 130 seconds left is used twice (0 and 120), with 110 once
-    BuddyPlan::Plan p = BuddyPlan::Best({ 120, 0, 0 }, {}, TimeLeft(13000, 100, {}).seconds);
+    BuddyPlan::Plan p = BuddyPlan::Best({ 120, 0, 0 }, {}, TimeLeft(13000, 100, {}).seconds, BuddyPlan::Fight::Boss);
     check(p.uses == 2, "the timeline plans over the guess: 130 seconds left, two uses of a 120-second cooldown");
-    p = BuddyPlan::Best({ 120, 0, 0 }, {}, TimeLeft(11000, 100, {}).seconds);
+    p = BuddyPlan::Best({ 120, 0, 0 }, {}, TimeLeft(11000, 100, {}).seconds, BuddyPlan::Fight::Boss);
     check(p.uses == 1, "110 seconds left: one use");
+
+    // the end unseen: plan over three of the longest regularly used
+    // cooldown; a paladin's Lay on Hands (20 minutes) isn't one, its
+    // Avenging Wrath (3) is
+    check(near(Horizon({ 180, 1200 }), 540), "Lay on Hands (20 minutes) isn't planned around: three of Avenging Wrath's 3 minutes");
+    check(near(Horizon({ 180, 600 }), 1800), "a Fire Elemental Totem (10 minutes) is used fight after fight: planned around");
+    check(near(Horizon({ 1200, 1800 }), 0), "only emergencies (Lay on Hands, Reincarnation): nothing to plan around");
 
     std::printf("\n%d passed, %d failed\n", passed, failed);
     return failed == 0 ? 0 : 1;

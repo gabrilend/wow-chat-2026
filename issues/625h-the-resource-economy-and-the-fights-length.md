@@ -45,12 +45,19 @@ under a second apart, say nothing yet, and a rising health is no fall. The
 time left works through the bursts ahead stretch by stretch (between two
 burst edges the rate is steady); a party member dying or joining rescales
 the rate by their part of the party's damage. With no fall measured, the
-end is not known and the time left is endless; the agent's call for the
-server's side, when it is built: the cooldown timeline (625f) then plans
-over three of the buddy's longest cooldowns, long enough that nothing is
-used early for an end that isn't coming. Checked by
-`scripts/test-buddy-fight-length` (17 checks), the last two planning a
-cooldown over the guess. Not yet: reading the enemies' health in the
+end is not known and the time left is endless; the cooldown timeline
+(625f) then plans over three of the buddy's longest *regularly used*
+cooldown, long enough that nothing is used early for an end that isn't
+coming (the owner, 2026-10-30, word for word: "longest regularly used
+cooldown. I think Lay on Hands has a 1 hour cooldown for example? Dont'
+wanna plan around that..."; it is 20 minutes in this version,
+Reincarnation 30). Regularly used: 10 minutes or less, a starting value
+(the Fire Elemental Totem, Army of the Dead and Rebirth are 10, used fight
+after fight in a raid; Lay on Hands is an emergency's) standing in for its
+root, each buddy's record of which cooldowns it is ready for fight after
+fight (625k). None regular: nothing to plan around. Checked by
+`scripts/test-buddy-fight-length` (20 checks): two plan a cooldown over
+the guess, three choose the horizon (Lay on Hands left out). Not yet: reading the enemies' health in the
 server, and the thrift that weighs mana against the time left.
 
 ## Intended Behavior

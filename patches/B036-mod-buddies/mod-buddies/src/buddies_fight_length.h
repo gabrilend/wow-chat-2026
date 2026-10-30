@@ -108,6 +108,31 @@ namespace BuddyFight
         return { true, rate, t + left / (rate * BuddyPlan::FactorAt(bursts, t)) };
     }
     // }}}
+
+    // {{{ Horizon
+    // How far ahead the cooldown timeline plans while the end can't be seen
+    // (a Guess not known): three of the buddy's longest regularly used
+    // cooldown, far enough that nothing is spent early for an end that
+    // isn't coming. Only regularly used ones count (the owner, 2026-10-30:
+    // "longest regularly used cooldown. I think Lay on Hands has a 1 hour
+    // cooldown for example? Dont' wanna plan around that..."; it is 20
+    // minutes here, Reincarnation 30): a cooldown of `regularMost` seconds
+    // or less. `regularMost` is a starting value, 10 minutes (the Fire
+    // Elemental Totem, Army of the Dead and Rebirth, used fight after fight
+    // in a raid, are 10; Lay on Hands, 20, is an emergency's), standing in
+    // for its root, a buddy's own record of which cooldowns it is ready to
+    // use fight after fight (learning, 625k;
+    // strategems/grown-and-relearnable.md). None regular: 0, nothing to
+    // plan around (each is used as the bot module would).
+    static constexpr double REGULAR_MOST = 600.0;
+    inline double Horizon(std::vector<double> const& cooldowns, double regularMost = REGULAR_MOST)
+    {
+        double longest = 0.0;
+        for (double c : cooldowns)
+            if (c <= regularMost) longest = std::max(longest, c);
+        return 3.0 * longest;
+    }
+    // }}}
 }
 
 #endif

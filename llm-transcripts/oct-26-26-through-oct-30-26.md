@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-30 13:29:14
+Generated on: 2026-10-30 13:40:27
 Models: claude-opus-5-5
 
 ## Contents
@@ -192,6 +192,10 @@ Models: claude-opus-5-5
     before your next basic compile. Buff targeting is now fully designed and the
     server-side work waits on that compile. Next: run scripts/update for basic
     so area looting comes back, then compile.
+46. 2026-10-30 13:32, after Request 147 - We're building every described issue
+    for your next compile, and `.elite` is now removed so gearing goes only
+    through `.gearset`. Next I'll build the action economy's timeline, where a
+    buddy holds a cooldown only when holding is worth more.
 
 --------------------------------------------------------------------------------
 
@@ -15213,6 +15217,90 @@ options in that issue.
 
 Next I'll start on the action economy's timeline: a buddy holds a cooldown only
 while the plan that includes the hold is worth more than using it now.
+
+--------------------------------------------------------------------------------
+
+### User Request 148
+
+okay please continue.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 148
+
+> Next is step 2 of the action economy: the cooldown timeline, as plain
+> arithmetic with tests. Looking at how the window-value test is set up so the
+> new one matches.
+
+> Writing the timeline as its own pure header, beside the window values.
+
+> 18 of 18 pass. Updating the issue, the ledger and the generated test lists,
+> then committing.
+
+> Only my row; claiming the regenerated registry and committing.
+
+*[commit] 2f53931fc - Action economy: a long cooldown is held only when the plan with the hold is worth more*
+
+> The cooldown timeline is committed (2f53931). Next it needs the fight's
+> remaining length, which is in the resource-economy issue; reading that part.
+
+> The fight's length is next: a running estimate from the enemies' health
+> falling, with bursts counted as faster stretches. Building it as plain
+> arithmetic beside the timeline.
+
+> 17 of 17 pass. Recording it in the resource-economy issue and committing.
+
+> Those are only my lines (the state line and the new section), so the
+> whole-file claim is safe here.
+
+*[commit] 74c597a67 - Resource economy: a running guess at how long the fight has left*
+
+Two more pieces of the action economy are built and committed. Both are plain
+arithmetic that runs offline, outside the server.
+
+**1. When to use a long cooldown (18 checks pass).**
+- **How it decides:** it cuts the rest of the fight into half-second steps and
+  works backwards from the end. At each step it keeps the most the cooldown can
+  still be worth from there.
+- **What a use is worth:** whatever the moment multiplies it by. Bloodlust or a
+  weak phase counts more, and a buff cut short by the fight's end counts less.
+- **What comes out:** the best moments to use the cooldown, and a lean against
+  using it now when waiting is worth more. Later the talent draw reads that
+  lean, so a buddy leans away from the cooldown rather than being forbidden it.
+- **A buddy's own cooldowns line up with each other.** Example: a 2-minute
+  cooldown waits 10 seconds for a 3-minute one. Its second use then moves to
+  overlap the other's second use.
+- **What the tests confirm:**
+  - a short wait that costs no use is taken;
+  - a wait that costs a whole use is taken only when the window pays for the
+    lost use (×2.5 does, ×1.3 doesn't);
+  - nothing is held when waiting gains nothing;
+  - near the end, everything gets used.
+
+**2. How long the fight has left (17 checks pass).**
+- **How it guesses:** it measures how fast the enemies' health has been falling
+  over the last few seconds. It fits a straight line through the readings, so
+  one big hit or a heal moves the guess only a little.
+- **Bursts ahead** count as stretches where health falls faster, not as a flat
+  amount off the end.
+- **A party member dying or joining** changes the rate by their share of the
+  party's damage.
+- **While health isn't falling,** it reports that the end can't be seen yet,
+  rather than making one up.
+
+I made one design call for you to review. When the end can't be seen, the server
+plans over three times the buddy's longest cooldown. That's long enough that
+nothing gets used early for an end that isn't coming.
+
+**Not built yet:** the server side. That means:
+- reading the enemies' health during a fight;
+- the worker threads that redo each buddy's plan as the fight changes;
+- passing the lean to the talent draw.
+
+These will wait for your compile like the rest of the server files.
+
+Next I can start that server side, or turn to next-quest pointing, which you
+asked about earlier and I haven't started.
 
 --------------------------------------------------------------------------------
 
