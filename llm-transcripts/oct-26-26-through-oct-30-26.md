@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-30 14:17:32
+Generated on: 2026-10-30 14:26:52
 Models: claude-opus-5-5
 
 ## Contents
@@ -15516,6 +15516,115 @@ known, so everything gets used.
 Next is the server side: reading the enemies' health and ranks during a fight,
 the worker threads that redo each buddy's plan, and passing the result to the
 talent draw. It will wait for your compile with the other server files.
+
+--------------------------------------------------------------------------------
+
+### User Request 151
+
+<pasted_content id="12ab">
+> Bloodlust: in this version its own cooldown is 5 minutes. The Sated debuff
+> (Exhaustion
+> for Heroism) then blocks the party from getting it again for 10 minutes, so
+> I'll plan it
+> on that 10-minute timer, read from the game's spell table. Ten minutes is
+> inside the
+>   "regularly used" line, so it is planned and used.
+</pasted_content id="12ab">
+
+
+consider a paladin's forebearance similarly. But keep in mind some spells like
+Blessing of Protection can put it on other targets, not just the casting
+paladin.
+
+let's continue.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 151
+
+> Forbearance is the same kind of lockout as Sated. A debuff on whoever receives
+> the spell blocks a set of spells on that character for a while. It can come
+> from the paladin's own Divine Shield, or from another paladin's Hand of
+> Protection. Checking how the game's tables record which spells it blocks and
+> what puts it on.
+
+> Most of these lockouts are put on by the server's spell scripts, not by the
+> tables. Finding where.
+
+> Now the timeline learns about blocked moments: a stretch where a cooldown
+> can't be cast, and an own cooldown that blocks another.
+
+> 30 of 30 still pass with the new blocked stretches. Writing the lockout test.
+
+> Avenging Wrath now gets both uses (0 and 180) and Divine Shield waits until
+> 30, worth 3 together against 2 the other way round. Updating the test to say
+> so.
+
+> All four action-economy tests pass (21, 30, 10 and 20 checks). Re-timing,
+> since lining up now tries each order.
+
+> About 0.5 ms for a 5-minute fight and 3.6 ms at the 30-minute worst case,
+> still well under the original 90. Recording it in the issues and committing.
+
+> Adding a line to the buff-targeting issue, the ledger row, and the test lists.
+
+> All of those changes are mine. Claiming the generated and scripted files, then
+> committing.
+
+*[commit] 0d7225a4e - Action economy: the game's lockouts, Forbearance and Sated among them, shape every buddy's plan*
+
+Forbearance is in, along with the other lockouts the game has, and it's
+committed (0d7225a). All 21 lockout checks pass.
+
+**What the buddies now know** (the ability generator writes this table;
+durations come from the game's spell table):
+
+| Mark | Lasts | Put on by | Refuses |
+|---|---:|---|---|
+| Forbearance | 2 min | Divine Shield, Divine Protection, Hand of Protection (on whoever it reaches), Lay on Hands on oneself | those four |
+| Avenging Wrath marker | 30 s | the same four, and Avenging Wrath | those four and Avenging Wrath |
+| Sated / Exhaustion | 10 min | Bloodlust / Heroism | both |
+| Hypothermia | 30 s | Ice Block | Ice Block |
+| Weakened Soul | 15 s | Power Word: Shield | Power Word: Shield |
+
+Three "not while that buff is up" pairs come from the table too: Tiger's Fury
+can't be used during Berserk, and Arcane Power and Presence of Mind refuse each
+other.
+
+**Where the rules come from:** who puts each mark on is in the server's code,
+not the tables. Most follow one general rule there. Forbearance and Sated come
+from the paladin and shaman scripts, each cited in the generator. The generator
+stops if the game's tables disagree with these rules.
+
+**What it changes:**
+- **Planning cooldown:** each ability is planned on the longer of its own
+  cooldown and its mark. Bloodlust gets 10 minutes; Divine Shield keeps its own
+  5.
+- **A paladin's own cooldowns** wait on each other: Divine Shield and Avenging
+  Wrath each block the other for 30 seconds.
+  - My first version of the lining-up got this wrong. Whichever cooldown planned
+    first took its best moment, even when that cost the other more.
+  - Now the planner tries each cooldown first in turn and keeps the set worth
+    most together. With 200 seconds of a boss left, the paladin gets Avenging
+    Wrath at 0 and 180 and Divine Shield at 30, instead of the shield at once
+    and only one Avenging Wrath.
+- **Hand of Protection on another paladin** puts Forbearance on them, so that
+  paladin's own Divine Shield waits until it runs out.
+- **Buff targeting:** a party member with a mark (Forbearance, Sated, Weakened
+  Soul) is left out for that buff until the mark runs out.
+
+**Cost:** a buddy's whole plan takes about 0.5 ms for a 5-minute fight, and 3.6
+ms at the 30-minute worst case.
+
+**Stand-in for now:** Divine Shield's worth is set to one plain use in these
+tests. Its real worth should come from danger, and the healer's-seat and health
+economy will supply it.
+
+Next is the server side, which waits for your compile with the other server
+files:
+- reading health, ranks and marks during a fight;
+- the worker threads that redo each buddy's plan;
+- passing the result to the talent draw.
 
 --------------------------------------------------------------------------------
 

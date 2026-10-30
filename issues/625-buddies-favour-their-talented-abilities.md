@@ -118,7 +118,13 @@ starting point; the talents a buddy actually took move them: for each
 ability a talent names, the stats that ability scales with count for
 more, by how much the talent changes the ability and how often the buddy
 uses it (and every ability is used sometimes). Gems (617j2), gear choice
-and loot all read these weights.
+and loot all read these weights. **The abilities learned move them
+too** (the owner, 2026-10-30: "We're updating the stat weights based on
+abilities learned (from the trainer) and talents picked, and it should
+be dynamic to each buddy-bot."): each buddy's weights are its own,
+worked out again when it learns an ability or spends a talent point,
+and read by its weapon choice (speed included, 625b) and by which
+lessons it buys first when it can't afford them all (617n).
 
 **No idle asking.** The bot module checks each of its triggers every
 moment ("does it have Trueshot Aura? no: cast it"), so an ability it can't
@@ -165,6 +171,17 @@ talents that touch an ability (above), not by how many talents name it.
   empowered moments.
 - 625e: what each fight taught (how much each phase made buddies move),
   written down to be read later.
+- 625f: the action economy: time as the currency, window values, the
+  cooldown timeline and the game's lockouts.
+- 625g: forms and stances weighed.
+- 625h: the resource economy, and the fight's length.
+- 625i: the healer's seat.
+- 625j: the threat economy: threat stored, attention placed, the curve
+  toward victory.
+- 625k: learning that can start over.
+- 625l: buffs given to who uses them most.
+- 625m: pets as a second pair of hands: their abilities the buddy's own,
+  on their own lane of time.
 
 **Pliable, and rigid** (the owner, 2026-10-29: "and through it all, we
 need to make the systems very flexible - pliable, so that the story and
@@ -206,6 +223,16 @@ prefers but never leave it idle or walking into a tree.
 1. How much more: a fixed raise per talent point, or as much as the
    talent's own effect (a talent adding 15% damage raises it by 15%)?
    **Both built, behind `Buddies.TalentWeights` (1 and 2), 2026-10-30;
-   the owner chooses.**
+   the owner chooses.** Asked again the same day, the owner, word for
+   word: "we will handle this in the ability economy system."
 2. Should this live in the bot module (a patch, every bot) or only for
-   buddies?
+   buddies? **Answered 2026-10-30** (the owner, word for word): "why is
+   it different? It should be every bot. All the things we make should
+   be A. sandboxed to a particular player, like how the original
+   wow-chat was designed, and B. fully idempotent / functional style,
+   with the only state available being the state that is stored on the
+   player, which gets memory freed whenever they log out." Every bot,
+   not only buddies. And a rule for all of this work: each piece works
+   for one player at a time (as wow-chat-1 did), as pure functions of
+   what is stored on that player, kept nowhere else, and freed when the
+   player logs out.

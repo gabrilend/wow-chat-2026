@@ -28,6 +28,14 @@ this much moved by haste; so this much more damage in these 40 seconds)
 is right for each buddy and stays right when the game or the buddy
 changes, because it is worked out again.
 
+And what it is for (the owner, 2026-10-30, on the threat economy): "the
+inputs are not [flexible] since they are derived from the environment,
+and the outcomes, ideally, are comprehensive and natural feeling bot
+behavior. We are less interested in optimizing for perfect output, and
+more toward feelings of serenity in flow, searching for familiarity and
+wholesome friendly." The roots keep the numbers honest; the aim is how
+the buddies feel to play beside.
+
 ## The shape
 
 1. **The roots are the game's own data**: what each spell, aura, buff and

@@ -1,6 +1,6 @@
 # Conversation Summary: e143dbfe-ff43-48be-8bd4-4d54fd7a325d
 
-Generated on: 2026-10-30 14:24:21
+Generated on: 2026-10-30 14:26:55
 Models: claude-opus-5-5
 
 ## Contents
@@ -2998,6 +2998,92 @@ I've written each as "taken as agreed, for you to correct". If you meant to
 answer any of them differently, say so.
 
 The todo list has 33 items. Nothing is committed yet.
+
+--------------------------------------------------------------------------------
+
+### User Request 22
+
+> One catch: the world database doesn't list a death knight's starting items,
+> because the
+>     client supplies those.
+
+no way. The server has to handle that. No way!
+
+Great. 10 more questions? When you say the todo list has 33 items, what I hear
+is "33 issue files can be worked on currently" and that's great. Let's open more
+up for parallel development!
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 22
+
+You're right, and the server does handle it. A new character's starting items
+come from a game data file the server reads at startup (the starting-outfit
+file), not from the world database. The database only holds extras. I read that
+file: every death knight outfit includes Black Mushroom (item 41751, level 55
+food). That's now written into the issue.
+
+About the todo list: yes, its 33 items are 33 pieces of work that can be built
+now, spread across about 35 issue files. Most touch only their own files, so
+they can run in parallel. One overlap: much of the buddy work lives in the buddy
+module's source files, and the five-ways session holds claims on several of
+those, so anything touching them has to wait its turn or be split by file.
+
+## Ten questions to open more issues
+
+**The level-up command** (a game master raises a character's level, with gear
+and professions, in one step)
+
+1. **Lowering a level, say 60 to 20.** Are the character's skills (weapon
+   skills, professions) lowered to match, or kept?
+   *My call:* lowered to the new level's cap, so nothing outranks the level.
+2. **Gear on level-up:** a fresh white gear set every time, or only when
+   crossing a tier (10, 20, 30…), so better gear found in play isn't replaced?
+   *My call:* only on crossing a tier, and only into slots that are empty or
+   worse.
+
+**The purse and visiting trainer after a level change** (the character gets
+exactly the copper its newly reachable lessons cost, and a trainer of its class
+appears beside it)
+
+3. **Weapon master lessons** (10 silver each, like Staves or Guns): counted in
+   the purse, or skipped since buddies learn weapons free?
+   *My call:* counted for players, skipped for buddies.
+4. **The visiting trainer:** seen only by that character, or by everyone nearby?
+   And how long does it stay?
+   *My call:* that character only, for 5 minutes or until it walks away.
+
+**The Ragefire Chasm stand-in test** (your October idea: Birth at the right
+level in front of Ragefire, with her buddies, all in white gear)
+
+5. **Which level?** 15 is the middle of Ragefire's 13–18.
+   *My call:* 15.
+6. **Birth is a shaman. Is she the group's healer,** so the stand-ins fill tank
+   and damage?
+   *My call:* yes, it tests a healer-led group.
+7. **Her leatherworking:** just learned (skill 1), or raised to what level 15
+   allows?
+   *My call:* raised to her level's cap.
+
+**A buddy's rings, amulets and enchants by level**
+
+8. **Picking a ring and necklace at a level:** the best for its talent plan
+   among those of its level, or random among them, as weapon enchants are?
+   *My call:* best for its plan, since rings matter more than the flavour of an
+   enchant.
+9. **Wrath materials:** the belt buckle and socket recipes need Saronite Bars
+   and Eternal Earth or Shadow, which basic doesn't have. Make those obtainable
+   somewhere in basic, or hand out the finished items (the buckle, the socketing
+   items) instead of recipes?
+   *My call:* hand out the finished items. No Wrath materials leak into a 1–60
+   world.
+
+**The graveyard walk-back** (asked once with no reply, so here it is again)
+
+10. **Who counts as someone who could resurrect a dead buddy,** making it wait
+    instead of releasing? Anyone on its side who knows a resurrection spell,
+    other buddies included, within some distance, or only players?
+    *My call:* anyone on its side who knows one, within 40 yards.
 
 --------------------------------------------------------------------------------
 
