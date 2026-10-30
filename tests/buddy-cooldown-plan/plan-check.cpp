@@ -28,19 +28,19 @@ static bool near(double a, double b) { return std::fabs(a - b) < 1e-6; }
 // against: every use's worth summed step by step (UseWorth), and every
 // moment within a cooldown tried for the next use. Gives the best plan's
 // worth (the quick one may pick a different moment among equals).
-static double ByScan(Cooldown const& cd, std::vector<Window> const& windows, double fightLeft, Fight fight)
+static double ByScan(Cooldown const& cd, std::vector<Window> const& windows, double fightLeft, Ending const& ending)
 {
     if (fightLeft <= 0.0) return 0.0;
     int end   = static_cast<int>(std::ceil(fightLeft / STEP));
     int gap   = std::max(1, static_cast<int>(std::ceil(cd.cooldown / STEP)));
     int ready = static_cast<int>(std::ceil(std::max(0.0, cd.readyIn) / STEP));
-    if (ready >= end) return Kept((ready - end) * STEP, cd.cooldown, fight);
+    if (ready >= end) return Kept((ready - end) * STEP, cd.cooldown, ending);
     std::vector<double> worth(end), best(end + gap + 1, 0.0);
-    for (int i = 0; i < end; ++i) worth[i] = UseWorth(windows, i * STEP, cd.lasts, fightLeft, fight);
-    for (int k = end; k <= end + gap; ++k) best[k] = Kept((k - end) * STEP, cd.cooldown, fight);
+    for (int i = 0; i < end; ++i) worth[i] = UseWorth(windows, i * STEP, cd.lasts, fightLeft, ending.fight);
+    for (int k = end; k <= end + gap; ++k) best[k] = Kept((k - end) * STEP, cd.cooldown, ending);
     for (int i = end - 1; i >= 0; --i)
     {
-        double top = Kept(0.0, cd.cooldown, fight);
+        double top = Kept(0.0, cd.cooldown, ending);
         for (int j = i; j < end && j <= i + gap; ++j) top = std::max(top, worth[j] + best[j + gap]);
         best[i] = top;
     }
@@ -131,9 +131,25 @@ int main()
     p = Best(own[0].cd, {}, 200, Fight::Boss);
     check(p.uses == 2 && near(p.at[0], 10) && near(p.at[1], 190), "every use of the best plan is listed (10 and 190)");
 
+    // from one boss to the next (the owner: "better to get the full use of
+    // a BL on the next boss than waste it on an easier boss."): Bloodlust,
+    // 40 seconds long, back for the party after Sated's 10 minutes, with a
+    // minute of this boss left and the next pulled 2 minutes after it
+    Cooldown lust{ 600, 0, 40 };
+    p = Best(lust, {}, 60, Ending(Fight::Boss, 1.5, 120));
+    check(p.uses == 0 && near(p.best, 1.5), "a harder boss next (a use worth 1.5 there): Bloodlust is saved for it");
+    check(near(p.useNow, 1.0 + 1.5 * (1.0 - 420.0 / 600.0)) && p.weight < 1, "spent here it is worth 1, and would still be 7 minutes from back at the next pull");
+    p = Best(lust, {}, 60, Ending(Fight::Boss, 1.0, 120));
+    check(p.uses == 1 && near(p.nextUse, 0), "the next boss no harder: spent here, a whole use now beats waiting");
+    p = Best(lust, {}, 60, Ending(Fight::Boss, 1.5, 600));
+    check(p.uses == 1 && near(p.nextUse, 0), "the next boss 10 minutes off: spent here, it is back in time");
+    p = Best(lust, {}, 60, Fight::Boss);
+    check(p.uses == 1 && near(p.best, 1.0), "no boss known to follow: everything is used");
+
     // the quick working out gives what trying every moment gives: 400
     // fights drawn at random (a fixed seed, so a failure can be run again),
-    // trash and boss, buffs and single strikes, up to four windows each
+    // trash and boss, half with a next fight of any worth and distance,
+    // buffs and single strikes, up to four windows each
     {
         unsigned seed = 625;
         auto draw = [&](double lo, double hi) { seed = seed * 1103515245u + 12345u; return lo + (hi - lo) * ((seed >> 8) & 0xffff) / 65535.0; };
@@ -146,7 +162,8 @@ int main()
             int count = static_cast<int>(draw(0, 4.99));
             for (int k = 0; k < count; ++k) ws.push_back({ draw(-20, 400), draw(5, 60), draw(1.05, 2.5) });
             double left  = draw(5, 700);
-            Fight  fight = draw(0, 1) < 0.5 ? Fight::Trash : Fight::Boss;
+            Fight  kind  = draw(0, 1) < 0.5 ? Fight::Trash : Fight::Boss;
+            Ending fight = draw(0, 1) < 0.5 ? Ending(kind) : Ending(kind, draw(0, 2), draw(0, 300));
             Plan   q     = Best(cd, ws, left, fight);
             double s     = ByScan(cd, ws, left, fight);
             ++tried;
@@ -154,7 +171,7 @@ int main()
             if (std::fabs(q.best - s) < 1e-6) ++agree;
             // the quick plan's own uses add up to what it says it is worth
             double sum = 0.0, after = -1.0;
-            for (double t : q.at) { sum += UseWorth(ws, t, cd.lasts, left, fight); after = t; }
+            for (double t : q.at) { sum += UseWorth(ws, t, cd.lasts, left, fight.fight); after = t; }
             int end = static_cast<int>(std::ceil(left / STEP)), gap = std::max(1, static_cast<int>(std::ceil(cd.cooldown / STEP)));
             int back = after < 0 ? static_cast<int>(std::ceil(std::max(0.0, cd.readyIn) / STEP)) : static_cast<int>(std::lround(after / STEP)) + gap;
             sum += back >= end ? Kept((back - end) * STEP, cd.cooldown, fight) : Kept(0.0, cd.cooldown, fight);

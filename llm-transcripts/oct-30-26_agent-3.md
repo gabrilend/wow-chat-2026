@@ -1,6 +1,6 @@
 # Conversation Summary: e143dbfe-ff43-48be-8bd4-4d54fd7a325d
 
-Generated on: 2026-10-30 13:38:19
+Generated on: 2026-10-30 14:14:15
 Models: claude-opus-5-5
 
 ## Contents
@@ -35,6 +35,10 @@ Models: claude-opus-5-5
    next basic compile can carry the buddy, Sargobras and pathfinding work. All
    answers so far are recorded in the issues, uncommitted. Next: commit only my
    changed lines, once you say go.
+8. 2026-10-30 13:41, after Request 18 - We're answering open questions so the
+   next basic compile can build buddy pathfinding, questing and Sargobras work.
+   Your answers are recorded in the issues, uncommitted. Next: answer the ten
+   questions above, starting with who can resurrect a dead buddy.
 
 --------------------------------------------------------------------------------
 
@@ -2618,6 +2622,177 @@ simple creature to save the server's time)
     the command, do that player's buddies get anything too (trainer lessons, a
     purse), or only the player?
     *My call:* the buddies too, the same way. They're raised alongside.
+
+--------------------------------------------------------------------------------
+
+### User Request 19
+
+> In PvP, a flag carrier is on the list only while
+>   the bot can see it, with sight measured from head height.
+
+no the flag carrier is always on the list, we just only know it's location if we
+can see it or if we can see it recently. Allies might also say things like "flag
+on roof" or "flag in the flag room" or something that, while ambiguous, might be
+helpful in updating our expected location of the flag carrier. Otherwise it's
+just where we last saw them. At a distance, a flag carrier entering the tunnel
+might be planning to move elsewhere, perhaps to the roof, possibly to the flag
+room, or otherwise. There's the graveyard, there's the ledge, there's a lot of
+places they can hide. So, when we lose sight of the flag carrier, we should
+project our idea of where they might be along all of the route lines they can
+take (just one per path, so one for tunnel, one for out the front, etc,
+branching like the AB paths) and then try to intercept by guessing one of those
+paths and trying to cut them off by moving where we expect them to be, not where
+they currently are. If we catch sight of them of course we know the real number,
+and we can more perfectly intercept them - sometimes, leaving combat and
+mounting up is a better way to catch them than just by walking forward. But the
+system should be able to route through multiple paths - for example "I could
+walk, and it'd take X amount of time. Or I could back off and mount up, which
+might be faster because of a/b/c parameters or whatever."
+
+
+
+<pasted_content id="415d">
+> 1. Who counts as "someone who could resurrect it"? Any character on its side
+> with a resurrection
+>      spell (priest, paladin, shaman, druid), other buddies included, within some distance?
+>      My call: anyone on its side who knows one, within 40 yards.
+</pasted_content id="415d">
+
+
+>   2. How long does it wait for that person before releasing anyway?
+>      My call: until the fight around it ends, then 30 seconds more.
+
+it waits until they are out of range. After 10-20 seconds it whispers them
+asking them for a rez. "rez?" "rez me please?" "pls rez" etc.
+
+> 3. "Roll down or straight up tangent line to hills": straight up and down the
+> slope, or along
+>      the hill's side at an even height, the way a road winds around it?
+
+I don't know the context, but in general we should have two ways to ascend -
+either walk straight to the top, or if there's not a clean path to do so (slopes
+that are too great to climb) between us and the apex, then we orbit with
+decreasing radius, increasing again if we get stuck, trying not to lose
+elevation, until we can get it - if we've ascended a bunch and reach some rocky
+terrain, or if it starts opening up on the opposite side to the direction we're
+orbiting it, or if there's a road that appears in the off-rotation direction,
+then we can switch rotation directions, as if we were on a switch-back.
+
+> 4. "follow me" ends with "go away". Does anything else end it: the person
+> logging out, entering
+>      a dungeon or town, or a time limit?
+
+all of these except time limit. Also we should be able to say "stop following
+me" and that'd work too.
+
+> Buddies wandering as lightweight creatures (a resting buddy shown as a simple
+> creature to save
+>   the server's time)
+
+I think we nixed this functionality because there's no benefit to be gained in
+performance from moving one gameobject verses another, so a lightweight NPC
+would be just as heavy as a heavy playerbot. No sense complicating it.
+
+
+
+<pasted_content id="415d">
+> 6. Other players. Can anyone right-click someone else's buddy and talk or
+> trade with it, or only
+>      its owner? Trading would let others take items from that owner's buddy.
+>      My call: talk yes, trade owner only.
+</pasted_content id="415d">
+
+
+buddy-bots can talk to others, but they should be polite and curt in general,
+and never give them anything, even if it'd save their life.
+
+> 7. Where does the tank go next: along a route learned for each dungeon (packs
+> in order, as a
+>      player learns them), or to the nearest pack it hasn't fought yet?
+
+make a route to the next boss. They sometimes can be completed in varying
+orders, but it's usually a T-intersection or similar, only rare bosses like VoA
+can have them fought in any order.
+
+make a route to the next boss, and then fight anything along the way that might
+aggro onto allies. We can clear a bit more or less, confident tanks clear more,
+nervous or scared tanks try to clear the bare minimum and skirt the edges of the
+arenas and dungeons and such.
+
+> 8. When the tank waits for mana or health, does it say so ("Waiting for
+> mana."), the way buddies
+>      say "My bags are full."?
+
+sure.
+
+
+
+<pasted_content id="415d">
+> 9. Group hearthstone. When someone in a group hearths, the others get a pop-up
+> to come along.
+>      Random bots can't press a button. Do they always come, never come, or come only when the
+>      person hearthing leads their group?
+</pasted_content id="415d">
+
+
+always come. Though, pressing "okay" causes them to cast their own hearthstone
+(even if it's on cooldown!) and if it's interrupted they'll address the
+interruption and then try again. It'll take them to the other party member's
+hearthstone location, not to their saved location. Also if the party leader
+chooses "no" then they'll cancel their cast. Once the original party member's
+cast expires because it completed successfully or was cancelled, the in-progress
+prompts to other players will immediately pick "no". If a party-member spams the
+hearthstone request, then it has a 10 second cooldown before it can start again,
+and players who are on the ignore list should never ever be able to give other
+players prompts, including group hearthstone prompts.
+
+> 10. The level-up command. When a game master raises a player's level with the
+> command, do that
+>       player's buddies get anything too (trainer lessons, a purse), or only the player?
+
+the buddies too.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 19
+
+> Correcting the flag carrier first:
+
+> Graveyard walk-back:
+
+I've recorded all your answers word for word. Notes:
+
+- **Flag carrier:** I had it wrong, and it's corrected now. The carrier is
+  always on the list. When out of sight, its likely place is pushed forward
+  along each route it could take (tunnel, front, roof, flag room, graveyard,
+  ledge), and allies' callouts weight those guesses. A buddy heads for where the
+  carrier would be on one route, not where it was last seen. To get there, it
+  picks walking or stepping out of combat to mount, whichever is faster.
+- **Graveyard:** the buddy waits while someone who can resurrect it is in range,
+  and after 10–20 seconds whispers "rez?" or similar. Hills are climbed either
+  straight up, or by circling with a tightening radius and switching back on
+  rocks, open ground or a road. Question 1 (who counts as able to resurrect) got
+  no reply, so it's still open in the issue with my call beside it.
+- **Following** ends on "go away", "stop following me", "stop", logout, a town
+  or a dungeon, never on a timer.
+- **Tank:** routes to the next boss, fights what could reach the group, clears
+  more when confident and less when nervous, and says "Waiting for mana."
+- **Group hearthstone:** your full rules are recorded.
+- **Level-up command:** buddies get the same as the player.
+- **Other players:** buddies are polite and curt with them and never give them
+  anything.
+- **Lightweight-creature buddies:** I marked the issue "will not implement" with
+  your reason, and it moves to the will-not-implement folder with the next
+  commit.
+
+**One thing to confirm before I retire the lightweight-creature buddies fully:**
+that issue has four sub-issues (the bake, the swap, right-click to talk,
+left-click to select). Six other issues mention it too, including the monster
+bots, two custom-class issues and the portal dimensions. Should the four
+sub-issues be retired with it? I'll check each of the six mentions so nothing
+still depends on it.
+
+The todo list has 32 items. Nothing is committed yet.
 
 --------------------------------------------------------------------------------
 

@@ -84,19 +84,42 @@ namespace BuddyPlan
     static constexpr double STEP = 0.5;
 
     // {{{ Fight
-    // What kind of fight it is, which decides what its end means (the
-    // owner, 2026-10-30: "for trash mobs, yes it diminishes the value. But
-    // for a boss, even if it's the end of the fight we still wanna burn it
-    // down as fast as we can, so use everything."):
-    //   Trash  a lasting buff counts only the part before the end, and a
-    //          cooldown still ready when the fight ends is worth a plain use
-    //          in the next one (a buddy fights pack after pack), less the
-    //          longer it would still be cooling then: so a big cooldown
-    //          isn't spent on a pack about to die
-    //   Boss   everything is used: a buff counts whole however near the end
-    //          (burning faster is what shortens the fight), and nothing is
-    //          kept for after
+    // What kind of fight it is, which decides how a lasting buff near the
+    // end counts (the owner, 2026-10-30: "for trash mobs, yes it diminishes
+    // the value. But for a boss, even if it's the end of the fight we still
+    // wanna burn it down as fast as we can, so use everything."):
+    //   Trash  only the part before the end counts
+    //   Boss   the whole of it counts, however near the end (burning faster
+    //          is what shortens the fight)
+    // Which enemies make a boss fight (the owner, 2026-10-30): a boss (the
+    // game's boss rank, or the dungeon's boss list) or a rare elite in the
+    // open world; "not regular elites", which are trash. The server reads
+    // it from the enemies in the fight (not built yet).
     enum class Fight { Trash, Boss };
+    // }}}
+
+    // {{{ Ending
+    // What comes after the fight, which decides what a cooldown is worth
+    // kept rather than spent:
+    //   fight      the kind of fight (above)
+    //   nextWorth  what one use is worth in the next fight that would use
+    //              it, against one here (plain uses): after trash 1, the
+    //              next pack is the same; after a boss with no boss known to
+    //              follow 0, so everything is used; before a harder boss more
+    //              than 1, so a big cooldown is saved for it (the owner,
+    //              2026-10-30: "better to get the full use of a BL on the
+    //              next boss than waste it on an easier boss.")
+    //   nextIn     seconds from this fight's end to that next fight's start
+    //              (0 after trash: the next pack is pulled at once)
+    // A Fight alone gives its ordinary ending: trash before more trash,
+    // a boss with nothing after.
+    struct Ending
+    {
+        Fight  fight;
+        double nextWorth, nextIn;
+        Ending(Fight f) : fight(f), nextWorth(f == Fight::Trash ? 1.0 : 0.0), nextIn(0.0) {}
+        Ending(Fight f, double worth, double in) : fight(f), nextWorth(worth), nextIn(in) {}
+    };
     // }}}
 
     // {{{ UseWorth
@@ -122,13 +145,15 @@ namespace BuddyPlan
 
     // {{{ Kept
     // What the cooldown is worth at the fight's end when it comes back
-    // `late` seconds after it (0: ready as the fight ends): against trash a
-    // plain use in the next fight, less by the share of a cooldown it would
-    // still be cooling; against a boss nothing.
-    inline double Kept(double late, double cooldown, Fight fight)
+    // `late` seconds after it (0: ready as the fight ends): one use in the
+    // next fight at what it is worth there (Ending's nextWorth), less by
+    // the share of a cooldown it would still be cooling when that fight
+    // starts (`nextIn` seconds after this one ends).
+    inline double Kept(double late, double cooldown, Ending const& ending)
     {
-        if (fight == Fight::Boss || cooldown <= 0.0) return 0.0;
-        return std::max(0.0, 1.0 - late / cooldown);
+        if (ending.nextWorth <= 0.0 || cooldown <= 0.0) return 0.0;
+        double cooling = std::max(0.0, late - ending.nextIn);
+        return ending.nextWorth * std::max(0.0, 1.0 - cooling / cooldown);
     }
     // }}}
 
@@ -158,7 +183,7 @@ namespace BuddyPlan
     //   cooldown away fall off the back, so no moment is looked at twice.
     // A 30-minute plan of three cooldowns went from about 90 milliseconds
     // to a few.
-    inline Plan Best(Cooldown const& cd, std::vector<Window> const& windows, double fightLeft, Fight fight)
+    inline Plan Best(Cooldown const& cd, std::vector<Window> const& windows, double fightLeft, Ending const& ending)
     {
         Plan plan{ 0.0, 0.0, -1.0, 0, 1.0, {} };
         if (fightLeft <= 0.0) return plan;
@@ -167,7 +192,7 @@ namespace BuddyPlan
         int ready = static_cast<int>(std::ceil(std::max(0.0, cd.readyIn) / STEP));
         if (ready >= end)                                                      // never ready before the end: only what is kept
         {
-            plan.useNow = plan.best = Kept((ready - end) * STEP, cd.cooldown, fight);
+            plan.useNow = plan.best = Kept((ready - end) * STEP, cd.cooldown, ending);
             return plan;
         }
 
@@ -185,15 +210,15 @@ namespace BuddyPlan
             for (int c = 0; c < end + n; ++c)
             {
                 double s = (c + 0.5) * STEP;
-                total[c + 1] = total[c] + ((s < fightLeft || fight == Fight::Boss) ? FactorAt(windows, s) : 0.0);
+                total[c + 1] = total[c] + ((s < fightLeft || ending.fight == Fight::Boss) ? FactorAt(windows, s) : 0.0);
             }
             for (int i = 0; i < end; ++i) worth[i] = (total[i + n] - total[i]) / n;
         }
 
         std::vector<double> best(end + gap + 1, 0.0), via(end, 0.0);          // via[j]: a use at j and the best after
         std::vector<int>    pick(end, -1);                                     // the next use's moment, -1 never (kept)
-        for (int k = end; k <= end + gap; ++k) best[k] = Kept((k - end) * STEP, cd.cooldown, fight);
-        double kept = Kept(0.0, cd.cooldown, fight);                           // never used again: ready at the end
+        for (int k = end; k <= end + gap; ++k) best[k] = Kept((k - end) * STEP, cd.cooldown, ending);
+        double kept = Kept(0.0, cd.cooldown, ending);                           // never used again: ready at the end
         std::deque<int> queue;                                                 // front the earliest; each worth more than all before it
         for (int i = end - 1; i >= 0; --i)
         {
@@ -236,7 +261,7 @@ namespace BuddyPlan
     // passes settle the cases tested; a plan that still moves after them is
     // used as it stands (the next working out, a moment later, starts from
     // the world as it is then).
-    inline std::vector<Plan> LineUp(std::vector<Own> const& own, std::vector<Window> const& outside, double fightLeft, Fight fight, int passes = 3)
+    inline std::vector<Plan> LineUp(std::vector<Own> const& own, std::vector<Window> const& outside, double fightLeft, Ending const& ending, int passes = 3)
     {
         std::vector<Plan>   plans(own.size());
         std::vector<size_t> order(own.size());
@@ -250,7 +275,7 @@ namespace BuddyPlan
                     if (k != i)
                         for (double t : plans[k].at)
                             windows.push_back({ t, std::max(own[k].cd.lasts, STEP), own[k].gain });
-                plans[i] = Best(own[i].cd, windows, fightLeft, fight);
+                plans[i] = Best(own[i].cd, windows, fightLeft, ending);
             }
         return plans;
     }

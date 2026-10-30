@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-30 13:40:27
+Generated on: 2026-10-30 14:03:28
 Models: claude-opus-5-5
 
 ## Contents
@@ -196,6 +196,11 @@ Models: claude-opus-5-5
     for your next compile, and `.elite` is now removed so gearing goes only
     through `.gearset`. Next I'll build the action economy's timeline, where a
     buddy holds a cooldown only when holding is worth more.
+47. 2026-10-30 13:43, after Request 148 - We're building every described issue
+    for your next compile, currently the buddies' action economy; the cooldown
+    timing and fight-length guess are committed and tested. Next, I'll start the
+    server side that feeds them, unless you'd rather I begin next-quest
+    pointing.
 
 --------------------------------------------------------------------------------
 
@@ -15301,6 +15306,124 @@ These will wait for your compile like the rest of the server files.
 
 Next I can start that server side, or turn to next-quest pointing, which you
 asked about earlier and I haven't started.
+
+--------------------------------------------------------------------------------
+
+### User Request 149
+
+> - What a use is worth: whatever the moment multiplies it by. Bloodlust or a
+> weak phase
+>     counts more, and a buff cut short by the fight's end counts less.
+
+for trash mobs, yes it diminishes the value. But for a boss, even if it's the
+end of the fight we still wanna burn it down as fast as we can, so use
+everything.
+
+
+
+<pasted_content id="12ab">
+> - How it decides: it cuts the rest of the fight into half-second steps and
+> works
+>     backwards from the end. At each step it keeps the most the cooldown can still be worth
+    from there.
+</pasted_content id="12ab">
+
+
+sounds performance intensive, maybe someday we can make this stuff into
+equations rather than discrete checks. For now this is fine.
+
+
+
+<pasted_content id="12ab">
+> I made one design call for you to review. When the end can't be seen, the
+> server plans
+> over three times the buddy's longest cooldown. That's long enough that nothing
+> gets used
+>   early for an end that isn't coming.
+</pasted_content id="12ab">
+
+
+longest regularly used cooldown. I think Lay on Hands has a 1 hour cooldown for
+example? Dont' wanna plan around that...
+
+we can worry about next-quest pointing later, after this compile. For now let's
+continue.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 149
+
+> Checking which cooldowns in the game's data are long, so the "regularly used"
+> line falls in the right place.
+
+> Now the tests: the existing ones run as boss fights, and new ones cover trash.
+
+> Now the boss-or-trash pair in place of the old "half a use" check.
+
+> The lined-up case changed: as a boss fight, buffs near the end now count
+> whole. Checking what it plans now.
+
+> Correct, and better aligned than before: in a boss fight the second use lands
+> exactly on the long cooldown's second use, at 190 (2.6 of 2.6). Updating the
+> expectation.
+
+> 23 of 23 pass. Now the horizon for a fight whose end can't be seen yet: three
+> times the longest *regularly used* cooldown.
+
+> Measuring the worst case you flagged: a 30-minute horizon with a 10-minute
+> cooldown, plus two shorter cooldowns lined up.
+
+> Adding the old step-by-step version to the test as the reference, and checking
+> the quick one against it on a few hundred random fights.
+
+> A real gap: in a trash fight, a cooldown that only comes back after the end
+> was valued at nothing. It is still worth something in the next fight. Fixing
+> the early return, and the reference to match.
+
+> 25 of 25 pass. Running the fight test, then recording your three answers in
+> the issues.
+
+> Now the issue text: 625f's built section.
+
+*[commit] 14650b9d2 - Cooldown timing: bosses are burned to the end, trash keeps its long buffs, and the plan is ninety times quicker*
+
+All three answers are built and committed (14650b9).
+
+- **Bosses burn to the end; trash doesn't.**
+  - **Against a boss** everything gets used, and a buff counts in full however
+    close the end is.
+  - **Against trash** a buff counts only what lands before the end. A cooldown
+    still ready when the pack dies is worth one use in the next pack, and less
+    the longer it would still be on cooldown then.
+  - **So** a 20-second buff isn't spent on a pack 10 seconds from dead, but a
+    single strike still is, because it lands in full.
+  - **Also fixed:** a cooldown that only comes back after a trash fight was
+    worth nothing in the plan. It now counts for what it brings to the next
+    fight.
+- **"Regularly used" means a cooldown of 10 minutes or less.**
+  - Fire Elemental Totem, Army of the Dead and Rebirth are 10 minutes, so they
+    count. Lay on Hands (20 minutes in this version) and Reincarnation (30) are
+    left out.
+  - The 10 minutes is a starting value. Later it can come from each buddy's own
+    record of which cooldowns it uses fight after fight.
+- **Performance.** Your instinct was right: a 30-minute plan took about 90 ms.
+  - Two changes brought it to about 1 ms (0.13 ms for a 5-minute fight):
+    - each buff's average comes from a running total (one subtraction);
+    - the best next moment comes from a running maximum, so no moment is checked twice.
+  - The old step-by-step version stays in the test as a reference, and 400
+    random fights agree with it to within 1e-13.
+  - Equations instead of steps are written into the issue as the later
+    direction.
+
+Tests: 25 pass for the timeline and 20 for the fight's length.
+
+**My design call, for you to review:** the server will treat a fight as a boss
+fight when any enemy in it has the game's boss rank or is on the dungeon's boss
+list. Everything else counts as trash, including rare elites in the open world.
+
+Next is the server side: reading the enemies' health, the worker threads that
+redo each buddy's plan, and passing the result to the talent draw. Like the
+other server files, it will wait for your compile.
 
 --------------------------------------------------------------------------------
 

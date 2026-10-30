@@ -73,7 +73,26 @@ and a cooldown still ready when the fight ends is worth a plain use in
 the next pack, less the longer it would still be cooling then (so a
 20-second buff isn't spent on a pack 10 seconds from dead; a single
 strike, landing whole, still is); against a boss a buff counts whole
-however near the end, and nothing is kept for after. What comes out: the worth of using it the moment it is ready, the best plan's
+however near the end. **Which fights are boss fights** (the owner,
+2026-10-30: "should be for rare elites in the open world as well, but not
+regular elites."): a boss (the game's boss rank, or on the dungeon's boss
+list) or a rare elite; a regular elite is trash. **What is kept for the
+next fight**: one use there at what it is worth there against one here,
+less by the share of a cooldown it would still be cooling when the next
+fight starts. After trash the next pack is the same and pulled at once.
+After a boss with no boss known to follow, nothing, so everything is used;
+before a harder boss more than one, so a big cooldown is saved for it (the
+owner, 2026-10-30, on Bloodlust: "I'm concerned we won't use it... But,
+better to get the full use of a BL on the next boss than waste it on an
+easier boss."). The agent's call, for the server's side: the next boss's
+worth against this one's is the ratio of their expected lengths (each
+boss's health over the party's damage per second; the dungeon's boss list
+gives the next one, and its pull time is guessed from the trash between),
+and Bloodlust and Heroism are planned with the party's lockout as their
+cooldown (Sated and Exhaustion, 10 minutes, read from the spell table;
+their own cooldown is 5). Checked: with a minute of this boss left and a
+harder one 2 minutes after it, Bloodlust is saved; with an equal one, or
+one 10 minutes off, it is spent. What comes out: the worth of using it the moment it is ready, the best plan's
 worth, its first use and every use, and the weight (the first over the
 second: 1 when using it at once is best, less the more holding gains).
 Lining up: a buddy's own cooldowns are planned with each other's planned
@@ -92,11 +111,12 @@ reference, and 400 random fights agree with it. Equations in place of the
 steps (each window's edges as the only moments worth trying) stay the
 later direction.
 
-Checked by `scripts/test-buddy-cooldown-plan` (25 checks): a 10-second
+Checked by `scripts/test-buddy-cooldown-plan` (30 checks): a 10-second
 wait for Bloodlust that costs no use is taken; a wait that costs a whole
 use is taken only for a window worth more than the lost use (x2.5, not
 x1.3); nothing is held for nothing; a boss's end burns everything; trash's
-end keeps a long buff for the next pack; a 120-second cooldown waits for a
+end keeps a long buff for the next pack; a harder boss next keeps
+Bloodlust for it; a 120-second cooldown waits for a
 180-second one and its second use slides onto the other's second. Not yet: the worker threads, the fight's
 length (625h's estimate), the windows from the party's buffs and a boss's
 phases, and the weight handed to the talent draw's multiplier, all in the
