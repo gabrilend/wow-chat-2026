@@ -11,7 +11,7 @@
   197 (the same change for a player), `scripts/change-character-class`
   (the class-change tool)
 - Priority: Medium
-- State: planned; not built (on the session's to-do list to implement)
+- State: built; waits for the compile; not built (on the session's to-do list to implement)
 
 ## Origin
 
@@ -29,15 +29,34 @@ The owner, 2026-10-25:
 
 ## Current Behavior
 
-Not built. A buddy's class is fixed once its roster slot is filled:
-Sargobras offers an owed slot (a `buddy_roster` row with class 0 and no
-buddy) a choice of any class, or of any people (race), of the owner's
-faction, or "I'm flexible", and the buddy module then makes the character.
-Nothing un-fills a slot. The class-change tool
-(`scripts/change-character-class`) can turn any character into another
-class while the world server is stopped, but it does not touch the
-roster, the buddy's gear, or Sargobras.
+**Built 2026-10-30, as decided (a new character with the same name,
+gender and race; game masters only; its belongings mailed on). The choice
+library is committed; the module's code, Sargobras's script and the
+roster's columns wait for the owner's compile and install
+(compiler-checked; the SQL applied twice to a scratch database):**
+- `.buddy reset <name>` (game master, and the console:
+  `scripts/gm-command ".buddy reset <name>"`), in `buddies_reset.cpp`:
+  refused unless the buddy is in the world (its belongings can only be
+  mailed then); mails everything it wears and carries and its money to
+  itself as "Kept for you" (the remake's own mail, now
+  `BuddyMailOldGear`), logs it out, renames it to a placeholder so its
+  name is free, and owes its roster slot again with the race kept and the
+  name, gender and old character written in three new columns
+  (`reset_name`, `reset_gender`, `reset_from`, in E042's SQL).
+- Sargobras (`patches/E066-sargobras/sargobras.lua`): an owed slot with a
+  race offers only that race's classes, no death knight and no races; a
+  pick keeps the race. The choice library (`Choice.menu_for_race`, and
+  `kept_race` in `Choice.resolve`, both copies) is checked by
+  `scripts/test-buddy-choice`: every race's offer, each pick keeping the
+  race, a class it can't play refused, "I'm flexible" among its classes
+  (70,364 checks).
+- The maker (`buddies_create.cpp`): a reset slot is made with its kept
+  name and gender (`BuddyMakeCharacter`'s two new arguments); then
+  `BuddyFinishReset` moves the old character's mail to the new buddy and
+  deletes the old character.
+- Not tried in game yet.
 
+Before 2026-10-30: not built.
 ## Intended Behavior
 
 - **A reset tool** (a script, run with the world server stopped, like the
@@ -78,6 +97,9 @@ roster, the buddy's gear, or Sargobras.
    spells are gone.
 
 ## Open Questions
+
+Gathered 2026-10-28 into 617's own list (question 37), merged with the
+same questions from other sub-issues; answers are written back here.
 
 1. (Answered 2026-10-25: a new one is fine) "we can replace it's
    history. The way that it functions behind the scenes shouldn't be

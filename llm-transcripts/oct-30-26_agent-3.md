@@ -1,7 +1,15 @@
 # Conversation Summary: e143dbfe-ff43-48be-8bd4-4d54fd7a325d
 
-Generated on: 2026-10-30 11:36:46
+Generated on: 2026-10-30 12:02:54
 Models: claude-opus-5-5
+
+## Contents
+
+1. 2026-10-30 11:39, after Request 7 - We're answering open questions so the
+   next basic compile can carry Sargobras, pathfinding and questing work; your
+   answers so far are written into the issues and onto a 22-item todo list.
+   Next: answer the ten waiting questions, starting with buddies offering to
+   trade.
 
 --------------------------------------------------------------------------------
 
@@ -1296,6 +1304,200 @@ differently)
     a faction leader and reappears in that faction's starting zone, with
     Sargobras waiting. Can a player do that again and again, or only once?
     *My call:* again and again, each time noted on the character.
+
+--------------------------------------------------------------------------------
+
+### User Request 8
+
+buddy-bots should mail upgrades to you. They shouldn't open trades with the
+player, they should just accept trades when asked to trade. If a player asks to
+trade with a buddy-bot, they should give any items that are "earmarked" for the
+player to them. So upgrades and stuff. If the player asks for food or water we
+can give them to them as well, but the buddy-bot will always split stacks of
+them to ensure they have some too.
+
+buddy-bots should only mail things when they're in town. Not just capital
+cities, but wherever a mailbox is found. There's a mailbox in the DK starting
+zone that's outside of a town so keep that in mind.
+
+if the buddy-bot says to the player "my bags are full" they might also say "my
+bags are full, can I give you something" and then they should walk to the player
+and follow them in the dynamic arcs and such until combat starts again, or until
+they get a resolution to their concern, which is their full inventory. If the
+player trades with them, they can pass off some stuff, but if they trade and
+then say "go sell" then whichever bots (that heard the "go sell" message) that
+have above a certain threshold of inventory spots taken by sellable things will
+go and sell them. If they give the player a couple items it's likely that they
+still need to sell, but, they might be able to push it off a bit. If their
+inventory is full, their "inventory economy" will encourage them to give items
+away, to the player or to other buddy-bots. If the other buddy-bots are in range
+and they want to give an upgrade or a consumable or whatever, then they should
+just do that automatically through lua or whatever instead of using the trade
+window bot-to-bot. But they should still walk to each other, face each other,
+and do the talking emote with a random 0-1 second delay, then once it's done
+they should both go their separate ways, having exchanged items of note.
+
+
+
+<pasted_content id="415d">
+> 5. Between targets in town, should buddies drift from nearest thing to nearest
+> thing, or also
+>      keep circling the way they do while roaming?
+>      My call: drift only. The circling is for open ground.
+</pasted_content id="415d">
+
+
+
+
+<pasted_content id="415d">
+> 6. The town circle. Today a town visit has a circle of errand spots (trainer,
+> vendor, repair)
+>      that buddies walk between. Your answer last round (fight your way to errands, help the
+>      guards, then talk) seems to replace "errands first, nothing else". Does that answer cover it,
+>      or should the circle stay a separate rule?
+</pasted_content id="415d">
+
+
+the errands are chosen semi-randomly. so it won't be a circle, otherwise the
+buddy-bots will always choose the same tasks each time. They should instead
+build a list of all the things they have to do, and then ping-pong between them.
+If there are monsters along the way, they can fight them, but that's rare.
+
+> 7. How strongly does one talent point pull a buddy toward an ability? A fixed
+> nudge per point,
+>      or as much as the talent changes the ability (a talent adding 15% damage pulls 15%)?
+
+we will handle this in the ability economy system.
+
+
+
+<pasted_content id="415d">
+> 8. Do talents steer only your buddies, or every bot on the server? Every bot
+> would mean a patch
+>      to the bot module.
+>      My call: buddies only for now, behind a switch.
+</pasted_content id="415d">
+
+
+why is it different? It should be every bot. All the things we make should be A.
+sandboxed to a particular player, like how the original wow-chat was designed,
+and B. fully idempotent / functional style, with the only state available being
+the state that is stored on the player, which gets memory freed whenever they
+log out.
+
+
+
+<pasted_content id="415d">
+> 9. A stand-in becoming a buddy. When a stand-in from a battleground or dungeon
+> joins you as a
+>      buddy, does it fill one of your owed buddy slots or replace an existing buddy? And does it
+>      keep its gear?
+</pasted_content id="415d">
+
+
+fills an owed slot and keeps it's gear. Remember, it's only for the correct
+race/class type. If you ask for a shaman and there's an appropriately levelled
+troll shaman, then it'll select that one.
+
+
+
+<pasted_content id="415d">
+> 10. Prestige more than once? You decided that a player retires by talking to a
+> faction leader
+>       and reappears in that faction's starting zone, with Sargobras waiting. Can a player do that
+>       again and again, or only once?
+</pasted_content id="415d">
+
+
+again and again
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 8
+
+> Rewriting the trade issue's intended behavior with your redesign:
+
+> Now the errand ping-pong, talents for every bot, stand-ins and prestige:
+
+> Another session is working on the talent system right now: it built both
+> talent-weight options behind a setting and created new sub-issues on the
+> ability economy. I'll keep my edits there minimal.
+
+I've recorded all your answers word for word. The todo list now has 25 items,
+and nothing is committed yet.
+
+- **Trade issue:** rewritten around your redesign. Buddies never open trades.
+  They mail earmarked upgrades from any mailbox, including the one in the death
+  knight starting zone. They accept your trades, splitting food and water stacks
+  so they keep some. Full bags trigger "can I give you something" and
+  arc-following. "go sell" sends only the buddies over a threshold of sellable
+  items. Buddy-to-buddy handovers happen by script, with the walk, face and talk
+  emote around them.
+- **Your rule about sandboxing every feature to a player** is now in the main
+  issue about every bot playing by the house rules, as how all features are
+  built. Talents steer every bot, not just buddies.
+- **Correction:** I described the "town circle" wrongly last round. It's the
+  circle that marks where a town is, not a loop of errands. Your answer still
+  landed in the right place: errands are now drawn in a semi-random, weighted
+  order.
+- **Another session is working on the talent system right now.** It has built
+  both talent-weight options behind a server setting and is writing new issues
+  about the ability economy. I only added your two answers to its main issue and
+  left the rest alone. Neither of us had a claim on that file, so you may want
+  to tell that session your talent answers are in there.
+
+## Ten more open questions
+
+**In town**
+
+1. **When a buddy in town finishes with one target and looks for the next**,
+   does it just go to whatever is nearest? Or does it also keep up the slow
+   circling it does on open ground?
+   *My call:* nearest only. Circling in a crowd looks odd.
+
+**Trading and mailing**
+
+2. **When you hand a buddy something in a trade,** does it take everything, or
+   judge each item? For example, it could keep an upgrade and hand junk back.
+   *My call:* it takes everything, since you chose to give it.
+3. **The "go sell" threshold.** What share of a buddy's bag spaces filled with
+   sellable things makes it go?
+   *My call:* half.
+4. **What counts as "earmarked for you" besides upgrades?** For example, quest
+   items for your quests, recipes you can learn, or bags bigger than yours.
+   *My call:* all three.
+5. **Should buddies mail money too,** such as anything above what they need for
+   training and repairs? Or only items?
+   *My call:* items only. Their money pays for their own training and repairs.
+
+**Stand-ins**
+
+6. **What is "appropriately levelled" for a stand-in filling a slot?** Exactly
+   the slot's level, within a few levels, or within a 10-level bracket?
+   *My call:* within 3 levels, so it fits the group.
+
+**Prestige** (retiring at a faction leader and starting again)
+
+7. **What level is a buddy after you're reborn?** Back at the level it first
+   joined you (the level-30 buddy is 30 again), or does it stay at its old level
+   and wait for you?
+   *My call:* back to its joining level, so the group stays even.
+8. **Can a death knight be reborn?** And if so, as what, given it starts at
+   level 55?
+   *My call:* yes, starting again at 55 in its own starting zone.
+9. **After several rebirths, which old buddy can come back as "someone
+   familiar"?** Only the latest one, or your choice of any buddy that slot has
+   had?
+   *My call:* your choice, offered by Sargobras.
+
+**Following**
+
+10. **Leaving a boat or zeppelin.** Buddies step aboard and ashore in a straight
+    line, because the walking mesh doesn't cover decks. A gangway with a bend,
+    or a zeppelin tower's platform, may need more than one leg. Do you want this
+    watched in game first, or should I plan multi-leg boarding now from the
+    recorded boardings?
+    *My call:* watch first, then fix only what breaks.
 
 --------------------------------------------------------------------------------
 

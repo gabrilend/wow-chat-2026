@@ -74,6 +74,22 @@ function Choice.menu(RC, team, owner_is_dk)
 end
 -- }}}
 
+-- {{{ function Choice.menu_for_race
+-- What Sargobras offers for a reset slot (617a7), whose race is kept: only
+-- the classes that race can play, death knights left out, { id, name },
+-- sorted by name. No races (the race is the slot's).
+function Choice.menu_for_race(RC, race)
+    local classes = {}
+    local r = RC.races[race]
+    if not r then return classes end
+    for _, c in ipairs(r.classes) do
+        if c ~= DEATH_KNIGHT then classes[#classes + 1] = { id = c, name = RC.classes[c].name } end
+    end
+    table.sort(classes, function(a, b) return a.name < b.name end)
+    return classes
+end
+-- }}}
+
 -- {{{ function Choice.needed_role
 -- The role the guarantee asks for at this slot, or nil. roster: the clan's
 -- chosen or filled buddies, each { class, profile, role (number) }.
@@ -96,6 +112,9 @@ end
 --   a.slot      1..7                       a.roster  (see needed_role)
 --   a.pick      { kind = "class" | "race", id }, { kind = "flexible" }, or
 --               { kind = "any" } (ignored for a DK owner)
+--   a.kept_race a reset slot's race (617a7), or nil: the class must be one
+--               the race plays (no death knight), the race stays; a
+--               flexible pick draws among the race's classes
 -- Returns { class, race, profile, role (number), filled (bool) } or
 -- nil, message (a pick the menu never offers: another faction's race, a
 -- death knight for a non-DK owner, a class the faction can't play).
@@ -105,7 +124,41 @@ function Choice.resolve(a)
     local need       = Choice.needed_role(a.slot, a.roster, a.owner_is_dk)
     local class, race
 
-    if a.owner_is_dk then
+    -- a reset slot (617a7): its race is kept; the class one it plays
+    if a.kept_race and a.kept_race ~= 0 then
+        local r = RC.races[a.kept_race]
+        if not r or r.team ~= a.team then return nil, "the kept race " .. tostring(a.kept_race) .. " is not of the " .. a.team end
+        local playable = {}
+        for _, c in ipairs(Choice.menu_for_race(RC, a.kept_race)) do
+            if a.TD.classes[c.id] then playable[#playable + 1] = c.id end
+        end
+        if a.pick and a.pick.kind == "class" then
+            if not race_can(r, a.pick.id) or a.pick.id == DEATH_KNIGHT then
+                return nil, "a " .. r.name .. " can't be class " .. tostring(a.pick.id) .. " (or a death knight)"
+            end
+            class = a.pick.id
+        elseif a.pick and a.pick.kind == "flexible" then
+            local pool = {}
+            for _, c in ipairs(playable) do
+                local taken = false
+                for _, b in ipairs(a.roster) do if b.class == c and b.profile == EVEN_SHAPE then taken = true end end
+                if not taken then pool[#pool + 1] = c end
+            end
+            if #pool == 0 then return nil, "every class this race plays already has a clan-mate in the even shape" end
+            class = pool[rand(#pool)]
+            local cls = a.TD.classes[class]
+            return { class = class, race = a.kept_race, profile = EVEN_SHAPE,
+                     role = ROLE_NUMBER[cls.shapes[EVEN_SHAPE].role], filled = false }
+        else
+            return nil, "a reset slot takes a class or \"I'm flexible\", not " .. tostring(a.pick and a.pick.kind)
+        end
+        race = a.kept_race
+    end
+
+    if class then
+        -- the kept race's class, chosen above
+
+    elseif a.owner_is_dk then
         class = DEATH_KNIGHT
         local fits = {}
         for _, rid in ipairs(team_races) do

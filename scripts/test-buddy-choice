@@ -170,10 +170,41 @@ for _, team in ipairs({ "alliance", "horde" }) do
     check(n >= 8, team .. " any: only " .. n .. " classes ever drawn")
 end
 
+-- a reset slot (617a7): its race kept; only its classes offered, no death
+-- knight; a class pick keeps the race; a class it can't play is refused;
+-- "I'm flexible" draws among its classes
+for _, team in ipairs({ "alliance", "horde" }) do
+    for rid, race in pairs(RC.races) do
+        if race.team == team then
+            local menu = Choice.menu_for_race(RC, rid)
+            local offered = {}
+            for _, c in ipairs(menu) do
+                offered[c.id] = true
+                check(c.id ~= 6, team .. " reset " .. race.name .. ": a death knight offered")
+                local b, err = Choice.resolve({ RC = RC, TD = TD, Spender = Spender, rand = function(n) return math.random(n) end,
+                    team = team, owner_is_dk = false, slot = 3, roster = {}, pick = { kind = "class", id = c.id }, kept_race = rid })
+                check(b ~= nil and b.race == rid and b.class == c.id, team .. " reset " .. race.name .. " class " .. c.id .. ": " .. tostring(err))
+            end
+            for cid in pairs(RC.classes) do
+                if not offered[cid] and cid ~= 6 then
+                    local b = Choice.resolve({ RC = RC, TD = TD, Spender = Spender, rand = function(n) return math.random(n) end,
+                        team = team, owner_is_dk = false, slot = 3, roster = {}, pick = { kind = "class", id = cid }, kept_race = rid })
+                    check(b == nil, team .. " reset " .. race.name .. ": class " .. cid .. " it can't play was accepted")
+                end
+            end
+            for i = 1, 20 do
+                local b = Choice.resolve({ RC = RC, TD = TD, Spender = Spender, rand = function(n) return math.random(n) end,
+                    team = team, owner_is_dk = false, slot = 3, roster = {}, pick = { kind = "flexible" }, kept_race = rid })
+                check(b ~= nil and b.race == rid and offered[b.class], team .. " reset " .. race.name .. " flexible")
+            end
+        end
+    end
+end
+
 print(string.format("test-buddy-choice: %d checks over %d clans per faction and owner kind", checks, RUNS))
 for _, f in ipairs(fails) do print("FAIL " .. f) end
 print(#fails == 0 and "Result: all checks passed." or ("Result: " .. #fails .. " failure(s) shown."))
 os.exit(#fails == 0 and 0 or 1)
 -- ==== footer of test-buddy-choice ====
--- lines:      179
+-- lines:      210
 -- ==== end of footer ====
