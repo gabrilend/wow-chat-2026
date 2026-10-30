@@ -148,6 +148,7 @@ lowest priority first, each line its header's own (`scripts/plan-patches basic`)
 |      700 | B060 | source | crowd control lasts its full length however often it lands: no diminishing returns, no 10-second PvP cap (taunts kept) |
 |      710 | B061 | source | a guild leader's character may be deleted: every basic player leads its buddies' clan                                  |
 |      720 | B062 | source | coins alone on a body are any member's of the group it fell to (issue 155z17)                                          |
+|      730 | B063 | source | a whisper to Sargobras crosses the faction line; every other whisper still doesn't (issue 617b2)                       |
 
 **After the compile and install (install steps and settings, mixed by priority):**
 

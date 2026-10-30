@@ -28,12 +28,32 @@ The owner, 2026-10-14:
 
 ## Current Behavior
 
-Not built. Sargobras exists only as creatures (the valley one, 6170001;
-the wandering one, 6170002 and 6170003 with his hat), driven by dialogue
-menus in `patches/E066-sargobras/sargobras.lua`. A whisper can only be sent to a
-logged-in character, so today "/whisper Sargobras" answers "No player
-named 'Sargobras' is currently playing." Choosing a buddy means walking up
-to one of the creatures and clicking a dialogue line.
+**Built 2026-10-30, not yet compiled or run (steps 2 to 5 below):**
+- the reader: `patches/E066-sargobras/helpers/lib/sargobras-whisper.lua`
+  turns a whisper into one of his menu's choices (a class, a people,
+  "flexible", "help", "owed", or unknown), checked offline by
+  `scripts/test-sargobras-whisper` (67 checks, a quick test);
+- the handler: `sargobras.lua` hears a whisper to the character named
+  Sargobras (the whisper event) and does what it asks with the menu's own
+  steps and refusals; the one Sargobras creature present for the
+  whisperer with the lowest tier answers aloud (a valley Sargobras counts
+  lowest), or the character answers by whisper when none is present;
+- the faction rule: source patch B063 lets a whisper to Sargobras through
+  the cross-faction test (basic), every other one still refused.
+
+**Not built (step 1): the character itself.** Nothing makes or logs in a
+character named Sargobras yet, so a whisper still finds nobody and the
+handler never fires. Making him (on his own account, the unseen guild
+master's, 630) and logging him in at server start is the buddy module's
+work, in files another session holds (the module's loader and stand-in
+code); it waits for them.
+
+Before this, Sargobras existed only as creatures (the valley one,
+6170001; the wandering one, 6170002 and 6170003 with his hat), driven by
+dialogue menus in `patches/E066-sargobras/sargobras.lua`. A whisper can
+only be sent to a logged-in character, so "/whisper Sargobras" answers "No
+player named 'Sargobras' is currently playing." Choosing a buddy means
+walking up to one of the creatures and clicking a dialogue line.
 
 Facts that shape the design:
 
@@ -88,13 +108,19 @@ everyone else.
 | Whisper | Does |
 |---|---|
 | `priest` (any class name) | chooses a buddy of that class for the lowest owed slot, by the same rules the dialogue line uses (`lib/buddy-choice.lua`), spec included: the buddy is made exactly as one chosen at his menus would be |
-| `shadow priest` (spec, then class) | the same, with that spec profile |
+| `shadow priest` (spec, then class) | the same as `priest`: spec words are read past, the spec drawn as at his menus (owner, 2026-10-28) |
+| `troll priest` (a people and a class) | the class is taken, the people drawn as at the class menu |
+| `flexible` (or `any`, `anyone`) | his "I'm flexible." line |
 | `troll` (any race name) | chooses by race, as the race dialogue lines do |
 | `help` | lists the commands |
 | `owed` | says how many buddies the whisperer is owed |
 
 A whisperer owed nothing gets his usual "nothing owed" answer. A
-whisper he does not understand gets a joke and the help line.
+whisper he does not understand gets a joke and the help line. The
+menu's refusals hold for whispers too: a death knight is told its
+companions come from Acherus, and an owner with no clan yet is told to
+find him and name it first (the naming uses the client's own pop-up box,
+which only his menu can open).
 
 **In the friends list, by choice only.** The owner, 2026-10-20 (while
 designing the legendary friends, 920):

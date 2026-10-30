@@ -71,6 +71,7 @@ local Spender = dofile(OWN .. "lib/sargobras-buddy-talent-spender.lua")
 local Choice  = dofile(OWN .. "lib/sargobras-buddy-choice.lua")
 local Valleys = dofile(OWN .. "data/sargobras-starting-valleys.lua")
 local Deck    = dofile(OWN .. "lib/sargobras-valley-deck.lua")
+local Whisper = dofile(OWN .. "lib/sargobras-whisper.lua")
 
 local VALLEY, WANDERER                   = 6170001, 6170002
 -- the wanderer in Don Rigoberto's Lost Hat, one time in ten (owner,
@@ -85,6 +86,7 @@ local CAMPFIRE                           = 1798           -- a stock "Campfire" 
 local PLAYER_EVENT_ON_LOGIN        = 3
 local PLAYER_EVENT_ON_LOGOUT       = 4
 local PLAYER_EVENT_ON_LEVEL_CHANGE = 13
+local PLAYER_EVENT_ON_WHISPER      = 19     -- mod-ale Hooks.h: (event, player, msg, Type, lang, receiver)
 local PLAYER_EVENT_ON_MAP_CHANGE   = 28     -- mod-ale Hooks.h: (event, player), after a loading screen
 local CREATURE_EVENT_ON_REACH_WP   = 6      -- mod-ale Hooks.h: (event, creature, type, id), a point reached
 local GOSSIP_EVENT_ON_HELLO        = 1
@@ -253,6 +255,11 @@ local function owed_slots(owner)
     return list
 end
 local function owed_slot(owner) return owed_slots(owner)[1] end
+end
+-- }}}
+
+end
+-- }}}
 -- }}}
 
 -- {{{ local function clan_roster
@@ -531,6 +538,7 @@ local function show_menu(player, creature, page)
         player:GossipMenuAddItem(GOSSIP_ICON_CHAT, "(test) Type our clan's name in a box.", 0, INTID_NAME_BOX, true, CLAN_POPUP)
     elseif owed_slot(player:GetGUIDLow()) then
         local classes, races = Choice.menu(RC, team_name(player), false)
+        end
         for _, c in ipairs(classes) do
             local text = c.name                 -- just the name (owner, 2026-09-29: "\"paladin\" or \"druid\" [...] and that's it")
             player:GossipMenuAddItem(CLASS_ICON[c.id] or GOSSIP_ICON_CHAT, text, 0, INTID_CLASS + c.id)
@@ -964,6 +972,112 @@ local function on_select(event, player, creature, sender, intid, code)
 end
 -- }}}
 
+-- {{{ whispers (617b2)
+-- A whisper to the character named Sargobras works his menus from afar
+-- (owner, 2026-10-30: "we can interact with the buddy-making menus, not open
+-- them"). The words are read by lib/sargobras-whisper.lua; what they ask is
+-- done here by the same steps as a menu line.
+--
+-- The character is his own account's, the unseen guild master's (630); it
+-- only receives whispers. Until it exists in the world (made and logged in
+-- by the buddy module, not yet built) no whisper reaches him, and this
+-- handler simply never fires.
+local SARGOBRAS_NAME = "Sargobras"
+local LANG_UNIVERSAL = 0
+
+-- {{{ local function answering_sargobras
+-- The one Sargobras creature who answers this whisperer: of those present
+-- for them (a valley Sargobras, anyone's; a wanderer, only his own owner's),
+-- the lowest tier (owner, 2026-10-30: "a single sargobras responds. If there
+-- are Sargobrases from multiple level tiers, then the lowest level one is
+-- utilized first."). A valley Sargobras serves the first owed slot, so he
+-- counts as the lowest; a wanderer's tier is the slot he serves. nil when
+-- none is present: then the character itself answers, by whisper.
+local function answering_sargobras(player)
+    local owner, best, best_tier = player:GetGUIDLow(), nil, nil
+    for _, entry in ipairs({ VALLEY, WANDERER, WANDERER_HATTED }) do
+        for _, c in ipairs(player:GetCreaturesInRange(SIGHT, entry) or {}) do
+            local low  = c:GetGUIDLow()
+            local tier = (entry == VALLEY) and 0 or slot_of[low]
+            -- a wanderer serves only his own owner; one with no known slot
+            -- (left from before a reload) is passed over
+            if tier and (entry == VALLEY or owner_of[low] == owner) and (not best_tier or tier < best_tier) then
+                best, best_tier = c, tier
+            end
+        end
+    end
+    return best
+end
+-- }}}
+
+-- {{{ local function whisper_answer
+-- How he answers: aloud through the creature present (as at his menus), or
+-- by whisper from the character when none is.
+local function whisper_answer(player, creature, sargobras, text)
+    if creature then return creature:SendUnitSay(text, 0) end
+    sargobras:Whisper(text, LANG_UNIVERSAL, player)
+end
+-- }}}
+
+-- {{{ local function whisper_pick
+-- A class, a people or "flexible": the same pick as the menu line of that
+-- name, with the menu's own refusals before it.
+local function whisper_pick(player, creature, sargobras, pick)
+    local owner = player:GetGUIDLow()
+    if player:GetClass() == CLASS_DEATH_KNIGHT then
+        return whisper_answer(player, creature, sargobras, "Your companions come from Acherus, not from me.")
+    end
+    if not player:IsInGuild() then
+        -- the clan is named at his menu first (the naming opens the client's own box)
+        return whisper_answer(player, creature, sargobras, "First a name for your clan. Come and find me, and we'll write it down.")
+    end
+    local slot = creature and serving_slot(owner, creature) or owed_slot(owner)
+    if not slot then
+        return whisper_answer(player, creature, sargobras, "Nobody is owed to you just now. Keep climbing.")
+    end
+    local b = choose(player, slot, clan_roster(owner), pick)
+    if not b then
+        return whisper_answer(player, creature, sargobras, "Hm. The stars are cloudy tonight. Ask me again in a moment.")
+    end
+    local race_name = RC.races[b.race].name
+    if pick.kind == "flexible" then
+        whisper_answer(player, creature, sargobras, "Good, you shall find others like you soon.")
+    else
+        whisper_answer(player, creature, sargobras, string.format("%s %s %s. They'll find you soon.",
+            article(race_name), race_name, RC.classes[b.class].name))
+    end
+    if creature and is_wanderer(creature:GetEntry()) then go_on_break(creature, player) end
+end
+-- }}}
+
+-- {{{ what each whisper does
+-- A dispatch table: the reader's kinds to their handlers.
+local WHISPER_DOES = {
+    class    = function(player, creature, sargobras, w) whisper_pick(player, creature, sargobras, { kind = "class", id = w.id }) end,
+    race     = function(player, creature, sargobras, w) whisper_pick(player, creature, sargobras, { kind = "race",  id = w.id }) end,
+    flexible = function(player, creature, sargobras, w) whisper_pick(player, creature, sargobras, { kind = "flexible" }) end,
+    help     = function(player, creature, sargobras, w) whisper_answer(player, creature, sargobras, Whisper.help_line()) end,
+    owed     = function(player, creature, sargobras, w)
+        local n = #owed_slots(player:GetGUIDLow())
+        whisper_answer(player, creature, sargobras, n == 0 and "Nobody is owed to you just now."
+            or string.format("%d still coming to you.", n))
+    end,
+    unknown  = function(player, creature, sargobras, w)
+        whisper_answer(player, creature, sargobras, JOKES[math.random(#JOKES)])
+        whisper_answer(player, creature, sargobras, Whisper.help_line())
+    end,
+}
+-- }}}
+
+-- {{{ local function on_whisper
+local function on_whisper(event, player, msg, msg_type, lang, receiver)
+    if not receiver or receiver:GetName() ~= SARGOBRAS_NAME then return end
+    local w = Whisper.parse(RC, msg)
+    WHISPER_DOES[w.kind](player, answering_sargobras(player), receiver, w)
+end
+-- }}}
+-- }}}
+
 -- {{{ player events
 -- {{{ local function join_clan_later
 -- A buddy that appears without being in its owner's clan joins it 5
@@ -1032,6 +1146,7 @@ if roster_ready() then
         RegisterCreatureEvent(entry, CREATURE_EVENT_ON_REACH_WP, on_reach)
     end
     RegisterPlayerEvent(PLAYER_EVENT_ON_CHAT,         on_chat)
+    RegisterPlayerEvent(PLAYER_EVENT_ON_WHISPER,      on_whisper)
     for _, entry in ipairs({ VALLEY, WANDERER, WANDERER_HATTED }) do
         RegisterCreatureGossipEvent(entry, GOSSIP_EVENT_ON_HELLO,  on_hello)
         RegisterCreatureGossipEvent(entry, GOSSIP_EVENT_ON_SELECT, on_select)
