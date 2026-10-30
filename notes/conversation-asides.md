@@ -541,3 +541,5 @@ Word for word, each written into its plan:
   ultimately applies to equipment choices, talent picks, EVERYTHING. But
   it's a large goal. So we gotta iterate towards it by bringing each
   system into alignment one-by-one."
+- (625l) "if a player has a cooldown ready but they're holding it, then
+  that probably means they want to save for a burn. ..." (in full in 625l)

@@ -1,6 +1,6 @@
 # Conversation Summary: e143dbfe-ff43-48be-8bd4-4d54fd7a325d
 
-Generated on: 2026-10-30 12:45:16
+Generated on: 2026-10-30 12:59:01
 Models: claude-opus-5-5
 
 ## Contents
@@ -22,6 +22,11 @@ Models: claude-opus-5-5
    blocks the next basic compile, focused on Sargobras, pathfinding and
    questing. Every answer so far is in its issue file, and nothing is committed.
    Next: commit just my changes when you say so.
+5. 2026-10-30 12:48, after Request 12 - We're answering open questions on
+   buddies, Sargobras and pathfinding for basic's next compile, with every
+   answer recorded word for word in the issues and nothing committed yet. Next
+   is your answers to the ten questions on dangerous selling trips, item plans
+   and bots with buddies.
 
 --------------------------------------------------------------------------------
 
@@ -1879,6 +1884,236 @@ bot)
     four exploring patterns in turn, by its character number. Should you be able
     to pick the pattern per buddy instead, or should it stay automatic?
     *My call:* automatic, with a command to override it for testing.
+
+--------------------------------------------------------------------------------
+
+### User Request 13
+
+if a buddy-bot is full inventory but not selling, they should still loot the
+bodies but leave the items behind. If they need to need/greed an upgrade item
+(need specifically, if inventory is full they pass on greed) then they can
+destroy their least valuable item to make space. Something they already intended
+to get rid of anyway.
+
+
+
+<pasted_content id="415d">
+> 1. How does a buddy judge "safe enough"? One way: compare the group's combined
+> strength (levels
+>      and roles) against the strongest monsters along the route, as seen right now. Or something
+>      else you picture?
+</pasted_content id="415d">
+
+
+they should, always, have a general conception of what kinds of foes they alone
+can defeat. We will use this mental model. They should also note who would be
+travelling back with them, and build up an impromptu party so they walk
+together. They should try and generally walk in formation for this but it's okay
+if they drift apart, so long as they are able to help each other when needed.
+
+> 2. Who stays with you? If several buddies leave to sell, should enough always
+> stay with you, so
+>      you're never left alone deep in Outland? Or can they all go if they all need to?
+
+they might leave you in the dust.
+
+
+
+<pasted_content id="415d">
+> 3. The hearthstone. Buddies keep their hearthstones. Should a scared buddy
+> hearth to town to
+>      sell when its hearthstone is ready, instead of walking? Then it rejoins you the way it would
+>      after any separation.
+</pasted_content id="415d">
+
+
+a scared buddy will be scared on the return trip as well. They should return
+together. If one hearths, they should all hearth, and ride back to you if
+needed. This also isn't just outland, a player could be level 30 and questing in
+the hinterlands if they want.
+
+
+
+<pasted_content id="415d">
+> 5. The list of plans. I wrote: wear it, keep it for a recipe, keep it to use,
+> earmark it for
+>      you, give it to a clan-mate, sell to a vendor, auction it. Should "disenchant it" be added
+>      for buddies with enchanting, or anything else?
+</pasted_content id="415d">
+
+
+yeah. any use you can think of.
+
+> 6. Seeing the plans. Should you be able to see a buddy's plans for what it
+> carries, for example
+>      a command that lists each item and what it's for? Or is that only for logs?
+
+nah. They might tell the player if asked when we set up llm capabilities but
+that's for later.
+
+> 7. How is a bot's clan named? From a list of names, from the bot's own name
+> ("Matis's Kin"), or
+>      chosen by the bot itself?
+
+the bot chooses. We can build a system for that later. For now, just give it a
+name from the same way we generate buddy-bot names.
+
+> 8. When an alt bot leaves your party to adventure alone, do its buddies go
+> with it as its own
+     group?
+
+yes, it is a player.
+
+> 9. Random bots: do they get buddies too, or are they owners with no buddies?
+> There can be
+>      hundreds of random bots, and each buddy is a whole extra character on the server.
+
+they get buddy-bots too. We won't have too many of them.
+
+
+
+<pasted_content id="415d">
+> 10. The four ways of exploring a place. Today each buddy is given one of four
+> exploring patterns
+>       in turn, by its character number. Should you be able to pick the pattern per buddy instead,
+>       or should it stay automatic?
+</pasted_content id="415d">
+
+--------------------------------------------------------------------------------
+
+### User Request 14
+
+if a buddy-bot is full inventory but not selling, they should still loot the
+bodies but leave the items behind. If they need to need/greed an upgrade item
+(need specifically, if inventory is full they pass on greed) then they can
+destroy their least valuable item to make space. Something they already intended
+to get rid of anyway.
+
+
+
+<pasted_content id="415d">
+> 1. How does a buddy judge "safe enough"? One way: compare the group's combined
+> strength (levels
+>      and roles) against the strongest monsters along the route, as seen right now. Or something
+>      else you picture?
+</pasted_content id="415d">
+
+they should, always, have a general conception of what kinds of foes they alone
+can defeat. We will use this mental model. They should also note who would be
+travelling back with them, and build up an impromptu party so they walk
+together. They should try and generally walk in formation for this but it's okay
+if they drift apart, so long as they are able to help each other when needed.
+
+> 2. Who stays with you? If several buddies leave to sell, should enough always
+> stay with you, so
+>      you're never left alone deep in Outland? Or can they all go if they all need to?
+
+they might leave you in the dust.
+
+
+
+<pasted_content id="415d">
+> 3. The hearthstone. Buddies keep their hearthstones. Should a scared buddy
+> hearth to town to
+>      sell when its hearthstone is ready, instead of walking? Then it rejoins you the way it would
+>      after any separation.
+</pasted_content id="415d">
+
+a scared buddy will be scared on the return trip as well. They should return
+together. If one hearths, they should all hearth, and ride back to you if
+needed. This also isn't just outland, a player could be level 30 and questing in
+the hinterlands if they want.
+
+
+
+<pasted_content id="415d">
+> 5. The list of plans. I wrote: wear it, keep it for a recipe, keep it to use,
+> earmark it for
+>      you, give it to a clan-mate, sell to a vendor, auction it. Should "disenchant it" be added
+>      for buddies with enchanting, or anything else?
+</pasted_content id="415d">
+
+yeah. any use you can think of.
+
+> 6. Seeing the plans. Should you be able to see a buddy's plans for what it
+> carries, for example
+>      a command that lists each item and what it's for? Or is that only for logs?
+
+nah. They might tell the player if asked when we set up llm capabilities but
+that's for later.
+
+> 7. How is a bot's clan named? From a list of names, from the bot's own name
+> ("Matis's Kin"), or
+>      chosen by the bot itself?
+
+the bot chooses. We can build a system for that later. For now, just give it a
+name from the same way we generate buddy-bot names.
+
+> 8. When an alt bot leaves your party to adventure alone, do its buddies go
+> with it as its own
+     group?
+
+yes, it is a player.
+
+> 9. Random bots: do they get buddies too, or are they owners with no buddies?
+> There can be
+>      hundreds of random bots, and each buddy is a whole extra character on the server.
+
+they get buddy-bots too. We won't have too many of them.
+
+
+
+<pasted_content id="415d">
+> 10. The four ways of exploring a place. Today each buddy is given one of four
+> exploring patterns
+>       in turn, by its character number. Should you be able to pick the pattern per buddy instead,
+>       or should it stay automatic?
+</pasted_content id="415d">
+
+
+eventually they will adjust themselves to get through certain terrain according
+to which movement profile they think would work the best. I navigate a trail
+differently than pavement.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 14
+
+I've recorded all the answers word for word:
+
+- **Full bags, no trip possible:** the buddy still loots its kills but leaves
+  the items in them. In a loot roll it passes where it would greed. Where it
+  would need an upgrade, it destroys its least valuable item, one it already
+  meant to get rid of, to make room.
+- **Going to sell:** each buddy always has a sense of which foes it alone can
+  beat, and weighs the way's live danger against that. Buddies that go form an
+  impromptu party and walk loosely in formation, close enough to help each
+  other. They may leave you in the dust. They come back together, just as scared
+  on the return trip. If one hearths, they all hearth, then ride back to you if
+  needed. This applies anywhere you're beyond their strength, like a level 30 in
+  the Hinterlands, not just Outland.
+- **Item plans:** they cover every use an item can have, disenchanting included.
+  You won't see them until buddies can talk about them through the language
+  model.
+- **Bots with buddies:** a bot's clan is named the way buddy names are drawn for
+  now, and the bot will choose its own name later. An alt bot's buddies go with
+  it, since it is a player. Random bots get buddies too.
+- **Exploring patterns:** buddies will eventually pick their way of moving by
+  the ground they're on. Until then, it stays by character number.
+
+The todo list now has 29 items, and nothing is committed.
+
+Your answers raised two new questions:
+
+1. **Where does a buddy's sense of "foes I can beat" come from?** It could be
+   worked out from levels, gear and the monster's rank (normal, elite), or
+   learned from its own fights, which are already going to be written down. Or
+   both, starting from levels and adjusted by experience?
+   *My call:* both.
+2. **How many random bots are "not too many"?** Each one with buddies adds
+   several characters to the server. Should there be a cap on the total, or will
+   you just keep the random-bot count low?
+   *My call:* no extra cap. The random-bot count you already set governs it.
 
 --------------------------------------------------------------------------------
 

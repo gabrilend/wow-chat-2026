@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-30 12:46:07
+Generated on: 2026-10-30 12:52:18
 Models: claude-opus-5-5
 
 ## Contents
@@ -14537,6 +14537,108 @@ no hand-set shares.
 One question for the buff targeting: how far back should "just jumped" look? The
 last few seconds would catch a single cooldown being used. A longer stretch
 would catch a whole burst starting.
+
+--------------------------------------------------------------------------------
+
+### User Request 141
+
+<pasted_content id="12ab">
+> One accident with the compile script: the commit took the whole file, so it
+> also carried
+> my 28 October change that runs the quick tests only after a failed build. That
+> change was
+> waiting for you to run it first, and now it's committed under the module-list
+> message.
+> Its plan is now committed with a note saying where it went. Nobody else's work
+> was
+  involved.
+</pasted_content id="12ab">
+
+
+is this the current status because it should be
+
+
+
+<pasted_content id="12ab">
+> - Each party member, players included, gets a worth: the buff's effect run
+> through that
+>     member's own abilities and weights. A caster gains more from Power Infusion than a
+>     rogue does; the emptiest healer gains most from Innervate.
+</pasted_content id="12ab">
+
+
+maybe when a buddy-bot enters a party, they build a list of the characters who
+might benefit from it, and then it only iterates through them when it's time to
+cast? They should be able to coordinate with the other buddy's cooldown economy
+to optimize uptime and such. And by coordinate I just mean like... when they can
+cast the buff, they look at the other buddy-bot's timing for the rest of the
+fight and they try and slot it into whichever buddy-bot has the best outcome for
+it. Keep in mind the cooldown economy where buddy-bots might be able to cast
+more than once in a fight, trying to optimize uptime! Anyway when joining a
+party we should make a mental list of each of the targets that *might* benefit
+from it, and then only iterate through them to see who we should cast it on.
+
+> - A member whose worth just jumped, because they just used a cooldown, is
+> preferred. As
+>     you said, that rise is the sign they're bursting.
+
+this is an alternative. Use whichever feels best.
+
+>   "Everything collapses to damage and health" is now
+> strategems/everything-is-damage-and-health.md. No worth is set by hand: every
+> weight is a
+  route to someone's damage dealt or health kept.
+
+technically this ultimately applies to equipment choices, talent picks,
+EVERYTHING. But it's a large goal. So we gotta iterate towards it by bringing
+each system into alignment one-by-one.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 141
+
+> Checking what the 1100d plan's status line says now.
+
+*[commit] 28d8694c1 in wow-chat-2026 - *
+
+> Tidying a doubled heading in the buff plan.
+
+*[commit] 714a6d57f in wow-chat-2026 - *
+
+All three are written into the plans and committed (28d8694c1, 714a6d57f).
+
+**1100d's status:** its plan now says "built 28 October; committed 30 October
+(by accident, with the module list); not yet run by you". It's still waiting for
+your first compile with it.
+
+**Buff targeting**, updated to your design:
+- When a buddy that can give a targeted buff joins a party, or the party
+  changes, it makes a short list of who might benefit. For Power Infusion that's
+  mana casters; for Innervate it's anyone with mana to refill. Only that list is
+  checked later.
+- When the buff is ready, it looks at each listed buddy's plan for the rest of
+  the fight. It gives the buff where the outcome is best: landing on that
+  buddy's own burst, and timed so the buff comes back for another good use.
+- For players, whose plans the server can't see, the jump in their worth after
+  using a cooldown is the sign instead. That's my pick from your two options:
+  plans for buddies, the jump for players. The only open question left is how
+  far back the jump looks.
+
+**The damage-and-health strategem** now has a table of every system that weighs
+things, and how far each is aligned:
+
+| System | Aligned |
+|---|---|
+| Talent draw | partly |
+| Window values | partly |
+| Buff targeting | planned |
+| The economies | planned |
+| Gear choice | not yet |
+| Talent picks | not yet |
+| Gems | not yet |
+| Loot rolls | not yet |
+
+Each gets brought in one at a time, with the table kept current.
 
 --------------------------------------------------------------------------------
 

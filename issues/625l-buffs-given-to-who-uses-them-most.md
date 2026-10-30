@@ -83,6 +83,29 @@ rules).
   timeline says when it will burst, so buddies are slotted by their
   plans; a player's isn't known, so for players the jump in worth (a
   cooldown just used) is the sign instead.
+- **A player saving a cooldown is waited for, then not** (the owner,
+  2026-10-30, word for word: "if a player has a cooldown ready but
+  they're holding it, then that probably means they want to save for a
+  burn. If we can and it would benefit them, we can save the buddy-bot's
+  buff for the player's burn phase - this is more satisfying than seeing
+  it go to a bot. BUT if the player keeps holding and holding then we can
+  give them a negative malus to the buddy-bot's weight for them for that
+  buff in particular, and at a certain point it'll just make more sense
+  to use it on a buddy-bot instead. This persists until the player logs
+  out again. Possibly when the group disbands or the player or that
+  buddy-bot leaves it, whichever is easier to implement."). So:
+  - a player with a big cooldown ready and unused is read as saving it for
+    a burn; while the buff would serve that burn well, the buddy holds the
+    buff for it (a player's burn is worth more than a buddy's: it is the
+    one the player sees);
+  - each time the player keeps holding past a good moment, their weight
+    for that buff, from that buddy, takes a malus that grows, until giving
+    it to a buddy wins;
+  - the malus is kept with the buddy's list of who might benefit (made on
+    joining), so it lasts until that list is made again: the party
+    disbands, the player or that buddy leaves it, or the player logs out
+    (the agent's call, the easier of the owner's two: one rule covers
+    all of them).
 - **How the jump is read.** A member whose worth has just jumped (they just
   used a cooldown, so their next seconds are worth more) is preferred:
   the rise itself is the sign that "this person is blowing their
@@ -107,3 +130,6 @@ rules).
 1. How far back should "just jumped" look: the last few seconds (a
    cooldown just used), or long enough to see a whole burst start?
    Now asked only for players (buddies are slotted by their plans).
+2. How long may a player hold a ready cooldown before the malus starts:
+   from its first good moment (Bloodlust up, the boss's weak phase), or
+   after a few seconds of the cooldown sitting ready whatever is happening?
