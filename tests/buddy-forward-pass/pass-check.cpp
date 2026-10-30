@@ -149,6 +149,31 @@ int main()
     auto calmPriest = Leans(s, calm, 2, PER_HOUR);
     check(near(calmPriest["flash heal"], 1.0) && near(calmPriest["pain suppression"], 1.0), "the tank healed faster than hurt: no lean toward the emergencies");
 
+    // windows already open: Bloodlust on the rogue, who deals all the
+    // party's damage, 40 seconds left of it. The boss's health was seen
+    // falling 1000 a second with Bloodlust on, so 769 without: 40 seconds at
+    // 1000 (40000), the last 20000 at 769, 26 more: 66 seconds, not 60
+    {
+        Snapshot w = s; Memory mw;
+        for (int t = 1; t <= 30; ++t)
+        {
+            mw.Add({ double(t - 1), HIT, BOSS, TANK, 0, RAW * through, true });
+            mw.Add({ double(t - 1), HEAL, HEALER, TANK, 0, 4000, false });
+            mw.Add({ double(t - 1), HIT, ROGUE, BOSS, 0, 1000, true });
+            mw.Sample(t, 90000 - 1000.0 * t);
+        }
+        mw.Forget(30);
+        check(OpenWindows(w, mw).empty(), "no empowering buff on anyone: no window open");
+        w.party[3].marks = { { 2825, 40, 1, ROGUE, {} } };
+        auto open = OpenWindows(w, mw);
+        check(open.size() == 1 && near(open[0].factor, 1.3) && near(open[0].length, 40), "Bloodlust on the rogue doing all the damage: the party's damage x1.3 for its 40 seconds");
+        Verdict vw = Step(w, mw);
+        check(near(vw.left, 40 + 20000 / (1000 / 1.3), 1e-6), "the fall measured under Bloodlust counted once: 66 seconds left, not 60");
+        w.party[3].marks = {};
+        w.party[1].marks = { { 31884, 20, 1, OFFTANK, {} } };
+        check(OpenWindows(w, mw).empty(), "Avenging Wrath on the paladin, who has dealt nothing: no window on the party's damage");
+    }
+
     std::printf("\n%d passed, %d failed\n", passed, failed);
     return failed == 0 ? 0 : 1;
 }

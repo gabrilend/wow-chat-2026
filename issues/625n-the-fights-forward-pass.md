@@ -12,7 +12,7 @@
 - Priority: High
 - State: in progress (all six layers built and tested offline; the
   server's side, the draw's hookup included, written and waiting for the
-  compile; replays, casts, cooldowns and windows read from the game next)
+  compile; replays, casts and cooldowns read from the game next)
 
 ## Origin
 
@@ -141,8 +141,8 @@ level, target, marks, the sorted threat list with each entry's state,
 taunt and melee reach). The snapshot and a copy of the minute go to a
 pool of worker threads, which run the step and keep the party's latest
 verdict; the pool stops at shutdown. `.buddy fight` prints it. Not read
-yet: casts in progress, cooldowns, the windows open, the group's gold per
-hour (gold counts nothing until it is).
+yet: casts in progress, cooldowns, the group's gold per hour (gold counts
+nothing until it is).
 
 **Layer 6, the answers, built 2026-10-30** (the arithmetic committed and
 tested; its server half waiting for the compile with the rest). For each
@@ -166,6 +166,18 @@ paladin's Lay on Hands x1.13 and its taunt x1.02, the priest's Pain
 Suppression x1.12; the tank's own taunt and Mortal Strike don't lean; in
 the calm fight nothing leans toward the emergencies. A party of four's
 leans take about 2.4 milliseconds.
+
+**The windows already open, 2026-10-30 (committed, offline):** the
+empowering buffs on the party now (any in the window table: Bloodlust,
+Heroism, Avenging Wrath and the rest, matched by their aura's spell) are
+windows on the party's damage, each on its wearer's share of the party's
+damage over the minute, for the time it has left (`OpenWindows`). The
+enemies' fall measured over the last ten seconds is taken as measured
+under them, so the steady rate is the measured one over them and they are
+counted once, where they still run. Checked (31 checks in all): Bloodlust
+on the rogue doing all the damage with 40 seconds left makes a minute's
+fight 66 seconds; Avenging Wrath on a paladin who has dealt nothing opens
+no window.
 Nothing yet takes the snapshot, keeps the history, runs the layers on
 worker threads or hands their verdict to the draw. The page
 `docs/HTML/fight-forward-pass.html` (made by

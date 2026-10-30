@@ -107,6 +107,34 @@ namespace BuddyForwardPass
     }
     // }}}
 
+    // {{{ OpenWindows
+    // The empowering buffs on the party now, as windows on its damage (the
+    // fight's end comes sooner while they last): each buff in the window
+    // table (buddies_window_buffs.h: Bloodlust, Heroism, Avenging Wrath ...)
+    // on a member, its haste and damage on that member's share of the
+    // party's damage over the minute, for the time it has left. Bloodlust on
+    // all five counts whole; Avenging Wrath on one paladin, its share.
+    inline std::vector<BuddyPlan::Window> OpenWindows(Snapshot const& s, Memory const& memory)
+    {
+        std::vector<BuddyPlan::Window> out;
+        double partyDealt = 0.0;
+        for (Member const& m : s.party) partyDealt += memory.DealtPerSecond(m.id, s.t);
+        if (partyDealt <= 0.0) return out;
+        for (Member const& m : s.party)
+        {
+            double share = memory.DealtPerSecond(m.id, s.t) / partyDealt;
+            for (Mark const& k : m.marks)
+                for (BuddyWindow::Buff const& b : BuddyWindow::BUFFS)
+                    if (b.spell == k.spell && k.secondsLeft > 0.0)
+                    {
+                        double g = (1.0 + b.gives.haste) * (1.0 + b.gives.damage);
+                        if (g != 1.0 && share > 0.0) out.push_back({ 0.0, k.secondsLeft, 1.0 + share * (g - 1.0) });
+                    }
+        }
+        return out;
+    }
+    // }}}
+
     // {{{ Step
     // One step: the snapshot and the minute in, the verdict out. `extras`:
     // marks tried on top (Try); they change the curves, not what the minute
@@ -120,7 +148,11 @@ namespace BuddyForwardPass
         // layer 1: the fight's time left
         double enemiesHealth = 0;
         for (Enemy const& e : s.enemies) enemiesHealth += e.health;
-        BuddyFight::Guess g = memory.FightLeft(s.t, enemiesHealth, s.windows);
+        std::vector<BuddyPlan::Window> windows = s.windows, open = OpenWindows(s, memory);
+        windows.insert(windows.end(), open.begin(), open.end());
+        double under = 1.0;
+        for (BuddyPlan::Window const& w : open) under *= w.factor;          // they were on while the fall was measured
+        BuddyFight::Guess g = memory.FightLeft(s.t, enemiesHealth, windows, 10.0, under);
         v.leftKnown = g.known;
         v.left = g.known ? g.seconds : PartyHorizon(s);
 

@@ -182,10 +182,14 @@ namespace BuddyFightState
             _samples.push_back({ t, enemiesHealth });
             while (!_samples.empty() && _samples.front().t < t - _window) _samples.pop_front();
         }
-        BuddyFight::Guess FightLeft(double now, double enemiesHealth, std::vector<BuddyPlan::Window> const& bursts, double look = 10.0) const
+        // `measuredUnder`: what the windows open now multiplied the fall by
+        // while it was measured (taken as open through the look back), so
+        // the steady rate is the measured one over it and the windows are
+        // counted once, where they still run
+        BuddyFight::Guess FightLeft(double now, double enemiesHealth, std::vector<BuddyPlan::Window> const& bursts, double look = 10.0, double measuredUnder = 1.0) const
         {
             std::vector<BuddyFight::Sample> s(_samples.begin(), _samples.end());
-            return BuddyFight::TimeLeft(enemiesHealth, BuddyFight::RateOf(s, now, look), bursts);
+            return BuddyFight::TimeLeft(enemiesHealth, BuddyFight::RateOf(s, now, look) / std::max(1e-6, measuredUnder), bursts);
         }
         // }}}
 
