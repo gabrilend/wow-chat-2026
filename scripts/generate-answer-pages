@@ -20,6 +20,8 @@
 --                a gif already in the pages' folder is kept unless --regif is given
 --   --regif      copy every gif again
 --   --check      write nothing; say whether the pages are up to date (a quick test)
+--   --questions PATH  write every question of every open issue (answered ones too)
+--                as JSON to PATH and stop: what scripts/write-question-contexts reads
 --   --help       this text
 -- Writes docs/HTML/answer-pages/<page>.html, its index.html, and gifs/.
 
@@ -27,7 +29,7 @@ local DIR = "/mnt/kaun/wow-chat-2026"
 local LIBS = "/home/ritz/programming/ai-stuff/libs/lua"
 
 -- {{{ arguments
-local gifsFrom, regif, check
+local gifsFrom, regif, check, exportTo
 do
     local i = 1
     while i <= #arg do
@@ -41,6 +43,7 @@ do
         elseif a == "--gifs"  then gifsFrom = arg[i + 1]; i = i + 1
         elseif a == "--regif" then regif = true
         elseif a == "--check" then check = true
+        elseif a == "--questions" then exportTo = arg[i + 1]; i = i + 1
         elseif a:sub(1, 2) ~= "--" then DIR = a
         else error("unknown option " .. a .. " (see --help)") end
         i = i + 1
@@ -251,11 +254,69 @@ local function questions_for(issueList)
     for _, id in ipairs(list) do
         local it = ISSUES[id]
         local qs = {}
-        for _, q in ipairs(it.questions) do qs[#qs + 1] = { n = q.n, html = inline(q.text), answered = q.answered, group = q.group } end
+        for _, q in ipairs(it.questions) do qs[#qs + 1] = { n = q.n, html = inline(q.text), text = q.text, answered = q.answered, group = q.group } end
         out[#out + 1] = { id = id, title = it.title, file = it.name .. ".md", ring = it.ring, state = state_kind(it.state, it.now, it.cb),
                           stateText = it.state, phase = it.phase, unblocks = it.unblocks, questions = qs }
     end
     return out
+end
+-- }}}
+
+-- {{{ the export
+-- Every open issue's questions, in the walkthrough's order (the rings'
+-- order from the architecture document, then phase, then issue number),
+-- each issue with its ring's place, its family (the issue number up to
+-- its first letter: 617e13 is of 617e) and its file, for the context
+-- writer (issue 1102a). Answered questions are included.
+if exportTo then
+    local all = questions_for({ "all" })
+    local ringIndex = {}
+    for i, r in ipairs(RINGS) do ringIndex[r] = i end
+    for _, it in ipairs(all) do
+        it.ringIndex = ringIndex[it.ring] or (#RINGS + 1)
+        it.family = it.id:match("^(%d+%a?)") or it.id
+        for _, q in ipairs(it.questions) do q.html = nil end
+    end
+    table.sort(all, function(a, b)
+        if a.ringIndex ~= b.ringIndex then return a.ringIndex < b.ringIndex end
+        if (a.phase or 99) ~= (b.phase or 99) then return (a.phase or 99) < (b.phase or 99) end
+        return a.id < b.id end)
+    local f = io.open(exportTo, "w") or error("cannot write " .. exportTo)
+    f:write(json.encode({ rings = RINGS, issues = all }, { indent = true }))
+    f:close()
+    print("questions of " .. #all .. " issues written to " .. exportTo)
+    os.exit(0)
+end
+-- }}}
+
+-- {{{ the walkthrough
+-- The order the context writer uses (scripts/write-question-contexts):
+-- the rings' order from the architecture document, then phase, then
+-- issue number. And the contexts it has written so far
+-- (docs/answer-pages/contexts/), each placed above the first question of
+-- its group. A group whose questions changed since its context was
+-- written still shows the old context until the writer runs again.
+local WALK = { order = {}, contexts = {} }
+do
+    local ringIndex = {}
+    for i, r in ipairs(RINGS) do ringIndex[r] = i end
+    local ids = {}
+    for _, id in ipairs(IDS) do if #ISSUES[id].questions > 0 then ids[#ids + 1] = id end end
+    table.sort(ids, function(a, b)
+        local A, B = ISSUES[a], ISSUES[b]
+        local ra, rb = ringIndex[A.ring] or (#RINGS + 1), ringIndex[B.ring] or (#RINGS + 1)
+        if ra ~= rb then return ra < rb end
+        if (A.phase or 99) ~= (B.phase or 99) then return (A.phase or 99) < (B.phase or 99) end
+        return a < b end)
+    WALK.order = ids
+    for name in io.popen("ls '" .. DIR .. "/docs/answer-pages/contexts/' 2>/dev/null"):lines() do
+        if name:match("%.json$") then
+            local c = json.decode(slurp(DIR .. "/docs/answer-pages/contexts/" .. name))
+            if c and c.questions and c.questions[1] and c.context then
+                WALK.contexts[c.questions[1]] = { text = c.context, size = #c.questions }
+            end
+        end
+    end
 end
 -- }}}
 
@@ -401,6 +462,7 @@ figure.gif figcaption:empty{display:none}h2{clear:both}
 .kept{background:var(--accent-soft);border-radius:4px;padding:.4rem .6rem;margin-top:.4rem;font-size:.92rem;white-space:pre-wrap}.kept .when{display:block;font-size:.75rem;color:var(--dim)}
 .said{font-size:.8rem;color:var(--dim);margin-top:.2rem}
 .source{font-size:.8rem;color:var(--dim);margin-top:3rem}
+.context{background:var(--accent-soft);border-left:4px solid var(--accent);border-radius:4px;padding:.6rem .9rem;margin:.8rem 0}.context .label{font:600 .72rem/1 var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:.3rem}.context p{margin:.4rem 0}
 @media (max-width:760px){.wrap{grid-template-columns:minmax(0,1fr);gap:.5rem}nav{position:static;max-height:none;border-bottom:1px solid var(--line)}figure.gif{float:none;margin:1rem auto;width:min(256px,100%)}}
 ]]
 
@@ -408,6 +470,7 @@ local SCRIPT = [[
 (function(){
 const PAGE=document.body.dataset.page, ALL=PAGE==="open-questions";
 const DATA=JSON.parse(document.getElementById("data").textContent);
+const WALK=JSON.parse(document.getElementById("walk").textContent);
 const served=location.protocol.startsWith("http");
 let kept={};
 const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e};
@@ -420,7 +483,9 @@ function render(){
   const f=ALL?{ring:document.getElementById("f-ring").value,state:document.getElementById("f-state").value,phase:document.getElementById("f-phase").value,
     text:document.getElementById("f-text").value.toLowerCase(),answered:document.getElementById("f-answered").checked,sort:document.getElementById("f-sort").value}:{answered:true};
   let issues=DATA.slice();
+  const walking=ALL&&f.sort==="walkthrough";
   if(ALL&&f.sort==="issue") issues.sort((a,b)=>a.id.localeCompare(b.id,undefined,{numeric:true}));
+  if(walking){const at={};WALK.order.forEach((id,i)=>at[id]=i);issues.sort((a,b)=>(at[a.id]??1e9)-(at[b.id]??1e9));f.answered=true;}
   let shownQ=0, openQ=0;
   for(const it of DATA) for(const q of it.questions) if(!q.answered) openQ++;
   for(const it of issues){
@@ -433,6 +498,9 @@ function render(){
     let lastGroup=null;
     for(const q of qs){
       shownQ++;
+      const ctx=WALK.contexts[it.id+"#"+q.n];
+      if(ctx){const c=el("div","context");c.appendChild(el("div","label","Context for the next "+ctx.size+" question"+(ctx.size>1?"s":"")));
+        for(const para of ctx.text.split(/\n\s*\n/)){const pp=el("p");pp.textContent=para.trim();c.appendChild(pp);}card.appendChild(c);}
       const d=el("div","q"+(q.answered?" answered":""));
       if(q.group&&q.group!==lastGroup){d.appendChild(el("div","group",q.group.replace(/</g,"&lt;")));lastGroup=q.group;}
       const head="<strong>"+q.n+".</strong> ";
@@ -495,7 +563,7 @@ local function page_html(page, meta, body, heads, data, titles)
         filters = "<div class=filters><label>Ring <select id=f-ring><option value=\"\">all</option>" .. table.concat(rings) .. "</select></label>"
             .. "<label>State <select id=f-state><option value=\"\">all</option><option>waiting for the compile</option><option>built</option><option>in progress</option><option>planned</option><option>not started</option><option>unclear</option></select></label>"
             .. "<label>Phase <select id=f-phase><option value=\"\">all</option>" .. table.concat(phases) .. "</select></label>"
-            .. "<label>Sort <select id=f-sort><option value=unblocks>unblocks the most</option><option value=issue>issue number</option></select></label>"
+            .. "<label>Sort <select id=f-sort>" .. (next(WALK.contexts) and "<option value=walkthrough>walkthrough, with contexts</option>" or "") .. "<option value=unblocks>unblocks the most</option><option value=issue>issue number</option><option value=walkthrough>walkthrough order</option></select></label>"
             .. "<input id=f-text type=search placeholder=\"Search\" aria-label=\"Search the questions\">"
             .. "<label><input id=f-answered type=checkbox> show answered</label></div><div class=count id=count></div>"
     end
@@ -518,6 +586,7 @@ local function page_html(page, meta, body, heads, data, titles)
             .. ".md</code> and the issue files on " .. os.date("%Y-%m-%d %H:%M") .. ". Answers: <code>notes/answers/" .. page .. ".md</code>.</p>",
         "</main></div>",
         "<script type=application/json id=data>" .. json.encode(data):gsub("</", "<\\/") .. "</script>",
+        "<script type=application/json id=walk>" .. json.encode(page == "open-questions" and WALK or { order = {}, contexts = WALK.contexts }):gsub("</", "<\\/") .. "</script>",
         "<script>" .. SCRIPT .. "</script></body></html>",
     }, "\n")
 end

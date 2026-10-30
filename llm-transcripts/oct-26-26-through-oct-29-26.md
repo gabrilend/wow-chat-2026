@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-29 23:27:00
+Generated on: 2026-10-29 23:47:45
 Models: claude-opus-5-5
 
 ## Contents
@@ -12887,6 +12887,200 @@ questions:
 3. When two trees answer the same concern (a Feral druid's and a Restoration
    druid's answers to "ally at low health"), should both lists be pooled, or
    should the buddy's role tree speak first?
+
+--------------------------------------------------------------------------------
+
+### User Request 124
+
+can we make a functionality that walks a bot through the world and then asks an
+image recognition program which routes forward exist? Maybe even classifying
+certain regions in certain terms like "dirty" or "snowy" or "solid" or "flat" or
+similar? Then, we can have different creatures walk along different things
+depending on how they like to feel. Um, okay for the pathfinding it'll help us
+build out a road network and such.
+
+okay now for the open questions listed in the open questions system, we should
+build a system that dynamically builds the context that a reader who is
+reasonably familiar with the project needs to know in order to answer the
+question. Essentially, explaining each of the specifics. This context should be
+placed above a series of questions that are directly related to it - each of
+them will have components that must be included in the context description we
+generate. Then, below it, is another context for the next few series of
+questions. Right now... Right now it's hard.
+
+hey can you look up the Questie or Questmaster or... I forget the term but
+there's one that's purple. The addons that help people quest. Can you look those
+up? Then, can we have the buddy-bots guide the player toward the next quest they
+should attend to? Quest helper, I think that was it? Anyway, the buddy-bots
+should stand on their arc in the direction of the next best quest to work on.
+They can also direct you to places you haven't been yet, if it's time to move
+on. So, you know you can always follow your buddies to find treasure and renown.
+
+
+
+<pasted_content id="12ab">
+> - "Rejuvenation is still active": yes, that's already handled. The bot module
+> only recasts a heal-over-time when its own copy on the target is about to run
+> out. It also tags every
+>     heal with a rough size and a mana-efficiency rating. Its one mana rule is a switch: below 60% mana it refuses heals that would mostly overheal. That's on or off at one line, not a
+>     weight that grows as mana falls.
+</pasted_content id="12ab">
+
+
+ah yes bots should emphasize never overhealing unless they're at 90% or above
+mana. HoTs can be placed on things expecting damage soon, like if they take
+aggro, and you can pre-cast some spells if the tank is charging, like to proc
+earthliving or to get the Regrowth HoT up and running.
+
+
+
+<pasted_content id="12ab">
+> - Spec picking one list: this is now its own plan, "one list from every tree".
+> A buddy hears the concerns and answers of every tree it has points in, and
+> each tree's answers count
+>     by its share. A druid with two thirds Restoration and one third Balance heals first and casts Balance spells when no one needs healing, about a third as often as a full Balance
+>     druid would.
+</pasted_content id="12ab">
+
+
+they should cast about 2/3rds of their spells as resto spells, and 1/3rd as
+balance spells.
+
+> 1. Should "empowered" mean only buffs that make the buddy's own spells
+> stronger or faster (Bloodlust, Power Infusion, Innervate)? Or any big moment
+> in the fight, like the tank's
+>      Shield Wall or a boss's weak phase?
+
+if a boss has a weak phase, use cooldowns there - make a plan for the fight in
+their rough general schedule in their head, and make sure that their CDs can
+coincide. Then after that, try and get as many uses of it as they can.
+Typically, a party will bloodlust at the start after the tank has got everything
+settled, unless there's a specific weak phase. This is so that the cooldowns
+from the bloodlust phase might have a chance to come off cooldown by the end of
+the fight, enabling another sprint toward the end.
+
+> 2. When a fight changes phase, should "how much this fight has made me move"
+> count the whole fight, or only the last half minute, so the buddy changes its
+> mind with the phase?
+
+should reset when the phase changes. Also, we should remember, so write our
+learnings to a log file and make sure we mark somewhere that we have to come
+back and consume that log file and it's machinery to learn which fights and
+which phases require "lots of movement" and what that coincides with. We never
+want to forget how to generate these conclusions, but we can build the machinery
+from scratch whenever a new use-case arises. [expansion oriented darling]
+
+> 3. When two trees answer the same concern (a Feral druid's and a Restoration
+> druid's answers to "ally at low health"), should both lists be pooled, or
+> should the buddy's role tree
+>      speak first?
+
+role tree should win, if we're 2/3rds feral and 1/3rd resto, we should address
+the "ally at low health" concern in a specific way, favoring our feral instincts
+first. If we have cat talents, we should try and pounce on their attackers. If
+we have bear talents, we try and pull them off. If they are too powerful to
+defeat easily, and our ally can hold on but needs healing and we're not under
+attack, then we can heal them, otherwise if we're a tank and they are not, then
+we should bear form and pull them off, otherwise if we're a tank and they are,
+then we can catform. Basically there's so many different priorities, and we can
+build them out one-by-one. I know how to play EVERY SINGLE WORLD OF WARCRAFT
+CLASS. I can fully describe how they're supposed to interrelate, and how the
+various roles (tank, healer, dps) are meant to perform as well, to better
+illustrate the gameplays.
+
+and through it all, we need to make the systems very flexible - pliable, so that
+the story and the AI or players can help guide it as they please. But, rigid, to
+provide a structure and make sure we aren't standing still yet running into
+trees. (or wandering about not knowing what we're doing)
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 124
+
+> Writing the new plans and folding your answers into the existing ones.
+
+> Now folding your answers into the two economy and tree plans.
+
+> All seven plans are valid. Recording your words, refreshing the pages, and
+> committing.
+
+*[commit] 378a3968c in wow-chat-2026 - *
+
+All of it is now written into plans, with your words kept word for word, and
+committed (378a3968c). The answer pages are refreshed with the new questions.
+
+**New plans:**
+- **Routes forward and how the ground feels.** A bot walks a route; every few
+  yards the game client draws what a player there would see, ahead and to both
+  sides. An image recognition program says which ways forward exist and labels
+  the ground (dirty, snowy, icy, solid, flat, wet and so on).
+  - The painted map tries the routes it names.
+  - Each kind of creature has likes and dislikes, so a wolf and a kodo cross the
+    same valley by different ways.
+  - Strips where many routes agree on solid, flat ground become roads, joined
+    into a network.
+  - This waits on the custom client's background pictures, the same as the
+    existing world perception map plan.
+- **A context above each group of questions.** Related questions are grouped, a
+  few at a time. Each question's components are listed: the terms it uses, the
+  mechanism, the numbers, what was already decided. A writer session then writes
+  one plain-English context per group covering all of them. A check sends it
+  back if anything is missing, and a context is rewritten when its issues
+  change.
+- **Buddies point the way.** I looked up the questing addons:
+  - [Questie](https://github.com/corang/questie) has a fork,
+    [Questie-335](https://warperia.com/addon-wotlk/questie/?lang=en_US), that
+    runs on 3.3.5a.
+  - Carbonite circled quest areas on its map.
+  - [Zygor](https://warperia.com/addon-wotlk/zygor-guides-viewer-remaster/?lang=bg_BG)
+    routes a whole levelling path with an arrow.
+  - QuestHelper, the original "quest helper", is [no longer
+    maintained](https://wow-power-leveling.pages.dev/articles/quest-helper-addons.html).
+  - I couldn't find which one is "the purple one".
+
+  They all carry their own quest database, but the server already knows the same
+  facts, so no addon is needed. The buddies' following arc swings toward your
+  next best quest: ones in your log first, then ones you can pick up, scored by
+  level, distance and how many objectives lie together. When an area is done,
+  they lean toward places you haven't been yet.
+- **What each fight taught.** Every fight writes how much each phase made the
+  buddies move, and what began just before. This plan stays open as your marker
+  that the log waits to be read. It also keeps the method, so the reading can be
+  rebuilt from scratch for any new use.
+
+**Your answers, folded in:**
+- **Hybrids and their trees:**
+  - Casts follow the tree shares: about two thirds Restoration, one third
+    Balance.
+  - On a shared concern, the role's tree answers first and in its own way. Your
+    feral example is in the plan as you wrote it.
+  - Each class's priorities get built from your descriptions, one class at a
+    time.
+- **Healing:**
+  - No overhealing below 90% mana.
+  - Heals-over-time go on allies about to take damage, like one who just took
+    aggro. Casts may start as the tank charges.
+- **Cooldowns:** a rough fight plan. Bloodlust goes at the start once the tank
+  has things settled, unless the boss has a weak phase, then there. Own
+  cooldowns line up with it and come back for a sprint at the end.
+- **Movement:** the measure starts again at each phase change.
+- **Pliable and rigid:** written as the rule for the whole talents work.
+  Weights, lists and measures are data that the story, an AI or a player can
+  bend. The structure that reads them stays fixed and tested, so bending a
+  weight changes preferences but never leaves a buddy idle or walking into a
+  tree.
+
+**Three questions:**
+1. Which class do you want to describe first? I'd suggest the druid, since its
+   three trees answer the same concerns three different ways.
+2. Should the contexts be written for all thousand open questions in one long
+   run, or a page at a time, starting with the questions that unblock the most?
+3. For routes forward: should the program answer questions about a picture
+   ("which ways go on from here?"), or paint a label on every pixel? I'd lean
+   towards both, the first for routes and the second for how the ground feels.
+
+My suggested order for building next is the talent table, then the weather
+simulator, then the question contexts.
 
 --------------------------------------------------------------------------------
 

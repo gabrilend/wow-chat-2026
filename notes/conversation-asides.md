@@ -409,3 +409,24 @@ Word for word, each written into its plan (in brackets):
   they please. But, rigid, to provide a structure and make sure we aren't
   standing still yet running into trees. (or wandering about not knowing
   what we're doing)"
+
+## 2026-10-29, who does what; the walkthrough; rmaps
+
+- (CLAUDE.md, the design target) "as we're playing I will describe
+  behavior and we will add it to the capabilities. My job is to dance
+  through the project, improving everything that I touch. Your job is to
+  build it all in the background so I have something to dance across, and
+  try to guide me toward the things that need the most guidance."
+- (1102a) "just do all of them, you can take your time. Remember we're
+  grouping them up together with shared contexts, and the idea is that if
+  we had ALL the open questions from the entire project even those that
+  have been answered, if we had those, then a user could walk through them
+  one-by-one and fully customize the software. ... by the end, if we had
+  all the open questions which we don't, then we'd be able to fully
+  describe the project completely. Does that make sense?" (in full in
+  1102a)
+- (618a) "it's not an interactive thing. We'd walk a bot around in the
+  world on totally random parts of the map, essentially trying to display
+  a character in the world for sizing relationship, then say "which parts
+  should I walk on?" ... Maybe... rmaps, for ritz maps! like mmaps but with
+  priority and labelling and route-finding details." (in full in 618a)

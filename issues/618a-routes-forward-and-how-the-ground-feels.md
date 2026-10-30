@@ -1,4 +1,4 @@
-# 618a - Routes Forward, and How the Ground Feels
+# 618a - Routes Forward, and How the Ground Feels (rmaps)
 
 ## Status
 - Created: 2026-10-29
@@ -21,6 +21,22 @@ The owner, 2026-10-29:
 > "solid" or "flat" or similar? Then, we can have different creatures
 > walk along different things depending on how they like to feel. Um, okay
 > for the pathfinding it'll help us build out a road network and such.
+
+And on how the program is asked (2026-10-29):
+
+> it's not an interactive thing. We'd walk a bot around in the world on
+> totally random parts of the map, essentially trying to display a
+> character in the world for sizing relationship, then say "which parts
+> should I walk on?" and then say "walk on this part because it looks
+> flat and solid" (and the "flat" and "solid" and "this part" are all tool
+> calls btw) or "don't walk on this part because of the flowers" etc. And
+> they store data about that particular pictured piece of the terrain and
+> geometry, and then we'd build it into our mmaps. Maybe... rmaps, for
+> ritz maps! like mmaps but with priority and labelling and route-finding
+> details.
+>
+> depending on the character, they can move throughout the world
+> differently depending on their characteristics and role.
 
 ## Current Behavior
 
@@ -54,6 +70,22 @@ into them (617o8) but know nothing of what the ground looks or feels like.
   network per map (crossings, forks, ends at towns and flight masters),
   which the planner prefers (617e) and the questing roads use (617e4c).
 
+**How the program is asked** (2026-10-29): not a conversation. The bot
+is placed at random spots across a map, with a character standing in the
+picture for scale, and the program is asked one thing: "which parts
+should I walk on?" It answers only through tool calls: it marks a region
+of the picture ("this part"), gives it words ("flat", "solid"), and says
+walk on it or don't, with the reason ("because of the flowers"). Each
+answer is stored against that piece of terrain and geometry: the region
+mapped back to the world, its words, walk or don't, and why.
+
+**rmaps** ("ritz maps", the owner's name): the server's movement maps
+(mmaps, the navigation mesh the game's pathfinding uses) are where a
+creature can stand. rmaps lay over them what a place is like and how
+much to prefer it: the words, walk or don't, priorities and routes. A
+character reads them by its own characteristics and role, so a tank, a
+healer, a wolf and a gnome cross the same ground differently.
+
 ## Suggested Implementation Steps
 
 1. The walker: a route, a camera every few yards, three pictures (ahead,
@@ -74,5 +106,8 @@ into them (617o8) but know nothing of what the ground looks or feels like.
    picture (a vision language model, none installed yet), or one that
    paints labels on every pixel (a segmentation model), or both, the first
    for routes forward and the second for the ground's feel?
+   **Answered 2026-10-29:** a model that looks at the picture and answers
+   only through tool calls (mark this part, these words, walk or don't,
+   why), run over random spots without anyone talking to it (above).
 2. Should likes and dislikes be per kind of creature only, or should each
    buddy also have its own, so two buddies of one race walk differently?

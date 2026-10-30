@@ -69,6 +69,16 @@ the status. Do you want to turn these on? [summary of status]" etc."
   asks: "here's the status. Do you want to turn these on?" It lists what
   is built and off, what is built and on, what is part-built, and what is
   not started.
+- **Who does what** (the owner, 2026-10-29: "as we're playing I will
+  describe behavior and we will add it to the capabilities. My job is to
+  dance through the project, improving everything that I touch. Your job
+  is to build it all in the background so I have something to dance
+  across, and try to guide me toward the things that need the most
+  guidance."). Behaviour the owner describes while playing is written
+  into its capability's issue, word for word, and built; the agent keeps
+  building in the background, and points the owner to the parts that most
+  need their judgement (the open-questions walkthrough, 1102a, is the
+  standing map of those).
 
 ### Writes outside the project while the owner is away
 

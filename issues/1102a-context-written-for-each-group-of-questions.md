@@ -21,11 +21,43 @@ The owner, 2026-10-29, on the open questions page:
 > context for the next few series of questions. Right now... Right now
 > it's hard.
 
+And, asked whether to write them all at once or a page at a time:
+
+> just do all of them, you can take your time. Remember we're grouping
+> them up together with shared contexts, and the idea is that if we had
+> ALL the open questions from the entire project even those that have been
+> answered, if we had those, then a user could walk through them
+> one-by-one and fully customize the software. And, if a user read through
+> every single properly sorted context with the properly sorted open
+> questions underneath them, then they'd be able to understand completely
+> and answer each and every question in the open questions document. So,
+> it'd be like a single documentation page that listed in a couple short
+> paragraphs, enough to understand a few simple questions. Then, it'd give
+> more context, and a couple more questions. Then more context, then more
+> questions, etc etc, and by the end, if we had all the open questions
+> which we don't, then we'd be able to fully describe the project
+> completely. Does that make sense?
+
 ## Current Behavior
 
-The page lists each issue's questions as the issue wrote them, under the
-issue's title: issue numbers, code names and shorthand from the day they
-were asked, with nothing explaining them.
+**The machinery is built (2026-10-29); no context is written yet.**
+- `scripts/generate-answer-pages --questions PATH` exports every question
+  of every open issue, answered ones included, in walkthrough order.
+- `scripts/write-question-contexts` groups them (452 groups of at most
+  five, one family of issues to a group), and for each group asks a
+  writer session (`claude -p`, allowed only to read, its answer held to a
+  fixed JSON shape) for the components and a context, checks that every
+  component's quoted sentence is really in the context, asks once more
+  with what is missing, and keeps the result in
+  `docs/answer-pages/contexts/<group>.json` with a fingerprint. Several
+  writers run at once (`--jobs`, 4 by default).
+- The open-questions page has a walkthrough order (the rings, then phase,
+  then issue), showing answered questions too, and places each written
+  context above the first question of its group.
+- **Not yet run**: starting writer sessions from the agent's own session
+  was refused by Claude Code's permission system on 2026-10-29. The owner
+  runs `scripts/write-question-contexts` (or allows it), then
+  `scripts/generate-answer-pages`.
 
 ## Intended Behavior
 
@@ -46,6 +78,21 @@ were asked, with nothing explaining them.
   text it was written from), so a page never explains a stale question.
 - **Then the questions**, reworded only where the original is unreadable
   out of its issue, the original kept beside it, each with its answer box.
+- **Every question, answered ones too.** An answered question is listed
+  with its answer, so the walkthrough covers every decision the project
+  has made, not only the ones still open. A reader who customizes their
+  own copy walks through all of them and may answer differently.
+- **One walkthrough, in order.** The groups are sorted so each context
+  builds on the ones before it: the foundations first (the ground, the
+  rules, the profiles), the things built on them after, in the order of
+  the capability architecture's rings. Read top to bottom, a short
+  context, a few questions, the next context, the next questions, it
+  explains the whole project to someone who has read nothing else.
+- **More questions over time.** The walkthrough is as complete as the
+  questions are. Decisions the code made without asking (a number chosen,
+  a rule picked) are written into their issues as answered questions
+  when found, so the walkthrough grows toward describing the project
+  completely.
 
 ## Suggested Implementation Steps
 
@@ -67,3 +114,5 @@ were asked, with nothing explaining them.
 1. Should the contexts be written for every open question at once (about
    a thousand, a long run), or a page at a time as it is opened, starting
    with those that unblock the most?
+   **Answered 2026-10-29:** all of them, answered ones included, taking
+   the time it takes (above).
