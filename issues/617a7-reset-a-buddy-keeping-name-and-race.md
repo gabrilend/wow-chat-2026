@@ -54,6 +54,17 @@ roster's columns wait for the owner's compile and install
   name and gender (`BuddyMakeCharacter`'s two new arguments); then
   `BuddyFinishReset` moves the old character's mail to the new buddy and
   deletes the old character.
+- **Its looks too** (the owner, 2026-10-30: "make sure we use the same
+  appearance options as well"): the new buddy takes the old one's skin,
+  face, hair, hair colour and facial hair from its saved row (a first
+  making draws them at random from the game's own table; a reset doesn't).
+- **Several Sargobrases waiting** (the owner, 2026-10-30: "do we correctly
+  handle the case where there are multiple sargobrases waiting for a
+  player?"): not at first. Each tier's Sargobras fills his own owed slot,
+  but the menu was built from the lowest owed slot, so with a reset slot
+  and an ordinary one owed, the wrong one could offer the reset's
+  limited classes. Fixed: the menu and the pick ask the same question
+  (`serving_slot`), so each Sargobras offers what his own slot takes.
 - Not tried in game yet.
 
 Before 2026-10-30: not built.

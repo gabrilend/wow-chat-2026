@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-30 11:27:44
+Generated on: 2026-10-30 12:05:14
 Models: claude-opus-5-5
 
 ## Contents
@@ -175,6 +175,10 @@ Models: claude-opus-5-5
     plan for the next compile, each behind a switch that starts off: talent
     draw, close-follow ring, Alterac Valley weather and storm, sidesteps. Next,
     you run the basic compile to build the waiting server code.
+42. 2026-10-30 11:30, after Request 135 - Goal: build every described issue
+    before your next compile. I moved send-a-buddy to the custom client and
+    asked three questions about hybrid trees and the healing economy. Next:
+    start the buddy reset once you reply.
 
 --------------------------------------------------------------------------------
 
@@ -13972,6 +13976,211 @@ Three questions would unblock them:
 3. **Regeneration:** I'd measure it as how long the buddy takes to refill its
    mana. Under about 30 seconds, mana barely matters and it spends freely; over
    two minutes, it's careful with every heal. Does that framing feel right?
+
+--------------------------------------------------------------------------------
+
+### User Request 136
+
+the hybrid tree shares looks great. Though a feral druid can often do cool
+things if they have things like Natural Shapeshifter and Furor - we should treat
+various states as important. This also applies to like, warrior stances. Some
+talents allow you to shift into and out of forms easily, sometimes even
+rewarding you for doing so - furor is especially important for feral druids in
+cat form, who can let their energy regenerate while casting a couple
+rejuvenations and such. Similarly a warrior can switch to defensive mode
+temporarily to cast a taunt or something, but they have to weigh the cost of
+losing their rage to do so. The weighting for each ability should be very
+dynamic and update according to their context around them, and their stats and
+talents and... so much... But once we build a sufficiently discrete and clear
+system then it should resolve such things naturally.
+
+Remember... there's multiple economies we need to balance. There's mana economy,
+(rage energy etc for the others), action economy (global cooldowns primarily,
+but also cast-times and such. Putting abilities on cooldown is valued to the
+action economy, especially if it can line up the times on when they come off
+cooldown so that they can be cast as often as optimizable), movement economy
+(how much to move, how fast the party is moving "slow down" or "go faster" or
+"out of mana" style), threat economy (can the tank handle more monsters, should
+an off-tank pull off of a faltering main tank, etc). These economies (and
+possibly others, including boss-mechanic economy (unique to each boss probably))
+need to be balanced artfully and skillfully to create systems that react
+dynamically and appropriately. Ideally, they could adjust with time spent
+learning, though only if we keep track of both A. how to learn, and B. where we
+started from, so if we wanted to we could either 1. learn from scratch as a
+batch, to see if we grow into different conclusions (the ideal state), or 2. to
+learn individually and become better at the game and our class as we level up
+and get better.
+
+I am very excited to work on the action economy.
+
+
+
+<pasted_content id="12ab">
+> 1. The third, when the healer is busy: if an ally is dying, should a 2/3
+> Restoration, 1/3
+>      Balance druid still cast Wrath a third of the time? Or should the third count only
+>      across calm moments, with Balance catching up when nobody needs healing? I'd build
+>      both behind a switch.
+</pasted_content id="12ab">
+
+
+if the healer is dead or incapacitated and can't be revived mid-combat through a
+combat rez or something, then those with healing talents are encouraged to heal
+more to keep things going. The person with at least some healing talents and the
+most mana is designated as the new "healer" at least until the fight is over,
+and people look to them for healing-based signals. If the healer's mana is ever
+low, we can prioritize other healing talented classes to throw out heals as well
+to help supplement, especially if they know an instant or easy spell like
+rejuvenation or renew or similar.
+
+
+
+<pasted_content id="12ab">
+> 2. "Very low" for fast heals: the bot module already marks allies as critical
+> below 25%,
+>      low below 45%, medium below 65% and almost full at 85%. Should the lean from cheap to
+>      fast slide smoothly with the ally's health, or switch at the critical line?
+</pasted_content id="12ab">
+
+
+smoothly. Also those breakpoints should be smoothed as well.
+
+
+
+<pasted_content id="12ab">
+> 3. Regeneration: I'd measure it as how long the buddy takes to refill its
+> mana. Under
+>      about 30 seconds, mana barely matters and it spends freely; over two minutes, it's
+>      careful with every heal. Does that framing feel right?
+</pasted_content id="12ab">
+
+
+yes a trash mob fight for example might not require a long-duration stretch of
+healing, so they can freely throw out damage spells inbetween casting their most
+powerful and expensive spells on the tank or whoever needs it. However in a
+longer fight they are less likely to cast damage spells because they probably
+will need their mana. However if the fight is ending sooner than their mana
+supply demands, then they can cast out damage spells as well. We'll need an
+estimate for when the fight might end that dynamically updates as party members
+die or the speed of health on the boss adjusts. Though it should take into
+account things like bloodlust or whatever, not as a flat value, but as a time
+period where the party deals more damage and such.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 136
+
+> You've given me a lot of design, so I'll write it into the plans first, word
+> for word, and give the action economy a plan of its own. Then I'll build the
+> buddy reset, and end with questions to start on the action economy together.
+
+> The parent plan is also being edited elsewhere, so the new plans name it as
+> their parent and I'll add them to its list once it's free. Writing them.
+
+*[commit] 80ef38f7d in wow-chat-2026 - *
+
+> Committed (80ef38f7d). Now the buddy reset. Reading the rest of its decided
+> design.
+
+> The roster's SQL source is the E042 install step's file; the install writes
+> the copies the server reads. Reading the remake's "Kept for you" mail and the
+> stages, which the reset reuses.
+
+> There's already a function here called "Reclassed", which suggests a class
+> change in place may already exist. Reading it before choosing between a fresh
+> character and changing the old one.
+
+> Writing the reset now. First the roster's three new columns, in the install
+> step's own SQL.
+
+> Now the module. The maker learns to take a kept name and gender, and the
+> remake's mail function is shared.
+
+> Now the reset itself: the command, and the finishing step once the new buddy
+> is made.
+
+> LogoutPlayerBot takes the full character id, not the number. Fixing.
+
+> Passes. Two safety touches on the name before it reaches the database:
+> normalized the way the server spells names, and escaped.
+
+> Now Sargobras: a reset slot's kept race limits his offer to that race's
+> classes. First the choice library and its test.
+
+> The test loads the library from somewhere else. Checking where.
+
+> Sargobras carries his own copy of the library; basic's copy in
+> `src/lua-basic/lib/` must change with it, as his install step's notes require.
+> Copying the edit across.
+
+> 70,364 checks pass, including the new reset ones. Now Sargobras's menu and his
+> pick, using the slot's kept race.
+
+> Sargobras's script parses. Testing the roster's new SQL against a throwaway
+> database with the project's own test.
+
+> The library copies match byte for byte. Checking the roster's new column
+> statement against a scratch database on the project's MySQL, then dropping it.
+
+*[commit] 387381e07 in wow-chat-2026 - *
+
+Here's where things stand: the buddy reset is built, your economy design is
+written into six new plans, and two questions below start the action economy.
+The next-quest pointing hasn't been started yet; it's next if you want it.
+
+**Buddy reset:** built, and waits for your compile and install. The game
+master's command is `.buddy reset <name>`, from a shell `scripts/gm-command
+".buddy reset <name>"`.
+- **The command:** the buddy has to be in the world. It mails everything it
+  wears and carries, plus its money, to itself as "Kept for you", then leaves.
+  Its slot is owed again with its race kept.
+- **Sargobras then offers only the classes that race can play,** with no death
+  knight and no race choice.
+- **The new buddy** comes back with the same name and gender. It receives the
+  old one's mail, and the old character is deleted.
+
+The class-choice part is committed with its tests (387381e07): 70,364 checks
+across every race, all passing. The roster's three new columns applied cleanly,
+twice in a row, to a throwaway database. The server code passes the compiler
+check.
+
+**Your economy design** is in six plans, with your words kept in full
+(80ef38f7d):
+- **The action economy:** global cooldowns, cast times, and cooldowns lined up
+  so each gets used as often as it can.
+- **Forms and stances:** leaving cat form for a couple of Rejuvenations, or
+  switching stance to taunt, is weighed as one round trip, with its cost and
+  what talents like Furor give back.
+- **Resources and the fight's length:**
+  - smooth curves replace the health breakpoints;
+  - mana is measured as time to refill;
+  - a running estimate of when the fight ends updates as people die, as the
+    boss's health falls, and through bursts like Bloodlust.
+
+  A healer with mana to spare before that end casts damage spells.
+- **The healer's seat:** if the healer falls, whoever has some healing talents
+  and the most mana takes over until the fight ends. While the healer's mana is
+  low, the others add cheap instant heals.
+- **The threat economy:** how much the tank can hold, and when an off-tank steps
+  in.
+- **Learning that can start over:** every starting number is kept, along with
+  the method that changes it. Learning can rerun from scratch as a batch, or
+  each buddy can learn on its own.
+
+I read your answer about the busy healer as: the healer's duty comes first, and
+the off-tree third gets made up in calmer moments. Tell me if that's wrong.
+
+**Sending a buddy to a clicked spot** is written as the custom client's issue
+815. It isn't committed in the client project's own history yet; that's another
+write there, which you can allow or leave for a client session.
+
+**Two questions to start the action economy:**
+1. **How long can a buddy hold a ready cooldown** to line it up with another, or
+   with Bloodlust or a boss's weak phase, before it uses it anyway? A few
+   seconds, or as long as the fight plan says?
+2. **Planning ahead:** should a buddy plan its next few casts ahead, the way a
+   skilled player queues a rotation in their head? Or should it judge only the
+   next cast, by what's ready now?
 
 --------------------------------------------------------------------------------
 

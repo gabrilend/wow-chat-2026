@@ -18,6 +18,11 @@ we could either 1. learn from scratch as a batch, to see if we grow into
 different conclusions (the ideal state), or 2. to learn individually and
 become better at the game and our class as we level up and get better."
 
+Then, of this idea: "this could be a strategem or something. The idea
+that we can "grow" functionality, and it must be re-learnable as it's
+underlying environment changes." Written as one:
+`strategems/grown-and-relearnable.md`.
+
 ## Current Behavior
 
 Not built. Nothing a buddy does changes its numbers; 625e plans the log

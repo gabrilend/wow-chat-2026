@@ -38,6 +38,20 @@ the party or hands the role on.
   the party member with at least some healing talents and the most mana.
 - **The seat speaks.** The others look to whoever holds it for the
   healing signals ("ready", "oom", "mana": 617z's words).
+- **Out of mana counts as fallen, for a while** (the owner, 2026-10-30:
+  "this should also apply if the healer gets low on mana and can't cast
+  spells. They should say "oom" or "mana" in an appropriate chat channel,
+  and others can use that as the signal to jump in."). A buddy healer low
+  on mana says "oom" (out of mana) or "mana" in the party's chat; hearing
+  it, the others with healing talents lean toward healing as below, until
+  it says "ready" again (617z's words).
+- **A player in the seat** (asked "What happens if a player is the
+  healer?"; the agent's design, for the owner to curate): a player who
+  heals (their talents, or what they cast) holds the seat like a buddy.
+  Buddies read the player's mana and health as they do a buddy's, and
+  hear the player's own words in the party's chat ("oom", "mana",
+  "ready") the same way; they never speak for the player. If the player
+  falls, the seat passes to a buddy as above.
 - **Help when the seat runs dry.** While the seat's mana is low, others
   with healing talents lean toward healing too, first with instant or easy
   heals (Rejuvenation, Renew and the like).
@@ -57,3 +71,4 @@ the party or hands the role on.
 1. The reading above of "when busy": is it right that a hybrid's minor
    tree waits while its role's duty calls, its share made up in calm
    moments, or should the third hold even then?
+   **Answered 2026-10-30:** "that's right".

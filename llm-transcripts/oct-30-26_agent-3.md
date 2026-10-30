@@ -1,6 +1,6 @@
 # Conversation Summary: e143dbfe-ff43-48be-8bd4-4d54fd7a325d
 
-Generated on: 2026-10-30 12:02:54
+Generated on: 2026-10-30 12:16:24
 Models: claude-opus-5-5
 
 ## Contents
@@ -1498,6 +1498,173 @@ and nothing is committed yet.
     watched in game first, or should I plan multi-leg boarding now from the
     recorded boardings?
     *My call:* watch first, then fix only what breaks.
+
+--------------------------------------------------------------------------------
+
+### User Request 9
+
+<pasted_content id="415d">
+> - Another session is working on the talent system right now. It has built both
+> talent-weight
+>     options behind a server setting and is writing new issues about the ability economy. I only
+>     added your two answers to its main issue and left the rest alone. Neither of us had a claim on
+>     that file, so you may want to tell that session your talent answers are in there.
+</pasted_content id="415d">
+
+
+we can take it off the todo list if someone else is working on it. But let's
+swing back around when they're done and make sure they implemented it according
+to what we in particular needed from it.
+
+> 1. When a buddy in town finishes with one target and looks for the next, does
+> it just go to
+>      whatever is nearest? Or does it also keep up the slow circling it does on open ground?
+
+it should pick one randomly. 50% chance to pick the nearest on their todo list,
+50% chance to pick the farthest. unless the farthest is more than 4x the
+distance to the nearest, then they do the nearest.
+
+> 3. The "go sell" threshold. What share of a buddy's bag spaces filled with
+> sellable things makes
+     it go?
+
+depends on how far the vendor they're gonna walk to is. 50% is if the vendor is
+nearby, 80 or 90% if it's far. How about if the player says "everyone go sell"
+then all the buddy-bots do it?
+
+> 4. What counts as "earmarked for you" besides upgrades? For example, quest
+> items for your
+>      quests, recipes you can learn, or bags bigger than yours.
+
+buddy-bots should not take quest items. Their quests are completed when the
+player completes them, so there's no reason for the buddy-bots to take them.
+They should leave them on corpses and leave the nodes behind.
+
+> 5. Should buddies mail money too, such as anything above what they need for
+> training and
+>      repairs? Or only items?
+
+maybe once or twice as a treat. Every once in a while. They'll usually just send
+like 1c and say "I found a lucky penny for you." or 10g pieces for a level 60
+and say "this fell out of some rich guy's pocket while I was walking close
+behind him in Stormwind, don't worry about it" says the rogue, that sort of
+thing.
+
+> 6. What is "appropriately levelled" for a stand-in filling a slot? Exactly the
+> slot's level,
+>      within a few levels, or within a 10-level bracket?
+
+within 3 levels, and they should be adjusted to match.
+
+> 7. What level is a buddy after you're reborn? Back at the level it first
+> joined you (the
+>      level-30 buddy is 30 again), or does it stay at its old level and wait for you?
+
+buddies will rejoin you once you hit the requisite level. This is why it's so
+important to keep them dormant in stasis.
+
+> 8. Can a death knight be reborn? And if so, as what, given it starts at level
+> 55?
+
+yes, with sargobras soul already given. We will need new functionality for the
+prestige path, because Sargobras takes the "skip story/do the story" check
+before requesting a soul. So we'll need a new menu just for prestigers (not a
+new option, but a new menu) that just has two options, "I want to skip the
+story" or "I want to see the story". Then it immediately jumps to as if the soul
+was given. Make sure we don't lose track of WHICH soul the original one was, so
+we can recreate the character if need be.
+
+> 9. After several rebirths, which old buddy can come back as "someone
+> familiar"? Only the latest
+>      one, or your choice of any buddy that slot has had?
+
+all of them I think...? Explain more?
+
+
+
+<pasted_content id="415d">
+> 10. Leaving a boat or zeppelin. Buddies step aboard and ashore in a straight
+> line, because the
+>       walking mesh doesn't cover decks. A gangway with a bend, or a zeppelin tower's platform, may
+>       need more than one leg. Do you want this watched in game first, or should I plan multi-leg
+>       boarding now from the recorded boardings?
+</pasted_content id="415d">
+
+
+we can record several entry paths per location where this is required. We'll
+need a tool or utility that records positions, momentum, facing, etc, everything
+else we can get and then we can run it through a manual LLM scrutiny test to
+clean up things like "standing still at the start of the routine" and such, to
+clarify the result to just the specificly needed waypoints. Then, when a
+buddy-bot needs to enter a zeppelin or whatever, they'll select a path onto the
+boat (preferring nearby ones) that another character is not currently using, and
+if we run out of available paths then we try again with a +1 to the "how many
+characters can be walking on this path" constraint.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 9
+
+> Now the errand order (nearest or farthest), stand-in levels and prestige:
+
+> Now boarding paths (question 10):
+
+Recorded, and the todo list is updated:
+
+- I removed the three talent-family items (weapon score, stat weights, boss
+  learning) and added one item to check the other session's work against what we
+  need once it's done: the weapon-speed lean, per-buddy stat weights, lessons
+  chosen by stat weights, boss learning, and every bot sandboxed per player.
+- **Errand order:** a coin toss between the nearest and the farthest errand
+  left, with the nearest taken when the farthest is more than 4 times as far.
+- **Selling:** buddies go at 50% full when the vendor is near, rising to
+  80–90% when it's far. "everyone go sell" sends them all.
+- **Loot and mail:** buddies leave quest items on corpses and quest nodes
+  untouched. Now and then they mail a little money with a line in their own
+  voice.
+- **Stand-ins:** must be within 3 levels and get set to the slot's level when
+  they join.
+- **Prestige:** buddies wait dormant and rejoin when you reach their level. A
+  reborn death knight gets its own two-line menu (skip or see the story), then
+  carries on as if the soul had been given. The record of the original soul is
+  kept.
+- **Boarding:** several recorded entry paths per place, cleaned down to the
+  needed waypoints, each buddy taking the nearest free one. When all are taken,
+  one more walker is allowed per path.
+
+## "Someone familiar," explained
+
+At each rebirth, a buddy keeps its name, gender and, where it can, its race, but
+it picks a new class, spec and professions. The exception is when you ask
+Sargobras for "someone familiar". Then it comes back as it was before the
+rebirth.
+
+So one buddy slot builds up a history. Say a buddy named Kessa:
+
+- **First life:** Blood Elf paladin
+- **After rebirth 1:** Tauren druid (Blood Elves can't be druids, so her race
+  changed)
+- **After rebirth 2:** you ask for "someone familiar"
+
+The question is what Sargobras offers at that point:
+- **Latest only:** Kessa comes back as the druid.
+- **All of them:** Sargobras lists each past version (the paladin, the druid)
+  and you pick one. Choosing the paladin would also bring back her Blood Elf
+  race.
+
+"All of them" means keeping a record of every past version of each slot, which
+is cheap: a few small fields per version.
+
+**Is that what you meant by "all of them"?** A list of every past version to
+pick from?
+
+## Two left from this round
+
+1. **When you hand a buddy something in a trade,** does it keep everything you
+   give it? Or does it look each item over, keeping what it can use and handing
+   the rest back?
+2. **Where does "near" end for the selling threshold?** A distance in yards to
+   the vendor, or a walking time (say, under a minute is near)?
 
 --------------------------------------------------------------------------------
 

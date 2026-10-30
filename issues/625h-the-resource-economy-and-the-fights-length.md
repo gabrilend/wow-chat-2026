@@ -46,6 +46,16 @@ switch at 60%.
   takes to refill (mana from spirit and mana per 5 seconds; rage, energy
   and runic power by their own rules): under about 30 seconds it barely
   matters; past two minutes every cost counts.
+- **In combat and out** (the owner, 2026-10-30, asked "in combat / out of
+  combat behavior?"; the agent's design, for the owner to curate): the
+  refill time is measured with the regeneration that applies at the
+  moment. In combat that is the slow kind (mana per 5 seconds, and spirit
+  only past five seconds without casting, the game's own rule; rage and
+  energy by their own); between fights it is the fast kind, with
+  drinking. So in combat thrift weighs by the fight's length (below);
+  out of combat a buddy below a share of its mana drinks before the next
+  pull and says "mana" (617z's word) so the tank waits, and its thrift
+  starts the next fight fresh.
 - **The fight's length.** A running estimate of when the fight will end:
   the enemies' health falling at the rate it has been falling, corrected
   as party members die or join, with known bursts (Bloodlust, a weak phase)

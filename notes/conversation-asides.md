@@ -493,3 +493,25 @@ Word for word, each written into its plan:
 - (625h) "smoothly. Also those breakpoints should be smoothed as well."
 - (625h) "yes a trash mob fight for example might not require a
   long-duration stretch of healing, ..." (in full in 625h)
+
+## 2026-10-30, the reset's looks, Sargobras, and the action economy's answers
+
+- (1102/gm commands) "make sure we update the gm-command list we made in HTML..."
+- (617a7) "do we correctly handle the case where there are multiple
+  sargobrases waiting for a player?" and "make sure we use the same
+  appearance options as well. Are those randomized for each buddy-bot upon
+  being created for the first time?"
+- (625h) "mana is measured as time to refill;" -> "in combat / out of combat behavior?"
+- (625i) "this should also apply if the healer gets low on mana and can't
+  cast spells. They should say "oom" or "mana" in an appropriate chat
+  channel, and others can use that as the signal to jump in. What happens
+  if a player is the healer?"
+- (625k, strategems/grown-and-relearnable.md) "this could be a strategem or
+  something. The idea that we can "grow" functionality, and it must be
+  re-learnable as it's underlying environment changes."
+- (625i) "that's right"
+- (625f) "we want to maximize valuable uptime. Can you think of a way to do that?"
+- (625f) "this planning should be reflected in the weights that we
+  dynamically adjust as the world around them changes and the situation
+  they're addressing develops. Lots of number crunching, gotta use
+  parallel threads for each buddy-bot and such..."

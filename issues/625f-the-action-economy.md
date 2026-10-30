@@ -67,6 +67,37 @@ what each answer gets done against the time it spends, and:
   (some instants, item uses) are slipped between global cooldowns rather
   than spending one.
 
+**Most valuable uptime** (the owner, 2026-10-30, asked how long a ready
+cooldown may wait: "we want to maximize valuable uptime. Can you think of
+a way to do that?"). The agent's way, for the owner to curate: a
+cooldown's worth over the rest of the fight is the sum, over every use it
+will get, of what a use is worth at that moment (more inside an
+empowered window: Bloodlust, a weak phase, another cooldown). Holding it
+is right only when the plan with the hold is worth more than the plan
+without:
+- with T seconds of fight left (625h's estimate) and a cooldown of C
+  seconds, using it now leaves room for about T / C more uses; holding it
+  w seconds may cost one of them (when the remainder of T / C is small);
+- a window starting in w seconds that multiplies a use by m is worth
+  holding for when the held use's gain (m - 1) is more than the use it
+  costs, a lost use counting at its own worth;
+- so short holds for big windows are taken, long holds that cost a use
+  are not, and near the fight's end every cooldown is used (nothing to
+  save it for).
+The check is plain arithmetic over each ability's timeline, worked out
+again whenever the fight's estimate or a window's timing changes.
+
+**Planning lives in the weights** (the owner, 2026-10-30: "this planning
+should be reflected in the weights that we dynamically adjust as the
+world around them changes and the situation they're addressing develops.
+Lots of number crunching, gotta use parallel threads for each buddy-bot
+and such..."). A buddy's plan (its next casts, its holds) is not a script
+it follows: it is the weights its answers carry, worked out again as the
+fight changes. The working out is heavy, so it is done off the world's
+thread, by a pool of worker threads (one buddy's plan a task), each
+finished plan handed to the multiplier the draw reads (625) between the
+bot module's choices.
+
 The action economy is one of several (625h resources, 625j threat, 617z
 movement, 617e5b boss mechanics): each says how much an answer is worth
 by its own measure, and the draw (625) weighs them together. Learning
@@ -85,6 +116,13 @@ by its own measure, and the draw (625) weighs them together. Learning
 ## Open Questions
 
 1. How long may a buddy hold a ready cooldown to line it up with another,
-   or with an empowered moment, before using it anyway?
+   or with an empowered moment, before using it anyway? **Answered
+   2026-10-30:** "we want to maximize valuable uptime": held only while the
+   plan with the hold is worth more (above).
 2. Should the timeline look ahead (plan the next few casts, as a skilled
-   player does), or only weigh the next one by what is ready?
+   player does), or only weigh the next one by what is ready? **Answered
+   2026-10-30:** the planning is reflected in the weights, worked out
+   again as things change, on worker threads per buddy (above).
+3. A use inside a window is worth m times a plain one: should m be what
+   the window gives in numbers (Bloodlust's 30% haste: 1.3), or larger, to
+   count the moment's importance (a weak phase, a burn) beyond its numbers?
