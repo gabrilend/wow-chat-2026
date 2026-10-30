@@ -214,6 +214,11 @@ int main()
     // {{{ the ring (617s2, 617s3)
     {
         Point owner{ 100.0f, 100.0f, 0.0f };
+        Settings rs;
+        float r = rs.ringYards;
+        for (int i = 0; i < 6; ++i) r = RingRadius(r, true, rs);
+        check(rs.ringYards == 5.0f && r == 25.0f, "\".buddy wider\" steps out from 5 and stops at 25");
+        check(RingRadius(20.0f, false, rs) == 5.0f, "\".buddy closer\" goes back to 5 at once");
         std::vector<Place> ring = RingPlaces(owner, 0.0f, 4, 4.0f);
         bool even = ring.size() == 4;
         for (Place const& p : ring)

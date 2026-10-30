@@ -59,7 +59,9 @@ struct Settings
     float    side         = 1.0f;    // yards to the side at the most ("within 1 yard of the trail")
     float    nearBack     = 1.0f;    // yards behind for the outermost places ("1-2 yards behind")
     float    farBack      = 2.0f;    // yards behind for a place on the trail itself
-    float    ringYards    = 4.0f;    // the close follow's ring round the owner (ours, 617s2)
+    float    ringYards    = 5.0f;    // the close follow's ring round the owner, to begin with (617s4: "5, 5, 25")
+    float    ringStep     = 5.0f;    // ".buddy wider" moves it out this far
+    float    ringMost     = 25.0f;   // and no farther
     float    ringSlack    = 1.5f;    // yards off its ring place before a follower walks back to it
     float    restYards    = 10.0f;   // following starts again only past this ("farther than 10 yards away")
     float    arriveYards  = 1.0f;    // at its place: following ends, rest begins (ours: the trail's own width)
@@ -351,6 +353,16 @@ inline std::vector<Place> RingPlaces(Point const& owner, float ownerFacing, int 
         out.push_back(p);
     }
     return out;
+}
+// }}}
+
+// {{{ RingRadius
+// The ring's radius after ".buddy wider" (a step out, ringStep, up to
+// ringMost) or ".buddy closer" (straight back to the smallest, ringYards),
+// the owner, 2026-10-04: "5, 5, 25" ... "yes. And 5 is the minimum."
+inline float RingRadius(float now, bool wider, Settings const& s)
+{
+    return wider ? std::min(now + s.ringStep, s.ringMost) : s.ringYards;
 }
 // }}}
 

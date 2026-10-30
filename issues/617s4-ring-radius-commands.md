@@ -13,6 +13,14 @@ See 617s (the owner's words, 2026-10-04, quoted in full there).
 
 ## Current Behavior
 
+**Built 2026-10-30 (the rule committed; the commands wait for the
+compile, compiler-checked):** `.buddy wider` and `.buddy closer`, player
+level, in `buddies_follow.cpp`; the radius is kept per leader while the
+server runs, and the close follow's ring (617s2) uses it. The rule
+(`BuddyFollow::RingRadius`: 5 to begin, a step of 5, at most 25, closer
+back to 5 at once) is checked in `tests/buddy-follow-core`. Both are in
+the command reference. Macros: not made.
+
 Not built.
 
 ## Intended Behavior
