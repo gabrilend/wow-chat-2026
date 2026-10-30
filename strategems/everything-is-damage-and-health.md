@@ -55,6 +55,7 @@ where each stands:
 |--------|--------------------------------|---------|
 | The talent draw (625) | the game's spell flags; a raise per point | partly |
 | Window values (625f) | the game's buff numbers, and each ability's profile from its own data (`scripts/generate-ability-data`) | yes (the shares of casts come at run time) |
+| Cooldown timing (625f) | each use worth its moment's window factors over the time left (`buddies_cooldown_plan.h`) | yes (the fight's length, 625h, comes at run time) |
 | Buff targeting (625l) | (planned from the roots) | planned |
 | Gear choice (617j, 625b) | the bot module's stat weights per class and spec | not yet |
 | Talent picks (617g) | the ten shapes, drawn at random | not yet |

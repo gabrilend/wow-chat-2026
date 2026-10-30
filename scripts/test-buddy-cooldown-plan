@@ -1,0 +1,28 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-cooldown-plan
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      a buddy holds a long cooldown only when the plan with the hold is worth more over the rest of the fight
+# quick-test: yes
+# ==== end of header ====
+# test-buddy-cooldown-plan - compiles and runs
+# tests/buddy-cooldown-plan/plan-check.cpp against the buddy module's
+# cooldown plan (issue 625f, "most valuable uptime"), with no server.
+#
+# Usage: scripts/test-buddy-cooldown-plan [DIR]   (--help: this text)
+
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+    sed -n '10,14p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+OUT="${DIR}/tmp/tmp"
+mkdir -p "${OUT}"
+g++ -std=c++17 -O1 -Wall -Wextra -Werror -I"${DIR}/patches/B036-mod-buddies/mod-buddies/src" \
+    "${DIR}/tests/buddy-cooldown-plan/plan-check.cpp" -o "${OUT}/buddy-cooldown-plan" || exit 1
+nice -n 19 "${OUT}/buddy-cooldown-plan"
+# ==== footer of test-buddy-cooldown-plan ====
+# lines:      28
+# ==== end of footer ====

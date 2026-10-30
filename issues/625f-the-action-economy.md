@@ -9,7 +9,8 @@
   617e5b (boss fights by the warnings: the boss-mechanic economy)
 - Priority: High (the owner: "I am very excited to work on the action
   economy.")
-- State: in progress (window values built; the timeline and its weights next)
+- State: in progress (window values and the cooldown timeline built; the
+  worker threads and the multiplier next)
 
 ## Origin
 
@@ -54,6 +55,30 @@ read from that data, nothing set by hand. Checked by
 `scripts/test-buddy-window-buffs`: from the data, Bloodlust is worth 1.30
 to a Fireball mage, 1.075 to a Sinister Strike rogue, 1.15 to a
 Corruption and Shadow Bolt warlock.
+
+**The cooldown timeline, built 2026-10-30 (committed, offline):**
+`buddies_cooldown_plan.h`. For one long cooldown it works out the best
+moments to use it over the time the fight has left: the time is cut into
+half-second steps, and from the end backwards each step keeps the most the
+cooldown can still be worth if it is ready then (never used again, or used
+at some moment within one cooldown from then and ready again a cooldown
+later; a hold longer than a whole cooldown is never better, since using it
+now and again at the held moment beats it). A use is worth the windows'
+factor over the time it keeps working, cut short at the fight's end. What
+comes out: the worth of using it the moment it is ready, the best plan's
+worth, its first use and every use, and the weight (the first over the
+second: 1 when using it at once is best, less the more holding gains).
+Lining up: a buddy's own cooldowns are planned with each other's planned
+uses as windows, three passes, longest cooldown first. Checked by
+`scripts/test-buddy-cooldown-plan` (18 checks): a 10-second wait for
+Bloodlust that costs no use is taken; a wait that costs a whole use is
+taken only for a window worth more than the lost use (x2.5, not x1.3);
+nothing is held for nothing; near the end everything is used; a
+120-second cooldown waits for a 180-second one and its second use slides
+to meet the other's second. Not yet: the worker threads, the fight's
+length (625h's estimate), the windows from the party's buffs and a boss's
+phases, and the weight handed to the talent draw's multiplier, all in the
+server and waiting for those.
 
 ## Intended Behavior
 
@@ -122,7 +147,8 @@ by its own measure, and the draw (625) weighs them together. Learning
    with what each economy said.
 2. The timeline as plain arithmetic in the buddy module's pure core
    (each ability's global cooldown, cast time, cooldown, readiness), with
-   tests.
+   tests. (Done for long cooldowns: `buddies_cooldown_plan.h`; the global
+   cooldown and cast times of the rotation's short abilities are next.)
 3. Its weight joined to the talent draw's multiplier.
 
 ## Open Questions
