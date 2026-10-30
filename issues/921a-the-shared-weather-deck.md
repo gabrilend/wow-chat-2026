@@ -5,7 +5,7 @@
 - Phase: 9
 - Parent: 921 (Alterac Valley's shared weather)
 - Switch: `Buddies.AlteracWeather` (the parent's)
-- State: in progress (built; waits for the compile; one open question)
+- State: in progress (built by the owner's compile of 2026-10-30 and committed; one open question)
 
 ## Origin
 

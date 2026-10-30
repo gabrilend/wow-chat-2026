@@ -6,7 +6,7 @@
 - Parent: 921 (Alterac Valley's shared weather)
 - Blocked by: 921a (the shared clock it rides on)
 - Switch: `Buddies.AlteracWeather` (the parent's)
-- State: in progress (built; waits for the compile; two open questions)
+- State: in progress (built by the owner's compile of 2026-10-30 and committed; two open questions)
 
 ## Origin
 

@@ -34,7 +34,7 @@ simulation focused on backgrounds."
 ## Current Behavior
 
 **The weights and the draw are built (2026-10-30), off by default; the
-server side waits for the owner's compile.**
+server side was built by the owner's compile of 2026-10-30.**
 - `buddies_talent_draw.h` (plain arithmetic): each ability's weight from
   the talents touching it (by points, or by the talent's own percent), and
   the draw: every answer's priority nudged by a Gumbel draw scaled by its
@@ -46,8 +46,9 @@ server side waits for the owner's compile.**
 - `buddies_talent_touches_data.h`, generated with 625a's table: each
   talent's rank spells, and each ability it touches with the percent its
   top rank states.
-- `buddies_talents.cpp` (waits for the compile; the compiler check passes,
-  with flags borrowed from the bot module): the "buddy talents" combat
+- `buddies_talents.cpp` (built by the 2026-10-30 compile; since then the
+  forward pass's lean was added to it (625n), so the file waits for the
+  next compile before it is committed): the "buddy talents" combat
   strategy, whose multiplier applies the draw to every spell a buddy might
   cast, its weights worked out from the talents it knows every 20 seconds;
   put on every buddy while `Buddies.TalentWeights` is 1 or 2.

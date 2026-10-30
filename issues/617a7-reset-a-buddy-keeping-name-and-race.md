@@ -11,7 +11,7 @@
   197 (the same change for a player), `scripts/change-character-class`
   (the class-change tool)
 - Priority: Medium
-- State: built; waits for the compile; not built (on the session's to-do list to implement)
+- State: in progress (built by the owner's compile of 2026-10-30 and committed; not yet tried in game)
 
 ## Origin
 
@@ -32,8 +32,8 @@ The owner, 2026-10-25:
 **Built 2026-10-30, as decided (a new character with the same name,
 gender and race; game masters only; its belongings mailed on). The choice
 library is committed; the module's code, Sargobras's script and the
-roster's columns wait for the owner's compile and install
-(compiler-checked; the SQL applied twice to a scratch database):**
+roster's columns were built by the owner's compile of 2026-10-30 and
+committed (the SQL applied twice to a scratch database first):**
 - `.buddy reset <name>` (game master, and the console:
   `scripts/gm-command ".buddy reset <name>"`), in `buddies_reset.cpp`:
   refused unless the buddy is in the world (its belongings can only be

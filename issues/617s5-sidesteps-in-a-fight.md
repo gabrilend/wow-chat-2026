@@ -14,7 +14,7 @@ See 617s (the owner's words, 2026-10-04, quoted in full there).
 ## Current Behavior
 
 **Built 2026-10-30, both step sizes (the arithmetic committed; the server
-side waits for the compile, compiler-checked):** `buddies_sidestep.h`
+side built by the owner's compile of 2026-10-30 and committed):** `buddies_sidestep.h`
 works out the step round the target at the buddy's present distance, by
 share (melee 20-35% of the circle, ranged 10-20%) or by distance (2-3
 yards at 40 yards out, shrinking toward the target), a random direction;
