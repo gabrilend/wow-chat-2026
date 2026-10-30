@@ -37,6 +37,7 @@ uncommitted until the owner's compile builds it.
 | 617s4 | `.buddy wider` (5 yards a step, up to 25) and `.buddy closer` (back to 5): the ring's radius per leader; the rule in `roam/buddy_follow_core.h` and its checks (committed); the commands in `buddies_follow.cpp`, their entries in `config/custom-gm-commands.lua` and the generated reference and help (wait) | the commands | none (the owner's numbers) | rule yes, commands wait | the command class, `RingRadius`, the two entries |
 | 921, 921a | Alterac Valley under one shared sky: the shuffled weather deck, slush included, in `buddies_weather_deck.h` with `tests/buddy-weather/` and `scripts/test-buddy-weather` (committed); `buddies_weather.cpp` (every copy given the sky of the moment, `.buddy weather`), its registration and reference entry (wait) | `Buddies.AlteracWeather` 0 or 1 | none open (921's turn length and the storm's effects stay questions) | deck yes, server waits | `buddies_weather*`, the registration line, the entry |
 | 921b | the wandering storm: `buddies_weather_storm.h`, the valley's cells (`scripts/generate-av-valley`, `buddies_av_valley_data.h`), the day-long test (committed); the storm in `buddies_weather.cpp` (waits); the weather page `docs/HTML/alterac-weather.html` by `scripts/generate-weather-page` (committed; picture 093) | the parent's `Buddies.AlteracWeather` | none (921b's size and count stay questions) | walk yes, server waits | the storm parts of `buddies_weather.cpp`, the storm header, valley data and generator, the page |
+| 617s5 | sidesteps round the target after an instant spell: `buddies_sidestep.h`, `tests/buddy-sidestep/`, `scripts/test-buddy-sidestep` (committed); `buddies_sidestep.cpp` and its registration (wait) | `Buddies.Sidestep` 0, 1 or 2 | **1** a share of the circle (melee 20-35%, ranged 10-20%) or **2** by distance (2-3 yards at 40 yards, less closer) | arithmetic yes, server waits | `buddies_sidestep*`, the registration line |
 
 ## Choices waiting for the owner
 
@@ -50,6 +51,8 @@ uncommitted until the owner's compile builds it.
 3. **The close follow in combat** (617s2, the two readings of "in combat
    or when specified"): `Buddies.CloseFollow.InCombat = 0` (the ring only
    when asked) or `= 1` (also while the leader fights).
+4. **Sidesteps** (617s5, the owner's two step sizes): `Buddies.Sidestep =
+   1` (a share of the circle) or `= 2` (by distance).
 
 ## Not built, and why
 

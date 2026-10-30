@@ -1,0 +1,21 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-sidestep
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      a buddy's sidestep round its target keeps its distance; by share (melee 20-35%, ranged 10-20%) or by distance (2-3 yards at 40, the melee reach close in); both ways round
+# quick-test: yes
+# ==== end of header ====
+# test-buddy-sidestep - compiles and runs tests/buddy-sidestep/sidestep-check.cpp
+# against the buddy module's sidestep (issue 617s5), with no server.
+
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+OUT="${DIR}/tmp/tmp"
+mkdir -p "${OUT}"
+g++ -std=c++17 -O1 -Wall -Wextra -Werror -I"${DIR}/patches/B036-mod-buddies/mod-buddies/src" \
+    "${DIR}/tests/buddy-sidestep/sidestep-check.cpp" -o "${OUT}/buddy-sidestep" || exit 1
+nice -n 19 "${OUT}/buddy-sidestep"
+# ==== footer of test-buddy-sidestep ====
+# lines:      21
+# ==== end of footer ====

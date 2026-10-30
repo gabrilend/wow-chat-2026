@@ -13,7 +13,19 @@ See 617s (the owner's words, 2026-10-04, quoted in full there).
 
 ## Current Behavior
 
-Not built. In a fight a buddy stands where its class's fighting puts it.
+**Built 2026-10-30, both step sizes (the arithmetic committed; the server
+side waits for the compile, compiler-checked):** `buddies_sidestep.h`
+works out the step round the target at the buddy's present distance, by
+share (melee 20-35% of the circle, ranged 10-20%) or by distance (2-3
+yards at 40 yards out, shrinking toward the target), a random direction;
+`scripts/test-buddy-sidestep` (a quick test) checks the distance kept,
+both shares, both distances and both directions. `buddies_sidestep.cpp`:
+when a buddy in a fight casts a spell with no cast time, at most once
+every 1.5 seconds, it is moved to the step's spot on the mesh (tried the
+other way round if the mesh refuses). Switch `Buddies.Sidestep`: 0 off
+(the default), 1 by share, 2 by distance, for the owner to choose. Not
+known until seen in game: whether the bot module's own fight movement
+cuts the step short.
 
 ## Intended Behavior
 
