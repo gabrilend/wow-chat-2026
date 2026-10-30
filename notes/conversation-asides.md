@@ -543,3 +543,7 @@ Word for word, each written into its plan:
   system into alignment one-by-one."
 - (625l) "if a player has a cooldown ready but they're holding it, then
   that probably means they want to save for a burn. ..." (in full in 625l)
+- (625l) "every time they hold it long enough that it's cooldown could
+  have been reset. ... We notice irresponsibility, not responsibility,
+  because buddy-bots are always responsible! How diligent of them!" (in
+  full in 625l)

@@ -101,6 +101,21 @@ rules).
   - each time the player keeps holding past a good moment, their weight
     for that buff, from that buddy, takes a malus that grows, until giving
     it to a buddy wins;
+  - **when it grows, and when it heals** (the owner, 2026-10-30, word for
+    word: "every time they hold it long enough that it's cooldown could
+    have been reset. Basically the bot is learning "oh this player isn't
+    being very responsible right now, I should look elsewhere for my buffs
+    to maximize my impact" because they're all just trying to do the very
+    best that they can. But if they then use their buffs correctly, as in,
+    rapidly after it's CD completes, then they can get a bit of faith back.
+    It should only ever climb to a baseline. We notice irresponsibility,
+    not responsibility, because buddy-bots are always responsible! How
+    diligent of them!"): the malus grows by a step each time the player
+    holds a ready cooldown for as long as that cooldown's own length (a
+    whole use lost); it shrinks by a step when they use a cooldown soon
+    after it comes back; it never goes above the baseline, the faith every
+    player starts with. Buddies are never marked down this way: they
+    always use what is ready (the action economy, 625f);
   - the malus is kept with the buddy's list of who might benefit (made on
     joining), so it lasts until that list is made again: the party
     disbands, the player or that buddy leaves it, or the player logs out
@@ -133,3 +148,6 @@ rules).
 2. How long may a player hold a ready cooldown before the malus starts:
    from its first good moment (Bloodlust up, the boss's weak phase), or
    after a few seconds of the cooldown sitting ready whatever is happening?
+   **Answered 2026-10-30:** each time they hold it as long as its own
+   cooldown; faith comes back with prompt use, never above the baseline
+   (above).

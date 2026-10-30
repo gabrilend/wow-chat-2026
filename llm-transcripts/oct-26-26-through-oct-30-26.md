@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-30 12:52:18
+Generated on: 2026-10-30 13:01:48
 Models: claude-opus-5-5
 
 ## Contents
@@ -183,6 +183,11 @@ Models: claude-opus-5-5
     for your next compile; the buddy reset is done and waits for that compile.
     Next: answer the two action-economy questions (how long to hold a cooldown,
     and whether to plan casts ahead).
+44. 2026-10-30 12:55, after Request 141 - We're building the buddy bots' combat
+    economies toward your next compile. Buff targeting and the damage-and-health
+    table are written and committed. Next is reading each ability's own speed
+    data for the window values, after you run `scripts/update` for basic and
+    compile.
 
 --------------------------------------------------------------------------------
 
@@ -14639,6 +14644,51 @@ things, and how far each is aligned:
 | Loot rolls | not yet |
 
 Each gets brought in one at a time, with the table kept current.
+
+--------------------------------------------------------------------------------
+
+### User Request 142
+
+<pasted_content id="12ab">
+> - For players, whose plans the server can't see, the jump in their worth after
+> using a
+>     cooldown is the sign instead. That's my pick from your two options: plans for buddies,
+>     the jump for players. The only open question left is how far back the jump looks.
+</pasted_content id="12ab">
+
+
+if a player has a cooldown ready but they're holding it, then that probably
+means they want to save for a burn. If we can and it would benefit them, we can
+save the buddy-bot's buff for the player's burn phase - this is more satisfying
+than seeing it go to a bot. BUT if the player keeps holding and holding then we
+can give them a negative malus to the buddy-bot's weight for them for that buff
+in particular, and at a certain point it'll just make more sense to use it on a
+buddy-bot instead. This persists until the player logs out again. Possibly when
+the group disbands or the player or that buddy-bot leaves it, whichever is
+easier to implement.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 142
+
+*[commit] a9b1aa95c in wow-chat-2026 - *
+
+I've added this to the buff-targeting plan and committed it (a9b1aa95c):
+
+- **Holding means saving.** A player with a big cooldown ready and unused is
+  read as saving it for a burn. While the buff would help that burn, the buddy
+  holds its buff for the player rather than giving it to a bot.
+- **Holding too long tips it to a buddy.** Each time the player keeps holding
+  past a good moment, their weight for that buff from that buddy takes a growing
+  penalty. Eventually giving it to a buddy wins.
+- **When it resets.** The penalty is kept with the buddy's list of who might
+  benefit, which it makes on joining. So it lasts until that list is remade:
+  when the party disbands, the player or that buddy leaves, or the player logs
+  out. One rule covers all of your options, which makes it the easiest to build.
+
+One question: when should the penalty start? From the first good moment the
+player lets pass, such as Bloodlust being up or the boss's weak phase? Or after
+the cooldown has sat ready for a few seconds, whatever is happening?
 
 --------------------------------------------------------------------------------
 
