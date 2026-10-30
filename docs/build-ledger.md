@@ -54,6 +54,24 @@ uncommitted until the owner's compile builds it.
 4. **Sidesteps** (617s5, the owner's two step sizes): `Buddies.Sidestep =
    1` (a share of the circle) or `= 2` (by distance).
 
+## Waiting for the owner's compile: the files
+
+All pass the compiler check (`scripts/test-patched-syntax`, flags borrowed
+from the bot module where the buddy module was never built here). Kept
+uncommitted until the compile builds them, then committed with their
+issues.
+
+| File | For |
+|------|-----|
+| `buddies_path.cpp/.h`, `buddies_map_stream.cpp` | the painted-map pathfinding switch (617o7, 617o8) |
+| `buddies_army.cpp/.h`, `buddies_stand_ins.cpp`, `buddies_stand_ins_pick.h`, `buddies.h`, `buddies_party.cpp`, `buddies_gems.cpp`, `buddies_roam_ground.cpp` | the army of 64, fully random; stand-ins met by chance; grouping; gems by plan (617e17, 617t, 617c2) |
+| `buddies_talents.cpp/.h`, `buddies_roam_strategy.cpp` | the talent draw (625) |
+| `buddies_follow.cpp/.h`, `buddies_orders.cpp` | the close follow's ring and its radius (617s2-s4) |
+| `buddies_weather.cpp` | Alterac Valley's sky and storm (921) |
+| `buddies_sidestep.cpp` | sidesteps (617s5) |
+| `buddies_loader.cpp` | registers the new scripts |
+| `config/custom-gm-commands.lua`, `docs/gm-commands.txt`, `docs/HTML/gm-commands.html`, `sql/*/34-custom-command-help.*.sql` | `.buddy path`, `.buddy army`, `.buddy wider`, `.buddy closer`, `.buddy weather` described |
+
 ## Not built, and why
 
 Kept as each candidate is looked at.
@@ -62,4 +80,7 @@ Kept as each candidate is looked at.
 |-------|---------------|
 | 617s1 | compass directions per roster slot: the ring shares places by nearness instead; build if the owner wants each buddy to keep its own compass point |
 | 921 (sliders) | the weather page's sliders for turn length, storm size and pace: would need the arithmetic twinned in the browser; the page plays back the real numbers instead |
+| 617s6 | sending one buddy to a clicked spot needs a click the server can hear (a ground-targeted spell given to players, as the bot module's own uses): a design step first |
+| 617a7 | resetting a buddy touches Sargobras's dialogue, the roster and character creation: next, a larger piece |
+| 617e18 | buddies pointing to the next quest: large (the server's quest tables, the arc in open country, where buddies roam rather than follow) |
 | 625c, 625d | every tree's list in the trees' shares, and the moment's economy: large, next after the talent draw is seen in game |
