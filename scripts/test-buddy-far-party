@@ -1,0 +1,52 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-far-party
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      buddies who can't join their owner's party group by who is near whom, split evenly (six make 3 and 3)
+# quick-test: yes
+# ==== end of header ====
+# test-buddy-far-party - checks how buddies who can't join their owner's
+# party group among themselves (the far party core,
+# roam/buddy_far_party_core.h), with no server (issue 617c2).
+#
+# For a general audience: buddies out of reach of their owner's party
+# make parties of their own, among those within experience-sharing range
+# of each other, and the owner wants them even: six make two groups of
+# three, not five and one. The server's version is plain arithmetic, so
+# this test builds it alone with the system compiler and checks the
+# sizes, that neighbours go together, and that nobody is grouped with
+# someone out of range.
+#
+# Usage: scripts/test-buddy-far-party [PROJECT_DIR] [--help]
+# Builds into tmp/tmp/ (the executable tier). Exits non-zero when any
+# check fails.
+
+set -uo pipefail
+
+# {{{ configuration
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+    echo "Usage: scripts/test-buddy-far-party [PROJECT_DIR]"
+    echo "  Builds and runs the far party core's offline check (tests/buddy-far-party/far-party-check.cpp)."
+    exit 0
+fi
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+CORE="${DIR}/patches/B036-mod-buddies/mod-buddies/src/roam"
+SOURCE="${DIR}/tests/buddy-far-party/far-party-check.cpp"
+EXEC_DIR="${DIR}/tmp/tmp"
+BINARY="${EXEC_DIR}/buddy-far-party-check"
+# }}}
+
+[[ -d "${DIR}/tmp" ]] || { echo "ERROR: ${DIR}/tmp missing (the project's link to /tmp/<project>)"; exit 1; }
+mkdir -p "${EXEC_DIR}"
+
+if ! g++ -std=c++17 -O2 -Wall -Wextra -Werror -I"${CORE}" "${SOURCE}" -o "${BINARY}"; then
+    echo "test-buddy-far-party: the far party core did not build alone (above); nothing was checked"
+    exit 1
+fi
+"${BINARY}"
+# ==== footer of test-buddy-far-party ====
+# lines:      52
+# ==== end of footer ====
