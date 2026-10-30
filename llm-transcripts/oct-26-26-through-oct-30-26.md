@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-30 14:44:28
+Generated on: 2026-10-30 14:52:42
 Models: claude-opus-5-5
 
 ## Contents
@@ -205,6 +205,11 @@ Models: claude-opus-5-5
     economy, so they use their long cooldowns at the best moments; the timing
     math is done, tested and committed. Next I'll build the server side, which
     will wait for your compile.
+49. 2026-10-30 14:47, after Request 152 - I'm building the buddies' threat
+    economy: what moves threat, and whom an enemy attacks, are done and
+    committed. Next I'll build the curve, each tank's time until death from
+    health, damage and healing, so every lever can be weighed by how it bends
+    that curve.
 
 --------------------------------------------------------------------------------
 
@@ -15752,6 +15757,63 @@ ability itself?
 Next is the curve: each attention holder's time until death from their health,
 damage taken and healing received. Then each lever's worth is how much it bends
 that curve.
+
+--------------------------------------------------------------------------------
+
+### User Request 153
+
+<pasted_content id="12ab">
+> One open question from the pets' issue: should the pet's plain attack (Claw,
+> Bite,
+> Firebolt) stay on the game's autocast as filler, with the buddy choosing only
+> the
+> abilities that have a purpose? Or should the buddy choose every pet ability
+> itself?
+</pasted_content id="12ab">
+
+
+the plain attack can be autocast I guess.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 153
+
+*[commit] f5220f130 - Pets: the plain attack stays on autocast as filler*
+
+*[commit] 25390d6ab - Threat economy: the curve toward victory, and what a lever saves along it*
+
+I wrote your answer into the pets issue: the plain attack (Claw, Bite, Firebolt)
+stays on the game's autocast as filler, and the buddy chooses the rest.
+Committed (f5220f1).
+
+The curve is also built and committed (25390d6). The rest of the fight is split
+into stretches, each with one character holding the enemies' attention. That
+character loses the enemies' damage, scaled by how much they let through, minus
+the healing, which follows whoever is being hit. If someone's health would drop
+below zero before the end, the gap is how much health is "short". A lever is
+worth however much shortfall it removes.
+
+The test fight: a tank 10 seconds from death, with 30 seconds left.
+
+| What's done | Health short |
+|---|---:|
+| Nothing | 4000 |
+| Hand of Protection, fury warrior next in line | 1700 |
+| Hand of Protection, priest next in line | 5750 (worse than nothing) |
+| Lay on Hands | 0 |
+
+So Lay on Hands is favoured, as you said. Hand of Protection depends on who
+holds attention next. After the tank, the planner correctly picks the fury
+warrior as the most durable. All 11 checks pass.
+
+None of the threat work is in the server yet. Still to do:
+- **The tank's load:** whether there's room to pull more.
+- **The off-tank's rule:** when to step in for a faltering tank.
+- **Reading the fight:** each enemy's threat list, everyone's health, the damage
+  coming in and the healing.
+
+The off-tank's rule has one question open: once the main tank recovers, should
+an off-tank hand the enemies back, or keep them to the end of the fight?
 
 --------------------------------------------------------------------------------
 

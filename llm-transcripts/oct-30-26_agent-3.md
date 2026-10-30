@@ -1,6 +1,6 @@
 # Conversation Summary: e143dbfe-ff43-48be-8bd4-4d54fd7a325d
 
-Generated on: 2026-10-30 14:49:41
+Generated on: 2026-10-30 14:53:32
 Models: claude-opus-5-5
 
 ## Contents
@@ -3233,6 +3233,126 @@ just the random extras, keeping the kit weapon's skill so a new buddy can use
 what it's holding?
 
 My call: keep the kit weapon's skill and drop the random extras.
+
+--------------------------------------------------------------------------------
+
+### User Request 24
+
+<pasted_content id="415d">
+> - Wrath materials: left open until the next profession pass. Here's what's
+> known. Basic already
+>     replaces spell data on the server, so the server could accept Arcanite Bars. The stock client
+>     keeps its own copy of the recipe, though, so it would still show and check for Saronite until
+>     the custom client.
+</pasted_content id="415d">
+
+
+custom recipe and recipe item maybe?
+
+
+
+<pasted_content id="415d">
+> One question your answers raised. Buddies get some weapon skills free today.
+> In October you
+> decided a buddy always knows the weapon its kit hands it, plus random weapon
+> skills up to your
+> own count, and that's built. Now that weapon lessons are a paid errand like
+> class lessons,
+> should both free grants go? Or just the random extras, keeping the kit
+> weapon's skill so a new
+>   buddy can use what it's holding?
+</pasted_content id="415d">
+
+
+ah right when a buddy-bot is created above level 1. I was thinking about just
+level 1 buddies but of course they can be made at any level. Okay so... they
+always have the weapon they show up with maxxed for their level. Also, if you
+have trained weapon skills from the trainer, for each one you've trained (not
+which you started with) then they start with 1 extra, if their class needs one
+extra. These extras should be maxxed for their level as well.
+
+10 more questions?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 24
+
+> Recording the recipe idea and the weapon-skill rule first:
+
+I've recorded both answers word for word:
+
+- **Wrath materials:** I added your custom recipe idea to the enhancements
+  issue. On the stock client, a new item works, because the client asks the
+  server about items it doesn't know. A new crafting spell doesn't, because the
+  client must already have the spell in its own files. So the likely shape is a
+  custom item that does the crafting itself: a mould or kit that, when used,
+  takes Arcanite Bars and gives the buckle or socket item, with its description
+  written into the item's tooltip. It gets settled in the profession pass.
+- **Weapon skills at creation:** a buddy made at any level knows the weapon it
+  arrives with, at its level's maximum skill. For each weapon skill you trained
+  at a trainer (not the ones you started with), it gets one more kind, as long
+  as its class has one left to learn, also at its level's maximum. Everything
+  else is bought from weapon masters. It's on the todo list.
+
+## Ten questions, all on basic's own issues
+
+**Drops by monster rank** (your knob: rares might drop greens at 2× the rate,
+and you could turn it to 3×, or "2 rate and 3 quantity", per monster type, in
+the config file)
+
+1. **"Quantity":** more copies of the same item (a stack of 3 cloth instead of
+   1, which only works for stackable things), or more rolls (three chances at a
+   green instead of one)?
+   *My call:* more rolls, since it works for every item.
+2. **"Monster type":** only rank (normal, elite, rare, rare elite), or also kind
+   (beast, humanoid, undead…)?
+   *My call:* rank only for now. Kind can be a second knob later.
+3. **Whose kills:** does the multiplier apply to every kill, buddies alone
+   included, or only kills a real player took part in?
+   *My call:* every kill, the same rule for everyone.
+
+**Rares on the common clock** (your words: rares should respawn on the ordinary
+monsters' timer, faster the more players are nearby, about 10% per player)
+
+4. **Which clock:** a flat 5 minutes for every rare, or each rare matched to the
+   ordinary monsters around it?
+   *My call:* matched to the monsters around it.
+5. **Rare spawn pools.** Many rares share their spawn spots with ordinary
+   placeholder monsters and appear at one spot at a time. On a short timer they
+   would cycle quickly through those spots. Keep that, or change the pools so
+   the rare is always up?
+   *My call:* keep the pools. The hunt is part of the fun.
+6. **Dungeons:** rares inside dungeons and raids too, or the open world only?
+   *My call:* open world only.
+
+**Shields give armour, not stamina** (your words: remove stamina from shields
+and give armour or defence, spirit for holy shields, and mana every 5 seconds
+for magic ones)
+
+7. **Sorting each shield:**
+   - intellect or spell power → magic (mana every 5 seconds)
+   - spirit or healing → holy (spirit)
+   - anything else → plain (bonus armour)
+
+   And what makes a shield "light", getting defence instead of armour: armour
+   below the usual for its item level, or its name?
+   *My call:* armour below the usual for its item level.
+8. **Order:** another step already turns stamina into spirit on two-fifths of
+   leather, plate, mail and jewellery, not shields. Should the shield step run
+   after it?
+   *My call:* yes, after.
+
+**Death knight buddies rune their weapons** (your words: a new rune "every time
+they go to Acherus")
+
+9. **Which Acherus?** The Ebon Hold floating over the Eastern Plaguelands, which
+   the Death Gate spell goes to, or Acherus in the death knight starting zone,
+   which exists only during the story?
+   *My call:* the one over the Plaguelands, since it's the one they keep
+   returning to.
+10. **How often a new rune:** every visit, or only sometimes (one visit in
+    three), so a rune is part of who the buddy is for a while?
+    *My call:* one in three.
 
 --------------------------------------------------------------------------------
 

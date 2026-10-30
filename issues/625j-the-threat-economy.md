@@ -9,7 +9,7 @@
   hands), 625l (buffs given to who uses them most), 617z (tank-paced
   pulls), 617c3 (the dungeon draw)
 - Priority: Medium
-- State: in progress (the levers, attention and the curve built; the tank's load next)
+- State: in progress (the levers, attention, the fight curves and tank swaps built; the tank's load next)
 
 ## Origin
 
@@ -73,7 +73,7 @@ The pets' part is its own issue, 625m.
 The bot module's tanks taunt what they lose and its damage dealers hold
 back by fixed threat triggers ("medium threat").
 
-**Built 2026-10-30 (committed, offline):** steps 1 to 3.
+**Built 2026-10-30 (committed, offline):** steps 1 to 3, and the tanks' swaps (step 5).
 - The levers, read from the game's spell table by
   `scripts/generate-ability-data` (`BUDDY_THREAT_LEVERS`, and a table in
   `docs/ability-data.md`; 42 of them): what each ability's effects and
@@ -104,8 +104,20 @@ back by fixed threat triggers ("medium threat").
   Protection with a fury warrior next in line 1700, so Lay on Hands is
   favoured; with the priest next in line, Hand of Protection is worse than
   nothing; the most durable after the tank is the fury warrior.
-Not yet: the tank's load, the off-tank, and the server reading each
-enemy's list, everyone's health, the damage coming in and the healing.
+- Tanks swapping by the fight curves (the owner's answer to the
+  off-tank's question): each character's marks (a debuff or buff that
+  changes what it takes or is healed until it wears off) are in its curve,
+  cut where they wear off. The tanks try: the holder keeps it; another
+  taunts now; a swap at a moment a mark wears off or every few seconds
+  between; a swap and a swap back. Kept: the plan that leaves the team
+  least short, then the one that loses least health in all (the healers'
+  mana), then fewer swaps. A taunt not yet ready makes the holder keep it
+  until it is. Checked (21 checks in all): healing keeping up, no swap; a
+  minute too long for one tank, shared; a tank with a stacking debuff
+  handing to the other and taking back once clean; a tank marked to take
+  half, taunting though no one would die either way.
+Not yet: the tank's load, and the server reading each enemy's list,
+everyone's health and marks, the damage coming in and the healing.
 
 ## Intended Behavior
 
@@ -142,8 +154,8 @@ happens, right?", and in this version it is close, but not a wipe):
   feign death aura 66, threat auras 10 and 103, the immunity auras 39 and
   40), not listed by hand.
 
-**The curve toward victory.** Each buddy keeps, in its head, a running
-curve for whoever holds attention: their health, falling at the rate
+**The curve toward victory: fight curves** (the owner's name for them,
+2026-10-30). Each buddy keeps, in its head, a running curve for whoever holds attention: their health, falling at the rate
 damage comes in less the healing (625i), and so the time until they die.
 A curve pointing at "dead tank" before the fight's end (625h) is the cost
 every lever is weighed against, said in health (the strategem: everything
@@ -192,7 +204,13 @@ The earlier lines, kept:
   there isn't, they hold.
 - **The off-tank.** A second buddy able to tank (a tank shape, or the
   talents) takes enemies off a faltering main tank: one whose health
-  falls faster than it is healed, or who is stunned or down.
+  falls faster than it is healed, or who is stunned or down. **Neither is
+  fixed** (the owner's answer below): main and off-tank swap as the fight
+  goes, each tank's marks (a debuff that makes it take more, or be healed
+  less, until it wears off; or one that makes it the one the boss should
+  hit) built into the fight curves, and the tanks taunt so the attention
+  sits with whichever leaves the team least short. Keeping the tank there
+  is the tie's winner: no swap for nothing.
 - **Threat as a cost.** An answer that draws a lot of threat costs more
   for a damage dealer near the top of the threat list, less for the tank.
 
@@ -217,4 +235,12 @@ The earlier lines, kept:
 
 1. When an off-tank takes enemies off a faltering main tank, should it
    hand them back once the main tank recovers, or keep them to the end of
-   the fight?
+   the fight? **Answered 2026-10-30** (the owner, word for word): "the
+   main and off-tank roles can switch naturally and elegantly during the
+   fight. But, they should keep in mind which tank would be best suited to
+   hold the attention, and they should taunt accordingly. For example
+   sometimes there's debuffs and stuff that can go to a tank, and you do or
+   don't want the boss targeting them for some reason or another. The bots
+   should build these into their "fight curves" as we should call them,
+   and they should automatically sort themselves into situations that are
+   most beneficial for their team." (Above, the off-tank.)
