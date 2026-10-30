@@ -142,6 +142,19 @@ talents that touch an ability (above), not by how many talents name it.
 - 625d: choosing an answer by the moment's economy: urgency, action
   economy, mana economy, movement, and cooldowns spent together in
   empowered moments.
+- 625e: what each fight taught (how much each phase made buddies move),
+  written down to be read later.
+
+**Pliable, and rigid** (the owner, 2026-10-29: "and through it all, we
+need to make the systems very flexible - pliable, so that the story and
+the AI or players can help guide it as they please. But, rigid, to
+provide a structure and make sure we aren't standing still yet running
+into trees. (or wandering about not knowing what we're doing)"). Every
+weight, list and measure in this work is data in one place, open to the
+story, an AI or a player to bend (a whispered wish, a story's mood, a
+learned log); the structure that reads them (concerns, bands, the draw,
+the checks) is fixed and tested, so a bent weight can change what a buddy
+prefers but never leave it idle or walking into a tree.
 
 ## Suggested Implementation Steps
 

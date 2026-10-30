@@ -340,3 +340,72 @@ And the follow-ups the same evening, word for word:
   intensive periods. Oh and cooldowns should try and coincide with other
   cooldowns or procs / buffs that make us feel empowered. "cast bloodlust?
   Thanks, I'll go all in" etc."
+
+## 2026-10-29, routes forward, contexts for questions, quest guidance, and the economy answered
+
+Word for word, each written into its plan (in brackets):
+
+- (618a) "can we make a functionality that walks a bot through the world
+  and then asks an image recognition program which routes forward exist?
+  Maybe even classifying certain regions in certain terms like "dirty" or
+  "snowy" or "solid" or "flat" or similar? Then, we can have different
+  creatures walk along different things depending on how they like to
+  feel. Um, okay for the pathfinding it'll help us build out a road
+  network and such."
+- (1102a) "okay now for the open questions listed in the open questions
+  system, we should build a system that dynamically builds the context
+  that a reader who is reasonably familiar with the project needs to know
+  in order to answer the question. Essentially, explaining each of the
+  specifics. This context should be placed above a series of questions
+  that are directly related to it - each of them will have components
+  that must be included in the context description we generate. Then,
+  below it, is another context for the next few series of questions. Right
+  now... Right now it's hard."
+- (617e18) "hey can you look up the Questie or Questmaster or... I forget
+  the term but there's one that's purple. The addons that help people
+  quest. Can you look those up? Then, can we have the buddy-bots guide the
+  player toward the next quest they should attend to? Quest helper, I
+  think that was it? Anyway, the buddy-bots should stand on their arc in
+  the direction of the next best quest to work on. They can also direct
+  you to places you haven't been yet, if it's time to move on. So, you
+  know you can always follow your buddies to find treasure and renown."
+- (625d) "ah yes bots should emphasize never overhealing unless they're at
+  90% or above mana. HoTs can be placed on things expecting damage soon,
+  like if they take aggro, and you can pre-cast some spells if the tank is
+  charging, like to proc earthliving or to get the Regrowth HoT up and
+  running."
+- (625c) "they should cast about 2/3rds of their spells as resto spells,
+  and 1/3rd as balance spells."
+- (625d) "if a boss has a weak phase, use cooldowns there - make a plan for
+  the fight in their rough general schedule in their head, and make sure
+  that their CDs can coincide. Then after that, try and get as many uses of
+  it as they can. Typically, a party will bloodlust at the start after the
+  tank has got everything settled, unless there's a specific weak phase.
+  This is so that the cooldowns from the bloodlust phase might have a
+  chance to come off cooldown by the end of the fight, enabling another
+  sprint toward the end."
+- (625e) "should reset when the phase changes. Also, we should remember,
+  so write our learnings to a log file and make sure we mark somewhere
+  that we have to come back and consume that log file and it's machinery
+  to learn which fights and which phases require "lots of movement" and
+  what that coincides with. We never want to forget how to generate these
+  conclusions, but we can build the machinery from scratch whenever a new
+  use-case arises. [expansion oriented darling]"
+- (625c) "role tree should win, if we're 2/3rds feral and 1/3rd resto, we
+  should address the "ally at low health" concern in a specific way,
+  favoring our feral instincts first. If we have cat talents, we should
+  try and pounce on their attackers. If we have bear talents, we try and
+  pull them off. If they are too powerful to defeat easily, and our ally
+  can hold on but needs healing and we're not under attack, then we can
+  heal them, otherwise if we're a tank and they are not, then we should
+  bear form and pull them off, otherwise if we're a tank and they are,
+  then we can catform. Basically there's so many different priorities, and
+  we can build them out one-by-one. I know how to play EVERY SINGLE WORLD
+  OF WARCRAFT CLASS. I can fully describe how they're supposed to
+  interrelate, and how the various roles (tank, healer, dps) are meant to
+  perform as well, to better illustrate the gameplays."
+- (625) "and through it all, we need to make the systems very flexible -
+  pliable, so that the story and the AI or players can help guide it as
+  they please. But, rigid, to provide a structure and make sure we aren't
+  standing still yet running into trees. (or wandering about not knowing
+  what we're doing)"

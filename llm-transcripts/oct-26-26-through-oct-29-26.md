@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-29 23:17:21
+Generated on: 2026-10-29 23:27:00
 Models: claude-opus-5-5
 
 ## Contents
@@ -12783,6 +12783,110 @@ When an ally is low and several heals fit, should the draw also lean on how
 badly hurt they are? A big slow heal when they're very low, a cheap one when
 they're barely hurt? Or should that stay with the module's own health bands, and
 the draw only mix within each band?
+
+--------------------------------------------------------------------------------
+
+### User Request 123
+
+> - Your spec only picks which list: the module guesses one talent tree. A druid
+> with two thirds of its points in Restoration plays the whole Restoration list,
+> and its Balance third
+>     changes nothing.
+
+ah see this is the part we need to upgrade.
+
+> - An answer that can't be used right now is skipped, and the draw is made
+> again among the rest.
+
+this includes things like "rejuvenation is still active, shouldn't cast again
+now" right?
+
+> When an ally is low and several heals fit, should the draw also lean on how
+> badly hurt they are? A big slow heal when they're very low, a cheap one when
+> they're barely hurt? Or
+> should that stay with the module's own health bands, and the draw only mix
+> within each band?
+
+when they're very low, we want fast heals. When they are slightly injured, we
+want cheap heals. a HoT is usually cheap in the action economy, but overheals
+are expensive in mana economy. the more concerns we have, the more important
+action economy is - the less mana we have, the more important mana economy is.
+more mp5 (from spirit or mp5) means mana economy is devalued and action economy
+is told to be extravagant. movement requirements mean we have to use things that
+are mobile friendly, and if those are common in this fight then we try and do
+the cast-time static abilities when we don't have to move at higher priority so
+we can save the instant ones for the movement intensive periods. Oh and
+cooldowns should try and coincide with other cooldowns or procs / buffs that
+make us feel empowered. "cast bloodlust? Thanks, I'll go all in" etc.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 123
+
+> Writing two new sub-plans: one list from every talent tree, and choosing by
+> the moment's economy.
+
+> Valid. Adding the two new plans to the talents page so their questions show
+> there, then committing.
+
+*[commit] 9b97e6c43 in wow-chat-2026 - *
+
+Here are the five pages. The answer server is running, so the answer boxes work
+at these addresses:
+
+1. http://127.0.0.1:8642/answer-pages/open-questions.html
+2. http://127.0.0.1:8642/answer-pages/pathfinding.html
+3. http://127.0.0.1:8642/answer-pages/talents.html
+4. http://127.0.0.1:8642/answer-pages/stand-ins.html
+5. http://127.0.0.1:8642/answer-pages/alterac-weather.html
+
+All five are listed together at http://127.0.0.1:8642/answer-pages/. The same
+pages are files in `docs/HTML/answer-pages/` (for example
+`file:///mnt/kaun/wow-chat-2026/docs/HTML/answer-pages/talents.html`); opened
+that way they read fine, but the boxes can't send. The server stops when this
+session ends, and `scripts/answer-server` starts it again.
+
+**Your questions, answered:**
+- **"Rejuvenation is still active":** yes, that's already handled. The bot
+  module only recasts a heal-over-time when its own copy on the target is about
+  to run out. It also tags every heal with a rough size and a mana-efficiency
+  rating. Its one mana rule is a switch: below 60% mana it refuses heals that
+  would mostly overheal. That's on or off at one line, not a weight that grows
+  as mana falls.
+- **Spec picking one list:** this is now its own plan, "one list from every
+  tree". A buddy hears the concerns and answers of every tree it has points in,
+  and each tree's answers count by its share. A druid with two thirds
+  Restoration and one third Balance heals first and casts Balance spells when no
+  one needs healing, about a third as often as a full Balance druid would.
+- **Your economy design:** this is now the plan "choosing by the moment's
+  economy", with your words kept in full. Each answer's chance is its talent
+  weight times five measures:
+  1. **Urgency:** fast answers when an ally is very low, cheap ones when they're
+     slightly hurt.
+  2. **Action economy:** the more concerns firing at once, the more speed and
+     heals-over-time count.
+  3. **Mana economy:** the less mana, the more cost and overhealing count.
+     Spirit and mana regeneration shrink this weight, so a buddy that refills
+     fast can be extravagant.
+  4. **Movement:** in a fight full of movement, a buddy standing still uses its
+     cast-time answers, saving the instant ones for when it has to move.
+  5. **Empowered moments:** cooldowns wait for Bloodlust, a proc or another
+     cooldown, then all go together. They're never held forever: in a critical
+     moment, or past a fight's middle, they get used anyway.
+
+The same five measures apply to damage and tanking, not just healing. Both plans
+are on the talents page now (committed as 9b97e6c43), with these three
+questions:
+
+1. Should "empowered" mean only buffs that make the buddy's own spells stronger
+   or faster (Bloodlust, Power Infusion, Innervate)? Or any big moment in the
+   fight, like the tank's Shield Wall or a boss's weak phase?
+2. When a fight changes phase, should "how much this fight has made me move"
+   count the whole fight, or only the last half minute, so the buddy changes its
+   mind with the phase?
+3. When two trees answer the same concern (a Feral druid's and a Restoration
+   druid's answers to "ally at low health"), should both lists be pooled, or
+   should the buddy's role tree speak first?
 
 --------------------------------------------------------------------------------
 

@@ -5,7 +5,7 @@
 - Phase: 6
 - Parent: 625 (buddies favour the abilities their talents touch)
 - Blocked by: 625a (the talent weights), 625c (the list it draws from)
-- Related: 627 (the bots think only when something happens), 617e5b (boss
+- Related: 625e (what each fight taught), 627 (the bots think only when something happens), 617e5b (boss
   fights by the warnings: when a fight makes everyone move), 617c5 (party
   buffs shared out)
 - Priority: High
@@ -68,11 +68,27 @@ in one place with its reason, so it can be tuned by feel.
    health missing wastes the difference. Regeneration (spirit and mana
    per 5 seconds, from gear and buffs) shrinks that weight: a buddy that
    refills fast is told to be extravagant, and leans on action economy.
+   **Never overheal below 90% mana** (the owner, 2026-10-29: "bots should
+   emphasize never overhealing unless they're at 90% or above mana"): an
+   answer whose expected heal is larger than the health missing is
+   refused below 90% mana, and allowed above it.
+   **Healing ahead of the damage** (the owner: "HoTs can be placed on
+   things expecting damage soon, like if they take aggro, and you can
+   pre-cast some spells if the tank is charging, like to proc earthliving
+   or to get the Regrowth HoT up and running."): an ally about to be hit
+   counts as hurt for heals over time: one who has just taken aggro, a
+   tank charging in. A healer may begin a cast as the tank charges, so a
+   heal over time is running, or Earthliving is ready to proc, when the
+   first blows land. These are not overheals: they are spent on damage
+   about to come.
 4. **Movement.** While moving, only instant answers can be used (the
    module already refuses a cast while moving). Across the fight, the
    buddy keeps how much of the recent time it has had to move: in a
    fight full of movement, cast-time answers are raised while standing
-   still, so the instants are saved for the moving stretches.
+   still, so the instants are saved for the moving stretches. The measure
+   starts again at each phase change (the owner, 2026-10-29: "should
+   reset when the phase changes"), and what each fight's phases asked is
+   written down to be read later (625e).
 5. **Empowered moments.** Cooldowns (Nature's Swiftness, Innervate,
    trinkets, racial abilities) wait for a moment that multiplies them:
    Bloodlust or Heroism, a haste or power buff from an ally, a proc, or
@@ -81,6 +97,19 @@ in one place with its reason, so it can be tuned by feel.
    spends them together. A cooldown is not held so long that it is never
    used: past a fight's middle, or in a critical concern, it is used
    anyway.
+   **A plan for the fight** (the owner, 2026-10-29, word for word: "if a
+   boss has a weak phase, use cooldowns there - make a plan for the fight
+   in their rough general schedule in their head, and make sure that
+   their CDs can coincide. Then after that, try and get as many uses of
+   it as they can. Typically, a party will bloodlust at the start after
+   the tank has got everything settled, unless there's a specific weak
+   phase. This is so that the cooldowns from the bloodlust phase might
+   have a chance to come off cooldown by the end of the fight, enabling
+   another sprint toward the end."). Each buddy keeps a rough schedule of
+   the fight: Bloodlust at the start once the tank has the enemies
+   settled, unless the boss has a weak phase, in which case there; its
+   own cooldowns lined up with it; then as many more uses as the fight's
+   length allows, timed so they come back for a sprint at the end.
 
 The same five measures serve damage and tanking answers: a damage
 buddy's urgency is a target about to die or a crowd to strike, its mana
@@ -105,8 +134,11 @@ the same, its movement the same, its empowered moments the same.
 ## Open Questions
 
 1. A buddy's empowered moments: only buffs that make its own answers
-   stronger or faster (Bloodlust, Power Infusion, Innervate for a
-   healer), or any big moment in the fight (the tank's shield wall, a
-   boss's weak phase)?
-2. How far back "this fight's movement" looks: the whole fight, or the
-   last half minute, so a fight that changes phase changes its mind?
+   stronger or faster, or any big moment in the fight? **Answered
+   2026-10-29:** a boss's weak phase counts, and the buddy plans the fight
+   around it (above).
+2. How far back "this fight's movement" looks? **Answered 2026-10-29:**
+   it starts again at each phase change, and is written down (625e).
+3. How does a buddy know a boss's weak phase before the fight: from the
+   boss warnings' own tables (617e5b), from what earlier fights taught
+   (625e), or both?
