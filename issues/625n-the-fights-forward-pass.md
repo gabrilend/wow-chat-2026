@@ -88,6 +88,27 @@ division (over the time covered, at least a second); the enemies' health
 read once per snapshot, for the fight's time left. Checked by
 `scripts/test-buddy-fight-state` (12 checks), among them 4000 uneven
 events whose running sums match re-reading the whole minute.
+
+**One step, snapshot to verdict, built 2026-10-30 (committed, offline):**
+`buddies_forward_pass.h`. In order: the fight's time left (or the
+horizon from the party's classes' regularly used cooldowns while it can't
+be seen); every member's marks as they stand; whom each enemy attacks;
+each enemy's real damage, read back through the armour and marks of the
+one it was hitting over the minute; for each member, what comes at it,
+how much its armour lets through (by the attackers' physical share), and
+the healing reaching it before its healing marks; each member's fight
+curve, its marks riding on it until they wear off; the party's
+shortfall; which tank should hold the hardest hitter. An answer is tried
+on a copy (a buff or debuff it would put on someone, a heal now, a
+taunt): a tried taunt changes whom the enemy attacks next and moves the
+healing with it (the healers heal whoever is hit), never what the enemy
+has done. Its worth is the shortfall it takes away, in health. Checked by
+`scripts/test-buddy-forward-pass` (15 checks) on a made-up boss fight: a
+tank under 2 seconds from dead; Shield Wall worth about 52000, Lay on
+Hands 24000 (what it adds before the tank is full), the off-tank's taunt
+about 4000, and more when the tank carries a boss's debuff, the tanks'
+plan then handing the boss over. Not yet: the desired state's other
+measures (kill time, gold cost), and the server's side (step 5).
 Nothing yet takes the snapshot, keeps the history, runs the layers on
 worker threads or hands their verdict to the draw. The page
 `docs/HTML/fight-forward-pass.html` (made by
@@ -200,7 +221,9 @@ its material.
 3. The snapshot and the minute of events as plain data, with the running
    summaries, tested on made-up event streams.
 4. The layers joined into one step from snapshot to verdict, tested on
-   those streams; the desired state's measures (gold cost, kill time).
+   those streams (done, offline: `buddies_forward_pass.h`, the shortfall
+   as the first measure); the desired state's other measures (gold cost,
+   kill time).
 5. In the server: the snapshot taken on events, the worker pool, the
    double-buffered verdict read by the draw, behind a switch; replay
    logging.
