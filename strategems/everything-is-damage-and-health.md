@@ -42,6 +42,26 @@ changes, because it is worked out again.
    (`strategems/grown-and-relearnable.md`), with a note naming the root it
    stands in for, until that root is traced.
 
+## Everything, one system at a time
+
+The owner, 2026-10-30: "technically this ultimately applies to equipment
+choices, talent picks, EVERYTHING. But it's a large goal. So we gotta
+iterate towards it by bringing each system into alignment one-by-one."
+So each system that weighs things is brought in on its own, its
+hand-set values traced to their roots one by one, and this list keeps
+where each stands:
+
+| System | Where its worth comes from now | Aligned |
+|--------|--------------------------------|---------|
+| The talent draw (625) | the game's spell flags; a raise per point | partly |
+| Window values (625f) | the game's buff numbers; per-kind shares by hand | partly |
+| Buff targeting (625l) | (planned from the roots) | planned |
+| Gear choice (617j, 625b) | the bot module's stat weights per class and spec | not yet |
+| Talent picks (617g) | the ten shapes, drawn at random | not yet |
+| Gems (617j2) | the spec profiles' colours and stats | not yet |
+| Loot rolls (617j) | the 10% upgrade bar and the blend of three trees | not yet |
+| The economies (625h, 625i, 625j) | (planned in damage and health) | planned |
+
 ## Where it is used, or will be
 
 - The talent draw (625): talents' worth from the game's spell flags.

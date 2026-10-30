@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-30 12:36:11
+Generated on: 2026-10-30 12:46:07
 Models: claude-opus-5-5
 
 ## Contents
@@ -14445,6 +14445,98 @@ later.
 
 Next on the action economy is each buddy's timeline: when each ability comes
 back, and the weights it hands to the draw. I can start on that.
+
+--------------------------------------------------------------------------------
+
+### User Request 140
+
+we should get area looting built into basic, the other two we can leave out.
+
+those buffs are neat. Buddies should cast them onto characters that can use them
+the most - this matters for power infusion and innervate and others, less so for
+bloodlust since it affects everyone. We'd just compare the weights on each party
+member and pick the one that can use it best, and only check when we're about to
+cast the spell. We should be able to prioritize it as well for players who just
+cast a cooldown, because they will suddenly be bumped higher in the priority
+queue and that *movement* is what allows us to develop an idea that "hey this
+person is blowing their cooldowns, let's maximize them"
+
+Remember we don't want to specify exact values. We want their value to come
+cleanly from the roots of the weights that determine their output - at the end
+of the day, EVERYTHING that we weigh collapses to just damage, and health. It's
+just a question of whose it is, and what route through the complicated combat
+ideaspace leads us to victory most assuredly.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 140
+
+> Taking area looting first. Finding every place that lists basic's modules.
+
+> The module-set test passes. Checking whether any config patch for the two
+> dropped modules still applies to basic.
+
+> No config patch depends on them. Committing the module-list change.
+
+*[commit] 138b89ea8 in wow-chat-2026 - Basic keeps area looting and leaves out solo dungeon finding and level-up fireworks*
+
+> The commit took 17 change blocks in `scripts/compile` where I made one. My
+> claim swept in the other session's uncommitted tests-first work. Checking
+> whose it is.
+
+> The 1100d plan was never committed either. Committing it now, with a note
+> saying its code rode along in the module-list commit.
+
+*[commit] f43a1417d in wow-chat-2026 - *
+
+> Now your two design points: who receives a buff, and every value grown from
+> the weights' roots.
+
+*[commit] b9c173322 in wow-chat-2026 - *
+
+Basic's module list is changed, buff targeting is written as a plan, and your
+rule is now a strategem. All committed: 138b89ea8, f43a1417d and b9c173322.
+
+**Area looting in basic:** basic's modules are now playerbots, area looting and
+the Lua engine, with our buddy module beside them. Solo dungeon finding and
+level-up fireworks stay vanilla's only. Basic's module list is written out in
+five places (update, install, compile, the profile list and a test), and I
+changed all five; the test passes. Area looting isn't in the shared source tree
+right now, so run `scripts/update` for basic before your next compile to fetch
+it back. That will also let the command list read its commands.
+
+**One accident with the compile script:** the commit took the whole file, so it
+also carried my 28 October change that runs the quick tests only after a failed
+build. That change was waiting for you to run it first, and now it's committed
+under the module-list message. Its plan is now committed with a note saying
+where it went. Nobody else's work was involved.
+
+**Buffs given to whoever uses them most** (written as a plan, not built yet):
+- It's decided only when the buff is about to be cast.
+- Each party member, players included, gets a worth: the buff's effect run
+  through that member's own abilities and weights. A caster gains more from
+  Power Infusion than a rogue does; the emptiest healer gains most from
+  Innervate.
+- A member whose worth just jumped, because they just used a cooldown, is
+  preferred. As you said, that rise is the sign they're bursting.
+- There's no table of who gets what. The choice falls out of each member's
+  damage and healing to come.
+
+**"Everything collapses to damage and health"** is now
+`strategems/everything-is-damage-and-health.md`. No worth is set by hand: every
+weight is a route to someone's damage dealt or health kept, traced from the
+game's own data through each character's abilities. A hand-set number is allowed
+only as a marked stand-in for a root not traced yet.
+
+The window values I built earlier have one of those stand-ins. How much haste
+moves an ability is set by hand for each kind of ability. Next, I'd read it from
+each ability's own data: its cast time, global cooldown, resource and damage
+over time. Then a window's worth comes out in damage and health per buddy, with
+no hand-set shares.
+
+One question for the buff targeting: how far back should "just jumped" look? The
+last few seconds would catch a single cooldown being used. A longer stretch
+would catch a whole burst starting.
 
 --------------------------------------------------------------------------------
 

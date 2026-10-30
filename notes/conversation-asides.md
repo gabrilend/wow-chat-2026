@@ -533,3 +533,11 @@ Word for word, each written into its plan:
   health. It's just a question of whose it is, and what route through the
   complicated combat ideaspace leads us to victory most assuredly." (in
   full in 625l)
+- (1100d) "is this the current status because it should be"
+- (625l) "maybe when a buddy-bot enters a party, they build a list of the
+  characters who might benefit from it, ..." (in full in 625l); and of
+  the jump in worth: "this is an alternative. Use whichever feels best."
+- (strategems/everything-is-damage-and-health.md) "technically this
+  ultimately applies to equipment choices, talent picks, EVERYTHING. But
+  it's a large goal. So we gotta iterate towards it by bringing each
+  system into alignment one-by-one."

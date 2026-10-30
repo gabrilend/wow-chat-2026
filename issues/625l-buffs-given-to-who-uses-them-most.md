@@ -30,6 +30,24 @@ The owner, 2026-10-30, word for word:
 > through the complicated combat ideaspace leads us to victory most
 > assuredly.
 
+And, the same day:
+
+> maybe when a buddy-bot enters a party, they build a list of the
+> characters who might benefit from it, and then it only iterates through
+> them when it's time to cast? They should be able to coordinate with the
+> other buddy's cooldown economy to optimize uptime and such. And by
+> coordinate I just mean like... when they can cast the buff, they look at
+> the other buddy-bot's timing for the rest of the fight and they try and
+> slot it into whichever buddy-bot has the best outcome for it. Keep in
+> mind the cooldown economy where buddy-bots might be able to cast more
+> than once in a fight, trying to optimize uptime! Anyway when joining a
+> party we should make a mental list of each of the targets that *might*
+> benefit from it, and then only iterate through them to see who we
+> should cast it on.
+
+On preferring a member whose worth just jumped: "this is an alternative.
+Use whichever feels best."
+
 ## Current Behavior
 
 Not built. The bot module casts its buffs on fixed targets (Power
@@ -38,6 +56,18 @@ rules).
 
 ## Intended Behavior
 
+- **A short list made on joining.** When a buddy that can give such a
+  buff joins a party (or the party changes), it lists the members who
+  *might* benefit: for Power Infusion those who cast with mana; for
+  Innervate those with mana to refill; and so on, by what the buff gives.
+  Only that list is looked at later.
+- **Slotted into the others' timelines.** When the buff is ready, the
+  buddy looks at each listed member's plan for the rest of the fight (a
+  buddy's cooldown timeline from the action economy, 625f) and gives it
+  where the outcome is best: where it lands on that member's own burst,
+  and so that the buff itself comes back in time for another good use
+  (a buff cast more than once a fight is planned for the most valuable
+  uptime, as a cooldown is).
 - **Asked only when it is about to be cast.** When a buddy's draw (625)
   has chosen a targeted empowering buff (Power Infusion, Innervate, and
   the like; Bloodlust needs no target), it asks then, not before: which
@@ -48,6 +78,11 @@ rules).
   gains more from Power Infusion's haste than a rogue; a healer short of
   mana gains more from Innervate than one who is full. Players are read
   the same way as buddies (their class, talents and what they cast).
+- **Moving up counts, for those without a plan to read** (the agent's
+  call, as the owner left it, "Use whichever feels best"): a buddy's
+  timeline says when it will burst, so buddies are slotted by their
+  plans; a player's isn't known, so for players the jump in worth (a
+  cooldown just used) is the sign instead.
 - **Moving up counts.** A member whose worth has just jumped (they just
   used a cooldown, so their next seconds are worth more) is preferred:
   the rise itself is the sign that "this person is blowing their
@@ -71,3 +106,4 @@ rules).
 
 1. How far back should "just jumped" look: the last few seconds (a
    cooldown just used), or long enough to see a whole burst start?
+   Now asked only for players (buddies are slotted by their plans).

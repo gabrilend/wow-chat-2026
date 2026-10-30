@@ -6,7 +6,7 @@
 - Parent: 1100 (tests remembered with each commit)
 - Related: 189f (which tests are quick: their headers), 1100b (test memory)
 - Priority: High
-- State: built 2026-10-28, not yet run by the owner
+- State: built 2026-10-28; committed 2026-10-30 (138b89ea8, by accident, with the module list); not yet run by the owner
 
 ## Origin
 
