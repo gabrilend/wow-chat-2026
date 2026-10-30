@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-30 15:07:02
+Generated on: 2026-10-30 15:28:10
 Models: claude-opus-5-5
 
 ## Contents
@@ -16133,6 +16133,144 @@ which do you picture fixed, like the game's own numbers?
 
 I can turn this into an HTML page with a diagram of the layers, if you'd like
 something to share or look at side by side.
+
+--------------------------------------------------------------------------------
+
+### User Request 156
+
+<pasted_content id="12ab">
+> 1. What's "desired" beyond victory? If a fast kill and a safe kill pull apart,
+> say
+>      burning hard while the healer runs dry, which should the curve lean toward? Is it the
+>      same for trash and bosses?
+</pasted_content id="12ab">
+
+
+depends on the group. What do they value? besides victory, bots prefer lower
+gold cost (use fewer consumables) and faster time (3 minute kill instead of 4).
+When questing and such, they prefer things like gold-per-hour, and exp-per-hour.
+If the player is grinding a certain mob, they will try to find those, but that's
+later so don't worry about that now.
+
+
+
+<pasted_content id="12ab">
+> 2. What does a buddy get to know? A language model sees its whole context, but
+> should a
+>      mage buddy "know" the tank's cooldown timers, or only what a player beside it could
+>      see (health bars, debuffs, casts)?
+</pasted_content id="12ab">
+
+
+we can let them know. Yes, it's not human, but humans have better capabilities
+in some ways and worse in others. So, with an eventual goal of equalizing the
+presented information, let's just let them see the numbers for now.
+
+> 3. How far back should the context reach? A minute of events, the whole fight,
+> or the
+>      whole dungeon run (so a buddy remembers how the last boss went)?
+
+a minute is fine.
+
+
+
+<pasted_content id="12ab">
+> Please also describe "the weights" back to me in your own words. In a language
+> model
+> they're all learned. Here, which do you picture growing with play, and which
+> do you
+>   picture fixed, like the game's own numbers?
+</pasted_content id="12ab">
+
+
+I don't imagine they will grow very much. They are things like, how much certain
+talents benefit certain abilities, how critical strike rating relates to certain
+spells, how resistant a target is to a certain type of shadow blast, how
+important mana is to this particular fight, stuff like that.
+
+I wouldn't mind looking at an HTML document.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 156
+
+> Writing your answers into the issues first, then the page. Checking which
+> issue should hold the forward-pass design.
+
+> Issue 627, "the bots think only when something happens", bears on the "every
+> tick" part of the design. Reading it before writing.
+
+> Issue written (validated). The capability-architecture page is the closest
+> relative of this one; reading its generator to match the house style.
+
+> The house pattern is a document in the docs folder, a generator that turns it
+> into a page, and a fragment for the artifact. Checking how the pages send
+> feedback, and the file claims, before writing.
+
+> Checking the playground's arithmetic against the module's test numbers before
+> publishing.
+
+The page's arithmetic gives the same four numbers as the module's test (4000, 0,
+1700, 5750). One look at the rendered page before publishing.
+
+--------------------------------------------------------------------------------
+
+### User Request 157
+
+[Image: original 1400x7683, displayed at 364x2000. Multiply coordinates by 3.85
+to map to original image.]
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 157
+
+> Renders cleanly in light, with the chart, layers and playground in place.
+> Publishing it.
+
+> Published. Adding the new issue to the parent's list and committing the page,
+> its generator and the screenshot.
+
+*[commit] d582b08c0 - The fight's forward pass: how the buddies' economies run together, as a design and a page*
+
+Here's the page: https://claude.ai/artifact/DGQKH5GyD3nPZJtzmFLtct
+
+It's private to you until you share it from its Share menu. A copy is in the
+project as `docs/HTML/fight-forward-pass.html`, built by
+`scripts/generate-fight-forward-pass-page`, and committed (d582b08).
+
+What's on it:
+- **The analogy, side by side:** the language model's step next to the buddy's
+  step.
+- **The snapshot:** every field, with what kind of value it holds.
+- **The six layers:** a drawing coloured by what's built.
+  - Built: rates, attention, fight curves.
+  - Part built: marks, plans.
+  - Not built: answers.
+- **Where it runs:** world thread, worker threads, double buffer.
+- **A playground** for the fight curves. You can move:
+  - tank health, enemy damage and healing;
+  - the fight's remaining time;
+  - a debuff on the tank (how much more damage they take, and when it wears
+    off).
+
+  Then pick nothing, Lay on Hands or Hand of Protection, and choose who's next
+  in line. It uses the same arithmetic as the buddy module, and I checked that
+  it gives the same four results as the module's test.
+- **Your words**, in full.
+
+Your answers are in a new issue for this design, word for word:
+- **What's desired:** victory first, then fewer consumables and a faster kill;
+  gold and experience per hour when questing.
+- **What buddies know:** they see every number for now.
+- **How far back:** a minute of events.
+- **The weights:** mostly fixed.
+
+That issue also follows the "think only when something happens" issue: the
+forward pass runs when events arrive, not while a buddy stands idle.
+
+One question opened up: for "lower gold cost", which consumables should count
+(potions, food, flasks, reagents, ammunition, repairs)? And should each be
+priced at the vendor, or at the auction house when it's sold there?
 
 --------------------------------------------------------------------------------
 

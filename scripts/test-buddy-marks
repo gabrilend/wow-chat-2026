@@ -1,0 +1,28 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-marks
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      the marks on a character (Shield Wall, Mortal Strike, Bloodlust and the like) folded into what its fight curve reads, from the game's own aura values
+# quick-test: yes
+# ==== end of header ====
+# test-buddy-marks - compiles and runs
+# tests/buddy-marks/marks-check.cpp against the buddy module's
+# marks (issue 625n, layer 2), with no server.
+#
+# Usage: scripts/test-buddy-marks [DIR]   (--help: this text)
+
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+    sed -n '10,14p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+OUT="${DIR}/tmp/tmp"
+mkdir -p "${OUT}"
+g++ -std=c++17 -O1 -Wall -Wextra -Werror -I"${DIR}/patches/B036-mod-buddies/mod-buddies/src" \
+    "${DIR}/tests/buddy-marks/marks-check.cpp" -o "${OUT}/buddy-marks" || exit 1
+nice -n 19 "${OUT}/buddy-marks"
+# ==== footer of test-buddy-marks ====
+# lines:      28
+# ==== end of footer ====

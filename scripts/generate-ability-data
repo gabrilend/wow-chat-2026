@@ -132,6 +132,8 @@ for _, r in ipairs(load_dbc("Spell.dbc")) do
                 dmgClass = r.u(213), school = r.u(225),
                 eff = { r.u(71), r.u(72), r.u(73) }, aura = { r.u(95), r.u(96), r.u(97) },
                 amount = { r.i(80) + 1, r.i(81) + 1, r.i(82) + 1 },  -- base points + 1: the effect's value
+                misc = { r.i(110), r.i(111), r.i(112) },                 -- an aura's school mask, stat, or the like
+                period = { r.u(98), r.u(99), r.u(100) },                 -- a ticking aura's period, milliseconds
             }
         end
     end
@@ -383,8 +385,43 @@ for _, l in ipairs(levers) do
     h[#h + 1] = string.format("    { %2d, %q, %q, %6d },", l.cls, l.name:lower(), l.kinds, l.amount)
     md[#md + 1] = string.format("| %s | %s | %s | %d |", l.className, l.name, l.kinds:gsub("|", ", "), l.amount)
 end
+h[#h + 1] = "};\n"
+-- }}}
+
+-- {{{ what an ability's auras do to their bearer
+-- Each effect of a class ability that is an aura the marks layer reads
+-- (issue 625n, buddies_marks.h): damage taken or dealt by a percent (87,
+-- 79; 14 flat), healing received by a percent (118, 283), haste (9 attack
+-- speed, 65, 138, 140, 192, 216), movement speed (31, 33), ticking damage
+-- or healing (3, 8, with their period), an absorb (69), armour (22 flat,
+-- 101 percent). In the server the same is read live from each aura on a
+-- character; this table is for planning an ability before it is cast, and
+-- for the tests.
+local MARK_AURAS = { [87] = true, [79] = true, [14] = true, [118] = true, [283] = true, [9] = true, [65] = true, [138] = true,
+                     [140] = true, [192] = true, [216] = true, [31] = true, [33] = true, [3] = true, [8] = true, [69] = true,
+                     [22] = true, [101] = true }
+local auraRows = 0
+h[#h + 1] = "// what an ability's auras do to whoever bears them (issue 625n): the aura type (SpellAuraDefines.h), the effect's"
+h[#h + 1] = "// value at the top rank, its misc value (a school mask, for damage taken or dealt and armour), and a ticking aura's"
+h[#h + 1] = "// period in milliseconds"
+h[#h + 1] = "struct BuddyAbilityAuraRow { uint8_t cls; char const* name; uint32_t aura; int32_t amount; int32_t misc; uint32_t periodMs; };\n"
+h[#h + 1] = "static BuddyAbilityAuraRow const BUDDY_ABILITY_AURAS[] = {"
+for _, c in ipairs(CLASSES) do
+    local names = {}
+    for n in pairs(BY_CLASS[c.id]) do names[#names + 1] = n end
+    table.sort(names)
+    for _, n in ipairs(names) do
+        local a = BY_CLASS[c.id][n]
+        for e = 1, 3 do
+            if MARK_AURAS[a.aura[e]] then
+                h[#h + 1] = string.format("    { %2d, %q, %3d, %7d, %4d, %5d },", c.id, n:lower(), a.aura[e], a.amount[e], a.misc[e], a.period[e])
+                auraRows = auraRows + 1
+            end
+        end
+    end
+end
 h[#h + 1] = "};\n\n#endif"
-print(string.format("%d threat levers", #levers))
+print(string.format("%d threat levers; %d aura effects of class abilities", #levers, auraRows))
 print(string.format("%d lockouts and %d while-up exclusions; %d of the table's own exclusions agree with them", #LOCKOUTS, #WHILE, checked))
 -- }}}
 local f = io.open(out, "w") or error("cannot write " .. out)

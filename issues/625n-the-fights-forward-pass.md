@@ -10,8 +10,8 @@
   can start over), 625l (buffs given to who uses them most), 625m (pets),
   627 (the bots think only when something happens)
 - Priority: High
-- State: planned (its layers 1, 3, 4 and 5 built offline in their own
-  issues; the frame that runs them, not yet)
+- State: in progress (layers 1 to 5 built offline, 2 here and the rest in
+  their own issues; the snapshot and the frame that runs them next)
 
 ## Origin
 
@@ -54,9 +54,25 @@ it remembers, and which weights grow, word for word:
 ## Current Behavior
 
 Not built as a whole. Its layers exist offline, each in its own issue
-and tested: the rates (the fight's length, 625h), the marks as modifiers
-(window buffs and lockouts, 625f; debuffs not yet), attention (625j), the
+and tested: the rates (the fight's length, 625h), attention (625j), the
 fight curves and the tanks' swaps (625j), the cooldown timeline (625f).
+
+**Layer 2, marks into modifiers, built 2026-10-30 (committed, offline):**
+`buddies_marks.h`. Every aura effect on a character, by its type and
+value, folded into what the fight curves read: damage taken by kind
+(physical, magic) and dealt, healing received, attack haste and cast
+haste (kept apart: Bloodlust's two effects haste each once), movement
+speed, damage and healing ticking each second, an absorb, armour flat and
+by a share; stacks counted once each, as the server applies them; types
+the curves don't read add nothing. The kinds of damage are weighed by
+the enemy's physical share, and armour turns into a reduction by the
+server's own rule (checked against `Unit::CalcArmorReducedDamage`). In the
+server each aura's effects will be read live; for planning an ability
+before it is cast, `scripts/generate-ability-data` writes every class
+ability's aura effects (`BUDDY_ABILITY_AURAS`, 216 of them: Shield Wall
+-60% taken, Mortal Strike -50% healing, Corruption 180 every 3 seconds).
+Checked by `scripts/test-buddy-marks` (18 checks), the last carrying
+Shield Wall into a tank's fight curve (2000 short without, none with).
 Nothing yet takes the snapshot, keeps the history, runs the layers on
 worker threads or hands their verdict to the draw. The page
 `docs/HTML/fight-forward-pass.html` (made by
@@ -134,7 +150,8 @@ what the group values (the owner: "depends on the group. What do they
 value?"): victory first (every enemy dead before anyone of the party, no
 curve below nothing); then, by default, fewer consumables used (lower
 gold cost) and a faster kill (3 minutes over 4); when questing, gold and
-experience per hour. Each is a measure said in the same units the curves
+experience per hour. Gold cost is each consumable used up at "whatever
+price the bot can acquire it by" (the owner). Each is a measure said in the same units the curves
 are, so a step's verdict is how much an answer closes the gap from
 extended to desired. What a group values is its own setting, the
 defaults above until it says otherwise. (Grinding a chosen monster comes
@@ -163,8 +180,8 @@ its material.
 
 1. (Done) The design page (`scripts/generate-fight-forward-pass-page`, done with
    this issue).
-2. Debuffs read as modifiers, from the game's aura types, beside the
-   buffs (the ability generator).
+2. (Done, offline) Debuffs read as modifiers, from the game's aura
+   types, beside the buffs (`buddies_marks.h`, the ability generator).
 3. The snapshot and the minute of events as plain data, with the running
    summaries, tested on made-up event streams.
 4. The layers joined into one step from snapshot to verdict, tested on
@@ -177,4 +194,9 @@ its material.
 
 1. Gold cost: which consumables count (potions, food, flasks, reagents,
    ammunition, repairs), and is each counted at its vendor price, or at
-   the auction house's when there is one (617h)?
+   the auction house's when there is one (617h)? **Answered 2026-10-30**
+   (the owner, word for word): "for whatever price the bot can acquire it
+   by." So every consumable a fight uses up counts, each at the cheapest
+   way that buddy could get another now (a vendor it can reach, the
+   auction house's lowest listing, or what its own crafting costs), worked
+   out when the cost is needed rather than fixed.
