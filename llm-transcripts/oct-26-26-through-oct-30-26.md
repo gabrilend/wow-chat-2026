@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-30 02:29:08
+Generated on: 2026-10-30 02:38:57
 Models: claude-opus-5-5
 
 ## Contents
@@ -13331,6 +13331,79 @@ with none missing, and reads cleanly:
 
 If they read well to you, the full run is the same command without `--limit`. It
 skips the three already written.
+
+--------------------------------------------------------------------------------
+
+### User Request 129
+
+also I'm concerned that if we don't do it with a single thread, then we'll find
+ourselves re-explaining things from the context. That's not ideal! Do you think
+this is valid? Also, can we make it so that words in the question that are
+important will stand out in the context with a color appropriate and bolded
+highlight?
+
+alright I just answered some questions in the document. I'm concerned because
+now it won't get delivered to the llm-transcripts, but I guess that's okay.
+Let's just make sure that the stuff that's written to this document (can you
+check on them by the way?) gets saved to the issue files verbatim. That should
+do it...
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 129
+
+> Checking your answers first.
+
+> Three answers, all for the Arathi Basin match's squads. Building a tool that
+> files every page answer into its issue word for word, and remembers which ones
+> it has filed.
+
+> Writer updated. Now the coloured, bold key terms on the pages.
+
+> Checking the marking works, by giving one existing context two terms for a
+> moment.
+
+> Marking works: terms are coloured and bold, and a short term never marks
+> inside a longer one. Recording everything and committing.
+
+*[commit] 81e474a5a in wow-chat-2026 - *
+
+Your three answers are now in the Arathi Basin match's issue, word for word
+under their questions, each marked "Answered 2026-10-30 (on the answer page),
+the owner". They're committed (81e474a5a), so they're in git even though they
+aren't in the transcripts.
+
+**Answers reach the issues from now on.** A new tool, `scripts/file-answers`,
+copies every answer from the pages into its issue, quoted exactly with its date.
+Before copying, it checks the question still reads as it did when you answered.
+It keeps a list of what it has copied, so nothing goes in twice. If a question
+has moved or been reworded, it reports the answer instead of guessing where it
+goes. I'll run it whenever I next work, and you can run it too.
+
+**Your concern about running them all at once is right.** Four writers at once
+can't see each other's contexts, so each would explain the basics again. The
+writer now runs one group at a time, in walkthrough order. Each writer gets the
+list of what the earlier contexts already explained and is told not to repeat
+it. A full run will be slower, probably several hours.
+
+**Key terms now stand out.** Each context names the important words from its
+questions, sorted into five kinds, and the page shows them bold and coloured:
+- blue for how something works;
+- gold for numbers;
+- green for the options a question offers;
+- purple for places, creatures and things in the game;
+- rose for things already decided.
+
+I checked the marking on a sample. Your three trial contexts predate this
+change, so they'll be rewritten in the full run, in order and with highlights.
+
+When you're ready, the full run is:
+`! /mnt/kaun/wow-chat-2026/scripts/write-question-contexts`
+then
+`! /mnt/kaun/wow-chat-2026/scripts/generate-answer-pages`
+
+One of your answers asked "groups of... 3 I think it was?" Yes: the Arathi Basin
+plans say squads of three (one place also mentions a squad of two).
 
 --------------------------------------------------------------------------------
 

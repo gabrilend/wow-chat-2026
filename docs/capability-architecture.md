@@ -320,6 +320,7 @@ glue is where they hide.
 | The GM command reference | every command, its level and words | a command undescribed | `test-gm-command-reference` | (generated) |
 | The board (CLAUDE.md, the design target) | where every issue stands | an issue on the wrong row | read at each compile | (generated) |
 | Development history | every picture, with its story | a picture without notes | `test-file-screenshot` | (always kept) |
+| Pictures drawn as light (the gif tools) | an idea drawn as a short animated gif, by the sibling gif generator's own code | a gif that shows something other than its idea | the contact sheet, by eye; `development-history/` | (tools: `compose-architecture-gifs`, `render-gif-scores`) |
 
 **How it may turn out, and how to steer it.** Views are how the owner
 decides, so a view that flatters is worse than none.
@@ -327,6 +328,7 @@ decides, so a view that flatters is worse than none.
 - Keep every picture, wrong ones included.
 - Make each view from data a generator wrote, so the view can't invent.
 - When a view and the game disagree, believe the game, and mend the twin.
+
 ### 7. Operations
 
 | Capability | Claims | Wrong if | Seen in | Off |
@@ -341,6 +343,7 @@ decides, so a view that flatters is worse than none.
 | Transcripts | the whole conversation kept with the work | a commit without its story | no seam test yet: the commit hook bundles them | (always on) |
 | Party checkpoint | a character saved, changed and restored comes back bit for bit | a table forgotten | `test-party-checkpoint` | (a tool) |
 | A player's journal | a player's journal opens with their password and nothing else | it opens for anyone | `test-journal-seal` | (a tool) |
+| Dormant work (`dormant/`) | built work parked whole, with its history and a note on how to wake it, out of every build, test and hook | something there still run, or woken without its note | each folder's README | (nothing runs it) |
 
 **How it may turn out, and how to steer it.** Operations decay at their
 edges: a hook missing after a fresh clone, a test that fails after every
@@ -350,6 +353,9 @@ commit and is stopped being read, a tool that fails in silence.
   own).
 - Make every tool say what it did.
 - Keep the board current at each compile.
+- Park what nobody will reach for in `dormant/`, whole, rather than leave
+  it half-used among the working tools; wake it when a use returns.
+
 ## Where the rings are thinnest
 
 These are the gaps, not the strengths: where being wrong is most likely
@@ -367,6 +373,10 @@ and least seen.
 - **Seams with no test.** The dungeon draw and party grouping are seen only
   in game; the transcripts' bundling only by its hook. A card that says "no
   seam test yet" is a place to put one.
+- **Minds that choose by fixed lists.** A buddy answers each concern (an
+  ally hurt, enemies close) with the first ability of a fixed list for one
+  guessed talent tree. Its talents, its other trees, its mana, the fight's
+  movement and its cooldowns change nothing yet (planned: 625a to 625e).
 - **Issues with no Current Behavior.** 42 open issues say nothing of where
   they stand, so the board can't place them.
 **How it may turn out, and how to steer it.** These are the next things to

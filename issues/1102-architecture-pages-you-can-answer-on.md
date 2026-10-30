@@ -8,7 +8,7 @@
   the army), 921 (Alterac Valley's weather), 1005 (the players' feedback
   mailbox, a different thing: players to the operator by rmail)
 - Priority: Medium
-- State: in progress
+- State: dormant (deferred 2026-10-30; parked in `dormant/answer-pages/`)
 
 ## Origin
 
@@ -32,6 +32,15 @@ make sense, but we must use the 5 that are assigned to our HTML page
 section."
 
 ## Current Behavior
+
+**Dormant since 2026-10-30, deferred** (the owner: "there is a zero
+percent chance I'm going to remember to use these tools. Let's mark them
+as "dormant" and archive them for now. I think it'll just be easier if we
+go through the issue file open questions in groups of 10, with sufficient
+context to read them."). Everything below was built and works, and is
+parked whole in `dormant/answer-pages/`; the paths named below are where
+the files lived before (`dormant/answer-pages/README.md` maps them, and
+says how to wake it). The owner's answers stay in `notes/answers/`.
 
 **Built 2026-10-29** (pictures 083-087): the five pages and their index,
 `docs/HTML/answer-pages/`, written by `scripts/generate-answer-pages` from

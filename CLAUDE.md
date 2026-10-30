@@ -77,8 +77,13 @@ the status. Do you want to turn these on? [summary of status]" etc."
   guidance."). Behaviour the owner describes while playing is written
   into its capability's issue, word for word, and built; the agent keeps
   building in the background, and points the owner to the parts that most
-  need their judgement (the open-questions walkthrough, 1102a, is the
-  standing map of those).
+  need their judgement.
+- **Open questions, ten at a time** (the owner, 2026-10-30: "I think
+  it'll just be easier if we go through the issue file open questions in
+  groups of 10, with sufficient context to read them."). In conversation:
+  ten related questions, above them enough plain context to answer them
+  without opening the issues, and each answer written into its issue word
+  for word. (The pages and tools tried first are parked in `dormant/`.)
 
 ### Writes outside the project while the owner is away
 

@@ -5,7 +5,7 @@
 - Phase: 1
 - Parent: 1102 (architecture pages you can answer on)
 - Priority: High
-- State: planned
+- State: dormant (deferred 2026-10-30; parked in `dormant/answer-pages/`)
 
 ## Origin
 
@@ -39,6 +39,15 @@ And, asked whether to write them all at once or a page at a time:
 > completely. Does that make sense?
 
 ## Current Behavior
+
+**Dormant since 2026-10-30, deferred** (the owner: "there is a zero
+percent chance I'm going to remember to use these tools. Let's mark them
+as "dormant" and archive them for now. I think it'll just be easier if we
+go through the issue file open questions in groups of 10, with sufficient
+context to read them."). Everything below was built and works, and is
+parked whole in `dormant/answer-pages/`; the paths named below are where
+the files lived before (`dormant/answer-pages/README.md` maps them, and
+says how to wake it). The owner's answers stay in `notes/answers/`.
 
 **The machinery is built (2026-10-29); no context is written yet.**
 - `scripts/generate-answer-pages --questions PATH` exports every question

@@ -640,6 +640,13 @@
 <td><code>test-file-screenshot</code></td>
 <td>(always kept)</td>
 </tr>
+<tr>
+<td>Pictures drawn as light (the gif tools)</td>
+<td>an idea drawn as a short animated gif, by the sibling gif generator's own code</td>
+<td>a gif that shows something other than its idea</td>
+<td>the contact sheet, by eye; <code>development-history/</code></td>
+<td>(tools: <code>compose-architecture-gifs</code>, <code>render-gif-scores</code>)</td>
+</tr>
 </tbody></table></div>
 <p><strong>How it may turn out, and how to steer it.</strong> Views are how the owner decides, so a view that flatters is worse than none.</p>
 <ul>
@@ -730,6 +737,13 @@
 <td><code>test-journal-seal</code></td>
 <td>(a tool)</td>
 </tr>
+<tr>
+<td>Dormant work (<code>dormant/</code>)</td>
+<td>built work parked whole, with its history and a note on how to wake it, out of every build, test and hook</td>
+<td>something there still run, or woken without its note</td>
+<td>each folder's README</td>
+<td>(nothing runs it)</td>
+</tr>
 </tbody></table></div>
 <p><strong>How it may turn out, and how to steer it.</strong> Operations decay at their edges: a hook missing after a fresh clone, a test that fails after every commit and is stopped being read, a tool that fails in silence.</p>
 <ul>
@@ -738,6 +752,8 @@
 <li>Make every tool say what it did.
 </li>
 <li>Keep the board current at each compile.
+</li>
+<li>Park what nobody will reach for in <code>dormant/</code>, whole, rather than leave it half-used among the working tools; wake it when a use returns.
 </li>
 </ul>
 <h2 id="where-the-rings-are-thinnest">Where the rings are thinnest</h2>
@@ -750,6 +766,8 @@
 <li><strong>Pages that run their own copy.</strong> The sandboxes run the script twin, not the server. The twin is held to the C++ by shared courses (<code>test-buddy-paint-paths</code>), but only for the parts both have.
 </li>
 <li><strong>Seams with no test.</strong> The dungeon draw and party grouping are seen only in game; the transcripts' bundling only by its hook. A card that says "no seam test yet" is a place to put one.
+</li>
+<li><strong>Minds that choose by fixed lists.</strong> A buddy answers each concern (an ally hurt, enemies close) with the first ability of a fixed list for one guessed talent tree. Its talents, its other trees, its mana, the fight's movement and its cooldowns change nothing yet (planned: 625a to 625e).
 </li>
 <li><strong>Issues with no Current Behavior.</strong> 42 open issues say nothing of where they stand, so the board can't place them.
 </li>
