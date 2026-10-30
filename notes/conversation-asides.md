@@ -547,3 +547,6 @@ Word for word, each written into its plan:
   have been reset. ... We notice irresponsibility, not responsibility,
   because buddy-bots are always responsible! How diligent of them!" (in
   full in 625l)
+- (625l) "yes and these cooldowns should only be like, 2+ minute
+  cooldowns. Maybe 1.5 minutes. Anything shorter is almost part of their
+  rotation, and they can manage it themselves."

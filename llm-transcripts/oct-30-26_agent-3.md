@@ -1,6 +1,6 @@
 # Conversation Summary: e143dbfe-ff43-48be-8bd4-4d54fd7a325d
 
-Generated on: 2026-10-30 12:59:01
+Generated on: 2026-10-30 13:05:07
 Models: claude-opus-5-5
 
 ## Contents
@@ -27,6 +27,10 @@ Models: claude-opus-5-5
    answer recorded word for word in the issues and nothing committed yet. Next
    is your answers to the ten questions on dangerous selling trips, item plans
    and bots with buddies.
+6. 2026-10-30 13:02, after Request 14 - We're answering basic's open questions
+   on buddies, Sargobras, pathfinding and questing, and your answers are
+   recorded word for word but not committed. Next: answer the two new questions,
+   how a buddy knows which foes it can beat and whether to cap random bots.
 
 --------------------------------------------------------------------------------
 
@@ -2114,6 +2118,77 @@ Your answers raised two new questions:
    several characters to the server. Should there be a cap on the total, or will
    you just keep the random-bot count low?
    *My call:* no extra cap. The random-bot count you already set governs it.
+
+--------------------------------------------------------------------------------
+
+### User Request 15
+
+<pasted_content id="415d">
+> 1. Where does a buddy's sense of "foes I can beat" come from? It could be
+> worked out from
+>      levels, gear and the monster's rank (normal, elite), or learned from its own fights, which
+>      are already going to be written down. Or both, starting from levels and adjusted by
+     experience?
+</pasted_content id="415d">
+
+
+tell me, how are it's fights being written down? Maybe we can use some of that
+machinery.
+
+> 2. How many random bots are "not too many"? Each one with buddies adds several
+> characters to the
+>      server. Should there be a cap on the total, or will you just keep the random-bot count low?
+
+we will just keep the random bot count low.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 15
+
+Nothing writes fights down yet. The fight log is designed but not built.
+
+**What exists:** a recorder that, every 5 seconds, writes one line per character
+in the world (players, buddies, bots). Each line holds the time, who it is,
+which map, zone and sub-zone, the x, y, z position, and two yes/no flags:
+fighting and dead. It runs only on Debug builds, writes to the RAM drive, and
+hasn't been run yet. It knows *that* someone is fighting, but not *what* they're
+fighting or how it went.
+
+**What's designed (from today's answers about bosses):**
+- **During a fight,** a full log goes to the RAM drive: when the fight starts
+  and ends, each phase as it begins, how much of each phase each buddy spent
+  moving, what was cast or summoned when movement rose, and deaths.
+- **After the fight,** a distilling step keeps only the crucial points. Those go
+  to disk in git, with a fingerprint of everything that makes up the fight, and
+  the raw log is cleared.
+- **Per boss,** the distilled points feed one shared memory that every buddy
+  reads.
+
+**How it could carry "foes I can beat":** that log already plans to mark each
+fight's start, end, deaths and outcome. Adding a few fields per foe turns it
+into the record we need:
+
+| Field | Type | What it holds |
+|---|---|---|
+| foe kind | number | the creature's entry number |
+| foe level, foe rank | small numbers | its level, and normal / elite / rare / boss |
+| buddy level | small number | the buddy's level at the time |
+| helpers | small number | how many fought beside it |
+| outcome | yes/no + percent | won or died, and its health left at the end |
+| length | seconds | how long the fight took |
+
+Each buddy's sense of what it can beat would then start as a guess from levels
+and rank, and get firmed up by these distilled lines: kinds it beat easily
+alone, kinds that nearly killed it, kinds it only beat with help. By your
+sandbox rule, the buddy's own lines are stored on the buddy and loaded with it.
+
+So the open question, put another way: **should a buddy's courage come from the
+fight log, a level-and-rank guess corrected by what it has actually lived
+through?** Or do you picture its mental model coming from somewhere else? It's
+written into the trade issue as an open question until you answer.
+
+I've also recorded your answer on random bots: no cap of their own, you'll keep
+the random-bot count low.
 
 --------------------------------------------------------------------------------
 

@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-30 13:01:48
+Generated on: 2026-10-30 13:04:02
 Models: claude-opus-5-5
 
 ## Contents
@@ -14689,6 +14689,50 @@ I've added this to the buff-targeting plan and committed it (a9b1aa95c):
 One question: when should the penalty start? From the first good moment the
 player lets pass, such as Bloodlust being up or the boss's weak phase? Or after
 the cooldown has sat ready for a few seconds, whatever is happening?
+
+--------------------------------------------------------------------------------
+
+### User Request 143
+
+<pasted_content id="12ab">
+> One question: when should the penalty start? From the first good moment the
+> player lets
+> pass, such as Bloodlust being up or the boss's weak phase? Or after the
+> cooldown has sat
+>   ready for a few seconds, whatever is happening?
+</pasted_content id="12ab">
+
+
+every time they hold it long enough that it's cooldown could have been reset.
+Basically the bot is learning "oh this player isn't being very responsible right
+now, I should look elsewhere for my buffs to maximize my impact" because they're
+all just trying to do the very best that they can. But if they then use their
+buffs correctly, as in, rapidly after it's CD completes, then they can get a bit
+of faith back. It should only ever climb to a baseline. We notice
+irresponsibility, not responsibility, because buddy-bots are always responsible!
+How diligent of them!
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 143
+
+*[commit] 590f956f7 in wow-chat-2026 - *
+
+I've written your rule into the buff-targeting plan, with your words, and
+committed it (590f956f7).
+
+- **Faith falls** by a step each time a player holds a ready cooldown for as
+  long as that cooldown's own length, a whole use lost.
+- **It comes back** by a step when the player uses a cooldown soon after it's
+  ready again.
+- **It never rises above the baseline** every player starts with.
+- **Buddies are never marked down**, since they always use what's ready.
+
+The penalty belongs to each buddy's list of who might benefit, so it lasts until
+the party changes or the player logs out.
+
+That answers the plan's last open question, so buff targeting is fully designed
+and ready to build once the action economy's timelines exist.
 
 --------------------------------------------------------------------------------
 

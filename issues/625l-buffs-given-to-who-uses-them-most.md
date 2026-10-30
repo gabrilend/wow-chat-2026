@@ -114,7 +114,12 @@ rules).
     holds a ready cooldown for as long as that cooldown's own length (a
     whole use lost); it shrinks by a step when they use a cooldown soon
     after it comes back; it never goes above the baseline, the faith every
-    player starts with. Buddies are never marked down this way: they
+    player starts with. **Only long cooldowns count** (the owner,
+    2026-10-30: "these cooldowns should only be like, 2+ minute cooldowns.
+    Maybe 1.5 minutes. Anything shorter is almost part of their rotation,
+    and they can manage it themselves."): a cooldown of 90 seconds or more
+    (one number, in one place; 90 chosen of the owner's two, 120 the
+    other). Buddies are never marked down this way: they
     always use what is ready (the action economy, 625f);
   - the malus is kept with the buddy's list of who might benefit (made on
     joining), so it lasts until that list is made again: the party
