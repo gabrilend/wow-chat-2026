@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-29 19:03:57
+Generated on: 2026-10-29 21:55:55
 Models: claude-opus-5-5
 
 ## Contents
@@ -137,6 +137,14 @@ Models: claude-opus-5-5
     map in game, and the Alterac Valley shared weather is now planned in three
     issue files. Next: decide whether that valley's weather deck should be snow
     and fog only, leaving the storm as the one rain.
+33. 2026-10-29 19:07, after Request 112 - We're working through the open
+    questions that hold up the most plans: your ten answers are written into the
+    plans, and the random army of 64 waits for your compile. Next, please answer
+    the four smaller follow-up questions.
+34. 2026-10-29 19:40, after Request 113 - Goal: answer the open questions that
+    unblock the most plans, then build them. Your answers are written in and
+    committed, and the stand-in and army code waits for your compile. Next: tell
+    me how many bots should fit on that small Burning Steppes shelf.
 
 --------------------------------------------------------------------------------
 
@@ -11617,6 +11625,845 @@ machine unable to start until a keyboard and screen are plugged in.
   are.
 - The stand-ins commit also carried a three-line note from yesterday's question
   gathering that was sitting uncommitted in the same file.
+
+--------------------------------------------------------------------------------
+
+### User Request 113
+
+how's our work with prioritizing abilities related to their talents? We could
+use the embedding of the icon and the name and the text to maybe also guide it a
+little bit. An embedding that says "improved the effect of your rejuvenation
+spell by 15%" will probably embed pretty well with casting rejuvenation more
+often, but we should check token-by-token to find word-by-word relationship
+associations. And then maybe prioritize or increase in value the relationships
+that are a little unseen, like "all of your subtlety spells" or "weapon attacks"
+and similar.
+
+
+
+<pasted_content id="12ab">
+> On the mini-computers: Alpine Linux is built on a different core system
+> library
+> than most Linux systems use, possibly including this one (I haven't checked).
+> If
+> they differ, a server built here won't run there as it is. We'd either build
+> on
+> the mini-computers themselves, or put this computer's kind of Linux on them.
+> That
+> can be done over SSH: write the new system onto the disk from the running one,
+> then restart. The danger is that a bad write leaves the machine unable to
+> start
+>   until a keyboard and screen are plugged in.
+</pasted_content id="12ab">
+
+
+oh um we're doing some work in a different session with a linode, can you find
+it and send them detailed information? maybe gather details from them?
+
+
+
+<pasted_content id="12ab">
+>   How I read three of your answers:
+> - Judging movement: the judge is shown movement over time, as a strip of
+> frames or
+>     each bot's trail drawn on one picture, rather than single still frames.
+> - Choosing a model server: there's no default place. All three are built, and
+> any
+>     request can go to any server we list.
+> - The army between test scenes: it's picked fresh each time. That follows from
+>     "fully random", but you didn't say it directly.
+</pasted_content id="12ab">
+
+
+each time we have a dynamic, we try to display and present it in any way that we
+can to the judgement presenter, who will use their wisdom, intuition, and
+discernment to choose if something looks right. "those cheesie fries don't look
+right, arrange them differently next time" etc.
+
+
+
+<pasted_content id="12ab">
+>   1. The tiny pocket again: your answer covered the floating asteroids around
+>      Outland, which now get no stored map. The Burning Steppes case is different:
+>      there the patch of ground in play was a 16-by-16-yard corner of a big area.
+>      When the bots are sent to a patch that small, how many of the 36 should go in?
+</pasted_content id="12ab">
+
+
+is this inside a cave or something? Tell me more details.
+
+>   2. On the Dark Portal front, which faction's reputation do kills give?
+
+Horde and Alliance.
+
+
+
+<pasted_content id="12ab">
+> 3. Stand-ins climb one level a match now. How many separate levelling paths
+> should
+>      they follow, some faster and some slower than a player, so you keep meeting
+>      both familiar and new ones?
+</pasted_content id="12ab">
+
+
+there shouldn't be a set path, it should just be... if you happen to see them,
+they'll level with you. it's random.
+
+> 4. The weather: for the Alterac Valley weather, should the cycle be only snow
+> and
+>      fog, leaving the wandering storm as the one rain?
+
+the rain sneezes to slush. sorry it freezes to sluyuch.
+
+
+
+<pasted_content id="12ab">
+> - The issue checker found two problems in the chat-model plans that were there
+>     before today. The main plan lacks two of its required sections, and one plan
+>     lists a blocker that the other side doesn't list back. I've left them as they
+    are.
+</pasted_content id="12ab">
+
+
+present them to me.
+
+> - The stand-ins commit also carried a three-line note from yesterday's
+> question
+>     gathering that was sitting uncommitted in the same file.
+
+handle it.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 113
+
+> Found two candidate sessions for the Linode work; checking which one is active
+> on it.
+
+> Sent. Now gathering the Burning Steppes pocket details from picture 078.
+
+> Writing your stand-in answer in. The code currently picks the same kept
+> stand-in every time, which doesn't match "it's random", so I'm changing that
+> too.
+
+> Now the talent-signal idea into the "what each talent touches" plan.
+
+> Answers are written in. Committing the issue text; the stand-in code waits for
+> your compile.
+
+*[commit] 5709b0ca1 - The owner's follow-up answers: slush, chance-met stand-ins, the judge's seat, talents read four ways*
+
+Nothing is built yet for favouring the abilities a buddy's talents touch; it's
+still a plan. I've added your icon, name and text idea to the plan and committed
+all your answers (5709b0ca1).
+
+**Talents guiding abilities**
+
+The game itself records which spells a talent changes, exactly: each talent
+carries a hidden list naming the spells it affects, and the server applies
+talents by that list. The plan already had that list as its base. It misses the
+broad talents you pointed at ("all your Shadow spells", "weapon attacks",
+finishing moves), because those target a whole school of magic or a weapon kind
+rather than named spells. So the plan now reads each talent four ways and checks
+them against each other:
+1. **The game's spell list:** exact, and it wins any disagreement, because it's
+   what the server actually applies.
+2. **The broad targets:** a school of magic, a weapon kind or a kind of ability,
+   expanded to every matching ability the class has.
+3. **The icon:** I checked the game's spell tables. Improved Rejuvenation uses
+   exactly the same picture as Rejuvenation. Starlight Wrath uses Wrath's
+   picture, but it also speeds up Starfire, which the icon alone misses. So the
+   icon finds a talent's main ability, not all of them.
+4. **The words, token by token:** ability names in the tooltip, plus a small
+   table of category phrases. A text embedding (each text turned into a list of
+   numbers, where similar meanings get similar lists) acts as a fuzzy
+   cross-check. No text embedding model is installed yet.
+
+The broad talents get a raised weight, so they don't spread too thin across the
+many abilities they cover.
+
+Two questions:
+1. Should a broad talent count as much on each ability it covers as a talent
+   that names one ability does, or about half as much?
+2. If only the icon or the words find a link that the game's list doesn't show,
+   should that link count? Or should the icon and words only confirm what the
+   game's list and the broad targets already found?
+
+**The Linode session:** it's the other session in this project, the one doing
+the journals and the hosted servers. I sent it everything, and it wrote your
+Alpine answer into the three-machine plan itself.
+- **No reflashing needed at first:** its plan builds every part of the server
+  for both kinds of system library. That covers Alpine as the mini-computers are
+  now. Reflashing only matters later, if they move to our own system images.
+- **The Linode doesn't exist yet,** and the rented machines are meant to receive
+  updates by rmail, never by SSH.
+- **Still unknown:** the mini-computers' addresses, their hardware, and whether
+  SSH reaches them.
+
+**The tiny pocket in the Burning Steppes, in detail:** it isn't a cave.
+- **Where it is:** open ground, in the area where Firegut Brutes spawn (18 spawn
+  points). Steep slopes cut that area into 6 separate patches you can walk on,
+  and the pocket is the fourth: a flat shelf about 16 by 16 yards, ringed by
+  ground too steep to climb.
+- **Why the bots went there:** the sandbox sends the bots to whichever patch is
+  nearest the player. You stood just outside it on the slope, so all 36 bots
+  went onto that one shelf. They stood 2 yards apart, constantly bumping into
+  each other.
+- **The other picture:** your earlier picture of the same spot counted the whole
+  merged area, about 47,600 square yards.
+
+So, reworded: when the patch nearest the player is a small shelf like that,
+should the bots take a bigger neighbouring patch instead? Or should only as many
+go up as fit, maybe 4 or 5, with the rest spreading over the next patches?
+
+**Your other answers, as I recorded them:**
+- **The judge:** every moving behaviour gets shown in as many ways as we can
+  make, and the judge answers in plain words, like your cheese fries example.
+- **Dark Portal reputation:** I read "Horde and Alliance" as each kill giving
+  reputation with the killer's own side. Tell me if both factions should get it.
+- **Stand-ins:** no set levelling paths. Which kept stand-in you meet is now
+  drawn at random, where the code used to pick the same one every time, and it's
+  raised to your level. The test passes, 19 of 19. This change waits for your
+  compile.
+- **Slush:** the game has no sleet. So a slush turn starts as rain, swaps back
+  and forth between rain and snow through its middle, and ends as snow. The
+  wandering storm stays a downpour.
+
+**The two checker findings:**
+1. **The main chat-model plan** is written in an older layout. It has sections
+   called Overview, Architecture and Implementation Order, where the checker
+   expects "Intended Behavior" and "Suggested Implementation Steps". The content
+   is there, under other names. The fix would be to rename those sections, or
+   add the two expected sections, so the checker and the status board can read
+   it.
+2. **A one-sided link:** the lore-generation plan says it depends on the model
+   runner, but the model runner's plan doesn't list the lore plan among the
+   things it blocks. The fix is one line added to the runner's plan.
+
+Should I make both fixes?
+
+**The three-line note:** I checked the session logs. This session wrote it
+yesterday, before an earlier part of our conversation was condensed, so it was
+mine to commit and there's nothing to undo.
+
+--------------------------------------------------------------------------------
+
+### User Request 114
+
+oh that's just because that's the one I have open in my browser right now
+
+ummmmm can you give me some recent HTML documents to look at? I want to get a
+feel for where we're at.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 114
+
+So the Burning Steppes pocket was only where the page happened to be open in
+your browser, not a place you'd chosen. I'll keep the "how many bots fit a small
+patch" question for when it comes up somewhere real.
+
+Here are the most recent pages, newest first. Open them in your browser:
+
+1. **The architecture of capabilities:**
+   `file:///mnt/kaun/wow-chat-2026/docs/HTML/capability-architecture.html`, from
+   today. All our pieces arranged in seven rings, from the ground up to how
+   things are run, with the tests standing between the parts. Each part has
+   patterns and guidance. It's also published privately at
+   https://claude.ai/artifact/4K4Kn8pPKKaizuxGe4oHQq.
+2. **The game master commands reference:**
+   `file:///mnt/kaun/wow-chat-2026/docs/HTML/gm-commands.html`, from today. It
+   now lists the army and path commands, which can't be used until your compile.
+3. **The ground sandbox:**
+   `file:///mnt/kaun/wow-chat-2026/docs/HTML/ground-sandbox.html`, from today.
+   This is the pathfinding work. Pick "painted map" under Pathfinding to watch
+   the bots learn the walls as they go. Click any zone to fly there.
+4. **The battleground sandbox:**
+   `file:///mnt/kaun/wow-chat-2026/docs/HTML/battleground-sandbox.html`, from
+   today. Arathi Basin with two sides: squads take the roads, circle their foes,
+   lean toward allies and break off to take the bases. It's the one you said
+   looked awesome.
+5. **The fish-school sandbox:**
+   `file:///mnt/kaun/wow-chat-2026/docs/HTML/fish-sandbox.html`, from 28
+   October. The schooling movement, shown for judging.
+6. **The buddy lever map:**
+   `file:///mnt/kaun/wow-chat-2026/docs/HTML/buddy-lever-map.html`, from 28
+   October. Every setting that tunes the buddies, and what each one moves.
+7. **The buddy gear gallery:**
+   `file:///mnt/kaun/wow-chat-2026/docs/HTML/buddy-gear-gallery.html`, from 27
+   October. What the buddies wear.
+
+**The sandbox's history:**
+`file:///mnt/kaun/wow-chat-2026/docs/HTML/archive/ground-sandbox/index.html`
+holds every saved version of the ground sandbox from the last two days. Paging
+through it shows how the pathfinding grew.
+
+The other session's connection page is its own work, and I haven't looked at it.
+
+--------------------------------------------------------------------------------
+
+### User Request 115
+
+excellent can you give me proposals for 5 more HTML artifacts that properly
+display one portion of the built or planned subject artitechture? If it is
+planned but not built, I want to see the document, then build it after I
+approve. It should list all open questions, and it should give a response form
+where I can respond by writing to a .md file, stored locally and displayed here
+for whenever I come back, or for future LLM guided developments.
+
+--------------------------------------------------------------------------------
+
+### User Request 116
+
+Base directory for this skill:
+/tmp/claude-1000/bundled-skills/2.1.284/024bad5083e1edd58594adb0397cf797/artifact-capabilities
+
+# Artifact runtime capabilities
+
+A published Artifact page can declare **runtime capabilities** — abilities the
+claude.ai viewer grants the page at open time — by passing `capabilities:
+{name: config}` to the Artifact tool. The control plane is the authority on
+valid names and config shapes. Declaration gestures: **omitting** `capabilities`
+on a redeploy carries the stored declaration forward unchanged (and preserves
+the artifact's stored contract pin); an **empty object** `{}` is the explicit
+clear-all; a **non-empty object** is a full-set declaration (anything stored but
+not restated is revoked). Moving a republished artifact's runtime version is a
+deliberate gesture — pass `contract: 'latest'` to upgrade, or a specific
+version to pin or roll back — never a side effect of editing.
+
+**A page that republishes itself** through the `artifact` capability sends its
+whole document in exactly the shape the Artifact tool publishes, so a later
+publish from the tool recognizes and replaces the skeleton instead of nesting
+it: `<!doctype html><html><head><meta charset=utf8><meta name=viewport
+content="width=device-width,initial-scale=1,viewport-fit=cover"><style>` the
+same small reset the tool's description names `</style></head><body>` — no
+whitespace between those tags and nothing else in the head — then the page
+content exactly as it was written for the tool (its `<title>` and `<style>`
+first, inside the body, regenerated from the page's state), then
+`</body></html>`.
+
+**Available capabilities:** `artifact`, `assets`, `comments`, `db`, `downloads`,
+`files`, `mcp`, `room`, `sample`, `self`, `user` — the complete set of
+capability names you may declare; built in on every page, called without
+declaring (never pass these in `capabilities`): `permissions`. Anything not
+listed is unavailable to this user.
+
+> Tool spelling in this session: the `Artifact` tool's `action: "read_db"` /
+> `"write_db"` with a `db_op` are the `ArtifactData` tool, whose `action` is
+> that `db_op` ("get", "list", "query", "set", "update", "str_replace",
+> "delete", "batch") with the other fields unchanged — load it with ToolSearch
+> when you first need it. Read the steps below with that substitution.
+
+Runtime contract 0.2.92
+
+
+Capability namespaces live behind `claude.use(name)`: `const db = await
+claude.use("db")` resolves the capability's namespace, or `null` when this view
+cannot run it (not served, not granted, or failed to load — indistinguishable
+by design). Branch on `null` and design for absence. `window.claude` carries
+only `use`: no `window.claude.db`, `.room`, or `.artifact` member is ever
+promised, so never read one — render the page without them and light features
+up when the promise resolves (later, never within your script's first run, and
+unordered with DOMContentLoaded; `null` after 10 s when no viewer answers). The
+resolved namespace is frozen and platform-owned: call its functions and keep the
+reference; never assign to it, `defineProperty` on it, or replace a member (wrap
+it for your own helpers). Permission stays on the calls: a consent prompt, rate
+limit, or policy refusal arrives on the first call, never from `use()`. Awaiting
+`use("db")` again is free (memoized); an unknown name resolves `null`.
+
+
+--- capability: artifact ---
+
+Use `artifact` for pages that should remember what people do with them: polls,
+sign-up sheets, checklists, trackers, boards — the page is the record; data
+kept server-side, or seeded or read back by Claude, is `db`. Declare
+`capabilities: {artifact: {}}`; `const artifact = await claude.use("artifact")`,
+then `await artifact.publish(html)` saves `html` (a complete document, doctype
+first) as the new version, and every open view, this one included, reloads to
+it. Nothing a viewer types, ticks or drags is kept unless the page publishes it.
+So embed the shared state as data in the HTML you publish and render the page
+from it; when an interaction completes, update the state, regenerate the
+document and publish it — never serialize the live DOM; batch rapid edits into
+one publish; publish only after a viewer acts, never on load. `conflict` is
+routine (every view reloads to the winner, dropping this edit): no retry. For
+read-only viewers publish rejects `not_granted`/`not_writer` — render a
+read-only view.
+
+
+--- capability: assets ---
+
+`assets` stores uploaded assets: `const assets = await claude.use("assets")`;
+`assets.upload(blob)` (image, SVG, video, PDF, font, CSS/JS, or
+CSV/Markdown/JSON/text; 20 MiB cap, CSS/JS 16 MiB, SVG 2 MiB and sanitized)
+resolves `{id, url, sizeBytes, contentType}`; `assets.list()` resolves `{assets,
+usage}`; `assets.delete(id)` removes one for good: only on a deliberate user
+action, updating rows that held it. Declare `capabilities: {assets: {}}`: only
+Editors and up get it, others get `null` from `use("assets")` (hide asset UI;
+handle errors). Only if the user wants uploads from non-editors, declare
+`{assets: {upload: "interact"}}`: where enabled, Contributors can upload but
+list and delete only their own, and their files show only in the organization;
+never run any asset as code, CSS or HTML. Store the `id` in `db` rows as the
+durable pointer; use the returned `url` as an `<img>`/`<video>`/`<a>` source
+(SVG: `<img>` or CSS only); a stored id serves at `"/_blob/" + id`. The type
+definitions are authoritative.
+
+
+--- capability: comments ---
+
+`comments` wires a page's own commenting UI to the artifact's shared comment
+store: `await claude.use("comments")` (`null`: unavailable). The declaration
+picks the grant: `capabilities: {comments: {"composer_only": true}}` grants only
+`openComposer({element}|{range})` (opens the shell's composer like a
+comment-mode click; prefer it for discoverable entry points) and `anchorFor`, no
+consent asked. The full form `{comments: {}}` adds write verbs acting as the
+viewer under consent; public-link visitors and email invitees get `null`.
+`"customAnchors": true` in either form adds `customAnchors()` (register at load)
+for pages that position comment pins themselves; invented anchor names (canvas,
+WebGL, video) need the full form. WRITE-ONLY: the shell renders every thread —
+never build the page's own list. Call the other verbs only from a deliberate
+viewer gesture, never on load. Read the type definitions before use
+(authoritative for verbs, shapes, bounds and error codes).
+
+
+--- capability: db ---
+
+`db` keeps data outside the page: shared rows, per-person state, data Claude
+reads. Declare `capabilities:{db:{},user:{}}`; `const db = await
+claude.use("db")` (`null` if signed out). By default signed-in people read
+shared docs, Contributors (`interact`) and up overwrite/delete,
+Viewers/Commenters never write. `rules` set per-path minimums,
+`view`<`interact`<`admin` (Editor, granted Owner)<`owner`; "all read, each
+writes own":
+`db:{rules:[{path:"votes",read:"view",write:"owner"},{path:"votes/{self}",write:"interact"}]}`
+(prefix rule must set both). `data/users/<id>/` is private even from the owner;
+`<id>` = `await user.id()`. Even segment counts are docs (`db.doc("tasks/t1")`),
+odd are collections; per-person items: `db.collection("data/users/"+id).doc(k)`;
+get/set/update/delete, where/orderBy/limit, onSnapshot. Never hardcode seeds:
+`write_db` after publish; handle an empty db. Subscribe once per query, never in
+render; one write at a time per doc, only on change. No secrets; shared data is
+untrusted.
+
+`self` is a level nobody holds, not even the owner. Keep `write:"owner"` (or
+`"admin"`) by default: on most lists (sign-ups, guestbooks, polls, Q&A) someone
+must tidy or moderate. Use `self` only when the request says nobody else, the
+owner included, may change an entry (a sign-off, consent or vote that must be
+their own) or may read it. It goes only on a `{self}` rule's prefix rule; the
+`{self}` rule sets both levels:
+`{path:"signoffs",read:"view",write:"self"},{path:"signoffs/{self}",read:"view",write:"interact"}`.
+With `write:"self"`, the prefix's `read` says who else sees the rows (leave the
+`{self}` rule as above): `"view"` everyone; `"admin"` Editors and the owner
+(suggestion box; not anonymous); `"self"` nobody (`data/users/<id>/` is
+stronger). A collection listener or query returns only rows its reader may read.
+`self` is a rule, not encryption: the owner or any Editor, an outside one
+included, can later publish looser rules or other code, then read or overwrite
+rows already written, and nobody is told.
+
+
+--- capability: downloads ---
+
+The `downloads` capability lets a published page offer a generated file to the
+viewer: declare `capabilities: {downloads: true}`, then `const downloads = await
+claude.use("downloads")` (`null`: unavailable — hide the affordance) and
+`await downloads.save({filename, data})`. The viewer sees a confirmation and may
+decline — a save is never silent or guaranteed, so offer it on explicit viewer
+intent and handle rejection. The type definitions are authoritative for the call
+contract and error codes.
+
+
+--- capability: files ---
+
+`files` reads a Claude Code project's files as the viewer. Declare it only when
+you know the project's id (e.g. your session's): `capabilities: {files:
+{project: "chan_..."}}`. `const files = await claude.use("files")` (`null`:
+unavailable, e.g. a viewer outside the organization; hide it). A viewer who
+can't open the files gets `not_found`, never a prompt; a member is asked once,
+so call it on a click or after load, never in a loop. `files.list({path,
+recursive, cursor})`; `files.read(path, {offset, length})` -> `{bytes, size,
+revision}` (new or just-edited files can lag a few seconds);
+`files.download(path)` asks the viewer to save it (some types, e.g. .exe, .js
+and .bat, are refused); `await files.asSampleTools()` gives `sample` list/read
+tools (declare it too). Only project members can publish an artifact declaring
+files. Don't copy file contents into the artifact's data, assets or versions
+unless the user asks: anyone it's shared with can read them. The type
+definitions give shapes and error codes.
+
+
+--- capability: mcp ---
+
+`mcp` lets a page call the viewer's claude.ai connectors: `await
+claude.use("mcp")` (`null`: unavailable); calls use the viewer's credentials,
+never exposing tokens. Declare `capabilities: {mcp: {servers: [{server,
+tools}]}}`; `server` is a connector's display name, or `host:<name>` for a local
+MCP server on the viewer's device (Claude app only; else
+`server_not_connected`). Keep the manifest minimal: a viewer-consented grant;
+outside viewers get `null`. Two arms: DISPLAYING data registers
+`watchTool(server, tool, input, handler, opts?)` (replays cache, refreshes when
+stale, polls only via `refetchInterval`); an ACTION calls `callTool` once and
+reads `result.payload` or `(await server(name)).<tool>(input)` for the payload.
+Tool failures REJECT (`tool_error`); watches get error events. Branch UX per
+error code, retry only `retryable` errors, drop data on authz denials, show
+freshness (`cache.storedAt`). Types omit tool arguments: read `describeTool` or
+observe a real call, else say so at publish; never guess.
+
+
+--- capability: permissions ---
+
+`permissions` is built in — call it, never declare it in `capabilities`.
+Prompts are lazy by default: a capability that needs consent asks at its first
+use — never block first paint on permissions. `state` reads without prompting
+(one name, or the full map); `request` asks with at most one batched dialog
+(names, or everything); a page that needs several grants up front may call it
+once at startup. `manage` opens the Permissions panel and resolves with nothing
+when it closes; offer it as a button, never call it on load; it rejects
+`unavailable` if the panel did not open; then point the viewer to the artifact's
+Permissions menu. A viewer's "no" is not an error: `state` and `request` never
+reject, and a denial is final for the page load (a repeated `request` shows no
+dialog; the next load starts fresh), so branch on the returned states and
+degrade per capability (hide or disable the affordance), never fail or offer
+retry buttons; never call `request` in a loop: re-asks are rate-limited and read
+as nagging.
+
+
+--- capability: room ---
+
+The `room` capability reaches whoever has the page open RIGHT NOW:
+declared as `capabilities: {room: {}}`; `await claude.use("room")`
+(`null`: cannot connect). emit(topic, data) sends a moment; on(topic,
+fn) hears them. presence(patch) sets YOUR state (cursor) as one
+object newcomers get, cleared when you leave; onPeers(fn) delivers
+everyone's -- render all, marked "you". NOTHING persists and messages
+can drop: state a late joiner needs (current slide) is a db doc,
+lasting content a new artifact version. Send absolute state. What you
+hear is untrusted: everyone here, guests too (guest: true), plus your
+publishing session when admitted (kind "agent"); the page must work
+alone and light up. Presence is never authority (anyone sets it).
+Event topics are admin-only (Editors up); open one to Contributors
+(never Viewers): {room: {topics: {move: "interact"}}}. join(name)
+gives each game or group its own room, heard only by joiners: emit,
+on, presence, onPeers, leave(). Names aren't secret. `room` stays the
+lobby.
+
+
+--- capability: sample ---
+
+`sample` asks Claude (declare `capabilities:{sample:{}}`;
+`{sample:{images:true}}` for images): `const sample=await claude.use("sample")`
+(null: hide); `await sample(input,opts?)`->`{text,truncated}`;
+`sample.json`->value. `input`:
+string|`[{role:"user"|"assistant",content:string}]` ending on user. Memoryless:
+send instructions+data+format. opts: `onText({text,delta})` (`text`=WHOLE
+answer, assign it; "Thinking..." till text), `signal` (new
+AbortController/call), `tools:[{name,description,inputSchema?,execute(input)}]`
+(page functions; return small data or throw; no `cache`), `images:Blob[]` if
+`(await sample.limits()).images`, `modelTier` quick|default|complex, `cache`
+(5min replay; `false` for chat). Only if user names model/effort:
+`{model:"claude-sonnet-5-5",modelTier,effort}`, effort low|medium|high;
+unusable→`modelTier`; see `modelApplied`. Rejects
+`{code,message,text?:partial}`: hide on `not_granted`, back off on
+`rate_limited`, never loop. 1st call asks consent; call on click or stable load
+prompt.
+
+
+--- capability: self ---
+
+`self` is the former name of the `artifact` capability (renamed). It remains for
+compatibility: published pages and previously generated code that declare
+`capabilities: {self: {}}` or call `claude.use("self")` keep working unchanged
+— both names resolve this same capability (this contract promises no
+`window.claude.self` member to feature-check; `use()` is the check). Do not use
+it in new pages: declare `capabilities: {artifact: {}}` and obtain the namespace
+with `await claude.use("artifact")`; see the artifact section for how to use it.
+
+
+--- capability: user ---
+
+`user` answers who is viewing this page and who your shared state names: the
+owner's organization and invited guests (`guest: true`); others are absent.
+`const user = await claude.use("user")`; `null` = absent (`user?.isOwner() ??
+false`). `isOwner()`/`canEdit()`/`can(name)` need no setup (canEdit = admin
+level; `can("data.write")` = may write shared `db` docs, `null` = not told: keep
+the input; refused writes decide). Declare `capabilities:{user:{}}` for
+`id()`/`me()` (opaque id, comparable only within one scope; `me()` never null)
+and `profiles(ids)`; `scopes:["profile"]` adds names and `search(q)`;
+`["profile","email"]` adds addresses. Reads never reject. Store only ids (`id()`
+or `hit.id`), never a name, avatar, or Profile: names differ per viewer and go
+stale. Resolve in render, every time: `const ps = await
+user.profiles(idsOnScreen)` then `ps[id].name || 'Someone'` (cached: call again
+freely). `name` is `""` if unresolvable: use `||` not `??`. Call `search('')` on
+focus; set names with textContent.
+
+
+**Your connectors this session.** Connector tools appear in your tool list as
+`mcp__<connector>__<toolName>`. Set `server` to the `<connector>` segment —
+everything between `mcp__` and the next `__` (for
+`mcp__claude_ai_Slack_beta__search`, the `server` is `claude_ai_Slack_beta`).
+Copy the segment exactly, case included; when publishing, it is resolved to the
+connector's display name automatically. In the page's own `callTool`/`watchTool`
+calls, pass the connector's display name (its name as shown in claude.ai), not
+that segment — viewers resolve connectors by name only. The publish result
+states the exact display name for each segment it resolves; if the page's calls
+do not match it, fix them and publish again. Locally-configured MCP servers
+connected in this session can also be declared, as host servers: set `server` to
+`host:<server>` where `<server>` is the segment between `mcp__` and the next
+`__` in that server's tool names (`mcp__filesystem__read_file` →
+`host:filesystem`). Only servers from the user's MCP configuration count, with
+one built-in exception: `host:claude_browser` is the Claude app's own browser
+— declare it, with the tools the page needs from `read_page`, `get_page_text`,
+`find`, `preview_start`, `navigate`, `computer` and `form_input`, when the page
+must read or act on other websites; it answers only when the viewer opens the
+page in a Cowork session of the desktop app, and the viewer is asked before each
+website. The app's other built-in servers (`cowork`, `scheduled-tasks`,
+`session_info`, `workspace` and the like) are never host servers, and a page
+that declares one is refused at publish. A host server only answers when the
+viewer opens the page in a Claude app that has that same local server connected
+— say so to the user when you publish. The manifest's `tools` array takes the
+connector's upstream tool names (as returned by `listTools()` /
+`/v1/mcp_servers`), which can differ from the normalized `<toolName>` segment
+when an upstream name contains `.` or spaces. Every `servers[]` entry needs a
+non-empty `tools` array naming the tools the page calls — an empty or omitted
+`tools` list is refused and never means "all tools"; to publish without
+connector access, leave `mcp` out of `capabilities` (pass `capabilities: {}` to
+clear a stored declaration) rather than declaring an empty `servers` list. In
+hermetic/CI sessions where connectors aren't loaded but
+`$CLAUDE_CODE_OAUTH_TOKEN` is set, fetch the list via Bash: `curl -H
+'anthropic-version: 2023-06-01' -H 'anthropic-beta: mcp-servers-2025-12-04' -H
+"Authorization: Bearer $CLAUDE_CODE_OAUTH_TOKEN"
+https://api.anthropic.com/v1/mcp_servers?limit=1000`; in that case use each
+entry's `display_name` as the `server` value (exact display names are always
+accepted alongside tool-prefix segments).
+
+**Call contract** (runtime contract 0.2.92). The platform-served `window.claude`
+type definitions for this contract are extracted under
+`/tmp/claude-1000/bundled-skills/2.1.284/024bad5083e1edd58594adb0397cf797/artifact-capabilities`:
+`0.2.92/artifact.d.ts`, `0.2.92/assets.d.ts`, `0.2.92/claude.d.ts`,
+`0.2.92/comments.d.ts`, `0.2.92/db.d.ts`, `0.2.92/downloads.d.ts`,
+`0.2.92/files.d.ts`, `0.2.92/mcp.d.ts`, `0.2.92/permissions.d.ts`,
+`0.2.92/room.d.ts`, `0.2.92/sample.d.ts`, `0.2.92/self.d.ts`,
+`0.2.92/user.d.ts`. Read
+`/tmp/claude-1000/bundled-skills/2.1.284/024bad5083e1edd58594adb0397cf797/artifact-capabilities/0.2.92/claude.d.ts`
+(how a page reaches any capability on this contract) and
+`/tmp/claude-1000/bundled-skills/2.1.284/024bad5083e1edd58594adb0397cf797/artifact-capabilities/0.2.92/mcp.d.ts`
+before writing any code that calls the `mcp` capability — they are
+authoritative for this contract version over any remembered API shape. Open
+these files with the Read tool rather than `cat`: a file past the Bash tool's
+inline output limit does not come back in full. The type definitions cover only
+the call envelope, not a connector tool's argument names or result shape. Take
+argument names from the tool's input schema in this session's own definition of
+that connector tool, when it is loaded here. Learn a result's shape from one
+real call of a tool that is safe to run — never run a write only to learn its
+result. The published page may also read a connector tool's schema itself with
+`describeTool(server, tool)` at view time, once the viewer has allowed that
+connector for the page (viewers without that support reject it — treat any
+rejection as no schema available); this session cannot read that answer before
+publishing, so it is no substitute for a schema read here. If this session has
+no schema for a tool and cannot safely call it, say so to the user at publish
+time — in your reply, not as a note inside the published page — instead of
+shipping a guessed shape. Observed response payloads are the user's real data:
+learn the shape from them, but never embed the observed values in the published
+page as sample or placeholder data.
+
+## Where a page keeps its state — this session
+
+- A per-viewer convenience (a remembered tab, a draft): browser storage; it
+  never reaches other viewers or Claude.
+- The page itself is the record (a poll, a sign-up sheet, a checklist): the
+  `artifact` capability — a viewer who can write republishes the whole page
+  from its state; every open view reloads to the winner, a concurrent save
+  rejects `conflict`, and read-only viewers cannot save. Such a page regenerates
+  the whole document from its state: keep the head, tokens and structure and
+  change only the content.
+- Data outside the page (Claude seeds or reads it, more than the page shows,
+  private per viewer, many writers at once): the `db` capability — documents
+  under access rules, live through `onSnapshot`, kept across republishes.
+
+## Verify before you hand over the link — this session
+
+A page whose `capabilities` you declared in this session gets one functional
+pass, not a render loop: after the first publish, one `ArtifactData` `list` of
+each collection the page writes, and, where its rules hide something from
+ordinary viewers, the same read with a lower `as_level`, which must not show
+what the rules hide from such a viewer. Then tell the user in one line what you
+exercised and what you could not. An Artifact made from an Artifact type is not
+such a page: its capabilities come from the type, and the type's instructions
+govern any checking.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 116
+
+Here are five proposals, most valuable first. Each one is a page published
+privately on claude.ai, plus a copy in `docs/HTML/`. Each lists every open
+question for its part and has an answer box under each one.
+
+**How the answer form works on all five**
+
+- **Where answers go:** what you type is saved as a row in the page's own small
+  database on claude.ai, and shows under its question with the date, whenever
+  you open the page again.
+- **Getting them into the project:** a browser page can't write into the project
+  folder. So the next time I (or any agent) start work, I read those rows and
+  write them word for word into `notes/answers/<page>.md`, and into the issue
+  each question came from. Then I republish the page, so it shows the answers
+  from that file too.
+- **A copy for yourself:** a "save my answers as .md" button gives you the file
+  directly, if you want your own copy. The local file copy can only offer that
+  button, since it has no database.
+
+## 1. Every open question, ranked by what it unblocks (the Operations ring)
+
+- **What exists already:** the data. The status board script and the dependency
+  ranking I made for your 10 questions.
+- **What the page does:** the 427 unfinished issues that have open questions,
+  grouped by ring and by state (built, waiting for the compile, planned, not
+  started).
+  - Filters by ring, by state, and "unblocks the most".
+  - Each issue folds open to show its own questions, with an answer box under
+    each.
+- **Why first:** it becomes the place where every question gets answered, and
+  the other four pages are focused slices of it.
+
+## 2. Pathfinding, end to end (Ground and Bodies)
+
+- **Built.** One step of a bot, followed through every layer:
+  - the painted map's cells;
+  - the route search;
+  - following the route and turning;
+  - the copy inside the game server;
+  - the saved map file.
+- **What you can play with:**
+  - The six ways side by side, with their measured smoothness and how often each
+    got stuck.
+  - A small live painted-map demo with sliders for the numbers still open: how
+    much space a bot wants from walls, how much it avoids unknown ground, how
+    much it avoids crowds. You could answer "which feel natural" by feel.
+- **Questions from:** the painted map's open questions, the five ways', and the
+  orbit checks.
+
+## 3. Talents guiding abilities (Minds)
+
+- **Planned, not built.** First the plan as a page: the four readings, why the
+  broad talents get raised, and the open questions.
+- **After you approve:** a real table for each class, read from the game's own
+  spell tables. Each talent shows the abilities it touches, coloured by which
+  readings agree, with the "only the words found this" links set apart for you
+  to judge by eye.
+
+## 4. Stand-ins and the army of 64 (Bodies and Minds)
+
+- **Built, waiting for your compile.**
+- **What you can play with:**
+  - A "draw an army" button that uses the real rules, showing the race, class,
+    talent profile and role split. You'll see why a fully random 64 holds about
+    4 tanks and 7 healers.
+  - A stand-in's life, step by step: made, kept, met by chance, raised to your
+    level.
+  - How the dungeon draw fills seats.
+- **Questions from:** the stand-ins, the army and the dungeon draw.
+
+## 5. Alterac Valley's weather (the world)
+
+- **Planned, not built.** First the plan as a page.
+- **After you approve:** a deck simulator. The shuffle runs on a timeline, each
+  turn swells and fades, and slush turns swap between rain and snow. The storm
+  wanders over the real Alterac Valley map, with a heat map of where it has
+  been, so you can see whether it covers the valley evenly. Sliders for turn
+  length, storm size and pace.
+
+Which ones should I build? Number 1 makes the most sense first, since it's the
+hub where every question can be answered. For 3 and 5, I'd publish the plan
+pages first and build the simulators once you've looked them over.
+
+--------------------------------------------------------------------------------
+
+### User Request 117
+
+okay excellent can you make 5 one line gif ideas for each of these? There should
+be a total of 25.
+
+for page 1. we should have a message box next to each of them where we can send
+data to our locally hosted HTML page launched web server.
+
+then, in the next message, when I review the above, we'll come up with 5 prompt
+ideas for the gif generator that should correspond to valid and different
+perspectionable outcomes. for each gif, we'll have 5 attempts at creating a
+decent visual. We'll pick the best from among them.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 117
+
+Here are the 25 ideas, five per page.
+
+**Page 1: every open question, ranked by what it unblocks**
+
+As you asked, page 1 will have a message box beside each question that sends to
+a web server running on this computer, which serves the page. The project
+doesn't have such a server yet. It would be a small LuaJIT program that serves
+`docs/HTML/` and writes each message into `notes/answers/<issue>.md`. I'll write
+its issue file when we build it.
+
+1. Question cards falling like leaves onto seven rings, each settling into its
+   own ring.
+2. A tree of locked issues; answering one question at the root unlocks a chain
+   of them, one after another downward.
+3. A wall of hundreds of grey tiles turning gold in a ripple as questions get
+   answered.
+4. An answer typed into a message box folds into a paper plane and flies into a
+   folder labelled "answers".
+5. A tower of question cards re-sorting itself, the ones that unblock the most
+   rising to the top.
+
+**Page 2: pathfinding, end to end**
+
+1. 36 green dots exploring a dark map, painting gold cells as they walk, walls
+   turning orange where they bump.
+2. One bot's step peeled apart into layers: the cell grid, the planned route,
+   the straightened line, the turning arc.
+3. Six small panels, each walking the same maze a different way: one stuck and
+   jittering, the painted map gliding through.
+4. Bots keeping a gap from a wall, the gap narrowing as they near a doorway they
+   need.
+5. A sun and moon cycling over a map as its paint thickens and the routes grow
+   smoother, day after day.
+
+**Page 3: talents guiding abilities**
+
+1. The Improved Rejuvenation and Rejuvenation icons drifting together and
+   clicking like matching puzzle pieces.
+2. A tooltip sentence lighting up word by word, with threads running from
+   "Rejuvenation" to the ability.
+3. A broad talent, "all your Shadow spells", casting a wide net that catches
+   several spell icons at once.
+4. Four coloured lenses (the game's spell list, broad targets, icon, words)
+   sliding over a talent; where all four agree, the link turns solid.
+5. A buddy's action bar where the talented abilities glow brighter and get
+   pressed more often.
+
+**Page 4: stand-ins and the army of 64**
+
+1. A deck dealing 64 figures onto a field, each flipping to show its class
+   colour and a sword, shield or cross for its role.
+2. A pie chart forming as the army is drawn: damage swelling large, tanks and
+   healers thin slices.
+3. A stand-in's life as a loop: made, into a dungeon, back onto a shelf of kept
+   ones, picked at random, its level ticking up.
+4. A player walking past a row of sleeping stand-ins; one wakes at random and
+   rises to the player's level.
+5. Five dungeon seats filling: buddies sit first, then a stand-in shimmers into
+   each empty seat.
+
+**Page 5: Alterac Valley's weather**
+
+1. A deck of weather cards (sun, fog, snow, slush) shuffled and dealt onto a
+   timeline, each swelling and fading in turn.
+2. Rain freezing into snow mid-fall over a mountain valley, flickering between
+   the two: slush.
+3. A dark storm cloud drifting across the Alterac Valley map, leaving a fading
+   glow where it has been.
+4. Two battleground windows side by side, the same sky changing in both at the
+   same moment.
+5. A heat map of the valley filling in evenly over a long time-lapse as the
+   storm seeks the corners it has visited least.
 
 --------------------------------------------------------------------------------
 

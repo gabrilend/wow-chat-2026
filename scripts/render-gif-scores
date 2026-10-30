@@ -1,0 +1,144 @@
+#!/usr/bin/env luajit
+-- render-gif-scores - draws a folder of gif-generator scores into gifs,
+-- several at once, and writes a contact sheet to look at them together.
+--
+-- For a general audience: the gif generator (a sibling project) turns a
+-- score, a list of glowing strokes, into an animated picture. This tool
+-- borrows its drawing code as it is, without changing that project or
+-- writing anything into it: each score in the folder is drawn by its own
+-- worker process (eight at a time), the gif lands beside the scores'
+-- folder in this project's RAM drive, and a page (index.html) shows every
+-- gif with the idea it was drawn from, grouped by the page it is for.
+-- A score the generator refuses is reported with the generator's own
+-- reasons, and the others carry on.
+--
+-- Usage: scripts/render-gif-scores [DIR] [--scores PATH] [--jobs N] [--gen PATH] [--one SCORE OUT]
+--   DIR           the project root (default the hard-coded one below)
+--   --scores PATH the folder of scores (default DIR/tmp/shared-memory/gifs/attempt-1/scores);
+--                 the gifs go to its parent folder
+--   --jobs N      how many drawn at once (default 8)
+--   --gen PATH    the gif generator (default /mnt/mtwo/programming/ai-stuff/gif-generator)
+--   --one S O     draw one score S into gif O (what each worker runs)
+--   --help        this text
+-- The contact sheet reads each score's "-- idea:" and "-- page:" lines.
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+local GEN = "/mnt/mtwo/programming/ai-stuff/gif-generator"
+
+-- {{{ arguments
+local scores, jobs, one, oneOut
+do
+    local i = 1
+    while i <= #arg do
+        local a = arg[i]
+        if a == "--help" or a == "-h" then
+            for line in io.lines(arg[0]) do
+                if not line:match("^%-%-") and not line:match("^#!") then break end
+                print((line:gsub("^%-%- ?", "")))
+            end
+            os.exit(0)
+        elseif a == "--scores" then scores = arg[i + 1]; i = i + 1
+        elseif a == "--jobs"   then jobs = tonumber(arg[i + 1]) or error("--jobs takes a number"); i = i + 1
+        elseif a == "--gen"    then GEN = arg[i + 1]; i = i + 1
+        elseif a == "--one"    then one, oneOut = arg[i + 1], arg[i + 2]; i = i + 2
+        elseif a:sub(1, 2) ~= "--" then DIR = a
+        else error("unknown option " .. a .. " (see --help)") end
+        i = i + 1
+    end
+end
+scores = scores or (DIR .. "/tmp/shared-memory/gifs/attempt-1/scores")
+jobs = jobs or 8
+-- }}}
+
+-- {{{ one score, in a worker
+-- The generator's reader, compiler and renderer, loaded from its own
+-- folder (read only). A refusal is printed with the generator's words and
+-- the worker exits 1; the gif is written to a partial file first and
+-- renamed, so a half-drawn gif never looks finished.
+if one then
+    package.path = GEN .. "/src/?.lua;" .. package.path
+    local score   = require("022-score")
+    local compile = require("024-compile")
+    local main    = require("026-render-main")
+    local ok, raw = pcall(score.read, one)
+    if not ok then io.stderr:write(one .. ": the reader refused it: " .. tostring(raw) .. "\n"); os.exit(1) end
+    local compiled, refusal = compile.score(raw)
+    if not compiled then
+        io.stderr:write(one .. ": the compiler refused it:\n" .. (type(refusal) == "table" and table.concat(refusal, "\n") or tostring(refusal)) .. "\n")
+        os.exit(1)
+    end
+    local bytes, facts = main.render_to_gif(compiled)
+    local f = io.open(oneOut .. ".partial", "wb") or error("cannot write " .. oneOut .. ".partial")
+    f:write(bytes)
+    f:close()
+    os.rename(oneOut .. ".partial", oneOut)
+    print(string.format("%s: %d frames, %d bytes", oneOut:match("[^/]+$"), facts.frames or 0, #bytes))
+    os.exit(0)
+end
+-- }}}
+
+-- {{{ every score, eight at a time
+local outDir = scores:gsub("/[^/]+/?$", "")
+local list = {}
+for name in io.popen("ls '" .. scores .. "'"):lines() do
+    if name:match("%.lua$") then list[#list + 1] = name end
+end
+if #list == 0 then error("no scores in " .. scores .. " (write them first: scripts/compose-architecture-gifs)") end
+
+-- the workers' commands, one per line, handed to xargs to run in parallel
+local cmdFile = outDir .. "/render-commands"
+local f = io.open(cmdFile, "w") or error("cannot write " .. cmdFile)
+for _, name in ipairs(list) do
+    f:write(string.format("luajit '%s' '%s' --gen '%s' --one '%s/%s' '%s/%s'\n", arg[0], DIR, GEN,
+        scores, name, outDir, (name:gsub("%.lua$", ".gif"))))
+end
+f:close()
+local ok = os.execute("xargs -P " .. jobs .. " -I{} sh -c '{}' < '" .. cmdFile .. "'")
+-- }}}
+
+-- {{{ the contact sheet
+local pages = { "Every open question, ranked by what it unblocks", "Pathfinding, end to end",
+    "Talents guiding abilities", "Stand-ins and the army of 64", "Alterac Valley's weather" }
+local byPage, made, missing = {}, 0, {}
+for _, name in ipairs(list) do
+    local idea, page = "", 0
+    for line in io.lines(scores .. "/" .. name) do
+        idea = line:match("^%-%- idea: (.*)") or idea
+        page = tonumber(line:match("^%-%- page: (%d+)")) or page
+        if not line:match("^%-%-") then break end
+    end
+    local gifName = name:gsub("%.lua$", ".gif")
+    local exists = io.open(outDir .. "/" .. gifName, "rb")
+    if exists then exists:close(); made = made + 1 else missing[#missing + 1] = name end
+    byPage[page] = byPage[page] or {}
+    table.insert(byPage[page], { id = name:gsub("%.lua$", ""), idea = idea, gif = exists and gifName })
+end
+local h = {}
+h[#h + 1] = "<!doctype html><!-- written by scripts/render-gif-scores from the scores beside it, to look at the drawn ideas together -->"
+h[#h + 1] = "<html><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><title>Architecture GIF Ideas</title><style>"
+h[#h + 1] = ":root{--bg:#f4f1ea;--ink:#222;--card:#fff;--muted:#666}@media (prefers-color-scheme:dark){:root{--bg:#141418;--ink:#e8e6e0;--card:#1e1e24;--muted:#999}}"
+h[#h + 1] = "body{background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif;margin:0;padding:16px}h1{font-size:22px}h2{font-size:18px;margin-top:28px}"
+h[#h + 1] = ".row{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}.card{background:var(--card);border-radius:8px;padding:10px}"
+h[#h + 1] = ".card img{width:100%;image-rendering:auto;background:#000;border-radius:4px}.id{font-weight:600}.idea{color:var(--muted);font-size:13px}</style></head><body>"
+h[#h + 1] = string.format("<h1>Architecture GIF ideas</h1><p>%d of %d drawn, from <code>%s</code>.</p>", made, #list, scores)
+for p = 1, 5 do
+    if byPage[p] then
+        h[#h + 1] = "<h2>Page " .. p .. ": " .. pages[p] .. "</h2><div class=row>"
+        for _, it in ipairs(byPage[p]) do
+            h[#h + 1] = string.format("<div class=card>%s<div class=id>%s</div><div class=idea>%s</div></div>",
+                it.gif and ("<img src='" .. it.gif .. "' alt=''>") or "<p>(not drawn: see the render output)</p>", it.id,
+                (it.idea:gsub("&", "&amp;"):gsub("<", "&lt;")))
+        end
+        h[#h + 1] = "</div>"
+    end
+end
+h[#h + 1] = "</body></html>"
+local sheet = io.open(outDir .. "/index.html", "w") or error("cannot write the contact sheet")
+sheet:write(table.concat(h, "\n"))
+sheet:close()
+print(string.format("%d of %d drawn; contact sheet: %s/index.html", made, #list, outDir))
+if #missing > 0 then
+    print("not drawn: " .. table.concat(missing, ", "))
+    os.exit(1)
+end
+-- }}}

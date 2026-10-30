@@ -1,0 +1,472 @@
+#!/usr/bin/env luajit
+-- compose-architecture-gifs - writes the 25 picture ideas for the five
+-- architecture pages as scores for the gif generator.
+--
+-- For a general audience: the gif generator (a sibling project,
+-- /mnt/mtwo/programming/ai-stuff/gif-generator) draws only with glowing
+-- light: arcs, lines, still points and filled shapes in seven colours,
+-- written as a "score", a list of strokes in playing order. It can't draw
+-- words or icons. So each idea ("question cards falling onto seven
+-- rings") is translated here into strokes of light. The arithmetic (where
+-- 64 figures land, which tile lights when) is done here, because a score
+-- itself may not compute. Each idea is a recipe; an attempt number moves
+-- its random choices (positions, order, seed), so several attempts of one
+-- idea differ and the best can be picked. Rendering is a separate tool
+-- (scripts/render-gif-scores); this one only writes scores.
+--
+-- Usage: scripts/compose-architecture-gifs [DIR] [--attempt N] [--out PATH] [--only ID]
+--   DIR          the project root (default the hard-coded one below)
+--   --attempt N  which attempt, 1 and up (default 1): moves the random choices
+--   --out PATH   where the scores go (default DIR/tmp/shared-memory/gifs/attempt-N/scores)
+--   --only ID    one idea only (for example 2c)
+--   --list       print the 25 ideas and stop
+--   --help       this text
+-- Each score's first lines say its idea and page, which the renderer's
+-- contact sheet reads.
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+
+-- {{{ arguments
+local attempt, out, only, list = 1, nil, nil, false
+do
+    local i = 1
+    while i <= #arg do
+        local a = arg[i]
+        if a == "--help" or a == "-h" then
+            for line in io.lines(arg[0]) do
+                if not line:match("^%-%-") and not line:match("^#!") then break end
+                print((line:gsub("^%-%- ?", "")))
+            end
+            os.exit(0)
+        elseif a == "--attempt" then attempt = tonumber(arg[i + 1]) or error("--attempt takes a number"); i = i + 1
+        elseif a == "--out"     then out = arg[i + 1]; i = i + 1
+        elseif a == "--only"    then only = arg[i + 1]; i = i + 1
+        elseif a == "--list"    then list = true
+        elseif a:sub(1, 2) ~= "--" then DIR = a
+        else error("unknown option " .. a .. " (see --help)") end
+        i = i + 1
+    end
+end
+out = out or (DIR .. "/tmp/shared-memory/gifs/attempt-" .. attempt .. "/scores")
+-- }}}
+
+-- {{{ the random stream
+-- A small linear congruential stream seeded by idea and attempt, so an
+-- attempt is the same every time it is written, and attempts differ.
+local seed = 1
+local function rnd()
+    seed = (seed * 1103515245 + 12345) % 2147483648
+    return seed / 2147483648
+end
+local function rr(a, b) return a + (b - a) * rnd() end
+-- }}}
+
+-- {{{ score text
+-- Times are spoken in tenths (the score format refuses two decimals);
+-- coordinates are whole pixels.
+local function t1(x) return string.format("%.1f", math.floor(x * 10 + 0.5) / 10) end
+local function px(p) return string.format("{%d, %d}", math.floor(p[1] + 0.5), math.floor(p[2] + 0.5)) end
+
+local EMIT = {
+    line  = "rate = 900, spread = 2, speed = 18, aim = 0.8, drag = 2.2, jitter = 18, life = 0.7",
+    fine  = "rate = 500, spread = 1.2, speed = 10, aim = 0.9, drag = 2.5, jitter = 8, life = 0.5",
+    fill  = "rate = 700, spread = 1.5, speed = 4, aim = 0, drag = 2.5, jitter = 8, life = 0.8",
+    dim   = "rate = 250, spread = 1.5, speed = 3, aim = 0, drag = 2.5, jitter = 6, life = 0.6",
+    flash = "rate = 1600, spread = 2, speed = 45, aim = 0, drag = 3, jitter = 10, life = 0.4",
+    spark = "rate = 500, spread = 1.5, speed = 20, aim = 0, drag = 3, jitter = 10, life = 0.35",
+    rain  = "rate = 700, spread = 3, speed = 60, aim = 1, drag = 0.5, jitter = 4, life = 0.4",
+    snow  = "rate = 400, spread = 4, speed = 6, aim = 0.3, drag = 2, jitter = 40, life = 1.2",
+}
+
+local S        -- the score being written: a list of lines
+local LENGTH   -- its length, seconds
+local function begin(length)
+    S, LENGTH = {}, length
+    S[#S + 1] = string.format("canvas{ size = 256, fps = 25, length = %s, seed = %d }", t1(length), 1000 + attempt)
+end
+-- one stroke; at and lasts kept inside the canvas
+local function stroke(at, lasts, color, fade, shape, emit, ease)
+    at = math.max(0, math.min(at, LENGTH - 0.2))
+    lasts = math.max(0.1, math.min(lasts, LENGTH - math.floor(at * 10 + 0.5) / 10))
+    S[#S + 1] = string.format("stroke{ at = %s, lasts = %s, color = %q, fade = %q, ease = %q,\n        shape = %s,\n        emit = { %s } }",
+        t1(at), t1(lasts), color, fade, ease or "linear", shape, EMIT[emit] or emit)
+end
+local function line(a, b) return "line{ from = " .. px(a) .. ", to = " .. px(b) .. " }" end
+local function point(a) return "point{ at = " .. px(a) .. " }" end
+local function arc(c, r, from, to, turn)
+    return string.format("arc{ center = %s, radius = %d, from = %s, to = %s, turn = %q }",
+        px(c), math.floor(r + 0.5), t1(from), t1(to), turn or "clockwise")
+end
+local function circle(c, r) return arc(c, r, 12, 11.9) end
+local function fill(vs, sweep)
+    local t = {}
+    for i, v in ipairs(vs) do t[i] = px(v) end
+    return "fill{ vertices = { " .. table.concat(t, ", ") .. " }, sweep = " .. string.format("%q", sweep or "at-once") .. " }"
+end
+local function box(x, y, w, h) return { { x, y }, { x + w, y }, { x + w, y + h }, { x, y + h } } end
+-- }}}
+
+local IDEAS = {}
+local function idea(id, page, text, recipe) IDEAS[#IDEAS + 1] = { id = id, page = page, text = text, recipe = recipe } end
+
+-- {{{ page 1: every open question, ranked by what it unblocks
+idea("1a", 1, "Question cards falling like leaves onto seven rings, each settling into its own ring.", function()
+    begin(5.0)
+    for r = 1, 7 do stroke(0, 5.0, "ice", "in", circle({ 128, 128 }, 16 * r + 4), "dim") end
+    for k = 1, 14 do
+        local ring = math.floor(rr(1, 7.99))
+        local ang  = rr(0, 6.283)
+        local land = { 128 + math.cos(ang) * (16 * ring + 4), 128 + math.sin(ang) * (16 * ring + 4) }
+        local at   = 0.4 + k * 0.25
+        stroke(at, 0.8, "gold", "out", line({ land[1] + rr(-30, 30), -10 }, land), "line", "ease-out")
+        stroke(at + 0.8, 0.6, "gold", "flash", point(land), "spark")
+    end
+end)
+idea("1b", 1, "A tree of locked issues; answering one question at the root unlocks a chain of them, one after another downward.", function()
+    begin(5.0)
+    local nodes, edges = { { 128, 30 } }, {}
+    local level = { 1 }
+    for depth = 1, 3 do
+        local next = {}
+        for _, n in ipairs(level) do
+            for b = 1, 2 do
+                local p = nodes[n]
+                local q = { p[1] + (b == 1 and -1 or 1) * (60 / depth) + rr(-6, 6), p[2] + 62 }
+                nodes[#nodes + 1] = q
+                edges[#edges + 1] = { n, #nodes, depth }
+                next[#next + 1] = #nodes
+            end
+        end
+        level = next
+    end
+    for _, e in ipairs(edges) do stroke(0, 5.0, "violet", "in", line(nodes[e[1]], nodes[e[2]]), "dim") end
+    stroke(1.0, 0.6, "gold", "flash", point(nodes[1]), "flash")
+    for _, e in ipairs(edges) do
+        local at = 1.2 + (e[3] - 1) * 0.9 + rr(0, 0.3)
+        stroke(at, 0.7, "gold", "hold", line(nodes[e[1]], nodes[e[2]]), "line", "stroke")
+        stroke(at + 0.7, 0.5, "jade", "flash", point(nodes[e[2]]), "spark")
+    end
+end)
+idea("1c", 1, "A wall of hundreds of grey tiles turning gold in a ripple as questions get answered.", function()
+    begin(5.0)
+    local ox, oy = rr(0, 256), rr(0, 256)
+    for i = 0, 9 do for j = 0, 9 do
+        local x, y = 14 + i * 23, 14 + j * 23
+        stroke(0, 5.0, "ice", "in", fill(box(x, y, 17, 17)), "dim")
+        local d = math.sqrt((x - ox) ^ 2 + (y - oy) ^ 2)
+        stroke(0.6 + d / 90, 1.4, "gold", "in-out", fill(box(x, y, 17, 17)), "fill")
+    end end
+end)
+idea("1d", 1, "An answer typed into a message box folds into a paper plane and flies into a folder labelled \"answers\".", function()
+    begin(5.0)
+    stroke(0, 5.0, "teal", "in", fill(box(30, 150, 110, 40)), "dim")
+    stroke(0.4, 1.4, "gold", "hold", line({ 38, 170 }, { 128, 170 }), "fine")
+    local folder = { rr(185, 215), rr(40, 70) }
+    stroke(0, 5.0, "jade", "in", fill(box(folder[1] - 22, folder[2] - 14, 44, 30)), "dim")
+    stroke(2.0, 1.6, "gold", "hold", arc({ (128 + folder[1]) / 2, 170 }, 70, 9, 2.5), "line", "stroke")
+    stroke(3.7, 0.8, "gold", "flash", point(folder), "flash")
+end)
+idea("1e", 1, "A tower of question cards re-sorting itself, the ones that unblock the most rising to the top.", function()
+    begin(5.0)
+    local hues = { "ice", "teal", "violet", "rose", "jade", "gold", "ember" }
+    local order = {}
+    for i = 1, 7 do order[i] = i end
+    for i = 7, 2, -1 do local j = math.floor(rr(1, i + 0.99)); order[i], order[j] = order[j], order[i] end
+    for slot = 1, 7 do
+        local card = order[slot]                    -- the card at this slot before; card 1 unblocks the most
+        local y0, y1 = 30 + slot * 28, 30 + card * 28
+        stroke(0, 2.0, hues[card], "out", line({ 70, y0 }, { 186, y0 }), "fine")
+        stroke(2.0, 1.0, hues[card], "in-out", line({ 128 + (card - 4) * 8, y0 }, { 128 + (card - 4) * 8, y1 }), "line", "smoothstep")
+        stroke(3.0, 2.0, hues[card], "in", line({ 70, y1 }, { 186, y1 }), "fine")
+    end
+    stroke(3.2, 1.0, "gold", "flash", point({ 128, 58 }), "flash")
+end)
+-- }}}
+
+-- {{{ page 2: pathfinding, end to end
+idea("2a", 2, "36 green dots exploring a dark map, painting gold cells as they walk, walls turning orange where they bump.", function()
+    begin(5.0)
+    for b = 1, 8 do
+        local p = { rr(40, 216), rr(40, 216) }
+        local at = rr(0, 0.5)
+        for step = 1, 6 do
+            local q = { math.max(12, math.min(244, p[1] + rr(-40, 40))), math.max(12, math.min(244, p[2] + rr(-40, 40))) }
+            stroke(at, 0.7, "jade", "hold", line(p, q), "fine")
+            stroke(at + 0.3, 5.0, "gold", "in", fill(box(q[1] - 5, q[2] - 5, 10, 10)), "dim")
+            if q[1] <= 14 or q[1] >= 242 or q[2] <= 14 or q[2] >= 242 or rnd() < 0.12 then
+                stroke(at + 0.6, 4.0, "ember", "in", line({ q[1] - 8, q[2] - 8 }, { q[1] + 8, q[2] + 8 }), "fine")
+            end
+            p, at = q, at + 0.7
+        end
+    end
+end)
+idea("2b", 2, "One bot's step peeled apart into layers: the cell grid, the planned route, the straightened line, the turning arc.", function()
+    begin(5.0)
+    for k = 0, 8 do
+        stroke(0, 5.0, "ice", "in", line({ 20 + k * 27, 20 }, { 20 + k * 27, 236 }), "dim")
+        stroke(0, 5.0, "ice", "in", line({ 20, 20 + k * 27 }, { 236, 20 + k * 27 }), "dim")
+    end
+    local pts = { { 34, 222 } }
+    for k = 1, 6 do pts[#pts + 1] = { 34 + k * 30 + rr(-8, 8), 222 - k * 30 + rr(-14, 14) } end
+    for k = 1, #pts - 1 do stroke(0.8 + k * 0.2, 1.0, "violet", "hold", line(pts[k], pts[k + 1]), "fine") end
+    stroke(2.4, 1.2, "gold", "hold", line(pts[1], pts[#pts]), "line", "stroke")
+    stroke(3.6, 1.2, "jade", "hold", arc({ pts[#pts][1] - 30, pts[#pts][2] }, 30, 3, 12, "counterclockwise"), "line", "smoothstep")
+end)
+idea("2c", 2, "Six small panels, each walking the same maze a different way: one stuck and jittering, the painted map gliding through.", function()
+    begin(5.0)
+    local stuck = math.floor(rr(1, 5.99))
+    for k = 0, 5 do
+        local x, y = 12 + (k % 3) * 80, 40 + math.floor(k / 3) * 100
+        stroke(0, 5.0, "ice", "in", fill(box(x, y, 72, 80)), "dim")
+        stroke(0, 5.0, "ember", "in", line({ x + 36, y }, { x + 36, y + 50 }), "fine")
+        if k == stuck then
+            local p = { x + 10, y + 70 }
+            for j = 1, 10 do
+                local q = { x + 22 + rr(-6, 6), y + 40 + rr(-8, 8) }
+                stroke(0.3 + j * 0.4, 0.4, "rose", "hold", line(p, q), "fine")
+                p = q
+            end
+        elseif k == 5 then
+            stroke(0.4, 4.0, "gold", "hold", arc({ x + 36, y + 62 }, 26, 9, 3, "clockwise"), "line", "smoothstep")
+        else
+            local mid = { x + 36 + rr(-4, 4), y + 64 + rr(-6, 6) }
+            stroke(0.4, 2.0, "jade", "hold", line({ x + 10, y + 70 }, mid), "fine")
+            stroke(2.4, 2.0, "jade", "hold", line(mid, { x + 62, y + 10 }), "fine")
+        end
+    end
+end)
+idea("2d", 2, "Bots keeping a gap from a wall, the gap narrowing as they near a doorway they need.", function()
+    begin(5.0)
+    local door = rr(110, 150)
+    stroke(0, 5.0, "ember", "in", line({ 128, 10 }, { 128, door - 14 }), "line")
+    stroke(0, 5.0, "ember", "in", line({ 128, door + 14 }, { 128, 246 }), "line")
+    for b = 1, 4 do
+        local y0 = b < 3 and 20 + b * 10 or 236 - (b - 2) * 10
+        local gap = 34 + rr(-4, 4)
+        stroke(b * 0.3, 2.4, "jade", "hold", line({ 128 - gap, y0 }, { 112, door }), "fine", "ease-out")
+        stroke(b * 0.3 + 2.4, 1.6, "jade", "hold", line({ 112, door }, { 220, door + rr(-20, 20) }), "fine")
+    end
+    stroke(2.6, 1.0, "gold", "flash", point({ 128, door }), "spark")
+end)
+idea("2e", 2, "A sun and moon cycling over a map as its paint thickens and the routes grow smoother, day after day.", function()
+    begin(6.0)
+    for day = 0, 2 do
+        stroke(day * 2.0, 1.0, "gold", "hold", arc({ 128, 110 }, 96, 9, 3, "clockwise"), "spark")
+        stroke(day * 2.0 + 1.0, 1.0, "ice", "hold", arc({ 128, 110 }, 96, 9, 3, "clockwise"), "spark")
+        local p, wob = { 24, 220 }, 26 / (day + 1)
+        for k = 1, 6 do
+            local q = { 24 + k * 35, 220 - k * 12 + rr(-wob, wob) }
+            stroke(day * 2.0 + 0.2, 1.6, day == 2 and "gold" or "jade", "in-out", line(p, q), "fine")
+            p = q
+        end
+        stroke(day * 2.0, 2.0, "gold", "in", fill(box(20, 150 + day * 4, 216, 90 - day * 4)), "dim")
+    end
+end)
+-- }}}
+
+-- {{{ page 3: talents guiding abilities
+idea("3a", 3, "The Improved Rejuvenation and Rejuvenation icons drifting together and clicking like matching puzzle pieces.", function()
+    begin(5.0)
+    local a, b = { 50, rr(60, 200) }, { 206, rr(60, 200) }
+    stroke(0, 2.0, "jade", "out", fill(box(a[1] - 18, a[2] - 18, 36, 36)), "fill")
+    stroke(0, 2.0, "teal", "out", fill(box(b[1] - 18, b[2] - 18, 36, 36)), "fill")
+    stroke(0.8, 1.8, "jade", "hold", line(a, { 128, 128 }), "line", "ease-out")
+    stroke(0.8, 1.8, "teal", "hold", line(b, { 128, 128 }), "line", "ease-out")
+    stroke(2.6, 0.6, "gold", "flash", point({ 128, 128 }), "flash")
+    stroke(2.8, 2.2, "gold", "in", fill(box(110, 110, 36, 36)), "fill")
+end)
+idea("3b", 3, "A tooltip sentence lighting up word by word, with threads running from \"Rejuvenation\" to the ability.", function()
+    begin(5.0)
+    local x, key = 20, math.floor(rr(3, 5.99))
+    local keyAt
+    for w = 1, 7 do
+        local len = rr(14, 30)
+        stroke(0.3 * w, 5.0, w == key and "gold" or "ice", "in", line({ x, 70 }, { x + len, 70 }), "fine")
+        if w == key then keyAt = { x + len / 2, 74 } end
+        x = x + len + 8
+    end
+    stroke(2.6, 1.2, "gold", "hold", line(keyAt, { 128, 190 }), "line", "stroke")
+    stroke(3.8, 1.2, "jade", "in", fill(box(110, 172, 36, 36)), "fill")
+end)
+idea("3c", 3, "A broad talent, \"all your Shadow spells\", casting a wide net that catches several spell icons at once.", function()
+    begin(5.0)
+    local top = { 128, 40 }
+    stroke(0, 5.0, "violet", "in", point(top), "spark")
+    local n = 5
+    for k = 1, n do
+        local p = { 28 + (k - 1) * 50, 200 + rr(-10, 10) }
+        stroke(0, 5.0, "ice", "in", fill(box(p[1] - 10, p[2] - 10, 20, 20)), "dim")
+        stroke(1.0, 1.2, "violet", "hold", line(top, p), "fine", "ease-out")
+        stroke(2.6 + k * 0.1, 0.6, "violet", "flash", point(p), "spark")
+    end
+    stroke(2.2, 1.0, "violet", "hold", arc({ 128, 120 }, 110, 7.5, 4.5, "counterclockwise"), "line", "smoothstep")
+end)
+idea("3d", 3, "Four coloured lenses (the game's spell list, broad targets, icon, words) sliding over a talent; where all four agree, the link turns solid.", function()
+    begin(5.0)
+    local hues = { "ice", "violet", "teal", "rose" }
+    for k = 1, 4 do
+        local ang = k * 1.5708 + rr(-0.2, 0.2)
+        local c = { 90 + math.cos(ang) * 14, 128 + math.sin(ang) * 14 }
+        stroke(0.3 + k * 0.5, 4.0, hues[k], "in", circle(c, 46), "fine")
+    end
+    stroke(2.8, 2.2, "gold", "hold", line({ 90, 128 }, { 220, 128 }), "line", "stroke")
+    stroke(4.0, 1.0, "jade", "flash", point({ 220, 128 }), "flash")
+end)
+idea("3e", 3, "A buddy's action bar where the talented abilities glow brighter and get pressed more often.", function()
+    begin(5.0)
+    local fav = { [math.floor(rr(1, 6.99))] = true, [math.floor(rr(1, 6.99))] = true }
+    for k = 1, 6 do
+        local x = 22 + (k - 1) * 37
+        stroke(0, 5.0, fav[k] and "gold" or "ice", "in", fill(box(x, 110, 30, 30)), "dim")
+        local presses = fav[k] and 6 or 1
+        for p = 1, presses do stroke(rr(0.3, 4.5), 0.4, fav[k] and "gold" or "ice", "flash", point({ x + 15, 125 }), "flash") end
+    end
+end)
+-- }}}
+
+-- {{{ page 4: stand-ins and the army of 64
+-- the real split of a fully random army (scripts/test-buddy-stand-ins: 259
+-- damage, 18 tank, 33 healer of 310 race, class and shape draws)
+local function role()
+    local r = rnd() * 310
+    if r < 259 then return "ember" elseif r < 277 then return "ice" else return "jade" end
+end
+idea("4a", 4, "A deck dealing 64 figures onto a field, each flipping to show its class colour and a sword, shield or cross for its role.", function()
+    begin(6.0)
+    local deck = { 128, 246 }
+    for k = 0, 63 do
+        local p = { 24 + (k % 8) * 30, 20 + math.floor(k / 8) * 26 }
+        local at = 0.2 + k * 0.07
+        stroke(at, 0.5, "gold", "out", line(deck, p), "fine", "ease-out")
+        stroke(at + 0.5, 6.0, role(), "in", point(p), "spark")
+    end
+end)
+idea("4b", 4, "A pie chart forming as the army is drawn: damage swelling large, tanks and healers thin slices.", function()
+    begin(5.0)
+    local slices = { { "ember", 259 }, { "ice", 18 }, { "jade", 33 } }
+    local from = 12
+    for i, s in ipairs(slices) do
+        local to = from + 12 * s[2] / 310
+        for r = 20, 100, 10 do stroke(0.4 + (i - 1) * 1.4, 1.4, s[1], "hold", arc({ 128, 128 }, r, from % 12, to % 12 == 0 and 11.9 or to % 12, "clockwise"), "fine", "smoothstep") end
+        from = to
+    end
+end)
+idea("4c", 4, "A stand-in's life as a loop: made, into a dungeon, back onto a shelf of kept ones, picked at random, its level ticking up.", function()
+    begin(6.0)
+    local c, R = { 128, 128 }, 90
+    local stations = { { 12, "gold" }, { 3, "violet" }, { 6, "ice" }, { 9, "jade" } }
+    for _, s in ipairs(stations) do
+        local a = (s[1] / 12) * 6.283 - 1.5708
+        stroke(0, 6.0, s[2], "in", fill(box(c[1] + math.cos(a) * R - 9, c[2] + math.sin(a) * R - 9, 18, 18)), "dim")
+    end
+    for lap = 0, 1 do
+        stroke(0.2 + lap * 2.8, 2.6, "teal", "hold", arc(c, R, 12, 11.9), "line")
+        stroke(2.6 + lap * 2.8, 0.4, "gold", "flash", point({ 128, 128 - lap * 14 }), "spark")
+        stroke(2.6 + lap * 2.8, 6.0, "gold", "in", line({ 118, 134 - lap * 14 }, { 138, 134 - lap * 14 }), "fine")
+    end
+end)
+idea("4d", 4, "A player walking past a row of sleeping stand-ins; one wakes at random and rises to the player's level.", function()
+    begin(5.0)
+    local wake = math.floor(rr(1, 7.99))
+    for k = 1, 8 do
+        local x = 14 + k * 26
+        stroke(0, 5.0, "ice", k == wake and "out" or "in", point({ x, 200 }), "dim")
+        if k == wake then
+            stroke(2.2, 1.2, "jade", "hold", line({ x, 200 }, { x, 90 }), "line", "ease-out")
+            stroke(3.4, 1.6, "jade", "flash", point({ x, 90 }), "flash")
+        end
+    end
+    stroke(0, 5.0, "gold", "hold", line({ 10, 90 }, { 246, 90 }), "line")
+end)
+idea("4e", 4, "Five dungeon seats filling: buddies sit first, then a stand-in shimmers into each empty seat.", function()
+    begin(5.0)
+    local buddies = math.floor(rr(2, 3.99))
+    for k = 1, 5 do
+        local x = 18 + (k - 1) * 46
+        stroke(0, 5.0, "ice", "in", fill(box(x, 104, 36, 48)), "dim")
+        if k <= buddies then
+            stroke(0.4 + k * 0.4, 4.0, "jade", "in", fill(box(x, 104, 36, 48)), "fill")
+        else
+            stroke(2.4 + (k - buddies) * 0.4, 0.8, "violet", "flash", point({ x + 18, 128 }), "flash")
+            stroke(2.8 + (k - buddies) * 0.4, 2.0, "violet", "in", fill(box(x, 104, 36, 48)), "fill")
+        end
+    end
+end)
+-- }}}
+
+-- {{{ page 5: Alterac Valley's weather
+local AV = { { 96, 10 }, { 150, 14 }, { 170, 70 }, { 160, 140 }, { 176, 200 }, { 150, 246 }, { 100, 244 }, { 84, 180 }, { 98, 110 }, { 80, 50 } }
+idea("5a", 5, "A deck of weather cards (sun, fog, snow, slush) shuffled and dealt onto a timeline, each swelling and fading in turn.", function()
+    begin(6.0)
+    local kinds = { "gold", "ice", "teal", "violet", "rose", "jade", "ember" }
+    for i = 7, 2, -1 do local j = math.floor(rr(1, i + 0.99)); kinds[i], kinds[j] = kinds[j], kinds[i] end
+    stroke(0, 6.0, "ice", "in", line({ 10, 200 }, { 246, 200 }), "fine")
+    for k = 1, 7 do
+        local x = 12 + (k - 1) * 33
+        stroke(0.2 + (k - 1) * 0.8, 0.9, kinds[k], "in-out", fill(box(x, 120, 30, 70), "radial"), "fill", "smoothstep")
+    end
+end)
+idea("5b", 5, "Rain freezing into snow mid-fall over a mountain valley, flickering between the two: slush.", function()
+    begin(5.0)
+    stroke(0, 5.0, "violet", "in", fill({ { 0, 256 }, { 70, 170 }, { 128, 210 }, { 190, 150 }, { 256, 256 } }), "dim")
+    for k = 1, 18 do
+        local x, at = rr(10, 246), rr(0, 4.3)
+        local frozen = at > 2.5 or (at > 1.4 and rnd() < 0.5)
+        if frozen then stroke(at, 1.2, "ice", "hold", line({ x, 0 }, { x + rr(-12, 12), 170 }), "snow")
+        else stroke(at, 0.5, "teal", "hold", line({ x, 0 }, { x - 6, 170 }), "rain") end
+    end
+end)
+idea("5c", 5, "A dark storm cloud drifting across the Alterac Valley map, leaving a fading glow where it has been.", function()
+    begin(6.0)
+    stroke(0, 6.0, "ice", "in", fill(AV), "dim")
+    local p, heading = { 128, 30 }, 1.5708
+    for k = 1, 10 do
+        heading = heading + rr(-0.5, 0.5)
+        local q = { math.max(95, math.min(160, p[1] + math.cos(heading) * 22)), math.max(20, math.min(236, p[2] + math.sin(heading) * 22)) }
+        if q[2] >= 236 then heading = -1.5708 end
+        stroke(k * 0.5, 0.5, "violet", "hold", line(p, q), "line")
+        stroke(k * 0.5 + 0.5, 2.5, "gold", "out", point(q), "dim")
+        p = q
+    end
+end)
+idea("5d", 5, "Two battleground windows side by side, the same sky changing in both at the same moment.", function()
+    begin(5.0)
+    local seq = { "gold", "ice", "teal", "violet" }
+    for i = 4, 2, -1 do local j = math.floor(rr(1, i + 0.99)); seq[i], seq[j] = seq[j], seq[i] end
+    for _, x in ipairs({ 14, 136 }) do
+        stroke(0, 5.0, "ice", "in", line({ x, 70 }, { x + 106, 70 }), "fine")
+        stroke(0, 5.0, "ice", "in", line({ x, 186 }, { x + 106, 186 }), "fine")
+        for k, hue in ipairs(seq) do stroke((k - 1) * 1.2, 1.3, hue, "in-out", fill(box(x, 72, 106, 112)), "fill") end
+    end
+end)
+idea("5e", 5, "A heat map of the valley filling in evenly over a long time-lapse as the storm seeks the corners it has visited least.", function()
+    begin(6.0)
+    stroke(0, 6.0, "ice", "in", fill(AV), "dim")
+    local cells = {}
+    for j = 0, 9 do for i = 0, 3 do cells[#cells + 1] = { 92 + i * 18, 14 + j * 23 } end end
+    for i = #cells, 2, -1 do local j = math.floor(rr(1, i + 0.99)); cells[i], cells[j] = cells[j], cells[i] end
+    for k, c in ipairs(cells) do stroke(0.2 + k * 0.13, 6.0, k % 3 == 0 and "ember" or "gold", "in", fill(box(c[1], c[2], 16, 20)), "dim") end
+end)
+-- }}}
+
+-- {{{ writing
+if list then
+    for _, it in ipairs(IDEAS) do print(it.id .. "  " .. it.text) end
+    os.exit(0)
+end
+os.execute("mkdir -p '" .. out .. "'")
+local written = 0
+for _, it in ipairs(IDEAS) do
+    if not only or only == it.id then
+        seed = attempt * 7919 + it.id:byte(1) * 131 + it.id:byte(2)
+        it.recipe()
+        local f = io.open(out .. "/" .. it.id .. ".lua", "w") or error("cannot write " .. out .. "/" .. it.id .. ".lua")
+        f:write("-- idea: " .. it.text .. "\n-- page: " .. it.page .. "\n-- attempt: " .. attempt
+            .. "\n-- written by scripts/compose-architecture-gifs, for the five architecture pages' pictures\n\n")
+        f:write(table.concat(S, "\n\n"), "\n")
+        f:close()
+        written = written + 1
+    end
+end
+print(string.format("%d scores written to %s (attempt %d)", written, out, attempt))
+-- }}}
