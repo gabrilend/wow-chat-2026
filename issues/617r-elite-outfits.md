@@ -60,8 +60,8 @@ A character's spec is the talent tree holding most of its points, read
 from the talents it has (`lib/gearsets.lua`, ties to the leftmost tree);
 a character with no points has no spec, and a spec-keyed profile names it
 rather than guessing. `.gearset <profile> <character>`, `.gearset
-<profile> buddies <partner>`, and `.elite <partner>` (short for the
-second) put a record on; bags go only into empty bag slots, ammunition is
+<profile> buddies <partner>` put a record on (`.elite <partner>`, the
+short form of the second, was removed 2026-10-30, below); bags go only into empty bag slots, ammunition is
 added. `scripts/test-gearsets` (855 checks): the elite rule on every elite
 item; every starter item exists, fits its slot and suits its class in the
 vanilla world database; the starter SQL on disk is exactly what the
@@ -127,8 +127,11 @@ exist (the starter kit) is keyed by class instead; each profile says which.
 
 Applied by chat command (game master): `.gearset <profile> <character>`,
 `.gearset <profile> buddies <partner>`, and later the selected creature
-(the mirror image). `.elite <partner>` stays as the short form of
-`.gearset elite buddies <partner>`.
+(the mirror image). There is no other way in: `.elite <partner>`, once
+the short form of `.gearset elite buddies <partner>`, was removed
+2026-10-30 (the owner, word for word: "can you also add to the todo list
+the removal of the .elite command? We should only gear targets through
+the .gearset command."), so every profile is put on by one command.
 
 **The vanilla starter kit moves in.** Today the level-20 kit is a matrix
 inside a bash generator (`scripts/generate-vanilla-starting-equipment-sql`)
@@ -169,7 +172,8 @@ profile when the item is unique.
 
 Shirt and tabard slots are never listed; a buddy keeps its own.
 
-**Putting it on.** `.elite <partner name>` (game master only): for each of
+**Putting it on.** `.gearset elite buddies <partner name>` (game master
+only; first built as `.elite <partner name>`, removed 2026-10-30): for each of
 the partner's buddies in the world, finds the elite with the buddy's race,
 class and role, removes what it wears in each listed slot, and equips the
 elite's item. A buddy with no matching elite is reported by name, never
@@ -236,13 +240,14 @@ Gearset profiles (2026-10-05):
    the earlier lists by a one-off converter; one reader
    (`lib/gearsets.lua`) with the spec found from talents.
 2. (Done) `gearset-command.lua`: `.gearset <profile> <character>`,
-   `.gearset <profile> buddies <partner>`, `.elite <partner>`.
+   `.gearset <profile> buddies <partner>` (the `.elite <partner>` short
+   form was removed 2026-10-30: one command gears every target).
 3. (Done) The starter-kit matrix moved into `vanilla-starter`; the
    generator (now Lua) reads it; the item rows are unchanged (compared
    row for row with the last bash output; the notes changed, so the file
    is not byte-identical).
 4. The selected creature as a target (the mirror image, 617f).
-5. In game: `.elite Growth` again; a new vanilla character still gets its
+5. In game: `.gearset elite buddies Growth` again; a new vanilla character still gets its
    kit (install E009 on vanilla).
 
 The elite profile, as first built:
@@ -256,6 +261,17 @@ The elite profile, as first built:
    NPC outfits through 617f.
 
 ## Open Questions
+
+Gathered 2026-10-28 into 617's own list (question 30), merged with the
+same questions from other sub-issues; answers are written back here.
+
+- **Answered 2026-10-28** (617's question 30): a buddy with unspent points
+  is dressed by its talent plan until it has spent them; a world drop that
+  also falls in Molten Core: "this is just for one outfit, do whatever
+  feels right": only Molten Core's boss drops count as Molten Core.
+
+- **Answered 2026-10-28** (617's question 30, in part): an elite outfit
+  comes back when its buddy is remade.
 
 1. (Answered 2026-10-05) The tool becomes gearset profiles; "elite" is
    the name of its first profile, not of the tool (quote above).

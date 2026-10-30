@@ -1,6 +1,6 @@
 # Conversation Summary: e143dbfe-ff43-48be-8bd4-4d54fd7a325d
 
-Generated on: 2026-10-30 13:15:09
+Generated on: 2026-10-30 13:26:22
 Models: claude-opus-5-5
 
 ## Contents
@@ -2317,6 +2317,203 @@ The solo record covers that now.
     each jump. Is that right, or should the same 64 carry from one jump to the
     next?
     *My call:* redrawn, as I read it.
+
+--------------------------------------------------------------------------------
+
+### User Request 17
+
+<pasted_content id="415d">
+  It's meant to learn two things:
+
+> 1. Which boss phases make everyone move a lot, and what triggers it (fire on
+> the ground, a
+>      summon, a cast). A buddy uses that to save its instant casts for the moving stretches and its
+>      long casts for when it can stand still.
+> 2. A boss's weak phase, so buddies line up Bloodlust and their cooldowns for
+> it. Today you said
+>      this should be learned by all buddies together, cached, and turned off by hand once a boss is
+     tested.
+
+> So it's about how a fight unfolds over time, not about what a buddy can beat.
+> The solo record
+>   covers that now.
+</pasted_content id="415d">
+
+
+got it. Sounds like we should only enable it at specific fights and bosses?
+
+
+
+<pasted_content id="415d">
+> 1. "More or better in each parameter." Say a new solo win had a foe with more
+> health but took
+>      less time. It's better in one way and not another. Does it replace the old record, or only a
+>      win that beats it in every way?
+</pasted_content id="415d">
+
+
+the record is only updated when something is more developed in every dimension
+that it records. The decisionmaking that comes *from* the records will be more
+dynamic. A decision only lasts as long as it's needed, and it informs the bot's
+economies.
+
+
+
+<pasted_content id="415d">
+> 2. One record, or one per kind of foe? A caster foe and a melee foe cost
+> differently: mana for
+>      interrupts, health from hits. Should a buddy keep a single record, or one each for a few
+>      kinds (caster, melee, beast)?
+</pasted_content id="415d">
+
+
+should have categories for player classes, and we sort NPCs into them. So a
+spellcasting NPC would be similar to a mage or something.
+
+> 3. Judging a foe it has never fought. The game data knows each creature's
+> health and damage.
+>      Should the buddy compare those numbers against its record to decide whether it can win?
+
+yes. It should also feel emboldened with allies nearby, but it shouldn't
+calculate exactly - it should simply multiple it's own value by 3 if it has 3
+allies, 4 if it has 4 allies, etc.
+
+> 4. "No help at all." Does a buff you cast on it before the fight count as
+> help? What about a
+>      heal from you during the fight?
+
+buffs don't count. This is only for monsters that they've fought on their own
+entirely. But buffs are fine.
+
+
+
+<pasted_content id="415d">
+> 5. Forgetting at level change. Buddies level with you, sometimes several times
+> an hour, and each
+>      level wipes the record. Is that intended? Or should one level up keep the record (it only
+>      got stronger) and only a level down forget it?
+</pasted_content id="415d">
+
+
+only when Sargobras changes your level. Levelling up via normal means shouldn't
+affect it.
+
+> 6. Stand-ins, always brave. Does that mean a stand-in never refuses a trip and
+> never says "I'm
+>      scared", whatever the danger?
+
+yes.
+
+> 7. Is the fight log still wanted, now that its two purposes are clear
+> (movement per phase, weak
+>      phases)? Or should it wait until custom bosses are being built?
+
+build it now entirely.
+
+
+
+<pasted_content id="415d">
+> 8. The far party's leader. Buddies too far from you form a group of their own.
+> Who leads it: the
+>      buddy with the lowest number (always the same one), or whoever has been far the longest?
+>      My call: the lowest number, so it's stable.
+</pasted_content id="415d">
+
+
+we already discussed this, try and find that conversation if you'd like more
+info. Though I think it was in relation to instanced groups? Anyway if
+buddy-bots can't join your party but totally would for some reason, they can
+create a group amongst themselves if they are within EXP sharing range. They can
+dynamically join and leave them according to the same rules we built for
+players. They should try and group up together and stay within each other's
+questing exp sharing zone. If there's for example 6 of them, they should make
+two groups of 3 instead of one group of 1 and one group of 5.
+
+
+
+<pasted_content id="415d">
+> 9. The radius event. Today the server checks every 5 seconds how far each
+> buddy is from you. You
+>      designed a "radius" an object can own that triggers functions when something enters it, and
+>      asked whether it would be fast. It would be: it rides on the server's own "a unit moved"
+>      notices. In October you said things should be triggered by something happening rather than
+>      looped. Should I plan that server patch?
+</pasted_content id="415d">
+
+
+yes, but, why were we checking every 5 seconds? What is it used for?
+
+
+
+<pasted_content id="415d">
+  10. The army of 64. For the planned scene jumps, I read your "fully random"
+      answer to mean the
+>       64 stand-ins are redrawn (race, class, talent shape) at each jump. Is that right, or should
+>       the same 64 carry from one jump to the next?
+</pasted_content id="415d">
+
+
+they are rebuilt dynamically. But, we will often be using the same ones. They
+come from the same pool as the stand-ins.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 17
+
+> Recording the grouping and solo-record answers now.
+
+I've recorded all ten answers word for word.
+
+**Turning the fight log on only for specific fights:** yes. It gets built whole
+now (the log, the distilling, the shared boss memory and the fingerprint), and
+it runs only for fights and bosses you switch on, each with its own switch, off
+by default.
+
+**The far party's leader:** I found the earlier conversation. It was October 28,
+about buddies left outside a dungeon, and you said "The leader isn't too
+important". So any buddy can lead, and your new rule is recorded: buddies that
+can't join your party group among themselves within experience-sharing range and
+split evenly, so six make two groups of three. Today's code fills one far party
+to five before starting another, so that has to change. It's on the todo list.
+
+## Why the 5-second check exists
+
+It seats buddies in groups by distance. Every 5 seconds, for each player online
+(outside dungeons and towns), the server measures each buddy's distance to its
+player and does this:
+
+- **Within 60 yards and ungrouped:** the buddy joins your party, nearest first,
+  while it has fewer than five.
+- **In your party but past 75 yards:** it leaves.
+- **Past 74 yards and ungrouped:** it joins or starts a far party with another
+  loose buddy within 70 yards of it.
+- **Two far parties:** they merge when members come within 70 yards of each
+  other and fit in five.
+
+With seven buddies per player, it's a handful of distance measurements per
+player every 5 seconds. It's cheap, but it's the kind of standing loop you said
+things shouldn't be.
+
+The radius-trigger issue from October already lists two more timers it could
+replace: the roaming buddies' look for monsters every second, and the noticing
+of people around them every 5 seconds. With the radius trigger, a buddy's group
+changes only at the moment it crosses 60, 70 or 75 yards. Your "yes" to planning
+it is now in that issue.
+
+**Also recorded:**
+- **The solo record:** one record per player class, with each creature sorted
+  into the class it fights like. A record is replaced only by a win that is more
+  in every measure. The buddy's own value is multiplied by its number of allies.
+  Buffs before a fight are fine. The record is forgotten only when Sargobras
+  sets its level or its class changes. Stand-ins are always brave.
+- **The army of 64:** rebuilt at each jump from the stand-ins' pool, so familiar
+  faces return.
+
+The todo list has 30 items. Nothing is committed yet.
+
+Another session has also edited the main buddy issue and the spell-learning
+issue since I started, both files I'm holding claims on. Its changes are fine,
+and I've left them alone.
 
 --------------------------------------------------------------------------------
 
