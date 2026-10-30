@@ -9,7 +9,7 @@
   hands), 625l (buffs given to who uses them most), 617z (tank-paced
   pulls), 617c3 (the dungeon draw)
 - Priority: Medium
-- State: planned
+- State: in progress (the levers and attention built; the curve next)
 
 ## Origin
 
@@ -70,8 +70,31 @@ The pets' part is its own issue, 625m.
 
 ## Current Behavior
 
-Not built. The bot module's tanks taunt what they lose and its damage
-dealers hold back by fixed threat triggers ("medium threat").
+The bot module's tanks taunt what they lose and its damage dealers hold
+back by fixed threat triggers ("medium threat").
+
+**Built 2026-10-30 (committed, offline):** steps 1 and 2.
+- The levers, read from the game's spell table by
+  `scripts/generate-ability-data` (`BUDDY_THREAT_LEVERS`, and a table in
+  `docs/ability-data.md`; 42 of them): what each ability's effects and
+  auras do (taunt, threat added or taken, a share, handed on, leaving the
+  fight, threat changed while up, immune), following the spells an ability
+  sets off one step (Hand of Salvation's tick), and four the server's
+  scripts cast for (Righteous Defense's and Death Grip's taunts,
+  Soulshatter's halving, Invisibility's turning invisible), each cited.
+  Divine Protection is rightly none. The pets' abilities come with them
+  (Growl, Torment, Suffering, Lesser Invisibility), for 625m.
+- `buddies_threat.h`: whom an enemy attacks, in the server's own order and
+  switching rule (online before passed over before offline, then a taunt,
+  then the threat; the current one kept until beaten by 10% within melee
+  reach or 30% from anywhere), and what each lever does to the list (a
+  taunt raises to the top, a share cuts, a hand-on adds to the receiver,
+  leaving drops, an immunity passes over and a comeback restores the
+  threat kept). Checked by `scripts/test-buddy-threat` (23 checks),
+  among them the shielded tank: passed over with its threat kept, the
+  fury warrior tanking, the attention back with the tank's first act.
+Not yet: the curve (step 3), the tank's load, the off-tank, and the
+server reading each enemy's list.
 
 ## Intended Behavior
 

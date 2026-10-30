@@ -836,3 +836,52 @@ An aura on the character an ability would reach that refuses it. *Put on by* the
 | Presence of Mind | until used | (while up) | arcane power |
 | Arcane Power | 15 | (while up) | presence of mind |
 | Berserk | 15 | (while up) | tiger's fury |
+
+## Threat levers
+
+What moves threat or attention, by what each ability's effects and auras do (issue 625j): *taunt*, *threat* added or taken, a *share* of it, *hand* it on, *leave* the fight, an *aura* changing threat made while up, *immune* (passed over with threat kept).
+
+| Class | Ability | Does | Amount |
+|---|---|---|---:|
+| Warrior | Challenging Shout | taunt | 0 |
+| Warrior | Mocking Blow | taunt | 0 |
+| Warrior | Sunder Armor | threat | 1 |
+| Warrior | Taunt | taunt | 0 |
+| Paladin | Divine Intervention | leave, immune | 0 |
+| Paladin | Divine Shield | immune | 0 |
+| Paladin | Hand of Protection | immune | 0 |
+| Paladin | Hand of Reckoning | taunt | 0 |
+| Paladin | Hand of Salvation | share | -2 |
+| Paladin | Righteous Defense | taunt | 0 |
+| Paladin | Righteous Fury | aura | 80 |
+| Hunter | Distracting Shot | threat, taunt | 110 |
+| Hunter | Feign Death | leave | 0 |
+| Hunter | Growl | threat | 1234 |
+| Hunter | Misdirection | hand | 0 |
+| Hunter | Taunt | taunt | 0 |
+| Hunter | Warp | threat | 1 |
+| Rogue | Feint | threat | -2162 |
+| Rogue | Tricks of the Trade | hand | 0 |
+| Rogue | Vanish | leave | 0 |
+| Priest | Fade | aura | -90000000 |
+| Death Knight | Blood Presence | aura | -20 |
+| Death Knight | Dark Command | taunt | 0 |
+| Death Knight | Death Grip | taunt | 0 |
+| Death Knight | Frost Presence | aura | 45 |
+| Death Knight | Unholy Presence | aura | -20 |
+| Shaman | Wind Shear | threat | 0 |
+| Mage | Ice Block | immune | 0 |
+| Mage | Invisibility | leave | 0 |
+| Mage | Mirror Image | aura | -90000000 |
+| Warlock | Anguish | threat | 1175 |
+| Warlock | Banish | immune | 0 |
+| Warlock | Challenging Howl | taunt | 0 |
+| Warlock | Lesser Invisibility | leave | 0 |
+| Warlock | Soothing Kiss | threat | -275 |
+| Warlock | Soulshatter | share | -50 |
+| Warlock | Suffering | threat | 1675 |
+| Warlock | Torment | threat | 1175 |
+| Druid | Challenging Roar | taunt | 0 |
+| Druid | Cower | threat | -3474 |
+| Druid | Cyclone | immune | 0 |
+| Druid | Growl | taunt | 0 |

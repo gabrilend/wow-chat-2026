@@ -802,4 +802,54 @@ static BuddyLockoutRow const BUDDY_LOCKOUTS[] = {
     { 50334, "Berserk",  15000, "", "tiger's fury" },
 };
 
+// a threat lever: an ability that moves threat or attention (issue 625j), by what its effects and auras do:
+// "taunt", "threat" (added; negative taken), "share" (a percent of it), "hand" (handed on), "leave" (out of
+// the fight), "aura" (threat made changed while up, percent), "immune" (passed over while immune); joined by "|"
+struct BuddyThreatLeverRow { uint8_t cls; char const* name; char const* kinds; int32_t amount; };
+
+static BuddyThreatLeverRow const BUDDY_THREAT_LEVERS[] = {
+    {  1, "challenging shout", "taunt",      0 },
+    {  1, "mocking blow", "taunt",      0 },
+    {  1, "sunder armor", "threat",      1 },
+    {  1, "taunt", "taunt",      0 },
+    {  2, "divine intervention", "leave|immune",      0 },
+    {  2, "divine shield", "immune",      0 },
+    {  2, "hand of protection", "immune",      0 },
+    {  2, "hand of reckoning", "taunt",      0 },
+    {  2, "hand of salvation", "share",     -2 },
+    {  2, "righteous defense", "taunt",      0 },
+    {  2, "righteous fury", "aura",     80 },
+    {  3, "distracting shot", "threat|taunt",    110 },
+    {  3, "feign death", "leave",      0 },
+    {  3, "growl", "threat",   1234 },
+    {  3, "misdirection", "hand",      0 },
+    {  3, "taunt", "taunt",      0 },
+    {  3, "warp", "threat",      1 },
+    {  4, "feint", "threat",  -2162 },
+    {  4, "tricks of the trade", "hand",      0 },
+    {  4, "vanish", "leave",      0 },
+    {  5, "fade", "aura", -90000000 },
+    {  6, "blood presence", "aura",    -20 },
+    {  6, "dark command", "taunt",      0 },
+    {  6, "death grip", "taunt",      0 },
+    {  6, "frost presence", "aura",     45 },
+    {  6, "unholy presence", "aura",    -20 },
+    {  7, "wind shear", "threat",      0 },
+    {  8, "ice block", "immune",      0 },
+    {  8, "invisibility", "leave",      0 },
+    {  8, "mirror image", "aura", -90000000 },
+    {  9, "anguish", "threat",   1175 },
+    {  9, "banish", "immune",      0 },
+    {  9, "challenging howl", "taunt",      0 },
+    {  9, "lesser invisibility", "leave",      0 },
+    {  9, "soothing kiss", "threat",   -275 },
+    {  9, "soulshatter", "share",    -50 },
+    {  9, "suffering", "threat",   1675 },
+    {  9, "torment", "threat",   1175 },
+    { 11, "challenging roar", "taunt",      0 },
+    { 11, "cower", "threat",  -3474 },
+    { 11, "cyclone", "immune",      0 },
+    { 11, "growl", "taunt",      0 },
+};
+
 #endif

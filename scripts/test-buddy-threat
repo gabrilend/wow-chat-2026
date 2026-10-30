@@ -1,0 +1,28 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-threat
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      whom an enemy attacks, the way the server decides it, and what each threat lever read from the game does to its list
+# quick-test: yes
+# ==== end of header ====
+# test-buddy-threat - compiles and runs
+# tests/buddy-threat/threat-check.cpp against the buddy module's
+# threat and attention (issue 625j), with no server.
+#
+# Usage: scripts/test-buddy-threat [DIR]   (--help: this text)
+
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+    sed -n '10,14p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+OUT="${DIR}/tmp/tmp"
+mkdir -p "${OUT}"
+g++ -std=c++17 -O1 -Wall -Wextra -Werror -I"${DIR}/patches/B036-mod-buddies/mod-buddies/src" \
+    "${DIR}/tests/buddy-threat/threat-check.cpp" -o "${OUT}/buddy-threat" || exit 1
+nice -n 19 "${OUT}/buddy-threat"
+# ==== footer of test-buddy-threat ====
+# lines:      28
+# ==== end of footer ====

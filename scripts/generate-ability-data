@@ -130,6 +130,8 @@ for _, r in ipairs(load_dbc("Spell.dbc")) do
                 channeled = bit.band(r.u(5), ATTR1_CHANNELED) ~= 0,
                 direct = direct, periodic = periodic, heal = heal,
                 dmgClass = r.u(213), school = r.u(225),
+                eff = { r.u(71), r.u(72), r.u(73) }, aura = { r.u(95), r.u(96), r.u(97) },
+                amount = { r.i(80) + 1, r.i(81) + 1, r.i(82) + 1 },  -- base points + 1: the effect's value
             }
         end
     end
@@ -284,7 +286,105 @@ for _, w in ipairs(WHILE) do
     h[#h + 1] = string.format("    { %5d, %q, %6d, %q, %q },", w.aura, w.name, w.ms, "", w.blocks)
     md[#md + 1] = string.format("| %s | %s | (while up) | %s |", w.name, w.ms > 0 and string.format("%.0f", w.ms / 1000) or "until used", w.blocks)
 end
+h[#h + 1] = "};\n"
+-- }}}
+
+-- {{{ threat levers
+-- What moves threat or attention (issue 625j), read from each ability's
+-- effects and auras (SharedDefines.h SpellEffects, SpellAuraDefines.h):
+--   taunt   effect 114 (attack me) or aura 11 (taunt): the enemy's
+--           attention forced on the caster, its threat raised to the top
+--   threat  effect 63 or 91: threat added (or taken, when negative)
+--   share   effect 125: threat changed by a share (Soulshatter -50)
+--   hand    effect 130: threat handed on to another (Misdirection, Tricks
+--           of the Trade)
+--   leave   effect 79 (sanctuary) or aura 66 (feign death): out of the
+--           fight, every enemy's threat on the caster dropped
+--   aura    aura 10 or 103: threat made changed while it is up (Fade's
+--           lowering, Salvation's)
+--   immune  aura 39 or 40: immune, so passed over with its threat kept
+--           while it lasts (the server's suppression, 625j)
+-- `amount` is the effect's value where one says how much (threat, a
+-- share, an aura's change); 0 where none does.
+local LEVER_EFFECT = { [114] = "taunt", [63] = "threat", [91] = "threat", [125] = "share", [130] = "hand", [79] = "leave" }
+-- aura 18, invisibility: passed over by every enemy that can't see it
+-- (the threat manager's "offline", 625j), so counted as leaving
+local LEVER_AURA   = { [11] = "taunt", [66] = "leave", [18] = "leave", [10] = "aura", [103] = "aura", [39] = "immune", [40] = "immune" }
+-- the spells an ability sets off, followed one step: effect 64 (trigger a
+-- spell) and auras 23 and 227 (trigger one each tick), their spell in
+-- Spell.dbc 116-118 (Hand of Salvation's tick lowers threat by a share)
+local TRIGGERS_EFFECT, TRIGGERS_AURA = { [64] = true }, { [23] = true, [227] = true }
+-- the spells a server script casts for an ability, where the table can't
+-- say (cited so a change upstream can be found):
+local SCRIPTED = {
+    ["righteous defense"] = { cls = 2, casts = 31790 },  -- spell_pal_righteous_defense, spell_paladin.cpp: a taunt on up to three of the friend's attackers
+    ["death grip"]        = { cls = 6, casts = 49560 },  -- spell_dk_death_grip, spell_dk.cpp: the pull's taunt
+    ["soulshatter"]       = { cls = 9, casts = 32835 },  -- spell_warl_soulshatter, spell_warlock.cpp: half the threat on each enemy; its own family is 0, so it isn't in the warlock's list above and is added here
+    ["invisibility"]      = { cls = 8, casts = 32612 },  -- SpellAuras.cpp: the fading aura casts the invisibility as it ends
+}
+-- {{{ local function lever_kinds()
+-- What one spell does to threat, and the spells it sets off one step on.
+local function lever_kinds(r, kinds, amounts, depth)
+    for e = 0, 2 do
+        local eff, aura = r.u(71 + e), r.u(95 + e)
+        local k = LEVER_EFFECT[eff] or LEVER_AURA[aura]
+        if k and not kinds[k] then
+            kinds[k] = true
+            kinds[#kinds + 1] = k
+            if k == "threat" or k == "share" or k == "aura" then amounts[#amounts + 1] = r.i(80 + e) + 1 end
+        end
+        local t = r.u(116 + e)
+        if depth == 0 and t ~= 0 and (TRIGGERS_EFFECT[eff] or TRIGGERS_AURA[aura]) and SPELLS[t] then lever_kinds(SPELLS[t], kinds, amounts, 1) end
+    end
+end
+-- }}}
+local levers = {}
+local function add_lever(cls, className, name, rows)
+    local kinds, amounts = {}, {}
+    for _, r in ipairs(rows) do lever_kinds(r, kinds, amounts, 0) end
+    if #kinds > 0 then levers[#levers + 1] = { cls = cls, className = className, name = name, kinds = table.concat(kinds, "|"), amount = amounts[1] or 0 } end
+end
+local classNameOf = {}
+for _, c in ipairs(CLASSES) do classNameOf[c.id] = c.name end
+for _, c in ipairs(CLASSES) do
+    local names = {}
+    for n in pairs(BY_CLASS[c.id]) do names[#names + 1] = n end
+    for n, sc in pairs(SCRIPTED) do
+        if sc.cls == c.id and not BY_CLASS[c.id][n:gsub("^%l", string.upper)] then
+            local found = false
+            for m in pairs(BY_CLASS[c.id]) do if m:lower() == n then found = true end end
+            if not found then names[#names + 1] = n end
+        end
+    end
+    table.sort(names, function(x, y) return x:lower() < y:lower() end)
+    for _, n in ipairs(names) do
+        local a = BY_CLASS[c.id][n]
+        local rows = {}
+        if a then rows[#rows + 1] = SPELLS[a.id] end
+        local sc = SCRIPTED[n:lower()]
+        if sc then rows[#rows + 1] = SPELLS[sc.casts] or error("scripted lever " .. n .. ": spell " .. sc.casts .. " is not in the client's table") end
+        local shown = a and n or (n:gsub("^%l", string.upper))
+        add_lever(c.id, c.name, shown, rows)
+    end
+end
+h[#h + 1] = "// a threat lever: an ability that moves threat or attention (issue 625j), by what its effects and auras do:"
+h[#h + 1] = "// \"taunt\", \"threat\" (added; negative taken), \"share\" (a percent of it), \"hand\" (handed on), \"leave\" (out of"
+h[#h + 1] = "// the fight), \"aura\" (threat made changed while up, percent), \"immune\" (passed over while immune); joined by \"|\""
+h[#h + 1] = "struct BuddyThreatLeverRow { uint8_t cls; char const* name; char const* kinds; int32_t amount; };\n"
+h[#h + 1] = "static BuddyThreatLeverRow const BUDDY_THREAT_LEVERS[] = {"
+md[#md + 1] = ""
+md[#md + 1] = "## Threat levers"
+md[#md + 1] = ""
+md[#md + 1] = "What moves threat or attention, by what each ability's effects and auras do (issue 625j): *taunt*, *threat* added or taken, a *share* of it, *hand* it on, *leave* the fight, an *aura* changing threat made while up, *immune* (passed over with threat kept)."
+md[#md + 1] = ""
+md[#md + 1] = "| Class | Ability | Does | Amount |"
+md[#md + 1] = "|---|---|---|---:|"
+for _, l in ipairs(levers) do
+    h[#h + 1] = string.format("    { %2d, %q, %q, %6d },", l.cls, l.name:lower(), l.kinds, l.amount)
+    md[#md + 1] = string.format("| %s | %s | %s | %d |", l.className, l.name, l.kinds:gsub("|", ", "), l.amount)
+end
 h[#h + 1] = "};\n\n#endif"
+print(string.format("%d threat levers", #levers))
 print(string.format("%d lockouts and %d while-up exclusions; %d of the table's own exclusions agree with them", #LOCKOUTS, #WHILE, checked))
 -- }}}
 local f = io.open(out, "w") or error("cannot write " .. out)
