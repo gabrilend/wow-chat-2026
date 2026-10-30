@@ -820,3 +820,19 @@ The top rank of each learnable ability: cast time, cooldown and global cooldown 
 | Typhoon | 0.0 | 20.0 | 1.5 | 25% base mana |  |
 | Wild Growth | 0.0 | 6.0 | 1.5 | 23% base mana | over time, heals |
 | Wrath | 2.0 | 0.0 | 1.5 | 11% base mana | at once |
+
+## Lockouts
+
+An aura on the character an ability would reach that refuses it. *Put on by* the abilities that put it on as they land (Hand of Protection on its target, Lay on Hands only on oneself); *while up* rows are an ability's own buff refusing another.
+
+| Aura | Lasts | Put on by | Refuses |
+|---|---:|---|---|
+| Forbearance | 120 | divine shield, divine protection, hand of protection, lay on hands | divine shield, divine protection, hand of protection, lay on hands |
+| Avenging Wrath Marker | 30 | avenging wrath, divine shield, divine protection, hand of protection, lay on hands | avenging wrath, divine shield, divine protection, hand of protection, lay on hands |
+| Sated | 600 | bloodlust | bloodlust, heroism |
+| Exhaustion | 600 | heroism | bloodlust, heroism |
+| Hypothermia | 30 | ice block | ice block |
+| Weakened Soul | 15 | power word: shield | power word: shield |
+| Presence of Mind | until used | (while up) | arcane power |
+| Arcane Power | 15 | (while up) | presence of mind |
+| Berserk | 15 | (while up) | tiger's fury |

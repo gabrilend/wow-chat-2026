@@ -178,7 +178,115 @@ for _, c in ipairs(CLASSES) do
         count = count + 1
     end
 end
+h[#h + 1] = "};\n"
+
+-- {{{ lockouts
+-- A lockout: an aura on a character that blocks some abilities from
+-- reaching that character (the one who would receive them: the caster for
+-- an ability cast on oneself, the target for one cast on another), often
+-- put on by those same abilities. The owner, 2026-10-30, on planning
+-- Bloodlust by Sated: "consider a paladin's forebearance similarly. But
+-- keep in mind some spells like Blessing of Protection can put it on other
+-- targets, not just the casting paladin."
+--
+-- Where the server says so, cited so a change upstream can be found:
+--   the general rule (Spell.cpp, PrepareTriggersExecutedOnHit): a class
+--     spell whose exclusion aura (Spell.dbc 26 on the caster, 27 on the
+--     target) is a debuff puts that aura on as it lands: Ice Block ->
+--     Hypothermia, Power Word: Shield -> Weakened Soul, Avenging Wrath ->
+--     its marker
+--   spell_pal_immunities (spell_paladin.cpp): Divine Shield, Divine
+--     Protection and Hand of Protection are refused to a receiver with
+--     Forbearance or the Avenging Wrath marker, and put both on it
+--   spell_pal_lay_on_hands: the same, only when cast on oneself
+--   SpellInfoCorrections.cpp and spell_shaman.cpp: Bloodlust and Heroism
+--     skip anyone with Sated or Exhaustion, and put theirs on each
+--   the server's own immune-shield marker (61988, not in the client's
+--     table) lasts only as long as Forbearance or the Avenging Wrath
+--     marker, so it is folded into them
+-- What the client's table records itself (the exclusion fields) is checked
+-- against these rows below; the durations are read from it.
+local LOCKOUTS = {
+    { aura = 25771, by = { "divine shield", "divine protection", "hand of protection", "lay on hands" },
+      blocks = { "divine shield", "divine protection", "hand of protection", "lay on hands" } },
+    { aura = 61987, by = { "avenging wrath", "divine shield", "divine protection", "hand of protection", "lay on hands" },
+      blocks = { "avenging wrath", "divine shield", "divine protection", "hand of protection", "lay on hands" } },
+    { aura = 57724, by = { "bloodlust" }, blocks = { "bloodlust", "heroism" } },
+    { aura = 57723, by = { "heroism" },   blocks = { "bloodlust", "heroism" } },
+    { aura = 41425, by = { "ice block" }, blocks = { "ice block" } },
+    { aura =  6788, by = { "power word: shield" }, blocks = { "power word: shield" } },
+}
+-- Lay on Hands is put on and refused only when the paladin casts it on
+-- itself (spell_pal_lay_on_hands); said in the header beside the rows
+local DURATION = {}
+for _, r in ipairs(load_dbc("SpellDuration.dbc")) do DURATION[r.u(0)] = r.u(1) end
+local SPELLS, NAMEOF = {}, {}
+for _, r in ipairs(load_dbc("Spell.dbc")) do SPELLS[r.u(0)] = r end
+local FOLDED = { [61988] = true }                                     -- the immune-shield marker, folded in (above)
+local isLockout = {}
+for _, l in ipairs(LOCKOUTS) do
+    local r = SPELLS[l.aura] or error("lockout aura " .. l.aura .. " is not in the client's spell table")
+    l.name = r.s(136)
+    l.ms   = DURATION[r.u(40)] or error("lockout aura " .. l.name .. " has no duration in SpellDuration.dbc")
+    isLockout[l.aura] = l
+end
+-- "while" exclusions: an ability refused while another ability's own buff
+-- is up (Tiger's Fury during Berserk), read from the exclusion fields;
+-- only those whose aura is itself a class ability
+local learnableName = {}
+for _, c in ipairs(CLASSES) do for n, a in pairs(BY_CLASS[c.id]) do learnableName[n:lower()] = true; NAMEOF[a.id] = n:lower() end end
+local WHILE, checked = {}, 0
+for _, c in ipairs(CLASSES) do
+    for n, a in pairs(BY_CLASS[c.id]) do
+        local r = SPELLS[a.id]
+        for _, field in ipairs({ 26, 27 }) do
+            local aura = r.u(field)
+            if aura ~= 0 then
+                local l = isLockout[aura]
+                if l then
+                    -- the table and the rows must agree: it blocks what the row says
+                    local found = false
+                    for _, b in ipairs(l.blocks) do if b == n:lower() then found = true end end
+                    if not found then error(n .. " is refused by " .. l.name .. " in the client's table, but its lockout row doesn't block it") end
+                    checked = checked + 1
+                elseif FOLDED[aura] then
+                    checked = checked + 1
+                elseif SPELLS[aura] and learnableName[SPELLS[aura].s(136):lower()] then
+                    local ar = SPELLS[aura]
+                    local ms = DURATION[ar.u(40)] or 0
+                    if ms >= 2147483647 then ms = 0 end                     -- lasts until used (Presence of Mind): 0, "while it is up"
+                    WHILE[#WHILE + 1] = { aura = aura, name = ar.s(136), ms = ms, blocks = n:lower() }
+                end
+            end
+        end
+    end
+end
+table.sort(WHILE, function(a, b) return a.blocks < b.blocks end)
+
+h[#h + 1] = "// a lockout: an aura on the character an ability would reach (the caster for one cast on oneself, the target"
+h[#h + 1] = "// otherwise) that refuses it; `by` the abilities that put it on that character as they land (none: an ability's"
+h[#h + 1] = "// own buff, refusing others while it is up), `ms` how long it lasts (0: while it is up), `blocks` what it refuses;"
+h[#h + 1] = "// names lower case, joined by \"|\". Lay on Hands puts it on and is refused only when cast on oneself."
+h[#h + 1] = "struct BuddyLockoutRow { uint32_t aura; char const* name; uint32_t ms; char const* by; char const* blocks; };\n"
+h[#h + 1] = "static BuddyLockoutRow const BUDDY_LOCKOUTS[] = {"
+md[#md + 1] = ""
+md[#md + 1] = "## Lockouts"
+md[#md + 1] = ""
+md[#md + 1] = "An aura on the character an ability would reach that refuses it. *Put on by* the abilities that put it on as they land (Hand of Protection on its target, Lay on Hands only on oneself); *while up* rows are an ability's own buff refusing another."
+md[#md + 1] = ""
+md[#md + 1] = "| Aura | Lasts | Put on by | Refuses |"
+md[#md + 1] = "|---|---:|---|---|"
+for _, l in ipairs(LOCKOUTS) do
+    h[#h + 1] = string.format("    { %5d, %q, %6d, %q, %q },", l.aura, l.name, l.ms, table.concat(l.by, "|"), table.concat(l.blocks, "|"))
+    md[#md + 1] = string.format("| %s | %.0f | %s | %s |", l.name, l.ms / 1000, table.concat(l.by, ", "), table.concat(l.blocks, ", "))
+end
+for _, w in ipairs(WHILE) do
+    h[#h + 1] = string.format("    { %5d, %q, %6d, %q, %q },", w.aura, w.name, w.ms, "", w.blocks)
+    md[#md + 1] = string.format("| %s | %s | (while up) | %s |", w.name, w.ms > 0 and string.format("%.0f", w.ms / 1000) or "until used", w.blocks)
+end
 h[#h + 1] = "};\n\n#endif"
+print(string.format("%d lockouts and %d while-up exclusions; %d of the table's own exclusions agree with them", #LOCKOUTS, #WHILE, checked))
+-- }}}
 local f = io.open(out, "w") or error("cannot write " .. out)
 f:write(table.concat(h, "\n"), "\n")
 f:close()

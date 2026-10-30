@@ -183,7 +183,16 @@ namespace BuddyPlan
     //   cooldown away fall off the back, so no moment is looked at twice.
     // A 30-minute plan of three cooldowns went from about 90 milliseconds
     // to a few.
-    inline Plan Best(Cooldown const& cd, std::vector<Window> const& windows, double fightLeft, Ending const& ending)
+    //
+    // `blocked`: stretches in which it can't be cast at all (its factor is
+    // not read): a lockout one of the buddy's own other cooldowns leaves
+    // (Divine Shield keeps Avenging Wrath waiting 30 seconds:
+    // buddies_lockouts.h, LineUp), or one someone else left on it that is
+    // known to run out (the server makes the stretch from the mark's time
+    // left). No use is planned in them; when it would be ready inside one,
+    // using it now is impossible, and the weight is 0.
+    inline Plan Best(Cooldown const& cd, std::vector<Window> const& windows, double fightLeft, Ending const& ending,
+                     std::vector<Window> const& blocked = {})
     {
         Plan plan{ 0.0, 0.0, -1.0, 0, 1.0, {} };
         if (fightLeft <= 0.0) return plan;
@@ -215,6 +224,13 @@ namespace BuddyPlan
             for (int i = 0; i < end; ++i) worth[i] = (total[i + n] - total[i]) / n;
         }
 
+        // a moment inside a blocked stretch can't hold a use: worth so little
+        // that no plan picks it
+        double const IMPOSSIBLE = -1e18;
+        for (Window const& b : blocked)
+            for (int i = std::max(0, static_cast<int>(std::ceil(b.start / STEP))); i < end && i * STEP < b.start + b.length; ++i)
+                worth[i] = IMPOSSIBLE;
+
         std::vector<double> best(end + gap + 1, 0.0), via(end, 0.0);          // via[j]: a use at j and the best after
         std::vector<int>    pick(end, -1);                                     // the next use's moment, -1 never (kept)
         for (int k = end; k <= end + gap; ++k) best[k] = Kept((k - end) * STEP, cd.cooldown, ending);
@@ -231,12 +247,13 @@ namespace BuddyPlan
             else                      { best[i] = kept;   pick[i] = -1; }
         }
 
-        plan.useNow  = worth[ready] + best[ready + gap];
+        bool canNow  = worth[ready] > IMPOSSIBLE / 2;
+        plan.useNow  = canNow ? worth[ready] + best[ready + gap] : 0.0;
         plan.best    = best[ready];
         plan.nextUse = pick[ready] < 0 ? -1.0 : pick[ready] * STEP;
         for (int i = ready; i < end && pick[i] >= 0; i = pick[i] + gap) plan.at.push_back(pick[i] * STEP);
         plan.uses    = static_cast<int>(plan.at.size());
-        plan.weight  = plan.best > 0.0 ? plan.useNow / plan.best : 1.0;
+        plan.weight  = !canNow ? 0.0 : plan.best > 0.0 ? plan.useNow / plan.best : 1.0;
         return plan;
     }
     // }}}
@@ -247,37 +264,107 @@ namespace BuddyPlan
     // (its window factor for this buddy, buddies_window_buffs.h: Arcane
     // Power's +20% damage run through the mage's own abilities). A use of
     // one inside another's working time is worth the other's gain more,
-    // because the two multiply.
-    struct Own { Cooldown cd; double gain; };
+    // because the two multiply. `blocks`: the buddy's other cooldowns (by
+    // their place in the list) that a use of this one refuses, and for how
+    // many seconds (buddies_lockouts.h, BlocksOwnMs: Divine Shield refuses
+    // Avenging Wrath 30 seconds, and Avenging Wrath Divine Shield).
+    struct Block { size_t other; double seconds; };
+    struct Own { Cooldown cd; double gain; std::vector<Block> blocks = {}; };
+    // }}}
+
+    // {{{ Around
+    // What cooldown i sees of the others' plans: their uses as windows (each
+    // multiplies by its gain while it works) and the stretches their uses
+    // block it for.
+    inline void Around(size_t i, std::vector<Own> const& own, std::vector<Plan> const& plans, std::vector<Window> const& outside,
+                       std::vector<Window>& windows, std::vector<Window>& blocked)
+    {
+        windows = outside;
+        blocked.clear();
+        for (size_t k = 0; k < own.size(); ++k)
+            if (k != i)
+            {
+                for (double t : plans[k].at)
+                    windows.push_back({ t, std::max(own[k].cd.lasts, STEP), own[k].gain });
+                for (Block const& b : own[k].blocks)
+                    if (b.other == i)
+                        for (double t : plans[k].at) blocked.push_back({ t, b.seconds, 0.0 });
+            }
+        // and the moments where a use of i would block a use another has
+        // already planned: i's lockout on k lasts `seconds`, so a use of i in
+        // the `seconds` before one of k's would refuse it. Respecting them,
+        // each cooldown fits round the plans made before it, never over them
+        // (the order of planning, tried every way in LineUp, decides who
+        // fits round whom).
+        for (Block const& b : own[i].blocks)
+            for (double t : plans[b.other].at) blocked.push_back({ t - b.seconds + 1e-6, b.seconds, 0.0 });
+    }
+    // }}}
+
+    // {{{ Together
+    // What all of a buddy's plans are worth together, each use counted
+    // against the others' plans as they finally stand, and what each keeps
+    // for after; a use inside a stretch another blocks makes the whole set
+    // impossible (-1: no such set).
+    inline double Together(std::vector<Own> const& own, std::vector<Plan> const& plans, std::vector<Window> const& outside,
+                           double fightLeft, Ending const& ending)
+    {
+        double sum = 0.0;
+        std::vector<Window> windows, blocked;
+        for (size_t i = 0; i < own.size(); ++i)
+        {
+            Around(i, own, plans, outside, windows, blocked);
+            for (double t : plans[i].at)
+            {
+                for (Window const& b : blocked)
+                    if (t >= b.start && t < b.start + b.length) return -1.0;
+                sum += UseWorth(windows, t, own[i].cd.lasts, fightLeft, ending.fight);
+            }
+            double back = plans[i].at.empty() ? own[i].cd.readyIn : plans[i].at.back() + own[i].cd.cooldown;
+            sum += Kept(std::max(0.0, back - fightLeft), own[i].cd.cooldown, ending);
+        }
+        return sum;
+    }
     // }}}
 
     // {{{ LineUp
     // Plans each of a buddy's cooldowns with the others' planned uses as
     // windows beside the outside ones (Bloodlust, a weak phase), so they
-    // fall together "so that they can be cast as often as optimizable".
-    // Each plan depends on the others', so it is worked out again a few
-    // times (`passes`), longest cooldown first in each pass: the long ones
-    // have the fewest uses to move, so the short ones fit round them. Three
-    // passes settle the cases tested; a plan that still moves after them is
-    // used as it stands (the next working out, a moment later, starts from
-    // the world as it is then).
+    // fall together "so that they can be cast as often as optimizable", and
+    // with the stretches the others' uses block it for (lockouts). Each
+    // plan depends on the others', so it is worked out again a few times
+    // (`passes`). Each cooldown plans for itself, so the one planned first
+    // takes its best moments and the rest fit round it; when one keeps
+    // another waiting (Divine Shield and Avenging Wrath) that order decides
+    // who waits, and the first may take a moment that costs the other more
+    // than it gains. So every cooldown is tried first in turn (the rest
+    // longest first: the long ones have the fewest uses to move), and the
+    // set worth most together (Together) is kept. A buddy has a handful of
+    // long cooldowns, so that is a handful of tries.
     inline std::vector<Plan> LineUp(std::vector<Own> const& own, std::vector<Window> const& outside, double fightLeft, Ending const& ending, int passes = 3)
     {
-        std::vector<Plan>   plans(own.size());
-        std::vector<size_t> order(own.size());
-        for (size_t i = 0; i < own.size(); ++i) order[i] = i;
-        std::stable_sort(order.begin(), order.end(), [&](size_t a, size_t b) { return own[a].cd.cooldown > own[b].cd.cooldown; });
-        for (int pass = 0; pass < passes; ++pass)
-            for (size_t i : order)
-            {
-                std::vector<Window> windows = outside;
-                for (size_t k = 0; k < own.size(); ++k)
-                    if (k != i)
-                        for (double t : plans[k].at)
-                            windows.push_back({ t, std::max(own[k].cd.lasts, STEP), own[k].gain });
-                plans[i] = Best(own[i].cd, windows, fightLeft, ending);
-            }
-        return plans;
+        std::vector<size_t> longest(own.size());
+        for (size_t i = 0; i < own.size(); ++i) longest[i] = i;
+        std::stable_sort(longest.begin(), longest.end(), [&](size_t a, size_t b) { return own[a].cd.cooldown > own[b].cd.cooldown; });
+
+        std::vector<Plan> kept(own.size());
+        double            keptWorth = -2.0;
+        std::vector<Window> windows, blocked;
+        for (size_t first : longest)
+        {
+            std::vector<size_t> order = { first };
+            for (size_t i : longest) if (i != first) order.push_back(i);
+            std::vector<Plan> plans(own.size());
+            for (int pass = 0; pass < passes; ++pass)
+                for (size_t i : order)
+                {
+                    Around(i, own, plans, outside, windows, blocked);
+                    plans[i] = Best(own[i].cd, windows, fightLeft, ending, blocked);
+                }
+            double worth = Together(own, plans, outside, fightLeft, ending);
+            if (worth > keptWorth + 1e-9) { kept = plans; keptWorth = worth; }
+        }
+        return kept;
     }
     // }}}
 }

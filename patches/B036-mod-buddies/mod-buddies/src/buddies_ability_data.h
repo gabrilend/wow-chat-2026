@@ -784,4 +784,22 @@ static BuddyAbilityRow const BUDDY_ABILITIES[] = {
     { 11, "wrath", 48461, 2000, 0, 1500, 0, 0, 11, 0, 1, 0, 0 },
 };
 
+// a lockout: an aura on the character an ability would reach (the caster for one cast on oneself, the target
+// otherwise) that refuses it; `by` the abilities that put it on that character as they land (none: an ability's
+// own buff, refusing others while it is up), `ms` how long it lasts (0: while it is up), `blocks` what it refuses;
+// names lower case, joined by "|". Lay on Hands puts it on and is refused only when cast on oneself.
+struct BuddyLockoutRow { uint32_t aura; char const* name; uint32_t ms; char const* by; char const* blocks; };
+
+static BuddyLockoutRow const BUDDY_LOCKOUTS[] = {
+    { 25771, "Forbearance", 120000, "divine shield|divine protection|hand of protection|lay on hands", "divine shield|divine protection|hand of protection|lay on hands" },
+    { 61987, "Avenging Wrath Marker",  30000, "avenging wrath|divine shield|divine protection|hand of protection|lay on hands", "avenging wrath|divine shield|divine protection|hand of protection|lay on hands" },
+    { 57724, "Sated", 600000, "bloodlust", "bloodlust|heroism" },
+    { 57723, "Exhaustion", 600000, "heroism", "bloodlust|heroism" },
+    { 41425, "Hypothermia",  30000, "ice block", "ice block" },
+    {  6788, "Weakened Soul",  15000, "power word: shield", "power word: shield" },
+    { 12043, "Presence of Mind",      0, "", "arcane power" },
+    { 12042, "Arcane Power",  15000, "", "presence of mind" },
+    { 50334, "Berserk",  15000, "", "tiger's fury" },
+};
+
 #endif

@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-30 14:03:28
+Generated on: 2026-10-30 14:17:32
 Models: claude-opus-5-5
 
 ## Contents
@@ -201,6 +201,10 @@ Models: claude-opus-5-5
     timing and fight-length guess are committed and tested. Next, I'll start the
     server side that feeds them, unless you'd rather I begin next-quest
     pointing.
+48. 2026-10-30 14:06, after Request 149 - Goal: build the buddies' action
+    economy, so they use their long cooldowns at the best moments; the timing
+    math is done, tested and committed. Next I'll build the server side, which
+    will wait for your compile.
 
 --------------------------------------------------------------------------------
 
@@ -15424,6 +15428,94 @@ list. Everything else counts as trash, including rare elites in the open world.
 Next is the server side: reading the enemies' health, the worker threads that
 redo each buddy's plan, and passing the result to the talent draw. Like the
 other server files, it will wait for your compile.
+
+--------------------------------------------------------------------------------
+
+### User Request 150
+
+<pasted_content id="12ab">
+>   - "Regularly used" means a cooldown of 10 minutes or less.
+>     - Fire Elemental Totem, Army of the Dead and Rebirth are 10 minutes, so they count. Lay
+>       on Hands (20 minutes in this version) and Reincarnation (30) are left out.
+>     - The 10 minutes is a starting value. Later it can come from each buddy's own record of
+>       which cooldowns it uses fight after fight.
+</pasted_content id="12ab">
+
+
+isn't bloodlust 30 minute timer? I'm concerned we won't use it... But, better to
+get the full use of a BL on the next boss than waste it on an easier boss.
+
+
+
+<pasted_content id="12ab">
+> My design call, for you to review: the server will treat a fight as a boss
+> fight when any
+> enemy in it has the game's boss rank or is on the dungeon's boss list.
+> Everything else
+>   counts as trash, including rare elites in the open world.
+</pasted_content id="12ab">
+
+
+should be for rare elites in the open world as well, but not regular elites.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 150
+
+> Two answers. Building the second and the cross-boss saving now.
+>
+> - **Bloodlust in this version:** the game's data gives it a 5-minute cooldown.
+>   It also puts a 10-minute debuff (Sated, or Exhaustion for Heroism) on
+>   everyone it touches, so the party really gets one every 10 minutes. Either
+>   way it's within the "regularly used" line, so it gets planned.
+> - **Saving it for the next boss:** you're right that the plan can't do that
+>   yet. A boss fight currently keeps nothing for afterwards. Fixing that now.
+
+> Adding the boss-to-boss checks, using Bloodlust's real lockout (10 minutes
+> from Sated) and its 40 seconds.
+
+> 30 of 30 pass, and the 400 random fights (now with random next fights too)
+> still agree with the reference. Writing it into the issue.
+
+> Only my lines in 625f since the last commit; claiming the scripted edits and
+> committing.
+
+*[commit] cfbef82c7 - Cooldown timing: a big cooldown can be saved for a harder boss next, and rare elites count as bosses*
+
+Both are built and committed (cfbef82), and all 30 checks pass.
+
+**Bloodlust:** in this version its own cooldown is 5 minutes. The Sated debuff
+(Exhaustion for Heroism) then blocks the party from getting it again for 10
+minutes, so I'll plan it on that 10-minute timer, read from the game's spell
+table. Ten minutes is inside the "regularly used" line, so it is planned and
+used.
+
+**Saving it for a harder boss:** what a cooldown is worth unspent now depends on
+what comes next.
+- **After trash**, the next pack is the same and gets pulled straight away, as
+  before.
+- **After a boss with no boss known to follow**, nothing is kept, so everything
+  gets used.
+- **Before a harder boss**, a big cooldown is saved for it. The plan compares:
+  - a whole use on this boss,
+  - against a use on the harder boss, reduced by how much cooldown would still
+    be left at that pull.
+
+With a minute of this boss left and a harder one pulled 2 minutes later,
+Bloodlust is saved. With an equal boss next, or one 10 minutes away, it gets
+used.
+
+**Rare elites:** open-world rare elites now count as boss fights, and regular
+elites as trash. Your words are in the issue.
+
+**My design call, for you to review:** "harder" will mean "expected to last
+longer": the boss's health divided by the party's damage per second. The
+dungeon's boss list says which boss is next. In the open world no next boss is
+known, so everything gets used.
+
+Next is the server side: reading the enemies' health and ranks during a fight,
+the worker threads that redo each buddy's plan, and passing the result to the
+talent draw. It will wait for your compile with the other server files.
 
 --------------------------------------------------------------------------------
 

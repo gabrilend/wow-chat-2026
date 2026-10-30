@@ -1,6 +1,6 @@
 # Conversation Summary: e143dbfe-ff43-48be-8bd4-4d54fd7a325d
 
-Generated on: 2026-10-30 14:14:15
+Generated on: 2026-10-30 14:24:21
 Models: claude-opus-5-5
 
 ## Contents
@@ -2793,6 +2793,211 @@ sub-issues be retired with it? I'll check each of the six mentions so nothing
 still depends on it.
 
 The todo list has 32 items. Nothing is committed yet.
+
+--------------------------------------------------------------------------------
+
+### User Request 20
+
+> One thing to confirm before I retire the lightweight-creature buddies fully:
+> that issue has four
+>   sub-issues (the bake, the swap, right-click to talk, left-click to select).
+
+yeah the architecture is important, but we don't need it built for it's own
+sake. If something else depends on it, consider it a requirement dependency.
+
+can you ask me 10 more questions?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 20
+
+> Questions for the next ten, pulled from issues still waiting on answers:
+
+The four lightweight-creature sub-issues are settled:
+
+- **The bake** stays, as a requirement of the monster bots, which need a
+  creature's look baked onto a bot. It gets built when they are.
+- **The swap, right-click to talk, and left-click to select** are marked "will
+  not implement". Nothing else depends on them, and they move with the next
+  commit.
+- **Of the six other mentions,** only the monster bots (and a passing analogy in
+  the monster stat pages) actually rely on the bake. The other four just contain
+  the number 628 in an unrelated spot, like a spell number or a line number.
+
+## Ten questions, each unblocking an issue
+
+**Healers stepping in** (your October words: "when the healer dies the other
+characters who are capable of healing will try to do so … after trying a fight
+several times and losing because of healing … characters who have healing
+abilities will be more likely to use healing spells")
+
+1. **How does a buddy tell a wipe was lost to healing,** rather than to damage
+   or positioning? For example: people died while the boss still had more than
+   half its health, and the healer was out of mana or dead.
+   *My call:* that, plus deaths that came from damage over time rather than one
+   big hit.
+2. **How many lost tries make the hybrids heal more?**
+   *My call:* two.
+3. **Outside dungeons and raids,** the same rule in the open world, or only in
+   instances?
+   *My call:* everywhere, since a dead healer is a dead healer.
+
+**The tank sets the pace**
+
+4. **Can a player who is playing damage also say "go faster",** or only the
+   healer?
+   *My call:* anyone in the group.
+5. **Harmless packs.** You said tanks fight only monsters that could harm the
+   group. Is a monster too low to matter (grey to the tank) simply walked past?
+   *My call:* walked past.
+
+**Teleport there and back** (your October words: teleporting to a place while
+already in it "takes them to where they were before they first teleported in")
+
+6. **Party members:** does every party member near the caster go along at once,
+   does each get an "accept" prompt like the group hearthstone, or are only the
+   caster's buddies taken automatically?
+   *My call:* buddies automatically, other players by prompt, the same as the
+   group hearthstone.
+7. **A chain of teleports.** A mage goes Stormwind → Ironforge → Dalaran,
+   then casts Teleport: Dalaran while in Dalaran. Does it return to Ironforge
+   (the step before) or to Stormwind (where the chain began)?
+   *My call:* Stormwind. "Before they first teleported in" reads as the chain's
+   start.
+
+**A death knight's buddies eat what it eats**
+
+8. **How much food:** the same count the death knight carries, a fixed number of
+   each kind, or one stack? And drink too, for buddies that use mana?
+   *My call:* one stack of each, with drink for mana users.
+
+**A buddy's own weapon record** (your words: buddies learn a weapon's real worth
+from its kills per minute, "it taught itself. tool use.")
+
+9. **A kill made by the group:** does it count for every buddy who was hitting
+   the target, or only the one that landed the last blow?
+   *My call:* everyone who hit it, weighted by the damage each dealt.
+10. **When does its own experience overrule the weapon's listed numbers?** After
+    holding a weapon for a few minutes its record rules entirely, or the two
+    blend more and more over time?
+    *My call:* a blend that shifts toward its own record the longer it holds the weapon.
+
+--------------------------------------------------------------------------------
+
+### User Request 21
+
+<pasted_content id="415d">
+> 1. How does a buddy tell a wipe was lost to healing, rather than to damage or
+> positioning? For
+>      example: people died while the boss still had more than half its health, and the healer was
+>      out of mana or dead.
+</pasted_content id="415d">
+
+
+if the bosses died while the healers had more than ~50% mana... Though,
+buddy-bot behavior means that we won't really be able to tell what caused a
+wipe, because they are always playing basically optimally. So, let's nix this
+for now.
+
+>   2. How many lost tries make the hybrids heal more?
+
+since we can't ascertain what critical limit caused us to fail, let's nix this
+too for now.
+
+> 3. Outside dungeons and raids, the same rule in the open world, or only in
+> instances?
+>      My call: everywhere, since a dead healer is a dead healer.
+>
+> 4. Can a player who is playing damage also say "go faster", or only the
+> healer?
+>      My call: anyone in the group.
+
+
+
+<pasted_content id="415d">
+> 5. Harmless packs. You said tanks fight only monsters that could harm the
+> group. Is a monster
+>      too low to matter (grey to the tank) simply walked past?
+>      My call: walked past.
+</pasted_content id="415d">
+
+
+
+
+<pasted_content id="415d">
+> Teleport there and back (your October words: teleporting to a place while
+> already in it "takes
+>   them to where they were before they first teleported in")
+>
+> 6. Party members: does every party member near the caster go along at once,
+> does each get an
+>      "accept" prompt like the group hearthstone, or are only the caster's buddies taken
+>      automatically?
+>      My call: buddies automatically, other players by prompt, the same as the group hearthstone.
+</pasted_content id="415d">
+
+
+
+
+<pasted_content id="415d">
+> 7. A chain of teleports. A mage goes Stormwind → Ironforge → Dalaran, then
+> casts Teleport:
+>      Dalaran while in Dalaran. Does it return to Ironforge (the step before) or to Stormwind
+>      (where the chain began)?
+</pasted_content id="415d">
+
+
+the most recent place they were at, so ironforge.
+
+> 8. How much food: the same count the death knight carries, a fixed number of
+> each kind, or one
+>      stack? And drink too, for buddies that use mana?
+
+they should just... start with the gray mushrooms that DKs always start with,
+instead of the fruitcake.
+
+> A buddy's own weapon record (your words: buddies learn a weapon's real worth
+> from its kills per
+>   minute, "it taught itself. tool use.")
+
+we will handle this with the stat / ability weighting economy system that's
+being built in another session. Don't worry about it, but this part might get
+deprecated.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 21
+
+> Recording the rest now (tank, teleport, food, weapon record).
+
+I've recorded this round:
+
+- **Healers stepping in:** the "heal more after wipes lost to healing" part is
+  set aside, as you said. The rest of that issue stands: when the healer dies,
+  others who can heal try, overheals make healing less likely, and a healer's
+  low mana makes it more likely.
+- **Teleport chains:** casting a teleport to where you already are takes you one
+  step back, to Ironforge in your example.
+- **Death knight buddies' food:** they start with the death knight starting
+  mushrooms instead of the fruitcake. That replaces copying the owner's food, so
+  the issue's other three questions fall away. One catch: the world database
+  doesn't list a death knight's starting items, because the client supplies
+  those. The likely item is Black Mushroom, a level 55 food, and I'll confirm it
+  in game before writing it in.
+- **Buddy weapon record:** marked "may be deprecated", waiting on the other
+  session's stat and ability weighting work.
+
+**Your silent replies:** you quoted four of my calls back without a reply:
+
+- the healer rule applies everywhere, not only in dungeons
+- anyone in the group can say "go faster"
+- grey packs are walked past
+- buddies come along on a teleport automatically, other players by prompt
+
+I've written each as "taken as agreed, for you to correct". If you meant to
+answer any of them differently, say so.
+
+The todo list has 33 items. Nothing is committed yet.
 
 --------------------------------------------------------------------------------
 

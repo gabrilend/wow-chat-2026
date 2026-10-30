@@ -1,0 +1,28 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-lockouts
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      the game's lockouts (Sated, Forbearance and the like) decide how long a buddy plans each ability on and which keep others waiting
+# quick-test: yes
+# ==== end of header ====
+# test-buddy-lockouts - compiles and runs
+# tests/buddy-lockouts/lockout-check.cpp against the buddy module's
+# lockouts (issue 625f), with no server.
+#
+# Usage: scripts/test-buddy-lockouts [DIR]   (--help: this text)
+
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+    sed -n '10,14p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+OUT="${DIR}/tmp/tmp"
+mkdir -p "${OUT}"
+g++ -std=c++17 -O1 -Wall -Wextra -Werror -I"${DIR}/patches/B036-mod-buddies/mod-buddies/src" \
+    "${DIR}/tests/buddy-lockouts/lockout-check.cpp" -o "${OUT}/buddy-lockouts" || exit 1
+nice -n 19 "${OUT}/buddy-lockouts"
+# ==== footer of test-buddy-lockouts ====
+# lines:      28
+# ==== end of footer ====

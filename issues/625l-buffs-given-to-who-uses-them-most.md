@@ -68,6 +68,12 @@ rules).
   and so that the buff itself comes back in time for another good use
   (a buff cast more than once a fight is planned for the most valuable
   uptime, as a cooldown is).
+- **No one bearing a lockout.** A member with a mark that refuses the
+  buff (Forbearance for Hand of Protection, Sated for Bloodlust's worth,
+  Weakened Soul for Power Word: Shield) is left out until it runs out; the
+  marks and what they refuse are the generated lockout table
+  (`buddies_lockouts.h`, 625f), Hand of Protection's Forbearance landing
+  on whoever it protects, another paladin included.
 - **Asked only when it is about to be cast.** When a buddy's draw (625)
   has chosen a targeted empowering buff (Power Infusion, Innervate, and
   the like; Bloodlust needs no target), it asks then, not before: which

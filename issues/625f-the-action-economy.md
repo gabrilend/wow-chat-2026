@@ -98,6 +98,41 @@ second: 1 when using it at once is best, less the more holding gains).
 Lining up: a buddy's own cooldowns are planned with each other's planned
 uses as windows, three passes, longest cooldown first.
 
+**Lockouts** (the owner, 2026-10-30, word for word, after Bloodlust was
+planned by Sated: "consider a paladin's forebearance similarly. But keep
+in mind some spells like Blessing of Protection can put it on other
+targets, not just the casting paladin."). A lockout is a mark on the
+character an ability reaches (the caster for one cast on oneself, the
+target otherwise) that refuses some abilities to that character for a
+while. `scripts/generate-ability-data` writes them beside the abilities
+(`BUDDY_LOCKOUTS`, and a table in `docs/ability-data.md`): Forbearance (2
+minutes) and the Avenging Wrath marker (30 seconds), put on whoever
+Divine Shield, Divine Protection or Hand of Protection reaches (and by a
+Lay on Hands on oneself; the marker by Avenging Wrath too); Sated and
+Exhaustion (10 minutes) by Bloodlust and Heroism; Hypothermia by Ice
+Block; Weakened Soul by Power Word: Shield; and three "while up" pairs
+read from the spell table (Berserk refuses Tiger's Fury, Arcane Power and
+Presence of Mind each other). Durations are read from the table. Who
+puts what on comes from the server: its general rule (a class spell
+refused while a debuff is on its caster or target puts that debuff on)
+and the paladin and shaman scripts, each cited in the generator, which
+stops if the table's own exclusions disagree with its rows.
+`buddies_lockouts.h` turns them into plans:
+- an ability is planned on the longer of its cooldown and the mark it
+  leaves on itself (Bloodlust 10 minutes; Divine Shield its own 5);
+- one of a buddy's cooldowns refuses another for so long (Divine Shield
+  and Avenging Wrath, 30 seconds each way): the timeline holds no use in
+  the stretch a planned use blocks, and a cooldown never takes a moment
+  whose lockout would land on another's planned use. Lining up then tries
+  each cooldown first in turn and keeps the set worth most together: with
+  200 seconds of a boss left, Avenging Wrath at 0 and 180 and Divine
+  Shield at 30 (worth 3), not the shield at once and one wrath (2);
+- a mark someone else left refuses the buddy's own abilities until it
+  runs out (another paladin's Hand of Protection: no Divine Shield for 2
+  minutes), and a party member bearing one is no one to give that ability
+  to (625l): read by the server from the marks on each character.
+Checked by `scripts/test-buddy-lockouts` (21 checks).
+
 **Kept quick** (the owner, 2026-10-30: "sounds performance intensive,
 maybe someday we can make this stuff into equations rather than discrete
 checks. For now this is fine."). Trying every moment within a cooldown
@@ -106,7 +141,8 @@ cooldowns. Now each use's worth comes from running totals of the windows'
 factor (a long buff's average is one subtraction), and the best next use
 from a running maximum (a queue of moments, each better than all earlier
 ones after it, so no moment is looked at twice): about 1 millisecond, and
-0.1 for a 5-minute fight. The step-by-step way is kept in the test as the
+0.1 for a 5-minute fight (with the lockouts and every order tried in
+lining up: 3.6 and 0.5). The step-by-step way is kept in the test as the
 reference, and 400 random fights agree with it. Equations in place of the
 steps (each window's edges as the only moments worth trying) stay the
 later direction.
