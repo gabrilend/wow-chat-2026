@@ -33,6 +33,27 @@ simulation focused on backgrounds."
 
 ## Current Behavior
 
+**The weights and the draw are built (2026-10-30), off by default; the
+server side waits for the owner's compile.**
+- `buddies_talent_draw.h` (plain arithmetic): each ability's weight from
+  the talents touching it (by points, or by the talent's own percent), and
+  the draw: every answer's priority nudged by a Gumbel draw scaled by its
+  weight, held so it reorders one concern's answers (about a point apart)
+  but never leaps a concern (fleeing at 39 always before healing at 34).
+  Checked by `scripts/test-buddy-talent-draw` (a quick test): twice the
+  weight wins about twice as often (1,231 to 2,399 wins in 20,000), every
+  answer still wins sometimes, a weighted heal never beats fleeing.
+- `buddies_talent_touches_data.h`, generated with 625a's table: each
+  talent's rank spells, and each ability it touches with the percent its
+  top rank states.
+- `buddies_talents.cpp` (waits for the compile; the compiler check passes,
+  with flags borrowed from the bot module): the "buddy talents" combat
+  strategy, whose multiplier applies the draw to every spell a buddy might
+  cast, its weights worked out from the talents it knows every 20 seconds;
+  put on every buddy while `Buddies.TalentWeights` is 1 or 2.
+- Not yet: 625c (every tree's list, cast in the trees' shares), 625d (the
+  moment's economy), set bonuses.
+
 A buddy fights by the bot module's strategies for its class and the tree
 the module guesses from its talents; each action has a fixed priority.
 A talent that improves an ability (more damage, less cost, a shorter
@@ -168,9 +189,23 @@ prefers but never leave it idle or walking into a tree.
    (a source patch to the bot module's action choice, or the buddy
    module's own strategy), and an action for an unknown spell is dropped.
 
+## The switches (2026-10-30, the design target: built both, the owner chooses)
+
+- `Buddies.TalentWeights`: 0 off (the default: buddies choose as the bot
+  module does); 1 a fixed raise per talent point (question 1's first
+  answer); 2 as much as the talent's own effect where the game states a
+  percent, and the per-point raise where it states a flat amount
+  (question 1's second answer).
+- `Buddies.TalentWeights.Broad`: how much a broad talent (a whole school,
+  every weapon attack) counts on each ability it covers, as a share of a
+  talent naming that ability: 100 (the default) or 50 (625a's question
+  1's two answers), any percent allowed.
+
 ## Open Questions
 
 1. How much more: a fixed raise per talent point, or as much as the
    talent's own effect (a talent adding 15% damage raises it by 15%)?
+   **Both built, behind `Buddies.TalentWeights` (1 and 2), 2026-10-30;
+   the owner chooses.**
 2. Should this live in the bot module (a patch, every bot) or only for
    buddies?

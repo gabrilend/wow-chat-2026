@@ -1,0 +1,22 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-talent-draw
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      a buddy's talents make weights, and the weighted draw favours weighted answers within a concern, in proportion, never leaping across concerns
+# quick-test: yes
+# ==== end of header ====
+# test-buddy-talent-draw - compiles and runs tests/buddy-talent-draw/draw.cpp
+# against the buddy module's talent draw (issue 625) and the generated
+# talent table, with no server.
+
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+OUT="${DIR}/tmp/tmp"
+mkdir -p "${OUT}"
+g++ -std=c++17 -O1 -Wall -Wextra -Werror -I"${DIR}/patches/B036-mod-buddies/mod-buddies/src" \
+    "${DIR}/tests/buddy-talent-draw/draw.cpp" -o "${OUT}/buddy-talent-draw" || exit 1
+nice -n 19 "${OUT}/buddy-talent-draw"
+# ==== footer of test-buddy-talent-draw ====
+# lines:      22
+# ==== end of footer ====
