@@ -73,6 +73,21 @@ ability's aura effects (`BUDDY_ABILITY_AURAS`, 216 of them: Shield Wall
 -60% taken, Mortal Strike -50% healing, Corruption 180 every 3 seconds).
 Checked by `scripts/test-buddy-marks` (18 checks), the last carrying
 Shield Wall into a tank's fight curve (2000 short without, none with).
+
+**The snapshot and the minute of events, built 2026-10-30 (committed,
+offline):** `buddies_fight_state.h`. The snapshot as plain data (the
+fight's time and windows; each member with health, resource, role,
+class, position, cast, cooldowns and marks, a pet naming its master; each
+enemy with health, rank, cast, marks, whom it attacks and its threat
+list), what kind of fight it is (a boss or rare elite makes it a boss
+fight), and what someone's marks add up to (layer 2). The minute of
+events: each hit and heal added as it comes and taken back off as it
+falls out of the minute, so damage taken, healing received and damage
+dealt per second, and each dealer's physical share, are always one
+division (over the time covered, at least a second); the enemies' health
+read once per snapshot, for the fight's time left. Checked by
+`scripts/test-buddy-fight-state` (12 checks), among them 4000 uneven
+events whose running sums match re-reading the whole minute.
 Nothing yet takes the snapshot, keeps the history, runs the layers on
 worker threads or hands their verdict to the draw. The page
 `docs/HTML/fight-forward-pass.html` (made by

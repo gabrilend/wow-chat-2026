@@ -1,0 +1,28 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-fight-state
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      the fight as the forward pass reads it: the snapshot, and a minute of events whose running sums match re-reading the minute
+# quick-test: yes
+# ==== end of header ====
+# test-buddy-fight-state - compiles and runs
+# tests/buddy-fight-state/state-check.cpp against the buddy module's
+# fight state (issue 625n), with no server.
+#
+# Usage: scripts/test-buddy-fight-state [DIR]   (--help: this text)
+
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+    sed -n '10,14p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+OUT="${DIR}/tmp/tmp"
+mkdir -p "${OUT}"
+g++ -std=c++17 -O1 -Wall -Wextra -Werror -I"${DIR}/patches/B036-mod-buddies/mod-buddies/src" \
+    "${DIR}/tests/buddy-fight-state/state-check.cpp" -o "${OUT}/buddy-fight-state" || exit 1
+nice -n 19 "${OUT}/buddy-fight-state"
+# ==== footer of test-buddy-fight-state ====
+# lines:      28
+# ==== end of footer ====
