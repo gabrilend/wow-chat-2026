@@ -225,6 +225,19 @@ and its damage effects (a single target's; an area spell's other victims
 not yet counted). The group's gold per hour is measured too: its
 members' money together against when first seen fighting, after a
 minute.
+
+**Bursts by whom they reach, 2026-10-30 (committed, offline):** an
+empowering buff's gain for each member is read from its own aura effects
+(cast haste for those who cast with mana, attack haste for the rest,
+damage dealt for all), on the member's share of the party's damage. A buff
+reaching the whole party (the spell table's targets 20 and 56: Bloodlust,
+Heroism) counts on everyone; one reaching only its caster (Avenging
+Wrath) on the buddy; one reaching a chosen ally (Power Infusion) on the
+member it would give most to (625l's "the one that can use it best"),
+written in the generated reach table as `area`. Checked (39 checks in
+all): Power Infusion leans as if on the mage dealing 3000 a second, not
+the rogue dealing 4000, whose energy-bound strikes it doesn't hasten. Not
+yet: casting it on that member (the cast action picks its own target).
 Nothing yet takes the snapshot, keeps the history, runs the layers on
 worker threads or hands their verdict to the draw. The page
 `docs/HTML/fight-forward-pass.html` (made by

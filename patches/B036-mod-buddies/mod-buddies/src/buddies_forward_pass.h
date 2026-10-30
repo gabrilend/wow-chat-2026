@@ -495,9 +495,27 @@ namespace BuddyForwardPass
             for (BuddyWindow::Buff const& buff : BuddyWindow::BUFFS)
                 if (Lower(buff.name) == r.name)
                 {
-                    double g = (1.0 + buff.gives.haste) * (1.0 + buff.gives.damage);
-                    a.burstFactor = r.self ? 1.0 + myShare * (g - 1.0) : g;
+                    // what it gives each member, from its own aura effects:
+                    // cast haste for those who cast with mana, attack haste
+                    // for the rest, damage dealt for all; on the member's
+                    // share of the party's damage. The whole party when it
+                    // reaches the party (Bloodlust); the buddy itself when
+                    // only itself (Avenging Wrath); otherwise the one ally it
+                    // would give most to (Power Infusion: 625l, "the one that
+                    // can use it best")
+                    BuddyMarks::Modifiers gives = BuddyMarks::Of(effects);
+                    auto gainOf = [&](Member const& m) {
+                        double haste = m.resourceKind == 0 ? gives.castHaste : gives.attackHaste;
+                        return haste * gives.dealt - 1.0;
+                    };
+                    auto shareOf = [&](Member const& m) { return partyDealt > 0.0 ? memory.DealtPerSecond(m.id, s.t) / partyDealt : 0.0; };
+                    double add = 0.0;
+                    if (r.area) for (Member const& m : s.party) add += shareOf(m) * gainOf(m);
+                    else if (r.self) add = myShare * gainOf(me);
+                    else for (Member const& m : s.party) add = std::max(add, shareOf(m) * gainOf(m));
+                    a.burstFactor = 1.0 + add;
                     a.burstLasts  = r.lastsMs / 1000.0;
+                    a.extras.clear();                                          // its marks are its burst, not a shield
                 }
             out[r.name] = Lean(Judge(s, memory, a, goldPerHour, &base), base);
         }

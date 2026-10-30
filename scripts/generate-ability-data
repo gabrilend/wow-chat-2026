@@ -429,13 +429,15 @@ h[#h + 1] = "};\n"
 -- For trying an ability as an answer (issue 625n, the answers layer): for
 -- every class ability with an aura the marks read or a heal: `self` 1 when
 -- every effect's first target is the caster itself (Shield Wall), 0 when it
--- can reach another (Pain Suppression); `heal` its direct heal at the top
--- rank before bonuses (-1: the caster's whole health, Lay on Hands, effect
--- 67); `lastsMs` how long its aura lasts (0: none, or until removed).
+-- can reach another (Pain Suppression); `area` 1 when it reaches the whole
+-- party or raid round its caster (targets 20 and 56: Bloodlust), 0 for one
+-- chosen ally (21: Power Infusion) or the caster; `heal` its direct heal at
+-- the top rank before bonuses (-1: the caster's whole health, Lay on Hands,
+-- effect 67); `lastsMs` how long its aura lasts (0: none, or until removed).
 local reachRows = 0
 h[#h + 1] = "// whom an ability reaches (self: only its caster), its direct heal (-1: the caster's whole health), and how long its aura"
 h[#h + 1] = "// lasts in milliseconds, for trying it as an answer (issue 625n)"
-h[#h + 1] = "struct BuddyAbilityReachRow { uint8_t cls; char const* name; uint8_t self; int32_t heal; uint32_t lastsMs; };\n"
+h[#h + 1] = "struct BuddyAbilityReachRow { uint8_t cls; char const* name; uint8_t self; int32_t heal; uint32_t lastsMs; uint8_t area; };\n"
 h[#h + 1] = "static BuddyAbilityReachRow const BUDDY_ABILITY_REACH[] = {"
 for _, c in ipairs(CLASSES) do
     local names = {}
@@ -443,17 +445,18 @@ for _, c in ipairs(CLASSES) do
     table.sort(names)
     for _, n in ipairs(names) do
         local a = BY_CLASS[c.id][n]
-        local marks, heal, self = false, 0, true
+        local marks, heal, self, area = false, 0, true, false
         for e = 1, 3 do
             if MARK_AURAS[a.aura[e]] then marks = true end
             if a.eff[e] == 10 then heal = math.max(heal, a.amount[e]) end
             if a.eff[e] == 67 then heal = -1 end
             if a.eff[e] ~= 0 and a.targetA[e] ~= 1 then self = false end
+            if a.targetA[e] == 20 or a.targetA[e] == 56 then area = true end
         end
         if marks or heal ~= 0 then
             local ms = DURATION[a.duration] or 0
             if ms >= 2147483647 then ms = 0 end
-            h[#h + 1] = string.format("    { %2d, %q, %d, %6d, %6d },", c.id, n:lower(), self and 1 or 0, heal, ms)
+            h[#h + 1] = string.format("    { %2d, %q, %d, %6d, %6d, %d },", c.id, n:lower(), self and 1 or 0, heal, ms, area and 1 or 0)
             reachRows = reachRows + 1
         end
     end

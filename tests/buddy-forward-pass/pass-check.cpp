@@ -208,6 +208,38 @@ int main()
         check(near(Step(c, calm).shortOf[2], 0), "a cast on no one known: nothing coming at the priest");
     }
 
+    // Power Infusion goes to the one it gives most to (625l): a mage (mana:
+    // its cast haste counts) dealing 3000 a second against a rogue (energy:
+    // cast haste is nothing to it) dealing 4000. PI's 20% cast haste on the
+    // mage's 3/7 of the party's damage: x(1 + 3/7 x 0.2); on the rogue,
+    // nothing. Bloodlust, reaching everyone, on all of it: x1.3
+    {
+        Snapshot pi = s; Memory mp;
+        pi.party[3].cls = 8; pi.party[3].resourceKind = 0;                     // the rogue's place: a mage
+        Member rogue; rogue.id = 5; rogue.cls = 4; rogue.resourceKind = 3; rogue.armour = 4000; rogue.level = 80; rogue.health = 18000; rogue.maxHealth = 18000;
+        Member shaman; shaman.id = 6; shaman.cls = 7; shaman.armour = 6000; shaman.level = 80; shaman.health = 16000; shaman.maxHealth = 16000;
+        pi.party.push_back(rogue);
+        pi.party.push_back(shaman);
+        pi.enemies[0].threat.push_back({ 5, { 1000, 2, 0, true } });
+        for (int t = 1; t <= 30; ++t)
+        {
+            mp.Add({ double(t - 1), HIT, BOSS, TANK, 0, RAW * through, true });
+            mp.Add({ double(t - 1), HEAL, HEALER, TANK, 0, 9000, false });
+            mp.Add({ double(t - 1), HIT, ROGUE, BOSS, 0, 3000, false });            // ROGUE (4) is the mage now
+            mp.Add({ double(t - 1), HIT, 5, BOSS, 0, 4000, true });
+            mp.Sample(t, 90000 - 1000.0 * t);
+        }
+        mp.Forget(30);
+        Answer piOnMage; piOnMage.burstFactor = 1.0 + 3.0 / 7.0 * 0.2; piOnMage.burstLasts = 15;
+        double expect = Lean(Judge(pi, mp, piOnMage, 0), Step(pi, mp));
+        auto lp = Leans(pi, mp, 2, 0);
+        auto ls = Leans(pi, mp, 5, 0);
+        std::printf("   (power infusion %.4f, bloodlust %.4f)\n", lp["power infusion"], ls["bloodlust"]);
+        check(near(lp["power infusion"], expect, 1e-9), "Power Infusion leans as if on the mage, whose casts it hastens (not the rogue, who deals more)");
+        Answer lust2; lust2.burstFactor = 1.3; lust2.burstLasts = 40;
+        check(near(ls["bloodlust"], Lean(Judge(pi, mp, lust2, 0), Step(pi, mp)), 1e-9), "Bloodlust, reaching everyone, leans on all the party's damage");
+    }
+
     std::printf("\n%d passed, %d failed\n", passed, failed);
     return failed == 0 ? 0 : 1;
 }
