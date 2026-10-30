@@ -5,7 +5,7 @@
 - Phase: 9
 - Parent: 921 (Alterac Valley's shared weather)
 - Switch: `Buddies.AlteracWeather` (the parent's)
-- State: planned
+- State: in progress (built; waits for the compile; one open question)
 
 ## Origin
 
@@ -14,8 +14,24 @@ The owner, 2026-10-29 (whole request in 921): "it oscillates in a pattern
 
 ## Current Behavior
 
-Not built. Each Alterac Valley copy gets its zone's stock weather,
-separately.
+**Built 2026-10-30 (the deck committed; the server side waits for the
+compile, compiler-checked):**
+- `buddies_weather_deck.h`: the deck (seven kinds, each once, shuffled
+  from the seed, never opening with the last deck's close), each turn six
+  minutes swelling and fading on half a sine, slush as rain, then rain and
+  snow in spells of 20 to 40 seconds, then snow; everything from the seed
+  and the time, so every copy agrees. `scripts/test-buddy-weather` (a
+  quick test): over 10,000 decks each kind exactly a seventh, no
+  stutter, two seeds differ, the swell and fade, slush's three parts. Its
+  `--timeline SEED HOURS` prints the sky every 20 seconds, for pages.
+- `buddies_weather.cpp`: the seed drawn from the system's randomness at
+  the first pass; every 5 seconds, while `Buddies.AlteracWeather` is 1,
+  each Alterac Valley copy (map 30, zone 2597) is given the sky of the
+  moment when its kind or strength (by 0.05) has moved on; arrivals get it
+  from the copy. `.buddy weather` (game master) says the sky and the rest
+  of the deck.
+- Known: "fine" is weather state 0, which a player arriving in a copy is
+  shown as the zone's own default weather rather than clear skies.
 
 ## Intended Behavior
 

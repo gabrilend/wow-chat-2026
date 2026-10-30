@@ -35,6 +35,7 @@ uncommitted until the owner's compile builds it.
 | 625 | the talent weights and the weighted draw among a concern's answers: `buddies_talent_draw.h`, `tests/buddy-talent-draw/`, `scripts/test-buddy-talent-draw` (committed); `buddies_talents.cpp/.h` and their registration in `buddies_roam_strategy.cpp`, `buddies_loader.cpp` (waits) | `Buddies.TalentWeights` 0 off, 1 or 2 | **1** a fixed raise per talent point, or **2** the talent's own percent; and `Buddies.TalentWeights.Broad` **100** or **50** (a broad talent's share) | core yes, server waits | `buddies_talents.*`, the two registration lines, the draw header and its test |
 | 617s2, 617s3 | the close follow: a ring round the leader at 4 yards, a tank at the front, the rest sharing places by nearness; "circle me" / "close follow" start it, "follow me" / "go away" end it: `RingPlaces`, `AssignRing` and the order words in `roam/buddy_follow_core.h`, checks in `tests/buddy-follow-core` (committed); the step and orders in `buddies_follow.cpp/.h`, `buddies_orders.cpp` (waits) | the order words; `Buddies.CloseFollow.InCombat` 0 or 1 | **0** the ring only when asked, or **1** also while the leader is in combat | core yes, server waits | the ring block in the follow step, the two order words, `RingPlaces` and `AssignRing` |
 | 617s4 | `.buddy wider` (5 yards a step, up to 25) and `.buddy closer` (back to 5): the ring's radius per leader; the rule in `roam/buddy_follow_core.h` and its checks (committed); the commands in `buddies_follow.cpp`, their entries in `config/custom-gm-commands.lua` and the generated reference and help (wait) | the commands | none (the owner's numbers) | rule yes, commands wait | the command class, `RingRadius`, the two entries |
+| 921, 921a | Alterac Valley under one shared sky: the shuffled weather deck, slush included, in `buddies_weather_deck.h` with `tests/buddy-weather/` and `scripts/test-buddy-weather` (committed); `buddies_weather.cpp` (every copy given the sky of the moment, `.buddy weather`), its registration and reference entry (wait) | `Buddies.AlteracWeather` 0 or 1 | none open (921's turn length and the storm's effects stay questions) | deck yes, server waits | `buddies_weather*`, the registration line, the entry |
 
 ## Choices waiting for the owner
 
@@ -56,4 +57,5 @@ Kept as each candidate is looked at.
 | Issue | Why not (yet) |
 |-------|---------------|
 | 617s1 | compass directions per roster slot: the ring shares places by nearness instead; build if the owner wants each buddy to keep its own compass point |
+| 921b | the wandering storm: next, with the weather page |
 | 625c, 625d | every tree's list in the trees' shares, and the moment's economy: large, next after the talent draw is seen in game |

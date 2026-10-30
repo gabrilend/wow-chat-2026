@@ -1,6 +1,6 @@
 # Conversation Summary: e143dbfe-ff43-48be-8bd4-4d54fd7a325d
 
-Generated on: 2026-10-30 10:33:34
+Generated on: 2026-10-30 10:56:02
 Models: claude-opus-5-5
 
 --------------------------------------------------------------------------------
@@ -342,6 +342,305 @@ distance from the others.
 
 One thing I'll ask a second time later, in different words: when you picture the
 painted map working well, what would you expect to see from above?
+
+--------------------------------------------------------------------------------
+
+### User Request 4
+
+<pasted_content id="415d">
+  Why: The weapon's own damage roll is bigger on a slow weapon with the same
+  damage per second.
+> Most of these count attack power at a fixed speed for the weapon type (dagger
+> 1.7, other
+> one-hander 2.4, two-hander 3.3, ranged 2.8), so only the weapon's roll favours
+> slow.
+</pasted_content id="415d">
+
+
+whoa, fixed speed? That doesn't seem right. Things like heroic strike add flat
+damage bonuses, is that what you're thinking of?
+
+> - Speed versus strength: should a slightly weaker weapon at the right speed
+> ever beat a stronger
+>     one at the wrong speed? Or is speed only a tie-breaker?
+
+speed is so important but sometimes you can deal more damage with a faster
+weapon because it gives attack power or strength or similar. Depending on how
+much the class favors weapon swing related things, we can prefer the "weaker"
+weapon, because the way that we weight weapon speed will naturally give us the
+"weaker, slower" weapon as a result sometimes, and not others. We're updating
+the stat weights based on abilities learned (from the trainer) and talents
+picked, and it should be dynamic to each buddy-bot. Can we also write in that if
+they need to choose abilities to train (because they don't have enough coin,
+they can't get all of them or something) then they'll pick ones that their stat
+weights most align with?
+
+
+
+<pasted_content id="415d">
+> - When a boss counts as learned: what tells the system to stop learning a
+> boss? For example, the
+>     same weak phase in the last few fights, the timings barely moving, or a set number of fights.
+>     And should you be able to switch a boss's learning back on?
+</pasted_content id="415d">
+
+
+we will turn it off manually when we've tested every boss thoroughly.
+
+> - Keeping the distilled fight notes: forever (they're small), or only until
+> that boss's plan is
+>     cached? And should they go into git, so the learning travels to other machines?
+
+learning travels, but we can remove them once we've built the plan. They are
+consumed, yet stored in git. Also, if the fight changes, we want to re-create
+them from scratch, so make sure we fingerprint anything related to the boss so
+we can both deterministically re-create the fight (not common) and also notice
+when things related to the fight have changed.
+
+> Background: whispering Sargobras will open his buddy-making menus from a
+> distance, so you can
+>   make a buddy without walking to him.
+
+we can interact with the buddy-making menus, not open them.
+
+> 1. Which account does the whisperable Sargobras live on? The stand-in account
+> (already a bot
+>      account with no owner), or a new account of his own?
+
+Sargobras needs his own account for the functionality related to him being every
+guild's guild master. Can you find that and use that for guidance?
+
+> 2. Both factions: one Sargobras with the faction rule patched so both sides
+> can whisper him? Or
+>      two characters, Alliance and Horde, with slightly different names?
+
+one character, patched faction rule.
+
+> 3. "All of them respond": every Sargobras near the person whispering, or every
+> Sargobras in the
+     world?
+
+a single sargobras responds. If there are Sargobrases from multiple level tiers,
+then the lowest level one is utilized first.
+
+> 4. A buddy name that's already taken: pick a random name instead, or refuse
+> and ask again?
+
+we don't get to pick buddy names. How does the auto-generation already handle
+this? My instinct is that we should just try again until we get a valid name.
+
+>   5. The numbers. Do these feel natural, or should any change?
+>
+>      - each bot wants 4 yards of space (relaxed within 10 yards of its goal)
+
+yes but on un-even terrain (lots of obstacles) the personal space bubble is
+reduced until they navigate through that to a more open area. This might be
+overwritten with the movement map caching we're going to do with the stand-in
+walking around the map taking screenshots of everything until we've fully
+painted the world, similar to photogrammetry style but not as detailed. So long
+as we get two angles of the same area, that should be good, and we don't have to
+do things like the tops of mountains and such for now. Right now for pathfinding
+we're kinda building a bunch of systems and tools that we can combine into an
+ultimate pathfinding solution once we've build all the mechanics, so focus on
+making levers that can be pulled and data sources that we can pull from.
+
+>      - unexplored ground costs 15% more to walk on
+
+this would make sense if we were trying to find the fastest way to walk
+somewhere, but it doesn't look very natural. Bots should be more like people,
+and they will be once we've built out their "visual map" of the area. Except
+"vmaps" are already taken, hmmmm....
+
+     - a follower aims 6 yards ahead
+
+not sure about this, what does that mean?
+
+     - a bot turns at most 240° per second
+
+sure I guess
+
+
+
+<pasted_content id="415d">
+> 6. A tiny pocket of an area. In one test, 36 bots were all sent into a
+> 260-square-yard pocket by
+>      the Firegut fence and stood 2 yards apart. Should a pocket that small be skipped, with the
+>      bots going on to the next part? Or should it take only as many bots as fit, with the rest
+>      going elsewhere?
+</pasted_content id="415d">
+
+
+sounds like they were clumped up for some reason. Why were they all trying to
+touch the same waypoint? Also, creatures in WoW can pass through each other so
+it's probably not too big of a concern.
+
+> 7. Five ways to find a path, side by side. When you compare them, what decides
+> which is better:
+>      getting stuck least, the least wasted walking, the most even spread, or how it looks to you?
+
+how it looks for me. Can we switch them in Lua? Once we have a running server
+I'll watch in-game and you can try the different methods one-by-one. We'll see
+if they appear natural.
+
+
+
+<pasted_content id="415d">
+> 8. Stuck on the way to a dock or portal. A buddy counts as stuck when it gains
+> less than 10
+>      yards toward you in 90 seconds. While it's walking to a dock or portal, the thing that
+>      matters is the dock, so right now the rule is switched off there. Should it measure progress
+>      toward the dock instead?
+</pasted_content id="415d">
+
+
+this is a fallback, if buddies are getting stuck, we should find out why, and
+fix that error instead. Our pathfinding must be rock-solid, and right now it is
+nascent. Don't worry if it's broken now, because we'll steadily improve it until
+it's fine.
+
+
+
+<pasted_content id="415d">
+> 9. More than five followers in the arc follow. When moving distances, buddies
+> trail behind you
+>      in an arc. You gave spacing for one to five buddies, but a clan is seven. Spread evenly,
+>      seven end up a third of a yard apart, which is narrower than a body. Should the arc grow
+>      wider, or should the extra buddies form a second row behind the first?
+</pasted_content id="415d">
+
+
+wider but no more than half a circle. Make it dynamic too because we'll use
+semi-circle arc positioning in many situations. Could also add a second layer
+arc, so it's like... maybe 3 in the closest radius, then 2 more behind, then
+another 2 behind them.
+
+> 10. Which monsters count as "quest monsters" when buddies spread through a
+> questing area? Any
+>       quest's target, or only targets of quests you or your buddies actually have?
+
+any monsters that are in the same spawn-zone as the player. Remember, there are
+overlapping spawn-zones.
+
+can you record these and add each of their issues to the todo list and then ask
+me 10 more open questions with sufficient context?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 4
+
+> Checking in the game's spell file which abilities really use the fixed-speed
+> rule, before answering your challenge.
+
+> Recording the answers now. First, the Sargobras whisper issue:
+
+> Now the weapon-speed answer and the correction (Stormstrike does not use the
+> fixed-speed rule; the file says so):
+
+> Now training choices in the spell-learning issue:
+
+> Fight notes (git, consumed, fingerprinted):
+
+> Now the painted map. Checking what "6 yards ahead" is and why the Firegut bots
+> clumped:
+
+> Now the intended behavior for the space bubble and unknown premium:
+
+> Still recording. Next, marking the Sargobras question in the main buddy issue
+> as answered:
+
+> Answers recorded. Adding each issue's build work to the todo list:
+
+I've written all your answers into their issues word for word and added 11 build
+items to the todo list. Nothing is committed yet.
+
+## On "fixed speed"
+
+It isn't Heroic Strike. I checked the game's spell file. Heroic Strike uses the
+plain "add weapon damage" effect, and its flat bonus lands on your next real
+swing. The fixed-speed rule is a separate effect kind. When an ability uses it,
+the server counts the attack-power part of the hit as if the weapon had a fixed
+speed: 1.7 for a dagger, 2.4 for other one-handers, 3.3 for a two-hander, 2.8
+for ranged. The weapon's own damage roll is still the real weapon's.
+
+Player abilities with the fixed-speed kind:
+
+- Warrior: Mortal Strike, Overpower, Whirlwind, Devastate
+- Rogue: Sinister Strike, Backstab, Ambush, Hemorrhage
+- Paladin: Crusader Strike
+- Death knight: Obliterate, Plague Strike
+- Hunter: Aimed Shot
+
+One correction to my last report: Stormstrike is the plain kind, not
+fixed-speed. I've fixed that in the issue.
+
+## Why the Firegut bots clumped
+
+They weren't all chasing one waypoint. The test page put the player in a pocket
+about 16 yards across, then treated that pocket as the whole area to spread
+over. In your earlier picture of the same spot, the area was 47,569 square
+yards. So all 36 bots got targets inside the pocket. The bug is in how the test
+page picks the area. It's on the todo list.
+
+## Ten more open questions
+
+**Sargobras**
+
+1. **A whisper that isn't a command.** In October you said that once a player
+   has added Sargobras as a friend, any message to him opens his dialogue menu.
+   Today you said whispers work his menus without opening them. When someone
+   whispers him something that isn't a command, should his menu appear, or
+   should he reply with the list of commands he understands?
+2. **"Sargobras has logged off."** When you log in as the only member of your
+   guild online, the game sometimes shows the guild's own "Sargobras has logged
+   off" line, as if he left the moment you arrived. How often: every lone login,
+   one in a few, or once a day per character?
+3. **Bot players choosing buddies.** Bots that play as owners also get buddies
+   from Sargobras. Should a bot's controlling player be able to whisper the
+   choice for it ("Sargobras: paladin")? Or does the bot always choose for
+   itself?
+
+**Pathfinding**
+
+4. **The point a bot steers toward.** A bot's planned route is a chain of
+   one-yard squares. It doesn't step from square to square. It steers toward a
+   point on the route 6 yards ahead of itself, like a driver looking down the
+   road instead of at the bumper. A farther point gives rounder, lazier corners
+   that cut inside bends. A nearer point traces every turn exactly and looks
+   twitchy. Should 6 yards stay, become a lever, or change with the ground
+   (nearer in clutter, farther in the open)?
+5. **A name for the "visual map".** This is the stand-in walking the world
+   taking pictures from at least two angles to paint the ground ahead of time.
+   "vmaps" is taken: it's the server's existing line-of-sight data. Some
+   options: "sight map", "the survey", "the album", "eye map". Or a name of your
+   own?
+6. **Trails.** Should ground that has been walked often get cheaper to walk, so
+   worn paths form the way deer trails do? In tests, the cost settings changed
+   coverage less than ordinary run-to-run variation did. So the answer would
+   come from watching, not from numbers.
+7. **The "forces only" way.** One of the five ways uses no map at all. Bots are
+   pushed away from walls and pulled toward their goal. It can't get around a
+   long wall or climb out of a dip. Should it stay pure, as a demonstration of
+   what forces alone do? Or should it get a memory, where squares it has stood
+   in push it away so it can't sink back into the same dip?
+8. **Ties on flat ground.** On a flat floor, going around an obstacle on the
+   left costs exactly the same as on the right, so the last bit of computer
+   rounding picks the side. Should a tie always go to a fixed side, such as the
+   buddy's own circling direction, so the choice is made on purpose?
+9. **The town-visit unstuck hop.** Today, a buddy in town that gains less than
+   10 yards in 90 seconds is hopped to a random spot within 30 yards. By your
+   answer about docks, that's a fallback that hides the real fault. Should it be
+   removed, so a stuck buddy stays stuck and gets reported loudly with where and
+   why?
+
+**Questing and travel**
+
+10. **An island buddy.** You're on a dock and your buddy is on the same
+    continent, but it is neither at your dock nor at another stop of your ship.
+    It walks toward your dock, which may have no land route (for example
+    Rut'theran Village, the island across from Darnassus). Should it look for
+    the nearest stop of that ship instead? Or should it plan a full route over
+    walking, boats and portals, like the route search you described for crossing
+    between continents?
 
 --------------------------------------------------------------------------------
 

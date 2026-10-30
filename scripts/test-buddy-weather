@@ -1,0 +1,21 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-weather
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      Alterac Valley's shared weather deck: each kind exactly its share, no kind twice running, turns swell and fade, slush trades rain for snow
+# quick-test: yes
+# ==== end of header ====
+# test-buddy-weather - compiles and runs tests/buddy-weather/weather-check.cpp
+# against the buddy module's weather deck (issue 921a), with no server.
+
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+OUT="${DIR}/tmp/tmp"
+mkdir -p "${OUT}"
+g++ -std=c++17 -O2 -Wall -Wextra -Werror -I"${DIR}/patches/B036-mod-buddies/mod-buddies/src" \
+    "${DIR}/tests/buddy-weather/weather-check.cpp" -o "${OUT}/buddy-weather" || exit 1
+nice -n 19 "${OUT}/buddy-weather"
+# ==== footer of test-buddy-weather ====
+# lines:      21
+# ==== end of footer ====
