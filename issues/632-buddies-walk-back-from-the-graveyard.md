@@ -60,9 +60,33 @@ the run back is the module's straight path.
 
 1. **Who counts as able to resurrect:** a player character of its side
    knowing a resurrection spell (priest, paladin, shaman, druid in or out
-   of combat), within how many yards (say 40)?
+   of combat), within how many yards (say 40)? **Answered 2026-10-30**
+   (the owner, word for word): "anyone on their side who knows one.
+   Within 70 yards probably." Anyone on its side who knows a
+   resurrection spell, buddies included, within 70 yards.
 2. **How long it waits** for that someone before releasing anyway (if it
-   never comes)?
+   never comes)? **Answered 2026-10-30** (the owner, word for word): "it
+   waits until they are out of range. After 10-20 seconds it whispers
+   them asking them for a rez. "rez?" "rez me please?" "pls rez" etc."
+   It waits as long as someone able to resurrect it is in range,
+   releasing when they leave it; after 10 to 20 seconds of waiting it
+   whispers them a short request in its own words ("rez?", "rez me
+   please?", "pls rez").
 3. **"Roll down or straight up tangent line to hills":** straight down
    and straight up the slope (along the steepest direction), or along the
-   hill's side, level, the way a road winds around it?
+   hill's side, level, the way a road winds around it? **Answered
+   2026-10-30** (the owner, word for word): "I don't know the context,
+   but in general we should have two ways to ascend - either walk
+   straight to the top, or if there's not a clean path to do so (slopes
+   that are too great to climb) between us and the apex, then we orbit
+   with decreasing radius, increasing again if we get stuck, trying not
+   to lose elevation, until we can get it - if we've ascended a bunch and
+   reach some rocky terrain, or if it starts opening up on the opposite
+   side to the direction we're orbiting it, or if there's a road that
+   appears in the off-rotation direction, then we can switch rotation
+   directions, as if we were on a switch-back." Two ways up a hill:
+   straight to the top when the way is clean; otherwise circling it,
+   the circle tightening as it climbs, widening again when stuck, never
+   giving up height, and turning back the other way (a switchback) on
+   rocky ground after a good climb, where the hill opens up the other
+   way, or where a road appears that way.

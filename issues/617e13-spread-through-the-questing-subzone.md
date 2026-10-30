@@ -189,7 +189,13 @@ reaching 60 yards instead of 30. The knobs:
 1. **The sub-zone's edges.** The client's area table gives each sub-zone
    (area id) but not its outline; the area centres (617e2) and the map's
    area grid can. Spread "through the sub-zone": over the parts of it that
-   are walkable and hold quest monsters, or all of it?
+   are walkable and hold quest monsters, or all of it? **Answered
+   2026-10-30** (asked as "which monsters count as quest monsters", the
+   owner, word for word): "any monsters that are in the same spawn-zone
+   as the player. Remember, there are overlapping spawn-zones." Buddies
+   spread over the monsters of every spawn zone (the fences of one kind
+   of creature, 617e14d) the player stands in, all of them where zones
+   overlap, whether or not anyone has a quest for them.
 2. **How far behind** a following buddy may be before it counts as left
    behind?
 3. **A test character for the scripted run**: may the test log in a
@@ -199,6 +205,21 @@ reaching 60 yards instead of 30. The knobs:
    until answered: evenly across the 2 yards, the ends at a yard each side
    and the middle on the track, which puts seven a third of a yard apart,
    closer than a body is wide. Wider for more (the half circle growing),
-   or a second row behind the first?
+   or a second row behind the first? **Answered 2026-10-30** (the owner,
+   word for word): "wider but no more than half a circle. Make it dynamic
+   too because we'll use semi-circle arc positioning in many situations.
+   Could also add a second layer arc, so it's like... maybe 3 in the
+   closest radius, then 2 more behind, then another 2 behind them." The
+   arc widens with the number of followers up to a half circle, never
+   more; past what a half circle holds at a body's width apart, arcs are
+   layered behind, 3 in the nearest, then 2, then 2 for a clan of seven.
+   The arc placement is one shared piece (a count, a radius, the facing,
+   the layer sizes in; the spots out), reused wherever buddies stand in
+   a half circle, not built into following alone.
 5. **How often a follower at rest rolls its one-in-ten mingle**: every 5
-   seconds is ours, until answered.
+   seconds is ours, until answered. **Answered 2026-10-30** (the owner,
+   word for word): "naturalizing NPC behavior is a complex topic. We
+   should just build a bunch of activities they could do and try to make
+   them feel natural." The mingle stays as one activity among many; what
+   a buddy does at rest becomes a set of activities to build and judge
+   by feel, not a tuned number.

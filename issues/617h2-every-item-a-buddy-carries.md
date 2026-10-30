@@ -58,6 +58,30 @@ with:
 
 Then the gaps filled, one rule per kind (open questions decide which).
 
+**A plan for each item, made when it is picked up** (the owner,
+2026-10-30, word for word: "Remember, everytime a buddy-bot picks up an
+item, they decide immediately what they want to do with it, and only
+update this plan if a new items plan would change based on whether or
+not they did something different with it, like hold onto it (a pearl for
+a recipe they know for example) or if they sold it (finally have enough
+money to buy that 2h axe from the AH) etc."). The moment a buddy picks
+something up, it decides what that item is for (wear it, keep it for a
+recipe it knows, keep it to use, earmark it for the owner, give it to a
+clan-mate, sell it to a vendor, put it on the auction house), and keeps
+that plan with the item. Plans are not revisited on every tick: an
+item's plan changes only when a newer item's plan would come out
+differently depending on it (a pearl kept because a newly learned
+recipe needs it; an item now sold because the money would finally buy
+the two-handed axe it wants from the auction house). The plans are what
+"go sell", the earmarks and the full-bags asking (623) read. The plans
+are every use an item can have (the owner, 2026-10-30, asked whether to
+add disenchanting: "yeah. any use you can think of."): besides those
+above, disenchant it, use it in a profession it has, open it, read or
+learn it, feed it to a pet, and any other use the catalogue finds. Not
+shown to the owner (asked about a command listing them: "nah. They might
+tell the player if asked when we set up llm capabilities but that's for
+later.").
+
 ## Suggested Implementation Steps
 
 1. The catalogue generator (Lua, reading the world database read-only),
@@ -69,6 +93,10 @@ Then the gaps filled, one rule per kind (open questions decide which).
 4. Each new use rule; a test per rule where it can be checked offline.
 
 ## Open Questions
+
+
+
+
 
 1. Openable items (a bag of coins, a clam, a locked box a rogue opens):
    open at once on pickup, or keep?

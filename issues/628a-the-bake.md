@@ -9,6 +9,11 @@
 - Related: 160 (the client caches creature names and must be told when
   they change), 617t1 (stand-ins: the same bake would serve them)
 - Priority: Medium
+- State: kept only as a requirement of 634 (monster bots: a creature's
+  look baked onto a bot), built when 634 is; its parent 628 is not
+  implemented (the owner, 2026-10-30: "the architecture is important,
+  but we don't need it built for it's own sake. If something else
+  depends on it, consider it a requirement dependency.")
 
 ## Origin
 

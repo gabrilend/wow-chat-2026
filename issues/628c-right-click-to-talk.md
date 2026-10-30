@@ -8,6 +8,9 @@
 - Related: 617y (spoken orders), 617m (language-model buddies), 617h2
   (every item a buddy carries: what it has to give)
 - Priority: Medium
+- State: will not implement (2026-10-30, with its parent 628; nothing
+  else depends on it); to be moved to issues/will-not-implement/ with
+  the next commit
 
 ## Origin
 

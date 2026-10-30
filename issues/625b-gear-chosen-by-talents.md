@@ -108,7 +108,15 @@ preference: a weapon group as the talents name them (axes and polearms;
 maces; swords; daggers and fist weapons; swords and axes...) and a grip
 (one two-hander, or a one-hander in each hand, or a one-hander with a
 shield or off-hand item). It is drawn when the buddy is made, from what
-its class and shape can use.
+its class and shape can use, weighted by the shape's talent plan (the
+owner, 2026-10-30, word for word: "yeah weighted by the plan! Remember
+we need to calculate dynamically because sometimes we make buddies or
+stand-ins with odd levels like 56 and 23"). The weighting is worked out
+when the buddy is made, from the talents the plan reaches at that
+buddy's own level, not from a table made per level: a level 23
+Combat rogue whose plan has not yet reached Hack and Slash draws from
+everything the class can use, weighted by the talents it does have; a
+level 56 one weighs its weapon talents fully.
 
 **Only the weapon talents follow the preference** (decided 2026-10-22).
 Where a buddy's talent plan includes a weapon-type talent, it takes the
@@ -135,12 +143,79 @@ include the one-hand ones (Nerves of Cold Steel, Threat of Thassarian),
 then a one-hander in each hand. The runeblade rule (718: the 55 and 57
 buddies carry the Runed Soulblade) applies to two-hand preferences.
 
-**Fast and slow (open question 3).** Some talents and abilities do more
-with fast weapons (poisons and other per-hit effects, off-hand hits),
-others with slow ones (abilities that add the weapon's damage, a
-two-hander's big swings). The weapon preference above doesn't decide
-speed; how a buddy weighs a fast weapon against a slow one of its group
-is open.
+**Fast and slow: from the same ability weights** (the owner,
+2026-10-30, word for word: "how about instead we use the talent picking
+heuristic system that determines how often we use certain abilities,
+and cause certain abilities that contain certain texts like "weapon
+damage" or "weapon swing" or similar to favor faster or slower weapons
+depending on the type of ability it is and how often you use it and what
+it procs and... actually a lot of stuff, can you give me a short report
+on that?"). No simulation: each ability the buddy uses leans toward fast
+or slow by what kind of ability it is, and the leans are added up,
+each scaled by how often the buddy uses that ability (625's weights). How
+each kind of ability leans was read in the server's own code on
+2026-10-30:
+
+- **Plain swings lean neither way.** A swing's damage and its attack
+  power bonus both grow with the weapon's speed, so damage per second is
+  the same fast or slow.
+- **Abilities that add the weapon's damage lean slow.** Their spell
+  effect says so exactly (effect types 17, 31, 58 and 121; the words
+  "weapon damage" in the tooltip are a check). The weapon's own roll is
+  larger on a slow weapon of the same damage per second. The "normalized"
+  kind (121) counts attack power at a fixed speed (1.7 for daggers, 2.4
+  other one-handers, 3.3 two-handers, 2.8 ranged; the server's attack
+  power multiplier), so only the weapon's roll leans; the plain kinds
+  lean further, since their attack power part is counted at the real
+  speed too. Read from Spell.dbc on 2026-10-30, the player abilities with
+  the normalized kind: Mortal Strike, Overpower, Whirlwind, Devastate,
+  Sinister Strike, Backstab, Ambush, Hemorrhage, Crusader Strike,
+  Obliterate, Plague Strike, Aimed Shot. With the plain kind (58):
+  Heroic Strike, Raptor Strike, and Stormstrike's two strikes. (The
+  owner asked, 2026-10-30, "whoa, fixed speed? That doesn't seem right.
+  Things like heroic strike add flat damage bonuses, is that what you're
+  thinking of?": no; Heroic Strike's flat bonus is the "on next swing"
+  kind below, and the fixed speed is a separate rule, applied only to
+  the attack power part of the normalized abilities.) Then, the same
+  day, word for word: "that seems dumb and wrong. We should use the
+  actual weapon speed." That rule change is 813; where it is on, the
+  normalized kind leans slow as the plain kind does.
+- **"On next swing" abilities lean slow** (Heroic Strike, Cleave, Maul,
+  Raptor Strike: flagged "on next swing" in the spell's attributes): a
+  flat bonus on each swing, and a slow weapon's swing is bigger anyway.
+- **Effects by chance on each hit lean fast** (a fixed percentage:
+  Deadly Poison, Combat Potency on off-hand hits): more hits, more procs.
+- **Effects by procs per minute lean neither way on swings, slow on
+  abilities** (the server's chance is speed × rate / 60): on swings the
+  speed cancels out, but an instant ability is one hit whatever the
+  speed, so a slow weapon's higher chance per hit is a gain.
+- **Extra attacks with a wait between them lean slow** (Sword
+  Specialization, Hack and Slash, Windfury Weapon): the wait caps how
+  often they fire, so each one's size, which grows with speed, decides.
+  Which of them have a wait, and how long, is read from the world
+  database's proc table (its cooldown column), not assumed: not yet
+  checked for these three.
+- **The off hand is weighed apart from the main hand**, by the
+  abilities that strike with each hand.
+
+The sum gives each hand a lean: fast, middling or slow.
+
+**Speed is weighed with the stats, not after them** (the owner,
+2026-10-30, word for word: "speed is so important but sometimes you can
+deal more damage with a faster weapon because it gives attack power or
+strength or similar. Depending on how much the class favors weapon
+swing related things, we can prefer the "weaker" weapon, because the way
+that we weight weapon speed will naturally give us the "weaker, slower"
+weapon as a result sometimes, and not others. We're updating the stat
+weights based on abilities learned (from the trainer) and talents
+picked, and it should be dynamic to each buddy-bot."). A weapon's score
+is one sum: its stats by the buddy's stat weights, plus its speed by the
+hand's lean, the lean as large as the buddy's weapon-swing abilities are
+used. A buddy that leans hard on weapon-damage abilities may take a
+slower weapon with fewer stats; one that barely swings takes the stats.
+Neither rule is a tie-break; both come out of the one score, worked out
+for each buddy from the abilities it has learned and the talents it
+took, and again whenever either changes.
 
 ## Suggested Implementation Steps
 
@@ -169,7 +244,9 @@ is open.
 ## Open Questions
 
 1. **The first draw:** at random among what the class can use, or
-   weighted by the shape's talent plan?
+   weighted by the shape's talent plan? **Answered 2026-10-30:** weighted
+   by the plan, worked out at the buddy's own level (above, word for
+   word).
 2. **"Stronger":** by the buddy's stat weights for the item (damage per
    second and stats together), or by weapon damage per second alone?
 3. **Fast or slow, and simulations.** The owner asked whether cached
@@ -182,4 +259,14 @@ is open.
    standard target, and writes a table "shape → preferred speed band per
    hand". Buddies read the table; nothing runs in game. It would be
    regenerated when a shape changes. Worth building, or is weapon damage
-   per second, with the preference above, good enough?
+   per second, with the preference above, good enough? **Answered
+   2026-10-30:** neither: each ability leans fast or slow by its kind,
+   scaled by how often it is used (above, word for word, with how each
+   kind leans).
+4. Does speed break a tie only, or count against strength (a slightly
+   weaker weapon of the right speed chosen over a stronger one of the
+   wrong speed)? **Answered 2026-10-30:** counted with the stats in one
+   score, per buddy, so the weaker slower weapon wins sometimes and not
+   others (above, word for word).
+5. Which effects wait between triggers, and how long, from the world
+   database's proc table: still to be read before the leans are built.

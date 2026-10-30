@@ -24,7 +24,10 @@ functions, A, B, and C, with these arguments, 1, 2, and 3, every time an
 object enters the radius. Could do other such things like 'when a spell is
 cast on this item' or whatever. Do you think that would be performant?"
 2026-10-04: "yes please. expanding the server's backend capability
-toolbox."
+toolbox." Asked again 2026-10-30 whether to plan it, so the buddies'
+5-second distance look (617c2) can go: "yes, but, why were we checking
+every 5 seconds? What is it used for?" (answered in conversation: the
+proximity party's seating, below in Current Behavior and in 617c2).
 
 ## Current Behavior
 
@@ -64,6 +67,57 @@ listen to it, and game objects and players have no such brain.
   receive them as an event, so either side can use it.
 - **Gone with their object**: a trigger is removed when its object leaves
   the world; a trigger can also be removed by name.
+- **A buddy's bulletin board** (the owner, 2026-10-30, word for word:
+  "buddies should be aware of everything within 70 yards of them. They
+  should all be on the concern list. So, radius triggers only to put
+  things up on the mental bulletin board, or remove them if they're far
+  enough away. Though certain bosses might have more important issues
+  and flag carriers in PvP should be entirely line-of-sight based (from
+  the bot's head, not their feet)"). The first user: each buddy (and
+  bot) carries a 70-yard trigger whose only actions are to pin what
+  enters onto its concern list and unpin what leaves (with the slack
+  above). What the buddy does about what is pinned is decided from the
+  list, not by the trigger. Two exceptions: a boss may be marked as
+  mattering beyond the usual (on the board whatever its distance while
+  the fight lasts); and in PvP a flag carrier is always on the board,
+  with its place known only as well as the buddy has seen it (line of
+  sight measured from the buddy's head height, not its feet).
+- **The flag carrier, where it probably is** (the owner, 2026-10-30,
+  correcting an earlier reading of the line above, word for word: "no
+  the flag carrier is always on the list, we just only know it's
+  location if we can see it or if we can see it recently. Allies might
+  also say things like "flag on roof" or "flag in the flag room" or
+  something that, while ambiguous, might be helpful in updating our
+  expected location of the flag carrier. Otherwise it's just where we
+  last saw them. At a distance, a flag carrier entering the tunnel might
+  be planning to move elsewhere, perhaps to the roof, possibly to the
+  flag room, or otherwise. There's the graveyard, there's the ledge,
+  there's a lot of places they can hide. So, when we lose sight of the
+  flag carrier, we should project our idea of where they might be along
+  all of the route lines they can take (just one per path, so one for
+  tunnel, one for out the front, etc, branching like the AB paths) and
+  then try to intercept by guessing one of those paths and trying to cut
+  them off by moving where we expect them to be, not where they currently
+  are. If we catch sight of them of course we know the real number, and
+  we can more perfectly intercept them - sometimes, leaving combat and
+  mounting up is a better way to catch them than just by walking
+  forward. But the system should be able to route through multiple paths
+  - for example "I could walk, and it'd take X amount of time. Or I could
+  back off and mount up, which might be faster because of a/b/c
+  parameters or whatever.""). For the battlegrounds (629, and the Arathi
+  Basin route charts, 176a2c):
+  - seen (or seen a moment ago): its true place;
+  - out of sight: its last seen place, moved forward along every route
+    it could have taken from there, one guess per branch (the tunnel,
+    out the front, the roof, the flag room, the graveyard, the ledge),
+    the branches drawn like Arathi Basin's path chart; allies' callouts
+    ("flag on roof", "flag in the flag room") weight the guesses;
+  - intercepting: a buddy picks one branch and heads for where the
+    carrier would be on it, not where it was last seen; on sight it
+    corrects to the real place;
+  - the way there is chosen among ways of travelling (walking on, or
+    stepping out of combat to mount), by the time each would take, with
+    the same route search as the rest of travel (617e8).
 
 ## Suggested Implementation Steps
 

@@ -47,7 +47,18 @@ replaced: open question 2).
 ## Open Questions
 
 1. **How much.** The same count the death knight carries, a fixed number
-   of each kind (the kit's 5), or one stack?
+   of each kind (the kit's 5), or one stack? **Answered 2026-10-30**
+   (the owner, word for word): "they should just... start with the gray
+   mushrooms that DKs always start with, instead of the fruitcake." A
+   death knight's buddies start with the mushrooms a new death knight
+   starts with, in place of the kit's usual food: Black Mushroom (41751,
+   level 55 food). Read 2026-10-30 from the starting outfit file the
+   server itself reads (`data-files/dbc/CharStartOutfit.dbc`, loaded by
+   the server at start and used when a character is created; the world
+   database's starting-items table holds only extras): every death
+   knight outfit lists 41751. This replaces the design of copying the owner's food, so
+   questions 2 to 4 (the kit's food kept or not, drink, when) fall away:
+   the mushrooms replace the kit's food when the buddy is made.
 2. **The kit's food.** Kept beside the owner's food, or taken away so the
    buddy carries only what its owner eats?
 3. **Drink.** "food": only food, or drink too for buddies that use mana

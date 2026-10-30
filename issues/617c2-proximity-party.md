@@ -182,6 +182,8 @@ they are near and you don't have a full group."
   60-yard join distance with room in the owner's party, it leaves the far
   party and joins the owner's in the same pass.
 
+
+
 ## Suggested Implementation Steps
 
 1. A world-update pass per online owner: distances, current group, the swap
@@ -191,6 +193,28 @@ they are near and you don't have a full group."
 3. In game with a level-40 owner (five buddies).
 
 ## Open Questions
+
+
+
+- **Answered 2026-10-30** (asked again as "the far party's leader", the
+  owner, word for word): "we already discussed this, try and find that
+  conversation if you'd like more info. Though I think it was in relation
+  to instanced groups? Anyway if buddy-bots can't join your party but
+  totally would for some reason, they can create a group amongst
+  themselves if they are within EXP sharing range. They can dynamically
+  join and leave them according to the same rules we built for players.
+  They should try and group up together and stay within each other's
+  questing exp sharing zone. If there's for example 6 of them, they
+  should make two groups of 3 instead of one group of 1 and one group of
+  5." The earlier answer was the one above (2026-10-28: "The leader
+  isn't too important"), so any leader. And the far parties are
+  balanced: buddies that would join the owner's party but can't form
+  groups among themselves within experience-sharing range, join and
+  leave by the same rules as the owner's party, keep within each other's
+  sharing range while questing, and split evenly (six make two groups
+  of three, not five and one). Today's pass fills one far party to five
+  before starting another, and merges two whenever they fit in five; to
+  be changed to the even split.
 
 - (Answered 2026-09-27) The join distance: 60 ("let's do 60").
 - **Raid experience** (owner, 2026-09-27: "can we update it to give the
@@ -269,7 +293,8 @@ they are near and you don't have a full group."
   something moves, and nothing for objects with no radius registered.
   Not built: it is a server patch of its own (a new issue if wanted).
 - **The far party's leader**: the lowest-numbered far buddy (a stable
-  choice), or whoever has been far longest?
+  choice), or whoever has been far longest? **Answered 2026-10-30:** any
+  leader; the far parties split evenly (above, word for word).
 
 ## Related Issues
 

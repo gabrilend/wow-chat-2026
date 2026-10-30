@@ -8,7 +8,7 @@
   a death knight's master could pick its taunt), playerbots (bot death
   knights use Death Grip in their tank and pull logic)
 - Priority: Low
-- State: planned; open questions first
+- State: deferred until after the next compile (2026-10-30, the owner: "let's defer this until after the next compile. Idk if I still want it...")
 - First profile: basic
 
 ## Origin

@@ -68,8 +68,23 @@ and falls with what happens:
 1. **How to tell a loss to healing** from a loss to damage or position:
    is "people died while the boss still had more than half its health,
    and the healer was out of mana or dead" close to what you mean?
+   **Set aside 2026-10-30** (the owner, word for word): "if the bosses
+   died while the healers had more than ~50% mana... Though, buddy-bot
+   behavior means that we won't really be able to tell what caused a
+   wipe, because they are always playing basically optimally. So, let's
+   nix this for now." The part where hybrids heal more after fights lost
+   to healing is not built for now; the rest stands (when the healer
+   dies, others who can heal try; overheals make healing less likely,
+   a healer's low mana more likely).
 2. **"Several times":** how many lost tries before the will rises?
+   **Set aside 2026-10-30:** "since we can't ascertain what critical
+   limit caused us to fail, let's nix this too for now."
 3. **Out of dungeons:** the same rule in the open world, or dungeons and
-   raids only?
+   raids only? Asked 2026-10-30 with the agent's call, everywhere ("a
+   dead healer is a dead healer"); the owner quoted it back without
+   objection, taken as agreed, for the owner to correct.
 4. **Players' characters:** buddies only, or every bot (random bots,
-   stand-ins)?
+   stand-ins)? **Answered by the rule of 2026-10-30** (620: "It should be
+   every bot. All the things we make should be A. sandboxed to a
+   particular player ... and B. fully idempotent / functional style");
+   the agent's reading, for the owner to correct: every bot.

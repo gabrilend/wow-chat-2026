@@ -159,7 +159,11 @@ speak in commands.
 2. (Answered 2026-10-12: players in the speaker's party or raid; "follow
    me" only the speaker's own buddies, its clan.)
 3. How does "follow" end: "stop", the owner logging out, a town, a
-   dungeon, after a time?
+   dungeon, after a time? **Answered 2026-10-30** (the owner, word for
+   word): "all of these except time limit. Also we should be able to say
+   "stop following me" and that'd work too." Following ends on "go
+   away", "stop following me", "stop", the followed person logging out,
+   entering a town, or entering a dungeon; never by time.
 4. (Answered 2026-10-12, for "follow me": said to the group's largest
    channel, the speaker's own buddies agree.) "follow <name>": the named
    one's buddies, or the speaker's?

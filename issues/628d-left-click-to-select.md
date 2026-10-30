@@ -7,6 +7,9 @@
 - Blocked by: 628b (the swap)
 - Related: 616 (public healer frames)
 - Priority: Medium
+- State: will not implement (2026-10-30, with its parent 628; nothing
+  else depends on it); to be moved to issues/will-not-implement/ with
+  the next commit
 
 ## Origin
 

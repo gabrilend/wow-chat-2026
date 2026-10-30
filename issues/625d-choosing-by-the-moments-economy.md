@@ -110,6 +110,25 @@ in one place with its reason, so it can be tuned by feel.
    settled, unless the boss has a weak phase, in which case there; its
    own cooldowns lined up with it; then as many more uses as the fight's
    length allows, timed so they come back for a sprint at the end.
+   **A weak phase is learned, not looked up** (the owner, 2026-10-30,
+   word for word: "we are going to build custom bosses eventually so we
+   should build a system that learns. I think it's okay if the bots all
+   learn at once, together, and remember. Then we can cache it and
+   eventually turn off the system that learns for that specific boss
+   once we really have it nailed down. The idea being that it would do so
+   automatically."). What a boss's weak phase is comes from what earlier
+   fights taught (625e), not from a hand-written table, so a custom boss
+   needs nothing written for it. The learning is shared: every buddy that
+   fights a boss adds to one memory of that boss, and every buddy reads
+   it. When a boss's memory is settled it is cached as that boss's plan,
+   and the learning for that boss is switched off; the plan is then read,
+   not relearned. **Switched off by hand** (the owner, 2026-10-30, word
+   for word: "we will turn it off manually when we've tested every boss
+   thoroughly."): the learning runs on its own, but nothing decides by
+   itself that a boss is learned; each boss's learning has its own
+   switch, turned off by the owner once that boss is tested thoroughly.
+   If what makes up a fight changes, its plan is rebuilt from scratch
+   (625e, the boss's fingerprint).
 
 The same five measures serve damage and tanking answers: a damage
 buddy's urgency is a target about to die or a crowd to strike, its mana
@@ -141,4 +160,13 @@ the same, its movement the same, its empowered moments the same.
    it starts again at each phase change, and is written down (625e).
 3. How does a buddy know a boss's weak phase before the fight: from the
    boss warnings' own tables (617e5b), from what earlier fights taught
-   (625e), or both?
+   (625e), or both? **Answered 2026-10-30:** learned from earlier fights,
+   by all buddies together, cached and the learning turned off per boss
+   once settled, automatically (above, word for word).
+4. What counts as "settled", so a boss's learning turns itself off: the
+   same weak phase found in the last N fights, the plan's timings moving
+   less than some amount, or a number of fights? And can the owner turn
+   a boss's learning back on (a boss changed, a buff to buddies)?
+   **Answered 2026-10-30:** "we will turn it off manually when we've
+   tested every boss thoroughly." A switch per boss, by hand; a changed
+   fight is relearned from scratch (625e).

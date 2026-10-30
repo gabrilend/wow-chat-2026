@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-30 14:52:42
+Generated on: 2026-10-30 15:07:02
 Models: claude-opus-5-5
 
 ## Contents
@@ -210,6 +210,10 @@ Models: claude-opus-5-5
     committed. Next I'll build the curve, each tank's time until death from
     health, damage and healing, so every lever can be weighed by how it bends
     that curve.
+50. 2026-10-30 15:01, after Request 154 - We're building the buddies' combat
+    thinking (cooldown timing, lockouts, threat and fight curves), all tested
+    offline and committed. Tank swapping by fight curves just landed; next is
+    the tank's load, meaning whether there's room to pull more.
 
 --------------------------------------------------------------------------------
 
@@ -15814,6 +15818,321 @@ None of the threat work is in the server yet. Still to do:
 
 The off-tank's rule has one question open: once the main tank recovers, should
 an off-tank hand the enemies back, or keep them to the end of the fight?
+
+--------------------------------------------------------------------------------
+
+### User Request 154
+
+> The off-tank's rule has one question open: once the main tank recovers, should
+> an
+>   off-tank hand the enemies back, or keep them to the end of the fight?
+
+the main and off-tank roles can switch naturally and elegantly during the fight.
+But, they should keep in mind which tank would be best suited to hold the
+attention, and they should taunt accordingly. For example sometimes there's
+debuffs and stuff that can go to a tank, and you do or don't want the boss
+targeting them for some reason or another. The bots should build these into
+their "fight curves" as we should call them, and they should automatically sort
+themselves into situations that are most beneficial for their team.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 154
+
+> I'll write your answer in, rename the curve "fight curves" as you suggest, and
+> build the tank choice. Each tank will carry the marks on them (a debuff that
+> makes them take more, or be healed less, until it wears off). The tanks then
+> compare fight curves for:
+> - keeping the current tank;
+> - taunting over now;
+> - swapping when a mark wears off.
+>
+> They keep whichever leaves the party shortest of nothing. On a tie, they don't
+> swap.
+
+> Now the marks and the swap choice in the fight-curve arithmetic.
+
+> 21 of 21 pass. Recording and committing.
+
+*[commit] 5be875950 - Fight curves: tanks hand the attention to whichever leaves the team best off*
+
+The tanks now swap by the fight curves, and it's committed (5be8759). Your
+answer is written into the threat issue, and the curves are called "fight
+curves" there.
+
+**How it works:**
+- **Marks:** each character can carry marks: a debuff or buff that changes how
+  much damage they take or how much healing they get, until it wears off. The
+  curve accounts for each mark until it wears off.
+- **The tanks compare plans:**
+  - keep the current holder;
+  - another tank taunts now;
+  - a swap when a mark wears off, or every few seconds in between;
+  - a swap and a swap back.
+- **Which plan wins:**
+  1. the one that leaves the team least short of health;
+  2. if tied, the one that loses the least health overall (what the healers'
+     mana pays for);
+  3. if still tied, the one with fewer swaps.
+
+  If the taunt isn't ready yet, the current tank keeps attention until it is.
+
+**What the 21 checks confirm:**
+- When the healing keeps up, nothing changes hands.
+- A minute of heavy damage is more than one tank can hold, so the two share it
+  and nobody runs out.
+- A tank with a stacking debuff hands over to the other and takes the boss back
+  once the debuff is gone.
+- A tank whose mark halves the damage they take draws the boss, even when nobody
+  would die either way, because the party loses less health in total.
+
+Still not built: the tank's load (whether there's room to pull more), and the
+server side, which reads threat lists, health, marks, incoming damage and
+healing during a fight.
+
+--------------------------------------------------------------------------------
+
+### User Request 155
+
+okay so the curve is a path through a series of weights, sorta like when an LLM
+is processing a long string of output text. At the instant when it processes
+it's next token, it feeds all the previous data through the same weights and
+sees where it trajectorizes to. We want to do something similar, all of the
+status effects of the fight should be charted and mapped and routed through
+these weights, each moment we supply the entire state and it updates the fight
+curve according to the new, and extended, and desired, state.
+
+tell me soooo much about how you plan to architect this.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 155
+
+## The fight curves, built like a language model's forward pass
+
+Your analogy fits closely, and I'd use it as the backbone. A language model
+takes everything said so far, runs it through the same fixed weights at every
+step, and gets a direction (the next token). Our buddies do the same with the
+fight:
+- **Everything said so far** is the fight so far.
+- **The weights** are the game's own numbers plus the economies' arithmetic.
+- **The direction** is the fight curves extended to the end of the fight, plus
+  how much each possible action bends them toward victory.
+
+Here is how I'd build it, piece by piece.
+
+## 1. The context: one snapshot of the whole fight, taken every tick
+
+Each tick (about every half second), the world thread copies down everything the
+buddies need to know. It's taken once per party, not once per buddy, so every
+buddy reads the same picture, the way every attention head in a model reads the
+same context.
+
+**The snapshot contains:**
+- **The fight:**
+  - how long it has run (seconds, a decimal number);
+  - its kind (boss or trash, a small whole number);
+  - the windows that are open, such as Bloodlust running or a weak phase. Each
+    window has a start, a length and a factor (three decimal numbers).
+- **Each party member:**
+  - health and maximum health (decimals);
+  - resource and maximum resource (mana, rage, energy; decimals), plus which
+    resource it is (a small whole number);
+  - role (tank, healer or damage);
+  - position (three decimals);
+  - whether they're mid-cast: which spell (a whole number) and time left (a
+    decimal);
+  - their cooldowns, each a spell id (whole number) and seconds until ready
+    (decimal);
+  - their marks (described below);
+  - for a pet, the same again, plus whose pet it is.
+- **Each mark** (every buff or debuff on someone): the aura's spell id (whole
+  number), seconds left (decimal), stack count (small whole number), and who put
+  it on (a character id).
+- **Each enemy:** health and maximum, rank, what it's casting, its marks, whom
+  it's hitting now, and its threat list. The threat list is one entry per
+  character:
+  - threat (decimal);
+  - state: available, passed over, or out (a small whole number);
+  - taunt state: taunting, none, or turned away (small whole number);
+  - whether it's in melee reach (yes or no).
+
+The snapshot is a plain copy. Once taken, nothing changes it, so worker threads
+can read it safely while the game moves on.
+
+## 2. The tokens: what happened, appended as it happens
+
+A language model's context is a sequence of tokens. Ours is the sequence of
+combat events:
+- a hit (who, whom, how much, which spell);
+- a heal (the same fields);
+- a mark landing or wearing off;
+- a cast starting, finishing or being interrupted;
+- a death.
+
+They go into a rolling history: a ring that keeps the last minute or so, each
+event stamped with its time.
+
+Like a language model's cache, we don't re-read the whole history every tick. A
+few running summaries are updated as each event arrives:
+- damage taken per second, per character;
+- healing received per second, per character;
+- our damage per second against each enemy;
+- each enemy's health trend, which is the fight-length guess (already built).
+
+Each tick then costs a small fixed amount, however long the fight runs.
+
+## 3. The weights: fixed structure, numbers from the game, some learnable
+
+These are not neural weights, but they do the same job: the same weights, every
+step, for every input. There are three kinds:
+
+1. **The game's own tables, read by generators** (most of this exists now):
+   - every class's abilities: cast time, cooldown, cost, what each does;
+   - what each buff gives;
+   - which talents touch which abilities;
+   - the lockouts (Forbearance, Sated);
+   - the threat levers.
+
+   Still to add: what each *debuff* does to the character carrying it (more
+   damage taken, less healing received). That will be read from the aura types
+   the same way, so a boss's debuff on the tank changes the tank's curve
+   automatically.
+2. **Each buddy's own numbers:** its abilities, talents and gear, worked out
+   again when it learns something or spends a point.
+3. **The learnable numbers:** the starting values written into the issues (10
+   minutes as "regularly used", the swap hysteresis, the look-back window). Each
+   is stored with:
+   - where it started;
+   - how it is learned;
+   - what it is now.
+
+   That way they can be relearned from scratch or grown buddy by buddy, as you
+   asked.
+
+## 4. The layers: the forward pass, run each tick
+
+Each layer reads the one before it, like a stack of transformer layers.
+
+1. **Rates.** From the running summaries:
+   - how fast each character is losing and gaining health;
+   - how fast each enemy is dying;
+   - so, how long the fight has left.
+
+   (The fight-length part is built.)
+2. **Marks into modifiers.** Every mark on everyone becomes a multiplier on
+   damage taken, healing received, damage dealt or haste, read from the game's
+   tables. Each one expires at its own time. (Built for buffs and lockouts;
+   debuffs still to do.)
+3. **Attention.** From each enemy's threat list: who it hits now, and who it
+   would hit next if the current target were passed over. (Built, in the
+   server's own order.)
+4. **Fight curves.** For every character: their health from now to the fight's
+   end. The inputs are who holds attention in each stretch, when marks wear off,
+   and the cooldowns already planned. Each curve's lowest point is how far short
+   of nothing it falls. (Built, including tank swaps.)
+5. **Plans.**
+   - each buddy's cooldown timeline (built);
+   - the tanks' swaps (built);
+   - the healer's plan, deciding who to heal and when to drink (the
+     healer's-seat issue, not yet);
+   - who gets each buff (the buff-targeting issue, partly designed).
+6. **Answers.** For every action a buddy could take this moment:
+   - run it through layers 3–5 as if it were taken;
+   - see how the curves change;
+   - turn that change into damage and health;
+   - turn that into a weight.
+
+   The talent draw then picks among the actions with those weights, still a
+   weighted random draw, so behaviour stays natural rather than robotic.
+
+Layer 6 is your "next token". A model scores every token in its vocabulary
+against the context. Here each buddy scores every ability it could use right now
+against the fight's context.
+
+## 5. New, extended and desired
+
+You used three words, and each has its own place:
+- **New** is the snapshot just taken, the latest observed state.
+- **Extended** is the projection: the curves carried forward to the fight's end,
+  with the planned actions in them.
+- **Desired** is the target: every enemy dead before anyone in the party, every
+  curve staying above nothing, and the most health and resource left at the end.
+
+Each tick measures the gap between "extended" and "desired". An action is worth
+what it closes of that gap, converted to damage and health, so it adds up with
+everything else.
+
+## 6. Where it runs
+
+- **The world thread** only takes the snapshot (a fast copy) and reads back the
+  latest results. It never does the heavy work, because the game's objects are
+  only safe to touch there.
+- **A pool of worker threads** runs the layers. There is one task per party for
+  the shared parts: attention, the fight curves, tank swaps, buff targeting.
+  There is one task per buddy for its own cooldown plan and the worth of its
+  actions.
+- **Results** go into a double buffer: the workers write the next copy while the
+  bot module reads the last one. Results are at most one tick old, which is fine
+  at human speeds.
+- **Cost, measured:** a buddy's full cooldown plan takes about 0.5 ms for a
+  five-minute fight, and a fight curve takes microseconds. A party of five comes
+  to a few milliseconds of worker time per second.
+
+## 7. Keeping it calm
+
+Your words were "serenity in flow". Several things push that way:
+- the server's own hysteresis (a new attacker must beat the current one by 10%
+  or 30%);
+- "no swap for nothing" as the tie-breaker;
+- weights changing smoothly rather than in steps;
+- the weighted random draw at the end.
+
+The fight curves decide which way to lean, not a fixed script.
+
+## 8. Replays
+
+Every tick's snapshot and result can be written to a log in the RAM drive. A
+recorded fight can then be fed back through the layers offline:
+- to test a change against real fights;
+- to compare two versions of the weights;
+- as the material learning uses, either all fights at once from scratch, or one
+  buddy's fights as it grows.
+
+The layers are pure arithmetic from snapshot to result, so a replay gives
+exactly the same answers every time.
+
+## What exists, what doesn't
+
+**Built, offline and tested:** window values, the cooldown timeline, lockouts,
+the fight-length guess, threat levers and attention, the fight curves and tank
+swaps.
+
+**Not built:**
+- the snapshot and the event history in the server;
+- debuffs read as modifiers;
+- the worker pool;
+- the answers layer that ties it all to the draw;
+- replay logging.
+
+## Questions for you
+
+1. **What's "desired" beyond victory?** If a fast kill and a safe kill pull
+   apart, say burning hard while the healer runs dry, which should the curve
+   lean toward? Is it the same for trash and bosses?
+2. **What does a buddy get to know?** A language model sees its whole context,
+   but should a mage buddy "know" the tank's cooldown timers, or only what a
+   player beside it could see (health bars, debuffs, casts)?
+3. **How far back should the context reach?** A minute of events, the whole
+   fight, or the whole dungeon run (so a buddy remembers how the last boss
+   went)?
+
+Please also describe "the weights" back to me in your own words. In a language
+model they're all learned. Here, which do you picture growing with play, and
+which do you picture fixed, like the game's own numbers?
+
+I can turn this into an HTML page with a diagram of the layers, if you'd like
+something to share or look at side by side.
 
 --------------------------------------------------------------------------------
 

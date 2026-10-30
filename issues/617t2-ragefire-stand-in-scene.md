@@ -75,7 +75,8 @@ the first refusal, naming it.
 
 ## Open Questions
 
-1. Which level: 15 (the middle of Ragefire's 13 to 18)?
+1. Which level: 15 (the middle of Ragefire's 13 to 18)? **Answered
+   2026-10-30:** "let's do 13".
 2. (Answered 2026-10-12: left for Sargobras; a stand-in sits in until
    she picks.) Does the stand-in sitting in for an unpicked slot belong
    to 617t (the dungeon seats by themselves), or does the scene bring it
@@ -85,6 +86,18 @@ the first refusal, naming it.
    the dungeon seats filled by themselves on entering (617t's own
    behaviour, not written yet)?
 4. Birth is a shaman, so she can heal. Is she the group's healer, so the
-   stand-ins are a tank and damage?
+   stand-ins are a tank and damage? **Answered 2026-10-30** (the owner,
+   word for word): "depends on how she sets her talents. She'll have two
+   buddy-bots, and depending on if they're tank or dps or not, and how she
+   builds her own spec, we'll know which stand-ins to spawn when she
+   enters the instance. Not before. Also if she exits and leaves, it
+   might generate new stand-ins for her. They leave once she's done with
+   the dungeon." The stand-ins are chosen when she enters the dungeon,
+   from the roles her talents and her two buddies leave open; leaving and
+   coming back may bring new ones; they leave when she is done with it.
 5. Her leatherworking skill: just learned (1), or raised to what her
-   level allows?
+   level allows? **Answered 2026-10-30** (the owner, word for word): "is
+   she a leatherworker?? I say don't worry about that for now. But... the
+   level up script should worry about it, so, ugh, let's worry about it
+   now." Her professions follow the level-up command's rule (185): each
+   kept at the same share of its maximum.

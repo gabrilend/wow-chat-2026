@@ -112,12 +112,30 @@ what "could hurt" means and what happens to the harmless ones instead).
    before it has rebuilt drop it further?
 3. The tank walking ahead: does it need a route through each dungeon
    (packs in order, as a player learns them), or does it take the nearest
-   pack it hasn't fought yet?
+   pack it hasn't fought yet? **Answered 2026-10-30** (the owner, word
+   for word): "make a route to the next boss. They sometimes can be
+   completed in varying orders, but it's usually a T-intersection or
+   similar, only rare bosses like VoA can have them fought in any order.
+   / make a route to the next boss, and then fight anything along the way
+   that might aggro onto allies. We can clear a bit more or less,
+   confident tanks clear more, nervous or scared tanks try to clear the
+   bare minimum and skirt the edges of the arenas and dungeons and such."
+   The tank routes to the next boss (the dungeon's boss order, branching
+   at its forks; any order only where a dungeon allows it, as Vault of
+   Archavon), fighting the packs on the way that could reach the group.
+   How much more it clears follows its confidence (the solo record and
+   "safe enough", 623): a confident tank clears wider, a nervous one the
+   bare minimum, keeping to the edges of rooms.
 4. A player who isn't the healer (playing damage): can they also say "go
-   faster", or only the healer?
+   faster", or only the healer? Asked 2026-10-30 with the agent's call,
+   anyone in the group; quoted back without objection, taken as agreed,
+   for the owner to correct.
 5. "only if the monsters have a chance of harming them. Otherwise, they
    refuse to fight": a monster too low (grey to the tank) is skipped and
    walked past? Or the tank refuses a "go faster" order when the next
-   pack is harmless, because faster gains nothing there?
+   pack is harmless, because faster gains nothing there? Asked again
+   2026-10-30 with the agent's call, walked past; quoted back without
+   objection, taken as agreed, for the owner to correct.
 6. When the answer is "wait", does the tank say so ("Waiting for mana."),
-   as "My bags are full." is said (617y)?
+   as "My bags are full." is said (617y)? **Answered 2026-10-30:**
+   "sure."

@@ -59,7 +59,12 @@ paladin who wants stamina need not carry a shield.
    spell power → magic (mana every 5 seconds); spirit or healing → holy
    (spirit); otherwise plain (bonus armour, or defence when the shield is
    light: what makes a shield "light"? its armour below its item level's
-   usual, or its name?).
+   usual, or its name?). **Answered 2026-10-30:** "sounds good. let's
+   worry about the "light" shields later." The sorting stands; every
+   plain shield gets bonus armour for now, and light shields (defence)
+   wait.
 2. **Order with the spirit step**: the spirit step (155k2) turns stamina
    into spirit on two fifths of leather, plate, mail and jewellery, not
    shields. Run this after it, so shields are judged on stock stats?
+   **Answered 2026-10-30:** asked with the agent's call, after it, the
+   owner: "this one".

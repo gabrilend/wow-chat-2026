@@ -70,9 +70,25 @@ Basic.Drop.Rare.Uncommon.Quantity = 3
 
 1. **"Quantity":** more copies of the same item (a stack of 3 instead of
    1, which only makes sense for stackables like cloth), or more rolls
-   (three chances at a green instead of one)?
+   (three chances at a green instead of one)? **Answered 2026-10-30**
+   (the owner, word for word): "for stackable items, it gives multiple
+   quantity. For non-stackable things like greens, then if it rolls one,
+   then instead of giving just one it gives a second from the same loot
+   type roll list as well. My understanding is that especially for
+   Azeroth there's white, green, blue, etc items in the same lists, and
+   in later expansions they separated that into "chance for a green,
+   chance for a blue, etc" etc. So for now, just treat it like 3x rolls,
+   though the intended behavior is that if a green drops, then instead 3x
+   greens would drop if the quantity was set to 3. If a blue drops, then
+   3x blues would drop." So: a stackable drop comes as that many copies;
+   a non-stackable drop brings more drops of the same quality from the
+   same loot list (quantity 3: a green drop is three greens, a blue
+   three blues). Built for now as that many rolls of the list; the
+   same-quality form is the intended one.
 2. **Rank or something finer:** rank (rare, rare elite, elite) is what
    the server knows about each monster. Is "monster type" rank, or also
-   beast/humanoid/undead and so on?
+   beast/humanoid/undead and so on? **Answered 2026-10-30:** "just rank.
+   the loot tables already handles monster type."
 3. **Players only, or buddies too:** the multipliers apply to every kill,
-   or only kills a real player took part in?
+   or only kills a real player took part in? **Answered 2026-10-30:**
+   "every kill."

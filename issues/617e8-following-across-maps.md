@@ -342,7 +342,12 @@ the owner's map), and anything for instances (617c3).
   sails to its owner; a buddy on the same map but neither at the owner's
   dock nor at another stop of that ship walks toward the owner's dock,
   which may have no way by land (Rut'theran Village). Should such a buddy
-  find the nearest stop of that ship instead?
+  find the nearest stop of that ship instead? **Answered 2026-10-30**
+  (asked: the nearest stop, or a full route over walking, boats and
+  portals; the owner, word for word): "route search. Same machinery."
+  The buddy plans its way to the owner's dock by the same route search
+  as crossing between maps (question 11 of 2026-10-28, above), with
+  walking, boats, zeppelins and portals all as ways.
 - **Mage teleport first**: a mage buddy teleports whenever it can, even
   when its owner took a boat it could follow. Is that wanted, or should
   the owner's own means come first and the teleport only replace a summon
@@ -351,8 +356,38 @@ the owner's map), and anything for instances (617c3).
   in 90 s) measures progress toward the owner, so it is off while walking
   to a dock or portal on another continent; the bot module's own
   teleport-to-destination is kept off too. Should the stuck rule measure
-  progress toward the dock instead?
+  progress toward the dock instead? **Answered 2026-10-30** (the owner,
+  word for word): "this is a fallback, if buddies are getting stuck, we
+  should find out why, and fix that error instead. Our pathfinding must
+  be rock-solid, and right now it is nascent. Don't worry if it's broken
+  now, because we'll steadily improve it until it's fine." No stuck rule
+  is added on the way to a dock; a buddy stuck there is a pathfinding
+  fault, logged loudly with where and why, and mended in the pathfinding
+  (617o). Whether the town visits' own unstuck rule (617e4, a hop of up
+  to 30 yards after 90 seconds without 10 yards of progress) is a
+  fallback to remove by the same reasoning is asked in the next ten.
 - **Off the deck in a straight line**: stepping aboard and ashore walks a
   straight line, since the navigation mesh has no deck. A gangway with a
   bend, or a zeppelin tower's platform, may need more than one straight
-  leg. To be seen in game.
+  leg. To be seen in game. **Answered 2026-10-30** (the owner, word for
+  word): "we can record several entry paths per location where this is
+  required. We'll need a tool or utility that records positions,
+  momentum, facing, etc, everything else we can get and then we can run
+  it through a manual LLM scrutiny test to clean up things like
+  "standing still at the start of the routine" and such, to clarify the
+  result to just the specificly needed waypoints. Then, when a buddy-bot
+  needs to enter a zeppelin or whatever, they'll select a path onto the
+  boat (preferring nearby ones) that another character is not currently
+  using, and if we run out of available paths then we try again with a
+  +1 to the "how many characters can be walking on this path"
+  constraint." So:
+  - **Recorded entry paths**, several per place that needs them: a
+    recording tool keeps everything it can (position, momentum, facing,
+    and the rest) as a character walks aboard or ashore.
+  - **Cleaned by reading**: each recording is read through (an LLM's
+    look, by hand) to cut what isn't the path (standing still at the
+    start, and the like), leaving only the waypoints needed.
+  - **Chosen by a free path**: a buddy boarding takes a recorded path,
+    the nearer first, that no other character is walking; when none is
+    free, the limit of walkers per path rises by one and it chooses
+    again.

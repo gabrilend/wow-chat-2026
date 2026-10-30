@@ -195,6 +195,21 @@ Everything here is from the owner's decisions recorded in 617e (2026-09-23,
   - others as 617h adds them.
   Each errand: walk to the NPC, face it, a talking animation, the errand
   done (playerbots' own sell / repair / learn actions where they exist).
+  **Semi-random order, not a fixed one** (the owner, 2026-10-30, word for
+  word: "the errands are chosen semi-randomly. so it won't be a circle,
+  otherwise the buddy-bots will always choose the same tasks each time.
+  They should instead build a list of all the things they have to do,
+  and then ping-pong between them. If there are monsters along the way,
+  they can fight them, but that's rare."). The list is built as above.
+  The next errand (the owner, 2026-10-30, word for word: "it should pick
+  one randomly. 50% chance to pick the nearest on their todo list, 50%
+  chance to pick the farthest. unless the farthest is more than 4x the
+  distance to the nearest, then they do the nearest."): a coin toss
+  between the nearest errand left on the list and the farthest, except
+  that when the farthest is more than 4 times as far as the nearest, the
+  nearest is taken. So buddies ping-pong across a town, and two visits
+  rarely run the same order. Monsters met on the way are fought (and see 617e12:
+  where they keep coming, the errand wins after a while).
 - **Leisure when the list is done** (and whenever a buddy is in a town:
   left out of a dungeon, or with its owner there):
   - it walks to a random townsperson, stands facing it, plays talking
@@ -261,6 +276,17 @@ Everything here is from the owner's decisions recorded in 617e (2026-09-23,
   the second spot beside a clanmate, an outsider never takes a spot of a
   bed someone else's clan is using.
 - **Unstuck**: less than 10 yards gained in 90 seconds (was 5).
+  **To be removed** (decided 2026-10-30; the hop is still in the buddy
+  module's town code until the next compile carries its removal), as a
+  fallback that hides the real fault. Asked
+  whether a stuck buddy should stay stuck and be reported loudly with
+  where and why, the owner, word for word: "yeah. we'll sweep it up in
+  the logs and work on it when we can." A buddy that gains less than 10
+  yards in 90 seconds is no longer hopped; it is logged as stuck (where,
+  toward what, by which way of finding a path, what refused it) and the
+  pathfinding is mended from the logs (617o). "Stuck again after the
+  move" below no longer arises; the owner's hearthstone still rescues a
+  stuck buddy by hand.
 - **Beds are placed by the owner**, in game, with the command.
 - **Stuck again after the move**: the owner's hearthstone rescues it.
 - **No food**: the buddy still rests: it sits, lights a campfire if it

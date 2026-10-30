@@ -99,6 +99,25 @@ bind-on-pickup" flag).
 
 ## Intended Behavior
 
+- **Quest items are left where they lie** (the owner, 2026-10-30, word
+  for word: "buddy-bots should not take quest items. Their quests are
+  completed when the player completes them, so there's no reason for the
+  buddy-bots to take them. They should leave them on corpses and leave
+  the nodes behind."). A buddy loots nothing a quest asks for: quest
+  items stay on the corpse, and quest objects (the nodes and things a
+  quest has players click) are left untouched, for the owner.
+- **Full bags** (the owner, 2026-10-30, word for word: "if a buddy-bot is
+  full inventory but not selling, they should still loot the bodies but
+  leave the items behind. If they need to need/greed an upgrade item
+  (need specifically, if inventory is full they pass on greed) then they
+  can destroy their least valuable item to make space. Something they
+  already intended to get rid of anyway."). A buddy with full bags that
+  isn't going to sell still loots its kills (the money, the corpse
+  opened) and leaves the items in them. In a roll with full bags it
+  passes where it would greed; where it would need (an upgrade), it
+  destroys its least valuable item, one whose plan was already to be
+  rid of it (617h2), to make room.
+
 - **Shared gear pool.** A player and their buddies (the "clan") are one
   pool: bind-on-pickup loot from dungeons and raids stays tradeable for 2
   hours to everyone who was there (stock), and buddies roll need or greed
@@ -176,6 +195,10 @@ bind-on-pickup" flag).
   **617h** selling and mailing
 
 ## Open Questions
+
+
+
+
 
 - (Answered 2026-09-24) Stat weights: the bot module's level-80 table, as
   is. Verbatim: "level 80 weights are fine. There are no WotLK weights

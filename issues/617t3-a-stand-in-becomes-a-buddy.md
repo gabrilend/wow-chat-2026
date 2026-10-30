@@ -95,4 +95,14 @@ knows.
    not only the maximum.) What chance should a matching stand-in have
    against a fresh character: always one when any matches, or a share?
 2. Does it take an owed roster slot, or replace a buddy the player has?
-3. Does it keep its gear, or get the kit of its level?
+   **Answered 2026-10-30** (the owner, word for word): "fills an owed
+   slot and keeps it's gear. Remember, it's only for the correct
+   race/class type. If you ask for a shaman and there's an appropriately
+   levelled troll shaman, then it'll select that one." It fills an owed
+   slot, and only when it matches what was asked for (class, and race
+   where the slot keeps one) at a fitting level. **A fitting level**
+   (the owner, 2026-10-30, word for word: "within 3 levels, and they
+   should be adjusted to match."): within 3 levels of the slot's level,
+   and set to the slot's level exactly when it joins.
+3. Does it keep its gear, or get the kit of its level? **Answered
+   2026-10-30:** it keeps its gear (above).

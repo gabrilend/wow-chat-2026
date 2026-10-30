@@ -167,8 +167,10 @@ Before this, the five ways (617o7) each lacked something asked for here:
 **One painted map per area, shared by every bot** ("collectively get
 better at navigating as we gather more data"). Fine cells (2 yards) over
 the area, each holding what the bots have learned:
-- **unknown**: nobody has stood there; assumed walkable, a little dearer
-  (the unknown premium) than ground already proven;
+- **unknown**: nobody has stood there; assumed walkable, costing the same
+  as ground already proven (the unknown premium is a lever, 0 by default
+  since 2026-10-30: a premium finds the fastest way, which doesn't look
+  like people walking);
 - **painted**: a bot has walked it (the count of walks kept too);
 - **wall**: a step into it was refused, or a doodad it belongs to was found
   by a bump (the whole doodad is painted at once);
@@ -187,6 +189,26 @@ nearer it is. The extra fades near the bot's goal (within the relax
 distance, measured straight, so a goal just across a wall counts as near):
 a bot fetching something by a wall walks up to it, and one whose goal is
 just across a wall walks close round the wall's end, not wide.
+
+**The space bubble shrinks in clutter** (2026-10-30, Open Questions 2):
+the wanted space between a bot and others (4 yards) is smaller on
+uneven, crowded ground, by how cluttered the ground around the bot is
+(the share of wall and steep cells near it), and grows back to the full
+4 yards in the open.
+
+**Levers and data sources first** (the owner, 2026-10-30, Open Questions
+2): every number here is a lever that can be pulled, and the map is one
+data source among several, so an ultimate pathfinding can later combine
+them. A second source is planned, the **smap** (named 2026-10-30): a
+stand-in walking the world taking pictures from at least two angles of
+each place (photogrammetry-like, coarser; mountain tops not needed for
+now), to paint the world before any buddy walks it. Trails (worn ground
+cheaper to walk) wait on it.
+
+**The steering point follows the ground** (2026-10-30, Open Questions
+2): a bot steers toward a point on its route ahead of it, nearer in
+clutter (tracing the route's turns) and farther in the open (rounder
+corners), by the same clutter measure as the space bubble.
 
 **Spreading** ("they should spread out through an area"):
 - bots heading the same way plan round each other: where bots stand and
@@ -248,8 +270,47 @@ We can make arcs between way points if necessary"):
 2. **The numbers**: wanted space 4 yards, relaxed within 10 yards of the
    goal; unknown ground 15% dearer; the crowd's weight; following 6 yards
    ahead and turning at most 240 degrees a second. Which feel natural?
+   **Answered 2026-10-30** (the owner, word for word, number by number):
+   - the 4 yards: "yes but on un-even terrain (lots of obstacles) the
+     personal space bubble is reduced until they navigate through that to
+     a more open area. This might be overwritten with the movement map
+     caching we're going to do with the stand-in walking around the map
+     taking screenshots of everything until we've fully painted the
+     world, similar to photogrammetry style but not as detailed. So long
+     as we get two angles of the same area, that should be good, and we
+     don't have to do things like the tops of mountains and such for now.
+     Right now for pathfinding we're kinda building a bunch of systems and
+     tools that we can combine into an ultimate pathfinding solution once
+     we've build all the mechanics, so focus on making levers that can be
+     pulled and data sources that we can pull from."
+   - the unknown premium: "this would make sense if we were trying to
+     find the fastest way to walk somewhere, but it doesn't look very
+     natural. Bots should be more like people, and they will be once
+     we've built out their "visual map" of the area. Except "vmaps" are
+     already taken, hmmmm...."
+   - the 6 yards ahead: "not sure about this, what does that mean?"
+     Explained in conversation: the route a bot plans is a line of
+     cells; the bot doesn't walk to each cell, it steers toward a point
+     on its route a few yards ahead of itself (6 yards, brought nearer
+     when the straight line to it isn't clear). The farther that point,
+     the rounder and lazier its corners; the nearer, the more it traces
+     the route's exact turns. **Answered 2026-10-30**, asked whether to
+     keep it, make it a lever, or vary it with the ground, word for word:
+     "nearer in clutter, farther in the open." The steering point's
+     distance follows the same clutter measure as the space bubble.
+   - the 240 degrees a second: "sure I guess".
+   What follows (in Intended Behavior): the personal space shrinks on
+   crowded, cluttered ground and grows back in the open; the unknown
+   premium is set to none by default and kept as a lever; and the
+   pathfinding work is aimed at levers and data sources to be combined
+   later, the stand-in's photographed map among them (the "visual map";
+   named 2026-10-30 by the owner, word for word: "smap works": the
+   **smap**, beside the server's own vmaps and mmaps).
 3. **Trails**: should well-walked ground grow cheaper, so trails form
    (natural, as deer paths are), or would that undo the spreading?
+   **Answered 2026-10-30** (the owner, word for word): "yes, but this
+   waits on the smaps to identify trails and such." Trails form, once
+   the smap can tell where they are; not built before it.
    Measured 2026-10-29 on the sandbox (pictures 067 and 074-076; the
    address can now set the map's numbers, `paint.UNKNOWN=0`):
 
@@ -282,3 +343,14 @@ We can make arcs between way points if necessary"):
    they are painted live as bots walk them. The Firegut pocket itself (a
    small part of a big area, where many bots are sent at once) is still
    to be asked again: how many bots it should take.
+   **The owner, 2026-10-30, word for word:** "sounds like they were
+   clumped up for some reason. Why were they all trying to touch the
+   same waypoint? Also, creatures in WoW can pass through each other so
+   it's probably not too big of a concern." Why (read from picture 078's
+   notes): they weren't chasing one waypoint. The sandbox picked as the
+   part in play the 260-square-yard pocket where it put the player
+   ("part 4 of 6"), instead of the 47,569-square-yard area picture 077
+   used, so every wedge target of all 36 bots fell inside a pocket about
+   16 yards across. The fault is in how the part in play is chosen, to
+   be mended there; and since creatures pass through each other, bots
+   sharing a small spot is not itself a fault.

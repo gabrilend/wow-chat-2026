@@ -7,7 +7,11 @@
   (an enchant changes what a weapon does), 309 (monsters that test their
   foes: the same idea from the other side)
 - Priority: Medium
-- State: planned; open questions first
+- State: planned; may be deprecated (2026-10-30, the owner: "we will
+  handle this with the stat / ability weighting economy system that's
+  being built in another session. Don't worry about it, but this part
+  might get deprecated."); its questions wait on that work (625's
+  family)
 
 ## Origin
 

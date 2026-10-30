@@ -82,4 +82,4 @@ buddies need no addon.
 
 1. Should the hint also be spoken now and then (a buddy saying "the
    murlocs we need are down by the shore"), or only shown in where they
-   stand?
+   stand? **Answered 2026-10-30:** "nah". Only where they stand.

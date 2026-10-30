@@ -221,6 +221,12 @@ over the real world:
   flat floor the left and right bows cost the same, and the last bit of
   rounding picks one. Should the core prefer a fixed side on a tie (say,
   the buddy's own circling direction), so the choice is by design?
+  **Answered 2026-10-30** (the owner, word for word): "it should randomly
+  pick within like a 10% margin. So if it's marginally equal it should
+  just pick one randomly. Or defer to the smap." Two ways whose costs are
+  within 10% of each other count as equal, and one is picked at random
+  (the margin a lever); where the smap knows the ground, it decides
+  instead.
 
 ## Related Issues
 

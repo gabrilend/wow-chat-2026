@@ -80,9 +80,17 @@ differences, each decided once here:
 
 - **How is a bot's clan named?** From a list (like `sargobras-jokes.lua`),
   from the bot's name ("Matis's Kin"), or by its master, by whisper, for
-  an alt bot?
+  an alt bot? **Answered 2026-10-30** (the owner, word for word): "the
+  bot chooses. We can build a system for that later. For now, just give
+  it a name from the same way we generate buddy-bot names." For now a
+  name drawn the way buddy names are; the bot choosing its own comes
+  later.
 - **Should an alt bot's buddies party with it when it leaves the human's
   party** and adventures alone (the alt bot as a leader of its own group)?
+  **Answered 2026-10-30:** "yes, it is a player."
 - **Random bots' buddies: allowed at all**, or is a random bot an owner
   with zero buddies? (That is 620's first open question, answered here
-  for buddies specifically.)
+  for buddies specifically.) **Answered 2026-10-30:** "they get
+  buddy-bots too. We won't have too many of them." Asked whether a cap
+  should limit the total: "we will just keep the random bot count low."
+  No cap of its own; the random bot count is kept low.

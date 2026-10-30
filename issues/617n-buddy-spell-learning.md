@@ -26,7 +26,30 @@ capitals. The owner (2026-10-15): "should be the same as any other
 trainer skill, including class and profession. Seriously, we should
 treat them the exact same." So the town training visit should take a
 buddy to class trainers, weapon masters and its professions' trainers
-alike, buying each lesson it can afford, cheapest first.
+alike, buying each lesson it can afford, cheapest first. Said again
+2026-10-30 (187, word for word): "buddies shouldn't learn weapons for
+free! They should be an errand they have to run in each capital city, if
+there's a trainer that teaches them something new. It should go through
+the exact same pipeline as the class ability trainer." Asked whether the
+free kinds given at creation (the kit's weapon, and random kinds up to
+the owner's count, decided 2026-10-15 and built) stay, the owner,
+2026-10-30, word for word: "ah right when a buddy-bot is created above
+level 1. I was thinking about just level 1 buddies but of course they
+can be made at any level. Okay so... they always have the weapon they
+show up with maxxed for their level. Also, if you have trained weapon
+skills from the trainer, for each one you've trained (not which you
+started with) then they start with 1 extra, if their class needs one
+extra. These extras should be maxxed for their level as well." So, when
+a buddy is made (at any level):
+- the kind of the weapon it arrives with is known, its skill at the
+  maximum for its level;
+- for each weapon skill its owner learned at a trainer (not those the
+  owner started with), the buddy gets one more kind, while its class has
+  kinds left to learn, each also at the maximum for its level;
+- every other kind is learned later, paid for, at weapon masters, as
+  class lessons are.
+(Before: random kinds up to the owner's whole count, starting ones
+included, at skill 1.)
 
 On stand-ins (verbatim): "When they are instantiated as buddy-bots, they
 might lose weapon skills! That's fine. ... If the stand-in-becoming-

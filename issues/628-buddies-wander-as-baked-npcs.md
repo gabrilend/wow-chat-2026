@@ -11,7 +11,20 @@
   awareness), 184 (play as any creature model), 160 (client cache follows
   content: creature names are cached by the client)
 - Priority: Medium
-- State: planned; open questions first
+- State: will not implement (2026-10-30); to be moved to issues/will-not-implement/ with the next commit
+
+## Retracted, 2026-10-30
+
+Asked about the creature's title and who may talk to it, the owner, word
+for word: "I think we nixed this functionality because there's no
+benefit to be gained in performance from moving one gameobject verses
+another, so a lightweight NPC would be just as heavy as a heavy
+playerbot. No sense complicating it." Not built. The design below is
+kept as it was, for the record. What its questions asked that still
+applies to buddies as they are (who may talk to another player's buddy)
+is answered in 623: "buddy-bots can talk to others, but they should be
+polite and curt in general, and never give them anything, even if it'd
+save their life."
 
 ## Origin
 

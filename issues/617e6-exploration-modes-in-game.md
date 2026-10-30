@@ -181,7 +181,14 @@ Read into the design:
   they don't pass under walked ground. Worth a real many-level graph
   (the navigation mesh) later?
 - **Mixed**: four systems in turn by character number; should the owner
-  pick per buddy instead?
+  pick per buddy instead? **Answered 2026-10-30** (the owner, word for
+  word): "eventually they will adjust themselves to get through certain
+  terrain according to which movement profile they think would work the
+  best. I navigate a trail differently than pavement." Neither in the
+  end: each buddy will choose its way of moving by the ground it is on,
+  as a person walks a trail differently from pavement (with the smap
+  telling the ground, 617o9, and the five ways as routines to switch
+  between, 617o7). By character number until then.
 
 ## Related Issues
 

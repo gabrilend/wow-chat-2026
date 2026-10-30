@@ -134,6 +134,11 @@ A buddy made at 14 gets the level-10 step; at 34, the 10, 20 and 30 steps.
    buddies at 60 by the kit, sold, or a recipe lowered too?
 4. Which ring and necklace at a level: the best for the plan among those
    of its level, or random among them like the weapon enchants?
+   **Answered 2026-10-30** (the owner, word for word): "suited to the
+   talent plan. These are PvP rings and necklaces, and there aren't very
+   many of them, so we can honestly just assign them manually." A table,
+   written by hand, of which ring and necklace each talent plan gets at
+   each level.
 5. **Where the three blacksmithing recipes drop** (the belt buckle's,
    Socket Bracer's, Socket Gloves', each socket recipe at a 1-in-3
    chance): the world bosses basic respawns (Azuregos, the Emerald
@@ -142,4 +147,22 @@ A buddy made at 14 gets the level-10 step; at 34, the 10, 20 and 30 steps.
 6. **Their materials**: the stock client shows and checks Saronite Bars
    and Eternal Earth or Shadow, which basic has none of. Make those
    obtainable in basic (from where?), or hand out the crafted results
-   (the buckle and socketing items) instead of recipes?
+   (the buckle and socketing items) instead of recipes? **The owner,
+   2026-10-30, word for word:** "if we can change the recipe to use
+   azeroth materials like arcanite bars or similar, that would be
+   great... But if not, then let's just leave this open until we do
+   another profession pass." What is known: a recipe's materials are
+   part of its spell, and basic already replaces spells' rows on the
+   server (`spell_dbc`), so the server can be made to take Arcanite Bars;
+   but the stock client reads its own copy of the spell for the tooltip
+   and the craft window (as found in 617e for a reagent, 2026-09-27), so
+   it would still show and check Saronite until the custom client. Open
+   until the next profession pass. The owner, the same day: "custom
+   recipe and recipe item maybe?" What that can be on the stock client:
+   a new item works (the client asks the server about items it doesn't
+   know), but a new crafting spell doesn't (the client must already have
+   the spell in its own files). So the likely shape is a custom item
+   that does the crafting itself: a mould or kit whose use, scripted on
+   the server, takes Arcanite Bars (or other Azeroth materials) and gives
+   the buckle or socket item, its tooltip text written in the item's own
+   description. To be settled in the profession pass.

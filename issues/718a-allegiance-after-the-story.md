@@ -127,7 +127,8 @@ chooses, at will, one of:
    standing), or only the name colour?
 2. Which tabards count for each master (any Horde or Alliance city tabard,
    or one made for the oath)?
-3. Can the oath be changed later, and how?
+3. Can the oath be changed later, and how? **Answered 2026-10-30:**
+   "can't be changed, even with a prestige." Sworn once, for good.
 4. The Val'kyr's hour: if the tabard comes off again within the hour, does
    the death knight stay dead (released to a graveyard as usual)?
 5. (Answered 2026-10-12: "same faction as the DK. They can be any race

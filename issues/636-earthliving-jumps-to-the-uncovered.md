@@ -5,7 +5,7 @@
 - Phase: 6 (the bots' behaviour; the spell change itself is a server patch)
 - Related: 635 (the Botanica party), 637 (totem places)
 - Priority: Medium
-- State: plan; open questions below
+- State: deferred until class behaviour is reworked (2026-10-30, the owner: "let's defer this as well until we are doing class changes.")
 
 ## Origin
 

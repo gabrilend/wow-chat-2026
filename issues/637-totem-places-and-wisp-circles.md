@@ -5,7 +5,7 @@
 - Phase: 6
 - Related: 636 (Earthliving), 635 (the Botanica party)
 - Priority: Medium
-- State: plan; open questions below
+- State: deferred until class behaviour is reworked (2026-10-30, the owner: "let's return to this when we're modifying class behavior. The whisp circles are shared design with other systems though so keep that in mind.")
 
 ## Origin
 

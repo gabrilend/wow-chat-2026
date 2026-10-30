@@ -144,7 +144,38 @@ and in game.
    the bot module's stat weights for the character's talent shape). White
    gear comes from vendors; where may green, blue and purple come from:
    any item of that quality, or only what drops in the world and
-   dungeons (no quest rewards, no crafted)?
+   dungeons (no quest rewards, no crafted)? **Answered 2026-10-30:** "for
+   now let's just set the level-up gear to give you the white quality
+   gearsets. we will come back to this later." White gear sets only;
+   other qualities later.
 4. Lowering a level (60 to 20): skills lowered to match, or kept?
+   **Answered 2026-10-30** (the owner, word for word): "lowered to match.
+   if the player is 80% of the way to the max on that skill, they should
+   be set to 80% of the max after the level adjustment." And for
+   professions, the same day: "we should take any professions known by
+   her and set them to the same ratio she had. Yes, this might enable us
+   to skip for example an expensive blacksmithing learning process, if we
+   take a level 5 blacksmith with like fuckin' 75 blacksmithing or
+   whatever and level them up to a level 60 blacksmith with 300. That's...
+   fine for now. If we later come back and decide to store the highest
+   level that a player has reached with that profession on that
+   character, then we can, though I don't really want to." Every skill
+   (weapon skills and professions alike) keeps its share of its maximum
+   across a level change, up or down: 80% of the way at the old level is
+   80% of the way at the new one.
 5. Gear: the white gearset every time, or only when the tier changes
    (crossing 10, 20, ...), so better gear found in play isn't replaced?
+   **Answered 2026-10-30** (the owner, word for word): "um... if we're
+   using the level up / down command, then fresh white gear, properly
+   gemmed and such. Remember, the gem weights might change depending on
+   which talents we pick, but on the bright side since it's not tied to
+   spec profile, we should be able to work it out for players too, if
+   their level ever changes and we need to re-gear them. It should be
+   continuous instead of based on tiers, so just replace it if necessary.
+   Changing level should produce a character in white gear, with it's old
+   gear mailed to it. If the old gear is white quality then it is not
+   mailed to them." Every use of the command dresses the character in
+   fresh white gear for its new level, chosen continuously by level (no
+   tiers), gemmed by gem weights worked out from the talents it has
+   picked (so players are geared the same way as buddies); its old gear
+   is mailed to it, except white items, which are not.

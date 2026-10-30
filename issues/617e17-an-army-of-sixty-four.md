@@ -58,3 +58,7 @@ fixed-size army round one player.
 1. **"scenario setup scene jumps we're planning for later"**: the 64 is
    kept constant for those; should the army's makeup (which stand-ins,
    their classes) be fixed from one jump to the next, or drawn again?
+   correct. **The owner, 2026-10-30, word for word:** "they are rebuilt
+   dynamically. But, we will often be using the same ones. They come
+   from the same pool as the stand-ins." Rebuilt at each jump, drawn
+   from the stand-ins' pool, so the same characters often come back.

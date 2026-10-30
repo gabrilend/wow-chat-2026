@@ -90,4 +90,12 @@ another module uses changes), with less repeated work:
    missing pet spells.) Remembering impossible actions: "not sure this
    is important?" - left for later.
 2. Steps 3-5 change the bot module's engine for every bot (a source
-   patch). All bots, or buddies only?
+   patch). All bots, or buddies only? **Answered by the rule of
+   2026-10-30** (620: "It should be every bot."); the agent's reading,
+   for the owner to correct: all bots. The same day the owner set the
+   shape it takes: "buddies should be aware of everything within 70
+   yards of them. They should all be on the concern list. So, radius
+   triggers only to put things up on the mental bulletin board, or remove
+   them if they're far enough away." (165): what a bot thinks about is
+   pinned and unpinned by radius triggers, not found by looking every
+   moment.

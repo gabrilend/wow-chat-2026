@@ -167,10 +167,48 @@ Each is built twice:
 
 1. Which measures decide the better way: least stuck, least wasted
    walking, most even spread, or how it looks (the owner's eye)?
+   **Answered 2026-10-30** (the owner, word for word): "how it looks for
+   me. Can we switch them in Lua? Once we have a running server I'll
+   watch in-game and you can try the different methods one-by-one. We'll
+   see if they appear natural." The owner's eye decides; the measures are
+   shown beside it. Switching while the server runs is already built as
+   a game master command (".buddy path <way>", per owner, read
+   2026-10-30 in the module's path switch), so no compile is needed
+   between ways; a Lua script can issue the same command, so a Lua
+   switch is that command called from Lua, not a second switch. The
+   watching: on a running basic server, the owner watches and the agent
+   switches the ways one by one.
 2. The potential field can't get round a long wall or out of a cup: keep
    it as it is (a way that shows what forces alone do), or give it a
    memory (cells it has stood in push too, so it can't sink back into the
    same dip)? With the memory it is no longer "no map at all".
+   **Answered 2026-10-30** (the owner, word for word): "it's a routine
+   that we should enter at certain points to navigate through the
+   terrain it is suited to, and switched out of if we need to do
+   something like get around a long wall our climb out of a dip. How we
+   determine those states is solvable, for example a small dip can be
+   detected by saying "oh are a bunch of points 1, 3, and 5 yards away
+   from me much higher proportionally than the Y value I possess?" or
+   similar, but it might have problems with being stuck in a canyon,
+   which are plentiful in World of Warcraft." The forces-only way stays
+   without memory, and becomes one routine among the ways: a buddy
+   enters it on ground it suits (open, gently rolling) and leaves it for
+   another way when the ground says so: a dip, told by the ground round
+   it at 1, 3 and 5 yards standing well above its own height; a long wall
+   ahead. Which ground is which comes from the smap (617o9, question 4
+   below), not from hand-tuned height tests.
+4. How is a canyon told from a dip, so the forces-only routine is not
+   left early in every canyon: by whether the high ground rings the buddy
+   or lines two sides, or by the smap once it exists? **Answered
+   2026-10-30:** by the smap (617o9; the owner, word for word: "this
+   fiddly stuff is why for complex problems like this, which COULD be
+   engineered at great difficulty, are better suited to a natural
+   processing technique like the smaps, which build a sight based
+   categorization of terrain that can only improve with additional smap
+   input. Once it's built, it's solved, and we *grew* a solution out of
+   the clay of the earth, rather than specified with harsh
+   tolerances."). The height test at 1, 3 and 5 yards is not built; the
+   routine's states wait on the smap.
 3. ~~The sandbox's flow and A* may cut the same corners the module's
    first version did: mend them there too?~~ Answered 2026-10-29 (the
    owner: "Okay let's do all of those things"): mended in the sandbox the

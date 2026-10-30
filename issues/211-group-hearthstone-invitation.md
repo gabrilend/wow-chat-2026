@@ -147,7 +147,30 @@ the moment the cast begins):
 
 1. Random bots in a player's group can't press a button. Do they always
    come, never come, or come only when the hearther is their group's
-   leader?
+   leader? **Answered 2026-10-30** (the owner, word for word): "always
+   come. Though, pressing "okay" causes them to cast their own
+   hearthstone (even if it's on cooldown!) and if it's interrupted
+   they'll address the interruption and then try again. It'll take them
+   to the other party member's hearthstone location, not to their saved
+   location. Also if the party leader chooses "no" then they'll cancel
+   their cast. Once the original party member's cast expires because it
+   completed successfully or was cancelled, the in-progress prompts to
+   other players will immediately pick "no". If a party-member spams the
+   hearthstone request, then it has a 10 second cooldown before it can
+   start again, and players who are on the ignore list should never ever
+   be able to give other players prompts, including group hearthstone
+   prompts." So, for everyone the prompt reaches (players and bots, bots
+   always saying yes):
+   - "okay" starts the member's own hearthstone cast, cooldown or not,
+     and it carries them to the first member's hearthstone place, not
+     their own; an interrupted cast is dealt with (the cause handled)
+     and started again;
+   - the party leader answering "no" cancels the leader's own cast;
+   - when the first member's cast ends, done or cancelled, every prompt
+     still open answers "no" at once;
+   - a member can start a group hearth at most once every 10 seconds;
+   - nobody on a player's ignore list can ever send that player a prompt,
+     this one included.
 2. Two members hearthing at once: one circle round the first hearther's
    destination for everyone, or does the second hearther's own pop-up go
    out too?

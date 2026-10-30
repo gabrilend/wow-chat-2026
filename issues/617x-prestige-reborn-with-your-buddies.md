@@ -58,10 +58,13 @@ are the candidates for what stays; not decided.
   "when they learn LLM capabilities");
 - its tier: it appears for the owner at the same level it did before.
 It is otherwise made anew when its tier is reached again: a new class,
-talent shape (617g) and professions (617k). Where it can, it keeps its
-race and gender; where the new class can't be played by its race (a blood
-elf paladin becoming a druid), it takes a race that can, "because they
-are being reborn same as you".
+talent shape (617g) and professions (617k). It keeps its race and
+gender: since 2026-10-30 a buddy's race and gender change only when the
+owner's do (617a, word for word there), so Sargobras offers it only the
+classes its race can play. (Before 2026-10-30: where the new class
+couldn't be played by its race, a blood elf paladin becoming a druid, it
+took a race that could, "because they are being reborn same as you".
+Overturned by the rule in 617a.)
 
 **"Someone familiar."** At each tier, Sargobras offers "I am looking for
 someone familiar..." alongside the classes and races, but only when the
@@ -76,9 +79,10 @@ reborn is an open question.
 ## Suggested Implementation Steps
 
 1. Answer the open questions.
-2. The rebirth record: per owner, per tier, the buddy as it was before
-   the rebirth (class, race, gender, shape, role, professions), kept
-   beside the stage record (617a6), so "someone familiar" can read it.
+2. The rebirth record: per owner, per tier, one profile (the latest
+   version: class, shape, role, professions) and an appearance set for
+   each race the buddy has been (617a), kept beside the stage record
+   (617a6), so "someone familiar" can bring back the latest version.
 3. The item: a world-database step adding the item (bind on pickup) to
    the chosen Kael'thas's loot, and the Lua that runs the rebirth on use.
 4. The owner's reset to level 1 (the server's own level command, as the
@@ -108,11 +112,42 @@ reborn is an open question.
    something that counts rebirths)?
 3. Does the rebirth start where they stand, or back in a starting valley
    (the rotating valleys, 155d)?
-4. Can a character be reborn more than once?
+4. Can a character be reborn more than once? **Answered 2026-10-30:**
+   "again and again".
 5. A buddy's level after the rebirth: "keep the same level that they
    appear for you" read as the tier (the level-30 buddy appears at 30
    again). Is that right, or should it stay at its old level (60) and
-   wait?
+   wait? **Answered 2026-10-30** (the owner, word for word): "buddies
+   will rejoin you once you hit the requisite level. This is why it's so
+   important to keep them dormant in stasis." Each buddy waits dormant
+   (the stage record's waiting stage, 617a6) and rejoins when the reborn
+   owner reaches its tier's level.
 6. Death knights: can one be reborn, and if so, as what (it starts at 55)?
+   **Answered 2026-10-30** (the owner, word for word): "yes, with
+   sargobras soul already given. We will need new functionality for the
+   prestige path, because Sargobras takes the "skip story/do the story"
+   check before requesting a soul. So we'll need a new menu just for
+   prestigers (not a new option, but a new menu) that just has two
+   options, "I want to skip the story" or "I want to see the story". Then
+   it immediately jumps to as if the soul was given. Make sure we don't
+   lose track of WHICH soul the original one was, so we can recreate the
+   character if need be." A death knight is reborn as a death knight,
+   the soul already given to Sargobras. A reborn death knight meeting
+   Sargobras gets a menu of its own (a separate menu, not an extra line
+   on the usual one) with two lines, "I want to skip the story" and "I
+   want to see the story"; either goes straight on as if the soul had
+   just been given. The record of which soul was given the first time is
+   kept, so the character can be recreated if need be.
 7. "Someone familiar" after two rebirths: the latest one only, or a
-   choice among each one the tier has had?
+   choice among each one the tier has had? The owner, 2026-10-30: "all
+   of them I think...? Explain more?" Explained in conversation (a slot's
+   history of versions: paladin, then druid; "all" meaning a list of
+   every past version to pick from). The owner's reply set the race rule
+   (617a) instead; whether Sargobras lists every past version or only
+   the latest is asked again. **Answered 2026-10-30** (the owner, word
+   for word): "class and professions should change at the same time.
+   Sargobras only brings the most recent version back. We just store one
+   profile probably, then an appearance set for each race they've
+   visited." Only the latest version comes back. Each buddy keeps one
+   profile (its class, shape and professions, which always change
+   together) and an appearance for each race it has been (617a).

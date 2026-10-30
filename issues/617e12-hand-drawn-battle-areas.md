@@ -222,15 +222,50 @@ in opposite directions does the nearer one simply win.
    surrounding plains included; sometimes talk, mostly fight. Still open:
    how often "sometimes" is (one target in five a townsperson?), and do
    errands (617e4: trainer, vendor, repair) still come first when due?
+   **Answered 2026-10-30** (the owner, word for word). On errands: "they
+   should fight their way to their errands, as if they were bots
+   travelling toward a distant ally on the other side of a zone or
+   something." On how often: "it is rare that monsters will be in capital
+   cities, but it's more common for them to be in regular towns.
+   Typically there will be guards to assist, so if the guards are
+   fighting something then the buddy-bots should help out until there's
+   no monsters around, then they can converse. Though, in some cases the
+   monsters continuously spawn, so we should make sure that they do
+   eventually prioritize their errands over fighting, to get them done.
+   Think like... the entrance room in ICC. The monsters there spawn
+   continuously, but a bot from a party parked in front of a boss waiting
+   for them to "go sell" will appreciate it if they complete their
+   business and then immediately return." So: no fixed share. In town a
+   buddy helps the guards while monsters are about, and talks once none
+   are; a due errand is walked toward, fighting what is in the way as
+   any travelling bot does, not given up for fighting; and where
+   monsters keep coming (the entrance room of Icecrown Citadel), the
+   errand wins after a while, done and straight back.
 3. **Town circles and drawn areas:** the town side (area 3) holds the
    town circle. Does being inside a drawn area with this rule replace the
    town circle's behaviour there, or does the circle still mean "town
-   errands first"?
+   errands first"? **Answered 2026-10-30** (the owner, word for word):
+   "the errands are chosen semi-randomly. so it won't be a circle,
+   otherwise the buddy-bots will always choose the same tasks each time.
+   They should instead build a list of all the things they have to do,
+   and then ping-pong between them. If there are monsters along the way,
+   they can fight them, but that's rare." No circle: a buddy in town
+   lists every errand it has and goes from one to another in a
+   semi-random order (617e4), fighting what is on the way, rarely.
+5a. Asked 2026-10-30: between targets in town, drift from nearest thing
+   to nearest thing only, or also keep circling as on open ground?
+   **Answered 2026-10-30** (asked again as "when a buddy in town finishes
+   with one target and looks for the next"): neither; a coin toss
+   between the nearest and the farthest on its to-do list, the nearest
+   when the farthest is more than 4 times as far (617e4, word for word).
 4. (Answered 2026-10-08) **The other starting valleys:** two or three
    areas each, and every other zone split too, monster kinds the clue.
 6. **"Almost no monsters, almost no friendly people":** counted how (the
    spawns inside the area, per square yard, below a threshold?), and
-   decided once when the area is drawn, or live?
+   decided once when the area is drawn, or live? **Answered 2026-10-30**
+   (the owner, word for word): "danger should be assessed
+   spontaneously." Live, from what is there at the moment, never
+   counted once and kept (as a road's danger, 617e4c).
 5. **"Orbit on their own":** is the drift from nearest thing to nearest
    thing enough, or should a buddy in town also keep circling (617e2's
    orbit) between targets?
@@ -240,7 +275,17 @@ in opposite directions does the nearer one simply win.
    scorpids (the middle) and the boars, which wrap round both sides of
    the scorpids as well as holding the camp. Is a part that wraps round
    another acceptable, or must every part be one solid piece of land on
-   one side?
+   one side? **Answered 2026-10-30** (the owner, word for word): "with
+   multiple spawn-zones, we defer to the sub-zone text - for example if
+   you enter a cave it shrinks the map to very small that they can wander
+   in because they must stay in the same sub-zone. But they can wander
+   anywhere inside that sub-zone that has the same monster spawns as the
+   player is in." Where spawn zones overlap, the sub-zone (its name, as
+   the game shows it on entering) bounds the wandering: a buddy stays in
+   the player's sub-zone (a cave's sub-zone makes the area very small),
+   and inside it wanders anywhere that holds the same monster spawns as
+   where the player is. A spawn zone may wrap round another; the
+   sub-zone and the shared spawns decide, not the shape.
 8. (Answered 2026-10-09) **Caves:** the Coven's inside is not told apart
    from the valley in the map files, and the generator sees the ground's
    height, not the roof. The owner: "should use movement navmesh?" Yes:
@@ -264,7 +309,18 @@ in opposite directions does the nearer one simply win.
    through-way: a cave's under-hill polygons join the surface at one
    mouth, a tunnel's at two or more, on different parts' sides. Another is
    width against length: a passage is long and one corridor wide, a cave
-   opens into rooms. Which one did the owner mean, or both?
+   opens into rooms. Which one did the owner mean, or both? **Answered
+   2026-10-30** (the owner, word for word): "they are both treated as
+   caves. If a buddy-bot needs to pass through a tunnel (for example
+   Timbermaw Hold) there's a node-based routing system that will get them
+   to their destination without calculating the exact path. Timbermaw
+   Hold always has one entrance and one exit, so the node-system would
+   say "... stuff in felwood or whatever, then timbermaw hold entrance,
+   then timbermaw hold, then timbermaw hold exit, then winterspring path,
+   then Everlook, etc"" No tunnel kind: a tunnel is a cave. Passing
+   through one is the route search's work (the node routing of 617e8's
+   crossings): its entrance, itself and its exit are nodes on the route,
+   and no exact path through it is worked out ahead.
 10. **A cave in a map of squares:** the roaming parts are flat squares
     about 33 yards across, one part each; a cave under a hill shares its
     squares with the hillside above it. A cave part needs a second layer:
@@ -272,4 +328,25 @@ in opposite directions does the nearer one simply win.
     (the table keyed by map, square and layer; "below" meaning the owner
     stands 4 yards or more under the terrain). Is a second layer the
     right shape, or should a cave be an exception kept by its mouth and
-    floor outline instead?
+    floor outline instead? **Answered 2026-10-30** (the owner, word for
+    word): "keep track of x, y, and z coordinates. We should have a "map"
+    that is "unrollable" into higher dimensions. For example when
+    entering a cave, we should conceptually walk into another dimension,
+    with the distance from the entrance / exit as the value in that
+    dimension. So if it was dimension Q for example increases in Q value
+    would mean you're getting farther from the entrance. Decreases in Q
+    value would mean you're getting closer to an exit. Doesn't matter
+    which exit, it's just... AN exit. / consider a spiral staircase. If
+    the entrance and exit share the SAME X/Y space, they'd also share the
+    same Q space value because they're both 0 at the entrance and exit,
+    but the top of the spiral staircase is at the same space as the
+    bottom of the spiral staircase. This is why it's important to store
+    the Z value as well. The Z value *would* differentiate the top and
+    bottom, which is why we need it." Neither layers nor an exception: a
+    cave's places are kept by x, y and z, plus a fourth number, Q: the
+    walking distance to the nearest of its mouths (0 at every mouth,
+    growing inward). Q says "deeper" or "nearer a way out" without saying
+    which way out; z tells apart places that share x and y (a spiral
+    stair's top and bottom, a cave under its hillside). Asked whether Q
+    covers buildings, crypts and instances too, the owner, 2026-10-30:
+    "yes, yes, and yes." Everything with a roof gets Q.

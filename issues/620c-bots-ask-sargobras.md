@@ -77,6 +77,11 @@ Sargobras (`patches/E066-sargobras/sargobras.lua`) is driven entirely by dialogu
 - **Should an alt bot's master be able to choose for it** (a whisper such
   as "Sargobras: paladin"), or does the bot always choose by itself? On
   basic, chat commands to buddies are dropped (B045), but alt bots still
-  take commands.
+  take commands. **Answered 2026-10-30** (the owner, word for word):
+  "the bot always chooses for itself." No whisper from a bot's master
+  chooses for it.
 - **Should a bot's Sargobras still sit by a campfire and tell jokes** once
   it has chosen, or leave at once (nobody is there to hear him)?
+  **Answered 2026-10-30** (the owner, word for word): "the bot listens."
+  He sits and tells his jokes as for a player, and the bot stays and
+  listens (sitting by the fire, facing him) until he is done.

@@ -77,9 +77,17 @@ For death knights (Death Gate), druids (Teleport: Moonglade) and mages
 1. **Party members:** "party-members can too": every party member near
    the caster goes along at once, or each is offered it (a summon-style
    "accept" box), or only the caster's own buddies are taken automatically?
+   Asked again 2026-10-30 with the agent's call, buddies automatically
+   and other players by a prompt as the group hearthstone's (211); quoted
+   back without objection, taken as agreed, for the owner to correct.
 2. **"Before they first teleported in":** if a mage teleports to
    Stormwind, then to Ironforge, then casts Teleport: Ironforge in
    Ironforge, does it go back to Stormwind (where it was before this
    trip), or to where it was before the first teleport of the chain?
+   **Answered 2026-10-30** (asked as Stormwind, Ironforge, Dalaran, then
+   Teleport: Dalaran in Dalaran; the owner, word for word): "the most
+   recent place they were at, so ironforge." The return goes to the
+   place the caster was just before the latest teleport, one step back,
+   not to the chain's start.
 3. **Mage portals** (Portal: city, for the group): the same two-way rule?
 4. **Cooldowns:** the return costs the spell's cooldown like any cast?

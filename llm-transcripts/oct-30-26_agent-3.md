@@ -1,6 +1,6 @@
 # Conversation Summary: e143dbfe-ff43-48be-8bd4-4d54fd7a325d
 
-Generated on: 2026-10-30 14:53:32
+Generated on: 2026-10-30 15:13:24
 Models: claude-opus-5-5
 
 ## Contents
@@ -3353,6 +3353,340 @@ they go to Acherus")
 10. **How often a new rune:** every visit, or only sometimes (one visit in
     three), so a rune is part of who the buddy is for a while?
     *My call:* one in three.
+
+--------------------------------------------------------------------------------
+
+### User Request 25
+
+> 1. "Quantity": more copies of the same item (a stack of 3 cloth instead of 1,
+> which only works
+>      for stackable things), or more rolls (three chances at a green instead of one)?
+
+for stackable items, it gives multiple quantity. For non-stackable things like
+greens, then if it rolls one, then instead of giving just one it gives a second
+from the same loot type roll list as well. My understanding is that especially
+for Azeroth there's white, green, blue, etc items in the same lists, and in
+later expansions they separated that into "chance for a green, chance for a
+blue, etc" etc. So for now, just treat it like 3x rolls, though the intended
+behavior is that if a green drops, then instead 3x greens would drop if the
+quantity was set to 3. If a blue drops, then 3x blues would drop.
+
+> 2. "Monster type": only rank (normal, elite, rare, rare elite), or also kind
+> (beast, humanoid,
+     undead…)?
+
+just rank. the loot tables already handles monster type.
+
+> 3. Whose kills: does the multiplier apply to every kill, buddies alone
+> included, or only kills a
+>      real player took part in?
+
+every kill.
+
+
+
+<pasted_content id="415d">
+> 4. Which clock: a flat 5 minutes for every rare, or each rare matched to the
+> ordinary monsters
+     around it?
+>      My call: matched to the monsters around it.
+</pasted_content id="415d">
+
+
+this one
+
+
+
+<pasted_content id="415d">
+> 5. Rare spawn pools. Many rares share their spawn spots with ordinary
+> placeholder monsters and
+>      appear at one spot at a time. On a short timer they would cycle quickly through those spots.
+>      Keep that, or change the pools so the rare is always up?
+>      My call: keep the pools. The hunt is part of the fun.
+</pasted_content id="415d">
+
+
+so... cycle through multiple spots? If the rare is already spawned, it won't
+spawn again until it's slain, right?
+
+>   6. Dungeons: rares inside dungeons and raids too, or the open world only?
+
+rares in dungeons and raids should always spawn. Or rather, if there are any to
+be found in the dungeon or raid, then at least one will always spawn, but it's a
+random one each time.
+
+
+
+<pasted_content id="415d">
+>   7. Sorting each shield:
+>      - intellect or spell power → magic (mana every 5 seconds)
+>      - spirit or healing → holy (spirit)
+>      - anything else → plain (bonus armour)
+</pasted_content id="415d">
+
+
+sounds good. let's worry about the "light" shields later.
+
+> 8. Order: another step already turns stamina into spirit on two-fifths of
+> leather, plate, mail
+>      and jewellery, not shields. Should the shield step run after it?
+>      My call: yes, after.
+
+this one
+
+
+
+<pasted_content id="415d">
+> 9. Which Acherus? The Ebon Hold floating over the Eastern Plaguelands, which
+> the Death Gate
+>      spell goes to, or Acherus in the death knight starting zone, which exists only during the
+     story?
+</pasted_content id="415d">
+
+
+either. If there is a runeforge in the list of tasks they could do in town, then
+they will reforge their gear with a new runeforge.
+
+> 10. How often a new rune: every visit, or only sometimes (one visit in three),
+> so a rune is part
+>       of who the buddy is for a while?
+
+every visit. And they send a message to their owner saying "I switched to [rune]
+on my [weapon]"
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 25
+
+> Writing the four sets of answers in:
+
+All ten answers are recorded word for word.
+
+**Your question about rare spawn spots:** yes, that's right. I checked basic's
+world database:
+
+- 135 of its 426 rares sit in a spawn pool. Each pool holds only that rare's own
+  possible spots, not placeholder monsters. Scale Belly's pool, for example, has
+  4 spots and at most 1 alive.
+- So the rare is at one spot at a time and never spawns a second copy while it
+  lives.
+- Once it's slain, after its respawn time it appears again at one of its spots,
+  picked at random.
+
+I've written it as kept as it is, for you to correct.
+
+**Also recorded:**
+
+- **Drops by rank:**
+  - Stackable drops come as that many copies.
+  - A non-stackable drop is meant to bring that many items of the same quality
+    (3 greens, or 3 blues). It's built as extra rolls of the same list for now.
+  - The multiplier is per rank only and applies to every kill.
+- **Rares:**
+  - Each rare respawns on the timer of the ordinary monsters around it.
+  - Every new dungeon or raid instance that has rares gets at least one, chosen
+    at random.
+- **Shields:**
+  - Each shield is sorted by its stats: mana every 5 seconds, spirit, or armour.
+  - This runs after the stamina-to-spirit step.
+  - Light shields come later.
+- **Death knight runes:**
+  - Any runeforge on a buddy's town errand list counts. It re-runes on every
+    visit.
+  - It then tells you "I switched to [rune] on my [weapon]".
+
+The todo list has 36 items, and nothing is committed yet.
+
+One question from the runeforge issue is still open: can you ask a buddy for a
+specific rune ("rune of razorice"), the way you'd give it any other order? My
+call: yes, and it keeps that rune until its next runeforge visit.
+
+--------------------------------------------------------------------------------
+
+### User Request 26
+
+10 more questions?
+
+> can you ask a buddy for a specific rune
+>   ("rune of razorice"), the way you'd give it any other order?
+
+nope. it's a personal choice.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 26
+
+I've recorded your answer: a buddy picks its own rune, and you can't order one.
+
+## Ten more questions
+
+**Respawns and the level command**
+
+1. **Faster respawns with more players.** You described each nearby player
+   speeding respawns by 10%, compounding (one player 90% of the wait, two 81%,
+   and so on). The server already has a built-in setting that is stronger: twice
+   the players means half the wait, never under 10 seconds. Your rule needs new
+   code. Which one? And does "nearby" mean the whole zone, or a radius around
+   the monster?
+   *My call:* your 10% compounding rule, counted per zone, for every monster.
+2. **Level command with better gear** (a green, blue or purple version of the
+   fresh gear set): which items may it pick from? Any item of that quality, or
+   only ones that drop in the world and dungeons (no quest rewards, no crafted
+   items)?
+   *My call:* only world and dungeon drops, so crafting and quests stay special.
+3. **Changing a character's class while the server runs.** The tool logs the
+   character out and locks it out for about 30 seconds while it makes the
+   change. The stock client can only show its fixed "this account has been
+   banned" text, not our reason. Is that acceptable? Or should it be our own
+   lock, enforced at login, with our own words whispered once the character is
+   back in?
+   *My call:* our own lock, since "banned" would alarm anyone.
+
+**Totem places and wisp circles** (your words: a circle of wisps around each
+totem, a third of its area, "you can only place one totem in each space")
+
+4. **"One totem in each space":** does that apply between one shaman's own
+   totems (its four can't stand together), or only between different shamans'
+   totems?
+   *My call:* only between different shamans', so each shaman's own set still
+   works.
+5. **A place already taken:** is the totem refused and the shaman told, or
+   dropped at the nearest free spot?
+   *My call:* the nearest free spot. Being refused mid-fight feels bad.
+6. **The wisp circle's inner third:** is the buff stronger inside it than in the
+   rest of the totem's area, or is the circle only a sign of where the edge is?
+   *My call:* stronger inside, as your "they feel how soon they get a bonus"
+   suggests.
+
+**Earthliving jumps** (your words: dual-wield Earthliving on a resto shaman;
+cast on someone who already has it, it jumps to someone nearby who doesn't;
+"double chance, double impact, scaling with coverage or durability indusage")
+
+7. **"Double impact":** two chances to trigger, one per weapon, or also a
+   stronger heal when both weapons carry it?
+   *My call:* two chances only. Stronger heals would make it too good.
+8. **"Durability indusage":** should each trigger wear the weapon's durability a
+   little, so the strength has a cost?
+   *My call:* yes, a small cost per trigger.
+
+**Death knights**
+
+9. **Removing Death Grip:** only from player death knights (and their buddies),
+   with creatures that cast it keeping it? And does Dark Command, the death
+   knight's own taunt, stay?
+   *My call:* gone from player death knights only, and Dark Command stays.
+10. **The oath after the story.** A death knight who finishes the story swears
+    to the Horde, the Alliance, or Acherus. Can that oath be changed later, and
+    how?
+    *My call:* yes, by swearing again at the same place, once per week.
+
+--------------------------------------------------------------------------------
+
+### User Request 27
+
+Death knights
+
+  9. Removing Death Grip
+
+let's defer this until after the next compile. Idk if I still want it...
+
+  10. The oath after the story
+
+can't be changed, even with a prestige.
+
+
+
+<pasted_content id="415d">
+> 1. Faster respawns with more players. You described each nearby player
+> speeding respawns by 10%,
+>      compounding (one player 90% of the wait, two 81%, and so on). The server already has a
+>      built-in setting that is stronger: twice the players means half the wait, never under 10
+>      seconds. Your rule needs new code. Which one? And does "nearby" mean the whole zone, or a
+>      radius around the monster?
+</pasted_content id="415d">
+
+
+let's just use their system for now, we can come back to ours later.
+
+
+
+<pasted_content id="415d">
+> 2. Level command with better gear (a green, blue or purple version of the
+> fresh gear set): which
+>      items may it pick from? Any item of that quality, or only ones that drop in the world and
+>      dungeons (no quest rewards, no crafted items)?
+</pasted_content id="415d">
+
+
+for now let's just set the level-up gear to give you the white quality gearsets.
+we will come back to this later.
+
+
+
+<pasted_content id="415d">
+> 3. Changing a character's class while the server runs. The tool logs the
+> character out and locks
+>      it out for about 30 seconds while it makes the change. The stock client can only show its
+>      fixed "this account has been banned" text, not our reason. Is that acceptable? Or should it
+>      be our own lock, enforced at login, with our own words whispered once the character is back
+     in?
+</pasted_content id="415d">
+
+
+our own lock and whisper. "welcome back adventurer, you're a druid now,
+congrats. go scratch your butt with a branch or whatever."
+
+
+
+<pasted_content id="415d">
+
+> Totem places and wisp circles (your words: a circle of wisps around each
+> totem, a third of its
+>   area, "you can only place one totem in each space")
+</pasted_content id="415d">
+
+
+let's return to this when we're modifying class behavior. The whisp circles are
+shared design with other systems though so keep that in mind.
+
+
+
+<pasted_content id="415d">
+> Earthliving jumps (your words: dual-wield Earthliving on a resto shaman; cast
+> on someone who
+> already has it, it jumps to someone nearby who doesn't; "double chance, double
+> impact, scaling
+>   with coverage or durability indusage")
+</pasted_content id="415d">
+
+
+let's defer this as well until we are doing class changes.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 27
+
+> Updating the class-change design to match your answer:
+
+I've recorded your answers:
+
+- **The oath:** can't be changed, even with a prestige.
+- **Respawns:** the server's built-in player-count setting for now. Your
+  10%-per-player rule is kept for later.
+- **Level command gear:** white gear sets only for now.
+- **Class change:** our own login lock instead of a ban, then a welcome-back
+  whisper on the next login. I updated the class-change design to match and
+  quoted your druid line as the tone.
+- **Deferred:**
+  - Death Grip waits until after the next compile, and is marked that way.
+  - Totem places and Earthliving wait until class behaviour is reworked. I
+    quoted your note that the wisp circles are a design other systems share.
+
+The todo list has 37 items. Nothing is committed yet.
+
+Want ten more? Next up would be: the Botanica checkpoint party (who its five
+are, and whether it's basic's), the jewelcrafting chain, and the death knight
+story questions.
 
 --------------------------------------------------------------------------------
 

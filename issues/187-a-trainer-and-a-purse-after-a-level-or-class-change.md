@@ -72,10 +72,11 @@ these tools and the `.buddy kit` / `.buddy gems` commands after them.
    so it can train everything at once.
 3. **The class change, live.** Instead of refusing while the world
    server runs, the tool asks the running server to disconnect that one
-   character's account and lock it out for a short time (a ban of about
-   30 seconds, its reason "your class is being changed"), makes the
-   change, then lifts the ban. The purse and the trainer are given at the
-   next login (the character is offline while the tool works).
+   character and lock that character out for a short time (our own lock,
+   checked at login, not a ban: decided 2026-10-30, Open Questions 4),
+   makes the change, then lifts the lock. The purse and the trainer are
+   given at the next login (the character is offline while the tool
+   works), with a whisper welcoming it back as its new class.
 4. A reply (in game, or on the console) naming the copper given, the
    lessons it covers, and the trainer summoned, or what failed.
 
@@ -105,12 +106,32 @@ these tools and the `.buddy kit` / `.buddy gems` commands after them.
 
 1. Weapon masters' lessons (10 silver each, Staves, Guns ...): counted in
    the purse, or taught free since buddies now learn them free?
+   **Answered 2026-10-30** (the owner, word for word): "buddies shouldn't
+   learn weapons for free! They should be an errand they have to run in
+   each capital city, if there's a trainer that teaches them something
+   new. It should go through the exact same pipeline as the class ability
+   trainer." Counted in the purse; and buddies pay for weapon lessons
+   too, learning them at weapon masters as a town errand by the same
+   path as class lessons (617n).
 2. The visiting trainer: seen by the character alone, or by everyone
-   nearby? How long does it stay?
+   nearby? How long does it stay? **Answered 2026-10-30** (the owner,
+   word for word): "the visiting trainer is just so that players don't
+   have to visit extra cities to get their bots all trained up, as a
+   matter of course. Though... it might be kinda neat if we could say to
+   a bot "go train" and they would. Hmmmm let's just build it as if the
+   visiting trainer were a static NPC that's always there, just like
+   another trainer, and then we can re-assess later." Built as an
+   ordinary trainer that stays, like any other; to be looked at again
+   later (and perhaps a "go train" order, 617y).
 3. When a level rises by the level-up command, do the character's buddies
-   (who learn free) get anything, or only the player?
+   (who learn free) get anything, or only the player? **Answered
+   2026-10-30:** "the buddies too." They get the same as the player.
 4. The ban's message: the game client shows a fixed "this account has
    been banned" text, not our reason. Is that acceptable, or should the
    lock-out instead be a "character locked for 30 seconds" flag our own
    login hook enforces (with our words, whispered or on the login screen
-   it can't be)?
+   it can't be)? **Answered 2026-10-30** (the owner, word for word): "our
+   own lock and whisper. "welcome back adventurer, you're a druid now,
+   congrats. go scratch your butt with a branch or whatever."" Not a
+   ban: our own short lock on the character, enforced at login, and on
+   its next login a whisper in that spirit naming its new class.

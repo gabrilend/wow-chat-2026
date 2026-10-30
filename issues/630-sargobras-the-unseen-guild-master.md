@@ -115,6 +115,11 @@ no roster.
 
 1. **How often "sometimes"?** Each lone login, one in a few, or once a
    day per character? (Asked again when a profile first makes room for it.)
+   **Deferred 2026-10-30** (the owner, word for word): "I realized this
+   would never trigger since guilds are just clans? Maybe we should wait
+   until we develop a system where a player can be in another player's
+   guild. So, defer this as well." Waits for a player able to be in
+   another player's guild.
 2. **Many guilds in the stock client**: the 3.3.5a client shows one
    guild; is switching which one is shown (step 1) what "viewable and
    selectable through the UI" means, or is it the custom client's to

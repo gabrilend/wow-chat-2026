@@ -69,10 +69,17 @@ And on the fishing pole:
    its map files (a road texture layer per map chunk); or the paths
    wandering guards and caravans walk (creature waypoints); or flight
    path routes; or hand-placed points with a tool (118, point-line tools).
-   Which one, or a mix?
+   Which one, or a mix? **Answered 2026-10-30** (the owner, word for
+   word): "smaps." Roads are read from the smap (617o9), the ground
+   seen.
 2. Is "quest mob" any creature a quest objective names, or only those of
    quests the owner has, or could take at their level?
 3. "Overlapping layers to quantify regions": should a region's danger be
    a number (how many layers say danger, how strongly) rather than yes or
-   no, so a road through quest land is "a little" dangerous?
+   no, so a road through quest land is "a little" dangerous? **Answered
+   2026-10-30** (the owner, word for word): "determined from surrounding
+   monsters and such, not baked into the smap, because monster positions
+   might change, but the terrain is more static." A road's danger is
+   worked out live from the monsters (and such) round it; the smap holds
+   only the road.
 4. A flock: a fishing pool (a school of fish), or something else?

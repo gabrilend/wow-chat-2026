@@ -65,6 +65,18 @@ glyph traders, the eccentric jewelcrafter) are invisible to it.
 
 ## Intended Behavior
 
+**How every feature is shaped, so bots share it** (the owner,
+2026-10-30, asked whether talents should steer only buddies, word for
+word: "why is it different? It should be every bot. All the things we
+make should be A. sandboxed to a particular player, like how the
+original wow-chat was designed, and B. fully idempotent / functional
+style, with the only state available being the state that is stored on
+the player, which gets memory freed whenever they log out."). Each
+feature runs for one player (or bot) at a time, as pure functions of
+what is stored on that player; it keeps nothing of its own elsewhere,
+and what it stores on the player is freed when the player logs out. A
+feature built that way is the same for a human, a buddy and a bot.
+
 An alt bot or a random bot on basic lives the same game a human player
 does, by the same rules, through the same doors:
 

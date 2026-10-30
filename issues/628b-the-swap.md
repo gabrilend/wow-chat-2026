@@ -9,6 +9,9 @@
   617a5 (buddies hidden and locked: how a buddy is already kept out of
   sight), 164 (per-player unselectable creatures)
 - Priority: Medium
+- State: will not implement (2026-10-30, with its parent 628; nothing
+  else depends on it); to be moved to issues/will-not-implement/ with
+  the next commit
 
 ## Origin
 

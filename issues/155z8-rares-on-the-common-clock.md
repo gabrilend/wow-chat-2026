@@ -90,13 +90,30 @@ often as the monsters around it. World bosses (rank 3, 155j) keep theirs.
 
 1. **Which clock?** The ordinary monsters' usual 5 minutes for every rare,
    or each rare matched to the ordinary monsters around it (or to its
-   pool's placeholder), where those differ from 5 minutes?
+   pool's placeholder), where those differ from 5 minutes? **Answered
+   2026-10-30:** asked with the agent's call, matched to the monsters
+   around it, the owner: "this one". Each rare's respawn time is that of
+   the ordinary monsters around it.
 2. **Pools.** A rare in a pool with placeholders appears at one of its
    spots each time; with a 5-minute timer it can show up every few
    minutes in turn with them. Is that wanted, or should the pools be
-   loosened so the rare always appears?
+   loosened so the rare always appears? Asked back by the owner,
+   2026-10-30: "so... cycle through multiple spots? If the rare is
+   already spawned, it won't spawn again until it's slain, right?" Read
+   in basic's world database the same day: 135 of the 426 rares are in a
+   pool, and those pools hold only the rare's own possible spots (Scale
+   Belly's pool: 4 spots, at most 1 alive), not placeholder monsters. So
+   yes: one rare at one of its spots, never a second while it lives;
+   once slain, after its respawn time it appears again at one of its
+   spots, picked at random. Kept as it is (the agent's reading, for the
+   owner to correct).
 3. **Instances.** Rares inside dungeons and raids too, or the open world
-   only?
+   only? **Answered 2026-10-30** (the owner, word for word): "rares in
+   dungeons and raids should always spawn. Or rather, if there are any
+   to be found in the dungeon or raid, then at least one will always
+   spawn, but it's a random one each time." Each time a dungeon or raid
+   instance is made, at least one of its rares is present, picked at
+   random.
 4. **Players in the area.** The server already has a player-count knob
    (`Respawn.DynamicRateCreature`: past a set number of players in a
    zone, waits shrink in proportion, so twice the players is half the
@@ -104,4 +121,7 @@ often as the monsters around it. World bosses (rank 3, 155j) keep theirs.
    above (0.9 per player) is gentler and needs compiled code instead.
    Which? And: "area" is the zone, or a radius around the rare? The
    first player counts (one player: 90%), or one player is the base?
-   Every monster, or rares only?
+   Every monster, or rares only? **Answered 2026-10-30:** "let's just
+   use their system for now, we can come back to ours later." The
+   server's own setting (`Respawn.DynamicRateCreature`, by players in
+   the zone) for now; the 0.9-per-player rule is kept for later.

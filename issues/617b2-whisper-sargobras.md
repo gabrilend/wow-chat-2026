@@ -50,19 +50,38 @@ Facts that shape the design:
 
 ## Intended Behavior
 
-**One Sargobras to whisper.** A character named Sargobras, logged in as a
-bot on the stand-in account (or an account of his own; see open
-questions) whenever the world server runs. He is invisible and never
+**The whisper works his menus, it does not open them** (the owner,
+2026-10-30, word for word: "we can interact with the buddy-making menus,
+not open them."). A whisper makes the same choices his dialogue lines
+make, from afar; it does not put his menu on the player's screen.
+
+**One Sargobras to whisper, on his own account** (the owner, 2026-10-30,
+word for word: "Sargobras needs his own account for the functionality
+related to him being every guild's guild master. Can you find that and
+use that for guidance?"). The unseen guild master (630, step 3) is a
+character that belongs to every guild's roster and never visibly logs
+in; that character needs an account, and it is this one: the
+whisperable Sargobras and the guild master are one character on one
+account of his own, not the stand-in account. A character named
+Sargobras, logged in as a bot on that account whenever the world server
+runs. He is invisible and never
 moves: he stands at one fixed spot out of the way, takes no bot commands,
 fights nothing, and is hidden from /who and add-friend as buddies are.
 He exists only to receive whispers.
 
-**Every Sargobras near you answers.** A whisper to him is handled as if
-said to all the Sargobras creatures present for the whisperer at that
-moment (the valley one beside them, their wandering one): each of them
-speaks the answer aloud in /say, as he does when a dialogue line is
-clicked, and the action is done once. With no Sargobras creature near,
-the invisible one answers by whisper.
+**One Sargobras answers, the lowest level first** (the owner,
+2026-10-30, word for word: "a single sargobras responds. If there are
+Sargobrases from multiple level tiers, then the lowest level one is
+utilized first."). Of the Sargobras creatures present for the whisperer,
+exactly one speaks the answer aloud in /say, as he does when a dialogue
+line is clicked, and the action is done once: where creatures of more
+than one level tier are present, the lowest-level one answers. With no
+Sargobras creature near, the invisible one answers by whisper.
+
+**Both factions reach the one character** (the owner, 2026-10-30, word
+for word: "one character, patched faction rule."): the whisper's faction
+check lets a whisper to Sargobras through, and stays as it is for
+everyone else.
 
 **The commands** (the same choices the dialogue offers, in words):
 
@@ -71,7 +90,6 @@ the invisible one answers by whisper.
 | `priest` (any class name) | chooses a buddy of that class for the lowest owed slot, by the same rules the dialogue line uses (`lib/buddy-choice.lua`), spec included: the buddy is made exactly as one chosen at his menus would be |
 | `shadow priest` (spec, then class) | the same, with that spec profile |
 | `troll` (any race name) | chooses by race, as the race dialogue lines do |
-| `priest Felicity` (a name after it) | the same, and the buddy is given that name if it is free |
 | `help` | lists the commands |
 | `owed` | says how many buddies the whisperer is owed |
 
@@ -138,30 +156,47 @@ and bots: the whisper.
    specs, races, keywords), then calls the same choose function the
    dialogue uses. Every Sargobras creature near the whisperer says the
    answer.
-4. **Names:** the requested name checked with the server's own name rules
-   and against existing characters; taken or invalid names get a joke and
-   a random name instead (see open questions).
+4. **Names: none asked for** (the owner, 2026-10-30, word for word: "we
+   don't get to pick buddy names. How does the auto-generation already
+   handle this? My instinct is that we should just try again until we get
+   a valid name."). A whisper never names the buddy. How the name is
+   drawn today (read 2026-10-30 in the buddy module's character maker):
+   a random name from the bot module's name list for the race and
+   gender, among those no character has; drawn again if it fails the
+   server's name rules or is reserved, at most five draws, and the buddy
+   is not made (an error saying no unused name is left) when all five
+   fail. To build, as the owner's instinct says: draw again until a
+   valid name comes, ending only when the list holds no unused name for
+   that race and gender (then the error, as now), not after a fixed five.
 5. **Tests:** an offline test of the word parsing beside
-   `scripts/test-buddy-choice`; in game, `/w Sargobras shadow priest
-   Felicity` from each faction, near a wanderer and far from any.
+   `scripts/test-buddy-choice`; in game, `/w Sargobras shadow priest`
+   from each faction, near a wanderer and far from any, and near two
+   Sargobras of different level tiers (the lower answers).
 6. Update 617b's Current Behavior.
-
 ## Open Questions
 
 Gathered 2026-10-28 into 617's own list (question 32), merged with the
 same questions from other sub-issues; answers are written back here.
 
-- **Which account:** the stand-in account (already a bot account with no
-  owner), or a new account of his own?
-- **Both factions:** one Sargobras with a patched faction check, or two
-  characters (Alliance and Horde) both named so whispers find the right
-  one? Names are unique on a realm, so two would need different names.
-- **"All of them respond"**: is it every Sargobras near the whisperer
-  (as written above), or every Sargobras creature in the world?
-- **A name that is taken:** a random name instead, or refuse and ask
-  again?
+- **Which account:** answered 2026-10-30: his own, the one the unseen
+  guild master (630) needs (above, word for word).
+- **Both factions:** answered 2026-10-30: "one character, patched
+  faction rule."
+- **"All of them respond"**: answered 2026-10-30: a single one, the
+  lowest level tier first (above, word for word).
+- **A name that is taken:** answered 2026-10-30: buddy names are never
+  asked for; the drawing tries again until a valid name comes (above,
+  word for word).
 - **Default spec:** answered 2026-10-28: "the spec should be picked in the
   same way that any other buddy. This whisper shortcut is just a way to
   interact with him from afar, or in an automated fashion. It should just
   create a priest using the same rules we already have." The whisper is
   his menus from afar; it adds no rules of its own.
+- **Opening his menu from the friends list** (raised 2026-10-30): the
+  friends-list design above (2026-10-20) says any whisper "will open his
+  dialogue menu", while the answer of 2026-10-30 says a whisper works his
+  menus and does not open them. Does a whisper that is not a command
+  still open his menu, or answer with the help line? **Deferred
+  2026-10-30** (the owner, word for word): "oh, um hmmmmmm... let's defer
+  that for now. We can just have the players click on him for now."
+  Opening his menu from afar is not built; players click on him.

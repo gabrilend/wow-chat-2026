@@ -83,6 +83,34 @@ language-model layer (917, 617m) reaches the same actions as tool calls.
 **No faction or race change** ("I don't intend to support faction or race
 changes at this time"): basic doesn't offer them.
 
+**A buddy's race and gender follow the owner's** (the owner, 2026-10-30,
+word for word: "buddy-bots should only change race / gender if the
+players race / gender changes. So, I think Sargobras should only offer
+racially appropriate classes. If the player gets a race-change, then
+all the buddy-bots will attempt to change races if they can, randomly.
+If however it's a paladin and a blood elf or whatever, or a draenei
+shaman, then they won't be able to change race until they change class
+first. / If they ever change back, they should return to the same
+appearance that they had originally."). For whenever a race or gender
+change exists (basic offers none yet):
+- a buddy's race and gender change only when its owner's do;
+- whenever Sargobras offers classes for a buddy that already has a race
+  (a reset, 617a7; a rebirth, 617x), he offers only classes that race
+  can play;
+- when the owner's race changes, every buddy that is able changes race
+  too, to a race drawn at random among those its class allows, never
+  the race it has now (the owner, 2026-10-30, word for word: "make sure
+  that if we race change, then all the buddies will as well if they are
+  able to. So, don't pick the same race they currently are, because it's
+  a race *change*, not a race "random draw" or whatever."); a buddy
+  whose class no other race can play there (a blood elf paladin, a
+  draenei shaman) keeps its race until its class changes first;
+- each buddy keeps an appearance (face, hair, skin, gender's looks) for
+  every race it has been, and a buddy changing back to a race gets
+  exactly that race's appearance again (the owner, 2026-10-30: "We just
+  store one profile probably, then an appearance set for each race
+  they've visited."; 617x).
+
 **Server restart** ("Ideally, they'd remember"): what a buddy is doing
 (errands, task hunts, the dungeon draw bag, auction price memory) is kept
 in the database, so a restart picks up where it left off.

@@ -93,9 +93,18 @@ stronger, as a two-hander has one weapon to carry it.)
 
 1. **"Every time they go to Acherus":** the Ebon Hold over the
    Plaguelands (map 0), where Death Gate goes, or Acherus in the Enclave
-   (map 609, only during the story)?
+   (map 609, only during the story)? **Answered 2026-10-30** (the owner,
+   word for word): "either. If there is a runeforge in the list of tasks
+   they could do in town, then they will reforge their gear with a new
+   runeforge." A runeforge is one more town errand (617e4's to-do list):
+   wherever a buddy's town visit finds a runeforge, it runes its weapon
+   anew.
 2. **How often a new pick:** every visit, or only some visits (say a
    one-in-three chance), so a buddy's rune is part of who it is for a
-   while?
+   while? **Answered 2026-10-30** (the owner, word for word): "every
+   visit. And they send a message to their owner saying "I switched to
+   [rune] on my [weapon]"" Every visit, then a whisper to its owner
+   naming the new rune and the weapon.
 3. **The owner's say:** may the owner ask a buddy for a rune ("rune of
-   razorice"), as 626's keyboard and orders do?
+   razorice"), as 626's keyboard and orders do? **Answered 2026-10-30:**
+   "nope. it's a personal choice." The buddy alone picks its rune.
