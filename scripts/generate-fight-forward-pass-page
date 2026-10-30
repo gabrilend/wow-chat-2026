@@ -1,0 +1,462 @@
+#!/usr/bin/env luajit
+--------------------------------------------------------------------------------
+-- generate-fight-forward-pass-page - writes the page that lays out how the
+-- buddies think in a fight (issue 625n): the fight's forward pass.
+--
+-- For a general audience: the owner compared a buddy's fight curves to a
+-- language model reading everything said so far through the same weights to
+-- find its next word, and asked how it would be built. This writes that
+-- design as a page in the project pages' look: the analogy side by side,
+-- what the snapshot of a fight holds, the minute of events, the weights,
+-- the six layers drawn with what is built, where it runs, and a playground
+-- where the fight curves can be moved by hand (a dying tank, Lay on Hands,
+-- Hand of Protection), using the same arithmetic as the buddy module's
+-- buddies_curve.h, with the numbers its test checks as the starting values.
+-- The layers' build state, the snapshot's fields and the owner's words are
+-- tables in this script; change them here and run it again.
+--
+-- Writes: docs/HTML/fight-forward-pass.html (a whole page), and with
+--         --fragment PATH the same page without its outer skeleton, for
+--         publishing as an artifact (which wraps its own skeleton round it)
+-- Usage:  scripts/generate-fight-forward-pass-page [PROJECT_DIR] [--fragment PATH]
+--         scripts/generate-fight-forward-pass-page --help
+--------------------------------------------------------------------------------
+
+-- {{{ configuration
+local DIR, FRAGMENT = "/mnt/kaun/wow-chat-2026", nil
+local i = 1
+while i <= #arg do
+    local a = arg[i]
+    if a == "--help" or a == "-h" then
+        print("generate-fight-forward-pass-page [PROJECT_DIR] [--fragment PATH]: writes docs/HTML/fight-forward-pass.html")
+        print("  (issue 625n's design as a page); --fragment PATH also writes the page without its skeleton (for an artifact).")
+        os.exit(0)
+    elseif a == "--fragment" then FRAGMENT = arg[i + 1]; i = i + 2
+    elseif a:sub(1, 2) == "--" then io.stderr:write("generate-fight-forward-pass-page: unknown option " .. a .. "\n"); os.exit(1)
+    else DIR = a; i = i + 1 end
+end
+local OUT = DIR .. "/docs/HTML/fight-forward-pass.html"
+-- }}}
+
+local function esc(s) return (tostring(s):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")) end
+
+-- {{{ the layers: name, what it does, its issue, built or not
+-- state: "built" (offline, tested), "part" (some of it), "todo"
+local LAYERS = {
+    { "Rates",              "Health lost and gained per character, enemies' health falling, so the fight's time left.", "625h", "built" },
+    { "Marks to modifiers", "Every buff and debuff a multiplier on damage taken, healing received, damage dealt or haste, ending when it does.", "625f", "part" },
+    { "Attention",          "Whom each enemy attacks now and next, in the server's own order.", "625j", "built" },
+    { "Fight curves",       "Each character's health to the fight's end, by who holds the attention, marks wearing off and planned cooldowns.", "625j", "built" },
+    { "Plans",              "Each buddy's cooldown timeline, the tanks' swaps, the healer's plan, who gets each buff.", "625f 625i 625l", "part" },
+    { "Answers",            "Each answer a buddy could give now, tried as if given; its change to the curves in damage and health, handed to the draw.", "625d", "todo" },
+}
+local STATE_LABEL = { built = "built, offline", part = "part built", todo = "not yet" }
+-- }}}
+
+-- {{{ the snapshot: field, type, what it is
+local SNAPSHOT = {
+    { "The fight", {
+        { "seconds run", "decimal", "since the pull" },
+        { "kind", "small whole number", "boss, rare elite or trash" },
+        { "windows open", "list of start, length, factor (decimals)", "Bloodlust running, a weak phase" },
+    } },
+    { "Each party member and pet", {
+        { "health, most health", "decimals", "now and at most" },
+        { "resource, most, which", "decimals and a small whole number", "mana, rage, energy, runic power, focus" },
+        { "role", "small whole number", "tank, healer or damage" },
+        { "position", "three decimals", "where it stands" },
+        { "cast in progress", "spell id (whole number), seconds left (decimal)", "what it is casting" },
+        { "cooldowns", "list of spell id, seconds until ready", "every ability waiting" },
+        { "marks", "list of marks (below)", "what is on it" },
+    } },
+    { "Each mark", {
+        { "aura", "spell id (whole number)", "which buff or debuff" },
+        { "seconds left", "decimal", "until it wears off" },
+        { "stacks", "small whole number", "how many" },
+        { "put on by", "character id", "whose it is" },
+    } },
+    { "Each enemy", {
+        { "health, most, rank, cast, marks", "as above", "the enemy's own state" },
+        { "attacking", "character id", "its attention now" },
+        { "threat list", "per character: threat (decimal); available, passed over or out; taunting, none or turned away; within melee reach (yes or no)", "where the threat is stored" },
+    } },
+}
+-- }}}
+
+-- {{{ the analogy, side by side
+local ANALOGY = {
+    { "Everything said so far", "The fight so far: one snapshot and a minute of events" },
+    { "Tokens, one after another", "Events: a hit, a heal, a mark landing or wearing off, a cast, a death" },
+    { "The cache, so nothing is read twice", "Running summaries, updated as each event arrives" },
+    { "Fixed weights", "The game's own numbers and the economies' arithmetic" },
+    { "Layers, each reading the last", "Rates, marks, attention, fight curves, plans, answers" },
+    { "A score for every word it could say", "A worth for every answer a buddy could give now" },
+    { "Sampling the next token", "The weighted draw picking what the buddy does" },
+}
+-- }}}
+
+-- {{{ the owner's words (issue 625n, word for word)
+local WORDS = {
+    { "The idea", "okay so the curve is a path through a series of weights, sorta like when an LLM is processing a long string of output text. At the instant when it processes it's next token, it feeds all the previous data through the same weights and sees where it trajectorizes to. We want to do something similar, all of the status effects of the fight should be charted and mapped and routed through these weights, each moment we supply the entire state and it updates the fight curve according to the new, and extended, and desired, state." },
+    { "What is desired", "depends on the group. What do they value? besides victory, bots prefer lower gold cost (use fewer consumables) and faster time (3 minute kill instead of 4). When questing and such, they prefer things like gold-per-hour, and exp-per-hour." },
+    { "What a buddy may know", "we can let them know. Yes, it's not human, but humans have better capabilities in some ways and worse in others. So, with an eventual goal of equalizing the presented information, let's just let them see the numbers for now." },
+    { "How far back", "a minute is fine." },
+    { "The weights", "I don't imagine they will grow very much. They are things like, how much certain talents benefit certain abilities, how critical strike rating relates to certain spells, how resistant a target is to a certain type of shadow blast, how important mana is to this particular fight, stuff like that." },
+}
+-- }}}
+
+-- {{{ the layer drawing: six bands, the snapshot coming in at the top, the draw at the bottom
+local svg = { '<svg class="stack" viewBox="0 0 640 520" role="img" aria-label="Six layers, from rates at the top to answers at the bottom, each reading the one before; the snapshot enters at the top and the weighted draw takes the answers at the bottom">' }
+svg[#svg + 1] = '<rect x="170" y="8" width="300" height="34" rx="4" class="io"/><text x="320" y="30" class="io-label">snapshot + a minute of events</text>'
+svg[#svg + 1] = '<line x1="320" y1="42" x2="320" y2="56" class="arrow"/>'
+for n, l in ipairs(LAYERS) do
+    local y = 56 + (n - 1) * 70
+    svg[#svg + 1] = ('<rect x="40" y="%d" width="560" height="56" rx="4" class="layer %s"/>'):format(y, l[4])
+    svg[#svg + 1] = ('<text x="58" y="%d" class="layer-n">%d</text>'):format(y + 34, n)
+    svg[#svg + 1] = ('<text x="88" y="%d" class="layer-name">%s</text>'):format(y + 25, esc(l[1]))
+    svg[#svg + 1] = ('<text x="88" y="%d" class="layer-issue">%s</text>'):format(y + 44, esc(l[3]))
+    svg[#svg + 1] = ('<text x="584" y="%d" class="layer-state">%s</text>'):format(y + 34, esc(STATE_LABEL[l[4]]))
+    if n < #LAYERS then svg[#svg + 1] = ('<line x1="320" y1="%d" x2="320" y2="%d" class="arrow"/>'):format(y + 56, y + 70) end
+end
+local yEnd = 56 + #LAYERS * 70 - 14
+svg[#svg + 1] = ('<line x1="320" y1="%d" x2="320" y2="%d" class="arrow"/>'):format(yEnd, yEnd + 14)
+svg[#svg + 1] = ('<rect x="170" y="%d" width="300" height="34" rx="4" class="io"/><text x="320" y="%d" class="io-label">the weighted draw: what the buddy does</text>'):format(yEnd + 14, yEnd + 36)
+svg[#svg + 1] = "</svg>"
+-- }}}
+
+-- {{{ the threads drawing: world thread, snapshot, workers, double buffer, draw
+local threads = [==[
+<svg class="threads" viewBox="0 0 640 210" role="img" aria-label="The world thread takes a snapshot and hands it to a pool of worker threads; their verdicts go to a double buffer that the bot module's draw reads from">
+  <rect x="10" y="80" width="130" height="50" rx="4" class="io"/><text x="75" y="102" class="io-label">world thread</text><text x="75" y="120" class="small">takes the snapshot</text>
+  <line x1="140" y1="105" x2="190" y2="105" class="arrow"/>
+  <rect x="190" y="20" width="200" height="40" rx="4" class="layer built"/><text x="290" y="45" class="io-label">party task: shared layers</text>
+  <rect x="190" y="85" width="200" height="40" rx="4" class="layer built"/><text x="290" y="110" class="io-label">buddy task: its plan</text>
+  <rect x="190" y="150" width="200" height="40" rx="4" class="layer built"/><text x="290" y="175" class="io-label">buddy task: its plan</text>
+  <line x1="390" y1="105" x2="440" y2="105" class="arrow"/>
+  <rect x="440" y="70" width="80" height="35" rx="3" class="io"/><text x="480" y="92" class="small">next</text>
+  <rect x="440" y="110" width="80" height="35" rx="3" class="io"/><text x="480" y="132" class="small">last</text>
+  <line x1="520" y1="127" x2="560" y2="127" class="arrow"/>
+  <rect x="560" y="105" width="72" height="45" rx="4" class="io"/><text x="596" y="132" class="small">the draw</text>
+</svg>]==]
+-- }}}
+
+-- {{{ html pieces
+local function analogyTable()
+    local t = { '<div class="table"><table><thead><tr><th>A language model</th><th>A buddy in a fight</th></tr></thead><tbody>' }
+    for _, r in ipairs(ANALOGY) do t[#t + 1] = ("<tr><td>%s</td><td>%s</td></tr>"):format(esc(r[1]), esc(r[2])) end
+    t[#t + 1] = "</tbody></table></div>"
+    return table.concat(t)
+end
+local function snapshotTables()
+    local t = {}
+    for _, group in ipairs(SNAPSHOT) do
+        t[#t + 1] = ('<h3>%s</h3><div class="table"><table><thead><tr><th>Field</th><th>Kind of value</th><th>What it is</th></tr></thead><tbody>'):format(esc(group[1]))
+        for _, r in ipairs(group[2]) do t[#t + 1] = ("<tr><td>%s</td><td>%s</td><td>%s</td></tr>"):format(esc(r[1]), esc(r[2]), esc(r[3])) end
+        t[#t + 1] = "</tbody></table></div>"
+    end
+    return table.concat(t)
+end
+local function layerList()
+    local t = { '<ol class="layers">' }
+    for _, l in ipairs(LAYERS) do
+        t[#t + 1] = ('<li><strong>%s</strong> <span class="chip %s">%s</span><br>%s <span class="issue">(%s)</span></li>'):format(esc(l[1]), l[4], esc(STATE_LABEL[l[4]]), esc(l[2]), esc(l[3]))
+    end
+    t[#t + 1] = "</ol>"
+    return table.concat(t)
+end
+local function words()
+    local t = {}
+    for _, w in ipairs(WORDS) do t[#t + 1] = ('<blockquote><p class="who">%s</p><p>%s</p></blockquote>'):format(esc(w[1]), esc(w[2])) end
+    return table.concat(t)
+end
+-- }}}
+
+-- {{{ the page
+local style = [==[
+<title>Fight Forward Pass</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* layout: the project pages' contents rail on the left and one reading column; the drawings and the playground in panels */
+  :root {
+    --bg: #f3f4f6; --panel: #ffffff; --ink: #1c2127; --dim: #5d6670; --line: #d6dae0;
+    --accent: #8a6a00; --accent-soft: #f1e6bd;
+    --built: #dfe9df; --part: #f1e6bd; --todo: #e9e3e3;
+    --tank: #8a6a00; --fury: #9b3b2a; --priest: #2d5f8a; --zero: #9b3b2a;
+    --display: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+    --body: "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #121418; --panel: #1a1d22; --ink: #e6e6e3; --dim: #9aa0a6; --line: #2c3138;
+    --accent: #e8c547; --accent-soft: #3a3320;
+    --built: #22302a; --part: #3a3320; --todo: #2c2526;
+    --tank: #e8c547; --fury: #e0806b; --priest: #7fb2e0; --zero: #e0806b;
+    color-scheme: dark } }
+  :root[data-theme="dark"] {
+    --bg: #121418; --panel: #1a1d22; --ink: #e6e6e3; --dim: #9aa0a6; --line: #2c3138;
+    --accent: #e8c547; --accent-soft: #3a3320;
+    --built: #22302a; --part: #3a3320; --todo: #2c2526;
+    --tank: #e8c547; --fury: #e0806b; --priest: #7fb2e0; --zero: #e0806b;
+    color-scheme: dark }
+  body { background: var(--bg); color: var(--ink); font: 16px/1.6 var(--body); margin: 0; }
+  .wrap { display: grid; grid-template-columns: 15rem minmax(0, 1fr); gap: 2.5rem; max-width: 76rem; margin: 0 auto; padding-inline: 16px; padding-block: 1.5rem 4rem; }
+  nav { position: sticky; top: env(safe-area-inset-top, 0px); align-self: start; max-height: 100vh; overflow-y: auto; padding-block: 1rem; }
+  nav .eyebrow { font: 600 0.72rem/1 var(--display); letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); margin-bottom: 0.75rem; }
+  nav a { display: block; color: var(--dim); text-decoration: none; font-size: 0.86rem; line-height: 1.35; padding-block: 0.28rem; border-left: 2px solid transparent; padding-left: 0.6rem; }
+  nav a:hover, nav a:focus-visible { color: var(--ink); border-left-color: var(--accent); outline: none; }
+  main { min-width: 0; max-width: 48rem; }
+  h1 { font: 700 clamp(2rem, 4.5vw, 2.9rem)/1.05 var(--display); letter-spacing: -0.01em; text-wrap: balance; margin: 0.5rem 0 1rem; }
+  h2 { font: 600 1.6rem/1.15 var(--display); text-wrap: balance; margin: 3rem 0 0.75rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+  h3 { font: 600 1.15rem/1.2 var(--display); letter-spacing: 0.02em; margin: 1.6rem 0 0.4rem; color: var(--accent); }
+  p, li { max-width: 65ch; }
+  ul, ol { padding-left: 1.3rem; }
+  li { margin-block: 0.4rem; }
+  strong { font-weight: 600; }
+  code { font: 500 0.84em var(--mono); background: var(--accent-soft); padding: 0.05em 0.35em; border-radius: 3px; overflow-wrap: anywhere; }
+  .lede { font-size: 1.12rem; color: var(--ink); }
+  .table { overflow-x: auto; margin-block: 0.8rem; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; font-size: 0.88rem; line-height: 1.4; }
+  th, td { text-align: left; vertical-align: top; padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--line); }
+  th { font: 600 0.78rem/1.2 var(--display); letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); background: var(--bg); }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; min-width: 9rem; }
+  figure { margin: 1.5rem 0 2rem; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+  figcaption { font-size: 0.85rem; color: var(--dim); margin-top: 0.5rem; }
+  svg.stack, svg.threads { width: 100%; max-width: 40rem; height: auto; display: block; }
+  .layer { stroke: var(--line); stroke-width: 1; }
+  .layer.built { fill: var(--built); } .layer.part { fill: var(--part); } .layer.todo { fill: var(--todo); }
+  .io { fill: var(--panel); stroke: var(--accent); stroke-width: 1.5; }
+  .arrow { stroke: var(--accent); stroke-width: 2; }
+  .io-label { font: 600 13px var(--display); fill: var(--ink); text-anchor: middle; letter-spacing: 0.03em; }
+  .small { font: 12px var(--body); fill: var(--dim); text-anchor: middle; }
+  .layer-n { font: 700 22px var(--display); fill: var(--accent); }
+  .layer-name { font: 600 15px var(--display); fill: var(--ink); letter-spacing: 0.03em; }
+  .layer-issue { font: 11px var(--mono); fill: var(--dim); }
+  .layer-state { font: 600 11px var(--display); fill: var(--dim); text-anchor: end; letter-spacing: 0.08em; text-transform: uppercase; }
+  ol.layers li { margin-block: 0.7rem; }
+  .chip { font: 600 0.7rem/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase; padding: 0.2em 0.5em; border-radius: 3px; border: 1px solid var(--line); color: var(--ink); white-space: nowrap; }
+  .chip.built { background: var(--built); } .chip.part { background: var(--part); } .chip.todo { background: var(--todo); }
+  .issue { font: 0.8rem var(--mono); color: var(--dim); }
+  blockquote { margin: 1rem 0; padding: 0.6rem 1rem; border-left: 3px solid var(--accent); background: var(--panel); border-radius: 0 6px 6px 0; }
+  blockquote p { margin: 0.2rem 0; }
+  blockquote .who { font: 600 0.75rem/1 var(--display); letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+  .play { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 1rem; display: grid; gap: 1rem; }
+  .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 0.6rem 1.2rem; }
+  .controls label { display: grid; gap: 0.15rem; font-size: 0.85rem; color: var(--dim); }
+  .controls output { font: 500 0.85rem var(--mono); color: var(--ink); }
+  .controls input[type=range] { width: 100%; accent-color: var(--accent); }
+  .levers { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .levers button { font: 600 0.85rem var(--display); letter-spacing: 0.04em; padding: 0.45rem 0.8rem; border-radius: 4px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+  .levers button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+  .levers button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .levers select { font: 0.85rem var(--body); padding: 0.4rem; border-radius: 4px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+  #chart { width: 100%; height: auto; display: block; }
+  .axis { stroke: var(--line); stroke-width: 1; }
+  .zero { stroke: var(--zero); stroke-width: 1; stroke-dasharray: 4 4; }
+  .tick { font: 11px var(--mono); fill: var(--dim); }
+  .c-tank { stroke: var(--tank); } .c-fury { stroke: var(--fury); } .c-priest { stroke: var(--priest); }
+  .curve { fill: none; stroke-width: 2.5; }
+  .holder-tank { fill: var(--tank); } .holder-fury { fill: var(--fury); } .holder-priest { fill: var(--priest); }
+  .verdict { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 0.6rem; }
+  .verdict div { border: 1px solid var(--line); border-radius: 4px; padding: 0.5rem 0.7rem; background: var(--bg); }
+  .verdict .k { font: 600 0.7rem/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+  .verdict .v { font: 600 1.25rem/1.3 var(--mono); font-variant-numeric: tabular-nums; }
+  .verdict .total { border-color: var(--accent); }
+  .key { display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; font-size: 0.85rem; color: var(--dim); }
+  .key span::before { content: ""; display: inline-block; width: 0.9rem; height: 3px; margin-right: 0.35rem; vertical-align: middle; background: currentColor; }
+  .key .k-tank { color: var(--tank); } .key .k-fury { color: var(--fury); } .key .k-priest { color: var(--priest); }
+  .source { font-size: 0.8rem; color: var(--dim); margin-top: 3rem; }
+  @media (max-width: 760px) {
+    .wrap { grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }
+    nav { position: static; max-height: none; border-bottom: 1px solid var(--line); }
+    nav .links { display: flex; flex-wrap: wrap; gap: 0.2rem 0.9rem; }
+    nav a { border-left: none; padding-left: 0; }
+  }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+</style>
+]==]
+
+local sections = {
+    { "idea", "The idea" }, { "context", "The snapshot" }, { "events", "A minute of events" }, { "weights", "The weights" },
+    { "layers", "The six layers" }, { "desired", "New, extended, desired" }, { "playground", "Fight curves, by hand" },
+    { "threads", "Where it runs" }, { "calm", "Calm, and replays" }, { "words", "The owner's words" }, { "open", "Still open" },
+}
+local nav = {}
+for _, s in ipairs(sections) do nav[#nav + 1] = ('<a href="#%s">%s</a>'):format(s[1], esc(s[2])) end
+
+local body = table.concat({
+'<div class="wrap"><nav aria-label="Contents"><div class="eyebrow">Contents</div><div class="links">', table.concat(nav), '</div></nav><main>',
+'<h1>Fight Forward Pass</h1>',
+'<p class="lede">How a buddy thinks in a fight: everything that has happened so far, run through the same fixed weights every moment, to find where every character\'s health is heading and which answer bends it toward victory. Issue 625n.</p>',
+
+'<h2 id="idea">The idea</h2>',
+'<p>A language model reads everything said so far through fixed weights and scores every word it could say next. A buddy reads the fight so far through fixed weights and scores every answer it could give now. The pieces line up one to one.</p>',
+analogyTable(),
+
+'<h2 id="context">The snapshot</h2>',
+'<p>Taken by the world thread when something has happened (no thinking while nothing does, issue 627; at most every half second in combat), once per party, so every buddy reads the same picture. Plain values copied, never game objects, so worker threads can read it while the game moves on. Buddies see every number for now; equalizing what they are shown against what a player beside them could see is the later goal.</p>',
+snapshotTables(),
+
+'<h2 id="events">A minute of events</h2>',
+'<p>Each hit, heal, mark landing or wearing off, cast and death goes into a ring that holds the last minute, each stamped with its time. Running summaries are updated as each event arrives, so a step never reads the whole minute again: damage taken and healing received per second for each character, damage dealt per second against each enemy, each enemy\'s health trend (which is the fight-length guess, already built).</p>',
+
+'<h2 id="weights">The weights</h2>',
+'<p>Mostly fixed. Three kinds:</p>',
+'<ol><li><strong>The game\'s own tables</strong>, read by generators: every class\'s abilities, what each buff gives, which talents touch which abilities, the lockouts (Forbearance, Sated), the threat levers. Still to add: what each debuff does to whoever carries it.</li>',
+'<li><strong>Each buddy\'s own</strong>: its abilities, talents and gear, worked out again when they change.</li>',
+'<li><strong>The few that may move with play</strong>, each kept with where it started and how it moves: how much a talent benefits an ability, how a rating relates to a spell, how resistant a target is to a school, how much mana matters in this fight.</li></ol>',
+
+'<h2 id="layers">The six layers</h2>',
+'<p>Each step runs them in order, each reading the one before.</p>',
+'<figure>', table.concat(svg), '<figcaption>The snapshot enters at the top; the weighted draw takes the answers at the bottom. Green: built and tested offline. Gold: part built. Grey: not yet.</figcaption></figure>',
+layerList(),
+
+'<h2 id="desired">New, extended, desired</h2>',
+'<ul><li><strong>New</strong> is the snapshot just taken.</li>',
+'<li><strong>Extended</strong> is the fight curves carried forward to the fight\'s end, with the plans in them.</li>',
+'<li><strong>Desired</strong> is what the group values: victory first (every enemy dead before anyone in the party, no curve below nothing); then, by default, fewer consumables used and a faster kill; when questing, gold and experience per hour.</li></ul>',
+'<p>Each step measures the gap from extended to desired. An answer is worth what it closes of that gap, said in damage and health so everything adds up.</p>',
+
+'<h2 id="playground">Fight curves, by hand</h2>',
+'<p>A tank at 2000 of 8000 health, a fury warrior and a priest behind it. Move the numbers and pick a lever; the curves are each character\'s health to the fight\'s end, worked out the way the buddy module works them out. The starting values are the ones its test checks: nothing done leaves the party 4000 short, Lay on Hands none, Hand of Protection with the fury warrior next 1700, with the priest next worse than nothing.</p>',
+[==[<div class="play">
+  <div class="controls">
+    <label for="tankHealth">Tank health now <output id="tankHealthOut"></output><input id="tankHealth" type="range" min="500" max="8000" step="100" value="2000"></label>
+    <label for="damage">Enemy damage per second <output id="damageOut"></output><input id="damage" type="range" min="100" max="1500" step="25" value="500"></label>
+    <label for="healing">Healing per second <output id="healingOut"></output><input id="healing" type="range" min="0" max="1200" step="25" value="300"></label>
+    <label for="left">Fight left, seconds <output id="leftOut"></output><input id="left" type="range" min="10" max="120" step="1" value="30"></label>
+    <label for="markTaken">Debuff on the tank: damage taken &#215; <output id="markTakenOut"></output><input id="markTaken" type="range" min="0.5" max="3" step="0.05" value="1"></label>
+    <label for="markUntil">Debuff wears off after, seconds <output id="markUntilOut"></output><input id="markUntil" type="range" min="0" max="60" step="1" value="10"></label>
+  </div>
+  <div class="levers" role="group" aria-label="Lever">
+    <button type="button" id="leverNone" aria-pressed="true">Nothing</button>
+    <button type="button" id="leverLoh" aria-pressed="false">Lay on Hands (5000)</button>
+    <button type="button" id="leverHop" aria-pressed="false">Hand of Protection (10 s)</button>
+    <label for="next" class="small-label">next in line <select id="next"><option value="1">the fury warrior</option><option value="2">the priest</option></select></label>
+  </div>
+  <svg id="chart" viewBox="0 0 640 300" role="img" aria-label="Each character's health over the rest of the fight"></svg>
+  <div class="key"><span class="k-tank">tank</span><span class="k-fury">fury warrior</span><span class="k-priest">priest</span><span>the band under the chart: who holds the attention</span></div>
+  <div class="verdict" id="verdict"></div>
+</div>]==],
+
+'<h2 id="threads">Where it runs</h2>',
+'<p>The world thread only takes the snapshot and reads the last verdict; the game\'s objects are safe to touch only there. A pool of worker threads runs the layers: one task per party for what is shared (attention, the fight curves, the tanks\' swaps, who gets each buff), one per buddy for its own plan and answers. Verdicts are double-buffered: the workers write the next while the bot module reads the last, at most one step old. Measured: a buddy\'s cooldown plan takes about half a millisecond for a five-minute fight, a fight curve microseconds.</p>',
+'<figure>', threads, '<figcaption>One snapshot, worked by many threads, read back through a double buffer.</figcaption></figure>',
+
+'<h2 id="calm">Calm, and replays</h2>',
+'<p>The server\'s own switching margins (a new attacker must beat the current one by a tenth in melee reach, three tenths at range), no swap or hold for nothing, weights that change smoothly, and the weighted draw at the end keep the buddies natural rather than scripted. Every step\'s snapshot and verdict can be written to a log; a recorded fight run back through the layers gives the same verdicts every time, so changes are tested on real fights and learning has its material.</p>',
+
+'<h2 id="words">The owner\'s words</h2>',
+words(),
+
+'<h2 id="open">Still open</h2>',
+'<p>Gold cost: which consumables count (potions, food, flasks, reagents, ammunition, repairs), and is each counted at its vendor price, or at the auction house\'s when there is one?</p>',
+
+'<p class="source">Made by scripts/generate-fight-forward-pass-page from issue 625n\'s design; the playground uses the same arithmetic as the buddy module\'s fight curves (buddies_curve.h). Change the script and run it again.</p>',
+'</main></div>',
+}, "\n")
+
+-- the playground's arithmetic: the module's Shortfall, twinned (same stretches,
+-- same marks cut where they wear off, healing never above most)
+local script = [==[
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var lever = "none";
+  var NAMES = ["tank", "fury", "priest"];
+  var LABELS = ["Tank", "Fury warrior", "Priest"];
+  function loss(h, t, f, cut) {
+    var taken = h.taken, healed = 1;
+    for (var i = 0; i < h.marks.length; i++) if (t < h.marks[i].until) { taken *= h.marks[i].taken; healed *= h.marks[i].healed; }
+    return f.damage * taken * (1 - cut) - f.healing * healed;
+  }
+  // follows every holder step by step, keeping each one's path for the chart
+  function follow(holders, stretches, f) {
+    var hs = holders.map(function (h) { return { health: h.health, maxHealth: h.maxHealth, taken: h.taken, marks: h.marks }; });
+    var step = 0.25, paths = hs.map(function (h) { return [[0, h.health]]; }), lowest = hs.map(function (h) { return h.health; });
+    for (var t = 0; t < f.left - 1e-9; t += step) {
+      var dt = Math.min(step, f.left - t), who = -1, cut = 0;
+      for (var s = 0; s < stretches.length; s++) if (t >= stretches[s].from && t < stretches[s].to) { who = stretches[s].holder; cut = stretches[s].cut; }
+      if (who >= 0) {
+        var h = hs[who];
+        h.health = Math.min(h.maxHealth, h.health - loss(h, t, f, cut) * dt);
+        lowest[who] = Math.min(lowest[who], h.health);
+      }
+      for (var k = 0; k < hs.length; k++) paths[k].push([t + dt, hs[k].health]);
+    }
+    return { paths: paths, short: lowest.map(function (l) { return Math.max(0, -l); }) };
+  }
+  function read() {
+    var v = {};
+    ["tankHealth", "damage", "healing", "left", "markTaken", "markUntil"].forEach(function (id) { v[id] = parseFloat($(id).value); $(id + "Out").textContent = $(id).value; });
+    return v;
+  }
+  function draw() {
+    var v = read();
+    var holders = [
+      { health: v.tankHealth, maxHealth: 8000, taken: 1.0, marks: v.markTaken !== 1 ? [{ until: v.markUntil, taken: v.markTaken, healed: 1 }] : [] },
+      { health: 6000, maxHealth: 6000, taken: 1.6, marks: [] },
+      { health: 4000, maxHealth: 4000, taken: 2.0, marks: [] }
+    ];
+    var f = { damage: v.damage, healing: v.healing, left: v.left };
+    var next = parseInt($("next").value, 10), stretches;
+    if (lever === "loh") holders[0].health = Math.min(8000, holders[0].health + 5000);
+    if (lever === "hop") stretches = [{ from: 0, to: 11.5, holder: next, cut: 0 }, { from: 11.5, to: f.left, holder: 0, cut: 0 }];
+    else stretches = [{ from: 0, to: f.left, holder: 0, cut: 0 }];
+    var r = follow(holders, stretches, f);
+    // chart: health from the lowest reached (or a little under nothing) to 8000
+    var W = 640, H = 300, L = 54, R = 12, T = 12, B = 46, band = 10;
+    var lo = 0; r.paths.forEach(function (p) { p.forEach(function (q) { lo = Math.min(lo, q[1]); }); });
+    lo = Math.floor(lo / 1000) * 1000 - (lo < 0 ? 0 : 0);
+    var hi = 8000;
+    var x = function (t) { return L + (W - L - R) * t / f.left; };
+    var y = function (h) { return T + (H - T - B) * (hi - h) / (hi - lo); };
+    var out = [];
+    for (var g = lo; g <= hi; g += 2000) out.push('<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(g) + '" y2="' + y(g) + '" class="axis"/><text x="' + (L - 6) + '" y="' + (y(g) + 4) + '" class="tick" text-anchor="end">' + g + '</text>');
+    out.push('<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(0) + '" y2="' + y(0) + '" class="zero"/>');
+    var tickStep = f.left > 60 ? 20 : 10;
+    for (var s2 = 0; s2 <= f.left; s2 += tickStep) out.push('<text x="' + x(s2) + '" y="' + (H - B + 16) + '" class="tick" text-anchor="middle">' + s2 + ' s</text>');
+    r.paths.forEach(function (p, k) {
+      var d = p.map(function (q, n) { return (n ? "L" : "M") + x(q[0]).toFixed(1) + " " + y(q[1]).toFixed(1); }).join(" ");
+      out.push('<path d="' + d + '" class="curve c-' + NAMES[k] + '"/>');
+    });
+    stretches.forEach(function (s) {
+      var a = x(Math.max(0, s.from)), b = x(Math.min(f.left, s.to));
+      if (b > a) out.push('<rect x="' + a + '" y="' + (H - B + 24) + '" width="' + (b - a) + '" height="' + band + '" class="holder-' + NAMES[s.holder] + '"/>');
+    });
+    $("chart").innerHTML = out.join("");
+    var total = r.short.reduce(function (a, b) { return a + b; }, 0);
+    var cells = r.short.map(function (s, k) { return '<div><div class="k">' + LABELS[k] + ' short</div><div class="v">' + Math.round(s) + '</div></div>'; });
+    cells.push('<div class="total"><div class="k">Party short</div><div class="v">' + Math.round(total) + '</div></div>');
+    cells.push('<div><div class="k">Curve points at</div><div class="v">' + (total < 0.5 ? "victory" : "a death") + '</div></div>');
+    $("verdict").innerHTML = cells.join("");
+  }
+  function pick(which) {
+    lever = which;
+    [["none", "leverNone"], ["loh", "leverLoh"], ["hop", "leverHop"]].forEach(function (p) { $(p[1]).setAttribute("aria-pressed", p[0] === which ? "true" : "false"); });
+    draw();
+  }
+  ["tankHealth", "damage", "healing", "left", "markTaken", "markUntil"].forEach(function (id) { $(id).addEventListener("input", draw); });
+  $("next").addEventListener("change", draw);
+  $("leverNone").addEventListener("click", function () { pick("none"); });
+  $("leverLoh").addEventListener("click", function () { pick("loh"); });
+  $("leverHop").addEventListener("click", function () { pick("hop"); });
+  draw();
+})();
+</script>
+]==]
+
+local content = style .. body .. "\n" .. script
+local note = "<!-- docs/HTML/fight-forward-pass.html - GENERATED by scripts/generate-fight-forward-pass-page (issue 625n's design as a page); don't edit, run it again. -->\n"
+local page = "<!doctype html>\n" .. note .. '<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n' ..
+    style .. "\n</head>\n<body>\n" .. body .. "\n" .. script .. "\n</body>\n</html>\n"
+local o = assert(io.open(OUT, "w")); o:write(page); o:close()
+print(("generate-fight-forward-pass-page: %d bytes -> %s"):format(#page, OUT:sub(#DIR + 2)))
+if FRAGMENT then
+    local fr = assert(io.open(FRAGMENT, "w")); fr:write(note:gsub("docs/HTML/fight%-forward%-pass%.html", "the artifact's page"), content, "\n"); fr:close()
+    print("generate-fight-forward-pass-page: the page without its skeleton -> " .. FRAGMENT)
+end
+-- }}}

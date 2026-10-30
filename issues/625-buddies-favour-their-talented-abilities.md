@@ -182,6 +182,9 @@ talents that touch an ability (above), not by how many talents name it.
 - 625l: buffs given to who uses them most.
 - 625m: pets as a second pair of hands: their abilities the buddy's own,
   on their own lane of time.
+- 625n: the fight's forward pass: the whole fight run through the same
+  weights each moment (the snapshot, a minute of events, six layers,
+  worker threads), the frame the economies run in.
 
 **Pliable, and rigid** (the owner, 2026-10-29: "and through it all, we
 need to make the systems very flexible - pliable, so that the story and
