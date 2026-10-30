@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-29 22:45:37
+Generated on: 2026-10-29 23:17:21
 Models: claude-opus-5-5
 
 ## Contents
@@ -149,6 +149,10 @@ Models: claude-opus-5-5
     each part of the project with its open questions and answer boxes, and I've
     proposed 25 GIF ideas for them. Next, once you've reviewed those, we'll
     write five generator prompts for each GIF.
+36. 2026-10-29 22:48, after Request 121 - We're turning the project's open
+    questions into pages you can answer on. The five architecture pages are
+    built and running at http://127.0.0.1:8642/answer-pages/. Next: your look at
+    the talents and weather plan pages, so I can build their simulators.
 
 --------------------------------------------------------------------------------
 
@@ -12692,6 +12696,93 @@ Everything is committed (f0577e013 for the pages, 8af198c49 for the pictures).
 - Should answers also be possible from copies published on claude.ai? Those
   can't reach this computer; they'd keep answers in the page's own database, for
   an agent to copy down. Or are the pages on this computer enough?
+
+--------------------------------------------------------------------------------
+
+### User Request 122
+
+It's okay just the local ones are needed. A user looking to customize their
+version of the project will use the form included in their git repo copy of the
+cloned project.
+
+I'm sure your intuitions are correct about 3 and 5.
+
+Now, can you tell me where we're at with NPCs using different abilities more or
+less frequently when multiple ways to address a concern are presented? Like,
+concern, ally low health, sub routine initiated heal the ally because can and
+specialized to, cast healing touch but not tejuvenation because that's how we're
+specced. Etc etc with more concerns being things like "enemy nearby" or "enemy
+nearby 3+ enemies" or "ally suddenly gained threat" or whatever.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 122
+
+> Recording your two answers, then looking into how the bots choose between
+> abilities today.
+
+> Writing what I found about the bot module's decision engine into the talents
+> plan.
+
+We have the concern-and-answer machinery, but it comes from the bot module as
+is, and none of our talent-based choosing is built yet. Your answers are
+recorded and committed (8e111ab32): the answer pages stay local only, and the
+talent table and weather simulator are approved to build next.
+
+**How it works today**
+
+- **A concern is a trigger.** Some examples:
+  - an ally below 25%, 45%, 65% or 85% health ("critical", "low", "medium",
+    "almost full");
+  - 3 or more enemies within 8 yards ("medium aoe");
+  - the bot's own threat getting high ("medium threat");
+  - an enemy too close to cast.
+
+  I didn't find one for "an ally suddenly gained threat". Tanks have their own
+  taunt triggers, which I haven't read yet.
+- **Each concern offers a fixed list of answers, each with a priority number.**
+  For a restoration druid with an ally at low health, the list is: tree form
+  21.5, Swiftmend 21.4, Wild Growth 21.3, Nourish 21.2, Regrowth 21.1, Healing
+  Touch 21.0. Rejuvenation is offered only when an ally is almost at full
+  health.
+- **Every tenth of a second the bot takes the highest-numbered answer it can use
+  right now** (known, off cooldown, enough mana). So the same concern always
+  gets the same first choice.
+- **Your spec only picks which list:** the module guesses one talent tree. A
+  druid with two thirds of its points in Restoration plays the whole Restoration
+  list, and its Balance third changes nothing.
+
+**What I found that helps**
+
+The engine already has a slot for this. Before choosing, it multiplies each
+answer's number by every "multiplier" a strategy adds. A buddy strategy of our
+own could lean on Healing Touch by its talent weight without rewriting any
+class's lists.
+
+**The catch:** the answers in a list sit only 0.1 apart. A boost of just 3%
+lifts Healing Touch over the whole list, every time. A plain multiplier would
+turn "more often" into "always".
+
+**So the plan, now written into the talents issue**
+
+- **A weighted draw within one concern's answers.** Each answer's chance comes
+  from its place in the module's list times its talent weight. A druid with
+  talents in Healing Touch casts it more often when an ally is low, and still
+  casts the others sometimes. That follows your words from 15 October: "we will
+  always use some of them sometime".
+- **An answer that can't be used right now is skipped,** and the draw is made
+  again among the rest.
+- **The draw never crosses concerns.** Running from an enemy in melee range (39)
+  still beats healing at low health (21), and critical health (30–34) still
+  beats low health.
+
+The weights themselves come from the talent table you just approved. So the
+order of work is: the table first, then this draw.
+
+When an ally is low and several heals fit, should the draw also lean on how
+badly hurt they are? A big slow heal when they're very low, a cheap one when
+they're barely hurt? Or should that stay with the module's own health bands, and
+the draw only mix within each band?
 
 --------------------------------------------------------------------------------
 

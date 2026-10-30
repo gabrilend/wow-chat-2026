@@ -324,3 +324,19 @@ And the follow-ups the same evening, word for word:
   how we're specced. Etc etc with more concerns being things like "enemy
   nearby" or "enemy nearby 3+ enemies" or "ally suddenly gained threat"
   or whatever."
+- (one tree's list; 625c) "ah see this is the part we need to upgrade."
+- (an answer that can't be used now) "this includes things like
+  "rejuvenation is still active, shouldn't cast again now" right?"
+- (choosing by the moment; 625d) "when they're very low, we want fast
+  heals. When they are slightly injured, we want cheap heals. a HoT is
+  usually cheap in the action economy, but overheals are expensive in mana
+  economy. the more concerns we have, the more important action economy is
+  - the less mana we have, the more important mana economy is. more mp5
+  (from spirit or mp5) means mana economy is devalued and action economy is
+  told to be extravagant. movement requirements mean we have to use things
+  that are mobile friendly, and if those are common in this fight then we
+  try and do the cast-time static abilities when we don't have to move at
+  higher priority so we can save the instant ones for the movement
+  intensive periods. Oh and cooldowns should try and coincide with other
+  cooldowns or procs / buffs that make us feel empowered. "cast bloodlust?
+  Thanks, I'll go all in" etc."

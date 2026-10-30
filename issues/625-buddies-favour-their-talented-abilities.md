@@ -136,6 +136,12 @@ talents that touch an ability (above), not by how many talents name it.
 - 625a: what each talent (and set bonus) touches, read from the game's
   own tables (step 2 below).
 - 625b: buddies wear the weapons their talents are for.
+- 625c: one list from every tree a buddy has points in, each tree's
+  answers weighted by its share (2026-10-29: "ah see this is the part we
+  need to upgrade").
+- 625d: choosing an answer by the moment's economy: urgency, action
+  economy, mana economy, movement, and cooldowns spent together in
+  empowered moments.
 
 ## Suggested Implementation Steps
 

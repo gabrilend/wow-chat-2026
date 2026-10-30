@@ -2,7 +2,7 @@ title: Talents Guiding Abilities
 subtitle: A buddy leans on the abilities its talents improve
 part: Minds
 state: planned; this page is the plan, and the per-class table is built once the owner approves it
-issues: 625 625a 625b
+issues: 625 625a 625b 625c 625d
 gifs: 3a 3b 3c 3d 3e
 
 The owner, 2026-10-15: "would it be possible to cause buddy-bots to be
