@@ -5,7 +5,7 @@
 - Phase: 8
 - Profile: basic
 - Priority: Low
-- Related: 617s6 (moving buddies by group), 617o (navigation mesh), 155z2
+- Related: 617s6 (moving buddies by group; now the custom client's 815), 617o (navigation mesh), 155z2
   (lanes: the pacing idea's cousin)
 
 ## Origin

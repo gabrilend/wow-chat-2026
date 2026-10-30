@@ -32,7 +32,7 @@ radius).
   the tank, the arc's open side toward the tank's facing, like a
   peacock's display; each takes a place on the arc (617s1's matching) and
   gets a new waypoint only when it reaches the last (617s2).
-- The compass follow (617s) and the send-one-buddy spell (617s6) are the
+- The compass follow (617s) and the send-one-buddy click (617s6, now the custom client's 815) are the
   same machinery used here.
 
 ## Suggested Implementation Steps
@@ -43,5 +43,8 @@ radius).
 3. Waypoint-on-arrival (617s2).
 
 ## Open Questions
+
+Gathered 2026-10-28 into 617's own list (question 21), merged with the
+same questions from other sub-issues; answers are written back here.
 
 1. Should the tank wait for the party's health and mana before each pull?

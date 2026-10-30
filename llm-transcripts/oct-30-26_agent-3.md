@@ -1,6 +1,6 @@
 # Conversation Summary: e143dbfe-ff43-48be-8bd4-4d54fd7a325d
 
-Generated on: 2026-10-30 11:07:55
+Generated on: 2026-10-30 11:25:15
 Models: claude-opus-5-5
 
 --------------------------------------------------------------------------------
@@ -917,6 +917,223 @@ floors too)**
     Five seconds was our guess. Does it feel right, or should it be slower or
     faster?
     *My call:* keep 5 seconds as a lever and judge it in game.
+
+--------------------------------------------------------------------------------
+
+### User Request 6
+
+<pasted_content id="415d">
+> About offering it upstream: AzerothCore aims to play the way 3.3.5a did, and
+> the fixed speed is
+> how 3.3.5a played. So they'd likely refuse a change to the default. A server
+> setting that starts
+> off is the shape they'd most likely accept. If we build it that way here, our
+> patch and the
+> contribution are the same code: the patch adds the setting, and basic's config
+> turns it on. I've
+>   written it into the new issue that way.
+</pasted_content id="415d">
+
+
+okay but that's not how 3.3.5a was, I remember getting a slower weapon and
+dealing more damage with it than a faster weapon on my ret paladin with Seal of
+Command procs. Though Seal of Command was changed towards the end of Wrath I
+think. Can you tell me when it switched to the cleave mechanic?
+
+  Real weapon speed
+
+>   1. Who gets it: every player on basic, or only buddies and bots?
+
+everyone.
+
+> 2. When to offer it upstream: right away as an off-by-default setting, or
+> after it has been
+>      played on basic for a while?
+
+obviously once we've tested it and make it rockhard and bulletproof.
+
+  3. Telling a canyon from a dip.
+
+this fiddly stuff is why for complex problems like this, which COULD be
+engineered at great difficulty, are better suited to a natural processing
+technique like the smaps, which build a sight based categorization of terrain
+that can only improve with additional smap input. Once it's built, it's solved,
+and we *grew* a solution out of the clay of the earth, rather than specified
+with harsh tolerances.
+
+> 4. What takes the pictures? The stand-in is a bot, so it has no eyes.
+> Something has to draw the
+>      world from where it stands.
+
+might be custom client work, but we can do it with a UI addon that we spin up
+and then a sandboxed client that we use. I think we have a plan for headless
+client usage somewhere...? Maybe it was this haha
+
+> 5. Which ground first? Basic's starting valleys and their zones, or wherever
+> the logs show
+>      buddies getting stuck most?
+
+it does not matter at all, we must do all of them. But starting zones is a good
+idea, so... Durotar, not the Valley of Trials. Maybe also the capitals.
+
+  6. Where do roads come from?
+
+smaps.
+
+>   7. Is a road's danger a number or a yes/no?
+
+determined from surrounding monsters and such, not baked into the smap, because
+monster positions might change, but the terrain is more static.
+
+>   8. What makes a passage a tunnel rather than a cave?
+
+they are both treated as caves. If a buddy-bot needs to pass through a tunnel
+(for example Timbermaw Hold) there's a node-based routing system that will get
+them to their destination without calculating the exact path. Timbermaw Hold
+always has one entrance and one exit, so the node-system would say "... stuff in
+felwood or whatever, then timbermaw hold entrance, then timbermaw hold, then
+timbermaw hold exit, then winterspring path, then Everlook, etc"
+
+>   9. A cave under a hill shares its map squares with the hillside above it.
+
+keep track of x, y, and z coordinates. We should have a "map" that is
+"unrollable" into higher dimensions. For example when entering a cave, we should
+conceptually walk into another dimension, with the distance from the entrance /
+exit as the value in that dimension. So if it was dimension Q for example
+increases in Q value would mean you're getting farther from the entrance.
+Decreases in Q value would mean you're getting closer to an exit. Doesn't matter
+which exit, it's just... AN exit.
+
+consider a spiral staircase. If the entrance and exit share the SAME X/Y space,
+they'd also share the same Q space value because they're both 0 at the entrance
+and exit, but the top of the spiral staircase is at the same space as the bottom
+of the spiral staircase. This is why it's important to store the Z value as
+well. The Z value *would* differentiate the top and bottom, which is why we need
+it.
+
+
+
+<pasted_content id="415d">
+> 10. The mingle. When you stop, following buddies rest within 10 yards of you.
+> Each one rolls a
+>       one-in-ten chance to wander a little, every 5 seconds. Five seconds was our guess. Does it
+>       feel right, or should it be slower or faster?
+</pasted_content id="415d">
+
+
+naturalizing NPC behavior is a complex topic. We should just build a bunch of
+activities they could do and try to make them feel natural.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 6
+
+> The game's own data settles it. Recording next.
+
+> Still recording; fixing one passage in the five-ways issue.
+
+> Adding the new work to the todo list, then the next ten questions.
+
+## Seal of Command
+
+According to the warcraft wiki, the change came in patch 3.2.0 (August 4, 2009).
+Seal of Command became 36% of weapon damage as extra Holy damage on every swing.
+Patch 3.2.2 (September 22, 2009) refined it: the extra damage jumps to up to 2
+more targets, but only when the attack that triggered it hits a single target.
+Before 3.2.0 it was a chance on each hit.
+
+Your memory and the fixed-speed rule are both right. I checked the game's own
+spell data and proc table. In 3.3.5a, Seal of Command triggers on every hit
+(chance 100) and uses the plain weapon-damage effect at the weapon's real speed.
+Divine Storm is the plain kind too. Of a Retribution paladin's attacks, only
+Crusader Strike uses the fixed speed, so a slow two-hander won. That's in the
+real-weapon-speed issue now.
+
+## Recorded
+
+- **Real weapon speed:** applies to everyone; offered upstream only once it's
+  tested and solid.
+- **The smap:** has its own issue now, with your words as its origin. Pictures
+  come from a sandboxed client running a UI addon, or the custom client's
+  headless mode (that's the plan you remembered, from the test scenes work). It
+  starts with all of Durotar, then the capitals. Roads come from it. Telling a
+  canyon from a dip and breaking ties wait on it. I didn't build the
+  hand-written height test.
+- **Road danger:** worked out live from the monsters nearby, never baked into
+  the smap.
+- **Caves and tunnels:** both are caves. A tunnel like Timbermaw Hold is crossed
+  by route nodes (entrance, inside, exit) without planning an exact path through
+  it. A cave's places are stored by x, y, z plus Q, the walking distance to the
+  nearest exit.
+- **The mingle:** becomes one of a set of rest activities, judged by feel.
+
+The todo list now has 19 items, and nothing is committed.
+
+## Ten more open questions
+
+**The smap**
+
+1. **Which model reads the pictures?** The image pipeline already has a part
+   that matches pictures with words (its CLIP part), or a larger picture-reading
+   model could run offline.
+   *My call:* the CLIP part first, since it's already installed, with a larger
+   model only where it's unsure.
+2. **How many picture spots per zone?** One every 20 yards on the walkable
+   ground, or denser where the ground changes (cliffs, rivers, town edges)?
+   *My call:* every 20 yards, then add spots wherever two angles disagree.
+3. **Does Q (depth from the nearest exit) also cover buildings, crypts and
+   instances?** Or only natural caves?
+   *My call:* everything with a roof. A crypt is a cave with walls.
+
+**Rest activities**
+
+4. **Name a few things you picture buddies doing while you stand still.** For
+   example: sitting, stretching, inspecting their gear, fishing if there's
+   water, poking at the nearest crate, talking to each other. Whatever comes to
+   mind is enough to start building.
+
+**Fighting in towns** (your October words: in town, buddies should treat
+fighting monsters and talking to people as equally important, mostly picking
+whatever is nearest)
+
+5. **When a buddy's errand is due (trainer, vendor, repair), does it still come
+   first in town?** Or does it wait while the buddy fights and talks with
+   whatever is nearest?
+   *My call:* errands first when due, then nearest-thing.
+6. **How often is "sometimes talk"?** For example, one target in five being a
+   townsperson instead of a monster.
+   *My call:* none, chosen by nearness alone as you said, so it varies with the
+   town.
+7. **Can an area wrap around another one?** The first cut of the Valley of
+   Trials has the boars' area wrapping around both sides of the scorpids. You
+   drew three areas: the cave, the middle upper area, and the town side. Is a
+   wrapping area fine, or must each area be one solid piece on one side?
+   *My call:* fine, since spawn zones overlap anyway.
+
+**Questing**
+
+8. **Pointing the way to the next quest:** buddies already hint by where they
+   stand. Should they also say it sometimes, like "the murlocs we need are down
+   by the shore"?
+   *My call:* yes, rarely, once per new objective.
+
+**Sargobras**
+
+9. **A bot owner's Sargobras.** When a bot player meets Sargobras to choose its
+   buddies, should he still sit by a campfire and tell jokes afterward, even
+   though no person is there to hear him? Or should he leave at once?
+   *My call:* leave at once, since nothing is gained by staying.
+
+**Areas**
+
+10. **Quiet areas.** An area marked as having almost no monsters and almost no
+    friendly people: is that counted once when the area is drawn, or live as
+    creatures come and go?
+    *My call:* live, the same reasoning as road danger: creatures move, ground doesn't.
+
+Sources:
+- [Seal of Command –
+  warcraft.wiki.gg](https://warcraft.wiki.gg/wiki/Seal_of_Command)
 
 --------------------------------------------------------------------------------
 

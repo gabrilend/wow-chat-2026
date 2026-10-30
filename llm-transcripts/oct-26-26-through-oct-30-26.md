@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-30 09:06:06
+Generated on: 2026-10-30 11:15:27
 Models: claude-opus-5-5
 
 ## Contents
@@ -167,6 +167,10 @@ Models: claude-opus-5-5
     and customize everything; the writer is ready and your answers now reach the
     issues. Next, run `scripts/write-question-contexts`, then
     `scripts/generate-answer-pages`.
+40. 2026-10-30 09:09, after Request 133 - Goal: buddies favour the abilities
+    their talents improve. That plan now reads only the game's own spell data,
+    with the icon and embedding ideas set aside for later. Next: say yes and
+    I'll build the per-class talent table.
 
 --------------------------------------------------------------------------------
 
@@ -13655,6 +13659,208 @@ I've left it as it was.
 This table is the next thing in the order you approved. Should I build it now?
 It would be a generator that reads the game's spell and talent tables and lists,
 for every class, each talent and the abilities it improves.
+
+--------------------------------------------------------------------------------
+
+### User Request 134
+
+okay sure let's build stuff, maybe the two things in your todo list, what's
+blocking those?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 134
+
+> Both are written and only waiting on your compile. Checking whether a compile
+> has run since.
+
+> Building the talent table now, as the plan describes. Checking one more table
+> layout: the one that says which spells each class can learn.
+
+> Writing the generator.
+
+> Both fixed. Adding a test for it, in the same shape as the project's other
+> quick tests.
+
+> Only the new test's row. Recording the table as built in its plan, and
+> committing.
+
+*[commit] a51f8264c in wow-chat-2026 - *
+
+> Talent table committed (a51f8264c). Now your build list. First an inventory:
+> every open issue, where it stands, and how many open questions it still has.
+
+> Core files pass. Checking whether the buddy module's own files were among
+> those checked.
+
+> The module's 42 files were skipped: this build tree's flag list has no entry
+> for any buddy file to borrow from. Looking for a build tree that has one.
+
+> That tree is from the release build on 29 October, which has no buddy module,
+> so its flags can't cover the module's files. Seeing whether the checker can
+> borrow another module's flags instead.
+
+> Now 38 issues show as waiting for the compile (was 24). Committing both tool
+> fixes.
+
+*[commit] 9b8778842 in wow-chat-2026 - *
+
+> Committed. Starting the ledger, then the first build: the talent weights,
+> which use the table just made, and the draw among a concern's answers.
+
+> The hook is there: buddies get their strategies switched on per bot, and a
+> combat strategy of our own can add a multiplier. Checking how a multiplier can
+> tell which spell an action casts.
+
+> Settings are read straight from the server's config with a default, so the new
+> switches will start off. Looking at how another buddy strategy is declared and
+> registered, to copy its shape.
+
+> Writing the switch and the two variants into the talents plan before building.
+
+> Now the generator's C++ output, including each talent's ranks and its stated
+> percent.
+
+> Registering the new strategy and script in the module.
+
+> Now the ledger: one place that accounts for everything this run builds, every
+> either-or choice, and what can be pruned.
+
+*[commit] a44ed9f00 in wow-chat-2026 - *
+
+> Committed (a44ed9f00). Next, the close-follow ring around you in combat, which
+> you settled on 28 October. Reading those plans.
+
+> Adding the ring to the follow core, beside the arc, and to its existing test.
+
+> Writing your 28 October answer into the ring plan first, with the combat case
+> as a switch, since your answer allows two readings.
+
+> Now the code: the ring in the follow core, the two order words, and the step.
+
+> Adding ring checks to the follow core's test, then running it and the compiler
+> check.
+
+> The ring passes its checks (43 of 43) and the compiler check. Updating the
+> tank plan and the ledger, then committing the core and test. The server wiring
+> waits for your compile.
+
+*[commit] cfff50eed in wow-chat-2026 - *
+
+> Committed (cfff50eed). Next, the ring's radius orders, which build on the ring
+> just made.
+
+> Your 4 October numbers say the ring starts at 5 yards, so the default moves
+> from 4 to 5. Finding where the `.buddy` commands are declared.
+
+> Regenerating the in-game help text for the new commands.
+
+> The check caught a missing namespace line. Fixing it the way the other command
+> files do.
+
+> Passes. Recording it in the plans and ledger, and committing the core and
+> test.
+
+*[commit] 41ffc34f6 in wow-chat-2026 - *
+
+> Committed (41ffc34f6). Next, the Alterac Valley weather you approved, starting
+> with the deck. First, checking how this server keeps weather for a
+> battleground's copy of a map.
+
+> Confirmed: Alterac Valley is zone 2597 on map 30. Writing the server script.
+
+> Passes the compiler check. Adding `.buddy weather` to the command reference,
+> recording it in the plans and ledger, and committing the deck and its test.
+
+*[commit] 0d91b15b5 in wow-chat-2026 - *
+
+> The storm needs the valley as data. Writing a small generator that turns the
+> battleground's own positions into the valley's cells, so nobody types them by
+> hand.
+
+> 548 cells, from the battleground's 916 places. Now the storm's test: a
+> simulated day.
+
+> Both pass. Wiring the storm into the server script: one storm for the server,
+> moved each pass, each player under it sent their own weather.
+
+> The page template contains `]]`, which ends Lua's long string early. Switching
+> to a longer string marker.
+
+> Generated. Adding a way to open the page at a chosen moment, so a picture
+> shows the storm's trail and not just the first second, then photographing it.
+
+*[commit] a0b316f5e in wow-chat-2026 - *
+
+> Committed (a0b316f5e). Next candidates from the plans marked "on the session's
+> to-do list". Reading the buddy reset plan.
+
+> The reset is a larger piece, touching Sargobras's dialogue, the roster and
+> character creation. Before taking it on, checking two smaller formation
+> pieces.
+
+> Fixed and passing. Finding the server's hook for "a player cast a spell", to
+> step right after an instant cast.
+
+> Passes. Recording it, and committing the sidestep's arithmetic and test.
+
+*[commit] 1bd2f01c8 in wow-chat-2026 - *
+
+> Committed (1bd2f01c8). Bringing the ledger up to date before going further:
+> the pieces looked at but not built, and an exact list of what sits uncommitted
+> waiting for your compile.
+
+*[commit] c07e9000b in wow-chat-2026 - *
+
+Here's where the push stands while you were at breakfast. Seven pieces are
+built, everything is committed except the server-side code, and that code passes
+the compiler check and waits for your compile. All of it is accounted for in
+`docs/build-ledger.md`: what was built, its switch, the choices waiting for you,
+what to prune, and the exact files waiting for the compile.
+
+**Built this push** (every new behaviour starts switched off):
+
+| What | Switch |
+|---|---|
+| Which abilities each of the 829 talents improves, read from the game's own spell data | (data) |
+| Buddies lean on their talented abilities: a weighted random choice within each concern's options. Twice the weight wins about twice as often, every option still wins sometimes, and it never jumps between concerns | `Buddies.TalentWeights` |
+| The close follow: a ring round you, a tank at the front. You start it with "circle me" or "close follow" and end it with "follow me" or "go away" | `Buddies.CloseFollow.InCombat` |
+| `.buddy wider` and `.buddy closer`: the ring from 5 to 25 yards | commands |
+| Alterac Valley under one shared sky, dealt as a shuffled deck, slush included | `Buddies.AlteracWeather` |
+| The wandering storm. Over a simulated day it never left the valley and gave every part of it a fair share of storm time | same switch |
+| Sidesteps round the target after an instant spell | `Buddies.Sidestep` |
+
+The weather page you approved is built: `docs/HTML/alterac-weather.html`,
+picture 093. It plays back the deck and the storm's walk, with a map of where
+the storm has been. The sliders for turn length, storm size and pace aren't
+built, since they'd need a second copy of the arithmetic in the browser.
+
+**Tooling fixes along the way:**
+- **The compiler check reaches the buddy module again.** The last build was the
+  release profile, which has no buddy module, so the check had been skipping all
+  the module's files.
+- **The status board is corrected.** It had listed written-but-uncompiled work
+  as "not started"; it now shows 38 issues waiting for the compile, not 24.
+
+**Your choices, once you've seen them in game:**
+1. **Talent weights** (`Buddies.TalentWeights`): 1 gives a fixed raise per
+   talent point; 2 uses the talent's own stated percent.
+2. **Broad talents** (`Buddies.TalentWeights.Broad`): a talent like "all your
+   Shadow spells" counts in full on each spell (100) or at half (50).
+3. **The ring in combat** (`Buddies.CloseFollow.InCombat`): 0 forms it only when
+   asked; 1 also forms it while you fight.
+4. **Sidestep size** (`Buddies.Sidestep`): 1 is a share of the circle; 2 scales
+   with distance.
+
+**What's next, and what waits on you:**
+- **Your compile** of the basic profile is the next step. It builds everything
+  waiting: the painted-map pathfinding, the army, the talent draw, the ring, the
+  weather and the sidesteps.
+- **Looked at but not built yet:**
+  - Sending one buddy to a clicked spot needs a click the server can hear first.
+  - Resetting a buddy and the next-quest pointing are both large; they're next.
+  - Hybrid tree shares and the healing economy are best done after the talent
+    draw has been seen in game.
 
 --------------------------------------------------------------------------------
 

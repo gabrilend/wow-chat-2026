@@ -66,7 +66,7 @@ they shift round their target now and then. Each part is a sub-issue:
 | 617s3 | tank-at-the-front | 617s1 | The tank takes the slot on the owner's facing, displacing whoever holds it, who takes the free slot nearest its own direction; so turning swaps the tank with a neighbour |
 | 617s4 | ring-radius-commands | 617s2 | Two commands: the ring a step wider (up to 40 yards), and back in to the smallest |
 | 617s5 | sidesteps-in-a-fight | 617o | In a fight, now and then a buddy moves round its target along the circle of its current distance, by 10-15% of that circle's length, on the mesh |
-| 617s6 | send-one-buddy | 617s2 | One buddy, chosen by the bot module's own addressing (its name, @tank, @heal...), sent to a spot the owner clicks; it holds there until told to follow again, and the ring leaves its slot empty meanwhile |
+| 617s6 | send-one-buddy | 617s2 | One buddy, chosen by the bot module's own addressing (its name, @tank, @heal...), sent to a spot the owner clicks; it holds there until told to follow again, and the ring leaves its slot empty meanwhile. **Moved 2026-10-30 to the custom client as its issue 815** (the click is what the original client can't send) |
 
 | 617s7 | box-select-in-the-custom-client | 617s6 | In the project's own client, buddies chosen by clicking and dragging a box over them |
 | 617s8 | nearest-open-slot | 617s2, 168 | The other follow mode, switched at Chromie: no buddy owns a compass place; each time a buddy reaches its waypoint it takes the nearest ring slot no other buddy has claimed |
@@ -118,6 +118,18 @@ wherever is closest and rarely cross the ring. The tank's front slot
   just scaling it linearly from 0 to 40 yards away" (617s5).
 
 ## Open Questions
+
+Gathered 2026-10-28 into 617's own list (question 2), merged with the
+same questions from other sub-issues; answers are written back here.
+
+- **Answered 2026-10-28** (617's question 2): "When moving distances, we
+  should do an "arc follow" which means they trail behind you. When doing
+  a "close follow" in combat or when specified, they circle around you."
+  So this ring is the **close follow**, used in combat or when asked; the
+  **arc follow** (617e13's half circle along the owner's track, built
+  2026-10-27) is used when travelling. Both stay; the parts of this plan
+  (the tank in front, radius commands, sidesteps, sending one buddy) are
+  the close follow's.
 
 1. (Answered 2026-10-04) "5, 5, 25": 25 yards is the largest ("yes. And 5
    is the minimum."): default 5, step 5, smallest 5, largest 25.

@@ -80,7 +80,7 @@ Kept as each candidate is looked at.
 |-------|---------------|
 | 617s1 | compass directions per roster slot: the ring shares places by nearness instead; build if the owner wants each buddy to keep its own compass point |
 | 921 (sliders) | the weather page's sliders for turn length, storm size and pace: would need the arithmetic twinned in the browser; the page plays back the real numbers instead |
-| 617s6 | sending one buddy to a clicked spot needs a click the server can hear (a ground-targeted spell given to players, as the bot module's own uses): a design step first |
+| 617s6 | moved to the custom client as its issue 815 (2026-10-30): the click is what the original client can't send |
 | 617a7 | resetting a buddy touches Sargobras's dialogue, the roster and character creation: next, a larger piece |
 | 617e18 | buddies pointing to the next quest: large (the server's quest tables, the arc in open country, where buddies roam rather than follow) |
 | 625c, 625d | every tree's list in the trees' shares, and the moment's economy: large, next after the talent draw is seen in game |

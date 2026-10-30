@@ -13,7 +13,16 @@ See 617s (the owner's words, 2026-10-04, quoted in full there).
 
 ## Current Behavior
 
-Not built. The bot module's `rtsc` saves clicked spots and sends bots ("rtsc save #", "rtsc go #", addressable as @tank and so on).
+**Moved to the custom client on 2026-10-30** (the owner, told the click
+is what a server can't hear from the original client: "custom client
+work. Can you move it there?"): it continues there as issue 815, *Send
+Companions to a Clicked Spot*
+(`/mnt/kaun/custom-client/issues/815-send-companions-to-a-clicked-spot.md`),
+with one new open question (a plain click or a key held). The server's
+side (the arc, the walk, the hold, the return) will be written here when
+the client's end exists.
+
+Before the move: not built. The bot module's `rtsc` saves clicked spots and sends bots ("rtsc save #", "rtsc go #", addressable as @tank and so on).
 
 ## Intended Behavior
 
