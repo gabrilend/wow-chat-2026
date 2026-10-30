@@ -12,7 +12,7 @@
 - Priority: High
 - State: in progress (all six layers built and tested offline; the
   server's side, the draw's hookup included, written and waiting for the
-  compile; replays and casts in progress next)
+  compile; casts in progress and the group's gold per hour next)
 
 ## Origin
 
@@ -193,6 +193,21 @@ with its time to ready (0 ready), so nothing is held for one it hasn't
 learned. Checked (34 checks in all): a mage with Arcane Power ready and
 Icy Veins ready in 10 seconds leans away from Arcane Power to 1/1.2 now;
 one who never learned Arcane Power doesn't hold Icy Veins for it.
+
+**Replays, 2026-10-30 (the format, its test and the tool committed; the
+server's writing waits for the compile):** `buddies_fight_replay.h`
+writes a step (the events since the last, the snapshot, the verdict the
+game worked out) as plain lines, a letter first, and reads them back,
+naming any line it can't read and its number. `scripts/replay-fight FILE
+[--leans]` feeds a written fight back through the forward pass step by
+step and prints each verdict (boss or trash, time left, shortfall, the
+tanks' plan) beside whether the game said the same; with `--leans` each
+member's leaning answers. In the server, `Buddies.ForwardPass.Replay` 1
+writes each party's fights into the logs folder (LogsDir) under
+`buddies-fights/`, one file a fight (a new one after 10 seconds without a
+step). Checked by `scripts/test-buddy-fight-replay` (6 checks): a made-up
+40-second fight written as played and replayed gives every verdict
+again, exactly; broken lines are named.
 Nothing yet takes the snapshot, keeps the history, runs the layers on
 worker threads or hands their verdict to the draw. The page
 `docs/HTML/fight-forward-pass.html` (made by
@@ -310,8 +325,10 @@ its material.
    time, gold cost as time to earn it back).
 5. In the server: the snapshot taken on events, the worker pool, the
    latest verdict kept per party and shown by `.buddy fight`; each
-   buddy's leans read by the draw, behind the switch (written, waiting for
-   the compile: `buddies_forward_pass.cpp`, `buddies_talents.cpp`); replay
+   buddy's leans read by the draw, behind the switch, and replays written
+   (written, waiting for the compile: `buddies_forward_pass.cpp`,
+   `buddies_talents.cpp`; the replay format and `scripts/replay-fight`
+   done); replay
    logging.
 
 ## Open Questions

@@ -1,0 +1,41 @@
+#!/bin/bash
+# replay-fight - feeds a fight the server wrote down back through the
+# buddies' forward pass, away from the game (issue 625n: replays).
+#
+# For a general audience: with Buddies.ForwardPass.Replay set to 1, the
+# server writes each party's fights to its logs folder, one file a fight
+# (buddies-fights/fight-<party>-<time>.replay): every half-second step's
+# picture of the fight and the events between. This reads one back and runs
+# it through the same arithmetic the buddies use, step by step, printing
+# what each step says (boss or trash, the time left, how far short the
+# party is, which tank should hold) beside whether the game said the same.
+# With --leans it also prints each member's answers that lean, and how far.
+# A change to the weights can be tried on real fights this way first.
+#
+# Usage: scripts/replay-fight FILE [--leans] [--dir DIR]
+#   FILE      a .replay file the server wrote
+#   --leans   also print each member's leaning answers
+#   --dir DIR the project folder (default the hard-coded one below)
+#   --help    this text
+# Exit status: 0 when every step replays to the verdict the game wrote.
+
+DIR="/mnt/kaun/wow-chat-2026"
+FILE=""
+LEANS=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --help|-h) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --leans)   LEANS="--leans"; shift ;;
+        --dir)     DIR="$2"; shift 2 ;;
+        *)         FILE="$1"; shift ;;
+    esac
+done
+if [ -z "${FILE}" ]; then
+    echo "replay-fight: which fight? (a .replay file; --help)" >&2
+    exit 2
+fi
+OUT="${DIR}/tmp/tmp"
+mkdir -p "${OUT}"
+g++ -std=c++17 -O2 -Wall -Wextra -I"${DIR}/patches/B036-mod-buddies/mod-buddies/src" \
+    "${DIR}/tests/buddy-fight-replay/replay-fight.cpp" -o "${OUT}/replay-fight" || exit 1
+"${OUT}/replay-fight" "${FILE}" ${LEANS}

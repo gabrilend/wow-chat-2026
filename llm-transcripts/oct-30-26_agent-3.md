@@ -1,6 +1,6 @@
 # Conversation Summary: e143dbfe-ff43-48be-8bd4-4d54fd7a325d
 
-Generated on: 2026-10-30 15:48:24
+Generated on: 2026-10-30 16:16:14
 Models: claude-opus-5-5
 
 ## Contents
@@ -47,6 +47,10 @@ Models: claude-opus-5-5
     so the next compile can build them, and every answer is now in its issue
     file with 37 build items listed, none committed yet. Next, ask whether you
     want ten more questions or a commit first.
+11. 2026-10-30 15:51, after Request 31 - We're working down the todo list to
+    build every described issue before basic's next compile. About fifteen
+    changes are written and syntax-checked but uncompiled. Next step: you run a
+    basic compile so I can commit whatever builds.
 
 --------------------------------------------------------------------------------
 
@@ -4561,6 +4565,82 @@ That's about 15 source files waiting to be compiled. **Could you run a basic
 compile now?** Then I can read the log, commit what built, and the remaining
 large features will start from a known-good build. I'll keep going on non-server
 work while it runs, if you like.
+
+--------------------------------------------------------------------------------
+
+### User Request 32
+
+okay I'll run the compile. Can you keep working on the task list? When the
+compile is done you should see it's logs, so make sure to watch for them and
+check back until they're finished.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 32
+
+> No recordings yet, so the cleanup step will start with test recordings of my
+> own making. Reading the recorder's step flags:
+
+> Tidying the pause loop I just wrote; it has a stray line:
+
+> Now the tool that shows and applies the cut:
+
+> The compile has started (its log is being written). Recording the trimmer in
+> the crossing issue:
+
+*[commit] 5d2370f1a in wow-chat-2026 - Boarding recordings can be trimmed to just the way aboard*
+
+> The compile is at 27%. Meanwhile, the island buddy: route search instead of
+> walking toward a dock with no land route. Reading the crossing code for that
+> case (a file not in this compile's changes):
+
+> Adding the route search for a buddy whose walk can't reach the owner's dock:
+> it walks to whichever stop of the same ship it can reach and sails from there.
+
+> The crossing file is clean. Recording the island route in its issue; the
+> compile is still running.
+
+> The compile is at 35%. Next: ties in the roaming core (pick at random when two
+> ways cost within 10% of each other), a pure core with its own offline test.
+
+> The roaming core is held to its Lua model draw for draw, so the tie rule goes
+> into both. Finding the Lua side:
+
+> Applying the same tie rule to both the C++ core and its Lua model:
+
+> Now the Lua model to match:
+
+> Two of 3,678 parity checks now fail. In both, C++ and Lua drew among the tied
+> paths but landed on different ones. Looking at the kept data to see why:
+
+> Parity holds again: 3,680 checks pass. Now a small check of the tie draw
+> itself, on the Lua model. Seeing what a minimal area needs:
+
+> The compile is at 56%. Checking whether my module files have gone through yet:
+
+> No errors so far; all my changed module files have compiled. Recording the tie
+> rule in the roaming issue:
+
+> Next: the level command. Checking whether it's meant as an in-game command or
+> a tool:
+
+The compile is at 79% with no errors so far; all my changed files have compiled.
+The background watch wakes me when the compile writes its receipt (or after 4
+hours without one).
+
+Built in this stretch (not in this compile, since I edited them after it
+started):
+- **Boarding paths:** the recorder already existed. The new trimming tool and
+  its test are committed.
+- **Island buddy:** when no walk reaches your dock, it walks to whichever stop
+  of the same ship it can reach and sails from there. Syntax-checked; waits for
+  the next compile.
+- **Ties in roaming:** paths within 10% of the cheapest are drawn at random, in
+  both the C++ core and its Lua model. The parity test passes again, and a new
+  tie test passes. Waits for the next compile.
+
+When the compile finishes I'll read its log and run the quick tests. If it
+built, I'll commit what compiled; if not, I'll fix whatever broke and tell you.
 
 --------------------------------------------------------------------------------
 
