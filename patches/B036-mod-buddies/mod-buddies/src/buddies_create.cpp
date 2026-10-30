@@ -314,17 +314,38 @@ static void Fail(uint32 owner, uint8 slot, uint8 race, uint8 cls, std::string co
 // adds (its roster row, its owner meeting it) is CreateBuddy's. `kind`
 // names it in the log ("buddy", "stand-in"); `forWhom` says for whom.
 // Returns the new character's guid and its name; 0 and why when it can't.
+// A reset buddy (617a7) is made with the name, gender and looks it had:
+// `wantName` (empty: a name from the list), `wantGender` (0 male, 1
+// female; 2: a random one) and `looksOf` (a character whose skin, face,
+// hair and facial hair it takes; 0: random looks, as at a first making).
 uint32 BuddyMakeCharacter(uint32 account, uint8 race, uint8 cls, uint8 level, uint8 shape, uint8 role,
-    uint32 bagsLike, bool pvpJewellery, char const* kind, std::string const& forWhom, std::string& name, std::string& why)
+    uint32 bagsLike, bool pvpJewellery, char const* kind, std::string const& forWhom, std::string& name, std::string& why,
+    std::string const& wantName, uint8 wantGender, uint32 looksOf)
 {
-    uint8 gender = urand(0, 1) ? GENDER_MALE : GENDER_FEMALE;
-    name = PickName(race, gender);
+    uint8 gender = wantGender <= 1 ? wantGender : (urand(0, 1) ? GENDER_MALE : GENDER_FEMALE);
+    name = wantName.empty() ? PickName(race, gender) : wantName;
     if (name.empty())
     {
         why = "no name in playerbots_names for this race and gender is both unused and allowed by the server's name rules";
         return 0;
     }
     BuddyLooks looks = PickLooks(race, gender);
+    // a reset buddy's own looks, from its old self (still saved until the
+    // reset finishes); random looks stay only if that row is gone
+    if (looksOf)
+    {
+        if (QueryResult old = CharacterDatabase.Query("SELECT skin, face, hairStyle, hairColor, facialStyle FROM characters WHERE guid = {}", looksOf))
+        {
+            looks.skin       = (*old)[0].Get<uint8>();
+            looks.face       = (*old)[1].Get<uint8>();
+            looks.hairStyle  = (*old)[2].Get<uint8>();
+            looks.hairColor  = (*old)[3].Get<uint8>();
+            looks.facialHair = (*old)[4].Get<uint8>();
+            looks.ok         = true;
+        }
+        else
+            LOG_ERROR("module", "mod-buddies: reset buddy {}: its old self {} is gone, so its looks are drawn afresh", wantName, looksOf);
+    }
     if (!looks.ok)
     {
         why = "CharSections.dbc has no face or hair for this race and gender";
@@ -435,21 +456,28 @@ static void CreateBuddy(uint32 owner, uint8 slot, uint8 cls, uint8 race)
     if (!sObjectMgr->GetPlayerInfo(race, cls))
         return Fail(owner, slot, race, cls, "that race can't be that class");
 
-    QueryResult plan = CharacterDatabase.Query("SELECT profile, role FROM buddy_roster WHERE owner = {} AND slot = {}", owner, slot);
+    QueryResult plan = CharacterDatabase.Query("SELECT profile, role, reset_name, reset_gender, reset_from FROM buddy_roster "
+        "WHERE owner = {} AND slot = {}", owner, slot);
     uint8 profile = plan ? (*plan)[0].Get<uint8>() : 0;
     uint8 role    = plan ? (*plan)[1].Get<uint8>() : 0;
+    // a reset slot (617a7): the name and gender it had, and its old self
+    std::string keepName = plan ? (*plan)[2].Get<std::string>() : "";
+    uint8 keepGender     = plan ? (*plan)[3].Get<uint8>() : 2;
+    uint32 resetFrom     = plan ? (*plan)[4].Get<uint32>() : 0;
     std::string name, why;
     // from level 18 a buddy wears the PvP necklace, rings and trinkets of
     // its level, as stand-ins do (owner, 2026-10-15: "They should have
     // cloaks and rings and trinkets at the specified level ... And don't
     // forget the PvP gear"); the first PvP rewards are level 18's
     uint32 guid = BuddyMakeCharacter(account, race, cls, ownerLevel, profile, role, owner, ownerLevel >= BUDDY_PVP_JEWELLERY_FROM, "buddy",
-        "owner " + std::to_string(owner), name, why);
+        "owner " + std::to_string(owner), name, why, keepName, keepGender, resetFrom);
     if (!guid)
         return Fail(owner, slot, race, cls, why);
 
-    CharacterDatabase.Execute("UPDATE buddy_roster SET buddy = {}, created = UNIX_TIMESTAMP() "
-        "WHERE owner = {} AND slot = {} AND buddy = 0", guid, owner, slot);
+    CharacterDatabase.Execute("UPDATE buddy_roster SET buddy = {}, created = UNIX_TIMESTAMP(), reset_name = '', reset_gender = 2, "
+        "reset_from = 0 WHERE owner = {} AND slot = {} AND buddy = 0", guid, owner, slot);
+    if (resetFrom)
+        BuddyFinishReset(resetFrom, guid, account);
 
     // Not into the clan here: a buddy joins its owner's clan 5 seconds after
     // it first appears in the world, and greets its owner (617l, owner

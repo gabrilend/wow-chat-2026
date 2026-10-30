@@ -70,18 +70,28 @@ from the bot module where the buddy module was never built here). Kept
 uncommitted until the compile builds them, then committed with their
 issues.
 
+**Built by the owner's compile of 2026-10-30** (the build copied the
+module at 15:57; the worldserver linked at 16:28 and came up in its
+validation run, "World initialized", 131 seconds) **and committed:**
+`buddies_path.cpp/.h`, `buddies_map_stream.cpp` (617o7, 617o8);
+`buddies_army.cpp/.h`, `buddies_stand_ins.cpp`, `buddies_stand_ins_pick.h`,
+`buddies.h`, `buddies_party.cpp`, `buddies_gems.cpp`,
+`buddies_roam_ground.cpp` (617e17, 617t, 617c2); `buddies_talents.h`,
+`buddies_roam_strategy.cpp` (625); `buddies_follow.cpp/.h`,
+`buddies_orders.cpp`, `roam/buddy_follow_core.h` (617s2-s4);
+`buddies_weather.cpp` (921); `buddies_sidestep.cpp` (617s5);
+`buddies_reset.cpp`, `buddies_create.cpp`, `buddies_stage.cpp`,
+`patches/E066-sargobras/sargobras.lua`,
+`patches/E042-basic-buddy-roster/04-buddy-roster.apply.sql` (617a7).
+
+**Still waiting** (changed after the build copied the module, or not in it):
+
 | File | For |
 |------|-----|
-| `buddies_path.cpp/.h`, `buddies_map_stream.cpp` | the painted-map pathfinding switch (617o7, 617o8) |
-| `buddies_army.cpp/.h`, `buddies_stand_ins.cpp`, `buddies_stand_ins_pick.h`, `buddies.h`, `buddies_party.cpp`, `buddies_gems.cpp`, `buddies_roam_ground.cpp` | the army of 64, fully random; stand-ins met by chance; grouping; gems by plan (617e17, 617t, 617c2) |
-| `buddies_talents.cpp/.h`, `buddies_roam_strategy.cpp` | the talent draw (625) |
-| `buddies_follow.cpp/.h`, `buddies_orders.cpp` | the close follow's ring and its radius (617s2-s4) |
-| `buddies_weather.cpp` | Alterac Valley's sky and storm (921) |
-| `buddies_sidestep.cpp` | sidesteps (617s5) |
-| `buddies_reset.cpp`, `buddies_create.cpp`, `buddies_stage.cpp`, `patches/E066-sargobras/sargobras.lua`, `patches/E042-basic-buddy-roster/04-buddy-roster.apply.sql` | resetting a buddy (617a7) |
+| `buddies_talents.cpp` | the talent draw (625), and the forward pass's lean in it (625n) |
 | `buddies_forward_pass.cpp` | the fight's forward pass in the server (625n) |
-| `buddies_loader.cpp` | registers the new scripts |
-| `config/custom-gm-commands.lua`, `docs/gm-commands.txt`, `docs/HTML/gm-commands.html`, `sql/*/34-custom-command-help.*.sql` | `.buddy path`, `.buddy army`, `.buddy wider`, `.buddy closer`, `.buddy weather`, `.buddy fight` described; `.elite` taken out |
+| `buddies_loader.cpp` | registers the new scripts (the forward pass's registration came after the build) |
+| `config/custom-gm-commands.lua`, `docs/gm-commands.txt`, `docs/HTML/gm-commands.html`, `sql/*/34-custom-command-help.*.sql` | `.buddy path`, `.buddy army`, `.buddy wider`, `.buddy closer`, `.buddy weather` (built) and `.buddy fight` (not yet) described; `.elite` taken out |
 
 ## Not built, and why
 

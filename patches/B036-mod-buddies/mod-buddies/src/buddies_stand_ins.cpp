@@ -41,6 +41,7 @@
 #include "buddies_roles.h"
 #include "buddies_spells.h"
 #include "buddies_kit.h"
+#include "buddies_gems.h"
 #include "buddies_stand_ins_pick.h"
 #include "AccountMgr.h"
 #include "CharacterCache.h"
@@ -201,6 +202,29 @@ struct StandInDue
     uint64 asked;
 };
 static std::map<uint32, StandInDue> sDue;               // character guid -> its first moments
+
+bool BuddyStandInOnItsWay(uint32 guid) { return sDue.count(guid) != 0; }
+
+bool BuddyPlanOf(uint32 guid, uint8& profile, uint8& role)
+{
+    profile = role = 0;
+    QueryResult row = CharacterDatabase.Query(
+        "SELECT profile, role FROM buddy_roster WHERE buddy = {} UNION ALL SELECT profile, role FROM buddy_stand_in WHERE guid = {}",
+        guid, guid);
+    if (!row)
+        return false;
+    profile = (*row)[0].Get<uint8>();
+    role    = (*row)[1].Get<uint8>();
+    return true;
+}
+
+void BuddyDismissStandIn(uint32 guid)
+{
+    sDue.erase(guid);
+    ObjectGuid g = ObjectGuid::Create<HighGuid::Player>(guid);
+    if (ObjectAccessor::FindConnectedPlayer(g))
+        sRandomPlayerbotMgr.LogoutPlayerBot(g);
+}
 // }}}
 
 // {{{ BuddyBringStandIn
@@ -210,10 +234,10 @@ static std::map<uint32, StandInDue> sDue;               // character guid -> its
 uint32 BuddyBringStandIn(uint8 side, uint8 role, uint8 level, uint8 race, uint8 cls,
     uint32 map, float x, float y, float z, float o, std::string& said)
 {
-    if (role > 2 || side > 1 || level < 1 || level > DEFAULT_MAX_LEVEL)
+    if (role > BuddyStandIn::ANY_ROLE || side > 1 || level < 1 || level > DEFAULT_MAX_LEVEL)
     {
         said = "asked for side " + std::to_string(side) + ", role " + std::to_string(role) + ", level " + std::to_string(level)
-            + ": side is alliance or horde, role tank, healer or damage, level 1 to " + std::to_string(DEFAULT_MAX_LEVEL);
+            + ": side is alliance or horde, role tank, healer, damage or any, level 1 to " + std::to_string(DEFAULT_MAX_LEVEL);
         return 0;
     }
 
@@ -227,19 +251,30 @@ uint32 BuddyBringStandIn(uint8 side, uint8 role, uint8 level, uint8 race, uint8 
     {
         said = std::string("no ") + (side ? "Horde" : "Alliance") + " race and class pair"
             + (race ? " of race " + std::to_string(race) : "") + (cls ? " of class " + std::to_string(cls) : "")
-            + " can take the role " + ROLE_NAMES[role];
+            + (role == BuddyStandIn::ANY_ROLE ? std::string(" at all") : std::string(" can take the role ") + ROLE_NAMES[role]);
         return 0;
     }
     auto pick = pairs[urand(0, uint32(pairs.size()) - 1)];
     race = pick.first;
     cls  = pick.second;
 
+    // any role: the shape drawn now from all ten, the role read from it,
+    // and only a kept one of that very shape will do (so the draw stays
+    // even); a role asked for: the shape is chosen below, among the role's
+    uint8 drawnShape = 0;
+    if (role == BuddyStandIn::ANY_ROLE)
+    {
+        drawnShape = uint8(urand(1, 10));
+        role       = BuddyStandIn::ShapeRole(cls, drawnShape);
+    }
+
     // a kept one first
     std::vector<BuddyStandIn::Kept> kept;
     std::map<uint32, uint8> shapeOf;
     if (QueryResult rows = CharacterDatabase.Query(
-            "SELECT guid, race, class, role, level, profile FROM buddy_stand_in WHERE race = {} AND class = {} AND role = {} AND level <= {}",
-            race, cls, role, level))
+            "SELECT guid, race, class, role, level, profile FROM buddy_stand_in WHERE race = {} AND class = {} AND role = {} AND level <= {}"
+            " AND ({} = 0 OR profile = {})",
+            race, cls, role, level, drawnShape, drawnShape))
         do
         {
             uint32 guid = (*rows)[0].Get<uint32>();
@@ -247,7 +282,7 @@ uint32 BuddyBringStandIn(uint8 side, uint8 role, uint8 level, uint8 race, uint8 
             kept.push_back({ guid, (*rows)[1].Get<uint8>(), (*rows)[2].Get<uint8>(), (*rows)[3].Get<uint8>(), (*rows)[4].Get<uint8>(), inWorld });
             shapeOf[guid] = (*rows)[5].Get<uint8>();
         } while (rows->NextRow());
-    uint32 guid  = BuddyStandIn::PickKept(kept, race, cls, role, level);
+    uint32 guid  = BuddyStandIn::PickKept(kept, race, cls, role, level, urand(0, 0x7FFFFFFF));   // which one: chance
     uint8  shape = 0;
     bool   raised = false;
     std::string name;
@@ -273,8 +308,10 @@ uint32 BuddyBringStandIn(uint8 side, uint8 role, uint8 level, uint8 race, uint8 
     {
         // a new one: a talent shape of its role, as a buddy's would be;
         // two alike in a squad is fine ("It's okay if there's two of one type")
+        // (any role: the shape already drawn)
         std::vector<uint8_t> shapes = BuddyStandIn::ShapesForRole(cls, role);
-        shape = shapes[urand(0, uint32(shapes.size()) - 1)];   // never empty: PairsFor kept only classes with such a shape
+        shape = drawnShape ? drawnShape
+                           : shapes[urand(0, uint32(shapes.size()) - 1)];   // never empty: PairsFor kept only classes with such a shape
         std::string why;
         uint32 account = AccountWithRoom(why);
         if (!account)
@@ -318,6 +355,9 @@ static void FirstMoments(Player* standIn, StandInDue const& due)
         BuddyLearnEverything(standIn);                  // what the new level teaches (617n)
         problems += BuddyRegear(standIn, due.shape);    // the kit's gear for the new level (617a4)
         problems += BuddyGivePvpJewellery(standIn, due.shape, due.role);
+        // the jewellery came after the re-gear's gems: its sockets filled
+        // too (until 2026-10-29 they stayed empty)
+        problems += BuddyGemKit(standIn, due.shape, due.role);
     }
     if (standIn->GetFreeTalentPoints())
         problems += std::to_string(standIn->GetFreeTalentPoints()) + " talent points unspent (is src/lua-basic/buddy-talents.lua "

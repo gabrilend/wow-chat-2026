@@ -39,6 +39,14 @@
 --                      spec: brought up to docs/buddy-gear-spec.md at its
 --                      next login (lessons, skills, empty kit slots, tools,
 --                      jewellery, gems), what it earned kept on, then 0
+--   reset_name, reset_gender, reset_from
+--                      (617a7) a buddy reset by a game master (.buddy
+--                      reset): its slot owed again with its race kept,
+--                      and the name and gender (0 male, 1 female; 2 none)
+--                      its new self is made with; reset_from the old
+--                      character, whose "Kept for you" mail goes to the
+--                      new one before the old is deleted. Empty, 2 and 0
+--                      otherwise.
 --
 -- A row moves through three states: owed (class 0), chosen (class set,
 -- buddy 0: the module makes the character), filled (buddy set).
@@ -87,6 +95,16 @@ SET @add_stage := IF(@has_stage = 0,
 PREPARE add_stage FROM @add_stage;
 EXECUTE add_stage;
 DEALLOCATE PREPARE add_stage;
+
+-- the reset columns (617a7, 2026-10-30), the same way
+SET @has_reset := (SELECT COUNT(*) FROM information_schema.columns
+  WHERE table_schema = DATABASE() AND table_name = 'buddy_roster' AND column_name = 'reset_name');
+SET @add_reset := IF(@has_reset = 0,
+  'ALTER TABLE `buddy_roster` ADD COLUMN `reset_name` varchar(12) NOT NULL DEFAULT \'\' AFTER `stage`, ADD COLUMN `reset_gender` tinyint unsigned NOT NULL DEFAULT 2 AFTER `reset_name`, ADD COLUMN `reset_from` int unsigned NOT NULL DEFAULT 0 AFTER `reset_gender`',
+  'DO 0');
+PREPARE add_reset FROM @add_reset;
+EXECUTE add_reset;
+DEALLOCATE PREPARE add_reset;
 
 -- The stage record (617a6): a buddy as it was when its owner's level went
 -- below it (whether it then waits or is made again), kept for the later

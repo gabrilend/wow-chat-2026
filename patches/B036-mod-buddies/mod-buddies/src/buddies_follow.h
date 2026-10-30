@@ -47,6 +47,9 @@ void     BuddyFollowStop(uint32_t buddy);
 void     BuddyFollowRefuse(uint32_t buddy, uint32_t leader);
 bool     BuddyFollowRefused(uint32_t buddy, uint32_t leader);
 uint32_t BuddyFollowLeader(uint32_t buddy);           // 0: no follow order
+void     BuddyFollowSetRing(uint32_t buddy, bool ring); // the close follow (617s2): in the ring round the leader, or not
+bool     BuddyFollowRing(uint32_t buddy);
+float    BuddyFollowRingYards(uint32_t leader);         // the ring's radius round this leader (617s4)
 // }}}
 
 #endif

@@ -168,6 +168,20 @@ static bool IsFarParty(Group* group, std::set<uint32> const& buddies)
 }
 // }}}
 
+// {{{ OwnerSeatFree
+// Whether a buddy could take a seat in the owner's party now: the owner in
+// no group (one is made when a buddy is seated), or in a party (not a
+// raid) of fewer than five. While there is none, the buddies near the owner
+// keep to their own parties (2026-10-29, the army of 64: "Buddy-bot
+// stand-ins should be sorted into groups correctly"; before, every buddy
+// within 74 yards of a full party was left in no group).
+static bool OwnerSeatFree(Player* owner)
+{
+    Group* g = owner->GetGroup();
+    return !g || (!g->isRaidGroup() && g->GetMembersCount() < PARTY_SIZE);
+}
+// }}}
+
 // {{{ IsOwnersBuddyRaid
 // The raid the bot module makes at login: the owner and only the owner's
 // buddies.
@@ -276,8 +290,9 @@ static void ArrangeOwner(Player* owner, std::vector<uint32> const& buddyGuids)
             sSeatedByPass.insert(b.bot->GetGUID().GetCounter());
 
     // 1. Leaving: out of the owner's group past 75; out of a far party
-    //    within 74 of the owner, or more than 74 from every other member of
-    //    it. RemoveMember disbands a group left with one member. The owner
+    //    within 74 of the owner while the owner's party has a seat free (a
+    //    full one: it stays, 2026-10-29), or more than 74 from every other
+    //    member of it. RemoveMember disbands a group left with one member. The owner
     //    (2026-09-27) also has a far-party buddy leave "when it could join
     //    the player's party": within the 60-yard join distance it is within
     //    74 too, so it leaves here, and the seat filling (FillSeats) may
@@ -294,7 +309,7 @@ static void ArrangeOwner(Player* owner, std::vector<uint32> const& buddyGuids)
             if (b.yards > LEAVE_OWNER_YARDS && sSeatedByPass.erase(guid))
                 g->RemoveMember(b.bot->GetGUID());     // seated by this pass: it may unseat; invited by hand: stays
         }
-        else if (IsFarParty(g, buddySet) && (b.yards <= FAR_YARDS || !NearAnyMember(b.bot, g, FAR_LEAVE_YARDS)))
+        else if (IsFarParty(g, buddySet) && ((b.yards <= FAR_YARDS && OwnerSeatFree(owner)) || !NearAnyMember(b.bot, g, FAR_LEAVE_YARDS)))
             g->RemoveMember(b.bot->GetGUID());
     }
 
@@ -309,14 +324,16 @@ static void ArrangeFar(Player* owner, std::vector<uint32> const& buddyGuids)
         return;                                        // a dungeon-finder or battleground group: not ours
     std::vector<Near> buddies = BuddiesNear(owner, buddyGuids);
 
-    // 3. Far parties: each ungrouped buddy past 74 (lowest guid first, so
-    //    the order is stable) joins a far party with room one of
+    // 3. Far parties: each ungrouped buddy past 74, or nearer while the
+    //    owner's party has no seat free (it would otherwise be in no group
+    //    at all; 2026-10-29), lowest guid first so the order is stable, joins a far party with room one of
     //    whose members is within 70 yards of it; failing that, it pairs up
     //    with the next loose far buddy within 70 in a new party it leads (the
     //    lower guid leads). A lone far buddy with nobody near waits.
     std::vector<Player*> farLoose;
+    bool seatFree = OwnerSeatFree(owner);
     for (Near const& b : buddies)
-        if (b.yards > FAR_YARDS && !b.bot->GetGroup())
+        if ((b.yards > FAR_YARDS || !seatFree) && !b.bot->GetGroup())
             farLoose.push_back(b.bot);
     std::sort(farLoose.begin(), farLoose.end(), [](Player* a, Player* b) { return a->GetGUID() < b->GetGUID(); });
     for (Player* bot : farLoose)
@@ -757,10 +774,12 @@ static void RunWalkIns()
 static std::set<uint32> sDrawnIn;
 
 // A buddy's role, as its plan's (buddy_roster.role).
+// (a stand-in of an army reads its own table's role: BuddyPlanOf)
 static BuddyRole RosterRole(uint32 buddy)
 {
-    QueryResult r = CharacterDatabase.Query("SELECT role FROM buddy_roster WHERE buddy = {}", buddy);
-    return r ? BuddyRole((*r)[0].Get<uint8>()) : BuddyRole::Damage;
+    uint8 profile, role;
+    BuddyPlanOf(buddy, profile, role);                 // neither table: 0, damage, as before
+    return BuddyRole(role);
 }
 
 // {{{ RoleTenths

@@ -26,6 +26,7 @@
 
 #include "buddies.h"
 #include "buddies_roam.h"
+#include "buddies_army.h"
 #include "roam/buddy_town_rules.h"
 #include "DBCEnums.h"
 #include "DBCStores.h"
@@ -64,20 +65,39 @@ static float const      WALK_RISE_PER_YARD = std::tan(WALK_SLOPE_DEGREES * float
 // {{{ BuddyRosterPairs
 // Read at most every ROSTER_REFRESH_MS: the roster changes only when a
 // buddy is made or deleted, and the passes run every few seconds.
+//
+// An army's stand-ins (617e17, a test realm) are added after the roster's
+// own: the owner, 2026-10-29, "we should treat them like as if we had 64
+// buddy-bots", so every pass (roaming, the far parties, the orders, the
+// following, the map) takes them as their game master's buddies. They
+// have no roster rows: what a pass reads from the roster's table finds
+// nothing for them (the dungeon draw counts each as damage; the gem
+// chooser leaves them be). The joined list is made again only when the
+// roster is read or the army changes, so the list a caller holds stays
+// as it was between those.
 std::vector<std::pair<uint32, uint32>> const& BuddyRosterPairs()
 {
-    static std::vector<std::pair<uint32, uint32>> pairs;
+    static std::vector<std::pair<uint32, uint32>> pairs, army, joined;
     static uint64 readAt = 0;
     uint64 now = uint64(GameTime::GetGameTimeMS().count());
-    if (readAt != 0 && now - readAt < ROSTER_REFRESH_MS)
-        return pairs;
-    readAt = now;
-    pairs.clear();
-    if (QueryResult rows = CharacterDatabase.Query("SELECT buddy, owner FROM buddy_roster WHERE buddy <> 0"))
-        do
-            pairs.emplace_back((*rows)[0].Get<uint32>(), (*rows)[1].Get<uint32>());
-        while (rows->NextRow());
-    return pairs;
+    bool read = readAt == 0 || now - readAt >= ROSTER_REFRESH_MS;
+    if (read)
+    {
+        readAt = now;
+        pairs.clear();
+        if (QueryResult rows = CharacterDatabase.Query("SELECT buddy, owner FROM buddy_roster WHERE buddy <> 0"))
+            do
+                pairs.emplace_back((*rows)[0].Get<uint32>(), (*rows)[1].Get<uint32>());
+            while (rows->NextRow());
+    }
+    std::vector<std::pair<uint32, uint32>> nowArmy = BuddyArmyPairs();
+    if (read || nowArmy != army)
+    {
+        army = std::move(nowArmy);
+        joined = pairs;
+        joined.insert(joined.end(), army.begin(), army.end());
+    }
+    return joined;
 }
 // }}}
 

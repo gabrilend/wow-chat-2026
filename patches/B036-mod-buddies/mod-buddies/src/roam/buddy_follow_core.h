@@ -74,6 +74,11 @@ struct Settings
     float    narrowYards  = 1.5f;    // a passage narrower than this from its middle to a wall: single file (ours: the
                                      // formation's own half-width, `side`, and half a body)
     float    columnSpacing = 2.5f;   // yards between followers in single file ("a few yards apart"; ours)
+    // more than five followers: layered arcs (the owner, 2026-10-30: "maybe 3
+    // in the closest radius, then 2 more behind, then another 2 behind
+    // them"); the last size repeats for a larger crowd
+    std::vector<int> layerSizes = { 3, 2, 2 };
+    float    layerStep    = 1.5f;    // yards each layer stands behind the one before (ours: a body and a half)
 };
 // }}}
 
@@ -111,8 +116,9 @@ struct Trail
 // along it the way the owner went. The owner's table:
 //   1: -1        2: -1, +1        3: -1, 0, +1        4: -1, -0.5, +0.5, +1
 // Five fills the gap the table leaves in four: -1, -0.5, 0, +0.5, +1. Past
-// five (a full clan is seven) the owner has not said; ours: evenly from -1
-// to +1, which keeps the table's ends and its middle. Asked in 617e13.
+// five this one arc would crowd (seven a third of a yard apart, narrower
+// than a body), so Places stands them in layered arcs instead (ArcSpots,
+// below); this evenly spread answer is kept for any one-arc caller.
 inline std::vector<float> Offsets(int n)
 {
     switch (n)
@@ -128,6 +134,56 @@ inline std::vector<float> Offsets(int n)
     std::vector<float> out;
     for (int k = 0; k < n; ++k)
         out.push_back(-1.0f + 2.0f * float(k) / float(n - 1));
+    return out;
+}
+// }}}
+
+// {{{ ArcSpots
+// Where n followers stand on a half circle behind someone, as a sideways
+// offset (units of Settings::side) and how much farther back than the
+// first arc (yards). The shared piece for every half-circle standing (the
+// owner, 2026-10-30: "Make it dynamic too because we'll use semi-circle
+// arc positioning in many situations"): a caller turns each spot into a
+// place its own way (PlaceFor, along a trail).
+//   up to five: one arc, the owner's table (Offsets);
+//   more: layered arcs, "wider but no more than half a circle", the
+//     layers' sizes from Settings::layerSizes (3, 2, 2; the last repeats),
+//     each layerStep yards behind the one before. The first layer spreads
+//     from side to side; each later one stands in the gaps of the one in
+//     front (two behind three at -0.5 and +0.5), so every follower can see
+//     past those ahead.
+struct ArcSpot
+{
+    float lateral   = 0.0f;          // -1 right of the line to +1 left, units of side
+    float extraBack = 0.0f;          // yards behind the first arc
+};
+
+inline std::vector<ArcSpot> ArcSpots(int n, Settings const& s)
+{
+    std::vector<ArcSpot> out;
+    if (n <= 5)
+    {
+        for (float lateral : Offsets(n))
+            out.push_back({ lateral, 0.0f });
+        return out;
+    }
+    int layer = 0;
+    while (int(out.size()) < n)
+    {
+        int want = s.layerSizes.empty() ? 3
+                 : s.layerSizes[std::min<size_t>(size_t(layer), s.layerSizes.size() - 1)];
+        int m = std::min(std::max(want, 1), n - int(out.size()));
+        for (int i = 0; i < m; ++i)
+        {
+            float lateral;
+            if (layer == 0)                 // the front arc: side to side (one alone on the line)
+                lateral = m == 1 ? 0.0f : -1.0f + 2.0f * float(i) / float(m - 1);
+            else                            // a later arc: in the gaps of the one before
+                lateral = -1.0f + 2.0f * (float(i) + 0.5f) / float(m);
+            out.push_back({ lateral, float(layer) * s.layerStep });
+        }
+        ++layer;
+    }
     return out;
 }
 // }}}
@@ -149,9 +205,11 @@ struct Place
 // owner, through its points newest to oldest, so on a bend the place lies
 // on the bend. Sideways is square to the trail at that point. With no trail
 // yet (the owner just arrived), behind is opposite the owner's facing.
-inline Place PlaceFor(Trail const& trail, Point const& owner, float ownerFacing, float lateral, Settings const& s)
+// extraBack: yards farther back still (a later layer's arc, ArcSpots).
+inline Place PlaceFor(Trail const& trail, Point const& owner, float ownerFacing, float lateral, Settings const& s,
+                      float extraBack = 0.0f)
 {
-    float back = s.nearBack + (s.farBack - s.nearBack) * (1.0f - std::fabs(lateral));
+    float back = s.nearBack + (s.farBack - s.nearBack) * (1.0f - std::fabs(lateral)) + extraBack;
     // walk back along owner -> newest -> ... -> oldest
     Point from = owner, at = owner;
     float dirX = -std::cos(ownerFacing), dirY = -std::sin(ownerFacing);   // the way back
@@ -189,12 +247,13 @@ inline Place PlaceFor(Trail const& trail, Point const& owner, float ownerFacing,
 // }}}
 
 // {{{ Places
-// Every follower's spot, in the order of Offsets (right to left).
+// Every follower's spot, in the order of ArcSpots (the front arc right to
+// left, then each later arc).
 inline std::vector<Place> Places(Trail const& trail, Point const& owner, float ownerFacing, int n, Settings const& s)
 {
     std::vector<Place> out;
-    for (float lateral : Offsets(n))
-        out.push_back(PlaceFor(trail, owner, ownerFacing, lateral, s));
+    for (ArcSpot const& a : ArcSpots(n, s))
+        out.push_back(PlaceFor(trail, owner, ownerFacing, a.lateral, s, a.extraBack));
     return out;
 }
 // }}}

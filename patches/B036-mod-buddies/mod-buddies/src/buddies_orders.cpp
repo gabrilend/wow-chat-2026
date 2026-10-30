@@ -107,6 +107,7 @@ struct HeardOrder
     std::vector<std::string> names;                    // attack: the buddies named; follow: the player named (empty: "me")
     Heard                    where = Heard::Say;
     bool                     hard  = false;            // "go away!": not again until the speaker logs out
+    bool                     circle = false;           // "circle me", "close follow": follow in the ring (617s2)
 };
 static std::mutex              sOrdersLock;
 static std::vector<HeardOrder> sHeard;
@@ -158,12 +159,14 @@ static bool IsAttack(std::string msg, std::vector<std::string>& names)
 // The words of a follow order, read by the following core
 // (BuddyFollow::ReadOrder, roam/buddy_follow_core.h, where the test checks
 // them).
-static bool IsFollowOrder(std::string const& raw, OrderKind& kind, std::string& name, bool& hard)
+static bool IsFollowOrder(std::string const& raw, OrderKind& kind, std::string& name, bool& hard, bool& circle)
 {
     BuddyFollow::Order o = BuddyFollow::ReadOrder(raw, name, hard);
     if (o == BuddyFollow::Order::None)
         return false;
-    kind = o == BuddyFollow::Order::Follow ? OrderKind::Follow : OrderKind::GoAway;
+    // "circle me" is a follow of the speaker, in the ring
+    circle = o == BuddyFollow::Order::Circle;
+    kind = (o == BuddyFollow::Order::Follow || circle) ? OrderKind::Follow : OrderKind::GoAway;
     return true;
 }
 // }}}
@@ -238,6 +241,7 @@ static void ObeyFollow(HeardOrder const& h, Player* speaker)
                 continue;
             }
             BuddyFollowSet(b->GetGUID().GetCounter(), leader->GetGUID().GetCounter());
+            BuddyFollowSetRing(b->GetGUID().GetCounter(), h.circle);   // "follow me" ends a ring, "circle me" starts one
             ++following;
         }
         tell.PSendSysMessage("{} {} following {}{}.", following, following == 1 ? "buddy is" : "buddies are", leader->GetName(),
@@ -446,7 +450,7 @@ private:
         HeardOrder h { player->GetGUID(), buddy, OrderKind::Sell, {}, where, false };
         OrderKind follow = OrderKind::Follow;
         std::string name;
-        if (IsFollowOrder(msg, follow, name, h.hard))
+        if (IsFollowOrder(msg, follow, name, h.hard, h.circle))
         {
             h.kind = follow;
             if (!name.empty())

@@ -71,6 +71,43 @@ int main()
     }
     // }}}
 
+    // {{{ more than five: layered arcs, 3 then 2 then 2 (the owner, 2026-10-30)
+    {
+        std::vector<ArcSpot> a5 = ArcSpots(5, s);
+        bool table = a5.size() == 5;
+        for (size_t k = 0; table && k < a5.size(); ++k)
+            table = near(a5[k].lateral, Offsets(5)[k]) && near(a5[k].extraBack, 0.0f);
+        check(table, "five or fewer: one arc, the owner's table, nobody farther back");
+
+        std::vector<ArcSpot> a7 = ArcSpots(7, s);
+        int front = 0, second = 0, third = 0;
+        for (ArcSpot const& q : a7)
+        {
+            front  += near(q.extraBack, 0.0f);
+            second += near(q.extraBack, s.layerStep);
+            third  += near(q.extraBack, 2.0f * s.layerStep);
+        }
+        check(a7.size() == 7 && front == 3 && second == 2 && third == 2, "seven: three in the front arc, two behind, two behind them");
+        check(near(a7[3].lateral, -0.5f) && near(a7[4].lateral, 0.5f), "seven: the second arc stands in the front arc's gaps (-0.5, +0.5)");
+
+        std::vector<ArcSpot> a10 = ArcSpots(10, s);
+        check(a10.size() == 10 && near(a10.back().extraBack, 4.0f * s.layerStep), "ten: the last size (two) repeats, a fourth and fifth arc behind");
+
+        std::vector<Place> p7 = Places(straight, owner, 0.0f, 7, s);
+        float closest = 1e9f;
+        bool behind = true, halfCircle = true;
+        for (size_t i = 0; i < p7.size(); ++i)
+        {
+            behind     = behind && p7[i].at.x < owner.x;
+            halfCircle = halfCircle && std::fabs(p7[i].at.y) <= s.side + 0.01f;
+            for (size_t j = i + 1; j < p7.size(); ++j)
+                closest = std::min(closest, std::hypot(p7[i].at.x - p7[j].at.x, p7[i].at.y - p7[j].at.y));
+        }
+        check(behind && halfCircle, "seven: every place behind the owner, none wider than the half circle's yard");
+        check(closest >= 0.9f, "seven: no two places closer than a body (0.9 yards)");
+    }
+    // }}}
+
     // {{{ a bend: east to (10, 0), then north to (10, 10); the owner at (10, 10)
     {
         Trail bend;

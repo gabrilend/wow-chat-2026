@@ -77,12 +77,14 @@
 #include "buddies_roam.h"
 #include "buddies_navmesh.h"
 #include "buddies_follow.h"
+#include "buddies_talents.h"
 #include "buddies_steer.h"
 #include "buddies_npcs.h"
 #include "MoveSpline.h"
 #include "buddies_town.h"
 #include "buddies_explore.h"
 #include "buddies_nodes.h"
+#include "buddies_path.h"
 #include "Bag.h"
 #include "CellImpl.h"
 #include "Creature.h"
@@ -700,6 +702,30 @@ public:
             s.checkedLeg        = SIZE_MAX;
             s.watched           = SIZE_MAX;
             s.orderedLeg        = SIZE_MAX;
+        }
+
+        // The path switch (617o7, ".buddy path <way>"): with a way picked
+        // for the owner's buddies, the waypoint is walked to by that way,
+        // step by step, instead of along the path below. Walking: this
+        // tick's step is done. Arrived: the waypoint is reached, as at the
+        // path's end below. Gave up: dropped and another picked shortly, as
+        // a waypoint the mesh refuses is. No way picked (mesh, the
+        // default): the path below, as before.
+        {
+            BuddyPath::Way way;
+            if (BuddyPathWayFor(owner->GetGUID().GetCounter(), way))
+            {
+                BuddyPathStep step = BuddyPathWalk(bot, way, s.buddy.waypoint);
+                if (step != BuddyPathStep::Walking)
+                {
+                    s.buddy.hasWaypoint = false;
+                    s.justArrived       = step == BuddyPathStep::Arrived;
+                    if (step == BuddyPathStep::GaveUp)
+                        s.retryAt = now + MESH_RETRY_MS;
+                }
+                StoreState(guid, s);
+                return step != BuddyPathStep::GaveUp;
+            }
         }
 
         // Walk: points already within reach are passed; the order goes to
@@ -1894,6 +1920,7 @@ public:
         creators["buddy travel"] = NewBuddyTravelStrategy;    // buddies_town.cpp (617e4)
         creators["buddy town"]   = NewBuddyTownStrategy;
         creators["buddy follow"] = NewBuddyFollowStrategy;    // buddies_follow.cpp (617e13)
+        creators["buddy talents"] = NewBuddyTalentsStrategy;  // buddies_talents.cpp (625): favour talented abilities
     }
 };
 class BuddyActionContext : public NamedObjectContext<Action>

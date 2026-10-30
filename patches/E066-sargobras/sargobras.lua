@@ -255,9 +255,29 @@ local function owed_slots(owner)
     return list
 end
 local function owed_slot(owner) return owed_slots(owner)[1] end
+-- {{{ local function serving_slot
+-- The slot a Sargobras serves for this owner: a tier's own Sargobras his
+-- slot, while it is still owed; a valley Sargobras (or a tier's whose slot
+-- is filled) the first owed. nil when nothing is owed. The menu and the
+-- pick both ask this, so what he offers is for the slot he fills (with
+-- several Sargobrases waiting, one per owed slot, each offers his own:
+-- a reset slot's kept race at his, the whole faction at the others').
+local function serving_slot(owner, creature)
+    local owed = owed_slots(owner)
+    if #owed == 0 then return nil end
+    local mine = slot_of[creature:GetGUIDLow()]
+    for _, s in ipairs(owed) do if s == mine then return mine end end
+    return owed[1]
 end
 -- }}}
 
+-- {{{ local function owed_race
+-- A reset slot's kept race (617a7: a game master's ".buddy reset" owes the
+-- slot again with its race kept), or 0 for an ordinary owed slot.
+local function owed_race(owner, slot)
+    if not slot then return 0 end
+    local q = CharDBQuery("SELECT race FROM buddy_roster WHERE owner = " .. owner .. " AND slot = " .. slot)
+    return q and q:GetUInt32(0) or 0
 end
 -- }}}
 -- }}}
@@ -282,7 +302,7 @@ local function choose(player, slot, roster, pick)
     local owner = player:GetGUIDLow()
     local b, err = Choice.resolve({ RC = RC, TD = TD, Spender = Spender, rand = math.random,
         team = team_name(player), owner_is_dk = player:GetClass() == CLASS_DEATH_KNIGHT,
-        slot = slot, roster = roster, pick = pick })
+        slot = slot, roster = roster, pick = pick, kept_race = owed_race(owner, slot) })
     if not b then
         print(string.format("%sERROR: owner %d slot %d: %s", TAG, owner, slot, err))
         return nil, err
@@ -537,7 +557,14 @@ local function show_menu(player, creature, page)
         player:GossipMenuAddItem(GOSSIP_ICON_CHAT, "First, our clan needs a name.", 0, INTID_NAME)
         player:GossipMenuAddItem(GOSSIP_ICON_CHAT, "(test) Type our clan's name in a box.", 0, INTID_NAME_BOX, true, CLAN_POPUP)
     elseif owed_slot(player:GetGUIDLow()) then
-        local classes, races = Choice.menu(RC, team_name(player), false)
+        -- a reset slot (617a7): only the classes its kept race plays, no
+        -- races to pick; otherwise the faction's classes and races
+        local kept = owed_race(player:GetGUIDLow(), serving_slot(player:GetGUIDLow(), creature))
+        local classes, races
+        if kept ~= 0 then
+            classes, races = Choice.menu_for_race(RC, kept), {}
+        else
+            classes, races = Choice.menu(RC, team_name(player), false)
         end
         for _, c in ipairs(classes) do
             local text = c.name                 -- just the name (owner, 2026-09-29: "\"paladin\" or \"druid\" [...] and that's it")
@@ -947,13 +974,8 @@ local function on_select(event, player, creature, sender, intid, code)
     if not player:IsInGuild() then return end       -- an old menu still open from before the clan rule: name first
 
     local owner = player:GetGUIDLow()
-    local owed  = owed_slots(owner)
-    if #owed == 0 then return end
-    -- a tier's own Sargobras serves his slot (while it is still owed);
-    -- a valley Sargobras, the first owed
-    local slot = owed[1]
-    local mine = slot_of[creature:GetGUIDLow()]
-    for _, s in ipairs(owed) do if s == mine then slot = mine end end
+    local slot  = serving_slot(owner, creature)
+    if not slot then return end
     local b = choose(player, slot, clan_roster(owner), pick)
     if not b then
         creature:SendUnitSay("Hm. The stars are cloudy tonight. Ask me again in a moment.", 0)

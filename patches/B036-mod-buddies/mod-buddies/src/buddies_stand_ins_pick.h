@@ -16,6 +16,7 @@
 #ifndef MOD_BUDDIES_STAND_INS_PICK_H
 #define MOD_BUDDIES_STAND_INS_PICK_H
 
+#include <algorithm>
 #include <cstdint>
 #include <utility>
 #include <vector>
@@ -94,28 +95,43 @@ namespace BuddyStandIn
     // {{{ PickKept
     // The kept stand-in to use for a race, class and role at a level: one
     // not in the world, at or below the level (its level never goes down,
-    // 617t: "their level doesn't go down"), the highest such, the oldest
-    // (lowest guid) on a tie so the same one is chosen every time. 0 when
-    // none fits and a new one must be made.
-    inline uint32_t PickKept(std::vector<Kept> const& kept, uint8_t race, uint8_t cls, uint8_t role, uint8_t level)
+    // 617t: "their level doesn't go down"), drawn by `roll` (any number,
+    // the caller's random draw) among all that fit, so which one a player
+    // meets is chance (the owner, 2026-10-29: "if you happen to see them,
+    // they'll level with you. it's random."; until then the highest, oldest
+    // one was always chosen). The fitting ones are taken in guid order, so
+    // the same roll picks the same one. 0 when none fits and a new one must
+    // be made.
+    inline uint32_t PickKept(std::vector<Kept> const& kept, uint8_t race, uint8_t cls, uint8_t role, uint8_t level,
+        uint32_t roll)
     {
-        Kept const* best = nullptr;
+        std::vector<uint32_t> fits;
         for (Kept const& k : kept)
         {
             if (k.inWorld || k.race != race || k.cls != cls || k.role != role || k.level > level)
                 continue;                               // in use, another kind, or above the level asked
-            if (!best || k.level > best->level || (k.level == best->level && k.guid < best->guid))
-                best = &k;
+            fits.push_back(k.guid);
         }
-        return best ? best->guid : 0;
+        if (fits.empty())
+            return 0;                                   // none fits: a new one is made
+        std::sort(fits.begin(), fits.end());
+        return fits[roll % fits.size()];
     }
     // }}}
+
+    // A role asked for as "any" (the army of 64, 617e17: "fully random
+    // talent spec profile distribution"): the race and class are drawn from
+    // all the side's pairs, then the shape from all ten, each equally
+    // likely, and the role is that shape's (ShapeRole). Asking by role
+    // instead weights the draw toward the role, as a squad's seats need.
+    static constexpr uint8_t ANY_ROLE = 3;
 
     // {{{ PairsFor
     // The race and class pairs a stand-in may be drawn from: the game's
     // pairs (the races and classes that can go together), of races on the
-    // asked side, of classes with a shape of the role. `sideOfRace`
-    // answers 0 Alliance, 1 Horde for a race id.
+    // asked side, of classes with a shape of the role (every class, for
+    // ANY_ROLE: each has ten shapes). `sideOfRace` answers 0 Alliance,
+    // 1 Horde for a race id.
     template <class SideOfRace>
     std::vector<std::pair<uint8_t, uint8_t>> PairsFor(std::vector<std::pair<uint8_t, uint8_t>> const& gamePairs,
         uint8_t side, uint8_t role, SideOfRace sideOfRace)
@@ -125,7 +141,7 @@ namespace BuddyStandIn
         {
             if (sideOfRace(p.first) != side)
                 continue;                               // the other side's race
-            if (ShapesForRole(p.second, role).empty())
+            if (role != ANY_ROLE && ShapesForRole(p.second, role).empty())
                 continue;                               // the class can't take the role
             out.push_back(p);
         }

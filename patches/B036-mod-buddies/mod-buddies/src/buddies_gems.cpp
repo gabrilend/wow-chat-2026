@@ -407,8 +407,10 @@ static std::map<Player*, GemScorer> ScorersFor(std::vector<Player*> const& clan)
     std::map<Player*, GemScorer> scorers;
     for (Player* m : clan)
     {
-        QueryResult row = CharacterDatabase.Query("SELECT profile, role FROM buddy_roster WHERE buddy = {}", m->GetGUID().GetCounter());
-        scorers.emplace(m, GemScorer(m, row ? (*row)[0].Get<uint8>() : 0, row ? (*row)[1].Get<uint8>() : 0));
+        // a buddy's plan, or a stand-in's (an army's, treated as buddies, 617e17)
+        uint8 profile, role;
+        BuddyPlanOf(m->GetGUID().GetCounter(), profile, role);
+        scorers.emplace(m, GemScorer(m, profile, role));
     }
     return scorers;
 }
@@ -643,8 +645,9 @@ uint32 BuddyBuyGemsAtAuction(Player* bot, Creature* auctioneer)
     if (empty.empty())
         return 0;
 
-    QueryResult row = CharacterDatabase.Query("SELECT profile, role FROM buddy_roster WHERE buddy = {}", bot->GetGUID().GetCounter());
-    GemScorer scorer(bot, row ? (*row)[0].Get<uint8>() : 0, row ? (*row)[1].Get<uint8>() : 0);
+    uint8 profile, role;
+    BuddyPlanOf(bot->GetGUID().GetCounter(), profile, role);
+    GemScorer scorer(bot, profile, role);
     uint64 budget = uint64(float(bot->GetMoney()) * GEM_SPEND_SHARE);
     std::set<uint32> taken;                            // auctions already bought this visit
     uint32 bought = 0;
@@ -718,9 +721,8 @@ public:
             handler->PSendSysMessage("{} is not a buddy in the world (a buddy is in the world while its owner is online).", name);
             return false;
         }
-        QueryResult row = CharacterDatabase.Query("SELECT profile, role FROM buddy_roster WHERE buddy = {}", buddy->GetGUID().GetCounter());
-        uint8 profile = row ? (*row)[0].Get<uint8>() : 0;
-        uint8 role    = row ? (*row)[1].Get<uint8>() : 0;
+        uint8 profile, role;
+        BuddyPlanOf(buddy->GetGUID().GetCounter(), profile, role);
         std::string problems = BuddyGemKit(buddy, profile, role);
         handler->PSendSysMessage("{} re-gemmed by its plan {} (role {}){}{}", name, uint32(profile), uint32(role),
             problems.empty() ? "" : "; ", problems);

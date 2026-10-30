@@ -183,7 +183,7 @@ void BuddyStageCheck(Player* owner)
 static constexpr char const* KEPT_SUBJECT = "Kept for you";   // the mail errand takes from these only what it can use (buddies_town.cpp)
 static constexpr uint32 KEPT_DAYS = 900;               // kept in the mail this long (the owner: "we should change the duration to be 900 days"; stock: 30)
 
-static uint32 MailOldGear(Player* bot)
+uint32 BuddyMailOldGear(Player* bot)
 {
     std::vector<Item*> items;
     for (uint8 b = INVENTORY_SLOT_BAG_START; b < INVENTORY_SLOT_BAG_END; ++b)
@@ -255,7 +255,7 @@ static void Remake(Player* bot, uint32 owner, uint8 profile, uint8 role)
         return;
     }
 
-    uint32 items = MailOldGear(bot);
+    uint32 items = BuddyMailOldGear(bot);
     uint32 forgotten = BuddyForgetLessons(bot);
 
     uint8 was = bot->GetLevel();

@@ -59,8 +59,21 @@ void BuddyQueueLogin(uint32 ownerGuid);
 // every spell up to its level, the kit's gear by its talent shape (bags
 // like `bagsLike`'s, 0 for none), the PvP necklace, rings and trinkets when
 // `pvpJewellery` (stand-ins), sockets. Its guid and name, or 0 and why.
+// A reset buddy (617a7) passes the name, gender and looks it had
+// (`wantGender` 0 male, 1 female, 2 random; `looksOf` the old character
+// whose looks it takes, 0 for random looks).
 uint32 BuddyMakeCharacter(uint32 account, uint8 race, uint8 cls, uint8 level, uint8 shape, uint8 role,
-    uint32 bagsLike, bool pvpJewellery, char const* kind, std::string const& forWhom, std::string& name, std::string& why);
+    uint32 bagsLike, bool pvpJewellery, char const* kind, std::string const& forWhom, std::string& name, std::string& why,
+    std::string const& wantName = "", uint8 wantGender = 2, uint32 looksOf = 0);
+
+// A buddy's worn and carried items and its money, mailed to itself as
+// "Kept for you" (buddies_stage.cpp, 617a6; the reset, 617a7). How many
+// items. World thread, the buddy in the world.
+uint32 BuddyMailOldGear(Player* bot);
+
+// The end of a reset (buddies_reset.cpp, 617a7): the old character's
+// "Kept for you" mail handed to the new buddy, then the old one deleted.
+void BuddyFinishReset(uint32 oldGuid, uint32 newGuid, uint32 account);
 
 // Whether this account holds stand-ins: characters that belong to nobody
 // (buddies_stand_ins.cpp, 617t1). Cheap: an in-memory list.
@@ -72,11 +85,28 @@ bool BuddyIsStandInAccount(uint32 accountId);
 bool BuddyIsNotAPlayer(uint32 accountId);
 
 // One stand-in of a side (0 Alliance, 1 Horde) and role (0 damage, 1 tank,
-// 2 healer) at a level, race and class 0 for any, brought to a place
+// 2 healer, 3 any: its shape drawn from all ten, the role the shape's) at
+// a level, race and class 0 for any, brought to a place
 // (buddies_stand_ins.cpp, 617t1): a kept one if one fits, else a new one.
 // Its guid (0 when it can't), and in `said` what was done or why not.
 uint32 BuddyBringStandIn(uint8 side, uint8 role, uint8 level, uint8 race, uint8 cls,
     uint32 map, float x, float y, float z, float o, std::string& said);
+// A buddy's or a stand-in's talent plan: its shape (`profile`, 1-10) and
+// role (0 damage, 1 tank, 2 healer), from the roster's row for a buddy or
+// the stand-in table's for a stand-in (the same numbers; a character is in
+// one or the other). False, both 0, for anyone else (a player: "no plan",
+// which the gem chooser scores as the bot module scores the character).
+// Since 2026-10-29: an army's stand-ins are treated as buddies everywhere
+// (617e17), so the gem chooser and the dungeon draw ask this rather than
+// the roster's table alone.
+bool BuddyPlanOf(uint32 guid, uint8& profile, uint8& role);
+// Whether a stand-in asked for is still on its way: not yet in the world
+// with its first moments done (its behaviours reset, moved to its place).
+// World thread only. The army (617e17) gives it a master only after.
+bool BuddyStandInOnItsWay(uint32 guid);
+// A stand-in out of the world, kept for the next asker (as ".buddy standin
+// dismiss" does); one still on its way is no longer awaited.
+void BuddyDismissStandIn(uint32 guid);
 
 // One wisp, the game masters' marker (buddies_town_circles.cpp): on the
 // ground near x, y, z, friendly, untouchable, gone after `ms`. False when

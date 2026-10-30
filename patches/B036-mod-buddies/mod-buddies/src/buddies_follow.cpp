@@ -32,6 +32,9 @@
 #include "buddies_navmesh.h"
 #include "buddies_roam.h"
 #include "roam/buddy_follow_core.h"
+#include "Chat.h"
+#include "CommandScript.h"
+#include "Config.h"
 #include "GameTime.h"
 #include "Map.h"
 #include "MovementActions.h"
@@ -69,6 +72,8 @@ static std::unordered_map<uint32, OwnerTrack>          sTrack;   // owner guid -
 static std::unordered_map<uint32, BuddyFollow::State>  sState;   // buddy guid -> rest or follow
 static std::unordered_map<uint32, uint32>              sLeader;  // buddy guid -> the player it was told to follow
 static std::unordered_map<uint32, std::set<uint32>>    sRefused; // buddy guid -> players it won't follow until they log out
+static std::set<uint32>                                 sRing;    // buddies told "circle me": the close follow (617s2)
+static std::unordered_map<uint32, float>                sRingYards; // leader guid -> the ring's radius (617s4; absent: SETTINGS.ringYards)
 // }}}
 
 // {{{ the follow orders
@@ -83,6 +88,23 @@ void BuddyFollowStop(uint32_t buddy)
     std::lock_guard<std::mutex> lock(sFollowLock);
     sLeader.erase(buddy);
     sState.erase(buddy);
+    sRing.erase(buddy);                                // "go away" ends the ring too
+}
+void BuddyFollowSetRing(uint32_t buddy, bool ring)
+{
+    std::lock_guard<std::mutex> lock(sFollowLock);
+    if (ring) sRing.insert(buddy); else sRing.erase(buddy);
+}
+bool BuddyFollowRing(uint32_t buddy)
+{
+    std::lock_guard<std::mutex> lock(sFollowLock);
+    return sRing.count(buddy) > 0;
+}
+float BuddyFollowRingYards(uint32_t leader)
+{
+    std::lock_guard<std::mutex> lock(sFollowLock);
+    auto it = sRingYards.find(leader);
+    return it == sRingYards.end() ? SETTINGS.ringYards : it->second;
 }
 void BuddyFollowRefuse(uint32_t buddy, uint32_t leader)
 {
@@ -197,6 +219,50 @@ public:
             if (it != sTrack.end() && it->second.mapId == owner->GetMapId())
                 trail = it->second.trail;
         }
+        // the close follow (617s2): told "circle me", or (with the switch
+        // Buddies.CloseFollow.InCombat at 1) while the leader fights. A ring
+        // round the leader, a tank among the followers at the front; each
+        // follower walks back to its place when more than ringSlack off it,
+        // and otherwise faces the leader. A follower that is itself fighting
+        // isn't here: this behaviour is for peace, and fighting is the bot
+        // module's.
+        bool ring = BuddyFollowRing(me) || (owner->IsInCombat() && sConfigMgr->GetOption<int32>("Buddies.CloseFollow.InCombat", 0) == 1);
+        if (ring)
+        {
+            std::vector<BuddyRoam::Point> at;
+            int tank = -1;
+            for (size_t i = 0; i < followers.size(); ++i)
+            {
+                at.push_back({ followers[i]->GetPositionX(), followers[i]->GetPositionY(), followers[i]->GetPositionZ() });
+                if (tank < 0 && botAI->IsTank(followers[i]))
+                    tank = int(i);
+            }
+            std::vector<BuddyFollow::Place> places = BuddyFollow::RingPlaces(ownerAt, owner->GetOrientation(), int(followers.size()),
+                                                                                    BuddyFollowRingYards(owner->GetGUID().GetCounter()));
+            std::vector<int> spotOf = BuddyFollow::AssignRing(at, places, tank);
+            int spot = spotOf[size_t(mine - followers.begin())];
+            if (spot < 0)
+                return false;
+            BuddyFollow::Place place = places[size_t(spot)];
+            BuddyRoam::Point meAt = at[size_t(mine - followers.begin())];
+            float off = std::sqrt((meAt.x - place.at.x) * (meAt.x - place.at.x) + (meAt.y - place.at.y) * (meAt.y - place.at.y));
+            if (off > SETTINGS.ringSlack)
+            {
+                bool walk = owner->IsWalking();
+                if (bot->IsWalking() != walk)
+                    bot->SetWalk(walk);
+                BuddyRoam::Point onMesh;
+                if (!BuddyMeshSnap(bot->GetMap(), place.at, SNAP_YARDS, SNAP_RISE, onMesh))
+                    onMesh = ownerAt;                    // no mesh at the ring place: to the leader's own spot
+                return MoveTo(bot->GetMapId(), onMesh.x, onMesh.y, onMesh.z);
+            }
+            float face = std::atan2(ownerAt.y - meAt.y, ownerAt.x - meAt.x);
+            float turn = std::fabs(Position::NormalizeOrientation(face - bot->GetOrientation()));
+            if (turn > FACE_TURN && turn < 2.0f * float(M_PI) - FACE_TURN)
+                bot->SetFacingTo(face);
+            return true;
+        }
+
         // side by side, or single file where the way is narrower than the
         // formation (measured on the track where the formation's middle
         // stands; off the mesh there, or no mesh: side by side)
@@ -363,9 +429,49 @@ private:
 };
 // }}}
 
+using namespace Acore::ChatCommands;
+
+// {{{ the ring's commands
+// ".buddy wider": the ring round you a step out (5 yards, up to 25);
+// ".buddy closer": back in to the smallest (5) at once (617s4). The
+// radius is yours, for every buddy in your ring, kept while the server
+// runs.
+class buddies_ring_command : public CommandScript
+{
+public:
+    buddies_ring_command() : CommandScript("buddies_ring_command") { }
+
+    ChatCommandTable GetCommands() const override
+    {
+        // multi-word names join the ".buddy" table the beds file starts
+        static ChatCommandTable commandTable =
+        {
+            { "buddy wider",  HandleWider,  SEC_PLAYER, Console::No },
+            { "buddy closer", HandleCloser, SEC_PLAYER, Console::No },
+        };
+        return commandTable;
+    }
+
+    static bool Set(ChatHandler* handler, bool wider)
+    {
+        uint32 me = handler->GetPlayer()->GetGUID().GetCounter();
+        float yards = BuddyFollow::RingRadius(BuddyFollowRingYards(me), wider, SETTINGS);
+        {
+            std::lock_guard<std::mutex> lock(sFollowLock);
+            sRingYards[me] = yards;
+        }
+        handler->PSendSysMessage("Your buddies' ring: {} yards round you (\"circle me\" to form it).", uint32(yards));
+        return true;
+    }
+    static bool HandleWider(ChatHandler* handler)  { return Set(handler, true); }
+    static bool HandleCloser(ChatHandler* handler) { return Set(handler, false); }
+};
+// }}}
+
 // {{{ AddSC_buddies_follow
 void AddSC_buddies_follow()
 {
+    new buddies_ring_command();
     new buddies_follow_world();
 }
 // }}}
