@@ -135,8 +135,17 @@ same questions from other sub-issues; answers are written back here.
    it looks, not a still frame's likeness to a picture. So the judge is
    shown movement (a strip of frames, or each bot's trail over a stretch
    of time drawn as one picture), and judged against the pattern
-   described in words and analogy (the 2026-10-28 answer). Whether a
-   model later learns to judge it the same way is still open.
+   described in words and analogy (the 2026-10-28 answer).
+   **And who judges, the same day:** "each time we have a dynamic, we try
+   to display and present it in any way that we can to the judgement
+   presenter, who will use their wisdom, intuition, and discernment to
+   choose if something looks right. "those cheesie fries don't look
+   right, arrange them differently next time" etc." So the work is in
+   the showing: every moving behaviour gets as many ways of being shown
+   as can be made (frame strips, trails, from above, close up, side by
+   side), and the judge (a person, or whoever holds that seat) answers
+   in plain words, like a cook told to arrange the plate differently.
+   The words go back into the next run as a change to try.
 2. (Answered 2026-10-28) **Clockwise only?** "The path finding should
    eventually be both clockwise and counter clockwise. Right now we're
    isolating one direction until we get the pattern right, then we do

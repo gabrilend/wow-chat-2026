@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-29 18:52:50
+Generated on: 2026-10-29 19:03:57
 Models: claude-opus-5-5
 
 ## Contents
@@ -11399,6 +11399,224 @@ While gathering these I found one question that later work seems to have
 answered already: whether the vanilla server gets its own databases. Every
 server has had its own set since the multi-server work, so I'll mark it answered
 unless you say otherwise.
+
+--------------------------------------------------------------------------------
+
+### User Request 112
+
+<pasted_content id="12ab">
+>   1. Is the painted map shared and kept? As bots walk, they mark which
+>      ground is open and where the walls are. Should every buddy on
+>      the server share one marked map per area, saved to disk so it
+>      keeps improving over days? Or should each clan keep its own?
+>      Saving and loading are built; this decides whose file it is. My
+>      guess: one map per area, shared by everyone, kept.
+</pasted_content id="12ab">
+
+
+yes yes and yes
+
+
+
+<pasted_content id="12ab">
+> 2. What happens with tiny pockets of ground? On the Burning Steppes test, the
+>      patch of ground in play was only about 16 by 16 yards, and all 36 bots crammed
+>      into it. Should a patch that small be skipped, so the bots move on to the next
+>      patch? Or should it take only as many bots as it has room for? My guess: room
+>      for as many as fit; the rest go to the next patch.
+</pasted_content id="12ab">
+
+
+we do not have to have maps for the floating asteroids in the Twisting Nether
+surrounding Outland. We can figure those out as we go, no need to store a baked
+map for them.
+
+
+
+<pasted_content id="12ab">
+>   3. Who judges whether movement looks right? You said you want to describe a
+>      pattern with pictures and comparisons rather than numbers. Should we install a
+>      model that can look at pictures and answer questions about them, so it can
+>      learn to agree with you? Or do you stay the only judge, by eye? My guess: you
+>      judge by eye for now; the model comes later.
+</pasted_content id="12ab">
+
+
+we judge it based on the apparent pattern of the movement of the components.
+
+
+
+<pasted_content id="12ab">
+> 4. The three mini-computers: what are they? What processor and operating
+> system do
+>      they run? Do they have fixed addresses on your home network? Does this
+>      computer stay a place for test servers, or only build from now on? Splitting
+>      the server across machines can't start without these answers. They're facts
+>      only you know.
+</pasted_content id="12ab">
+
+
+they run alpine linux but I don't remember much about them. We can reflash a new
+OS to them if we need to, and if we can do it without a mouse-and-keyboard, over
+like SSH or something.
+
+
+
+<pasted_content id="12ab">
+>   5. Where does the small chat AI run first? The options:
+>      - on the mini-computers, next to the game server, so a crash can't take the
+       game down;
+>      - inside the game server itself, with no network but sharing its memory;
+>      - on each player's own graphics card.
+>
+>      This one choice holds up the most plans of any. My guess: on the
+>      mini-computers.
+</pasted_content id="12ab">
+
+
+we must be able to send to any endpoint
+
+
+
+<pasted_content id="12ab">
+> 6. How fast do stand-ins grow? Stand-ins are the bots that fill dungeon groups
+> and
+>      battlegrounds. Should they go up one level per match, or jump in ten-level
+>      steps? My guess: ten-level steps.
+</pasted_content id="12ab">
+
+
+one level.
+
+
+
+<pasted_content id="12ab">
+> 7. What does the army of 64 look like? Should it be shaped like real parties,
+> a
+>      tank and a healer in every five, all at the game master's level and on their
+>      side? Should it stay the same bots from one test scene to the next, or be
+>      picked fresh each time? My guess: party-shaped, picked fresh each time.
+</pasted_content id="12ab">
+
+
+fully random talent spec profile distribution.
+
+
+
+<pasted_content id="12ab">
+> 8. Do random bots come back to the basic server? Right now the only bots there
+> are
+>      each player's buddies. If random bots return, how many? Since each one could
+>      be owed up to seven buddies, 500 random bots would mean 4,000 bots in all. And
+>      may bots ever play death knights? My guess: no random bots, and no death-knight
+     bots.
+</pasted_content id="12ab">
+
+
+no bots for now
+
+
+
+<pasted_content id="12ab">
+> 9. The Dark Portal front: who's on which side, and what do kills give? Are the
+>      murlocs and furbolgs with the allies, or a third side that fights both? Do
+>      kills there give experience, loot or reputation? My guess: a third side; kills
+>      give reputation only.
+</pasted_content id="12ab">
+
+
+murlocs and furlbogs fight for Azeroth.
+
+kills give reputation only.
+
+
+
+<pasted_content id="12ab">
+> 10. Which server carries the new worlds (the Earth, Mars and Sun maps)? Every
+>       player on that server would have to install new map files for their game. My
+>       guess: a separate server of their own, not basic.
+</pasted_content id="12ab">
+
+
+let's defer this for now
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 112
+
+> Writing your answers into the issues; first checking how the army picks each
+> bot's talents so "fully random" can be built.
+
+> Updating the army issue first (the design change), then the code.
+
+> Now the code: a stand-in asked for with "any role" gets a random race and
+> class, then one of the ten shapes at random.
+
+> Army change passes its test (18 of 18). Now the painted-map answers.
+
+> Still writing your answers in; now the chat AI's placement.
+
+> Committing the answers; the army code stays uncommitted until your compile.
+
+*[commit] b0467a8e9 - Ten open questions answered, written into the plans they unblock*
+
+I've written all ten answers into the plans they unblock and committed them
+(b0467a8e9), except two plans that other work holds. Your army answer also
+changed the buddy code, which waits for your compile.
+
+**The army of 64 is now fully random.** Each stand-in gets a random race and
+class for your side, then one of the ten talent profiles, each equally likely.
+Its role is whatever that profile is. The test passes, 18 of 18. Over every
+Horde race, class and profile, the split comes out at 84% damage, 6% tanks and
+11% healers. So a random army of 64 will have about 4 tanks and 7 healers. This
+change stays uncommitted until your compile.
+
+**Two answers I couldn't put in their plans:**
+- **The mini-computers:** that plan is marked as being edited by another work
+  session, the one doing the journals and the hosted servers, since 26 October.
+- **The new worlds:** that plan is a file another session wrote and never saved
+  to the project's history.
+
+Both answers are saved word for word in the conversation notes until those plans
+are free.
+
+**On the mini-computers:** Alpine Linux is built on a different core system
+library than most Linux systems use, possibly including this one (I haven't
+checked). If they differ, a server built here won't run there as it is. We'd
+either build on the mini-computers themselves, or put this computer's kind of
+Linux on them. That can be done over SSH: write the new system onto the disk
+from the running one, then restart. The danger is that a bad write leaves the
+machine unable to start until a keyboard and screen are plugged in.
+
+**How I read three of your answers:**
+- **Judging movement:** the judge is shown movement over time, as a strip of
+  frames or each bot's trail drawn on one picture, rather than single still
+  frames.
+- **Choosing a model server:** there's no default place. All three are built,
+  and any request can go to any server we list.
+- **The army between test scenes:** it's picked fresh each time. That follows
+  from "fully random", but you didn't say it directly.
+
+**Four new, smaller questions:**
+1. **The tiny pocket again:** your answer covered the floating asteroids around
+   Outland, which now get no stored map. The Burning Steppes case is different:
+   there the patch of ground in play was a 16-by-16-yard corner of a big area.
+   When the bots are sent to a patch that small, how many of the 36 should go
+   in?
+2. On the Dark Portal front, which faction's reputation do kills give?
+3. Stand-ins climb one level a match now. How many separate levelling paths
+   should they follow, some faster and some slower than a player, so you keep
+   meeting both familiar and new ones?
+4. **The weather:** for the Alterac Valley weather, should the cycle be only
+   snow and fog, leaving the wandering storm as the one rain?
+
+**Two smaller things:**
+- The issue checker found two problems in the chat-model plans that were there
+  before today. The main plan lacks two of its required sections, and one plan
+  lists a blocker that the other side doesn't list back. I've left them as they
+  are.
+- The stand-ins commit also carried a three-line note from yesterday's question
+  gathering that was sitting uncommitted in the same file.
 
 --------------------------------------------------------------------------------
 

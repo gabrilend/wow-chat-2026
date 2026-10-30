@@ -20,9 +20,17 @@ separately.
 ## Intended Behavior
 
 - **The deck.** The weather kinds fitting a snowy mountain valley: fine,
-  fog, light snow, snow, heavy snow, light rain, rain (7). They are dealt
-  as a shuffled deck: each kind once, in a random order, then the deck is
-  shuffled again.
+  fog, light snow, snow, heavy snow, light slush, slush (7). They are
+  dealt as a shuffled deck: each kind once, in a random order, then the
+  deck is shuffled again.
+  - **Slush** (the owner, 2026-10-29: "the rain freezes to slush"): the
+    valley's rain freezes as it falls. The game has no sleet (its kinds
+    are fine, fog, rain, snow and sandstorm at three strengths, thunder,
+    and black rain and snow), so a slush turn is drawn from rain and
+    snow: it opens as rain, trades back and forth between rain and snow
+    through its middle (every 20 to 40 seconds, the client fading each
+    change), and closes as snow, the rain freezing as the turn goes on.
+    Light slush uses the light kinds, slush the medium ones.
   - **Unpredictable:** the shuffle draws from a seed taken fresh at server
     start (the system's own source of randomness, not the time), so no two
     runs deal alike and nobody can foresee the next.
@@ -64,3 +72,7 @@ separately.
 
 1. The kinds: snow is native to the valley; is rain right there at all,
    or should the deck be snows and fog only (with the storm the one rain)?
+   **Answered 2026-10-29:** "the rain sneezes to slush. sorry it freezes
+   to sluyuch." The deck's rain becomes slush (above). The wandering
+   storm stays a downpour, as asked when it was first described; whether
+   it should freeze too is still open.

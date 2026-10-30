@@ -15,6 +15,15 @@ depending on the contents of their talents? Question, can we do it
 mechanically by finding out exactly which spells the talent modifies,
 through sql or something?"
 
+And 2026-10-29: "We could use the embedding of the icon and the name and
+the text to maybe also guide it a little bit. An embedding that says
+"improved the effect of your rejuvenation spell by 15%" will probably
+embed pretty well with casting rejuvenation more often, but we should
+check token-by-token to find word-by-word relationship associations. And
+then maybe prioritize or increase in value the relationships that are a
+little unseen, like "all of your subtlety spells" or "weapon attacks" and
+similar."
+
 ## Current Behavior
 
 Nothing built (625 is an idea). Bots choose abilities by their strategy's
@@ -62,6 +71,61 @@ the buddy code loads. Re-generated when the game data changes (never, on
    Rejuvenation touches Rejuvenation; Sword Specialization touches no
    ability, it is a weapon talent: 625b).
 
+### Four readings of a talent, checked against each other (2026-10-29)
+
+The game's masks (above) are exact for what they cover, but they miss
+the broad talents, the "a little unseen" ones the owner named: those
+affect a whole school of magic ("all your Shadow spells": a school mask,
+not a family mask), every attack made with a weapon ("weapon attacks",
+"with daggers": a weapon class mask, or no mask at all), or every
+ability of a kind (finishing moves, bleeds, shapeshifts). So each talent
+rank, and each set bonus, is read four ways:
+
+1. **The masks**: the same family with overlapping flags (the exact
+   answer, what the server itself applies).
+2. **The broad targets**: an effect aimed at a school, a weapon kind or a
+   mechanic, expanded to every ability of the class that matches (all
+   its Shadow spells; all its abilities that strike with a weapon).
+3. **The icon**: a talent drawn with an ability's own icon is almost
+   always about that ability (Improved Rejuvenation wears Rejuvenation's
+   picture). The client's Spell.dbc gives each spell an icon number, so
+   this is an exact match on a number, not a picture comparison.
+   Checked 2026-10-29 in Spell.dbc: Improved Rejuvenation and
+   Rejuvenation share icon 64; Starlight Wrath shares Wrath's icon (263)
+   but also speeds Starfire, which the icon alone misses (the masks
+   catch it). So the icon finds a talent's main ability, not all of them.
+4. **The words**: the talent's tooltip text, read token by token:
+   - an ability's name appearing in it ("your Rejuvenation spell") ties
+     the two;
+   - category words ("weapon attacks", "finishing moves", "Shadow
+     spells", "bleed", a tree's name such as "Subtlety") are looked up in
+     a small table of phrases, each naming the abilities it covers;
+   - a text embedding (each text turned into a list of numbers, close
+     lists meaning close meanings) of the talent's text against each
+     ability's own text, as a fuzzy cross-check that catches what the
+     word table lacks. No text embedding model is installed yet; the
+     image pipeline's text encoder (its CLIP part) is one candidate, a
+     small sentence model another.
+
+Where the readings agree, the link is sure. Where only the words or the
+embedding find a link, it is listed for a look by eye before it counts.
+Where the masks find one the words don't, the masks win (the server
+applies them whatever the text says).
+
+**The broad ones count for more** (the owner: "prioritize or increase in
+value the relationships that are a little unseen"): a talent that
+touches many abilities would otherwise spread thin and count for little
+on each, and its abilities would never be favoured. Its weight on each
+ability it covers is raised, so a buddy with "all of your Shadow spells"
+talents leans toward its Shadow spells as a whole. This is not 625's
+dropped idea of counting how many talents name an ability (that made a
+druid cast only Healing Touch): the raise is per broad talent, by points
+spent in it.
+
 ## Open Questions
 
-None yet.
+1. How much should the broad talents be raised: to count as much on each
+   ability they cover as a talent naming one ability does, or by half
+   of that?
+2. Should the icon and the words count on their own (a link no mask
+   shows), or only as a check of the masks and the broad targets?

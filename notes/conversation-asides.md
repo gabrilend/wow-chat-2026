@@ -283,3 +283,27 @@ question each answers in brackets, and where it was written):
   and "kills give reputation only."
 - (which server carries the new worlds; 919, another session's unsaved
   file, left as it is) "let's defer this for now"
+
+And the follow-ups the same evening, word for word:
+
+- (where it was written: 617e16) "each time we have a dynamic, we try to
+  display and present it in any way that we can to the judgement
+  presenter, who will use their wisdom, intuition, and discernment to
+  choose if something looks right. "those cheesie fries don't look right,
+  arrange them differently next time" etc."
+- (the tiny pocket, asked for more detail) "is this inside a cave or
+  something? Tell me more details."
+- (the Dark Portal front's reputation; 155z) "Horde and Alliance."
+- (stand-ins' tracks; 617t, built the same evening) "there shouldn't be a
+  set path, it should just be... if you happen to see them, they'll level
+  with you. it's random."
+- (the Alterac Valley deck's rain; 921a) "the rain sneezes to slush. sorry
+  it freezes to sluyuch."
+- (talents guiding abilities; 625a) "We could use the embedding of the
+  icon and the name and the text to maybe also guide it a little bit. An
+  embedding that says "improved the effect of your rejuvenation spell by
+  15%" will probably embed pretty well with casting rejuvenation more
+  often, but we should check token-by-token to find word-by-word
+  relationship associations. And then maybe prioritize or increase in
+  value the relationships that are a little unseen, like "all of your
+  subtlety spells" or "weapon attacks" and similar."

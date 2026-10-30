@@ -122,7 +122,8 @@ owner), with the spawn mix, sizes and tuning as data. The guards' scaling
    can a player be hit by, or hit, the fighters?
 5. Do kills here give experience, loot or reputation? **Answered
    2026-10-29:** "kills give reputation only." No experience and no loot.
-   Still open: which faction's reputation.
+   Which faction's, the same day: "Horde and Alliance." A kill gives
+   reputation with the killer's own side (Alliance or Horde).
 
 ## A stopgap, 2026-10-23: the wave demons halfway down
 

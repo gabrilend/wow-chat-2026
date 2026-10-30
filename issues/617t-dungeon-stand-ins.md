@@ -115,15 +115,20 @@ seat.
   levelling, though maybe there should be some that go slow or fast, to
   make sure that everyone knows some stand-ins and are greeted with new
   ones too. parallel levelling tracks."): a stand-in only levels when it
-  is used, never while stored, one level a match (decided 2026-10-29),
-  so stand-ins as a whole climb about as fast as players do. Each stand-in is on one of several
-  parallel tracks, some slower and some faster than that rate, so a
-  player keeps meeting stand-ins they already know, and new ones too.
+  is used, never while stored, one level a match (decided 2026-10-29).
+  No set tracks (the owner, 2026-10-29: "there shouldn't be a set path,
+  it should just be... if you happen to see them, they'll level with
+  you. it's random."): which kept stand-in a player meets is chance, and
+  one met is raised to the level it is needed at (as built: a kept one at
+  or below the level is raised to it). A stand-in a player keeps meeting
+  climbs with that player; one never met again stays where it was left.
+  So familiar faces and new ones both come by chance, not by a schedule.
 - **Reused anywhere above** ("They should be able to be chosen for *any*
   higher level bracket btw. But their level doesn't go down."): the next
   time any player needs a stand-in of that race, class and role, a kept one
   at or below the needed bracket is raised to it and used before a new one
-  is made; never one above.
+  is made; never one above. Among several that fit, one is drawn at
+  random (2026-10-29, "it's random").
 - **Which dungeons**: the low ones, up to 30; up to 49 for a player still
   without a tank or healer buddy; up to 59 for one who has a tank but no
   healer and plays damage themselves ("up to 30, then up to 49 if they lack
@@ -187,8 +192,11 @@ same questions from other sub-issues; answers are written back here.
    the stock sizes.
 7. **The step per use**: a ten-level bracket (as above) or one level a
    match ("it might end up being 1 level each match, we'll see")?
-   **Answered 2026-10-29:** "one level." Still open: how many parallel
-   tracks, at what speeds compared with a player?
+   **Answered 2026-10-29:** "one level." And the tracks, the same day:
+   "there shouldn't be a set path, it should just be... if you happen to
+   see them, they'll level with you. it's random." No tracks; which kept
+   stand-in comes is drawn at random among those that fit (until then
+   the highest-level, oldest one was always chosen).
 8. (Answered 2026-10-08) **Players playing a stand-in** (owner,
    2026-10-08: "We should make it so players can play one too, any
    race-class that exists (which should probably end up being all of
