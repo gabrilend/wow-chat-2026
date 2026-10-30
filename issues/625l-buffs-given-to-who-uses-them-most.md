@@ -83,7 +83,7 @@ rules).
   timeline says when it will burst, so buddies are slotted by their
   plans; a player's isn't known, so for players the jump in worth (a
   cooldown just used) is the sign instead.
-- **Moving up counts.** A member whose worth has just jumped (they just
+- **How the jump is read.** A member whose worth has just jumped (they just
   used a cooldown, so their next seconds are worth more) is preferred:
   the rise itself is the sign that "this person is blowing their
   cooldowns, let's maximize them". So the comparison weighs each member's
