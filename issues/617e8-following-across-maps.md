@@ -348,7 +348,7 @@ the owner's map), and anything for instances (617c3).
   The buddy plans its way to the owner's dock by the same route search
   as crossing between maps (question 11 of 2026-10-28, above), with
   walking, boats, zeppelins and portals all as ways. **Built 2026-10-30,
-  the walk-or-sail part, waiting for the compile** (syntax-checked;
+  the walk-or-sail part, compiled 2026-10-31, not yet seen in game** (
   `StopByLand` in `buddies_crossing.cpp`): a buddy at no stop of the
   owner's ship first asks the walking mesh whether a complete walk
   reaches the owner's pier; if not, it takes the stop of that ship on its
@@ -372,7 +372,7 @@ the owner's map), and anything for instances (617c3).
   is added on the way to a dock; a buddy stuck there is a pathfinding
   fault, logged loudly with where and why, and mended in the pathfinding
   (617o). The town visits' own hop was removed by the same reasoning
-  (617e4). Built 2026-10-30, waiting for the compile: on the long walk to
+  (617e4). Built and compiled 2026-10-30: on the long walk to
   a crossing, no 10-yard gain toward the crossing's place in 90 seconds
   is one `mod-buddies: STUCK` error line naming where the buddy stands,
   the crossing it was walking to, the yards left and why; it keeps

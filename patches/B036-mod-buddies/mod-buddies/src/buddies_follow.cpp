@@ -31,11 +31,13 @@
 #include "buddies_follow.h"
 #include "buddies_navmesh.h"
 #include "buddies_roam.h"
+#include "buddies_town.h"
 #include "roam/buddy_follow_core.h"
 #include "Chat.h"
 #include "CommandScript.h"
 #include "Config.h"
 #include "GameTime.h"
+#include "Log.h"
 #include "Map.h"
 #include "MovementActions.h"
 #include "NonCombatStrategy.h"
@@ -74,6 +76,7 @@ static std::unordered_map<uint32, uint32>              sLeader;  // buddy guid -
 static std::unordered_map<uint32, std::set<uint32>>    sRefused; // buddy guid -> players it won't follow until they log out
 static std::set<uint32>                                 sRing;    // buddies told "circle me": the close follow (617s2)
 static std::unordered_map<uint32, float>                sRingYards; // leader guid -> the ring's radius (617s4; absent: SETTINGS.ringYards)
+static std::unordered_map<uint32, bool>                 sLeaderInside; // leader guid -> in a town or a dungeon at the last look
 // }}}
 
 // {{{ the follow orders
@@ -404,8 +407,48 @@ public:
         // a leader logged out: its follows end, and the refusals of it with
         // them ("won't follow that person until they log out again")
         auto online = [](uint32 guid) { return ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(guid)) != nullptr; };
+        // a leader stepping into a town or a dungeon: its follows end too
+        // (the owner, 2026-10-30, of what ends "follow me": "all of these
+        // except time limit", the list naming the person logging out,
+        // entering a town, entering a dungeon). On stepping in only, so a
+        // "follow me" said inside a town holds until the next one. Each path:
+        //   logged out                          - its follows end (above)
+        //   was outside, now in a town/dungeon  - its follows end
+        //   otherwise                           - they go on
+        std::set<uint32> steppedIn;
+        for (auto const& [buddy, leaderGuid] : sLeader)
+        {
+            Player* leader = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(leaderGuid));
+            if (!leader || !leader->IsInWorld())
+                continue;
+            bool inside = leader->GetMap()->Instanceable() || BuddyTownArea(leader) != 0;
+            auto was = sLeaderInside.find(leaderGuid);
+            if (inside && was != sLeaderInside.end() && !was->second)
+                steppedIn.insert(leaderGuid);
+            sLeaderInside[leaderGuid] = inside;
+        }
         for (auto it = sLeader.begin(); it != sLeader.end();)
-            it = online(it->second) ? std::next(it) : sLeader.erase(it);
+        {
+            if (!online(it->second))
+                it = sLeader.erase(it);
+            else if (steppedIn.count(it->second))
+            {
+                LOG_INFO("module", "mod-buddies: buddy {} stops following player {}: they stepped into a town or a dungeon",
+                    it->first, it->second);
+                sRing.erase(it->first);
+                sState.erase(it->first);
+                it = sLeader.erase(it);
+            }
+            else
+                it = std::next(it);
+        }
+        for (auto it = sLeaderInside.begin(); it != sLeaderInside.end();)
+        {
+            bool stillLeads = false;
+            for (auto const& [buddy, leaderGuid] : sLeader)
+                stillLeads = stillLeads || leaderGuid == it->first;
+            it = stillLeads ? std::next(it) : sLeaderInside.erase(it);   // nobody follows it: forgotten
+        }
         for (auto& [buddy, refused] : sRefused)
             for (auto r = refused.begin(); r != refused.end();)
                 r = online(*r) ? std::next(r) : refused.erase(r);

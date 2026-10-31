@@ -457,6 +457,7 @@ inline std::vector<int> AssignRing(std::vector<Point> const& followers, std::vec
 //   "follow me"         - Follow, name empty
 //   "follow <name>"     - Follow, name the lower-cased name
 //   "go away", "shoo"   - GoAway; hard when "go away" ends in "!"
+//   "stop following me", "stop" - GoAway, never hard (2026-10-30)
 //   "circle me", "close follow" - Circle: follow the speaker in the ring
 //                         (617s2, 2026-10-30)
 //   anything else       - None (a bare "follow" among them)
@@ -494,6 +495,13 @@ inline Order ReadOrder(std::string const& raw, std::string& name, bool& hard)
         return Order::GoAway;
     }
     if (words.size() == 1 && words[0] == "shoo")
+        return Order::GoAway;
+    // "stop following me", or "stop" alone (the owner, 2026-10-30, asked
+    // what else ends following: "all of these except time limit. Also we
+    // should be able to say "stop following me" and that'd work too."; the
+    // list asked about began with "stop"): as "go away", never the hard way
+    if ((words.size() == 1 && words[0] == "stop")
+        || (words.size() == 3 && words[0] == "stop" && words[1] == "following" && words[2] == "me"))
         return Order::GoAway;
     if (words.size() == 2 && ((words[0] == "circle" && words[1] == "me") || (words[0] == "close" && words[1] == "follow")))
         return Order::Circle;

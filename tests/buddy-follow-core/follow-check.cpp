@@ -245,6 +245,9 @@ int main()
         check(ReadOrder("follow the road home", name, hard) == Order::None, "ordinary chat with \"follow\" in it is no order");
         check(ReadOrder("Circle me!", name, hard) == Order::Circle, "\"circle me\": the close follow (617s2)");
         check(ReadOrder("close follow please", name, hard) == Order::Circle, "\"close follow\": the close follow too");
+        check(ReadOrder("Stop following me!", name, hard) == Order::GoAway && !hard, "\"stop following me\": they go, never the hard way");
+        check(ReadOrder("stop", name, hard) == Order::GoAway && !hard, "\"stop\" alone: they go");
+        check(ReadOrder("stop the cart", name, hard) == Order::None, "\"stop\" in ordinary chat is no order");
     }
     // }}}
 

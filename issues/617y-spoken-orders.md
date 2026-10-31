@@ -163,7 +163,15 @@ speak in commands.
    word): "all of these except time limit. Also we should be able to say
    "stop following me" and that'd work too." Following ends on "go
    away", "stop following me", "stop", the followed person logging out,
-   entering a town, or entering a dungeon; never by time.
+   entering a town, or entering a dungeon; never by time. **Built
+   2026-10-30, compiled 2026-10-31, not yet seen in game**: "stop following
+   me" and "stop" read as "go away", never the hard way (`ReadOrder`,
+   `roam/buddy_follow_core.h`; 3 new checks in
+   `scripts/test-buddy-follow-core`, 54 in all); the follow pass ends a
+   leader's follows when it steps from outside into a town (a town circle)
+   or a dungeon (any instance), on stepping in only, so "follow me" said
+   inside a town holds (`buddies_follow.cpp`); logging out already ended
+   them.
 4. (Answered 2026-10-12, for "follow me": said to the group's largest
    channel, the speaker's own buddies agree.) "follow <name>": the named
    one's buddies, or the speaker's?

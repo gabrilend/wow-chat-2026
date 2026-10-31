@@ -65,6 +65,7 @@
 
 #include "buddies.h"
 #include "buddies_crossing.h"
+#include "buddies_navmesh.h"
 #include "buddies_recorder.h"
 #include "buddies_town.h"
 #include "DBCStores.h"
@@ -874,6 +875,57 @@ static bool StepTransport(Player* bot, Player* owner, BuddyTrip& trip, BuddyCros
 }
 // }}}
 
+// {{{ StopByLand
+// For a buddy at no stop of the owner's ship: whether a walk reaches the
+// owner's own dock (its pier) on the walking mesh; if not, the other stop
+// of that ship on the buddy's map whose pier the shortest complete walk
+// reaches (617e8, 2026-10-30: "route search. Same machinery."; an island
+// dock such as Rut'theran has no walk from Darnassus's shore, so the
+// buddy goes to Auberdine's pier and sails). True with that stop and its
+// pier; false when the owner's dock is reached by land (walk it, as
+// before) or when no stop is (logged as an error: it walks toward the
+// owner's dock, and the travel step reports it if it sticks).
+static bool StopByLand(Player* bot, uint32 entry, uint8 ownerStop, uint8& outStop, Spot& outPier)
+{
+    TransportRoute const* route = RouteOf(entry);
+    if (!route || ownerStop >= route->stops.size())
+        return false;
+    std::vector<BuddyRoam::Point> pts;
+    Spot pier;
+    if (PierOf(route->stops[ownerStop], pier)
+        && BuddyMeshRoute(bot, { pier.x, pier.y, pier.z }, pts) == BuddyRouteKind::Complete)
+        return false;                                // a walk joins them: no crossing needed
+    float best = 0.0f;
+    bool  found = false;
+    for (uint8 k = 0; k < route->stops.size(); ++k)
+    {
+        if (k == ownerStop || route->stops[k].mapId != bot->GetMapId() || !PierOf(route->stops[k], pier))
+            continue;
+        if (BuddyMeshRoute(bot, { pier.x, pier.y, pier.z }, pts) != BuddyRouteKind::Complete)
+            continue;                                // no walk to this pier either
+        float len = 0.0f;
+        for (size_t i = 1; i < pts.size(); ++i)
+            len += std::hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+        if (!found || len < best)
+        {
+            found   = true;
+            best    = len;
+            outStop = k;
+            outPier = pier;
+        }
+    }
+    if (found)
+        LOG_INFO("module", "mod-buddies: buddy {} has no walk to its owner's dock (transport {}, stop {}); it walks {:.0f} yards "
+            "to stop {} of that ship and sails", bot->GetName(), entry, ownerStop, best, outStop);
+    else
+        LOG_ERROR("module", "mod-buddies: buddy {} on map {} at ({:.0f}, {:.0f}) has no walk to its owner's dock (transport {}, "
+            "stop {}) nor to any other stop of that ship on its map; it walks toward the dock. To debug: is the walking mesh "
+            "built here? does the bot module's travel graph have a pier node near each stop?", bot->GetName(), bot->GetMapId(),
+            bot->GetPositionX(), bot->GetPositionY(), entry, ownerStop);
+    return found;
+}
+// }}}
+
 // {{{ StepSameShip
 // The owner is on a dock of this map, or aboard a ship docked here. Every
 // change of the owner's (arrived, boarded, stepped back) is answered after
@@ -954,16 +1006,41 @@ static bool StepSameShip(Player* bot, Player* owner, BuddyTrip& trip, BuddyCross
 
             // the buddy stands at another stop of that same ship: sail from here
             uint8 myStop = 0;
-            if (trip.dockEntry
+            bool  atStop = trip.dockEntry
                 && BuddyTransportStop(trip.dockEntry, bot->GetMapId(), bot->GetPositionX(), bot->GetPositionY(),
-                                      DOCK_NEAR_YARDS, myStop)
-                && myStop != trip.dockStop)
+                                      DOCK_NEAR_YARDS, myStop);
+            // at no stop of it: a walk to the owner's dock if one joins them,
+            // else the stop of this ship a walk does reach (StopByLand), and
+            // sail from there (the owner, 2026-10-30, of a buddy whose walk
+            // can't reach an island dock such as Rut'theran: "route search.
+            // Same machinery."). Each path:
+            //   a complete walk to the owner's dock  - walk it, as before
+            //   none, another stop reached by land   - to that stop (the
+            //                                          shortest walk), then sail
+            //   none to any stop                     - logged as an error; it
+            //                                          walks toward the dock
+            //                                          and is reported if stuck
+            bool viaLand = false;
+            Spot landPier;
+            if (trip.dockEntry && !atStop)
+            {
+                uint8 byLand = 0;
+                if (StopByLand(bot, trip.dockEntry, trip.dockStop, byLand, landPier))
+                {
+                    atStop  = true;
+                    myStop  = byLand;
+                    viaLand = true;
+                }
+            }
+            if (atStop && myStop != trip.dockStop)
             {
                 BuddyTrip plan;
                 plan.way       = Way::Transport;
                 plan.toMap     = owner->GetMapId();
                 plan.entry     = trip.dockEntry;
-                plan.departure = { bot->GetMapId(), bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ() };
+                // from where it stands at that stop, or (reached by land) from that stop's pier
+                plan.departure = viaLand ? landPier
+                                         : Spot{ bot->GetMapId(), bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ() };
                 auto seen = sDeckSeen.find(trip.dockEntry);
                 if (seen != sDeckSeen.end())
                     plan.deck = seen->second;        // for the straight walk, if this dock has no recording
