@@ -1,0 +1,128 @@
+#!/usr/bin/env luajit
+-- generate-teleport-destinations - write the table of the mage's city
+-- teleports and the place each one lands in (issue 723), for the way-back
+-- rule in src/lua-basic/buddy-hearth.lua.
+--
+-- For a general audience: a mage's "Teleport: Stormwind" and its kin take
+-- the mage to a city. Cast again inside that city, the project sends the
+-- mage back where they were before (issue 723), so the script needs to
+-- know, for each teleport, which place counts as "inside". This tool reads
+-- both answers from the game's own data files instead of a hand-typed
+-- list: the spells from Spell.dbc (every mage spell a player can learn,
+-- named "Teleport: X", whose effect is a teleport), and each one's place from AreaTable.dbc
+-- (the area named X, "X City", "The X" or "X Isle", in that order of
+-- preference). A city (an area with no parent zone) is matched by the
+-- zone the caster stands in; a town inside a larger zone (Stonard,
+-- Theramore Isle) by its own area, plus nearness to the landing spot (the
+-- script reads the landing spot from the world database).
+--
+-- Usage: scripts/generate-teleport-destinations [PROJECT_DIR] [--check]
+--   PROJECT_DIR  the project root (default /mnt/kaun/wow-chat-2026)
+--   --check      write nothing; exit 1 if the data file differs from what
+--                would be written (a quick test can run this)
+--   --help       this text
+-- Output: src/lua-basic/data/teleport-destinations.lua
+
+local DIR, CHECK = "/mnt/kaun/wow-chat-2026", false
+for _, a in ipairs(arg) do
+    if a == "--help" or a == "-h" then
+        print((io.open(arg[0]):read("*a"):match("^.-\n(%-%- generate.-)\n\n"):gsub("%-%- ?", "")))
+        os.exit(0)
+    elseif a == "--check" then CHECK = true
+    else DIR = a end
+end
+local DBC = DIR .. "/data-files/dbc/"
+local OUT = DIR .. "/src/lua-basic/data/teleport-destinations.lua"
+
+-- {{{ local function load_dbc
+local function u32(d, o) local a, b, c, e = d:byte(o + 1, o + 4); return a + b * 256 + c * 65536 + e * 16777216 end
+local function load_dbc(name)
+    local f = io.open(DBC .. name, "rb") or error("cannot open " .. DBC .. name)
+    local d = f:read("*a")
+    f:close()
+    if d:sub(1, 4) ~= "WDBC" then error(name .. " is not a WDBC file") end
+    local n, rs = u32(d, 4), u32(d, 12)
+    local strings = 20 + n * rs
+    local rows = {}
+    for r = 0, n - 1 do
+        local b = 20 + r * rs
+        rows[#rows + 1] = {
+            u = function(field) return u32(d, b + field * 4) end,
+            s = function(field)
+                local s = strings + u32(d, b + field * 4)
+                return d:sub(s + 1, (d:find("\0", s + 1, true) or s + 1) - 1)
+            end,
+        }
+    end
+    return rows
+end
+-- }}}
+
+-- Spell.dbc columns (DBCStructure.h SpellEntry): 0 id, 71-73 the three
+-- effects, 136 the English name, 208 the spell family (3 the mage's).
+-- AreaTable.dbc: 0 id, 1 map, 2 the parent zone (0: a zone itself), 11 the
+-- English name.
+local EFFECT_TELEPORT_UNITS, FAMILY_MAGE = 5, 3
+
+local areas = {}                                   -- name -> { id, map, parent }, first of each name
+for _, r in ipairs(load_dbc("AreaTable.dbc")) do
+    local name = r.s(11)
+    if name ~= "" and not areas[name] then areas[name] = { id = r.u(0), map = r.u(1), parent = r.u(2) } end
+end
+
+-- only spells a player can learn (SkillLineAbility.dbc column 2): the
+-- mage family also holds NPC-only teleports ("Teleport: Zul'Aman Instance")
+local LEARNABLE = {}
+for _, r in ipairs(load_dbc("SkillLineAbility.dbc")) do LEARNABLE[r.u(2)] = true end
+
+local rows, missing = {}, {}
+for _, r in ipairs(load_dbc("Spell.dbc")) do
+    local name = r.s(136)
+    local place = name:match("^Teleport: (.+)$")
+    local teleports = r.u(71) == EFFECT_TELEPORT_UNITS or r.u(72) == EFFECT_TELEPORT_UNITS or r.u(73) == EFFECT_TELEPORT_UNITS
+    if place and teleports and r.u(208) == FAMILY_MAGE and LEARNABLE[r.u(0)] then
+        local a = areas[place] or areas[place .. " City"] or areas["The " .. place] or areas[place .. " Isle"]
+        if not a then
+            missing[#missing + 1] = r.u(0) .. " " .. name
+        else
+            rows[#rows + 1] = { spell = r.u(0), name = name, area = a.id, map = a.map, zone = a.parent == 0 }
+        end
+    end
+end
+table.sort(rows, function(x, y) return x.spell < y.spell end)
+if #missing > 0 then
+    io.stderr:write("ERROR: no area found for: " .. table.concat(missing, "; ") .. "\n")
+    os.exit(1)
+end
+
+local out = {
+    "-- teleport-destinations.lua - made by scripts/generate-teleport-destinations",
+    "-- from data-files/dbc/{Spell,AreaTable}.dbc, so the way-back rule (issue 723,",
+    "-- buddy-hearth.lua) knows where each mage teleport lands. Do not edit: run",
+    "-- the generator again.",
+    "--   spell -> { area = the AreaTable id, map, zone = true when the area is a",
+    "--              whole zone (a city: matched by the caster's zone), false when",
+    "--              it is a town inside a zone (matched by area and nearness) }",
+    "return {",
+}
+for _, r in ipairs(rows) do
+    out[#out + 1] = string.format("    [%5d] = { area = %4d, map = %3d, zone = %-5s },   -- %s", r.spell, r.area, r.map, tostring(r.zone), r.name)
+end
+out[#out + 1] = "}"
+local text = table.concat(out, "\n") .. "\n"
+
+if CHECK then
+    local f = io.open(OUT, "rb")
+    local have = f and f:read("*a")
+    if f then f:close() end
+    if have ~= text then
+        print("generate-teleport-destinations: " .. OUT .. " is out of date (run the generator)")
+        os.exit(1)
+    end
+    print("generate-teleport-destinations: up to date, " .. #rows .. " teleports")
+    os.exit(0)
+end
+local f = assert(io.open(OUT, "wb"))
+f:write(text)
+f:close()
+print("generate-teleport-destinations: wrote " .. #rows .. " teleports to " .. OUT)

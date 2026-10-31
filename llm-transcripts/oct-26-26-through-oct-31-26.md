@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-31 16:21:16
+Generated on: 2026-10-31 16:31:50
 Models: claude-opus-5-5
 
 ## Contents
@@ -17066,6 +17066,77 @@ Two ways to go:
 
 I'd go with the first, since it keeps your two-test design honest. Which do you
 want?
+
+--------------------------------------------------------------------------------
+
+### User Request 169
+
+got it, okay, well, we only need to do that first startup if we changed the SQL.
+Can we add a check for that?
+
+Our systems are idempotent. They must be, it is important. So, when we apply the
+same SQL twice, it should not duplicate the impact. If we change the underlying
+records, they should not be altered unless we change them specifically. This is
+critical for the design. Can you validate that for me? Also, it kinda sounds
+like we apply sql at two parts of the compilation process. Is there a reason for
+that? Can you find out?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 169
+
+> Three things: skip the first start when the SQL hasn't changed, check that our
+> SQL is idempotent, and find out why SQL seems to be applied at two points.
+> First, how the compile is staged and where SQL is touched.
+
+> Your second start took 529 s and the first 435 s; both are now in the record.
+> Reading the check's start-and-wait section to rewrite it.
+
+> Rewriting the wait loop to time the whole start, as you asked. First I'll
+> check the check's own test, since some of its cases are built around the old
+> quiet rule.
+
+> All 6 cases pass. Now the server's warnings: listing every "missing property"
+> line from the server you just started.
+
+> Still on the settings file: one fix left. A setting's name was matching longer
+> names that start with it (ForwardPass picked up ForwardPass.Threads' note).
+
+> The notes now read correctly. Adding a quick test that fails whenever the
+> settings file falls behind the code, so this can't come back.
+
+*[commit] 080100b8a in wow-chat-2026 - *
+
+Committed (080100b): the one-line start check with its timer, and the buddy
+module's new settings file, which the next compile installs.
+
+Your question: yes, that's right. Our SQL patches never change the database
+themselves. Each one:
+1. puts its SQL file into a folder;
+2. registers that folder with the server's updater (one row in the database's
+   `updates_include` table, the only thing a patch writes directly).
+
+The worldserver applies the files when it starts, through AzerothCore's own
+update pipeline, and records each in its `updates` table. That's why changing a
+file's first line made the server re-run them all.
+
+On the warnings: every one comes from the same cause, now fixed:
+- The buddy module never had a settings file, so each of our switches existed
+  only as a default in the code, and the server warned each time it read one.
+  `Buddies.ForwardPass` is read on every hit and heal, hence 222 warnings in one
+  start.
+- "AC_" isn't a claim on your buddies. It's just how AzerothCore's settings
+  loader names an environment variable for any setting that's missing, whoever's
+  it is; playerbots' get the same prefix.
+- The generated settings file gives every buddy setting a line, so the warnings
+  stop at the next compile. A quick test keeps the file in step with the code.
+
+Next:
+- skipping the first start when no SQL has changed;
+- the idempotency test, which applies all our SQL twice to a scratch copy and
+  compares;
+- the town-bake skip test, which waits so it doesn't disturb your running
+  server.
 
 --------------------------------------------------------------------------------
 
