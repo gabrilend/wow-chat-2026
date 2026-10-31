@@ -1,0 +1,26 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddies-conf
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      the buddy module's settings file has a line for every setting its code reads
+# quick-test: yes
+# ==== end of header ====
+# test-buddies-conf - fails when the buddy module's settings file
+# (mod-buddies/conf/mod_buddies.conf.dist) is behind its code: a setting the
+# code reads with no line in the file makes the server warn each time it is
+# read (2026-10-31: 222 warnings in one start). The file is written by
+# scripts/generate-buddies-conf; this runs it with --check.
+#
+# Usage: scripts/test-buddies-conf [DIR]   (--help: this text)
+
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+    sed -n '10,16p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+"${DIR}/scripts/generate-buddies-conf" "${DIR}" --check
+# ==== footer of test-buddies-conf ====
+# lines:      26
+# ==== end of footer ====

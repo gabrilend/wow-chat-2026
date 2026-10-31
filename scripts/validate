@@ -134,238 +134,174 @@ get_profile_paths() {
 # of adding one, so counting rows saw none of that work, and a start
 # re-applying forty files was stopped as silent with the work still going.
 #
-# How long quiet may last is learned (the owner, 2026-10-31: "this five
+# How long a start may take is learned (the owner, 2026-10-31: "this five
 # minute limit should be set based on the average of how long previous
 # starts have taken. It should count the last like, 5 starts, and average
-# them. Plus/minus 50%."). What the limit measures is the longest quiet
-# stretch inside a start (one slow database file applying, the log still),
-# not a whole start's length, so that is what is learned: each successful
-# start of this profile is kept in build-shadow/.validate-starts-<profile>,
-# one line each (when, its seconds in all, its longest quiet stretch), and
-# the limit is the average longest quiet of the last five, plus half. (First
-# written from whole starts' lengths and seeded with a 131-second start that
-# applied nothing; the owner, 2026-10-31: "if the limit is 3 minutes, and we
-# just timed out on a 5 minute timer, then why would you set the limit to 3
-# minutes?" A start re-running every file has quiet stretches of two minutes
-# and more.) A start quicker than half the usual length is said so (it may
-# have skipped work). With no starts recorded yet, 300 seconds, the earlier
-# fixed limit.
+# them. Plus/minus 50%."): each successful start of this profile is kept in
+# build-shadow/.validate-starts-<profile> (one line each: when, its seconds),
+# and a start may take the average of the last five plus half. While the
+# databases' updates are still finishing (the owner, 2026-10-22, asked
+# whether a start should wait while updates go on: "yes"), each update that
+# finishes moves the deadline to half an average past it, so a start doing
+# real work past its usual length isn't cut off; one that stops making any
+# is. A start quicker than half the average is said so: it may have skipped
+# work. With no starts recorded, 300 seconds (the old five minutes).
+# (A first version timed quiet stretches instead and was seeded by hand with
+# one start that applied nothing; the owner: "if the limit is 3 minutes, and
+# we just timed out on a 5 minute timer, then why would you set the limit to
+# 3 minutes?")
+#
+# What it prints (the owner, 2026-10-31, of the old lines: "this is way too
+# busy. We could make this like, 1/10th of the text. Can we also add an
+# updating timer that says how long we've waited so far?"): one line saying
+# what is checked and how long it may take, a timer counting on the
+# terminal (not in the build log), and one line with the result. A failure
+# says everything it knows.
 validate_shadow_worldserver() {
     local STARTS="${DIR}/build-shadow/.validate-starts-${PROFILE}"
-    local AVERAGE="" LENGTH=""                      # the average longest quiet, and the average length, of recent starts
-    if [[ -f "${STARTS}" ]]; then
-        # the last five starts that recorded their longest quiet (3 fields)
-        AVERAGE="$(awk 'NF >= 3' "${STARTS}" | tail -n 5 | awk '{ s += $3; n++ } END { if (n > 0) printf "%d", s / n }')"
-        LENGTH="$(tail -n 5 "${STARTS}" | awk '{ s += $2; n++ } END { if (n > 0) printf "%d", s / n }')"
-    fi
-    # seconds without progress: the average plus half (300 with no starts
-    # recorded); VALIDATE_MAX_TIMEOUT sets it outright for scripts/test-validate-needs-world-up
-    local LEARNED=300
-    [[ "${AVERAGE}" =~ ^[0-9]+$ && ${AVERAGE} -gt 0 ]] && LEARNED=$(( AVERAGE + (AVERAGE + 1) / 2 ))
-    local MAX_TIMEOUT=${VALIDATE_MAX_TIMEOUT:-${LEARNED}}
-    # when this start began: updates finished since then are its progress
+    local AVERAGE=""                                # the average length of the last five starts
+    [[ -f "${STARTS}" ]] && AVERAGE="$(tail -n 5 "${STARTS}" | awk '{ s += $2; n++ } END { if (n > 0) printf "%d", s / n }')"
+    local LIMIT=300                                 # seconds a start may take: the average plus half
+    [[ "${AVERAGE}" =~ ^[0-9]+$ && ${AVERAGE} -gt 0 ]] && LIMIT=$(( AVERAGE + (AVERAGE + 1) / 2 ))
+    LIMIT=${VALIDATE_MAX_TIMEOUT:-${LIMIT}}         # set outright by scripts/test-validate-needs-world-up
+    local HARD_LIMIT=${VALIDATE_HARD_LIMIT:-3600}   # seconds in all, whatever happens
+    local PROBE_EVERY=5                             # seconds between counts of finished updates
+    # half an average: how far a finished update moves the deadline; at least
+    # two counts' worth, since an update is only seen when the count is taken
+    local GRACE=$(( (LIMIT + 2) / 3 ))
+    (( GRACE < 2 * PROBE_EVERY )) && GRACE=$(( 2 * PROBE_EVERY ))
     local START_EPOCH
-    START_EPOCH="$(date +%s)"
-    local HARD_LIMIT=${VALIDATE_HARD_LIMIT:-3600}   # seconds in all, progress or not
-    local PROBE_EVERY=5                             # seconds between counts of applied updates
-    # How many database updates are applied so far: one number, or nothing
-    # when the database can't be read. The test replaces it
-    # (VALIDATE_PROGRESS_CMD) with a file its pretend servers write.
+    START_EPOCH="$(date +%s)"                       # updates finished since then are this start's
+    # how many database updates have finished since this start began, new or
+    # re-applied (a re-applied file rewrites its row, so rows aren't counted);
+    # the test replaces it (VALIDATE_PROGRESS_CMD) with its pretend servers' file
     local PROGRESS_CMD="${VALIDATE_PROGRESS_CMD:-}"
     if [[ -z "${PROGRESS_CMD}" ]]; then
         local MYSQL_CALL="\"${MYSQL_DIR}/bin/mysql\" --defaults-file=${DIR}/mysql/conf/client.cnf -h127.0.0.1 -P3307 -N -B"
-        # every database with an updates table (each profile's, and acore_auth)
         local SCHEMAS
         SCHEMAS="$(eval "${MYSQL_CALL}" -e "\"SELECT table_schema FROM information_schema.tables WHERE table_name = 'updates' AND table_schema LIKE 'acore%'\"" 2>&1 | grep -v "Using a password")"
         if [[ -n "${SCHEMAS}" && "${SCHEMAS}" != *ERROR* ]]; then
             local SUM="" s
-            # no backquotes around the names: the command is run through eval,
-            # inside double quotes, where a backquote would run a command
-            # (the names are plain: letters, digits, underscores)
-            # the updates finished since this start began, new or re-applied
-            # (\${START_EPOCH} is filled in each time the count is taken)
+            # no backquotes round the names: the command runs through eval;
+            # \${START_EPOCH} is filled in each time the count is taken
             for s in ${SCHEMAS}; do SUM="${SUM:+${SUM} + }(SELECT COUNT(*) FROM ${s}.updates WHERE UNIX_TIMESTAMP(timestamp) >= \${START_EPOCH})"; done
             PROGRESS_CMD="${MYSQL_CALL} -e \"SELECT ${SUM}\" 2>&1 | grep -v 'Using a password'"
         else
-            # a fallback: the start is then timed by its log alone, which can
-            # stop it while it is still applying updates (as on 2026-10-21)
-            echo "  WARNING (fallback): can't read the databases' update records, so progress is judged by the log alone."
+            # a fallback, said: without the update records, no update can move
+            # the deadline, so a long backlog of updates may be cut off
+            echo "  WARNING (fallback): can't read the databases' update records, so a long run of updates can't extend the time allowed."
             echo "    The database said: ${SCHEMAS:-nothing}"
             echo "    To debug: is MySQL running (scripts/start-mysql)? does ${MYSQL_DIR}/bin/mysql exist?"
         fi
     fi
+    # minutes and seconds, for people
+    local fmt
+    fmt() { if (( $1 >= 60 )); then printf '%dm %02ds' $(( $1 / 60 )) $(( $1 % 60 )); else printf '%ds' "$1"; fi; }
 
+    [[ -f "${INSTALL_DIR_SHADOW}/bin/worldserver" ]] || { echo "  ERROR: no worldserver in ${INSTALL_DIR_SHADOW}/bin (did the build install?)"; return 1; }
+    [[ -f "${INSTALL_DIR_SHADOW}/etc/worldserver.conf" ]] || { echo "  ERROR: no worldserver.conf in ${INSTALL_DIR_SHADOW}/etc"; return 1; }
+
+    local VALIDATION_LOG="${DIR}/tmp/shadow-validation-${PROFILE}.log"
+    local WHAT="the new server starts with our database changes"
+    if [[ "${NO_PROMOTE}" == "true" ]]; then
+        VALIDATION_LOG="${DIR}/tmp/shadow-gate-2000-${PROFILE}.log"
+        WHAT="the new server starts on upstream's databases"
+    fi
     echo ""
-    echo "Validating shadow worldserver..."
-    echo "  Shadow: ${INSTALL_DIR_SHADOW}/bin/worldserver"
-
-    # Check if binary exists
-    if [[ ! -f "${INSTALL_DIR_SHADOW}/bin/worldserver" ]]; then
-        echo "  ERROR: worldserver not found in shadow"
-        return 1
-    fi
-
-    # Check if config exists
-    if [[ ! -f "${INSTALL_DIR_SHADOW}/etc/worldserver.conf" ]]; then
-        echo "  ERROR: worldserver.conf not found in shadow/etc/"
-        return 1
-    fi
-
-    # Start worldserver in background
-    echo "  Starting worldserver from shadow (validation run)..."
+    echo "Checking ${WHAT} (allowed $(fmt ${LIMIT}))..."
     cd "${INSTALL_DIR_SHADOW}/bin"
     export LD_LIBRARY_PATH="${MYSQL_DIR}/lib:${LD_LIBRARY_PATH}"
-
-    # Start in background, redirect output to validation log
-    # Use /dev/null for stdin to prevent blocking on input
-    local VALIDATION_LOG="${DIR}/tmp/shadow-validation-${PROFILE}.log"
-    [[ "${NO_PROMOTE}" == "true" ]] && VALIDATION_LOG="${DIR}/tmp/shadow-gate-2000-${PROFILE}.log"
     mkdir -p "${DIR}/tmp"
-    > "${VALIDATION_LOG}"  # Truncate log
-    # Explicit -c and -C flags: with CONF_DIR baked into the binary
-    # pointing at the profile etc dir (see issue 137), the shadow
-    # validation run must override BOTH the main config file (-c) AND
-    # the module config directory (-C, from B022). Without -C, module
-    # configs would still be loaded from the baked _CONF_DIR — i.e.
-    # the promoted profile's etc/modules — which silently invalidates
-    # the validation. The flags are the exception, used precisely here.
+    > "${VALIDATION_LOG}"
+    # Explicit -c and -C flags: with CONF_DIR baked into the binary pointing
+    # at the profile's etc (issue 137), the check must override both the main
+    # config (-c) and the module config folder (-C, from B022), or modules'
+    # settings come from the promoted profile and the check means nothing.
     ./worldserver \
         -c "${INSTALL_DIR_SHADOW}/etc/worldserver.conf" \
         -C "${INSTALL_DIR_SHADOW}/etc" \
         < /dev/null > "${VALIDATION_LOG}" 2>&1 &
     local WS_PID=$!
 
-    echo "  Worldserver started (PID ${WS_PID})"
-    if [[ -n "${VALIDATE_MAX_TIMEOUT:-}" ]]; then
-        echo "  (the quiet limit set outright: ${MAX_TIMEOUT}s)"
-    elif [[ -n "${AVERAGE}" ]]; then
-        echo "  (the last starts' longest quiet stretches averaged ${AVERAGE}s; quiet allowed: that plus half, ${MAX_TIMEOUT}s)"
-    else
-        echo "  (no starts recorded yet for ${PROFILE}: quiet allowed ${MAX_TIMEOUT}s)"
-    fi
-    echo "  Waiting for \"World initialized\" (until ${MAX_TIMEOUT}s pass with no new log line and no update applied, ${HARD_LIMIT}s at most)..."
+    # the timer goes to the terminal only, when there is one (the build log
+    # gets the result line, not a line a second)
+    local TTY=""
+    { : > /dev/tty; } 2>/dev/null && TTY=/dev/tty
 
-    # Smart detection variables
-    local elapsed=0
-    local last_line_count=0
-    local silence_count=0
-    local success=false
-    local unique_count=0
-    local quiet=0                                   # seconds since the last progress of either kind
-    local longest_quiet=0                           # the longest such stretch in this start, kept for the next limit
+    local elapsed=0 deadline=${LIMIT} success=false
     local applied="" applied_now="" applied_first=""
-
     if [[ -n "${PROGRESS_CMD}" ]]; then
         applied="$(eval "${PROGRESS_CMD}")"
         applied_first="${applied}"
     fi
 
-    while [[ ${quiet} -lt ${MAX_TIMEOUT} && ${elapsed} -lt ${HARD_LIMIT} ]]; do
-        # Check for success FIRST (before checking if process died)
-        # This handles the case where server initializes and exits cleanly
+    # Only "World initialized in" is success (until 2026-10-18 five quiet
+    # seconds counted as up, and a build was promoted whose world never
+    # loaded; the owner: "you should have caught this").
+    while (( elapsed < deadline && elapsed < HARD_LIMIT )); do
         if grep -qi "World initialized in" "${VALIDATION_LOG}" 2>/dev/null; then
-            sleep 2
-            echo "  Stable: World initialized successfully"
             success=true
             break
         fi
-
-        # Check if process is still running
         if ! kill -0 ${WS_PID} 2>/dev/null; then
-            # Process died - but check if it succeeded before dying
-            if grep -qi "World initialized in" "${VALIDATION_LOG}" 2>/dev/null; then
-                echo "  Stable: World initialized (server exited cleanly)"
-                success=true
-                break
-            fi
-            echo "  ERROR: Worldserver crashed during startup"
-            echo "  Check log: ${VALIDATION_LOG}"
+            [[ -n "${TTY}" ]] && printf '\r\033[K' > "${TTY}"
+            echo "  ERROR: the server stopped before it finished starting (after $(fmt ${elapsed}))"
+            echo "  Its last line: $(tail -1 "${VALIDATION_LOG}" 2>/dev/null | cut -c1-160)"
+            echo "  Its log: ${VALIDATION_LOG}"
             return 1
         fi
-
-        # Check for critical errors (but not warnings about missing optional things)
         if grep -qE "^(FATAL|.*Failed to initialize World)" "${VALIDATION_LOG}" 2>/dev/null; then
-            echo "  ERROR: Worldserver failed to initialize"
-            kill ${WS_PID} 2>/dev/null
-            wait ${WS_PID} 2>/dev/null
-            echo "  Check log: ${VALIDATION_LOG}"
+            [[ -n "${TTY}" ]] && printf '\r\033[K' > "${TTY}"
+            kill ${WS_PID} 2>/dev/null; wait ${WS_PID} 2>/dev/null
+            echo "  ERROR: the server failed to initialize (after $(fmt ${elapsed}))"
+            echo "  The error: $(grep -m1 -E "^(FATAL|.*Failed to initialize World)" "${VALIDATION_LOG}" | cut -c1-160)"
+            echo "  Its log: ${VALIDATION_LOG}"
             return 1
         fi
-
-        # Count current lines
-        local current_line_count
-        current_line_count=$(wc -l < "${VALIDATION_LOG}" 2>/dev/null || echo 0)
-
-        # Silence and repeated lines are NOT success: only "World initialized
-        # in" above is. Until 2026-10-18 five quiet seconds counted as stable,
-        # and the worldserver is quiet for longer than that while it updates
-        # its databases, so a build was promoted after 6 s and 55 lines, the
-        # world never loaded (owner: "you should have caught this"). They are
-        # still counted, to say in the timeout message where it went quiet.
-        if [[ ${current_line_count} -eq ${last_line_count} ]]; then
-            ((silence_count++))
-            ((quiet++))
-        else
-            silence_count=0
-            quiet=0
-            unique_count=${current_line_count}
-            last_line_count=${current_line_count}
-        fi
-
-        # an update finished since the last count: progress, even with the log quiet
+        # an update finished: the start is still at work, so the deadline is
+        # at least half an average past now
         if [[ -n "${PROGRESS_CMD}" ]] && (( elapsed % PROBE_EVERY == 0 )); then
             applied_now="$(eval "${PROGRESS_CMD}")"
             if [[ "${applied_now}" =~ ^[0-9]+$ && "${applied}" =~ ^[0-9]+$ && ${applied_now} -gt ${applied} ]]; then
-                quiet=0
+                (( elapsed + GRACE > deadline )) && deadline=$(( elapsed + GRACE ))
             fi
             [[ "${applied_now}" =~ ^[0-9]+$ ]] && applied="${applied_now}"
         fi
-
-        (( quiet > longest_quiet )) && longest_quiet=${quiet}
+        [[ -n "${TTY}" ]] && printf '\r  %s' "$(fmt ${elapsed})" > "${TTY}"
         sleep 1
         ((elapsed++))
     done
+    [[ -n "${TTY}" ]] && printf '\r\033[K' > "${TTY}"
 
-    # Kill the validation worldserver gracefully, then forcefully
-    echo "  Stopping validation worldserver..."
+    # stop the check's server: gently, then not
     if kill ${WS_PID} 2>/dev/null; then
         sleep 2
-        if kill -0 ${WS_PID} 2>/dev/null; then
-            kill -9 ${WS_PID} 2>/dev/null
-        fi
+        kill -0 ${WS_PID} 2>/dev/null && kill -9 ${WS_PID} 2>/dev/null
     fi
     wait ${WS_PID} 2>/dev/null
 
-    # how many database updates the start applied, when they could be counted
-    local applied_note=""
-    if [[ "${applied}" =~ ^[0-9]+$ && "${applied_first}" =~ ^[0-9]+$ ]]; then
-        applied_note=", $(( applied - applied_first )) database updates applied"
-    fi
+    local updates=""
+    [[ "${applied}" =~ ^[0-9]+$ && "${applied_first}" =~ ^[0-9]+$ ]] && updates="$(( applied - applied_first ))"
 
     if [[ "${success}" == "true" ]]; then
-        echo "  Validation successful (${elapsed}s, ${unique_count} lines${applied_note})"
-        # this start, for the next one's limit; and a word when it was
-        # quicker than half the usual (the owner's "minus 50%")
+        echo "  Up in $(fmt ${elapsed})${updates:+, ${updates} database updates applied}."
         if [[ -z "${VALIDATE_MAX_TIMEOUT:-}" ]]; then
             mkdir -p "$(dirname "${STARTS}")"
-            echo "$(date +%Y-%m-%dT%H:%M:%S) ${elapsed} ${longest_quiet}" >> "${STARTS}"
-            echo "  (its longest quiet stretch: ${longest_quiet}s, recorded for the next limit)"
-            if [[ "${LENGTH}" =~ ^[0-9]+$ && ${LENGTH} -gt 0 && ${elapsed} -lt $(( LENGTH / 2 )) ]]; then
-                echo "  NOTE: this start took ${elapsed}s, under half the usual ${LENGTH}s: it may have skipped work it should have done (its log: ${VALIDATION_LOG})"
+            echo "$(date +%Y-%m-%dT%H:%M:%S) ${elapsed}" >> "${STARTS}"
+            if [[ "${AVERAGE}" =~ ^[0-9]+$ && ${AVERAGE} -gt 0 && ${elapsed} -lt $(( AVERAGE / 2 )) ]]; then
+                echo "  NOTE: under half the usual $(fmt ${AVERAGE}): it may have skipped work (its log: ${VALIDATION_LOG})"
             fi
         fi
         return 0
-    else
-        if [[ ${elapsed} -ge ${HARD_LIMIT} ]]; then
-            echo "  ERROR: Validation timeout (${HARD_LIMIT}s in all, the hard limit, though it was still making progress)"
-        else
-            echo "  ERROR: Validation timeout (${MAX_TIMEOUT}s with no new log line and no update applied, after ${elapsed}s)"
-        fi
-        echo "  It never said \"World initialized\"; ${unique_count} lines logged${applied_note}, the log's last ${silence_count}s silent."
-        echo "  Last line: $(tail -1 "${VALIDATION_LOG}" 2>/dev/null | cut -c1-120)"
-        echo "  Check log: ${VALIDATION_LOG}"
-        return 1
     fi
+    if (( elapsed >= HARD_LIMIT )); then
+        echo "  ERROR: not up after $(fmt ${HARD_LIMIT}), the most any start may take, though updates were still finishing"
+    else
+        echo "  ERROR: not up after $(fmt ${elapsed}): allowed $(fmt ${LIMIT})${AVERAGE:+ (the recent average, $(fmt ${AVERAGE}), and half again)}, and no database update finished in its last $(fmt ${GRACE})"
+    fi
+    echo "  ${updates:-an unknown number of} database updates applied; the log's last line: $(tail -1 "${VALIDATION_LOG}" 2>/dev/null | cut -c1-160)"
+    echo "  Its log: ${VALIDATION_LOG}"
+    return 1
 }
 # }}}
 
