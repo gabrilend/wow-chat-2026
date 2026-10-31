@@ -137,16 +137,26 @@ get_profile_paths() {
 # How long quiet may last is learned (the owner, 2026-10-31: "this five
 # minute limit should be set based on the average of how long previous
 # starts have taken. It should count the last like, 5 starts, and average
-# them. Plus/minus 50%."): the average of the last five successful starts
-# of this profile (kept in build-shadow/.validate-starts-<profile>, one line
-# each: when, seconds), plus half of it. A start quicker than half the
-# average is said so (it may have skipped work it should have done). With no
-# starts recorded yet, 300 seconds, the earlier fixed limit.
+# them. Plus/minus 50%."). What the limit measures is the longest quiet
+# stretch inside a start (one slow database file applying, the log still),
+# not a whole start's length, so that is what is learned: each successful
+# start of this profile is kept in build-shadow/.validate-starts-<profile>,
+# one line each (when, its seconds in all, its longest quiet stretch), and
+# the limit is the average longest quiet of the last five, plus half. (First
+# written from whole starts' lengths and seeded with a 131-second start that
+# applied nothing; the owner, 2026-10-31: "if the limit is 3 minutes, and we
+# just timed out on a 5 minute timer, then why would you set the limit to 3
+# minutes?" A start re-running every file has quiet stretches of two minutes
+# and more.) A start quicker than half the usual length is said so (it may
+# have skipped work). With no starts recorded yet, 300 seconds, the earlier
+# fixed limit.
 validate_shadow_worldserver() {
     local STARTS="${DIR}/build-shadow/.validate-starts-${PROFILE}"
-    local AVERAGE=""
+    local AVERAGE="" LENGTH=""                      # the average longest quiet, and the average length, of recent starts
     if [[ -f "${STARTS}" ]]; then
-        AVERAGE="$(tail -n 5 "${STARTS}" | awk '{ s += $2; n++ } END { if (n > 0) printf "%d", s / n }')"
+        # the last five starts that recorded their longest quiet (3 fields)
+        AVERAGE="$(awk 'NF >= 3' "${STARTS}" | tail -n 5 | awk '{ s += $3; n++ } END { if (n > 0) printf "%d", s / n }')"
+        LENGTH="$(tail -n 5 "${STARTS}" | awk '{ s += $2; n++ } END { if (n > 0) printf "%d", s / n }')"
     fi
     # seconds without progress: the average plus half (300 with no starts
     # recorded); VALIDATE_MAX_TIMEOUT sets it outright for scripts/test-validate-needs-world-up
@@ -229,7 +239,7 @@ validate_shadow_worldserver() {
     if [[ -n "${VALIDATE_MAX_TIMEOUT:-}" ]]; then
         echo "  (the quiet limit set outright: ${MAX_TIMEOUT}s)"
     elif [[ -n "${AVERAGE}" ]]; then
-        echo "  (the last starts took ${AVERAGE}s on average; quiet allowed: that plus half, ${MAX_TIMEOUT}s)"
+        echo "  (the last starts' longest quiet stretches averaged ${AVERAGE}s; quiet allowed: that plus half, ${MAX_TIMEOUT}s)"
     else
         echo "  (no starts recorded yet for ${PROFILE}: quiet allowed ${MAX_TIMEOUT}s)"
     fi
@@ -242,6 +252,7 @@ validate_shadow_worldserver() {
     local success=false
     local unique_count=0
     local quiet=0                                   # seconds since the last progress of either kind
+    local longest_quiet=0                           # the longest such stretch in this start, kept for the next limit
     local applied="" applied_now="" applied_first=""
 
     if [[ -n "${PROGRESS_CMD}" ]]; then
@@ -310,6 +321,7 @@ validate_shadow_worldserver() {
             [[ "${applied_now}" =~ ^[0-9]+$ ]] && applied="${applied_now}"
         fi
 
+        (( quiet > longest_quiet )) && longest_quiet=${quiet}
         sleep 1
         ((elapsed++))
     done
@@ -336,9 +348,10 @@ validate_shadow_worldserver() {
         # quicker than half the usual (the owner's "minus 50%")
         if [[ -z "${VALIDATE_MAX_TIMEOUT:-}" ]]; then
             mkdir -p "$(dirname "${STARTS}")"
-            echo "$(date +%Y-%m-%dT%H:%M:%S) ${elapsed}" >> "${STARTS}"
-            if [[ "${AVERAGE}" =~ ^[0-9]+$ && ${AVERAGE} -gt 0 && ${elapsed} -lt $(( AVERAGE / 2 )) ]]; then
-                echo "  NOTE: this start took ${elapsed}s, under half the usual ${AVERAGE}s: it may have skipped work it should have done (its log: ${VALIDATION_LOG})"
+            echo "$(date +%Y-%m-%dT%H:%M:%S) ${elapsed} ${longest_quiet}" >> "${STARTS}"
+            echo "  (its longest quiet stretch: ${longest_quiet}s, recorded for the next limit)"
+            if [[ "${LENGTH}" =~ ^[0-9]+$ && ${LENGTH} -gt 0 && ${elapsed} -lt $(( LENGTH / 2 )) ]]; then
+                echo "  NOTE: this start took ${elapsed}s, under half the usual ${LENGTH}s: it may have skipped work it should have done (its log: ${VALIDATION_LOG})"
             fi
         fi
         return 0

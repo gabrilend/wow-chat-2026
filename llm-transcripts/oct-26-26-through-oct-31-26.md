@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-30 16:36:31
+Generated on: 2026-10-31 16:03:03
 Models: claude-opus-5-5
 
 ## Contents
@@ -219,6 +219,9 @@ Models: claude-opus-5-5
     which action helps most, so it's ready for your next compile. The offline
     pieces are done; next I'll add kill time and gold cost to what the buddies
     aim for.
+52. 2026-10-30 16:39, after Request 160 - Your compile built the buddy pieces,
+    the new server came up in its first check, and I committed the built files.
+    Once its second check finishes, I'll ask which switches you want on.
 
 --------------------------------------------------------------------------------
 
@@ -16618,6 +16621,90 @@ then show it" completed (exit code 0)*
 
 I'll give you the full status, with the switches, once the second validation run
 reports.
+
+--------------------------------------------------------------------------------
+
+### User Request 161
+
+hi
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 161
+
+> Hi. The compile built cleanly, but its second check failed, so the new server
+> hasn't been promoted yet. Looking into why.
+
+> These are 316 small updates by primary key, which should take seconds. Five
+> silent minutes points at waiting on a lock, not slowness. Reading what the
+> compile did between the two checks.
+
+> The flight-path update actually finished in a third of a second (recorded at
+> 16:31:43). The log line was only cut off unflushed, so the hang was in
+> whatever came next. Finding which.
+
+> Writing the validator change now: the silence limit learned from the last five
+> starts, and progress counted by updates finished since the start began.
+
+> Checking the new count against the real database. From the second check's
+> start time it should find the 14 world files re-applied (plus the characters'
+> six).
+
+*[commit] e2751e4d6 in wow-chat-2026 - *
+
+The compile built cleanly, but the new server isn't promoted yet. Its second
+start check gave up too early while it was still working. That's fixed
+(e2751e4).
+
+**What went wrong:**
+- Basic's module list gained area looting, which changes the first line of each
+  of our database files, so the server re-ran all of them on startup.
+- The check counts progress by the number of entries in the database's update
+  record. A file run a second time rewrites its existing entry instead of adding
+  one, so the count never moved.
+- It saw five minutes of "silence" while files were actually finishing every few
+  seconds, and stopped the server partway. Files 03 to 19 were re-run; 20 to 43
+  weren't.
+
+**What changed in the check:**
+- Progress is now the number of update files finished since this start began,
+  whether new or re-run.
+- As you asked, the quiet limit is learned from past starts: the average of the
+  last five successful starts plus 50%. A start under half the average gets a
+  warning that it may have skipped work. Each successful start is recorded.
+- I seeded the record with yesterday's one clean start (131 s), so the next
+  limit is about 3 minutes and adjusts from there.
+
+**For you to run:** `scripts/validate --profile basic`. It will finish
+re-running files 20–43, then promote the build if the server comes up.
+
+**What this compile built**, now committed (9a8c0f3, issues updated in 4cbaddc).
+Everything is off until you turn it on. Do you want to turn any of these on?
+
+| Switch | What it does | Choice |
+|---|---|---|
+| `Buddies.TalentWeights` | buddies lean toward abilities their talents improve | **1** a fixed boost per talent point, or **2** the talent's own percentage. `.Broad`: **100** or **50** |
+| `Buddies.CloseFollow.InCombat` | the close-follow ring (start it by saying "circle me" or "close follow"; widen and narrow it with `.buddy wider` / `.buddy closer`) | **0** only when asked, or **1** also while you're fighting |
+| `Buddies.AlteracWeather` | one shared sky and a wandering storm in Alterac Valley | 0 or 1 |
+| `Buddies.Sidestep` | buddies step around the target after an instant spell | **1** a share of the circle, or **2** by distance |
+| `.buddy reset <name>` | game-master command: the owner picks the buddy's class again at Sargobras | always available |
+| `.buddy path <way>` | which of the five pathfinding ways your buddies use | per player |
+| `.buddy army` | 64 stand-ins around you | test realms only (`Buddies.TestRealm`) |
+
+**Waiting for the next compile:**
+- the forward pass, `.buddy fight`, and its lean in the talent draw;
+- the module's loader, which registers it.
+
+Those changed after this build took its copy.
+
+**Left uncommitted on purpose:** two built files with changes I don't recognise
+as mine:
+- `buddies_kit.cpp`: death knights' buddies eat Black Mushrooms (issue 718f);
+- `buddies_town.cpp`: an errand rework in town visits.
+
+They look like another session's work, so I've left them for it.
+
+The status board is written to `docs/next-compile-status.md` (539 open issues).
 
 --------------------------------------------------------------------------------
 
