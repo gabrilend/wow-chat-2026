@@ -19,6 +19,13 @@ buddy features: "Use it like a player." So a bot is owed buddies at level
 
 ## Current Behavior
 
+**The clan's name, built 2026-10-31 (step 3, Lua only), not yet run in
+game:** a clanless bot asking Sargobras (620c) gets a name drawn at random
+from the bot module's name list, none a guild already holds, founded
+through the same guild command a spoken name uses, the next name tried
+while one fails (`sargobras.lua`, bot_name_clan). The rest below is
+unchanged.
+
 Not planned for, not tried. Because the buddy module treats any character
 that is neither a buddy nor a stand-in as an owner (620a), an alt bot or
 random bot that logs in is already queued as an owner by accident:

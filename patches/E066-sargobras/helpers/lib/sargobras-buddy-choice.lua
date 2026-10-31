@@ -104,14 +104,43 @@ function Choice.needed_role(slot, roster, owner_is_dk)
 end
 -- }}}
 
+-- {{{ function Choice.lacking_role
+-- The role a group lacks most, for a bot choosing its own buddy (620c,
+-- 2026-10-14: "the role its group lacks most, counted the same way the
+-- dungeon draw counts tank and healer"). A five-player group wants one
+-- tank, one healer and three damage (617c3); each role's shortfall is what
+-- it wants minus what the group has, and the largest shortfall wins. Each
+-- path:
+--   one role short the most       - that role
+--   several equally short         - one of them at random (rand(n) -> 1..n)
+--   none short (the group full)   - the least over-supplied, the same way
+-- have: { tank = n, healer = n, damage = n } (numbers, may be fractions;
+-- missing keys count as 0).
+local WANTED_ROLES = { { "tank", 1 }, { "healer", 1 }, { "damage", 3 } }
+function Choice.lacking_role(have, rand)
+    local best, top = nil, {}
+    for _, w in ipairs(WANTED_ROLES) do
+        local short = w[2] - (have[w[1]] or 0)
+        if not best or short > best then
+            best, top = short, { w[1] }
+        elseif short == best then
+            top[#top + 1] = w[1]
+        end
+    end
+    return top[rand(#top)]
+end
+-- }}}
+
 -- {{{ function Choice.resolve
 -- The buddy a pick makes.
 --   a.RC        race-class-data.lua        a.TD   buddy-talent-data.lua
 --   a.Spender   buddy-talent-spender.lua   a.rand function(n) -> 1..n
 --   a.team      "alliance"/"horde"         a.owner_is_dk  boolean
 --   a.slot      1..7                       a.roster  (see needed_role)
---   a.pick      { kind = "class" | "race", id }, { kind = "flexible" }, or
---               { kind = "any" } (ignored for a DK owner)
+--   a.pick      { kind = "class" | "race", id }, { kind = "flexible" },
+--               { kind = "role", role = "tank" | "healer" | "damage" }
+--               (a bot's own pick, 620c), or { kind = "any" } (ignored
+--               for a DK owner)
 --   a.kept_race a reset slot's race (617a7), or nil: the class must be one
 --               the race plays (no death knight), the race stays; a
 --               flexible pick draws among the race's classes
@@ -211,6 +240,31 @@ function Choice.resolve(a)
             if race_can(RC.races[rid], class) then fits[#fits + 1] = rid end
         end
         race = fits[rand(#fits)]
+
+    elseif a.pick and a.pick.kind == "role" then
+        -- a bot's own pick (620c): a role its group lacks. Any class of the
+        -- faction but the death knight that has a shape of that role, any
+        -- race of it that plays the class; the shape is then drawn with the
+        -- role asked for (below), so a role pick always gets a shape of it
+        local classes = {}
+        for _, rid in ipairs(team_races) do
+            for _, c in ipairs(RC.races[rid].classes) do
+                if c ~= DEATH_KNIGHT and a.TD.classes[c] and a.Spender.can_fill(a.TD.classes[c], a.pick.role) then
+                    classes[c] = true
+                end
+            end
+        end
+        local pool = {}
+        for c in pairs(classes) do pool[#pool + 1] = c end
+        table.sort(pool)
+        if #pool == 0 then return nil, "no " .. a.team .. " class has a shape of role " .. tostring(a.pick.role) end
+        class = pool[rand(#pool)]
+        local fits = {}
+        for _, rid in ipairs(team_races) do
+            if race_can(RC.races[rid], class) then fits[#fits + 1] = rid end
+        end
+        race = fits[rand(#fits)]
+        need = a.pick.role
 
     elseif a.pick and a.pick.kind == "flexible" then
         -- "I'm flexible." (owner, 2026-10-12: "it creates a totally random

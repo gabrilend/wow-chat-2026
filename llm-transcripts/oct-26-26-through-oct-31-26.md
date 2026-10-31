@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-31 16:03:03
+Generated on: 2026-10-31 16:15:41
 Models: claude-opus-5-5
 
 ## Contents
@@ -16705,6 +16705,184 @@ as mine:
 They look like another session's work, so I've left them for it.
 
 The status board is written to `docs/next-compile-status.md` (539 open issues).
+
+--------------------------------------------------------------------------------
+
+### User Request 162
+
+> - I seeded the record with yesterday's one clean start (131 s), so the next
+> limit is
+>     about 3 minutes and adjusts from there.
+
+silly computer. if the limit is 3 minutes, and we just timed out on a 5 minute
+timer, then why would you set the limit to 3 minutes? silly computer!
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 162
+
+> You're right. I seeded it with the wrong start: the 131-second one re-ran
+> nothing, while yesterday's failed start was re-running forty files. One of
+> them, the Outland tradeskills file, sat quiet for 118 seconds alone, and the
+> sockets file was still going after two minutes when the check stopped it. A
+> 3-minute limit could cut the next run short the same way.
+>
+> There's also a mismatch underneath. I averaged how long whole starts take, but
+> the limit measures the longest quiet stretch inside a start, so those are
+> different quantities. The fix:
+> - **Remove the seed**, so the next run keeps the old 5 minutes until real
+>   starts are recorded.
+> - **Record each start's longest quiet stretch** alongside its total, and set
+>   the limit from the average longest quiet stretch, plus 50%. A start
+>   re-running many slow files then teaches the check how long a single file can
+>   take.
+
+> Checking the averaging on a made-up history: two starts from the old
+> two-column format, which should be skipped, and five with their longest quiet.
+
+*[commit] 7578af020 in wow-chat-2026 - *
+
+You're right: I copied the old record into the new measure without checking it
+matched (7578af0).
+- **The seed is gone.** Your next `scripts/validate --profile basic` uses the
+  old 5 minutes, which is enough for the files still to re-run.
+- **What's learned now** is each start's longest quiet stretch, and the limit is
+  the average of the last five plus 50%. Before, it averaged whole starts, which
+  measure something else.
+
+One question before this settles. A clean start's longest quiet is about 20
+seconds, while a start re-running every file has quiet stretches of two minutes
+or more. Averaging the two kinds, a run of clean starts drags the limit down
+until the next re-run gets cut off, which is the same trap one step removed.
+Which should the limit follow?
+1. **The longest quiet of the last five starts, plus 50%.** It stays generous
+   after one heavy start.
+2. **Only starts that had files to re-run.** Clean starts would barely use the
+   limit anyway.
+3. **The average, as you said.** I'd keep it if you see a reason the dips don't
+   matter.
+
+My recommendation is 1, the simplest that can't trap itself. I'll switch it to
+whichever you pick.
+
+--------------------------------------------------------------------------------
+
+### User Request 163
+
+> - The seed is gone. Your next scripts/validate --profile basic uses the old 5
+> minutes,
+>     which is enough for the files still to re-run.
+
+girl are you being stupid on purpose? we want the limit, but starting it at 3
+minutes is silly. This isn't like you!
+
+ Which should the limit follow?
+
+um it should work as I plainly described. How does it work right now?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 163
+
+> Sorry, I overcomplicated it. Plainly, as it stands right now:
+> - **What the check times is quiet**, not the whole start. It stops the server
+>   when nothing new happens for too long: no new log line and no database file
+>   finishing.
+> - **How long "too long" is:** 1.5 × the average *longest quiet stretch* of
+>   the last five starts. With none recorded, 300 seconds.
+>
+> That isn't what you described. You said: time the start itself, and set its
+> limit from the average length of the last five starts, plus or minus 50%. I'll
+> make it do exactly that.
+>
+> On the starting value: it shouldn't be one start I picked by hand. The logs
+> from past builds record how long each start actually took, so I'll seed the
+> record from those. Finding them.
+
+> Today's basic build log has no start results yet. Checking whether a run is
+> under way right now before I change the check.
+
+While it runs, here's what I'll change once it finishes, exactly as you
+described:
+- **The limit times the whole start**, from launch until "World initialized". It
+  no longer times quiet stretches.
+- **Limit = the average of the last five starts' lengths + 50%.** A start under
+  half the average gets flagged.
+- **With nothing recorded**, 5 minutes, the old limit.
+- **The record is seeded from real starts in the logs:**
+  - basic's 131 s start from yesterday;
+  - today's start, once it finishes (it re-runs the remaining files, so it's a
+    heavy one).
+
+  Yesterday's failed start isn't usable as a length: it was cut off at 302 s
+  while still working, so its real length is unknown.
+
+--------------------------------------------------------------------------------
+
+### User Request 164
+
+okay sure fine whatever that's good enough.
+
+
+
+<pasted_content id="12ab">
+Listing area pieces from acore_world_basic...
+  2606 area pieces (only towns are baked)
+Compiling the baker...
+  baked 150 town pieces, 931585 walkable cells, into
+  /mnt/kaun/wow-chat-2026/data-files/buddy-towns/
+</pasted_content id="12ab">
+
+
+is there a reason we don't bake this once and then check to see if it changed
+before re-baking?
+
+also we're at this:
+
+
+
+<pasted_content id="12ab">
+Validating shadow worldserver...
+  Shadow: /mnt/kaun/wow-chat-2026/installed-files-shadow/bin/worldserver
+  Starting worldserver from shadow (validation run)...
+  Worldserver started (PID 16753)
+  (no starts recorded yet for basic: quiet allowed 300s)
+  Waiting for "World initialized" (until 300s pass with no new log line and no
+  update applied, 3600s at most)...
+</pasted_content id="12ab">
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 164
+
+> Checking how the town baker decides to run.
+
+> My editing script tripped on its own quotes, so nothing was changed. Rewriting
+> it with safer quoting.
+
+The bake change is written and waiting on that test.
+
+The server start is now 6 minutes in. It finished re-running every one of our
+database files at 16:11:20 and is loading the world. With yesterday's fix the
+check waits up to 5 more minutes of quiet after that, until about 16:16. A
+normal load takes about two minutes, so it should make it this time. I'll get a
+notice the moment the check ends.
+
+--------------------------------------------------------------------------------
+
+*[background task] Background command "Wait for today's start check to finish"
+completed (exit code 0)*
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 164 (continued)
+
+> That wait would have matched its own command line and never ended. Restarting
+> it with a pattern anchored to the compile's own process.
+
+I'll get a notice when the compile ends. Then I'll commit the forward pass,
+update the check script to time whole starts as agreed, and test the bake
+fingerprint.
 
 --------------------------------------------------------------------------------
 

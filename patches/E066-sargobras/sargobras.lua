@@ -143,6 +143,18 @@ local WALK_GIVE_UP_MS   = 15000     -- a seat he can't reach: sit where he is af
 local DEAL_BUDDY_ANGLE  = math.pi * 3 / 4   -- radians from the partner's facing: 45 degrees off straight back
 local DEAL_BUDDY_DIST   = 3         -- yards behind the partner, the first pair
 local DEAL_BUDDY_STEP   = 2         -- yards further out for each later pair
+-- a bot owner asking him (620c, owner 2026-10-14: "the bots, upon logging
+-- in or acquiring a Sargobras event, will wait ~15-30 seconds while they
+-- talk to Sargobras, and then they will automatically send a whisper")
+local BOT_ASK_AFTER_MS  = 5000      -- after he is summoned: time for him to walk up to his circle
+local BOT_ASK_RANGE     = 30        -- yards: a Sargobras this near is asked (a valley one, or its own wanderer)
+local BOT_TALK_MS       = { 15000, 30000 }  -- the talk before the choice
+local BOT_GESTURE_MS    = 4000      -- a talking gesture this often while it talks
+local BOT_NAME_TRIES    = 10        -- clan names tried in turn before giving up until the next ask
+local BOT_NAME_CHECK_MS = 2500      -- after the guild command, when the new clan is looked for
+local BOT_LISTEN_MS     = 2000      -- while listening at his fire: face him and sit this often
+local BOT_NEXT_ASK_MS   = 10000     -- after one tier's choice, the next owed tier's Sargobras is asked
+local EMOTE_ONESHOT_TALK = 1
 -- }}}
 
 -- {{{ game constants (3.3.5a)
@@ -788,6 +800,7 @@ end
 -- }}}
 
 local summon_wanderer                               -- defined below; a lost Sargobras is summoned anew
+local bot_ask                                       -- defined below (620c); a bot owner asks the one summoned for it
 
 -- {{{ local function follow_tick
 -- Once a second while he stands (owner, 2026-10-12; see 617b, "circles,
@@ -917,6 +930,10 @@ summon_wanderer = function(player)
                 new_circle(c, player)
                 walk_to_spot(c)
                 c:RegisterEvent(follow_tick, 1000, 0)
+                -- a bot owner goes and asks him once he has come up (620c)
+                if player:IsBot() then
+                    player:RegisterEvent(function(_, _, _, p) bot_ask(p) end, BOT_ASK_AFTER_MS, 1)
+                end
             end
         end
     end
@@ -1015,7 +1032,10 @@ local LANG_UNIVERSAL = 0
 -- utilized first."). A valley Sargobras serves the first owed slot, so he
 -- counts as the lowest; a wanderer's tier is the slot he serves. nil when
 -- none is present: then the character itself answers, by whisper.
-local function answering_sargobras(player)
+-- awake_only (a bot's ask, 620c): a wanderer already on break (his fire
+-- lit) is passed over, so his tier is not chosen twice; a player's whisper
+-- still reaches him there.
+local function answering_sargobras(player, awake_only)
     local owner, best, best_tier = player:GetGUIDLow(), nil, nil
     for _, entry in ipairs({ VALLEY, WANDERER, WANDERER_HATTED }) do
         for _, c in ipairs(player:GetCreaturesInRange(SIGHT, entry) or {}) do
@@ -1023,7 +1043,8 @@ local function answering_sargobras(player)
             local tier = (entry == VALLEY) and 0 or slot_of[low]
             -- a wanderer serves only his own owner; one with no known slot
             -- (left from before a reload) is passed over
-            if tier and (entry == VALLEY or owner_of[low] == owner) and (not best_tier or tier < best_tier) then
+            if tier and (entry == VALLEY or owner_of[low] == owner) and not (awake_only and fire_of[low])
+                and (not best_tier or tier < best_tier) then
                 best, best_tier = c, tier
             end
         end
@@ -1100,6 +1121,167 @@ end
 -- }}}
 -- }}}
 
+-- {{{ bots ask him (620c)
+-- An alt bot or random bot owed a buddy is an owner like any player (620b),
+-- but it never opens a menu, so it asks him itself: it faces the Sargobras
+-- present for it (the same one a whisper would reach: answering_sargobras),
+-- makes the talking gesture for 15 to 30 seconds, then makes its choice
+-- through the whisper's own door (whisper_pick), so he answers it aloud as
+-- he answers a player. The owner, 2026-10-30: "the bot always chooses for
+-- itself", and of his fire: "the bot listens".
+--
+-- The whisper itself is not sent: the character named Sargobras that a
+-- whisper goes to is not made yet (617b2, 630), so the bot steps through
+-- the door directly. Once he exists, the bot could whisper him instead;
+-- what it would say (a role, "tank") the reader doesn't take, and a
+-- player has no use for it, so the direct step stays.
+--
+-- A bot is told from a player by the engine's own test (IsBot); a buddy or
+-- stand-in is a bot too but owns no roster rows, so it is never owed and
+-- never asks.
+local bot_asking = {}           -- bot guid (low) -> true while a talk is under way
+
+-- {{{ local function group_roles
+-- The roles in the bot's group, for its choice: { tank, healer, damage }.
+-- Counted: the bot's own clan (its chosen and made buddies, from the
+-- roster, wherever they are), and every other owner's buddy in its group
+-- (by that buddy's roster role). Not counted: players and bots that are
+-- not buddies. The dungeon draw reads a player's role from its talent
+-- spec in the server (617c3), which a script can't ask; a player is
+-- uncounted rather than guessed.
+local ROLE_NAME = { [0] = "damage", [1] = "tank", [2] = "healer" }
+local function group_roles(player)
+    local have, owner = { tank = 0, healer = 0, damage = 0 }, player:GetGUIDLow()
+    for _, b in ipairs(clan_roster(owner)) do
+        local r = ROLE_NAME[b.role]
+        if r then have[r] = have[r] + 1 end
+    end
+    local g = player:GetGroup()
+    for _, m in ipairs(g and g:GetMembers() or {}) do
+        local q = CharDBQuery("SELECT role FROM buddy_roster WHERE buddy = " .. m:GetGUIDLow() .. " AND owner <> " .. owner)
+        local r = q and ROLE_NAME[q:GetUInt32(0)]
+        if r then have[r] = have[r] + 1 end
+    end
+    return have
+end
+-- }}}
+
+-- {{{ local function bot_name_clan
+-- A clanless bot's clan is named for it before its first choice (620b,
+-- owner 2026-10-30: "just give it a name from the same way we generate
+-- buddy-bot names"): names drawn at random from the bot module's name list
+-- (the list buddies are named from), none already a guild's, tried in turn
+-- through the same guild command a spoken name uses (found_clan) until
+-- one is made. done(p) runs once the bot is in its clan; when every name
+-- drawn fails, the error is logged and the bot asks again at its next
+-- Sargobras.
+local function bot_name_clan(player, creature, done)
+    local names = {}
+    local q = CharDBQuery("SELECT n.name FROM playerbots_names n LEFT JOIN guild g ON g.name = n.name "
+        .. "WHERE g.guildid IS NULL ORDER BY RAND() LIMIT " .. BOT_NAME_TRIES)
+    if q then repeat names[#names + 1] = q:GetString(0) until not q:NextRow() end
+    local i = 0
+    local function try_next(p)
+        if p:IsInGuild() then return done(p) end
+        i = i + 1
+        if not names[i] then
+            print(string.format("%sERROR: bot %s (%d): no clan name of %d drawn from playerbots_names was accepted; it asks again at its next Sargobras",
+                TAG, p:GetName(), p:GetGUIDLow(), #names))
+            bot_asking[p:GetGUIDLow()] = nil
+            return
+        end
+        found_clan(p, creature, names[i])
+        p:RegisterEvent(function(_, _, _, pp) try_next(pp) end, BOT_NAME_CHECK_MS + 500, 1)
+    end
+    try_next(player)
+end
+-- }}}
+
+-- {{{ local function bot_listen
+-- At his fire (a wanderer on break) the bot sits across the fire from him
+-- and faces him until he goes (owner, 2026-10-30: "the bot listens"). Its
+-- seat: on the circle round the fire, opposite his (his seat is swung by
+-- SIT_SWING off the line from the fire to where he stood). Each tick it
+-- faces him and sits again; it stops listening when he has gone, or when
+-- it is farther than his jokes carry (its master led it away: a bot's own
+-- following is not overruled here).
+local function bot_listen(player, creature, fx, fy, fz, after)
+    local him = creature:GetGUID()
+    local a   = math.atan2(creature:GetY() - fy, creature:GetX() - fx) + SIT_SWING + math.pi
+    local sx, sy = fx + math.cos(a) * SIT_RADIUS, fy + math.sin(a) * SIT_RADIUS
+    player:MoveTo(0, sx, sy, player:GetMap():GetHeight(sx, sy) or fz)
+    player:RegisterEvent(function(event_id, _, _, p)
+        local c = p:GetMap():GetWorldObject(him)
+        if not c or not owner_of[c:GetGUIDLow()] or p:GetDistance(c) > JOKE_RANGE then
+            p:RemoveEventById(event_id)                      -- he has gone, or the bot was led away
+            p:SetStandState(STAND_STATE_STAND)
+            return after(p)
+        end
+        if p:IsMoving() then return end
+        p:SetFacingToObject(c)
+        p:SetStandState(STAND_STATE_SIT)
+    end, BOT_LISTEN_MS, 0)
+end
+-- }}}
+
+-- {{{ function bot_ask
+-- One talk: the Sargobras present for the bot (answering_sargobras: its
+-- lowest-tier own wanderer, or a valley one), within BOT_ASK_RANGE. Each
+-- path:
+--   already talking, nothing owed, a death knight, none near
+--                         - nothing
+--   otherwise             - it faces him and gestures for 15 to 30 s; then
+--                           names its clan if it has none (bot_name_clan),
+--                           and picks the role its group lacks most
+--                           (Choice.lacking_role) through whisper_pick; a
+--                           wanderer goes on break, and the bot listens
+--                           (bot_listen); another owed tier's Sargobras is
+--                           asked BOT_NEXT_ASK_MS after the listening ends
+--                           (at once, after a valley Sargobras)
+-- A reset slot (617a7, its race kept) takes "I'm flexible": a role pick
+-- can't keep a race.
+bot_ask = function(player)
+    local low = player:GetGUIDLow()
+    if bot_asking[low] or player:GetClass() == CLASS_DEATH_KNIGHT or not owed_slot(low) then return end
+    local creature = answering_sargobras(player, true)
+    if not creature or player:GetDistance(creature) > BOT_ASK_RANGE then return end
+    bot_asking[low] = true
+    local him  = creature:GetGUID()
+    local talk = math.random(BOT_TALK_MS[1], BOT_TALK_MS[2])
+    local spent = 0
+    player:RegisterEvent(function(event_id, _, _, p)
+        local c = p:GetMap():GetWorldObject(him)
+        if not c then
+            bot_asking[p:GetGUIDLow()] = nil
+            return p:RemoveEventById(event_id)               -- he went meanwhile
+        end
+        spent = spent + BOT_GESTURE_MS
+        if spent < talk then
+            p:SetFacingToObject(c)
+            return p:PerformEmote(EMOTE_ONESHOT_TALK)
+        end
+        p:RemoveEventById(event_id)
+        bot_name_clan(p, c, function(pp)
+            local owner = pp:GetGUIDLow()
+            local slot  = serving_slot(owner, c)
+            local pick  = owed_race(owner, slot) ~= 0 and { kind = "flexible" }
+                or { kind = "role", role = Choice.lacking_role(group_roles(pp), math.random) }
+            local fx, fy, fz = pp:GetLocation()                -- his fire is lit under the chooser's feet
+            local on_break   = is_wanderer(c:GetEntry())
+            whisper_pick(pp, c, nil, pick)
+            bot_asking[owner] = nil
+            local function ask_next(p3) p3:RegisterEvent(function(_, _, _, p4) bot_ask(p4) end, BOT_NEXT_ASK_MS, 1) end
+            if on_break and fire_of[c:GetGUIDLow()] then
+                bot_listen(pp, c, fx, fy, fz, ask_next)      -- the next tier once his jokes are done
+            else
+                ask_next(pp)
+            end
+        end)
+    end, BOT_GESTURE_MS, 0)
+end
+-- }}}
+-- }}}
+
 -- {{{ player events
 -- {{{ local function join_clan_later
 -- A buddy that appears without being in its owner's clan joins it 5
@@ -1124,6 +1306,11 @@ local function on_login(event, player)
     give_death_knight_buddies(player, false)
     join_clan_later(player)
     summon_wanderer(player)
+    -- a bot owed its first buddy, logged in beside a valley Sargobras (620c);
+    -- a wanderer's bot asks once he is summoned (summon_wanderer)
+    if player:IsBot() then
+        player:RegisterEvent(function(_, _, _, p) bot_ask(p) end, BOT_ASK_AFTER_MS, 1)
+    end
 end
 
 local function on_level_change(event, player, old_level)
@@ -1148,6 +1335,7 @@ local function on_map_change(event, player)
 end
 
 local function on_logout(event, player)
+    bot_asking[player:GetGUIDLow()] = nil
     -- every tier's Sargobras leaves with the owner
     local mine = wanderer_of[player:GetGUIDLow()]
     if not mine then return end

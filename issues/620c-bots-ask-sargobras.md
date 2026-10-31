@@ -17,8 +17,49 @@ The owner, 2026-10-14: "making the playerbots interact with Sargobras
 
 ## Current Behavior
 
-Sargobras (`patches/E066-sargobras/sargobras.lua`) is driven entirely by dialogue
-(gossip) menus written in Lua, which the bot module never opens:
+**Built 2026-10-31, not yet run in game** (`patches/E066-sargobras/sargobras.lua`,
+"bots ask him"; the choice in `lib/buddy-choice.lua` and Sargobras's own
+copy, checked by `scripts/test-buddy-choice`, which also checks that the
+two copies match):
+
+- **Who asks:** a bot (the engine's own test) that is owed a buddy. Buddies
+  and stand-ins are bots too but own no roster rows, so never ask. Death
+  knights don't.
+- **When:** 5 seconds after its wanderer is summoned (login, a tenth level,
+  a loading screen), and 5 seconds after login for a bot beside a valley
+  Sargobras; the Sargobras asked is the one a whisper would reach (its
+  lowest-tier own wanderer not yet on break, or a valley one), within 30
+  yards.
+- **The talk:** it faces him and makes the talking gesture every 4 seconds
+  for 15 to 30 seconds. It does not walk up to him: the wanderer comes to
+  its circle round the bot by himself, and a bot's own following would
+  undo a walk.
+- **The clan** (620b): a clanless bot first gets a name drawn at random from
+  the bot module's name list (the list buddies are named from), skipping
+  any a guild already has, made through the same guild command as a spoken
+  name, the next name tried while one fails (up to 10; then an error is
+  logged and it tries again at its next Sargobras).
+- **The choice:** the role its group lacks most (one tank, one healer, three
+  damage wanted; the largest shortfall, ties at random), counting the bot's
+  own clan and other owners' buddies in its group by their roster role.
+  Players and non-buddy bots in the group are not counted: the dungeon
+  draw reads a player's role from its talent spec inside the server, which
+  a script can't ask. The pick is a new kind, "role": any class of the
+  faction with a shape of that role, a race that plays it, a shape of the
+  role. A reset slot (race kept) takes "I'm flexible" instead. The pick
+  goes through the whisper's own door (`whisper_pick`), so he answers
+  aloud as for a player; the whisper itself isn't sent, as the character
+  it goes to (617b2, 630) isn't made yet.
+- **The fire:** a wanderer goes on break as usual (the fire under the bot);
+  the bot walks to the seat across the fire from his, and every 2 seconds
+  faces him and sits, until he goes or the bot is led more than 30 yards
+  away (its master moving on; a bot's following is not overruled). Then
+  the next owed tier's Sargobras is asked 10 seconds later.
+
+Not done: the in-game test (step 4), and 617b's Current Behavior.
+
+Before this, Sargobras was driven entirely by dialogue (gossip) menus
+written in Lua, which the bot module never opens:
 
 - **The valley Sargobras** (creature 6170001) stands in every starting
   valley. A bot never talks to him.

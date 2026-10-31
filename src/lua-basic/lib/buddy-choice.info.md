@@ -16,9 +16,18 @@ The choices Sargobras offers: every race/class pair legal for `team`
 Whether the next buddy (at roster position `slot`) must fill a guaranteed
 role the roster doesn't have yet, or `nil` when any pick is fine.
 
+### `Choice.lacking_role(have, rand) -> "tank" | "healer" | "damage"`
+The role a group lacks most, for a bot choosing its own buddy (620c).
+`have` is a table `{ tank = number, healer = number, damage = number }`
+(missing keys count 0); a five-player group wants 1, 1 and 3, and the
+largest shortfall wins. `rand(n)` returns 1..n and breaks ties.
+
 ### `Choice.resolve(a) -> race, class`
 Turns one menu pick (and any random draw it implies) into the concrete
-race/class pair a buddy is created with.
+race/class pair a buddy is created with. A pick is a class, a race,
+"flexible", "any" (a death knight's buddies), or "role" with
+`role = "tank" | "healer" | "damage"` (a bot's own pick: a class with a
+shape of that role, and that shape).
 
 ## Where this fits
 
