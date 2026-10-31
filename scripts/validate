@@ -127,9 +127,35 @@ get_profile_paths() {
 # the start should wait while updates are still being applied and time out
 # only once it goes quiet: "yes". A hard limit (HARD_LIMIT) still ends a
 # start that keeps making progress and never finishes.
+#
+# Counted since 2026-10-31 as the updates finished since this start began,
+# new or re-applied: a file the updater runs again (its first line changed,
+# as when basic's module list gained area looting) rewrites its row instead
+# of adding one, so counting rows saw none of that work, and a start
+# re-applying forty files was stopped as silent with the work still going.
+#
+# How long quiet may last is learned (the owner, 2026-10-31: "this five
+# minute limit should be set based on the average of how long previous
+# starts have taken. It should count the last like, 5 starts, and average
+# them. Plus/minus 50%."): the average of the last five successful starts
+# of this profile (kept in build-shadow/.validate-starts-<profile>, one line
+# each: when, seconds), plus half of it. A start quicker than half the
+# average is said so (it may have skipped work it should have done). With no
+# starts recorded yet, 300 seconds, the earlier fixed limit.
 validate_shadow_worldserver() {
-    # seconds without progress; VALIDATE_MAX_TIMEOUT shortens it for scripts/test-validate-needs-world-up
-    local MAX_TIMEOUT=${VALIDATE_MAX_TIMEOUT:-300}
+    local STARTS="${DIR}/build-shadow/.validate-starts-${PROFILE}"
+    local AVERAGE=""
+    if [[ -f "${STARTS}" ]]; then
+        AVERAGE="$(tail -n 5 "${STARTS}" | awk '{ s += $2; n++ } END { if (n > 0) printf "%d", s / n }')"
+    fi
+    # seconds without progress: the average plus half (300 with no starts
+    # recorded); VALIDATE_MAX_TIMEOUT sets it outright for scripts/test-validate-needs-world-up
+    local LEARNED=300
+    [[ "${AVERAGE}" =~ ^[0-9]+$ && ${AVERAGE} -gt 0 ]] && LEARNED=$(( AVERAGE + (AVERAGE + 1) / 2 ))
+    local MAX_TIMEOUT=${VALIDATE_MAX_TIMEOUT:-${LEARNED}}
+    # when this start began: updates finished since then are its progress
+    local START_EPOCH
+    START_EPOCH="$(date +%s)"
     local HARD_LIMIT=${VALIDATE_HARD_LIMIT:-3600}   # seconds in all, progress or not
     local PROBE_EVERY=5                             # seconds between counts of applied updates
     # How many database updates are applied so far: one number, or nothing
@@ -146,7 +172,9 @@ validate_shadow_worldserver() {
             # no backquotes around the names: the command is run through eval,
             # inside double quotes, where a backquote would run a command
             # (the names are plain: letters, digits, underscores)
-            for s in ${SCHEMAS}; do SUM="${SUM:+${SUM} + }(SELECT COUNT(*) FROM ${s}.updates)"; done
+            # the updates finished since this start began, new or re-applied
+            # (\${START_EPOCH} is filled in each time the count is taken)
+            for s in ${SCHEMAS}; do SUM="${SUM:+${SUM} + }(SELECT COUNT(*) FROM ${s}.updates WHERE UNIX_TIMESTAMP(timestamp) >= \${START_EPOCH})"; done
             PROGRESS_CMD="${MYSQL_CALL} -e \"SELECT ${SUM}\" 2>&1 | grep -v 'Using a password'"
         else
             # a fallback: the start is then timed by its log alone, which can
@@ -198,6 +226,13 @@ validate_shadow_worldserver() {
     local WS_PID=$!
 
     echo "  Worldserver started (PID ${WS_PID})"
+    if [[ -n "${VALIDATE_MAX_TIMEOUT:-}" ]]; then
+        echo "  (the quiet limit set outright: ${MAX_TIMEOUT}s)"
+    elif [[ -n "${AVERAGE}" ]]; then
+        echo "  (the last starts took ${AVERAGE}s on average; quiet allowed: that plus half, ${MAX_TIMEOUT}s)"
+    else
+        echo "  (no starts recorded yet for ${PROFILE}: quiet allowed ${MAX_TIMEOUT}s)"
+    fi
     echo "  Waiting for \"World initialized\" (until ${MAX_TIMEOUT}s pass with no new log line and no update applied, ${HARD_LIMIT}s at most)..."
 
     # Smart detection variables
@@ -297,6 +332,15 @@ validate_shadow_worldserver() {
 
     if [[ "${success}" == "true" ]]; then
         echo "  Validation successful (${elapsed}s, ${unique_count} lines${applied_note})"
+        # this start, for the next one's limit; and a word when it was
+        # quicker than half the usual (the owner's "minus 50%")
+        if [[ -z "${VALIDATE_MAX_TIMEOUT:-}" ]]; then
+            mkdir -p "$(dirname "${STARTS}")"
+            echo "$(date +%Y-%m-%dT%H:%M:%S) ${elapsed}" >> "${STARTS}"
+            if [[ "${AVERAGE}" =~ ^[0-9]+$ && ${AVERAGE} -gt 0 && ${elapsed} -lt $(( AVERAGE / 2 )) ]]; then
+                echo "  NOTE: this start took ${elapsed}s, under half the usual ${AVERAGE}s: it may have skipped work it should have done (its log: ${VALIDATION_LOG})"
+            fi
+        fi
         return 0
     else
         if [[ ${elapsed} -ge ${HARD_LIMIT} ]]; then
