@@ -84,14 +84,16 @@ validation run, "World initialized", 131 seconds) **and committed:**
 `patches/E066-sargobras/sargobras.lua`,
 `patches/E042-basic-buddy-roster/04-buddy-roster.apply.sql` (617a7).
 
-**Still waiting** (changed after the build copied the module, or not in it):
+**Built by the owner's compile of 2026-10-31** (the build copied the
+module at 16:04; the worldserver came up in its validation run, 435
+seconds, re-applying our database files) **and committed:**
+`buddies_forward_pass.cpp`, the forward pass's lean in
+`buddies_talents.cpp`, `buddies_loader.cpp` (625, 625n); the command list
+and its generated reference and help (`.buddy path`, `.buddy army`,
+`.buddy wider`, `.buddy closer`, `.buddy weather`, `.buddy fight`; `.elite`
+taken out).
 
-| File | For |
-|------|-----|
-| `buddies_talents.cpp` | the talent draw (625), and the forward pass's lean in it (625n) |
-| `buddies_forward_pass.cpp` | the fight's forward pass in the server (625n) |
-| `buddies_loader.cpp` | registers the new scripts (the forward pass's registration came after the build) |
-| `config/custom-gm-commands.lua`, `docs/gm-commands.txt`, `docs/HTML/gm-commands.html`, `sql/*/34-custom-command-help.*.sql` | `.buddy path`, `.buddy army`, `.buddy wider`, `.buddy closer`, `.buddy weather` (built) and `.buddy fight` (not yet) described; `.elite` taken out |
+Nothing of this push is waiting now.
 
 ## Not built, and why
 

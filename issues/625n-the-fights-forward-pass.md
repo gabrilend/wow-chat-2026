@@ -11,8 +11,8 @@
   627 (the bots think only when something happens)
 - Priority: High
 - State: in progress (all six layers built and tested offline; the
-  server's side, the draw's hookup included, written and waiting for the
-  compile)
+  server's side, the draw's hookup included, built by the owner's compile
+  of 2026-10-31 and committed; not yet tried in game)
 
 ## Origin
 
@@ -123,9 +123,8 @@ nothing). Checked (21 checks in all): Bloodlust brings a minute's fight
 costs, and not when the tank is healed faster than hurt (20 seconds of
 earning for nothing).
 
-**The server's side, written 2026-10-30, waiting for the owner's
-compile** (compiler-checked on a RAM copy; not committed until it
-compiles): `buddies_forward_pass.cpp`, behind `Buddies.ForwardPass` (0
+**The server's side, written 2026-10-30, built by the owner's compile
+of 2026-10-31 and committed:** `buddies_forward_pass.cpp`, behind `Buddies.ForwardPass` (0
 off; `Buddies.ForwardPass.Threads`, default 2). Each hit (the damage-dealt
 hook, after absorbs; a plain attack read as physical, a spell or tick as
 magic, the hook giving the kind of damage but not its school) and each

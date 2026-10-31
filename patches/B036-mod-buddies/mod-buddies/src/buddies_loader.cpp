@@ -39,6 +39,14 @@ void AddSC_buddies_stand_ins();
 void AddSC_buddies_show();
 void AddSC_buddies_orders();
 void AddSC_buddies_follow();
+void AddSC_buddies_map_stream();
+void AddSC_buddies_path();
+void AddSC_buddies_army();
+void AddSC_buddies_talents();
+void AddSC_buddies_weather();
+void AddSC_buddies_sidestep();
+void AddSC_buddies_reset();
+void AddSC_buddies_forward_pass();
 
 // {{{ Addmod_buddiesScripts
 void Addmod_buddiesScripts()
@@ -74,5 +82,13 @@ void Addmod_buddiesScripts()
     AddSC_buddies_show();
     AddSC_buddies_orders();
     AddSC_buddies_follow();
+    AddSC_buddies_map_stream();
+    AddSC_buddies_path();
+    AddSC_buddies_army();
+    AddSC_buddies_talents();
+    AddSC_buddies_weather();
+    AddSC_buddies_sidestep();
+    AddSC_buddies_reset();
+    AddSC_buddies_forward_pass();
 }
 // }}}
