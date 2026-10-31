@@ -347,7 +347,15 @@ the owner's map), and anything for instances (617c3).
   portals; the owner, word for word): "route search. Same machinery."
   The buddy plans its way to the owner's dock by the same route search
   as crossing between maps (question 11 of 2026-10-28, above), with
-  walking, boats, zeppelins and portals all as ways.
+  walking, boats, zeppelins and portals all as ways. **Built 2026-10-30,
+  the walk-or-sail part, waiting for the compile** (syntax-checked;
+  `StopByLand` in `buddies_crossing.cpp`): a buddy at no stop of the
+  owner's ship first asks the walking mesh whether a complete walk
+  reaches the owner's pier; if not, it takes the stop of that ship on its
+  own map whose pier the shortest complete walk reaches, walks there and
+  sails (logged); with none reachable it is an error in the log and it
+  walks toward the dock as before (reported if it sticks). Portals and
+  teleports are not yet weighed against the walk within one map.
 - **Mage teleport first**: a mage buddy teleports whenever it can, even
   when its owner took a boat it could follow. Is that wanted, or should
   the owner's own means come first and the teleport only replace a summon

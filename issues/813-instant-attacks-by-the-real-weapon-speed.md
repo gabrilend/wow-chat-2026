@@ -7,7 +7,7 @@
   rule), 803 (monster accuracy level cap: another combat rule changed by
   a source patch)
 - Priority: Medium
-- State: planned; not built
+- State: built 2026-10-30 as a setting, off; waiting for the compile, then the owner names basic in C042 to turn it on
 
 ## Origin
 
@@ -16,6 +16,19 @@ fixed speed per weapon kind, the owner, word for word: "that seems dumb
 and wrong. We should use the actual weapon speed."
 
 ## Current Behavior
+
+**Built 2026-10-30, waiting for the compile:** source patch B064 adds the
+setting `Combat.InstantAttacks.RealWeaponSpeed` (0 by default: stock),
+named in `WorldConfig.h`, read in `WorldConfig.cpp` beside `Daze.Enabled`,
+documented in `worldserver.conf.dist`, and asked by the attack power
+multiplier for a weapon (`Unit::GetAPMultiplier`): when it is 1, a request
+for the fixed speed gets the real one. Its apply and revert were
+round-tripped on copies of the four files. Settings patch C042 sets it to
+1; its profiles line is "none" until the owner names basic there (built
+and on are separate decisions). Every profile built from source-beta
+carries the setting, off.
+
+What stock does (below) is unchanged until the setting is 1:
 
 Stock 3.3.5a, read in the server on 2026-10-30. A weapon attack's damage
 is the weapon's own roll plus attack power ÷ 14 × a speed in seconds.

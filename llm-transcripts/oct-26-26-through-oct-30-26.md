@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-30 16:30:32
+Generated on: 2026-10-30 16:36:31
 Models: claude-opus-5-5
 
 ## Contents
@@ -16579,6 +16579,45 @@ file and the two roaming-core files. The forward-pass file wasn't in this build
 at all. Those wait for the next compile.
 
 I'll pick this up when the background wait reports the validation result.
+
+--------------------------------------------------------------------------------
+
+*[background task] Background command "Wait for the new server's validation run,
+then show it" completed (exit code 0)*
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 160 (continued)
+
+> Two built files, the town and kit files, aren't in the ledger's table, though
+> the line tracker says they're mine. Checking what their changes are before
+> committing them.
+
+*[commit] 9a8c0f37e in wow-chat-2026 - Buddy module: the pieces the owner's compile built are committed*
+
+> Committed (9a8c0f3). The issues for those pieces still say "waiting for the
+> compile". Finding which ones.
+
+> Updating the issues whose pieces this compile built. Reading their status
+> lines first.
+
+> Those six issue files now differ from the last commit by only my lines (each
+> diff is just the change above), so claiming them is safe.
+
+> The issues commit didn't land. Retrying with its output visible.
+
+> Committed (4cbaddc). Tasks #8 and #9 were waiting for this compile and are now
+> built and committed, so I'm marking them done.
+
+> While the second validation runs: the project's rule is that at each compile I
+> show you the status board and ask which switches to turn on. Generating it.
+
+> The board is written: 539 open issues, 40 of them still marked as waiting for
+> a compile. Collecting the switches this compile built, from the ledger, to ask
+> which you want on.
+
+I'll give you the full status, with the switches, once the second validation run
+reports.
 
 --------------------------------------------------------------------------------
 

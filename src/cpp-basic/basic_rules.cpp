@@ -1034,6 +1034,31 @@ struct BasicDropRates
     uint32 rareRolls = 1;       // how many times a rare's loot is rolled
 };
 static BasicDropRates sBasicDrops;
+
+// The table of knobs by monster rank and item quality (issue 155z10; the
+// owner, 2026-10-22: "if rares get 2x the green drop rate and quantity,
+// then we should be able to turn a knob that would adjust it to 3x, or 2
+// rate and 3 quantity, just for greens, for that specific monster
+// type. We can store it in the config file."). Each cell two numbers,
+// read from worldserver.conf, 1 when unset (stock), on top of the rates
+// above:
+//   Basic.Drop.<Rank>.<Quality>.Rate      the chance each item drops, times this
+//   Basic.Drop.<Rank>.<Quality>.Quantity  how many tries it gets (an item with its
+//                                         own chance: 1 - (1 - p)^n; a one-quality
+//                                         table: processed n times)
+// Ranks: Normal, Elite, Rare, RareElite, Boss ("just rank. the loot tables
+// already handles monster type." 2026-10-30). Qualities: Poor, Common,
+// Uncommon, Rare, Epic, Legendary. Every kill counts, buddies' too
+// ("every kill."). Quantity as tries is the first form: the owner,
+// 2026-10-30, "for now, just treat it like 3x rolls, though the intended
+// behavior is that if a green drops, then instead 3x greens would drop".
+enum BasicDropRank : uint8 { DROP_RANK_NORMAL, DROP_RANK_ELITE, DROP_RANK_RARE, DROP_RANK_RARE_ELITE, DROP_RANK_BOSS, DROP_RANK_COUNT };
+static char const* const BASIC_DROP_RANK_NAME[DROP_RANK_COUNT] = { "Normal", "Elite", "Rare", "RareElite", "Boss" };
+static constexpr uint32 BASIC_DROP_QUALITIES = 6;   // Poor .. Legendary
+static char const* const BASIC_DROP_QUALITY_NAME[BASIC_DROP_QUALITIES] = { "Poor", "Common", "Uncommon", "Rare", "Epic", "Legendary" };
+struct BasicDropCell { float rate = 1.0f; uint32 quantity = 1; };
+static BasicDropCell sBasicDropTable[DROP_RANK_COUNT][BASIC_DROP_QUALITIES];
+
 static std::unordered_set<uint32> sBasicBossEntries;       // encounter-list credits
 static std::unordered_map<uint32, uint32> sBasicRefQuality; // one-quality reference tables -> quality
 static std::unordered_set<uint32> sBasicBandTables;        // bands creatures point at directly
@@ -1049,6 +1074,38 @@ static void LoadBasicDrops()
     sBasicRefQuality.clear();
     sBasicBandTables.clear();
 
+    // the rank-by-quality table (155z10): read first, whatever C040 says,
+    // since its own cells default to stock; a cell turned is logged
+    uint32 turned = 0;
+    for (uint32 r = 0; r < DROP_RANK_COUNT; ++r)
+        for (uint32 q = 0; q < BASIC_DROP_QUALITIES; ++q)
+        {
+            std::string key = std::string("Basic.Drop.") + BASIC_DROP_RANK_NAME[r] + "." + BASIC_DROP_QUALITY_NAME[q];
+            BasicDropCell& c = sBasicDropTable[r][q];
+            c.rate     = std::max(0.0f, sConfigMgr->GetOption<float>(key + ".Rate", 1.0f, false));
+            c.quantity = uint32(std::max(1, sConfigMgr->GetOption<int32>(key + ".Quantity", 1, false)));
+            if (c.rate != 1.0f || c.quantity != 1)
+            {
+                LOG_INFO("server.loading", ">> basic: drops from {} monsters, {} items: chance x{}, {} tries",
+                    BASIC_DROP_RANK_NAME[r], BASIC_DROP_QUALITY_NAME[q], c.rate, c.quantity);
+                ++turned;
+            }
+        }
+    // the bosses and the one-quality tables are wanted by the table too
+    if (QueryResult r = WorldDatabase.Query("SELECT DISTINCT creditEntry FROM instance_encounters WHERE creditType = 0"))
+        do sBasicBossEntries.insert(r->Fetch()[0].Get<uint32>()); while (r->NextRow());
+    if (QueryResult r = WorldDatabase.Query("SELECT r.Entry, MIN(i.Quality), MAX(i.Quality) FROM reference_loot_template r "
+                                            "JOIN item_template i ON i.entry = r.Item WHERE r.Reference = 0 GROUP BY r.Entry"))
+        do
+        {
+            Field* f = r->Fetch();
+            // only tables whose every item is one quality (a mixed table is a band, not a quality)
+            if (f[1].Get<uint32>() == f[2].Get<uint32>())
+                sBasicRefQuality[f[0].Get<uint32>()] = f[1].Get<uint32>();
+        } while (r->NextRow());
+    LOG_INFO("server.loading", ">> basic: drops by rank and quality: {} of {} cells turned from stock", turned,
+        uint32(DROP_RANK_COUNT) * BASIC_DROP_QUALITIES);
+
     std::string gb   = sConfigMgr->GetOption<std::string>("Basic.Drops.GreenBlueRate", "", false);
     std::string ep   = sConfigMgr->GetOption<std::string>("Basic.Drops.EpicRate", "", false);
     std::string rr   = sConfigMgr->GetOption<std::string>("Basic.Drops.RareRolls", "", false);
@@ -1062,17 +1119,6 @@ static void LoadBasicDrops()
     sBasicDrops.rareRolls = uint32(std::max(1, std::stoi(rr)));
     sBasicDrops.on        = true;
 
-    if (QueryResult r = WorldDatabase.Query("SELECT DISTINCT creditEntry FROM instance_encounters WHERE creditType = 0"))
-        do sBasicBossEntries.insert(r->Fetch()[0].Get<uint32>()); while (r->NextRow());
-    if (QueryResult r = WorldDatabase.Query("SELECT r.Entry, MIN(i.Quality), MAX(i.Quality) FROM reference_loot_template r "
-                                            "JOIN item_template i ON i.entry = r.Item WHERE r.Reference = 0 GROUP BY r.Entry"))
-        do
-        {
-            Field* f = r->Fetch();
-            // only tables whose every item is one quality (a mixed table is a band, not a quality)
-            if (f[1].Get<uint32>() == f[2].Get<uint32>())
-                sBasicRefQuality[f[0].Get<uint32>()] = f[1].Get<uint32>();
-        } while (r->NextRow());
     if (QueryResult r = WorldDatabase.Query("SELECT DISTINCT ABS(l.Reference) FROM creature_loot_template l WHERE l.Reference <> 0 "
                                             "AND ABS(l.Reference) IN (SELECT Entry FROM reference_loot_template WHERE Reference <> 0)"))
         do sBasicBandTables.insert(r->Fetch()[0].Get<uint32>()); while (r->NextRow());
@@ -1106,6 +1152,60 @@ static BasicDropKind BasicDropKindOf(Loot const& loot, LootStore const& store)
     if (t->rank == CREATURE_ELITE_RARE || t->rank == CREATURE_ELITE_RAREELITE)
         return BasicDropKind::Rare;
     return BasicDropKind::Ordinary;
+}
+// -- }}}
+
+// -- {{{ BasicDropRankOf
+// The table's rank of the monster whose own loot this is (155z10); false
+// for anything but a creature's own loot (a chest, skinning, an item's
+// contents). Each path:
+//   an encounter-list credit, a world boss, a boss by its type flag:  Boss
+//   rare, rare elite:                                                 Rare, RareElite
+//   elite:                                                            Elite
+//   anything else:                                                    Normal
+static bool BasicDropRankOf(Loot const& loot, LootStore const& store, BasicDropRank& rank)
+{
+    if (&store != &LootTemplates_Creature)
+        return false;
+    ObjectGuid source = loot.sourceWorldObjectGUID;
+    if (!source.IsCreature())
+        return false;
+    uint32 entry = source.GetEntry();
+    CreatureTemplate const* t = sObjectMgr->GetCreatureTemplate(entry);
+    if (!t)
+        return false;
+    if (sBasicBossEntries.count(entry) || t->rank == CREATURE_ELITE_WORLDBOSS || (t->type_flags & CREATURE_TYPE_FLAG_BOSS_MOB))
+        rank = DROP_RANK_BOSS;
+    else if (t->rank == CREATURE_ELITE_RARE)
+        rank = DROP_RANK_RARE;
+    else if (t->rank == CREATURE_ELITE_RAREELITE)
+        rank = DROP_RANK_RARE_ELITE;
+    else if (t->rank == CREATURE_ELITE_ELITE)
+        rank = DROP_RANK_ELITE;
+    else
+        rank = DROP_RANK_NORMAL;
+    return true;
+}
+// -- }}}
+
+// -- {{{ BasicDropQualityOf
+// An entry's quality: a one-quality table's, or a plain item's own; false
+// for a mixed table (a level band), which has none.
+static bool BasicDropQualityOf(LootStoreItem const* item, uint32& quality)
+{
+    if (item->reference)
+    {
+        auto q = sBasicRefQuality.find(uint32(std::abs(item->reference)));
+        if (q == sBasicRefQuality.end())
+            return false;
+        quality = q->second;
+        return quality < BASIC_DROP_QUALITIES;
+    }
+    ItemTemplate const* proto = sObjectMgr->GetItemTemplate(item->itemid);
+    if (!proto)
+        return false;
+    quality = proto->Quality;
+    return quality < BASIC_DROP_QUALITIES;
 }
 // -- }}}
 
@@ -1150,14 +1250,33 @@ public:
             float miss = std::pow(1.0f - chance / 100.0f, float(sBasicDrops.rareRolls));
             chance = 100.0f * (1.0f - miss);
         }
+
+        // the rank-by-quality table (155z10), on top: the rate times the
+        // chance, then the quantity as tries for a plain item with its own
+        // chance (a one-quality table's tries are in OnAfterRefCount; items
+        // sharing a group's chance equally are left as they are)
+        BasicDropRank rank;
+        uint32 quality;
+        if (BasicDropRankOf(loot, store, rank) && BasicDropQualityOf(item, quality))
+        {
+            BasicDropCell const& c = sBasicDropTable[rank][quality];
+            chance *= c.rate;
+            if (c.quantity > 1 && !item->reference && !item->groupid && chance > 0.0f && chance < 100.0f)
+                chance = 100.0f * (1.0f - std::pow(1.0f - chance / 100.0f, float(c.quantity)));
+        }
         return true;
     }
 
-    // A rare's level bands, processed once per roll of its loot.
+    // A rare's level bands, processed once per roll of its loot; and a
+    // one-quality table, as many times as the table's quantity says (155z10).
     void OnAfterRefCount(Player const* /*player*/, LootStoreItem* item, Loot& loot, bool /*canRate*/, uint16 /*lootMode*/, uint32& maxcount, LootStore const& store) override
     {
         if (BasicDropKindOf(loot, store) == BasicDropKind::Rare && sBasicBandTables.count(uint32(std::abs(item->reference))))
             maxcount *= sBasicDrops.rareRolls;
+        BasicDropRank rank;
+        uint32 quality;
+        if (BasicDropRankOf(loot, store, rank) && BasicDropQualityOf(item, quality))
+            maxcount *= sBasicDropTable[rank][quality].quantity;
     }
 };
 // -- }}}

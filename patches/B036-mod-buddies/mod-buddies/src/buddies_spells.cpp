@@ -167,11 +167,13 @@ uint32 BuddyTrainAtTrainer(Player* bot, Creature* npc)
 // Then, at capital cities and such, they can learn more."
 //
 // So: the kind of every weapon its kit hands it is learned, whatever the
-// count (BuddyLearnWeaponKind); then, when it is made, random kinds its
-// class and race can learn are added until it knows as many kinds as its
-// owner, at least one (BuddyFillWeaponKinds). What it starts with counts,
-// and it is never made to forget one. Learning more at weapon masters in
-// the capitals is planned (617n).
+// count (BuddyLearnWeaponKind); then, when it is made, one more random
+// kind its class and race can learn for each kind its owner learned at a
+// trainer (BuddyFillWeaponKinds; since 2026-10-30, the owner's starting
+// kinds no longer count, and what the buddy arrives with doesn't use up
+// the count); then every kind it knows at the most its level allows
+// (BuddyMaxWeaponSkills). It is never made to forget one. Learning more
+// at weapon masters, paid, as class lessons are, is planned (617n).
 //
 // Weapon masters teach these, and they are filed as profession trainers
 // in the world database (trainer type 2), so the class-trainer sweep below
@@ -225,27 +227,49 @@ static void FindWeaponLessons()
     });
 }
 
-static uint32 WeaponKindsKnown(Player const* p)
-{
-    uint32 n = 0;
-    for (uint32 skill : sWeaponKinds)
-        if (p->HasSkill(skill))
-            ++n;
-    return n;
-}
-
+// The weapon kinds the owner learned at a trainer: those it knows, less
+// those its race and class start with (the server's starting skills,
+// playercreateinfo_skills). Since 2026-10-30 a buddy gets one extra kind
+// for each of these, beyond the weapon it arrives with (the owner: "if you
+// have trained weapon skills from the trainer, for each one you've trained
+// (not which you started with) then they start with 1 extra, if their
+// class needs one extra."). Before, it was every kind the owner knew,
+// starting ones included, at least one, and what the buddy arrived with
+// counted toward it.
 uint32 BuddyWeaponAllowance(uint32 ownerGuid)
 {
     FindWeaponLessons();
-    uint32 n = 0;
+    std::set<uint32> known;
+    uint8 race = 0, cls = 0;
     if (Player* owner = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(ownerGuid)))
-        n = WeaponKindsKnown(owner);                   // online: what it knows this moment
-    else if (QueryResult rows = CharacterDatabase.Query("SELECT skill FROM character_skills WHERE guid = {}", ownerGuid))
-        do
-            if (sWeaponKinds.count((*rows)[0].Get<uint16>()))
-                ++n;
-        while (rows->NextRow());                       // offline: as last saved
-    return std::max<uint32>(n, 1);                     // the owner's minimum: one, the weapon it starts with
+    {
+        for (uint32 skill : sWeaponKinds)              // online: what it knows this moment
+            if (owner->HasSkill(skill))
+                known.insert(skill);
+        race = owner->getRace();
+        cls  = owner->getClass();
+    }
+    else
+    {
+        if (QueryResult rows = CharacterDatabase.Query("SELECT skill FROM character_skills WHERE guid = {}", ownerGuid))
+            do
+                if (sWeaponKinds.count((*rows)[0].Get<uint16>()))
+                    known.insert((*rows)[0].Get<uint16>());
+            while (rows->NextRow());                   // offline: as last saved
+        if (QueryResult who = CharacterDatabase.Query("SELECT race, class FROM characters WHERE guid = {}", ownerGuid))
+        {
+            race = (*who)[0].Get<uint8>();
+            cls  = (*who)[1].Get<uint8>();
+        }
+    }
+    // what its race and class start with is not trained
+    if (PlayerInfo const* info = sObjectMgr->GetPlayerInfo(race, cls))
+        for (PlayerCreateInfoSkill const& s : info->skills)
+            known.erase(s.SkillId);
+    else
+        LOG_ERROR("module", "mod-buddies: owner {} (race {}, class {}) has no starting-skill record; every weapon kind it "
+            "knows counts as trained", ownerGuid, race, cls);
+    return uint32(known.size());
 }
 
 // The lesson that teaches `skill` to this buddy, if any weapon master has one.
@@ -276,6 +300,10 @@ bool BuddyLearnWeaponKind(Player* bot, uint32 skill, std::string& why)
     return false;
 }
 
+// `allowance` extra kinds beyond what the buddy already knows (the weapon
+// it arrives with, taught by the kit), at random among those its class and
+// race can still learn: as many as its owner trained, or fewer when its
+// class has no more kinds to learn ("if their class needs one extra").
 uint32 BuddyFillWeaponKinds(Player* bot, uint32 allowance)
 {
     FindWeaponLessons();
@@ -288,8 +316,8 @@ uint32 BuddyFillWeaponKinds(Player* bot, uint32 allowance)
     uint32 learned = 0;
     for (uint32 skill : open)
     {
-        if (WeaponKindsKnown(bot) >= allowance)
-            break;                                     // as many as its owner: enough
+        if (learned >= allowance)
+            break;                                     // one for each the owner trained: enough
         std::string why;
         if (BuddyLearnWeaponKind(bot, skill, why))
             ++learned;
@@ -297,6 +325,28 @@ uint32 BuddyFillWeaponKinds(Player* bot, uint32 allowance)
             LOG_ERROR("module", "mod-buddies: buddy {} could not learn weapon kind {}: {}", bot->GetName(), skill, why);
     }
     return learned;
+}
+
+// Every weapon kind the buddy knows, at the most its level allows (the
+// owner, 2026-10-30: "they always have the weapon they show up with maxxed
+// for their level ... These extras should be maxxed for their level as
+// well."). Kinds learned later at weapon masters start low and are raised
+// by use, as a player's are. Returns how many were raised.
+uint32 BuddyMaxWeaponSkills(Player* bot)
+{
+    FindWeaponLessons();
+    uint32 raised = 0;
+    for (uint32 skill : sWeaponKinds)
+    {
+        if (!bot->HasSkill(skill))
+            continue;
+        uint16 most = bot->GetPureMaxSkillValue(skill);
+        if (bot->GetPureSkillValue(skill) >= most)
+            continue;                                  // at its level's most already
+        bot->SetSkill(uint16(skill), bot->GetSkillStep(uint16(skill)), most, most);
+        ++raised;
+    }
+    return raised;
 }
 // }}}
 

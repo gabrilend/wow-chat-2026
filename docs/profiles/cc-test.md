@@ -70,28 +70,30 @@ lowest priority first, each line its header's own (`scripts/plan-patches cc-test
 
 **Before the compile (source patches, taken off again once it is through):**
 
-| priority | id   | kind   | about                                                                                       |
-| -------: | ---- | ------ | ------------------------------------------------------------------------------------------- |
-|      120 | B002 | source | Add ALE OnLogin hook to playerbots bot login                                                |
-|      140 | B004 | source | Fix ~695 compiler warnings in upstream modules                                              |
-|      300 | B020 | source | Add LOCK_ALE to ALEEventProcessor::RemoveEvent                                              |
-|      320 | B022 | source | A --conf-dir option for the servers and dbimport, over the compiled-in module config folder |
-|      360 | B026 | source | Fix the bot-login Engine::Init crash (dangling strategy on duplicate add)                   |
-|      370 | B027 | source | Guard Engine::Init against a strategy with a stale/foreign bot facade                       |
-|      460 | B036 | source | Build the project's buddy module (mod-buddies) into the worldserver                         |
-|      470 | B037 | source | Playerbots: a switch for the group invite at a bot's login                                  |
-|      520 | B042 | source | A bot says "AI was reset to defaults" only when asked to reset                              |
-|      540 | B044 | source | Companion accounts: their characters are not in /who and can't be friended                  |
-|      550 | B045 | source | Playerbots: a bot on a companion account takes no chat commands                             |
-|      560 | B046 | source | Playerbots: buddies judge gear by their own talent plan and roll                            |
-|      570 | B047 | source | Creature outfits: a creature can look like a dressed player character                       |
-|      580 | B048 | source | Buddies don't whisper their owner about failed item moves                                   |
-|      600 | B050 | source | Playerbots: a buddy weighs spirit by what it heals                                          |
-|      620 | B052 | source | Playerbots: a buddy's long walk never ends in a teleport                                    |
-|      640 | B054 | source | The server accepts navigation tiles built by version 19 of the                              |
-|      660 | B056 | source | Bots see only as far as they act                                                            |
-|      670 | B057 | source | The most any view distance may be, as a setting                                             |
-|      680 | B058 | source | Bots trade with their own guild                                                             |
+| priority | id   | kind   | about                                                                                                      |
+| -------: | ---- | ------ | ---------------------------------------------------------------------------------------------------------- |
+|      120 | B002 | source | Add ALE OnLogin hook to playerbots bot login                                                               |
+|      140 | B004 | source | Fix ~695 compiler warnings in upstream modules                                                             |
+|      300 | B020 | source | Add LOCK_ALE to ALEEventProcessor::RemoveEvent                                                             |
+|      320 | B022 | source | A --conf-dir option for the servers and dbimport, over the compiled-in module config folder                |
+|      360 | B026 | source | Fix the bot-login Engine::Init crash (dangling strategy on duplicate add)                                  |
+|      370 | B027 | source | Guard Engine::Init against a strategy with a stale/foreign bot facade                                      |
+|      460 | B036 | source | Build the project's buddy module (mod-buddies) into the worldserver                                        |
+|      470 | B037 | source | Playerbots: a switch for the group invite at a bot's login                                                 |
+|      520 | B042 | source | A bot says "AI was reset to defaults" only when asked to reset                                             |
+|      540 | B044 | source | Companion accounts: their characters are not in /who and can't be friended                                 |
+|      550 | B045 | source | Playerbots: a bot on a companion account takes no chat commands                                            |
+|      560 | B046 | source | Playerbots: buddies judge gear by their own talent plan and roll                                           |
+|      570 | B047 | source | Creature outfits: a creature can look like a dressed player character                                      |
+|      580 | B048 | source | Buddies don't whisper their owner about failed item moves                                                  |
+|      600 | B050 | source | Playerbots: a buddy weighs spirit by what it heals                                                         |
+|      620 | B052 | source | Playerbots: a buddy's long walk never ends in a teleport                                                   |
+|      640 | B054 | source | The server accepts navigation tiles built by version 19 of the                                             |
+|      660 | B056 | source | Bots see only as far as they act                                                                           |
+|      670 | B057 | source | The most any view distance may be, as a setting                                                            |
+|      680 | B058 | source | Bots trade with their own guild                                                                            |
+|      740 | B064 | source | a setting: instant attacks count attack power at the real weapon speed (issue 813)                         |
+|      750 | B065 | source | Playerbots: buddies leave quest items on corpses and quest objects untouched, for their owner (issue 617j) |
 
 **After the compile and install (install steps and settings, mixed by priority):**
 

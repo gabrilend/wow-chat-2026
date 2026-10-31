@@ -48,6 +48,11 @@ a buddy is made (at any level):
   kinds left to learn, each also at the maximum for its level;
 - every other kind is learned later, paid for, at weapon masters, as
   class lessons are.
+Built 2026-10-30 in the source, waiting for the compile
+(`BuddyWeaponAllowance`, `BuddyFillWeaponKinds`, `BuddyMaxWeaponSkills` in
+`buddies_spells.cpp`, called by the kit): the owner's trained kinds are
+those it knows less its race and class's starting skills (the server's
+`playercreateinfo_skills`). Paid lessons at weapon masters are not built.
 (Before: random kinds up to the owner's whole count, starting ones
 included, at skill 1.)
 

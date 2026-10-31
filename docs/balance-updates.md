@@ -752,6 +752,32 @@ and to the edge search, which now stops where the ground climbs faster
 than that (`WALK_SLOPE_DEGREES`, `buddies_roam_ground.cpp`). A hill a
 walker can climb is still roamed. Not yet measured in game.
 
+## 2026-10-30 — a stuck travelling buddy is reported, not moved (617e4)
+
+| Knob | Value | Where |
+|---|---|---|
+| Long walks in a row that found no way, then reported stuck | 3 (was: then unstuck at once) | `FAILS_BEFORE_REPORT`, `buddies_town.cpp` (B036) |
+| How far an unstick may move it | removed (was 30 yards, 60 for a second in a row) | the travel step's `ReportStuck` |
+
+Why: the hop was a fallback that hid the fault. The owner, asked whether
+a stuck buddy should stay stuck and be reported loudly: "yeah. we'll
+sweep it up in the logs and work on it when we can." Each report is one
+`mod-buddies: STUCK` error line in the world server's log (where, going
+where, why). Takes effect at the next compile.
+
+## 2026-10-30 — shields trade their stamina (155z18)
+
+| Knob | Value | Where |
+|---|---|---|
+| Points of stamina for one of mana every 5 seconds (magic shields) | 2.5 | `STAMINA_PER_MP5`, `scripts/generate-basic-shield-stats-sql` |
+| Points of bonus armour for one of stamina (plain shields) | 10 | `ARMOUR_PER_STAMINA`, the same |
+| Points of spirit for one of stamina (holy shields) | 1 | the same (155k2's own trade) |
+
+Why: a first guess at the exchange; the issue's "stat budget" was never
+fixed (155k2 chose "less about budget"). Counts changed: run the
+generator, it prints them. Takes effect when E075 names basic and the
+install runs it.
+
 ## How to add an entry
 
 ```markdown

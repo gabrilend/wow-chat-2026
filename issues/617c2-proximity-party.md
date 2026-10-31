@@ -214,7 +214,14 @@ they are near and you don't have a full group."
   sharing range while questing, and split evenly (six make two groups
   of three, not five and one). Today's pass fills one far party to five
   before starting another, and merges two whenever they fit in five; to
-  be changed to the even split.
+  be changed to the even split. **The split's core built 2026-10-30**
+  (`roam/buddy_far_party_core.h`, plain arithmetic, checked by
+  `scripts/test-buddy-far-party`, 13 checks): buddies chained within reach
+  form a cluster; a cluster of m makes ceil(m / 5) groups as even as can
+  be (6: 3 and 3; 7: 4 and 3; 11: 4, 4, 3), each a slice of neighbours by
+  bearing round the cluster's middle; a slice not within reach throughout
+  (a chain's far ends) is halved again; the first member leads. Not yet
+  used by the party pass (`buddies_party.cpp`, another session's file).
 
 - (Answered 2026-09-27) The join distance: 60 ("let's do 60").
 - **Raid experience** (owner, 2026-09-27: "can we update it to give the

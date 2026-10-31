@@ -32,9 +32,11 @@
  * (buddies_beds.cpp; "proper beds. But we can manually place those"), no
  * sleeping where a town has none; fishing as a pastime where the town has
  * water ("They'll do at least 10 casts before moving on, up to 30"); a
- * buddy stuck on a long walk moved to a random spot within 30 yards, "like
- * the unstuck command", instead of to its destination; training paid from
- * the buddy's own money ("make them earn it": no gold cheat is given).
+ * buddy stuck on a long walk is reported loudly, never moved (until
+ * 2026-10-30 it was hopped to a random spot within 30 yards, "like the
+ * unstuck command"; removed as a fallback that hid the fault, 617e4);
+ * training paid from the buddy's own money ("make them earn it": no gold
+ * cheat is given).
  *
  * The errands are done here, not by the bot module's own sell / repair /
  * trainer actions: those report every step to the owner in a whisper
@@ -147,12 +149,13 @@ static constexpr uint32 FISH_MAX_CASTS      = 30;
 static constexpr uint32 FISH_GIVE_UP_MS     = 900000;  // a fishing visit ends by now whatever the count (15 min)
 static constexpr float  FISH_WATER_MIN      = 10.0f;   // the cast reaches water this far ...
 static constexpr float  FISH_WATER_MAX      = 20.0f;   // ... to this (the bot module's own fishing limits)
-static constexpr uint32 STUCK_MS            = 90000;   // no progress on a long walk for this long: unstuck
+static constexpr float  NEXT_ERRAND_FAR_CAP = 4.0f;    // the farthest errand is chosen only within this many times
+                                                       // the nearest's distance (the owner, 2026-10-30: "unless the
+                                                       // farthest is more than 4x the distance to the nearest")
+static constexpr uint32 STUCK_MS            = 90000;   // no progress on a long walk for this long: reported stuck
 static constexpr float  PROGRESS_YARDS      = 10.0f;   // what counts as progress toward the owner
-static constexpr float  UNSTUCK_YARDS       = 30.0f;   // "a random spot within 30 yards"
-static constexpr uint32 UNSTUCK_TRIES       = 12;      // random spots tried for walkable ground
 // 617e13 (2026-10-27, from the first measured walk; tuned in docs/balance-updates.md):
-static constexpr uint32 FAILS_BEFORE_UNSTUCK = 3;      // long walks in a row that found no way: unstuck at once
+static constexpr uint32 FAILS_BEFORE_REPORT = 3;       // long walks in a row that found no way: reported stuck at once
 static constexpr float  ARRIVE_RADIUS       = 5.0f;    // the arc a travelling buddy ends on, round its owner
 static constexpr float  ARRIVE_SPACING      = 4.0f;    // yards between neighbouring places on it
 static constexpr uint64 ARRIVE_CLAIM_MS     = 30000;   // a place not walked to again for this long is free
@@ -185,7 +188,7 @@ struct TownState
 {
     uint32                  mapId    = 0;
     uint32                  areaId   = 0;        // the town this state belongs to; another town starts afresh
-    std::vector<ErrandStop> todo;                // the errands still to run, in order
+    std::vector<ErrandStop> todo;                // the errands still to run (built in priority order, run ping-pong: NextErrandFirst)
     Doing                   doing    = Doing::Nothing;
     ObjectGuid              target;              // who or what the current pastime is about
     float                   spotX = 0, spotY = 0, spotZ = 0; // where to sleep; where it sat (for the seat groups)
@@ -211,7 +214,7 @@ struct TravelProgress
     float  nearest = 0.0f;
     uint64 since   = 0;
     uint32 fails   = 0;      // long walks in a row that found no way (617e13)
-    uint32 unstuck = 0;      // unsticks in a row without progress: each reaches farther
+    uint32 reports = 0;      // stuck reports in a row without progress (named in each report)
 };
 // {{{ the arrival arc (617e13)
 // Where a travelling buddy walks to: a place on an arc in front of its
@@ -231,6 +234,19 @@ struct ArriveClaim { uint32 place = 0; uint64 at = 0; float x = 0.0f, y = 0.0f; 
 static std::unordered_map<uint32, std::unordered_map<uint32, ArriveClaim>> sArrive;   // under sTownLock
 // }}}
 static std::unordered_map<uint32, TravelProgress> sTravel;   // under sTownLock
+// The same measure on the way to a crossing (a dock, a portal, a zeppelin
+// tower: 617e8), where the owner's distance says nothing: progress is
+// toward the crossing's own place. A place moved more than LEG_YARDS is a
+// new leg, measured afresh.
+struct CrossingProgress
+{
+    float  tx = 0.0f, ty = 0.0f;   // the place walked to (the crossing's step)
+    float  nearest = 0.0f;
+    uint64 since   = 0;
+    uint32 reports = 0;
+};
+static constexpr float LEG_YARDS = 5.0f;
+static std::unordered_map<uint32, CrossingProgress> sCrossTravel;   // under sTownLock
 static std::mutex sTownLock;
 static std::unordered_map<uint32, TownState> sTown;
 
@@ -1295,15 +1311,20 @@ static std::unordered_map<uint8, ErrandFn> const sErrands = {
 // area, and on walkable ground); arriving anywhere in the area ends the
 // trip. Runs, not walks: it is a journey, not a stroll.
 //
-// Getting unstuck (owner, 2026-09-27): "should teleport them to a random
-// spot within 30 yards, like the unstuck command." The bot module's long
-// walk (MoveFarTo) has its own recovery: after 90 seconds without real
-// progress it puts the bot at the destination. That is switched off here
-// by resetting its stuck clock before every step (the clock lives in the
-// bot's public "rpg" state), and this action keeps its own: no 10-yard gain
-// toward the owner in 90 seconds (the owner, 2026-09-27: "let's make it
-// 10"; it was 5), and the buddy is moved to a random
-// walkable spot within 30 yards of where it stands, then walks on.
+// Stuck: reported, never moved. The bot module's long walk (MoveFarTo) has
+// its own recovery: after 90 seconds without real progress it puts the bot
+// at the destination. That is switched off here by resetting its stuck
+// clock before every step (the clock lives in the bot's public "rpg"
+// state), and this action keeps its own measure: no 10-yard gain toward the
+// owner in 90 seconds (the owner, 2026-09-27: "let's make it 10"; it was
+// 5), or three long walks in a row that found no way. Either is logged as
+// an error naming where the buddy stands, where it was going and why
+// (ReportStuck), and the buddy stays and keeps trying. Until 2026-10-30 it
+// was then hopped to a random walkable spot within 30 yards (the owner,
+// 2026-09-27: "like the unstuck command"); removed as a fallback that hid
+// the fault (the owner, 2026-10-30, asked whether a stuck buddy should
+// stay stuck and be reported loudly: "yeah. we'll sweep it up in the logs
+// and work on it when we can."; 617e4).
 class BuddyTravelStepAction : public NewRpgBaseAction
 {
 public:
@@ -1368,9 +1389,50 @@ public:
                     /*generatePath*/ false, /*forceDestination*/ false);
                 return true;
             }
+            // the long walk to the crossing: no 10-yard gain toward its
+            // place in 90 seconds is reported stuck, as the walk to the
+            // owner is (the owner, 2026-10-30, on a stuck rule toward the
+            // dock: "this is a fallback, if buddies are getting stuck, we
+            // should find out why, and fix that error instead"; so it is
+            // reported, never moved, 617e8). Each path:
+            //   a new leg (the place moved more than LEG_YARDS): measured afresh
+            //   a 10-yard gain: the clock starts again
+            //   90 seconds without one: reported, and it keeps walking
+            if (move.mapId == bot->GetMapId())
+            {
+                uint32 guid = bot->GetGUID().GetCounter();
+                uint64 now  = Now();
+                float  dist = std::hypot(bot->GetPositionX() - move.x, bot->GetPositionY() - move.y);
+                uint32 times = 0;
+                {
+                    std::lock_guard<std::mutex> lock(sTownLock);
+                    CrossingProgress& c = sCrossTravel[guid];
+                    if (c.since == 0 || std::hypot(c.tx - move.x, c.ty - move.y) > LEG_YARDS)
+                        c = { move.x, move.y, dist, now, 0 };
+                    else if (dist + PROGRESS_YARDS < c.nearest)
+                    {
+                        c.nearest = dist;
+                        c.since   = now;
+                        c.reports = 0;
+                    }
+                    else if (now - c.since >= STUCK_MS)
+                    {
+                        c.nearest = dist;
+                        c.since   = now;
+                        times = ++c.reports;
+                    }
+                }
+                if (times)
+                    ReportStuck("the crossing (a dock, portal or tower) on its way to its owner", move.mapId, move.x, move.y, move.z,
+                        dist, "no 10-yard gain toward the crossing in 90 seconds", times);
+            }
             return MoveFarTo(WorldPosition(move.mapId, move.x, move.y, move.z));
         }
         BuddyCrossingForget(bot);                      // on the owner's map again: any crossing is over
+        {
+            std::lock_guard<std::mutex> lock(sTownLock);
+            sCrossTravel.erase(bot->GetGUID().GetCounter());
+        }
 
         // the stuck rule (see above): progress is the distance to the owner
         uint32 guid = bot->GetGUID().GetCounter();
@@ -1399,10 +1461,9 @@ public:
             uint32 times;
             {
                 std::lock_guard<std::mutex> lock(sTownLock);
-                times = ++sTravel[guid].unstuck;
+                times = ++sTravel[guid].reports;
             }
-            if (Unstick(UNSTUCK_YARDS * float(std::min<uint32>(times, 2))))
-                return true;
+            ReportStuck(owner, "no 10-yard gain toward its owner in 90 seconds", times);
         }
 
         // keep the bot module's own teleport-to-destination from firing
@@ -1429,10 +1490,11 @@ public:
             }
         }
         // A long walk that found no way (2026-10-27: Matis's, every step,
-        // from one spot): FAILS_BEFORE_UNSTUCK of them in a row and it is
-        // unstuck now, not after STUCK_MS of standing.
-        //   found a way: the count starts again
-        //   none, the third in a row: unstuck (farther the second time in a row)
+        // from one spot): FAILS_BEFORE_REPORT of them in a row and it is
+        // reported stuck now, not after STUCK_MS of standing.
+        //   found a way: the counts start again
+        //   none, the third in a row: reported (the count of reports in a
+        //     row named), and it tries again next step
         //   none, fewer: tried again next step
         uint32 fails, times;
         {
@@ -1440,20 +1502,17 @@ public:
             TravelProgress& p = sTravel[guid];
             p.fails = walking ? 0 : p.fails + 1;
             if (walking)
-                p.unstuck = 0;
+                p.reports = 0;
             fails = p.fails;
-            times = p.unstuck;
-            if (fails >= FAILS_BEFORE_UNSTUCK)
+            times = p.reports;
+            if (fails >= FAILS_BEFORE_REPORT)
             {
                 p.fails = 0;
-                times = ++p.unstuck;
+                times = ++p.reports;
             }
         }
-        if (!walking && fails >= FAILS_BEFORE_UNSTUCK)
-        {
-            BuddyTrace(bot, "travel: {} long walks in a row found no way to its owner; unstuck", FAILS_BEFORE_UNSTUCK);
-            return Unstick(UNSTUCK_YARDS * float(std::min<uint32>(times, 2)));
-        }
+        if (!walking && fails >= FAILS_BEFORE_REPORT)
+            ReportStuck(owner, "three long walks in a row found no way (to the owner's arc, nor along the owner's track)", times);
         return walking;
     }
 
@@ -1517,37 +1576,31 @@ public:
     // }}}
 
 private:
-    // A random walkable spot within `reach` (UNSTUCK_YARDS, twice that for a
-    // second unstick in a row, 617e13): ground found near the
-    // buddy's height, not under water, within sight of where it stands (so
-    // it isn't put through a wall into a closed room). Returns false, logged,
-    // when none of the tries fits; the walk then simply goes on.
-    bool Unstick(float reach = UNSTUCK_YARDS)
+    // {{{ ReportStuck
+    // A stuck buddy, said loudly where it can be swept up from the log
+    // (one line, "mod-buddies: STUCK", greppable): who, where it stands
+    // (map, zone, area, x y z), where it was going (its owner's area and
+    // place, and the distance left), why it counts as stuck, and how many
+    // reports in a row. Nothing moves it: the fault is the pathfinding's,
+    // mended from these lines (617o). The owner's hearthstone still
+    // rescues it by hand. Two forms: going to the owner, and going to any
+    // named place (the crossing's dock, portal or tower, 617e8).
+    void ReportStuck(Player* owner, char const* why, uint32 times)
     {
-        Map* map = bot->GetMap();
-        float bx = bot->GetPositionX(), by = bot->GetPositionY(), bz = bot->GetPositionZ();
-        for (uint32 attempt = 0; attempt < UNSTUCK_TRIES; ++attempt)
-        {
-            float angle = frand(0.0f, 2.0f * float(M_PI));
-            float d     = frand(5.0f, reach);
-            float x = bx + std::cos(angle) * d;
-            float y = by + std::sin(angle) * d;
-            float z = map->GetHeight(bot->GetPhaseMask(), x, y, bz + 10.0f, true, 30.0f);
-            if (z <= INVALID_HEIGHT || std::fabs(z - bz) > 15.0f)
-                continue;                              // no ground there, or another floor
-            if (map->IsInWater(bot->GetPhaseMask(), x, y, z, bot->GetCollisionHeight()))
-                continue;                              // not into a lake
-            if (!bot->IsWithinLOS(x, y, z + 1.0f))
-                continue;                              // not through a wall
-            LOG_INFO("module", "mod-buddies: buddy {} made no progress toward its owner for {} s; moved {:.0f} yards to walk on",
-                bot->GetName(), STUCK_MS / 1000, d);
-            bot->NearTeleportTo(x, y, z + 0.5f, angle);
-            return true;
-        }
-        LOG_WARN("module", "mod-buddies: buddy {} is stuck but none of {} spots within {:.0f} yards was walkable; it keeps trying",
-            bot->GetName(), UNSTUCK_TRIES, reach);
-        return false;
+        std::string goingTo = "its owner " + owner->GetName() + " in area " + std::to_string(owner->GetAreaId());
+        ReportStuck(goingTo.c_str(), owner->GetMapId(), owner->GetPositionX(), owner->GetPositionY(), owner->GetPositionZ(),
+            bot->GetExactDist(owner), why, times);
     }
+    void ReportStuck(char const* goingTo, uint32 mapId, float x, float y, float z, float left, char const* why, uint32 times)
+    {
+        LOG_ERROR("module", "mod-buddies: STUCK buddy {} on map {} zone {} area {} at ({:.1f}, {:.1f}, {:.1f}), going to {} "
+            "on map {} at ({:.1f}, {:.1f}, {:.1f}), {:.0f} yards left: {} (report {} in a row); it stays and keeps trying",
+            bot->GetName(), bot->GetMapId(), bot->GetZoneId(), bot->GetAreaId(),
+            bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(),
+            goingTo, mapId, x, y, z, left, why, times);
+        BuddyTrace(bot, "travel: STUCK, {} (report {} in a row)", why, times);
+    }
+    // }}}
 };
 // }}}
 
@@ -1637,7 +1690,10 @@ public:
                 return false;                              // a pause between pastimes: stand about
             }
             if (!s.todo.empty())
+            {
+                NextErrandFirst(s);
                 Begin(s, Doing::Errand, s.todo.front().npc, now);
+            }
             else
                 ChoosePastime(s, areaId, now);
         }
@@ -1694,6 +1750,49 @@ private:
             return;
         bot->HandleEmoteCommand(emote);
         s.nextEmote = now + urand(EMOTE_MIN_MS, EMOTE_MAX_MS);
+    }
+    // }}}
+
+    // {{{ NextErrandFirst
+    // Which errand next: the list is built in priority order (BuildTodo),
+    // but it is run ping-pong, not in that order (the owner, 2026-10-30:
+    // "the errands are chosen semi-randomly. so it won't be a circle,
+    // otherwise the buddy-bots will always choose the same tasks each time
+    // ... ping-pong between them", and "50% chance to pick the nearest on
+    // their todo list, 50% chance to pick the farthest. unless the farthest
+    // is more than 4x the distance to the nearest, then they do the
+    // nearest."). The chosen one is moved to the front, the rest kept in
+    // their order. Each path:
+    //   one errand or none: nothing to choose
+    //   the farthest more than 4 times as far as the nearest: the nearest
+    //   otherwise: a coin toss, the nearest or the farthest
+    // An errand whose NPC or mailbox can't be found counts as at 0 yards,
+    // so it comes first and RunErrand drops it at once.
+    void NextErrandFirst(TownState& s)
+    {
+        if (s.todo.size() < 2)
+            return;
+        size_t nearI = 0, farI = 0;
+        float  nearD = 1e30f, farD = -1.0f;
+        for (size_t i = 0; i < s.todo.size(); ++i)
+        {
+            float d = ErrandYards(s.todo[i]);
+            if (d < nearD) { nearD = d; nearI = i; }
+            if (d > farD)  { farD  = d; farI  = i; }
+        }
+        size_t pick = (farD > NEXT_ERRAND_FAR_CAP * nearD || urand(0, 1) == 0) ? nearI : farI;
+        std::rotate(s.todo.begin(), s.todo.begin() + pick, s.todo.begin() + pick + 1);
+    }
+    // yards from the buddy to an errand's NPC or mailbox; 0 when not found
+    float ErrandYards(ErrandStop const& e)
+    {
+        if (e.kind == Errand::Mail)
+        {
+            GameObject* box = ObjectAccessor::GetGameObject(*bot, e.npc);
+            return box ? bot->GetDistance(box) : 0.0f;
+        }
+        Creature* npc = ObjectAccessor::GetCreature(*bot, e.npc);
+        return npc ? bot->GetDistance(npc) : 0.0f;
     }
     // }}}
 

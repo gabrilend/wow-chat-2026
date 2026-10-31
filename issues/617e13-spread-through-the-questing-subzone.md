@@ -42,9 +42,16 @@ a second and walks each follower to its spot (moved onto the navigation
 mesh; with no mesh near, the track point it was measured from). It is
 the dungeon set's following in place of the bot module's "follow", and
 the "told to follow" set of step 5's orders, which are built (617y).
-Past five followers the owner's table says nothing; ours spreads them
-evenly across the 2 yards (an open question below). The mingle interval
-of 5 seconds is ours too.
+Past five followers they stand in layered arcs (built 2026-10-30 in the
+core, waiting for the compile; the owner's answer below): three in the
+front arc, two behind in its gaps, two behind them, the last size
+repeating for more, each arc 1.5 yards behind the one before
+(`ArcSpots` in `roam/buddy_follow_core.h`, the shared half-circle piece
+any caller can use; `Settings::layerSizes`, `layerStep`); checked by
+`scripts/test-buddy-follow-core` (51 checks, 7 new: the table kept up to
+five, 3-2-2 for seven, the gaps, repeating, all behind, no two closer
+than 0.9 yards). Before, they spread evenly across the 2 yards, a third
+of a yard apart for seven. The mingle interval of 5 seconds is ours.
 
 The roaming core runs in game (617e2) and is checked against its Lua
 model offline (`scripts/test-buddy-roam-core`), but there is no

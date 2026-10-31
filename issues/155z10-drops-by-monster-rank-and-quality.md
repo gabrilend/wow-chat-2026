@@ -7,7 +7,7 @@
 - Related: 155z8 (rares on the common clock), 718e (the west path out of
   the Enclave through Tyr's Hand: "extra rewards")
 - Priority: Medium
-- State: planned; open questions first
+- State: built 2026-10-30 (basic_rules.cpp and C044), waiting for the compile; no knob turned yet
 
 ## Origin
 
@@ -22,7 +22,20 @@ Verbatim, 2026-10-22:
 
 ## Current Behavior
 
-There is no such knob in the stock server. What exists:
+**Built 2026-10-30, waiting for the compile** (syntax-checked with the
+build's own flags): basic's rules (`src/cpp-basic/basic_rules.cpp`) read a
+table of knobs, `Basic.Drop.<Rank>.<Quality>.Rate` and `.Quantity`, for
+ranks Normal, Elite, Rare, RareElite, Boss and qualities Poor to
+Legendary, each 1 when unset, on top of C040's rates. On each item rolled
+from a monster's own loot, its chance is multiplied by the cell's rate;
+a plain item with its own chance gets the quantity as tries
+(1 - (1 - p)^n); a one-quality table is processed that many times. Items
+sharing a group's chance equally are left as they are. The knobs are the
+lines of `C044_CELLS` in config patch C044 (basic), none turned yet, so
+nothing changes. Quantity as tries is the first form; the same-quality
+copies the owner intends are not built.
+
+Before it, there was no such knob in the stock server. What exists:
 
 - **By quality, for every monster alike** (worldserver.conf, all 1 on
   basic): `Rate.Drop.Item.Poor`, `.Normal`, `.Uncommon` (greens), `.Rare`

@@ -297,8 +297,27 @@ static uint32 GiveGear(Player* buddy, uint8 shape, bool firstMaking, std::string
 // {{{ GiveMeals
 // The best food (health regeneration) and, for mana users, the best drink
 // (mana regeneration) a vendor sells that the buddy can use at its level.
-static void GiveMeals(Player* buddy, std::string& problems)
+//
+// A death knight's buddies eat what a new death knight carries instead of
+// that food (the owner, 2026-10-30, issue 718f: "they should just... start
+// with the gray mushrooms that DKs always start with, instead of the
+// fruitcake."): Black Mushroom, which every death knight outfit in the
+// server's starting outfit file (CharStartOutfit.dbc) lists. Their drink,
+// for mana users, is the vendor's as for anyone. The owner's class is read
+// from the characters database (the owner may be offline). Each path:
+//   a death knight's buddy: MEALS Black Mushrooms, the vendor's drink
+//   any other buddy, or a stand-in (no owner): the vendor's food and drink
+static constexpr uint32 BLACK_MUSHROOM = 41751;  // level 55 food; every death knight starting outfit lists it
+static bool OwnerIsDeathKnight(uint32 ownerGuid)
 {
+    if (!ownerGuid)
+        return false;                                   // a stand-in: nobody's buddy
+    QueryResult r = CharacterDatabase.Query("SELECT class FROM characters WHERE guid = {}", ownerGuid);
+    return r && (*r)[0].Get<uint8>() == CLASS_DEATH_KNIGHT;
+}
+static void GiveMeals(Player* buddy, uint32 ownerGuid, std::string& problems)
+{
+    bool deathKnights = OwnerIsDeathKnight(ownerGuid);
     QueryResult rows = WorldDatabase.Query(
         "SELECT DISTINCT it.entry, it.RequiredLevel, it.ItemLevel FROM item_template it JOIN npc_vendor v ON v.item = it.entry "
         "WHERE it.class = 0 AND it.subclass = 5 AND it.RequiredLevel <= {} "
@@ -320,6 +339,8 @@ static void GiveMeals(Player* buddy, std::string& problems)
             if (wantDrink && !drink && spell->HasAura(SPELL_AURA_MOD_POWER_REGEN))
                 drink = entry;
         } while ((!food || (wantDrink && !drink)) && rows->NextRow());
+    if (deathKnights)
+        food = BLACK_MUSHROOM;                          // in place of the vendor's food (718f)
     if (!food)
         problems += "no food found at vendors for its level; ";
     else if (!buddy->StoreNewItemInBestSlots(food, MEALS))
@@ -559,11 +580,14 @@ std::string BuddyGiveStartingKit(Player* buddy, uint32 ownerGuid, uint8 shape)
     GiveBags(buddy, ownerGuid, problems);               // bags first, so the meals have room
     uint32 worn = GiveGear(buddy, shape, true, problems);
     GiveClassTools(buddy, problems);                     // totems, poisons, ammunition: after the gear (the ammo fits the ranged weapon)
-    // then a random weapon kind for each its owner knows (617n); a
-    // stand-in (made with ownerGuid 0) is nobody's buddy and learns none
+    // then one more random weapon kind for each its owner trained (617n,
+    // 2026-10-30); a stand-in (made with ownerGuid 0) is nobody's buddy and
+    // learns none. Then every kind it knows (the one it arrives with, and
+    // these) at the most its level allows ("maxxed for their level").
     if (ownerGuid)
         BuddyFillWeaponKinds(buddy, BuddyWeaponAllowance(ownerGuid));
-    GiveMeals(buddy, problems);
+    BuddyMaxWeaponSkills(buddy);
+    GiveMeals(buddy, ownerGuid, problems);
     if (buddy->GetLevel() > 1)
         buddy->ModifyMoney(int32(buddy->GetLevel()) * 100);   // level x 1 silver
     // a level-1 buddy wears its stock starting outfit by design (GiveGear);

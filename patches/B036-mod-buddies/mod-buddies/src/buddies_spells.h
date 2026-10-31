@@ -32,10 +32,11 @@ class Player;
 uint32 BuddyTrainAtTrainer(Player* bot, Creature* trainer);
 // }}}
 
-// {{{ weapon kinds, as many as the owner's
-// How many weapon kinds (Axes, Staves, Guns ...) a buddy of this owner may
-// know: as many as the owner knows now (online) or as last saved, at
-// least 1. The owner's rule, 2026-10-15.
+// {{{ weapon kinds: the one it arrives with, one more per kind its owner trained
+// How many extra weapon kinds (Axes, Staves, Guns ...) a new buddy of this
+// owner gets: one for each kind the owner learned at a trainer, not those
+// its race and class start with; now (online) or as last saved. The
+// owner's rule, 2026-10-30 (617n).
 uint32 BuddyWeaponAllowance(uint32 ownerGuid);
 // Teaches the buddy a weapon kind (a skill line) from a weapon master's
 // lessons, free, if it lacks it: a weapon its kit hands it is always
@@ -44,9 +45,13 @@ uint32 BuddyWeaponAllowance(uint32 ownerGuid);
 // `why` filled when no weapon master teaches it to its class and race.
 // Safe before the buddy is in the world.
 bool BuddyLearnWeaponKind(Player* bot, uint32 skill, std::string& why);
-// When a buddy is made: random kinds its class and race can learn, until
-// it knows `allowance` (BuddyWeaponAllowance). Returns how many learned.
+// When a buddy is made: `allowance` (BuddyWeaponAllowance) more kinds, at
+// random among those its class and race can still learn (fewer when it
+// runs out). Returns how many learned.
 uint32 BuddyFillWeaponKinds(Player* bot, uint32 allowance);
+// Every weapon kind the buddy knows raised to the most its level allows
+// ("maxxed for their level", 2026-10-30). Returns how many were raised.
+uint32 BuddyMaxWeaponSkills(Player* bot);
 // }}}
 
 // {{{ BuddyLearnEverything

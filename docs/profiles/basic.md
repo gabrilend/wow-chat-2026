@@ -149,44 +149,47 @@ lowest priority first, each line its header's own (`scripts/plan-patches basic`)
 |      710 | B061 | source | a guild leader's character may be deleted: every basic player leads its buddies' clan                                  |
 |      720 | B062 | source | coins alone on a body are any member's of the group it fell to (issue 155z17)                                          |
 |      730 | B063 | source | a whisper to Sargobras crosses the faction line; every other whisper still doesn't (issue 617b2)                       |
+|      740 | B064 | source | a setting: instant attacks count attack power at the real weapon speed (issue 813)                                     |
+|      750 | B065 | source | Playerbots: buddies leave quest items on corpses and quest objects untouched, for their owner (issue 617j)             |
 
 **After the compile and install (install steps and settings, mixed by priority):**
 
-| priority | id    | kind     | about                                                                                        |
-| -------: | ----- | -------- | -------------------------------------------------------------------------------------------- |
-|     1010 | E001  | install  | Create symlinks from install dir to the profile-specific Lua source                          |
-|     1040 | E004  | install  | Create RAM-backed log directory symlink                                                      |
-|     1060 | E006  | install  | Initialize config files (.dist -> .conf) and apply profile-specific values                   |
-|     1100 | C001  | settings | Database Connections                                                                         |
-|     1105 | C002  | settings | Directory Paths                                                                              |
-|     1110 | C003  | settings | Run Speed 85% (named for its first value, 80%)                                               |
-|     1115 | C004  | settings | Fall Damage 10x                                                                              |
-|     1140 | C006d | settings | Max Level 60 (Basic)                                                                         |
-|     1150 | C007b | settings | Starting Level 1 (Beta/Release/Basic)                                                        |
-|     1160 | C008  | settings | GM Login State                                                                               |
-|     1170 | C010  | settings | Network Ports                                                                                |
-|     1175 | C011  | settings | Realmlist Setup                                                                              |
-|     1195 | C016  | settings | Missing server config keys                                                                   |
-|     1200 | C017  | settings | Level-correlated caps                                                                        |
-|     1210 | C019  | settings | RealmID per profile                                                                          |
-|     1220 | C021  | settings | SOAP Loopback Console (remote command channel for local scripts)                             |
-|     1230 | C023  | settings | Basic: No Random Bots                                                                        |
-|     1235 | C024  | settings | Basic Death Knight Rules (interim, until issue 718)                                          |
-|     1240 | C025  | settings | Client cache version follows the profile's content (issue 160)                               |
-|     1245 | C026  | settings | Basic: No Dual Spec                                                                          |
-|     1250 | C027  | settings | Basic: Buddies Spend Their Own Talents                                                       |
-|     1255 | C028  | settings | Basic: Honor Without a Cap                                                                   |
-|     1260 | C029  | settings | Basic: Buddies Keep Their Own Parties                                                        |
-|     1265 | C030  | settings | Basic: No Group Invite at a Buddy's Login                                                    |
-|     1270 | C031  | settings | Basic: No World Channels (General, Trade, the Defense channels, LFG, Guild Recruitment)      |
-|     1275 | C032  | settings | Preserve Custom Channels (so a script can tell one channel from another)                     |
-|     1285 | C034  | settings | No Faster Healing Below Level 15, on Every Server                                            |
-|     1305 | C038  | settings | No Quest Sparkles, Object Quest Marks or Map Points                                          |
-|     1310 | C039  | settings | Instances and Battlegrounds: See as Far as the Server Allows                                 |
-|     1315 | C040  | settings | Basic: richer monster drops (greens and blues x2, epics x5, rares' loot rolled twice)        |
-|     1320 | C041  | settings | Basic: per-character player settings on (for hidden shoulders)                               |
-|     1790 | E049  | install  | Every town's exploring grid baked ahead of time (issue 617o3), so buddies                    |
-|     1960 | E066  | install  | Sargobras, his own patch: his script and his own copies of what it loads, placed per profile |
+| priority | id    | kind     | about                                                                                          |
+| -------: | ----- | -------- | ---------------------------------------------------------------------------------------------- |
+|     1010 | E001  | install  | Create symlinks from install dir to the profile-specific Lua source                            |
+|     1040 | E004  | install  | Create RAM-backed log directory symlink                                                        |
+|     1060 | E006  | install  | Initialize config files (.dist -> .conf) and apply profile-specific values                     |
+|     1100 | C001  | settings | Database Connections                                                                           |
+|     1105 | C002  | settings | Directory Paths                                                                                |
+|     1110 | C003  | settings | Run Speed 85% (named for its first value, 80%)                                                 |
+|     1115 | C004  | settings | Fall Damage 10x                                                                                |
+|     1140 | C006d | settings | Max Level 60 (Basic)                                                                           |
+|     1150 | C007b | settings | Starting Level 1 (Beta/Release/Basic)                                                          |
+|     1160 | C008  | settings | GM Login State                                                                                 |
+|     1170 | C010  | settings | Network Ports                                                                                  |
+|     1175 | C011  | settings | Realmlist Setup                                                                                |
+|     1195 | C016  | settings | Missing server config keys                                                                     |
+|     1200 | C017  | settings | Level-correlated caps                                                                          |
+|     1210 | C019  | settings | RealmID per profile                                                                            |
+|     1220 | C021  | settings | SOAP Loopback Console (remote command channel for local scripts)                               |
+|     1230 | C023  | settings | Basic: No Random Bots                                                                          |
+|     1235 | C024  | settings | Basic Death Knight Rules (interim, until issue 718)                                            |
+|     1240 | C025  | settings | Client cache version follows the profile's content (issue 160)                                 |
+|     1245 | C026  | settings | Basic: No Dual Spec                                                                            |
+|     1250 | C027  | settings | Basic: Buddies Spend Their Own Talents                                                         |
+|     1255 | C028  | settings | Basic: Honor Without a Cap                                                                     |
+|     1260 | C029  | settings | Basic: Buddies Keep Their Own Parties                                                          |
+|     1265 | C030  | settings | Basic: No Group Invite at a Buddy's Login                                                      |
+|     1270 | C031  | settings | Basic: No World Channels (General, Trade, the Defense channels, LFG, Guild Recruitment)        |
+|     1275 | C032  | settings | Preserve Custom Channels (so a script can tell one channel from another)                       |
+|     1285 | C034  | settings | No Faster Healing Below Level 15, on Every Server                                              |
+|     1305 | C038  | settings | No Quest Sparkles, Object Quest Marks or Map Points                                            |
+|     1310 | C039  | settings | Instances and Battlegrounds: See as Far as the Server Allows                                   |
+|     1315 | C040  | settings | Basic: richer monster drops (greens and blues x2, epics x5, rares' loot rolled twice)          |
+|     1316 | C044  | settings | Basic: the drop table's knobs by monster rank and item quality (issue 155z10; none turned yet) |
+|     1320 | C041  | settings | Basic: per-character player settings on (for hidden shoulders)                                 |
+|     1790 | E049  | install  | Every town's exploring grid baked ahead of time (issue 617o3), so buddies                      |
+|     1960 | E066  | install  | Sargobras, his own patch: his script and his own copies of what it loads, placed per profile   |
 
 **After the databases are brought to upstream's state (our SQL):**
 

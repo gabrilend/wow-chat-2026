@@ -96,6 +96,7 @@ lowest priority first, each line its header's own (`scripts/plan-patches vanilla
 |      370 | B027 | source | Guard Engine::Init against a strategy with a stale/foreign bot facade                       |
 |      660 | B056 | source | Bots see only as far as they act                                                            |
 |      670 | B057 | source | The most any view distance may be, as a setting                                             |
+|      740 | B064 | source | a setting: instant attacks count attack power at the real weapon speed (issue 813)          |
 
 **After the compile and install (install steps and settings, mixed by priority):**
 

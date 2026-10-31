@@ -105,7 +105,12 @@ bind-on-pickup" flag).
   buddy-bots to take them. They should leave them on corpses and leave
   the nodes behind."). A buddy loots nothing a quest asks for: quest
   items stay on the corpse, and quest objects (the nodes and things a
-  quest has players click) are left untouched, for the owner.
+  quest has players click) are left untouched, for the owner. Built
+  2026-10-30 as source patch B065 (in the bot module's looting, for
+  companion accounts only), waiting for the compile; round-tripped and
+  syntax-checked: an item of the quest class, bound as a quest item, or
+  starting a quest is refused; an object with the game's "on condition"
+  flag (how quest objects are marked) is never opened.
 - **Full bags** (the owner, 2026-10-30, word for word: "if a buddy-bot is
   full inventory but not selling, they should still loot the bodies but
   leave the items behind. If they need to need/greed an upgrade item
