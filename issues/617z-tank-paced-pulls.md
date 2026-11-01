@@ -34,7 +34,25 @@ Answer, 2026-10-12 (verbatim), on whether a healer buddy may say it too:
 
 ## Current Behavior
 
-Nothing paces a dungeon but the player. Inside a dungeon each buddy follows
+**The pace's decision core, built 2026-10-31** (`roam/buddy_pace_core.h`,
+plain arithmetic, checked by `scripts/test-buddy-pace`, 24 checks, a quick
+test; step 6): a pack weighs its normals plus three per elite, 10% more
+per level above the group; the tank remembers its last five fights (the
+healer's mana spent and the pack's weight) and expects a pack to cost the
+record's mana per weight times its weight; it pulls when the healer's
+mana less that cost keeps a reserve that grows as its confidence falls
+(up to 40% for a fully nervous tank). Confidence starts at 0.9; "wait",
+"slow down", "go slower" take 0.3 off (never below 0.1) and it regains
+0.05 a minute back to 0.9; a healer's "oom", "out of mana" or "mana"
+stops it until "ready"; a fight the healer came out of above the reserve
+adds 0.05 (the owner's "go faster" by pulling more). It clears 10 to 30
+yards either side of its route by confidence. Every number is the
+agent's call, to be judged in game. Not built: the route to the next boss
+(the dungeon's boss order and its forks), hearing the words in group
+chat, the walk ahead and the pull, a healer buddy's own "slow down", and
+picking up what a player pulls.
+
+Before: nothing paced a dungeon but the player. Inside a dungeon each buddy follows
 its owner (the bot module's own following), and when the owner comes
 within a little more than a monster's notice range, the owner's buddies
 not yet fighting go at the nearest hostile monster the owner can see
@@ -102,6 +120,11 @@ what "could hurt" means and what happens to the harmless ones instead).
 7. In game: Ragefire Chasm with Birth healing (617t2's scene).
 
 ## Open Questions
+
+
+
+
+
 
 1. (Answered 2026-10-12: a player or a healer buddy, whispered to the
    tank.) When the player is the healer (Birth is a shaman), does the
