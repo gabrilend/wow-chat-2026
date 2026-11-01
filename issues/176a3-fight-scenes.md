@@ -156,3 +156,9 @@ live viewer come after.
    places again each round (always) and the stand-ins themselves (with
    `redraw`) what you meant, or should something else be drawn again (the
    stand-ins' talents and gear, the monster)?
+   **Answered 2026-10-31:** "I mean, ability choices and such. We're trying
+   to attach non-linearities to their combat mechanics, and if it played
+   out the same way everytime, then we aren't building it correctly." The
+   choices are drawn (the forward pass's leans through the talent draw's
+   random factor), and the frames checker points out a stand-in whose
+   rounds all cast alike.
