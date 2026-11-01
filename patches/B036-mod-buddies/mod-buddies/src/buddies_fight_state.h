@@ -62,7 +62,7 @@ namespace BuddyFightState
         double health = 0, maxHealth = 0, resource = 0, maxResource = 0;
         uint8_t resourceKind = 0, role = 0, cls = 0;
         double armour = 0; int level = 1;
-        uint8_t healPoints = 0; double baseMana = 0;
+        uint8_t healPoints = 0, talentPoints = 0; double baseMana = 0;   // talentPoints: all it has spent
         double x = 0, y = 0, z = 0;
         uint32_t casting = 0; double castLeft = 0;
         std::vector<Cooldown> cooldowns;
@@ -199,6 +199,22 @@ namespace BuddyFightState
         // while it was measured (taken as open through the look back), so
         // the steady rate is the measured one over it and the windows are
         // counted once, where they still run
+        // Each member's mana (or other resource), one reading per snapshot,
+        // the last minute kept: how fast it is falling (the fight-length
+        // guess's straight-line fit, over `look` seconds); 0 when not falling.
+        void SampleResource(uint64_t id, double t, double value)
+        {
+            auto& d = _resources[id];
+            d.push_back({ t, value });
+            while (!d.empty() && d.front().t < t - _window) d.pop_front();
+        }
+        double ResourceFalling(uint64_t id, double now, double look = 10.0) const
+        {
+            auto it = _resources.find(id);
+            if (it == _resources.end()) return 0.0;
+            std::vector<BuddyFight::Sample> s(it->second.begin(), it->second.end());
+            return BuddyFight::RateOf(s, now, look);
+        }
         BuddyFight::Guess FightLeft(double now, double enemiesHealth, std::vector<BuddyPlan::Window> const& bursts, double look = 10.0, double measuredUnder = 1.0) const
         {
             std::vector<BuddyFight::Sample> s(_samples.begin(), _samples.end());
@@ -230,6 +246,7 @@ namespace BuddyFightState
         double _window, _first = 0.0;
         std::deque<Event> _events;
         std::deque<BuddyFight::Sample> _samples;
+        std::unordered_map<uint64_t, std::deque<BuddyFight::Sample>> _resources;
         std::unordered_map<uint64_t, Sums> _sums;
     };
     // }}}

@@ -16,7 +16,7 @@
  *   E t kind from to spell amount physical          an event (buddies_fight_state.h)
  *   S t                                             a snapshot begins at time t
  *   W start length factor                           a window open
- *   M id owner health most resource most kind role cls armour level x y z casting castLeft healPoints baseMana
+ *   M id owner health most resource most kind role cls armour level x y z casting castLeft healPoints talentPoints baseMana
  *                                                   a member; its C and K lines follow it
  *   C spell name readyIn                            one of its long abilities
  *   K spell secondsLeft stacks by n {aura amount misc period} x n
@@ -76,7 +76,7 @@ namespace BuddyFightReplay
         {
             o << "M " << m.id << ' ' << m.owner << ' ' << m.health << ' ' << m.maxHealth << ' ' << m.resource << ' ' << m.maxResource << ' '
               << int(m.resourceKind) << ' ' << int(m.role) << ' ' << int(m.cls) << ' ' << m.armour << ' ' << m.level << ' '
-              << m.x << ' ' << m.y << ' ' << m.z << ' ' << m.casting << ' ' << m.castLeft << ' ' << int(m.healPoints) << ' ' << m.baseMana << '\n';
+              << m.x << ' ' << m.y << ' ' << m.z << ' ' << m.casting << ' ' << m.castLeft << ' ' << int(m.healPoints) << ' ' << int(m.talentPoints) << ' ' << m.baseMana << '\n';
             for (Cooldown const& c : m.cooldowns) o << "C " << c.spell << ' ' << Under(c.name) << ' ' << c.readyIn << '\n';
             marks(m.marks);
         }
@@ -130,10 +130,10 @@ namespace BuddyFightReplay
             }
             else if (what == 'M')
             {
-                Member m; int kind = 0, role = 0, cls = 0, healPoints = 0;
+                Member m; int kind = 0, role = 0, cls = 0, healPoints = 0, talentPoints = 0;
                 if (!(l >> m.id >> m.owner >> m.health >> m.maxHealth >> m.resource >> m.maxResource >> kind >> role >> cls >> m.armour >> m.level
-                        >> m.x >> m.y >> m.z >> m.casting >> m.castLeft >> healPoints >> m.baseMana)) return fail("a member short of its fields");
-                m.healPoints = uint8_t(healPoints);
+                        >> m.x >> m.y >> m.z >> m.casting >> m.castLeft >> healPoints >> talentPoints >> m.baseMana)) return fail("a member short of its fields");
+                m.healPoints = uint8_t(healPoints); m.talentPoints = uint8_t(talentPoints);
                 m.resourceKind = uint8_t(kind); m.role = uint8_t(role); m.cls = uint8_t(cls);
                 cur.snapshot.party.push_back(std::move(m));
                 lastMarks = &cur.snapshot.party.back().marks;
@@ -208,6 +208,7 @@ namespace BuddyFightReplay
             for (Enemy const& e : st.snapshot.enemies) health += e.health;
             memory.Forget(st.snapshot.t);
             memory.Sample(st.snapshot.t, health);
+            for (Member const& m : st.snapshot.party) memory.SampleResource(m.id, st.snapshot.t, m.resource);
             each(st, memory);
         }
     }

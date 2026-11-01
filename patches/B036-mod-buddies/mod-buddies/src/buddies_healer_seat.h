@@ -31,6 +31,7 @@
 #include "buddies_fight_state.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <cstring>
 
@@ -78,26 +79,47 @@ namespace BuddySeat
     }
     // }}}
 
-    // {{{ Seat
-    // Who holds the seat and whether it is out of mana:
-    //   holder  a member's index (-1: no one able)
-    //   oom     the holder, out of mana, recovering (it holds the seat
-    //           still, so it can say "ready"; the others help meanwhile)
-    struct Seat { int holder = -1; bool oom = false; };
+    // {{{ HealerShare
+    // How much of a healer a member is (the owner, 2026-10-31: "we can count
+    // 1/3rd specs as 1/3rd of a healer, off-specs (2/3rd and 1/3rd with
+    // 1/3rd being healing talents) as 1/3rd of a healer, and full specs and
+    // main specs (2/3rd healing talents 1/3rd non healing tree) as 1 whole
+    // healer"): the share of its talent points in healing trees, to the
+    // nearest third: two thirds or all, 1; a third, 1/3; none, 0. With no
+    // points spent yet (a low level), a healer by role counts 1.
+    inline double HealerShare(Member const& m)
+    {
+        if (m.talentPoints == 0) return m.role == 2 ? 1.0 : 0.0;
+        double thirds = std::round(3.0 * m.healPoints / m.talentPoints);
+        return thirds >= 2.0 ? 1.0 : thirds >= 1.0 ? 1.0 / 3.0 : 0.0;
+    }
+    // }}}
 
-    // whether a member can heal at all: points in a healing tree, alive
-    inline bool CanHeal(Member const& m) { return m.healPoints > 0 && m.health > 0; }
+    // {{{ Seats
+    // The party's healer seats:
+    //   want     how much healing the party keeps: its healers' shares when
+    //            the fight began (the owner: "we should have as many healers
+    //            as we had when the fight started")
+    //   holders  who heals now (members' indexes)
+    //   dry      members out of mana, recovering (they stop casting heals
+    //            until ready again, and may hold a seat again then)
+    //   short_   the seats couldn't be filled back to `want`: everyone able
+    //            to heal leans in
+    struct Seats { double want = -1; std::vector<int> holders, dry; bool short_ = false; };
 
-    // whether it is out of mana: less than its cheapest heal
+    // whether a member can heal at all: points in a healing tree (or a
+    // healer by role before any points), alive
+    inline bool CanHeal(Member const& m) { return (m.healPoints > 0 || (m.talentPoints == 0 && m.role == 2)) && m.health > 0; }
+
+    // out of mana: less than its cheapest heal costs
     inline bool Oom(Member const& m)
     {
         Heal h = CheapestHeal(m.cls, m.baseMana);
         return m.resourceKind == 0 && h.cost > 0 && m.resource < h.cost;
     }
 
-    // the mana that makes it ready again: its own healing for the rest of
-    // the fight, at its cheapest heal's health a mana; full at most, one
-    // heal's worth at least
+    // ready again (out of the dry ones): its mana covers its own healing for
+    // the rest of the fight, at its cheapest heal's health a mana, or full
     inline double ReadyAt(Member const& m, double healingPerSecond, double left)
     {
         Heal h = CheapestHeal(m.cls, m.baseMana);
@@ -106,32 +128,57 @@ namespace BuddySeat
         return std::min(m.maxResource, std::max(h.cost, need));
     }
 
-    // The seat now, from the last (`was`): the party's healer (role 2) that
-    // is alive keeps it, oom or not, and is oom until ready again; with none
-    // alive, the member able to heal with the most mana takes it until the
-    // fight ends. `left`: the fight's time left (the forward pass's).
-    inline Seat Now(Snapshot const& s, Memory const& memory, Seat was, double left)
+    inline bool Has(std::vector<int> const& v, int i) { return std::find(v.begin(), v.end(), i) != v.end(); }
+
+    // The seats now, from the last (`was`, want -1 at a fight's start). A
+    // holder keeps its seat until it runs out of mana or dies (the owner:
+    // "we should only update this role when the current healer runs out of
+    // mana or dies"); then members able to heal, not dry, whole healers
+    // before thirds and the most mana among equals, are seated until the
+    // shares are back to what the fight began with.
+    // Members are indexed as in the snapshot (the party's order is the
+    // server's, the same from step to step within a fight).
+    inline Seats Now(Snapshot const& s, Memory const& memory, Seats was, double left)
     {
-        Seat seat;
-        // the healer by role, alive (the most mana among several)
-        for (size_t i = 0; i < s.party.size(); ++i)
+        Seats seats;
+        seats.want = was.want;
+        if (seats.want < 0)
         {
-            Member const& m = s.party[i];
-            if (m.role == 2 && m.health > 0 && (seat.holder < 0 || m.resource > s.party[seat.holder].resource)) seat.holder = int(i);
+            // the fight's start: the healers by role, and what they come to
+            seats.want = 0;
+            for (size_t i = 0; i < s.party.size(); ++i)
+                if (s.party[i].role == 2 && s.party[i].health > 0) { seats.holders.push_back(int(i)); seats.want += HealerShare(s.party[i]); }
         }
-        // none: the one able to heal with the most mana
-        if (seat.holder < 0)
+        else
+            for (int i : was.holders)
+                if (i >= 0 && size_t(i) < s.party.size() && s.party[i].health > 0) seats.holders.push_back(i);
+        // the dry stay dry until ready; a holder newly out of mana joins them
+        for (int i : was.dry)
+            if (i >= 0 && size_t(i) < s.party.size() && s.party[i].health > 0 &&
+                s.party[i].resource < ReadyAt(s.party[i], memory.HealingPerSecond(s.party[i].id, s.t), left)) seats.dry.push_back(i);
+        for (auto it = seats.holders.begin(); it != seats.holders.end(); )
+            if (Oom(s.party[*it])) { seats.dry.push_back(*it); it = seats.holders.erase(it); }
+            else ++it;
+        // filled back to what the fight began with
+        auto have = [&]() { double h = 0; for (int i : seats.holders) h += HealerShare(s.party[i]); return h; };
+        while (have() + 1e-9 < seats.want)
+        {
+            int best = -1;
             for (size_t i = 0; i < s.party.size(); ++i)
             {
                 Member const& m = s.party[i];
-                if (CanHeal(m) && (seat.holder < 0 || m.resource > s.party[seat.holder].resource)) seat.holder = int(i);
+                if (!CanHeal(m) || HealerShare(m) <= 0 || Has(seats.holders, int(i)) || Has(seats.dry, int(i)) || Oom(m)) continue;
+                // whole healers before thirds (a third seated first would
+                // leave the party short while a whole healer stood by), then
+                // the most mana among equal shares
+                double share = HealerShare(m), bestShare = best < 0 ? -1 : HealerShare(s.party[best]);
+                if (best < 0 || share > bestShare + 1e-9 ||
+                    (std::fabs(share - bestShare) <= 1e-9 && m.resource > s.party[best].resource)) best = int(i);
             }
-        if (seat.holder < 0) return seat;
-        Member const& h = s.party[seat.holder];
-        bool stillOom = was.oom && was.holder == seat.holder;
-        if (stillOom) seat.oom = h.resource < ReadyAt(h, memory.HealingPerSecond(h.id, s.t), left);
-        else seat.oom = Oom(h);
-        return seat;
+            if (best < 0) { seats.short_ = true; break; }
+            seats.holders.push_back(best);
+        }
+        return seats;
     }
     // }}}
 }

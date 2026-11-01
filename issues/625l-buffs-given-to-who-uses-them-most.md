@@ -48,6 +48,17 @@ And, the same day:
 On preferring a member whose worth just jumped: "this is an alternative.
 Use whichever feels best."
 
+On Innervate's worth (2026-10-31, word for word):
+
+> well, the dps of the (potential) targets is known, alongside their hps.
+> so, we should know roughly who would most empower us to defeat the
+> target and emerge victorious. Remember, we're combining curves to
+> coalesce toward a solution that provides the results we want (victory)
+> and avoids defeats and losses. I am picturing many different composite
+> curves that are multiplied together or whatever, with a final "output
+> curve" that shows how the fight will progress. Each bot only has the
+> current status, they don't know other bot's behavior plans.
+
 ## Current Behavior
 
 **Built 2026-10-31** (the choosing committed and tested; the casting,
@@ -57,17 +68,29 @@ compile), through the forward pass (625n):
   member it gives most to: its own aura effects (cast haste for those who
   cast with mana, attack haste for the rest, damage for all) on the
   member's share of the party's damage (Power Infusion on the mage, not
-  the rogue who deals more); Innervate on the healer's seat while it is out
-  of mana (625i), leaning in at 2, a starting value standing in for the
-  mana turned into healing.
+  the rogue who deals more).
+- **Innervate, by what its mana becomes** (the owner's composite curves):
+  its mana is the game's own (225% of the druid's base mana over its
+  length). For each member with mana whose mana is falling and will run
+  out before the fight's end (its mana over the last ten seconds), the
+  mana buys it more seconds of its own work: up to the mana over how fast
+  it falls, no more than the time from running out to the fight's end.
+  Those seconds are turned into damage and health by what that member has
+  been doing (its healing a second, capped by what the party is short of,
+  and its damage a second, as a share of the fight's pace), and Innervate
+  goes to whoever it turns into the most, leaning in by that share.
+  A member whose mana lasts the fight gets none; no one is asked when all
+  of them last. Each buddy reads only the party's state now, not the
+  others' plans.
 - **When**: when its lean, the share of the gap it closes, is above 1.
 - **Cast**: by the buddy itself on its own update, through the bot
   module's own cast (so its checks and bookkeeping hold: in reach, ready,
   free to cast), at most once a second; the bot module's own cast of that
   buff leans away (0.05), so it isn't cast twice or on someone else.
 Checked: the forward pass test names the mage for Power Infusion and no
-one for Bloodlust; the seat test names the dry priest for Innervate, and
-no one while the seat is fine.
+one for Bloodlust; the seat test names the priest whose mana runs out ten
+seconds into the last minute for Innervate, and no one when its mana
+lasts the fight.
 
 Not yet: the short list made on joining (every member is looked at each
 step, which the half-second step makes cheap enough); a player's saved

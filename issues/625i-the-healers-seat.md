@@ -7,7 +7,7 @@
 - Related: 625c (every tree's list: a hybrid's minor tree), 625h (the
   resource economy), 617z (tank-paced pulls: the healer's "oom" signals)
 - Priority: Medium
-- State: in progress (the seat built; mana-regaining fighting not yet)
+- State: in progress (the seats built; mana-regaining fighting not yet)
 
 ## Origin
 
@@ -25,46 +25,78 @@ dying, word for word:
 > help supplement, especially if they know an instant or easy spell like
 > rejuvenation or renew or similar.
 
+And 2026-10-31, word for word, on the seat as first built:
+
+> but we should only update this role when the current healer runs out of
+> mana or dies. Also, for raids, we should have as many healers as we had
+> when the fight started - we can count 1/3rd specs as 1/3rd of a healer,
+> off-specs (2/3rd and 1/3rd with 1/3rd being healing talents) as 1/3rd of
+> a healer, and full specs and main specs (2/3rd healing talents 1/3rd non
+> healing tree) as 1 whole healer.
+
 ## Current Behavior
 
-**Built 2026-10-31** (the arithmetic committed and tested; the server's
-side written and compiler-checked, waiting for the owner's compile):
+**Built 2026-10-31** (the arithmetic tested; the server's side written and
+compiler-checked for cc-test, waiting for the owner's compile):
 `buddies_healer_seat.h`, read by the forward pass (625n).
-- **Who can heal**: points in a healing tree (a priest's Discipline and
-  Holy, a paladin's Holy, a shaman's and a druid's Restoration), read in
-  the server from the bot module's points per tree.
-- **The seat**: the party's healer (role 2) that is alive, the most mana
-  among several; with none alive, the member able to heal with the most
-  mana, until the fight ends.
+- **How much of a healer each member is** (the owner's thirds): the share
+  of its talent points in healing trees (a priest's Discipline and Holy, a
+  paladin's Holy, a shaman's and a druid's Restoration), to the nearest
+  third: two thirds or all, a whole healer; a third, a third of one; none,
+  none. A healer by role with no points spent yet (a low level) counts
+  whole. The points per tree are read in the server from the bot module.
+- **Seats, not one seat**: when a fight begins, the party's healers by role
+  (alive) hold the seats, and what their shares add up to is what the
+  party keeps for the whole fight ("as many healers as we had when the
+  fight started"; two whole healers in a raid stay two).
+- **Changed only by running dry or falling**: a holder keeps its seat
+  while it is alive and has mana; someone else having more mana changes
+  nothing. When a holder falls or runs out of mana, the seats are filled
+  back to the fight's starting count from the members able to heal (alive,
+  some healing points, not out of mana, not recovering): whole healers
+  before thirds, then the most mana among equals. If they can't be filled
+  back, the party is **short**.
 - **Out of mana and ready again**, from the game's own numbers: out of
-  mana when its mana is under its cheapest heal's cost (the cheapest
-  direct heal of its class in the generated tables, a cost in percent of
-  base mana worked on its own base mana); ready again only when its mana
-  covers its own healing for the rest of the fight (its healing a second
-  over the minute, times the fight's time left, at that heal's health a
-  mana), or it is full, so it doesn't flicker at the line.
-- **The leans**: a healing answer (a heal, a heal over time, a shield)
-  leans as worked out for the seat's holder, away (0.05: stop casting, so
-  spirit refills it) while it is out of mana; for the others able to heal,
-  not at all while the seat is fine, and as worked out once it is empty or
-  dry ("others can use that as the signal to jump in"). Heals over time
-  now count in the fight curves (their ticks over their length, capped at
-  full health).
-- **It speaks**: the seat's holder, a buddy or stand-in only, says "oom" in
-  party chat when it runs dry and "ready" when it is ready again; a player
-  in the seat is read the same way and never spoken for.
-Checked by `scripts/test-buddy-healer-seat` (13 checks).
+  mana ("oom") when its mana is under its cheapest heal's cost (the
+  cheapest direct heal of its class in the generated tables, a cost in
+  percent of base mana worked on its own base mana). Once out, it stays
+  out ("dry") until its mana covers its own healing for the rest of the
+  fight (its healing a second over the minute, times the fight's time
+  left, at that heal's health a mana), or it is full, so it doesn't flip
+  back and forth at the line. Ready again, it is a candidate like any
+  other; it takes a seat back only when one comes free.
+- **The leans**: a dry member's healing answers (a heal, a heal over
+  time, a shield) lean away (0.05: it stops casting, so spirit refills its
+  mana); a member able to heal but not seated does its own job (healing
+  answers don't lean) while the seats are full, and leans in as worked out
+  when the party is short ("others can use that as the signal to jump
+  in"); the holders' heals lean as worked out. Heals over time count in
+  the fight curves (their ticks over their length, capped at full health).
+- **It speaks**: a buddy or stand-in that runs dry says "oom" in party chat
+  and "ready" when it is ready again; a player is read the same way and
+  never spoken for.
+- The seats are kept between the forward pass's steps by the party's
+  order in the server (the same within one fight), and drawn fresh when a
+  new fight begins.
+Checked by `scripts/test-buddy-healer-seat` (19 checks: the thirds, the
+starting count, sticking while nothing happens, a third of a healer
+leaving the party short, a Holy paladin making it whole, ready again
+without taking the seat back, a fallen holder replaced, the leans, and
+Innervate's target).
 
 Not yet: the holder fighting in the way that brings mana back (Seal of
-Wisdom, a wand, a form), paladins choosing Judgement of Wisdom while the
+Wisdom, a wand, a form), paladins choosing Judgement of Wisdom while a
 seat is dry, and hearing a player's own "oom" in chat.
 
 ## Intended Behavior
 
-- **One healer's seat per party.** The party's healer holds it. If the
-  healer dies or is incapacitated and can't be brought back mid-fight (no
-  combat resurrection to hand), the seat passes, until the fight ends, to
-  the party member with at least some healing talents and the most mana.
+- **As many healers as the fight began with.** The party's healers hold
+  the seats; their shares (a whole healer for two thirds or more of its
+  points in healing, a third for a third) are what the party keeps. A seat
+  changes hands only when its holder runs out of mana or dies (or is
+  incapacitated and can't be brought back mid-fight); then it passes to
+  members with healing talents, whole healers first, the most mana among
+  equals, until the count is made up again.
 - **The seat speaks.** The others look to whoever holds it for the
   healing signals ("ready", "oom", "mana": 617z's words).
 - **Out of mana counts as fallen, for a while** (the owner, 2026-10-30:

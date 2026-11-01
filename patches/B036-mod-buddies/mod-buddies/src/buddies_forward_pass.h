@@ -470,13 +470,13 @@ namespace BuddyForwardPass
     // Abilities that answer none of these aren't listed (the draw leaves
     // them at 1). Heals are counted before the caster's healing bonuses, so
     // they lean a little less than they will land: noted, not yet read.
-    // `seat`: the healer's seat (625i, buddies_healer_seat.h), when known: a
+    // `seats`: the healer seats (625i, buddies_healer_seat.h), when known: a
     // healing answer (a heal, a heal over time, a shield) leans as worked
-    // out for whoever holds it, away (0.05: stop casting, let spirit refill
-    // the mana) while it is out of mana, and not at all (1) for the others
-    // able to heal while the seat is fine; with the seat empty or out of
-    // mana, they lean in as worked out ("others can use that as the signal
-    // to jump in").
+    // out for a seat's holder; away (0.05: stop casting, let spirit refill
+    // the mana) for a healer out of mana; not at all (1) for the others able
+    // to heal while the seats are filled; as worked out for them too when
+    // the seats couldn't be filled ("others can use that as the signal to
+    // jump in").
     // `targets`, when asked for: the member each buff that goes on one
     // chosen ally should go on (625l: "Buddies should cast them onto
     // characters that can use them the most"): an empowering buff on the
@@ -484,7 +484,7 @@ namespace BuddyForwardPass
     // Innervate on the healer's seat while it is out of mana. The server
     // casts these itself on that member, and the bot module's own cast of
     // them leans away (buddies_forward_pass.cpp).
-    inline std::map<std::string, double> Leans(Snapshot const& s, Memory const& memory, int b, double goldPerHour, BuddySeat::Seat const* seat = nullptr,
+    inline std::map<std::string, double> Leans(Snapshot const& s, Memory const& memory, int b, double goldPerHour, BuddySeat::Seats const* seats = nullptr,
                                                std::map<std::string, int>* targets = nullptr)
     {
         std::map<std::string, double> out;
@@ -550,22 +550,50 @@ namespace BuddyForwardPass
             double lean = Lean(Judge(s, memory, a, goldPerHour, &base), base);
             BuddyMarks::Modifiers m = BuddyMarks::Of(effects);
             bool healing = r.heal != 0 || m.tickHealing > 0 || m.absorb > 0;
-            if (seat && healing)
+            if (seats && healing)
             {
-                if (b == seat->holder) { if (seat->oom) lean = 0.05; }
-                else if (BuddySeat::CanHeal(me) && seat->holder >= 0 && !seat->oom) lean = 1.0;
+                if (BuddySeat::Has(seats->dry, b)) lean = 0.05;
+                else if (!BuddySeat::Has(seats->holders, b) && BuddySeat::CanHeal(me) && !seats->short_) lean = 1.0;
             }
             out[r.name] = lean;
         }
-        // Innervate (mana, not damage or health, so no curve shows it): on
-        // the healer's seat while it is out of mana, leaning in by the whole
-        // of the share of the gap its heals would close (2), a starting value
-        // standing in for the mana it gives turned into healing over the
-        // time left (strategems/everything-is-damage-and-health.md)
-        if (me.cls == 11 && seat && seat->oom && seat->holder >= 0)
+        // Innervate: its mana turned into what the one who gets it would do
+        // with it (the owner, 2026-10-31: "the dps of the (potential) targets
+        // is known, alongside their hps. so, we should know roughly who would
+        // most empower us to defeat the target and emerge victorious"). Its
+        // mana is 225% of the druid's base mana (the window table's regen).
+        // For each member spending mana: if its mana runs out before the
+        // fight ends (its fall over the last seconds), the mana buys it more
+        // seconds of what it does: its healing a second over them as health
+        // (up to the party's shortfall), its damage a second as seconds off
+        // the fight at the party's pace. The member it buys most for gets it,
+        // leaning by that, as every other answer does (Lean).
+        if (me.cls == 11)
         {
-            out["innervate"] = 2.0;
-            if (targets) (*targets)["innervate"] = seat->holder;
+            double mana = 0.0;
+            for (BuddyWindow::Buff const& buff : BuddyWindow::BUFFS) if (Lower(buff.name) == "innervate") mana = buff.gives.regen * me.baseMana;
+            double enemies = 0.0;
+            for (Enemy const& e : s.enemies) enemies += e.health;
+            double pace = base.leftKnown && base.left > 0 ? enemies / base.left : 0.0;
+            Score best{ 0.0, 0.0 };
+            int bestAt = -1;
+            for (size_t k = 0; mana > 0 && k < s.party.size(); ++k)
+            {
+                Member const& m = s.party[k];
+                double falling = memory.ResourceFalling(m.id, s.t);
+                if (m.health <= 0 || m.resourceKind != 0 || falling <= 0.0) continue;
+                double outAt = m.resource / falling;                       // when it runs dry
+                if (outAt >= base.left) continue;                          // it lasts the fight anyway
+                double extra = std::min(mana / falling, base.left - outAt);
+                Score sc{ std::min(base.shortfall, memory.HealingPerSecond(m.id, s.t) * extra),
+                          pace > 0 ? memory.DealtPerSecond(m.id, s.t) * extra / pace : 0.0 };
+                if (bestAt < 0 || Better(sc, best)) { best = sc; bestAt = int(k); }
+            }
+            if (bestAt >= 0)
+            {
+                out["innervate"] = Lean(best, base);
+                if (targets) (*targets)["innervate"] = bestAt;
+            }
         }
         // the long empowering cooldowns, through the cooldown timeline (625f):
         // each one's lean times its weight, how much worse using it now is

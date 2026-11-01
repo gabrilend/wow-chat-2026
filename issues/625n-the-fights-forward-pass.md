@@ -52,6 +52,16 @@ it remembers, and which weights grow, word for word:
 > certain type of shadow blast, how important mana is to this particular
 > fight, stuff like that.
 
+And 2026-10-31, word for word: "Remember, we're combining curves to
+coalesce toward a solution that provides the results we want (victory)
+and avoids defeats and losses. I am picturing many different composite
+curves that are multiplied together or whatever, with a final "output
+curve" that shows how the fight will progress. Each bot only has the
+current status, they don't know other bot's behavior plans." And, on the
+test fights: "We're trying to attach non-linearities to their combat
+mechanics, and if it played out the same way everytime, then we aren't
+building it correctly."
+
 ## Current Behavior
 
 Not built as a whole. Its layers exist offline, each in its own issue

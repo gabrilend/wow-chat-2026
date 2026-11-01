@@ -1,6 +1,6 @@
 # Conversation Summary: e143dbfe-ff43-48be-8bd4-4d54fd7a325d
 
-Generated on: 2026-10-31 16:51:58
+Generated on: 2026-10-31 19:46:31
 Models: claude-opus-5-5
 
 ## Contents
@@ -51,6 +51,10 @@ Models: claude-opus-5-5
     build every described issue before basic's next compile. About fifteen
     changes are written and syntax-checked but uncompiled. Next step: you run a
     basic compile so I can commit whatever builds.
+12. 2026-10-31 15:55, after Request 35 - I'm working through the buddy todo list
+    while you were away; about a dozen new features are written and checked but
+    not yet compiled. Next: please run the compile so I can commit what builds
+    and show the status board.
 
 --------------------------------------------------------------------------------
 
@@ -5388,6 +5392,248 @@ on a copy of the tree.
 
 When you've compiled, I'll commit what built and show the status board. Do you
 want to turn these on?
+
+--------------------------------------------------------------------------------
+
+### User Request 36
+
+> - The smap and road danger need pictures taken by a game client.
+
+we can worry about this later.
+
+
+
+<pasted_content id="415d">
+> - Race and gender changes, prestige, the selling party, the radius event, the
+> bulletin board,
+>     putting items into trades, tank routes and the group hearth on basic are each new systems that
+>     need your judgement. I'd rather they come after this batch has compiled.
+</pasted_content id="415d">
+
+
+I'll run the compile. Can you work on these in the background? Keep an eye out
+for the new compilation logs.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 36
+
+> I'll watch for the new compile with a script that can't match its own name,
+> and work on those systems meanwhile. Checking whether the compile has started:
+
+> The compile started at 17:37 and copied the buddy module at 17:37:32, after my
+> last edit, so this build carries all of it. Starting the watcher:
+
+> The pattern missed the compile's real command line. Checking how it appears:
+
+> Writing the pacing core:
+
+> The failing check was my arithmetic, not the core: the heavy pack costs 40%,
+> so at 50% a confident tank (2% reserve) rightly pulls. Fixing that check, and
+> the vacuous one after it:
+
+> 24 pass. Rewriting the test script's description (copied from the solo test):
+
+> Pace core done (24 checks). Its info page and the issue:
+
+> Committing the pace core (an offline core no server file includes yet, with
+> its passing test):
+
+*[commit] b82616673 in wow-chat-2026 - A dungeon tank's pace, as plain arithmetic with its own test*
+
+> Next, the group hearth on basic. Reading what the owner answered for it:
+
+> Beta already has the group hearth. Checking how cc-test runs a basic script in
+> place, to do the same for basic with beta's:
+
+> The compile succeeded and promoted at 17:42:57; the server then ran until
+> 18:29. Checking what it built and what the server said about the new pieces:
+
+> Marking them compiled, using the edit tool so each line stays recorded as
+> mine:
+
+> Some of my texts break that phrase across lines; finding those too:
+
+> The 10-30 ones were built by the 10-30 compile; fixing their stale text too:
+
+> Issue texts updated. Previewing the commit of everything this compile built:
+
+> The generated command reference and help rows aren't in yet. Checking their
+> diffs are pure generator output before claiming them:
+
+> Only my command. Claiming those generated files and committing the compiled
+> batch:
+
+*[commit] ae038b8d8 in wow-chat-2026 - Built by the 2026-10-31 compile: buddies help guards, mail upgrades, remember solo wins, wait for a rez, and more*
+
+> Committed (ae038b8d8). Releasing my file claims, then on to the next pieces:
+
+> All committed. Now the Sargobras guild: finding where the bot module puts a
+> masterless bot into a guild of its own:
+
+> Clean. Recording it in the issue:
+
+> Next, the group hearth on basic. Beta's version was built before the 10-30
+> answers; checking how it treats bots and what depends on beta:
+
+> No ignore-list call in the engine API, but the game keeps ignores in its
+> `character_social` table (flag 2), which a query can read. Looking at how
+> beta's offline test fakes the engine:
+
+> I'll extend the shared script with the 10-30 rules and keep beta's behaviour
+> otherwise, then add a basic wrapper. Claiming the files and checking nobody
+> else has them open:
+
+> Baseline: 154 checks pass. Now the script changes. First, the settings and new
+> state:
+
+> Now the ride itself, and the invitation's new checks:
+
+> Now the events: a rider's own cast must not open a new invitation, an
+> interrupted ride starts again, and answers start or stop rides:
+
+> Now completion: the hearther's finish closes unanswered windows, and each
+> rider is placed when their own hearthstone finishes:
+
+> Riders who log out should be forgotten too:
+
+> Now the test's pretend world needs the clock, casting, interrupting and the
+> ignore list:
+
+> All 167 checks pass. Now basic's wrapper, which runs that file in place and
+> leaves buddies out:
+
+> A rider's buddies should follow the rider to the circle, not home:
+
+> All clean. Updating issue 211:
+
+*[commit] 80e3c5664 in wow-chat-2026 - Group hearthstone: the owner's rules of 2026-10-30, and on basic*
+
+> Group hearth committed. Next, the radius event and bulletin board (issue 165):
+
+> 22 checks pass. Before planning the engine hookup, looking at where the server
+> tells creatures that a unit moved:
+
+> The natural hook point for a buddy (a player) is the server's own "update what
+> this player sees" step, which already runs for every nearby object whenever
+> either side moves. Checking its signature:
+
+> Two forms: the batched one the movement pass uses, and a single one. Looking
+> at the batched form's surroundings for a patch anchor:
+
+> Idempotent and round-trips. Syntax-checking the patched file:
+
+> Registering it and syntax-checking:
+
+> A real error: the command table needs the server's command namespace. Adding
+> it:
+
+> Clean. Adding the command's help entry beside the other buddy commands:
+
+> The command list is claimed by the other session right now, so the help entry
+> waits until they release it. Updating issue 165:
+
+*[commit] 27b3425ab in wow-chat-2026 - Radius triggers and the bulletin board, as plain C++ with their own test*
+
+> Mending the new patch's header and the generated lists:
+
+> Next, putting earmarked items into a trade your buddy accepts (623, piece 3).
+> Looking at where the bot module handles a trade opening:
+
+> Now the trade step itself:
+
+> Clean. Now the source patch that has the bot module ask first:
+
+> Clean and round-trips. One more thing to check: whether the bot module will
+> accept a trade where the buddy gives and gets nothing back.
+
+> Buddy accounts aren't random-bot accounts, so the bot module accepts whatever
+> trade its owner offers; the giving works. Mending headers and recording it:
+
+> The vendor list is private to the roaming step; a friend function is the
+> smallest way to share it:
+
+> Now the rule itself as a small tested core:
+
+> 8 checks pass. Now wiring it into the order; first the bag-slot export:
+
+> Use the header's own style (`unsigned int`) to avoid needing another include:
+
+> Now the order itself:
+
+> Now the decision and what each buddy says:
+
+> SayToOwner takes a plain text pointer; passing the formatted line's text:
+
+> Clean. Claiming the script-edited file and committing the offline sell core:
+
+*[commit] 0bd6f98b8 in wow-chat-2026 - The "go sell" rule, as plain arithmetic with its own test*
+
+> Recording the "go sell" change in 623:
+
+> Running the quick tests touched by this round before reporting:
+
+> All pass, and every source patch (the two new ones included) applies and
+> reverts cleanly together. Tidying my claims to just the files still waiting
+> for a compile:
+
+Your compile built everything that was waiting, without errors. It passed its
+check run, was promoted at 17:42, and the server ran until 18:29. I've committed
+all of it, and the issue texts now say what is compiled.
+
+**What showed when the server started:** Sargobras was made on his own account
+and logged in unseen. One surprise: the bot module treated him as one of its
+random bots and made him the only member of a new random-bot guild, "Red
+Stronghold". The fix is written and waits for the next compile: he now leaves
+any guild he's put in, and a guild he alone makes up is disbanded.
+
+**Built during this compile:**
+- **Group hearthstone:** this is done in Lua, so it takes effect the next time
+  the server starts. Saying yes now starts your own hearthstone, which lands you
+  on the first hearther's circle rather than at home. An interrupted one starts
+  again. When the hearther's cast ends, any window still open closes as a no. A
+  hearther can invite at most every 10 seconds, and nobody who ignores them is
+  asked. Basic now runs beta's own file, leaving buddies to their own hearth
+  script. Its offline test passes (167 checks), and the druids' Moonglade trip,
+  which shares the invitation, still passes.
+- **Tank pace:** the pull-or-wait rule for dungeon tanks is built as plain
+  arithmetic with its own test (24 checks). It isn't connected to the game yet.
+- **Radius triggers and the bulletin board:**
+  - The core is committed with its test (22 checks).
+  - Waiting for the next compile:
+    - **Core hook (B067):** a one-line hook in the server's own "what this player sees" step.
+    - **The board:** each buddy keeps a 70-yard board, behind `Buddies.Board`, which starts off.
+    - **`.buddy board <name>`:** a command to look at a buddy's board.
+  - The command's help line isn't added yet, because the other session holds the
+    command list.
+- **Trades:** waiting for the next compile, with a small patch (B068). When you
+  open a trade with your buddy, it puts in the items it has set aside for you
+  (up to six), and the bot module no longer whispers you its whole inventory.
+- **"go sell":** the rule is committed with its test (8 checks); the change to
+  the order waits for the next compile. Each buddy weighs how much of its bags
+  it would sell against the walk to the nearest vendor: half full when close,
+  nine tenths when far, smoothly between. It tells you what it decided and why,
+  and "everyone go sell" sends them all.
+
+Every source patch, including both new ones, applies and reverts cleanly
+together on a copy of the source.
+
+**Not done yet:**
+- **Race and gender following the owner:** this needs a way to change a buddy's
+  race the way the server does (racial spells, skills, looks), and basic has no
+  race change for players yet.
+- **Prestige:** a whole new system that only matters at level 60.
+- **Far parties grouping by the board instead of the 5-second look:** I'd switch
+  this only once we've seen the board work in game.
+- **The rest of the selling party:** the "I'm scared" choice, the impromptu
+  party, and hearthing back together.
+
+**Questions:**
+1. In the group hearth, your rule was that if the party leader chooses "no",
+   "they'll cancel their cast". Whose cast: the leader's own, or the hearther's,
+   calling off the whole group hearth? I built it as the leader's own.
+2. Do you want the bulletin board turned on (`Buddies.Board = 1`) for your next
+   play session?
 
 --------------------------------------------------------------------------------
 
