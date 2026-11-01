@@ -28,6 +28,7 @@
 #include "buddies_gems.h"
 #include "buddies_kit.h"
 #include "buddies_loot.h"
+#include "buddies_solo.h"
 #include "buddies_spells.h"
 #include "DatabaseEnv.h"
 #include "Item.h"
@@ -259,6 +260,7 @@ static void Remake(Player* bot, uint32 owner, uint8 profile, uint8 role)
     uint32 forgotten = BuddyForgetLessons(bot);
 
     uint8 was = bot->GetLevel();
+    BuddySoloForget(guid);                             // its level set for it: the solo record starts over (623)
     bot->GiveLevel(level);
     bot->SetUInt32Value(PLAYER_XP, 0);
     bot->InitTalentForLevel();

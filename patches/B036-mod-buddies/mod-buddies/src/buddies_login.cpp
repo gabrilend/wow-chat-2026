@@ -23,6 +23,7 @@
  */
 
 #include "buddies.h"
+#include "buddies_sargobras.h"
 #include "buddies_steer.h"
 #include "Creature.h"
 #include "DatabaseEnv.h"
@@ -409,6 +410,8 @@ public:
         uint64 now = uint64(GameTime::GetGameTimeMS().count());
         if (BuddyIsStandInAccount(player->GetSession()->GetAccountId()))
             return;                                    // a stand-in: no owner, no placement (buddies_stand_ins.cpp)
+        if (BuddyIsSargobrasAccount(player->GetSession()->GetAccountId()))
+            return;                                    // Sargobras's own character (617b2): no buddies, no placement
         if (BuddyIsCompanionAccount(player->GetSession()->GetAccountId()))
             sBuddiesDue[player->GetGUID().GetCounter()] = { now + BUDDY_SETTLE_MS, 0 };
         else

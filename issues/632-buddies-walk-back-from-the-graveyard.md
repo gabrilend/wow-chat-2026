@@ -21,7 +21,20 @@ Verbatim, 2026-10-22:
 
 ## Current Behavior
 
-A dead buddy does what the bot module's death handling does (release,
+**The release, built and compiled 2026-10-31, not yet seen in game** (syntax-checked;
+source patch B066, round trip checked on a copy; the rule in
+`buddies_release.cpp`): the bot module now asks the buddy module first
+whenever it weighs releasing a dead bot. A buddy lies still for a random
+1 to 10 seconds; then, while anyone of its side who knows any rank of a
+resurrection spell (Resurrection, Redemption, Ancestral Spirit, Rebirth),
+buddies included, stands alive within 70 yards, it waits, and after 10 to
+20 seconds of waiting on that one it whispers them once ("rez?", "rez me
+please?" or "pls rez"; someone new restarts that clock); with nobody able
+in range it releases. Anyone not a buddy keeps the stock rules. Not built:
+the walk back (the sine-wave weave and the two ways up a hill); the run
+back is still the bot module's own.
+
+Before: a dead buddy did what the bot module's death handling does (release,
 run back, or be revived by the module's own rules), with its stock
 timing; nothing checks for someone nearby who could resurrect it, and
 the run back is the module's straight path.

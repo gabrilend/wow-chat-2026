@@ -41,6 +41,7 @@
 #include "buddies_roles.h"
 #include "buddies_spells.h"
 #include "buddies_kit.h"
+#include "buddies_sargobras.h"
 #include "buddies_gems.h"
 #include "buddies_stand_ins_pick.h"
 #include "AccountMgr.h"
@@ -99,7 +100,8 @@ bool BuddyIsStandInAccount(uint32 accountId)
 
 bool BuddyIsNotAPlayer(uint32 accountId)
 {
-    return BuddyIsStandInAccount(accountId) || BuddyIsCompanionAccount(accountId);
+    // Sargobras's own character (617b2) is no player either: no owner, no buddies
+    return BuddyIsStandInAccount(accountId) || BuddyIsCompanionAccount(accountId) || BuddyIsSargobrasAccount(accountId);
 }
 
 static void RememberStandInAccount(uint32 id)

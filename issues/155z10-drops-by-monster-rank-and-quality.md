@@ -7,7 +7,7 @@
 - Related: 155z8 (rares on the common clock), 718e (the west path out of
   the Enclave through Tyr's Hand: "extra rewards")
 - Priority: Medium
-- State: built 2026-10-30 (basic_rules.cpp and C044), waiting for the compile; no knob turned yet
+- State: built and compiled 2026-10-30 (basic_rules.cpp and C044); no knob turned yet
 
 ## Origin
 
@@ -22,7 +22,7 @@ Verbatim, 2026-10-22:
 
 ## Current Behavior
 
-**Built 2026-10-30, waiting for the compile** (syntax-checked with the
+**Built and compiled 2026-10-30** (syntax-checked first with the
 build's own flags): basic's rules (`src/cpp-basic/basic_rules.cpp`) read a
 table of knobs, `Basic.Drop.<Rank>.<Quality>.Rate` and `.Quantity`, for
 ranks Normal, Elite, Rare, RareElite, Boss and qualities Poor to

@@ -111,6 +111,21 @@ Towns are marked separately, by circles (617e4a: two in the Valley of
 Trials, around its camp), and inside a town circle buddies do town
 things (errands, leisure) rather than fight (617e4).
 
+**Helping the guards, built 2026-10-31, compiled the same day, not yet seen in game**
+(syntax-checked; the town visit's step, `buddies_town.cpp`): before each
+town step, a monster within 40 yards that is alive, hostile to the
+buddy, fighting someone the buddy is not hostile to (a guard, a
+townsperson, a player of its side) and inside the town is attacked, the
+nearest first, the way roaming opens a fight; the bot module's combat
+takes it from there, and the town step resumes once the buddy is out of
+combat. A pastime under way is ended for it; an errand is kept. With
+errands waiting, the buddy helps for at most a minute in all (the
+patience clock starts at the first help and resets once no monster is
+fighting the town); after that it leaves the fight to the guards and
+does its errands, and helps again once the list is empty. A buddy
+attacked on its way to an errand fights back by the bot module's own
+combat, as any travelling bot does. Not checked in game yet.
+
 ## Intended Behavior
 
 **Areas drawn by hand, where the map files' areas are too big.** A game
@@ -212,6 +227,7 @@ in opposite directions does the nearer one simply win.
 
 ## Open Questions
 
+
 1. (Answered 2026-10-08) **How an area is drawn:** polygons, drawn by an
    AI from pictures, quest overlays, spawn queries and wiki pages (above).
    Still open: which model and how it is run (one zone at a time, offline,
@@ -285,7 +301,11 @@ in opposite directions does the nearer one simply win.
    the player's sub-zone (a cave's sub-zone makes the area very small),
    and inside it wanders anywhere that holds the same monster spawns as
    where the player is. A spawn zone may wrap round another; the
-   sub-zone and the shared spawns decide, not the shape.
+   sub-zone and the shared spawns decide, not the shape. **Built
+   2026-10-31, compiled the same day, not yet seen in game** (617e13's spawn zones): roaming
+   already keeps to the owner's named area, its sub-zone; a waypoint
+   holding none of the monster kinds that live where the owner stands
+   is now dropped and another chosen (`buddies_roam_strategy.cpp`).
 8. (Answered 2026-10-09) **Caves:** the Coven's inside is not told apart
    from the valley in the map files, and the generator sees the ground's
    height, not the roof. The owner: "should use movement navmesh?" Yes:

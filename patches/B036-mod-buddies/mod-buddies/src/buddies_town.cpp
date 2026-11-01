@@ -69,6 +69,7 @@
 #include "FishingAction.h"
 #include "Spell.h"
 #include "SpellMgr.h"
+#include "StatsWeightCalculator.h"
 #include "Timer.h"
 #include "CellImpl.h"
 #include "Creature.h"
@@ -149,7 +150,9 @@ static constexpr uint32 FISH_MAX_CASTS      = 30;
 static constexpr uint32 FISH_GIVE_UP_MS     = 900000;  // a fishing visit ends by now whatever the count (15 min)
 static constexpr float  FISH_WATER_MIN      = 10.0f;   // the cast reaches water this far ...
 static constexpr float  FISH_WATER_MAX      = 20.0f;   // ... to this (the bot module's own fishing limits)
-static constexpr float  NEXT_ERRAND_FAR_CAP = 4.0f;    // the farthest errand is chosen only within this many times
+static constexpr float  HELP_YARDS          = 40.0f;   // a monster fighting the town's people this near is joined (617e12)
+static constexpr uint64 ERRAND_PATIENCE_MS  = 60000;   // helping longer than this with errands waiting: errands first
+static constexpr float  NEXT_ERRAND_FAR_CAP = 4.0f;   // the farthest errand is chosen only within this many times
                                                        // the nearest's distance (the owner, 2026-10-30: "unless the
                                                        // farthest is more than 4x the distance to the nearest")
 static constexpr uint32 STUCK_MS            = 90000;   // no progress on a long walk for this long: reported stuck
@@ -175,7 +178,7 @@ static constexpr float  MEAL_SPEND_SHARE    = 0.25f;   // at most this share of 
 // their map's update thread and maps update in parallel. A buddy's entry is
 // copied out, worked on and written back; the seat-timer sharing (below)
 // reads the others' entries under the same lock.
-enum class Errand : uint8 { Train, Sell, Repair, Mail, Auction };   // Mail: at a mailbox, not an NPC
+enum class Errand : uint8 { Train, Sell, Repair, Mail, Auction, Runeforge };   // Mail, Runeforge: at an object, not an NPC
 enum class Doing  : uint8 { Nothing, Errand, Visit, Sit, Sleep, Fish };
 
 struct ErrandStop
@@ -204,6 +207,7 @@ struct TownState
     ObjectGuid              mainHand;            // fishing: what it held before the pole, put back after
     ObjectGuid              offHand;
     ObjectGuid              lastVisit;           // the wander's last townsperson, so the next is someone else
+    uint64                  helpingSince = 0;    // game-time ms it began helping the guards with errands waiting (0: not)
 };
 
 // Each buddy's long walk toward its owner's area: the nearest it has come
@@ -521,6 +525,83 @@ static GameObject* NearestMailbox(Player* bot)
     return best;
 }
 
+// {{{ the runeforge (633)
+// The owner, 2026-10-30: "If there is a runeforge in the list of tasks they
+// could do in town, then they will reforge their gear with a new
+// runeforge." and "every visit. And they send a message to their owner
+// saying "I switched to [rune] on my [weapon]"". A rune is the buddy's own
+// choice ("nope. it's a personal choice."): drawn at random among those
+// that suit the weapon, never the one it has.
+//
+// The runes, read from the game's spell file on 2026-10-30: the spells
+// named "Rune of ...", each enchanting a weapon (effect 53) with the
+// enchantment it names. Which weapons each suits is the spell's own
+// weapon-kind mask (two-handers only: Swordshattering, Spellshattering,
+// Stoneskin Gargoyle; one-handers only: Swordbreaking, Spellbreaking,
+// Nerubian Carapace; any: the rest), read from the spell as it is used.
+static constexpr uint32 RUNE_SPELLS[] = { 53323, 53331, 53341, 53342, 53343, 53344, 54446, 54447, 62158, 70164 };
+
+// A runeforge near the buddy: a spell focus object of the kind the rune
+// spells need (their own RequiresSpellFocus), in reach of a town scan.
+static GameObject* NearestRuneforge(Player* bot)
+{
+    SpellInfo const* rune = sSpellMgr->GetSpellInfo(RUNE_SPELLS[0]);
+    if (!rune || !rune->RequiresSpellFocus)
+        return nullptr;                                // no focus named: no runeforge to look for
+    std::list<GameObject*> objects;
+    Acore::GameObjectInRangeCheck check(bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(), TOWN_SCAN_YARDS);
+    Acore::GameObjectListSearcher<Acore::GameObjectInRangeCheck> searcher(bot, objects, check);
+    Cell::VisitObjects(bot, searcher, TOWN_SCAN_YARDS);
+    GameObject* best = nullptr;
+    for (GameObject* go : objects)
+        if (go->GetGoType() == GAMEOBJECT_TYPE_SPELL_FOCUS && go->GetGOInfo()->spellFocus.focusId == rune->RequiresSpellFocus
+            && go->isSpawned() && (!best || bot->GetDistance(go) < bot->GetDistance(best)))
+            best = go;
+    return best;
+}
+
+// At the runeforge: each hand's weapon gets a new rune, drawn among those
+// that suit it, never the one it wears; the owner is told each. Each path
+// per hand:
+//   no weapon in that hand              - nothing
+//   no rune suits it but its own        - nothing (logged)
+//   otherwise                           - the new rune put on, the owner whispered
+static void DoRuneforge(PlayerbotAI* ai, Player* bot, GameObject* /*forge*/)
+{
+    Player* owner = ai->GetMaster();
+    for (uint8 slot : { uint8(EQUIPMENT_SLOT_MAINHAND), uint8(EQUIPMENT_SLOT_OFFHAND) })
+    {
+        Item* weapon = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot);
+        if (!weapon || weapon->GetTemplate()->Class != ITEM_CLASS_WEAPON)
+            continue;
+        uint32 kindBit = 1u << weapon->GetTemplate()->SubClass;
+        uint32 current = weapon->GetEnchantmentId(PERM_ENCHANTMENT_SLOT);
+        std::vector<std::pair<uint32, SpellInfo const*>> suits;     // enchantment, its rune spell
+        for (uint32 id : RUNE_SPELLS)
+            if (SpellInfo const* s = sSpellMgr->GetSpellInfo(id))
+                if (s->EquippedItemClass == ITEM_CLASS_WEAPON && (s->EquippedItemSubClassMask & kindBit))
+                    for (SpellEffectInfo const& e : s->GetEffects())
+                        if (e.IsEffect(SPELL_EFFECT_ENCHANT_ITEM) && uint32(e.MiscValue) != current
+                            && sSpellItemEnchantmentStore.LookupEntry(uint32(e.MiscValue)))
+                            suits.push_back({ uint32(e.MiscValue), s });
+        if (suits.empty())
+        {
+            LOG_INFO("module", "mod-buddies: buddy {} found no other rune to suit its {}", bot->GetName(), weapon->GetTemplate()->Name1);
+            continue;
+        }
+        auto const& [enchant, spell] = suits[urand(0, uint32(suits.size()) - 1)];
+        bot->ApplyEnchantment(weapon, PERM_ENCHANTMENT_SLOT, false);   // the old rune's effects off
+        weapon->SetEnchantment(PERM_ENCHANTMENT_SLOT, enchant, 0, 0, bot->GetGUID());
+        bot->ApplyEnchantment(weapon, PERM_ENCHANTMENT_SLOT, true);
+        std::string line = "I switched to " + std::string(spell->SpellName[0]) + " on my " + weapon->GetTemplate()->Name1 + ".";
+        if (owner && owner->IsInWorld())
+            bot->Whisper(line, LANG_UNIVERSAL, owner);
+        LOG_INFO("module", "mod-buddies: buddy {} runeforged its {} with {} (enchantment {})", bot->GetName(),
+            weapon->GetTemplate()->Name1, spell->SpellName[0], enchant);
+    }
+}
+// }}}
+
 // At the mailbox: every item and all the money out of each collectable
 // mail, then the emptied mail thrown away, through the same server
 // requests a player's clicks send (they check the mailbox is in reach, the
@@ -635,6 +716,42 @@ static uint32 FixedPrice(uint32 entry)
 }
 // }}}
 
+// {{{ OwnerUpgrade (623)
+// Whether `item` is earmarked for the owner: gear the owner can wear now
+// that scores higher, by the owner's own stat weights (the bot module's
+// scorer, asked for the owner as for any player), than what the owner
+// wears in the slot it would go to, by at least OWNER_UPGRADE_MARGIN. The
+// owner, 2026-10-30: "buddy-bots should mail upgrades to you." Each path:
+//   owner offline or away (no master)    - no (judged again at the next stop)
+//   not gear, or soulbound (can't mail)  - no
+//   the owner can't use it (level, kind) - no
+//   the slot it would go to is empty     - yes
+//   otherwise                            - yes when it scores higher by the margin
+// For rings and trinkets the slot is the one the server would equip into
+// (the first empty, else the first of the pair).
+static constexpr float OWNER_UPGRADE_MARGIN = 1.05f;   // 5% better than what the owner wears: not a sidegrade
+static bool OwnerUpgrade(PlayerbotAI* ai, Item* item)
+{
+    Player* owner = ai->GetMaster();
+    ItemTemplate const* p = item->GetTemplate();
+    if (!owner || !owner->IsInWorld() || !IsGear(p) || item->IsSoulBound())
+        return false;
+    if (owner->CanUseItem(p) != EQUIP_ERR_OK)
+        return false;
+    uint8 slot = owner->FindEquipSlot(p, NULL_SLOT, true);
+    if (slot == NULL_SLOT)
+        return false;                                  // no slot of the owner's takes it
+    Item* worn = owner->GetItemByPos(INVENTORY_SLOT_BAG_0, slot);
+    if (!worn)
+        return true;
+    StatsWeightCalculator scorer(owner);
+    scorer.SetOverflowPenalty(false);
+    float mine = scorer.CalculateItem(p->ItemId, item->GetItemRandomPropertyId());
+    float now  = scorer.CalculateItem(worn->GetEntry(), worn->GetItemRandomPropertyId());
+    return mine > now * OWNER_UPGRADE_MARGIN;
+}
+// }}}
+
 // {{{ FateOf
 static Fate FateOf(PlayerbotAI* ai, Item* item)
 {
@@ -652,6 +769,8 @@ static Fate FateOf(PlayerbotAI* ai, Item* item)
         default:
             break;
     }
+    if (OwnerUpgrade(ai, item))
+        return Fate::MailOwner;                        // earmarked: an upgrade for the owner (623)
     if (p->Quality >= ITEM_QUALITY_EPIC && IsGear(p) && p->RequiredLevel > 0)
     {
         if (item->IsSoulBound())
@@ -861,19 +980,77 @@ static void CountAuctionMail(Player* bot, Mail const* m)
 }
 // }}}
 
+// {{{ the treat (623)
+// Now and then a mail carries a little money with a line in the buddy's
+// own voice (the owner, 2026-10-30: "maybe once or twice as a treat. Every
+// once in a while. They'll usually just send like 1c and say "I found a
+// lucky penny for you." or 10g pieces for a level 60 and say "this fell
+// out of some rich guy's pocket while I was walking close behind him in
+// Stormwind, don't worry about it" says the rogue, that sort of thing.").
+// At each mailbox stop: TREAT_CHANCE of a treat; of treats, TREAT_PURSE_CHANCE
+// are a purse (its level squared times TREAT_PURSE_PER_LEVEL2 copper: 10
+// gold at level 60), the rest the lucky penny. A purse comes out of the
+// buddy's own money; one it can't afford is a penny instead. The purse's
+// line is its class's (TREAT_LINES, by class id; the rogue's is the
+// owner's own words).
+static constexpr float  TREAT_CHANCE          = 0.10f;
+static constexpr float  TREAT_PURSE_CHANCE    = 0.25f;
+static constexpr uint32 TREAT_PURSE_PER_LEVEL2 = 28;     // copper x level^2: 60 -> 100800, about 10 gold
+static char const* const PENNY_LINE = "I found a lucky penny for you.";
+static char const* const TREAT_LINES[] = {
+    "Some coin from the road. Spend it on something shiny.",                                  //  0 (none)
+    "Took this off a brute who swung first. Buy yourself a whetstone.",                       //  1 warrior
+    "The Light provides, and today it provided this. Share it well.",                         //  2 paladin
+    "Found this in a nest my pet dug up. Don't ask what else was in there.",                  //  3 hunter
+    "this fell out of some rich guy's pocket while I was walking close behind him in Stormwind, don't worry about it", //  4 rogue
+    "An offering left at a shrine. I'm sure they meant it for you.",                          //  5 priest
+    "The dead don't need it. I asked.",                                                       //  6 death knight
+    "The spirits pointed me to it under a stone. Thank them, not me.",                        //  7 shaman
+    "Conjured? No. Found. Probably. Enjoy it.",                                               //  8 mage
+    "A small contract, fulfilled. Your share.",                                               //  9 warlock
+    "Squirrels hoard the strangest things.",                                                  // 10 (none)
+    "A bear was sitting on it. I asked nicely.",                                              // 11 druid
+};
+// }}}
+
 // {{{ MailToOwner
-// Bind-on-equip epics it has no use for go to its owner (never sold).
+// Its earmarked items go to its owner (OwnerUpgrade, and bind-on-equip
+// epics it has no use for, never sold), with a treat now and then; a
+// treat alone is mailed too.
 static void MailToOwner(PlayerbotAI* ai, Player* bot)
 {
     std::vector<Item*> items = ItemsForOwner(ai, bot);
-    if (items.empty())
+    uint32 money = 0;
+    std::string line = "Found this and thought of you.";
+    if (rand_norm() < TREAT_CHANCE)
+    {
+        uint32 purse = bot->GetLevel() * bot->GetLevel() * TREAT_PURSE_PER_LEVEL2;
+        if (rand_norm() < TREAT_PURSE_CHANCE && bot->GetMoney() >= purse)
+        {
+            money = purse;
+            uint8 cls = bot->getClass();
+            line = TREAT_LINES[cls < std::size(TREAT_LINES) ? cls : 0];
+        }
+        else
+        {
+            money = 1;                                 // the lucky penny (a copper, conjured: it never left a purse)
+            line  = PENNY_LINE;
+        }
+    }
+    if (items.empty() && !money)
         return;
     QueryResult row = CharacterDatabase.Query("SELECT owner FROM buddy_roster WHERE buddy = {}", bot->GetGUID().GetCounter());
     if (!row)
         return;
     ObjectGuid owner = ObjectGuid::Create<HighGuid::Player>((*row)[0].Get<uint32>());
     CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
-    MailDraft draft("For the clan", "Found this and thought of you.");
+    MailDraft draft("For the clan", line);
+    if (money)
+    {
+        if (money > 1)
+            bot->ModifyMoney(-int32(money));           // a purse is the buddy's own
+        draft.AddMoney(money);
+    }
     uint32 n = 0;
     for (Item* item : items)
     {
@@ -1221,6 +1398,10 @@ static std::vector<ErrandStop> BuildTodo(PlayerbotAI* ai, Player* bot, uint32 ar
     if (MailWaiting(bot) || !ItemsForOwner(ai, bot).empty())                                  // 4
         if (GameObject* box = NearestMailbox(bot))
             todo.push_back({ Errand::Mail, box->GetGUID() });
+    // a death knight's runeforge, every visit where the town has one (633)
+    if (bot->getClass() == CLASS_DEATH_KNIGHT)
+        if (GameObject* forge = NearestRuneforge(bot))
+            todo.push_back({ Errand::Runeforge, forge->GetGUID() });
     bool auctioning = auctioneer && AnythingToAuction(ai, bot);
     if (auctioning)
         todo.push_back({ Errand::Auction, auctioneer->GetGUID() });                           // 5
@@ -1682,6 +1863,13 @@ public:
             s.todo   = BuildTodo(botAI, bot, areaId);
         }
 
+        // The guards' fight comes first, within patience (617e12).
+        if (HelpTheGuards(s, areaId, now))
+        {
+            StoreTown(guid, s);
+            return true;
+        }
+
         if (s.doing == Doing::Nothing)
         {
             if (now < s.idleUntil)
@@ -1714,6 +1902,78 @@ public:
     }
 
 private:
+    // {{{ HelpTheGuards (617e12)
+    // A monster fighting the town's people, near and inside the town: the
+    // buddy joins in, as roaming opens a fight (the bot module's combat
+    // takes over from there, and this step waits, being out of use while
+    // the buddy is in combat). The owner, 2026-10-30: "if the guards are
+    // fighting something then the buddy-bots should help out until there's
+    // no monsters around, then they can converse... in some cases the
+    // monsters continuously spawn, so we should make sure that they do
+    // eventually prioritize their errands over fighting, to get them done."
+    // Each path:
+    //   no such monster          - nothing to do; the patience clock is reset
+    //   errands waiting, helping longer than ERRAND_PATIENCE_MS
+    //                            - the errands first (the fight is left to the
+    //                              guards) until the to-do list is empty
+    //   otherwise                - the nearest such monster is attacked; a
+    //                              pastime under way is ended (stood up, its
+    //                              bed let go), an errand kept and its walk's
+    //                              give-up clock restarted
+    // A monster counts when it is alive, hostile to the buddy, in combat
+    // with someone the buddy is not hostile to (a guard, a townsperson, a
+    // player of its side), and inside the town (its own area or a building
+    // of it), so a fight at the gate's far side draws no one out.
+    bool HelpTheGuards(TownState& s, uint32 areaId, uint64 now)
+    {
+        Creature* foe   = nullptr;
+        float     foeD  = HELP_YARDS + 1.0f;
+        for (Unit* u : UnitsNear(bot, HELP_YARDS))
+        {
+            Creature* c = u->ToCreature();
+            if (!c || !c->IsAlive() || !c->IsInCombat() || !c->IsHostileTo(bot))
+                continue;
+            Unit* victim = c->GetVictim();
+            if (!victim || victim->IsHostileTo(bot) || !InTown(c, areaId))
+                continue;
+            float d = bot->GetDistance(c);
+            if (d < foeD)
+            {
+                foe  = c;
+                foeD = d;
+            }
+        }
+        if (!foe)
+        {
+            s.helpingSince = 0;
+            return false;
+        }
+
+        bool errandsWaiting = !s.todo.empty();
+        if (errandsWaiting && s.helpingSince && now - s.helpingSince > ERRAND_PATIENCE_MS)
+            return false;                                  // patience spent: errands first
+        if (errandsWaiting && !s.helpingSince)
+            s.helpingSince = now;
+
+        if (s.doing == Doing::Errand)
+            s.began = now;                                 // the walk's give-up clock starts again after the fight
+        else if (s.doing != Doing::Nothing)
+            Finish(s, now);
+        StandUp();
+
+        bool melee = botAI->IsMelee(bot);
+        bot->SetSelection(foe->GetGUID());
+        context->GetValue<Unit*>("current target")->Set(foe);
+        botAI->ChangeEngine(BOT_STATE_COMBAT);
+        bot->Attack(foe, melee);
+        if (melee)
+            bot->GetMotionMaster()->MoveChase(foe);
+        BuddyTrace(bot, "town: helping against {} ({:.0f} yards, fighting {})",
+            foe->GetName(), foeD, foe->GetVictim()->GetName());
+        return true;
+    }
+    // }}}
+
     // {{{ bookkeeping
     void Begin(TownState& s, Doing what, ObjectGuid target, uint64 now)
     {
@@ -1786,7 +2046,7 @@ private:
     // yards from the buddy to an errand's NPC or mailbox; 0 when not found
     float ErrandYards(ErrandStop const& e)
     {
-        if (e.kind == Errand::Mail)
+        if (e.kind == Errand::Mail || e.kind == Errand::Runeforge)
         {
             GameObject* box = ObjectAccessor::GetGameObject(*bot, e.npc);
             return box ? bot->GetDistance(box) : 0.0f;
@@ -1801,9 +2061,9 @@ private:
     bool RunErrand(TownState& s, uint64 now)
     {
         ErrandStop stop = s.todo.front();
-        if (stop.kind == Errand::Mail)
+        if (stop.kind == Errand::Mail || stop.kind == Errand::Runeforge)
         {
-            // a mailbox is an object, not a person: walk to it, open it
+            // a mailbox or a runeforge is an object, not a person: walk to it, use it
             GameObject* box = ObjectAccessor::GetGameObject(*bot, stop.npc);
             if (!box || TooLong(s, now))
             {
@@ -1814,7 +2074,10 @@ private:
             if (bot->GetDistance(box) > ARRIVED_YARDS)
                 return WalkTo(box, NPC_YARDS);
             bot->SetFacingToObject(box);
-            DoMail(botAI, bot, box);
+            if (stop.kind == Errand::Runeforge)
+                DoRuneforge(botAI, bot, box);
+            else
+                DoMail(botAI, bot, box);
             s.todo.erase(s.todo.begin());
             Finish(s, now);
             return true;

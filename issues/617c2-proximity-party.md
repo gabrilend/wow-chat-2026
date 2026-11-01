@@ -220,8 +220,16 @@ they are near and you don't have a full group."
   form a cluster; a cluster of m makes ceil(m / 5) groups as even as can
   be (6: 3 and 3; 7: 4 and 3; 11: 4, 4, 3), each a slice of neighbours by
   bearing round the cluster's middle; a slice not within reach throughout
-  (a chain's far ends) is halved again; the first member leads. Not yet
-  used by the party pass (`buddies_party.cpp`, another session's file).
+  (a chain's far ends) is halved again; the first member leads. **Used by
+  the party pass since 2026-10-31, compiled the same day, not yet seen in game**
+  (syntax-checked; `buddies_party.cpp`, step 5, after the joining and
+  merging): the far buddies (those in far parties, and loose ones past 74
+  yards or with the owner's party full) are chained into clusters within
+  74 yards of each other; a cluster whose parties are already even (all
+  grouped, as many parties as the even split makes, sizes within one) is
+  left alone, so settled groups are not re-drawn every pass; any other is
+  made again as the core's even groups (a group of one stays loose). Not
+  built: the radius event in place of the 5-second pass.
 
 - (Answered 2026-09-27) The join distance: 60 ("let's do 60").
 - **Raid experience** (owner, 2026-09-27: "can we update it to give the

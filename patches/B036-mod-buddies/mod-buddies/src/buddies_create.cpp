@@ -428,8 +428,78 @@ uint32 BuddyMakeCharacter(uint32 account, uint8 race, uint8 cls, uint8 level, ui
 }
 // }}}
 
+// {{{ AdoptStandIn (617t3)
+// A kept stand-in may fill an owed slot instead of a new character (the
+// owner, 2026-10-30: "fills an owed slot and keeps it's gear. Remember,
+// it's only for the correct race/class type. If you ask for a shaman and
+// there's an appropriately levelled troll shaman, then it'll select that
+// one."; and of the level: "within 3 levels, and they should be adjusted
+// to match."). The candidates: kept stand-ins of the slot's class and role,
+// of the owner's side, within ADOPT_LEVELS of the level the buddy is made
+// at, out of the world. One is drawn, weighted by its level ("Higher
+// priority goes to stand-ins who were higher level when they were
+// stand-in'd"). Each path:
+//   none fits                  - 0: a new character is made as before
+//   one drawn                  - it moves to the owner's companion account,
+//                                its level set to the buddy's (experience
+//                                0), it leaves the stand-in list, and the
+//                                slot takes its race, shape and role; its
+//                                name, looks and gear stay. Returns its guid
+// Its weapon kinds are not cut to the owner's count yet (617t3 step 3).
+static constexpr uint8 ADOPT_LEVELS = 3;
+static uint32 AdoptStandIn(uint32 account, uint32 owner, uint8 slot, uint8 ownerRace, uint8 cls, uint8 role, uint8 level, std::string& name)
+{
+    QueryResult rows = CharacterDatabase.Query("SELECT s.guid, s.race, s.level, s.profile, c.account FROM buddy_stand_in s "
+        "JOIN characters c ON c.guid = s.guid WHERE s.class = {} AND s.role = {} AND s.level + {} >= {} AND s.level <= {} + {}",
+        cls, role, ADOPT_LEVELS, level, level, ADOPT_LEVELS);
+    if (!rows)
+        return 0;
+    struct Fit { uint32 guid, oldAccount; uint8 race, level, profile; };
+    std::vector<Fit> fits;
+    uint32 weights = 0;
+    do
+    {
+        Fit f{ (*rows)[0].Get<uint32>(), (*rows)[4].Get<uint32>(), (*rows)[1].Get<uint8>(), (*rows)[2].Get<uint8>(), (*rows)[3].Get<uint8>() };
+        if (Player::TeamIdForRace(f.race) != Player::TeamIdForRace(ownerRace))
+            continue;                                  // the other side's
+        if (ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(f.guid)))
+            continue;                                  // standing in somewhere now
+        fits.push_back(f);
+        weights += f.level;
+    } while (rows->NextRow());
+    if (fits.empty())
+        return 0;
+    uint32 pick = urand(1, weights);
+    Fit chosen = fits.back();
+    for (Fit const& f : fits)
+    {
+        if (pick <= f.level)
+        {
+            chosen = f;
+            break;
+        }
+        pick -= f.level;
+    }
+
+    ObjectGuid guid = ObjectGuid::Create<HighGuid::Player>(chosen.guid);
+    CharacterDatabase.DirectExecute("UPDATE characters SET account = {}, level = {}, xp = 0 WHERE guid = {}", account, level, chosen.guid);
+    CharacterDatabase.DirectExecute("DELETE FROM buddy_stand_in WHERE guid = {}", chosen.guid);
+    CharacterDatabase.DirectExecute("UPDATE buddy_roster SET race = {}, profile = {} WHERE owner = {} AND slot = {}",
+        chosen.race, chosen.profile, owner, slot);
+    sCharacterCache->UpdateCharacterAccountId(guid, account);
+    sCharacterCache->UpdateCharacterLevel(guid, level);
+    sWorld->UpdateRealmCharCount(chosen.oldAccount);
+    sWorld->UpdateRealmCharCount(account);
+    sCharacterCache->GetCharacterNameByGuid(guid, name);
+    LOG_INFO("module", "mod-buddies: stand-in {} (guid {}, level {}) becomes owner {}'s buddy in slot {} at level {}, keeping its gear (617t3)",
+        name, chosen.guid, uint32(chosen.level), owner, uint32(slot), uint32(level));
+    return chosen.guid;
+}
+// }}}
+
 // {{{ CreateBuddy
-// One chosen row -> one saved character, written into the row.
+// One chosen row -> one saved character, written into the row: a kept
+// stand-in that fits (AdoptStandIn), else a new one.
 static void CreateBuddy(uint32 owner, uint8 slot, uint8 cls, uint8 race)
 {
     std::pair<uint32, uint8> key{ owner, slot };
@@ -469,8 +539,11 @@ static void CreateBuddy(uint32 owner, uint8 slot, uint8 cls, uint8 race)
     // its level, as stand-ins do (owner, 2026-10-15: "They should have
     // cloaks and rings and trinkets at the specified level ... And don't
     // forget the PvP gear"); the first PvP rewards are level 18's
-    uint32 guid = BuddyMakeCharacter(account, race, cls, ownerLevel, profile, role, owner, ownerLevel >= BUDDY_PVP_JEWELLERY_FROM, "buddy",
-        "owner " + std::to_string(owner), name, why, keepName, keepGender, resetFrom);
+    // a reset slot (617a7) keeps its own name and looks: never a stand-in
+    uint32 guid = resetFrom ? 0 : AdoptStandIn(account, owner, slot, ownerRace, cls, role, ownerLevel, name);
+    if (!guid)
+        guid = BuddyMakeCharacter(account, race, cls, ownerLevel, profile, role, owner, ownerLevel >= BUDDY_PVP_JEWELLERY_FROM, "buddy",
+            "owner " + std::to_string(owner), name, why, keepName, keepGender, resetFrom);
     if (!guid)
         return Fail(owner, slot, race, cls, why);
 

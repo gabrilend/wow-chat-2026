@@ -58,6 +58,48 @@ static constexpr uint32 TRACK_EVERY_MS   = 250;    // how often each owner's pos
 static constexpr float  SNAP_YARDS       = 2.0f;   // how far a spot may move sideways onto the mesh
 static constexpr float  SNAP_RISE        = 4.0f;   // and up or down
 static constexpr float  FACE_TURN        = 0.3f;   // radians: a smaller turn toward the owner isn't worth a turn
+
+// {{{ the rest activities (617e13, question 5)
+// What a buddy at rest does when the core's look says "mingle" (one look in
+// ten). The owner, 2026-10-30: "naturalizing NPC behavior is a complex
+// topic. We should just build a bunch of activities they could do and try
+// to make them feel natural." So the mingle is one activity among several,
+// drawn by weight; each is judged by feel in game and its weight turned in
+// docs/balance-updates.md:
+//   Wander - the core's short walk near its place (the mingle as it was)
+//   Chat   - turn to the nearest other follower within CHAT_YARDS and talk
+//            (the talking gesture); with nobody near, a look round instead
+//   Look   - face a random way, as someone taking in the view
+//   Gesture- one of a few small gestures (a laugh, a point, a cheer, a bow)
+//   Sit    - sit where it stands; the next walk stands it up (the walking
+//            does that)
+enum class RestActivity : uint8 { Wander, Chat, Look, Gesture, Sit };
+struct RestWeight { RestActivity what; uint32 weight; };
+static constexpr RestWeight REST_WEIGHTS[] = {
+    { RestActivity::Wander,  4 },
+    { RestActivity::Chat,    3 },
+    { RestActivity::Look,    2 },
+    { RestActivity::Gesture, 2 },
+    { RestActivity::Sit,     1 },
+};
+static constexpr float  CHAT_YARDS = 6.0f;            // a fellow follower this near can be talked to
+static constexpr uint32 REST_GESTURES[] = { EMOTE_ONESHOT_LAUGH, EMOTE_ONESHOT_POINT, EMOTE_ONESHOT_CHEER, EMOTE_ONESHOT_BOW };
+
+static RestActivity DrawRestActivity()
+{
+    uint32 total = 0;
+    for (RestWeight const& w : REST_WEIGHTS)
+        total += w.weight;
+    uint32 pick = urand(1, total);
+    for (RestWeight const& w : REST_WEIGHTS)
+    {
+        if (pick <= w.weight)
+            return w.what;
+        pick -= w.weight;
+    }
+    return RestActivity::Wander;
+}
+// }}}
 static BuddyFollow::Settings const SETTINGS;      // the owner's numbers (buddy_follow_core.h)
 // }}}
 
@@ -296,6 +338,44 @@ public:
         //   Mingle  - a short walk near the spot, at a walk
         //   Face    - turn toward the owner, if the turn is worth making
         //   Nothing - no new order: whatever it does goes on
+        // a mingle is one of the rest activities (above); all but the
+        // wander are done here and end the step
+        if (d.act == BuddyFollow::Act::Mingle)
+        {
+            RestActivity what = DrawRestActivity();
+            Player* mate = nullptr;
+            if (what == RestActivity::Chat)
+            {
+                float best = CHAT_YARDS;
+                for (Player* f : followers)
+                    if (f != bot && bot->GetExactDist(f) <= best)
+                    {
+                        mate = f;
+                        best = bot->GetExactDist(f);
+                    }
+                if (!mate)
+                    what = RestActivity::Look;           // nobody near to talk to
+            }
+            switch (what)
+            {
+                case RestActivity::Wander:
+                    break;                               // the core's wander, below
+                case RestActivity::Chat:
+                    bot->SetFacingToObject(mate);
+                    bot->HandleEmoteCommand(EMOTE_ONESHOT_TALK);
+                    return true;
+                case RestActivity::Look:
+                    bot->SetFacingTo(float(rand_norm() * 2.0 * M_PI));
+                    return true;
+                case RestActivity::Gesture:
+                    bot->HandleEmoteCommand(REST_GESTURES[urand(0, std::size(REST_GESTURES) - 1)]);
+                    return true;
+                case RestActivity::Sit:
+                    bot->SetStandState(UNIT_STAND_STATE_SIT);
+                    return true;
+            }
+        }
+
         switch (d.act)
         {
             case BuddyFollow::Act::Walk:

@@ -23,7 +23,11 @@
  * 70 yards of it, or pairs up with another loose far buddy within 70; two
  * far parties merge when a member of one is within 70 yards of a member of
  * the other and together they fit in five; a far-party buddy more than 74
- * yards from every other member leaves it.
+ * yards from every other member leaves it. Then the far parties are evened
+ * out (the owner, 2026-10-30: "If there's for example 6 of them, they
+ * should make two groups of 3 instead of one group of 1 and one group of
+ * 5."; roam/buddy_far_party_core.h): a cluster of far buddies whose
+ * parties are uneven is made again as even groups of neighbours.
  *
  * Nothing is done in a dungeon, raid or battleground: the dungeon draw
  * (617c3) will decide those. In a town every buddy is ungrouped (617c,
@@ -44,6 +48,7 @@
 #include "buddies_loot.h"
 #include "buddies_roam.h"
 #include "buddies_roles.h"
+#include "roam/buddy_far_party_core.h"
 #include "BattlegroundMgr.h"
 #include "BattlegroundQueue.h"
 #include "DatabaseEnv.h"
@@ -315,7 +320,97 @@ static void ArrangeOwner(Player* owner, std::vector<uint32> const& buddyGuids)
 
 }
 
-// Steps 3 and 4: far buddies grouping with each other.
+// {{{ EvenOutFar
+// Step 5 (617c2, 2026-10-30): the far buddies, chained within 74 yards of
+// each other into clusters (the far parties' own leaving distance, so a
+// party is never cut in two by the clustering), each cluster's parties
+// made even. Each path, per cluster:
+//   one buddy                          - left as it is (nobody to group with)
+//   its parties already even: every
+//   member in a far party, as many
+//   parties as the even split makes
+//   (ceil(size / 5)), sizes within one - left as they are (no churn: the
+//                                        groups the earlier steps keep are
+//                                        not re-drawn every pass)
+//   otherwise                          - everyone leaves their far party and
+//                                        the even split's groups are made
+//                                        (BuddyFarParty::Groups: slices of
+//                                        neighbours by bearing, each within
+//                                        reach), the first of each leading;
+//                                        a group of one stays loose
+// Steps 3 and 4 still run first: they make the parties the even split then
+// only has to correct, which is rare once the buddies have settled (5 and
+// 1 becomes 3 and 3 once; a newcomer then joins the party with room).
+static void EvenOutFar(Player* owner, std::vector<Near> const& buddies, std::set<uint32> const& buddySet, bool seatFree)
+{
+    std::vector<Player*> far;
+    std::vector<BuddyFarParty::Spot> at;
+    for (Near const& b : buddies)
+    {
+        Group* g = b.bot->GetGroup();
+        bool loose = !g && (b.yards > FAR_YARDS || !seatFree);
+        bool inFar = g && IsFarParty(g, buddySet) && !g->isRaidGroup();
+        if (!loose && !inFar)
+            continue;                                  // the owner's party, someone else's group, or near and waiting for a seat
+        far.push_back(b.bot);
+        at.push_back({ b.bot->GetPositionX(), b.bot->GetPositionY() });
+    }
+
+    for (std::vector<uint32_t> const& cluster : BuddyFarParty::Clusters(at, FAR_LEAVE_YARDS))
+    {
+        if (cluster.size() < 2)
+            continue;
+        std::map<Group*, uint32> sizes;
+        bool allGrouped = true;
+        for (uint32_t i : cluster)
+        {
+            if (Group* g = far[i]->GetGroup())
+                ++sizes[g];
+            else
+                allGrouped = false;
+        }
+        std::vector<uint32_t> want = BuddyFarParty::GroupSizes(uint32_t(cluster.size()));
+        uint32 lo = 0xFFFFFFFF, hi = 0;
+        for (auto const& [g, n] : sizes)
+        {
+            lo = std::min(lo, n);
+            hi = std::max(hi, n);
+        }
+        if (allGrouped && sizes.size() == want.size() && hi - lo <= 1)
+            continue;                                  // already even
+
+        // made again: the cluster's own spots, split by the core
+        std::vector<BuddyFarParty::Spot> mine;
+        for (uint32_t i : cluster)
+            mine.push_back(at[i]);
+        for (uint32_t i : cluster)
+            if (Group* g = far[i]->GetGroup())
+                g->RemoveMember(far[i]->GetGUID());    // a party left with one member disbands itself
+        uint32 made = 0;
+        for (std::vector<uint32_t> const& group : BuddyFarParty::Groups(mine, FAR_LEAVE_YARDS))
+        {
+            if (group.size() < 2)
+                continue;                              // a group of one: stays loose
+            Player* leader = far[cluster[group[0]]];
+            if (leader->GetGroup())
+                continue;                              // still in a group (should not happen): left alone
+            Group* g = NewParty(leader);
+            if (!g)
+                continue;
+            for (size_t k = 1; k < group.size(); ++k)
+                if (!g->AddMember(far[cluster[group[k]]]))
+                    LOG_ERROR("module", "mod-buddies: {} could not join the evened far party led by {} (server refused)",
+                        far[cluster[group[k]]]->GetName(), leader->GetName());
+            ++made;
+        }
+        LOG_DEBUG("module", "mod-buddies: {}'s {} far buddies near each other evened out into {} parties",
+            owner->GetName(), cluster.size(), made);
+    }
+}
+// }}}
+
+// Steps 3 and 4: far buddies grouping with each other; then step 5,
+// evening them out.
 static void ArrangeFar(Player* owner, std::vector<uint32> const& buddyGuids)
 {
     std::set<uint32> buddySet(buddyGuids.begin(), buddyGuids.end());
@@ -425,6 +520,8 @@ static void ArrangeFar(Player* owner, std::vector<uint32> const& buddyGuids)
         if (!moved)
             break;                                     // nothing moved: stop rather than loop
     }
+
+    EvenOutFar(owner, buddies, buddySet, seatFree);
 }
 // }}}
 

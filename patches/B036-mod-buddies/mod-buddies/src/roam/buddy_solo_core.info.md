@@ -2,9 +2,10 @@
 
 A buddy's sense of which foes it can beat alone: the hardest fight it has
 won with no help, one per kind of foe (issue 623, question 7). Plain
-arithmetic, no server; checked by `scripts/test-buddy-solo-record`. Not yet
-wired into the server: nothing notes a solo kill or keeps the records on a
-buddy so far.
+arithmetic, no server; checked by `scripts/test-buddy-solo-record`. The
+server's side is `buddies_solo.cpp` (`buddies_solo.h`): it notes each solo
+win, keeps the records in the `buddy_solo_record` table, and answers
+`BuddySoloCanTake` and `BuddySoloForget`.
 
 ## Kinds
 

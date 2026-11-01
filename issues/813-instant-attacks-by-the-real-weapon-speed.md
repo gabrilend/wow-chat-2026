@@ -7,7 +7,7 @@
   rule), 803 (monster accuracy level cap: another combat rule changed by
   a source patch)
 - Priority: Medium
-- State: built 2026-10-30 as a setting, off; waiting for the compile, then the owner names basic in C042 to turn it on
+- State: built and compiled 2026-10-30 as a setting, off; the owner names basic in C042 to turn it on
 
 ## Origin
 
@@ -17,7 +17,7 @@ and wrong. We should use the actual weapon speed."
 
 ## Current Behavior
 
-**Built 2026-10-30, waiting for the compile:** source patch B064 adds the
+**Built and compiled 2026-10-30:** source patch B064 adds the
 setting `Combat.InstantAttacks.RealWeaponSpeed` (0 by default: stock),
 named in `WorldConfig.h`, read in `WorldConfig.cpp` beside `Daze.Enabled`,
 documented in `worldserver.conf.dist`, and asked by the attack power

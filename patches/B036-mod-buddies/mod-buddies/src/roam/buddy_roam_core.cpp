@@ -514,8 +514,8 @@ bool NextWaypoint(Buddy& buddy, Area const& area, Point const& at, std::vector<P
         }
         if (via)
         {
-            std::vector<Point> leg1 = PlanPath(at, *via, buddy.body, ground, settings);
-            std::vector<Point> leg2 = PlanPath(*via, buddy.waypoint, buddy.body, ground, settings);
+            std::vector<Point> leg1 = PlanPath(at, *via, buddy.body, ground, settings, &rng);
+            std::vector<Point> leg2 = PlanPath(*via, buddy.waypoint, buddy.body, ground, settings, &rng);
             if (leg1.empty() || leg2.empty())
                 return false;
             leg1.insert(leg1.end(), leg2.begin() + 1, leg2.end());
@@ -523,7 +523,7 @@ bool NextWaypoint(Buddy& buddy, Area const& area, Point const& at, std::vector<P
         }
         else
         {
-            buddy.path = PlanPath(at, buddy.waypoint, buddy.body, ground, settings);
+            buddy.path = PlanPath(at, buddy.waypoint, buddy.body, ground, settings, &rng);
             if (buddy.path.empty())
                 return false;
         }
@@ -536,17 +536,19 @@ bool NextWaypoint(Buddy& buddy, Area const& area, Point const& at, std::vector<P
 
 // {{{ PlanPath
 // Every bow gets its detours, one obstacle at a time from the start toward
-// the end; the cheapest bow that clears wins (the first on a tie). A trip
-// of no length is just its two ends.
-std::vector<Point> PlanPath(Point const& from, Point const& to, float body, Ground const& ground, Settings const& settings)
+// the end; of the bows that clear, those within tieMargin of the cheapest
+// are tied, and with `rng` one is drawn among them (one random number,
+// only when two or more tie; the Lua model draws the same); without it, or
+// with one alone, the first cheapest. A trip of no length is just its two ends.
+std::vector<Point> PlanPath(Point const& from, Point const& to, float body, Ground const& ground, Settings const& settings,
+                            Rng const* rng)
 {
     double len = std::sqrt(double(to.x - from.x) * (to.x - from.x) + double(to.y - from.y) * (to.y - from.y));
     if (len < 1e-6)
         return { from, to };
     double ux = (double(to.x) - from.x) / len, uy = (double(to.y) - from.y) / len;
 
-    std::optional<std::vector<Sample>> chosen;
-    double chosenCost = 0.0;
+    std::vector<std::pair<double, std::vector<Sample>>> cleared;   // each clearing bow's cost and points, in BOWS order
     for (double bow : BOWS)
     {
         Curve c{ from.x, from.y, from.z, len, ux, uy, -uy, ux, bow, body, {} };
@@ -567,18 +569,28 @@ std::vector<Point> PlanPath(Point const& from, Point const& to, float body, Grou
             ok = false;                                         // a detour made a new obstacle it couldn't clear
         if (!ok)
             continue;
-        double cost = PathCost(pts, settings);
-        if (!chosen || cost < chosenCost)
-        {
-            chosen = std::move(pts);
-            chosenCost = cost;
-        }
+        cleared.emplace_back(PathCost(pts, settings), std::move(pts));
     }
     std::vector<Point> out;
-    if (!chosen)
+    if (cleared.empty())
         return out;                                             // no bow gets through: the caller logs it
-    out.reserve(chosen->size());
-    for (Sample const& p : *chosen)
+    // the cheapest, then the bows tied with it. Each path:
+    //   one within the margin, or no rng: the first cheapest (as before)
+    //   two or more and an rng: one of them, drawn
+    size_t first = 0;
+    for (size_t i = 1; i < cleared.size(); ++i)
+        if (cleared[i].first < cleared[first].first)
+            first = i;
+    std::vector<size_t> tied;
+    for (size_t i = 0; i < cleared.size(); ++i)
+        if (cleared[i].first <= cleared[first].first * (1.0 + settings.tieMargin))
+            tied.push_back(i);
+    size_t pick = first;
+    if (rng && settings.tieMargin >= 0.0 && tied.size() > 1)
+        pick = tied[std::min(tied.size() - 1, size_t(std::floor((*rng)() * double(tied.size()))))];
+    std::vector<Sample> const& chosen = cleared[pick].second;
+    out.reserve(chosen.size());
+    for (Sample const& p : chosen)
         out.push_back({ float(p.x), float(p.y), float(p.h) });
     return out;
 }

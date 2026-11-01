@@ -47,6 +47,9 @@ void AddSC_buddies_weather();
 void AddSC_buddies_sidestep();
 void AddSC_buddies_reset();
 void AddSC_buddies_forward_pass();
+void AddSC_buddies_solo();                 // the solo record: fights won alone (623)
+void AddSC_buddies_levelup();              // ".levelto": a character and its buddies to a level (185)
+void AddSC_buddies_sargobras();            // the whisperable Sargobras on his own account (617b2)
 
 // {{{ Addmod_buddiesScripts
 void Addmod_buddiesScripts()
@@ -90,5 +93,8 @@ void Addmod_buddiesScripts()
     AddSC_buddies_sidestep();
     AddSC_buddies_reset();
     AddSC_buddies_forward_pass();
+    AddSC_buddies_solo();
+    AddSC_buddies_levelup();
+    AddSC_buddies_sargobras();
 }
 // }}}

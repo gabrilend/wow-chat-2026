@@ -7,7 +7,7 @@
 - Related: 617a4 (the buddy starting kit: food and drink), 617h2 (every
   item a buddy carries), 718e (the buddies' arrival after the rise)
 - Priority: Low
-- State: built 2026-10-30 in the kit, waiting for the compile
+- State: built and compiled 2026-10-30 in the kit
 - First profile: basic
 
 ## Origin
@@ -19,7 +19,7 @@ Verbatim, 2026-10-22:
 
 ## Current Behavior
 
-**Built 2026-10-30, waiting for the compile:** a death knight's buddies
+**Built and compiled 2026-10-30:** a death knight's buddies
 are made with 5 Black Mushrooms (41751) in place of the kit's vendor food;
 their drink, for mana users, is the vendor's as for anyone
 (`GiveMeals` and `OwnerIsDeathKnight` in `buddies_kit.cpp`, the owner's

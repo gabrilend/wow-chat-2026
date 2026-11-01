@@ -270,6 +270,11 @@ int main(int argc, char** argv)
     int perMap = std::atoi(argv[4]);
     std::ofstream cases(argv[2]), results(argv[3]);
     Settings settings;
+    // the tie draw off (as in the Lua driver): near the margin's edge the
+    // two versions' costs for a bow they don't choose differ by a hair of
+    // height sampling, so with the draw on they can tie different bows; the
+    // draw itself is checked by scripts/test-buddy-roam-tie
+    settings.tieMargin = -1.0;
     cases << "settings turn " << F(settings.turn) << "\n";
 
     static float const BODIES[] = { 0.61f, 0.69f, 0.78f, 1.95f };

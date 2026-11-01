@@ -24,6 +24,27 @@ Verbatim, 2026-10-22:
 
 ## Current Behavior
 
+**The mage's city teleports, built and compiled 2026-10-31, not yet tried in game**
+(the way-back table is install step E077; the rule is in
+`src/lua-basic/buddy-hearth.lua`, beside the hearthstone's; the list of
+teleports and where each lands is `src/lua-basic/data/teleport-destinations.lua`,
+made by `scripts/generate-teleport-destinations` from the game's
+Spell.dbc and AreaTable.dbc, 13 teleports, `--check` to compare):
+- cast away from its city in the open world: where the caster stood is
+  kept as that teleport's way back (the latest replacing the last: one
+  step back, question 2); cast inside a dungeon, raid or battleground:
+  nothing kept;
+- cast inside its city (a city's own zone; for Stonard and Theramore, the
+  town's area or within 300 yards of where the spell lands) with a way
+  back: the spell lands as usual, then the caster is sent along the way
+  back, which is used up; with none: as usual, and the caster is told;
+- the caster's buddies come along every time, placed round where the
+  caster arrives, as after a hearthstone.
+Not built: party members (question 1's prompt, as the group hearthstone's),
+Death Gate (its way in is a gate the death knight steps through, not a
+teleport spell), mage portals (question 3). Teleport: Moonglade is
+two-way already in the stock game.
+
 Stock 3.3.5a:
 
 - **Death Gate** (death knight, 50977): opens a gate to the Ebon Hold.

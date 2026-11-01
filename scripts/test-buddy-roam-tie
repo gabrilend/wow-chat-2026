@@ -1,0 +1,95 @@
+#!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-buddy-roam-tie
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      check that a roaming buddy draws between paths that cost about the same
+-- quick-test: yes
+-- ==== end of header ====
+-- test-buddy-roam-tie - checks the roaming planner's tie draw (issue 617e2).
+--
+-- For a general audience: a buddy walking round something chooses among
+-- five gentle bows, left and right of the straight line. On a flat floor
+-- the left and right bows cost the same, and until 2026-10-30 the last bit
+-- of computer rounding picked the side. The owner: "it should randomly
+-- pick within like a 10% margin. So if it's marginally equal it should
+-- just pick one randomly." This checks, on the Lua model (the server's C++
+-- core is held to the same model by test-buddy-roam-core, which runs with
+-- the draw off), that on a flat floor different random numbers walk
+-- different sides, that a path clearly cheaper is always taken, and that
+-- with the draw off or no random numbers the first cheapest is taken.
+--
+-- Usage: scripts/test-buddy-roam-tie [PROJECT_DIR] [--help]
+-- Exit status 0 if all pass.
+
+-- {{{ arguments
+if arg[1] == "--help" or arg[1] == "-h" then
+    print("Usage: scripts/test-buddy-roam-tie [PROJECT_DIR]")
+    print("  Checks the roaming planner's tie draw (src/lua-basic/lib/buddy-roam.lua, PLAN.TIE).")
+    os.exit(0)
+end
+local DIR  = arg[1] or "/mnt/kaun/wow-chat-2026"
+-- }}}
+local Roam = dofile(DIR .. "/src/lua-basic/lib/buddy-roam.lua")
+
+local fails, checks = {}, 0
+local function check(ok, what)
+    checks = checks + 1
+    if not ok then fails[#fails + 1] = what end
+    print((ok and "ok   " or "FAIL ") .. what)
+end
+
+-- {{{ the floors
+-- A 100 by 60 yard floor, flat (height 0) or with a hill on one side
+local function floor(height)
+    return { outline = { { 0, 0 }, { 100, 0 }, { 100, 60 }, { 0, 60 } }, rects = {}, walls = {},
+             centre = { x = 50, y = 30 }, height = height }
+end
+local flat = floor(function() return 0 end)
+-- a hill north of the line (y above 30): the north bows climb and cost more
+local hill = floor(function(x, y) return y > 30 and (y - 30) * 0.8 or 0 end)
+-- which side a path bends to: the sign of its middle point's offset from y = 30
+local function side(pts)
+    local mid = pts[math.floor(#pts / 2) + 1]
+    return mid.y > 30.01 and "north" or (mid.y < 29.99 and "south" or "straight")
+end
+local function always(v) return function() return v end end
+-- }}}
+
+-- on the flat floor the straight bow is the cheapest, and the gentle bows
+-- either side cost only a little more (well within 10%), so they tie with
+-- it and different random numbers take different ones
+local seen = {}
+for _, r in ipairs({ 0.0, 0.3, 0.5, 0.7, 0.99 }) do
+    local pts = Roam.plan_path(flat, 10, 30, 90, 30, 0.7, always(r))
+    seen[side(pts)] = true
+end
+check(seen.north and seen.south, "flat floor: different random numbers walk different sides (seen: "
+    .. (seen.north and "north " or "") .. (seen.south and "south " or "") .. (seen.straight and "straight" or "") .. ")")
+
+-- no random numbers, or the draw off: always the first cheapest
+local a = side(Roam.plan_path(flat, 10, 30, 90, 30, 0.7))
+Roam.PLAN.TIE = -1
+local b = side(Roam.plan_path(flat, 10, 30, 90, 30, 0.7, always(0.99)))
+Roam.PLAN.TIE = 0.10
+check(a == "straight" and b == "straight", "no random numbers, or the draw off: the first cheapest, straight (" .. a .. ", " .. b .. ")")
+
+-- the hill: the north bows cost clearly more, so never drawn
+local north = false
+for _, r in ipairs({ 0.0, 0.25, 0.5, 0.75, 0.99 }) do
+    if side(Roam.plan_path(hill, 10, 30, 90, 30, 0.7, always(r))) == "north" then north = true end
+end
+check(not north, "a hill on one side: no draw ever climbs it")
+
+-- one random number per draw, none without a tie
+local draws = 0
+Roam.plan_path(flat, 10, 30, 90, 30, 0.7, function() draws = draws + 1; return 0.5 end)
+check(draws == 1, "a tie draws one random number (" .. draws .. ")")
+
+print(string.format("%d checks, %d failed", checks, #fails))
+print(#fails == 0 and "Result: all checks passed." or ("Result: " .. #fails .. " failure(s)."))
+os.exit(#fails == 0 and 0 or 1)
+-- ==== footer of test-buddy-roam-tie ====
+-- lines:      95
+-- ==== end of footer ====

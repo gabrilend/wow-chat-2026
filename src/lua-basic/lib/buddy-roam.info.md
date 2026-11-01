@@ -31,7 +31,7 @@ Builds one roam session's state: who is near/far, each buddy's current
 spin (orbit direction) and target, seeded from `rand` so a run is
 reproducible.
 
-### `Roam.plan_path(area, ax, ay, bx, by, body) -> list of points`
+### `Roam.plan_path(area, ax, ay, bx, by, body, rand) -> list of points`
 A walkable path from `(ax, ay)` to `(bx, by)`, curved around obstacles and
 detoured through openings rather than cutting through walls; `body` is the
 walking creature's collision radius.

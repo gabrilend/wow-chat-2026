@@ -7,7 +7,7 @@
   chosen by talents: one-hand or two-hand), 621 (a strong enchant on a
   new weapon), 723 (Death Gate there and back)
 - Priority: Medium
-- State: planned; open questions first
+- State: built 2026-10-30 as a town errand, compiled 2026-10-31; needs a town circle at Ebon Hold
 
 ## Origin
 
@@ -24,7 +24,21 @@ buddy-bot runeforging?":
 
 ## Current Behavior
 
-None in practice (read 2026-10-22):
+**Built 2026-10-30, compiled 2026-10-31, not yet seen in game** (the town
+visit, `buddies_town.cpp`): a death knight buddy's town errands include
+the runeforge whenever a runeforge stands within the town scan (a
+spell-focus object of the focus the rune spells ask for: Ebon Hold's and
+Acherus's). At it, each hand's weapon gets a rune drawn at random among
+those whose own weapon mask suits it (two-hand runes on two-handers,
+one-hand runes on one-handers), never the one it wears, put on as a
+permanent enchantment; the owner is whispered "I switched to [rune] on
+my [weapon]." The runes are the ten "Rune of ..." spells read from the
+spell file. **Known gap:** an errand runs only during a town visit, and
+the town circles (found by the generator from helpful people, or placed
+with `.buddy town here`) have none at Ebon Hold or Acherus yet, so for
+now no buddy reaches one; a circle placed there by hand would open it.
+
+Before this, none in practice (read 2026-10-22):
 
 - Death knight buddies know the Runeforging spell (53428; the bot module
   teaches it to every death knight bot with Death Gate and the

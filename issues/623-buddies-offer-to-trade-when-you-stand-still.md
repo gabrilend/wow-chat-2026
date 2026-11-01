@@ -30,6 +30,25 @@ the owner's clan mates), and refuses anyone else's, saying so.
 
 ## Current Behavior
 
+**Earmarks and treats by mail, built 2026-10-31, compiled the same day, not yet seen in game**
+(syntax-checked; the town visit's mailbox errand, `buddies_town.cpp`):
+- an item is earmarked for the owner when it is gear the owner can wear
+  now, not bound to the buddy, that the buddy has no use for itself, and
+  that scores at least 5% higher by the owner's own stat weights (the bot
+  module's scorer, asked for the owner) than what the owner wears in the
+  slot it would go to (or the slot is empty). Earmarked items join the
+  bind-on-equip epics already mailed, at the next mailbox of a town visit
+  (piece 2; the death knights' mailbox outside a town is not reached yet,
+  as the town visit needs a town circle there);
+- at each mailbox stop, one time in ten, a treat: usually a copper with
+  "I found a lucky penny for you.", one treat in four a purse of its level
+  squared times 28 copper (about 10 gold at 60) from its own money, with
+  a line in its class's voice (the rogue's is the owner's own words).
+Not built: pieces 3 to 6 (putting earmarked items and split food into a
+trade the owner opens, the full-bags offer and arcs, the "go sell"
+threshold, buddy-to-buddy giving), and piece 8's refusal of others' trades
+beyond B058's clan rule.
+
 **Clan trades, built 2026-10-26 (source patch B058, not yet compiled):**
 a player in a bot's own guild may now open a trade with it, and the bot
 accepts what it is given; anyone else is refused as before ("I'm kind of
@@ -323,9 +342,20 @@ buddies waiting to trade, designed 2026-10-15, are dropped):
    rogue, mage: `unit_class`), the record per kind, replaced only by a fight
    more in every one of its six numbers, judging by the record times the
    allies near, forgetting all at once, stand-ins keeping none and always
-   brave. Not wired in yet: noting a solo kill (no help at all) and its
-   numbers, keeping the records on the buddy across logins and storage,
-   forgetting them when Sargobras sets the level, and asking it before a
-   selling trip; the other session's fight picture (`buddies_fight_state.h`,
-   damage taken and dealt per character) is where the fight's numbers
-   will come from.
+   brave. **Wired in 2026-10-31, compiled the same day, not yet seen in game** (syntax-checked;
+   `buddies_solo.cpp`, its table `buddy_solo_record` from install step
+   E076): twice a second a buddy's fight is watched from its first blow;
+   anyone but the buddy and its pets on the foe's threat list (a heal, a
+   friend's blow), or a second foe on the buddy, spoils it; the foe dying
+   with the buddy standing is a solo win, its numbers (the foe's health at
+   the start; the buddy's health lost, resource spent and seconds; the foe's
+   damage per second as health lost over seconds; gold cost 0, since
+   buddies use no paid consumables in fights yet) handed to the record and
+   saved when they became it; read back at login; forgotten when a buddy is
+   made again at its owner's level (`buddies_stage.cpp`, the remake); a
+   stand-in keeps none. `BuddySoloCanTake(buddy, foe, allies)` answers for
+   a foe never fought (its weapon damage over its attack speed for its
+   damage per second). Not yet asked by anything: the selling trip's
+   "safe enough" (piece 5) and the ability economies are its readers to
+   come. The other session's fight picture (`buddies_fight_state.h`) was
+   not used: it is filled only while the forward pass plans a fight.

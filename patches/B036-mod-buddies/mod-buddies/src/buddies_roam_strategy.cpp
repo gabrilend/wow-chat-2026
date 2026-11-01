@@ -85,6 +85,7 @@
 #include "buddies_explore.h"
 #include "buddies_nodes.h"
 #include "buddies_path.h"
+#include "buddies_spawn_zones.h"
 #include "Bag.h"
 #include "CellImpl.h"
 #include "Creature.h"
@@ -674,6 +675,30 @@ public:
                 bot->GetExactDist2d(s.buddy.waypoint.x, s.buddy.waypoint.y), s.buddy.path.size(),
                 found ? "the explorer's grid" : "the pinwheel");
 
+            // The owner's spawn zones bound the wandering (617e12 question
+            // 7, the owner 2026-10-30: "they must stay in the same
+            // sub-zone. But they can wander anywhere inside that sub-zone
+            // that has the same monster spawns as the player is in"): the
+            // area is already the owner's sub-zone; a waypoint holding none
+            // of the monster kinds that live where the owner stands is
+            // dropped and another chosen shortly. Each path:
+            //   the owner where no monster lives (a road, a camp)  - any waypoint of the area
+            //   the waypoint shares one of the owner's zones       - kept
+            //   otherwise                                          - dropped
+            {
+                std::vector<uint32> ownerKinds;
+                BuddySpawnZonesAt(map->GetId(), owner->GetPositionX(), owner->GetPositionY(), ownerKinds);
+                if (!ownerKinds.empty() && !BuddySharesSpawnZone(map->GetId(), ownerKinds, s.buddy.waypoint.x, s.buddy.waypoint.y))
+                {
+                    BuddyTrace(bot, "roam: waypoint dropped: none of the {} monster kinds living where the owner stands lives there",
+                        ownerKinds.size());
+                    s.buddy.hasWaypoint = false;
+                    s.retryAt = now + MESH_RETRY_MS;
+                    StoreState(guid, s);
+                    return false;
+                }
+            }
+
             // The mesh's word on the waypoint (617o1): moved onto the mesh,
             // and a complete route there, or the pick is dropped and another
             // made shortly. Every planner judges ground its own way; only
@@ -1083,8 +1108,20 @@ private:
     // someone else's kill, one the buddy may attack, worth experience to
     // it, hostile or neutral (617e3: starting zones are nearly all neutral
     // monsters), not recently given up on.
+    //
+    // The owner's spawn zones first (617e13, the owner 2026-10-30: "any
+    // monsters that are in the same spawn-zone as the player. Remember,
+    // there are overlapping spawn-zones."): of those, a monster whose kind
+    // lives where the owner stands (BuddyInSpawnZone, every overlapping
+    // zone counting) is chosen before any other. Each path:
+    //   one or more of the owner's zones' monsters near  - the nearest of them
+    //   none (the owner on a road, or between zones)    - the nearest of all
     Creature* PreyNear(RoamState const& s, uint64 now)
     {
+        Player* owner = botAI->GetMaster();
+        bool ownerHere = owner && owner->IsInWorld() && owner->GetMapId() == bot->GetMapId();
+        Creature* zoned = nullptr;
+        float zonedDist = MOBS_YARDS + 1.0f;
         std::list<Unit*> units;
         Acore::AnyUnitInObjectRangeCheck check(bot, MOBS_YARDS);
         Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(bot, units, check);
@@ -1114,8 +1151,14 @@ private:
                 best = c;
                 bestDist = d;
             }
+            if (ownerHere && d < zonedDist
+                && BuddyInSpawnZone(bot->GetMapId(), c->GetEntry(), owner->GetPositionX(), owner->GetPositionY()))
+            {
+                zoned = c;
+                zonedDist = d;
+            }
         }
-        return best;
+        return zoned ? zoned : best;
     }
 
     // {{{ HelpNear

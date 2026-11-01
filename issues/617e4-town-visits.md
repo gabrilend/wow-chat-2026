@@ -208,8 +208,8 @@ Everything here is from the owner's decisions recorded in 617e (2026-09-23,
   between the nearest errand left on the list and the farthest, except
   that when the farthest is more than 4 times as far as the nearest, the
   nearest is taken. So buddies ping-pong across a town, and two visits
-  rarely run the same order. Built 2026-10-30 in the source, waiting for
-  the compile (`NextErrandFirst` in `buddies_town.cpp`, the 4 times as
+  rarely run the same order. Built and compiled 2026-10-30
+  (`NextErrandFirst` in `buddies_town.cpp`, the 4 times as
   `NEXT_ERRAND_FAR_CAP`). Monsters met on the way are fought (and see 617e12:
   where they keep coming, the errand wins after a while).
 - **Leisure when the list is done** (and whenever a buddy is in a town:
@@ -278,7 +278,7 @@ Everything here is from the owner's decisions recorded in 617e (2026-09-23,
   the second spot beside a clanmate, an outsider never takes a spot of a
   bed someone else's clan is using.
 - **Unstuck**: less than 10 yards gained in 90 seconds (was 5).
-  **Removed in the source 2026-10-30, waiting for the compile** (the
+  **Removed 2026-10-30, compiled the same day** (the
   travel step in `buddies_town.cpp`: `ReportStuck` in place of the hop;
   one `mod-buddies: STUCK` error line per report, naming where it stands,
   where it was going and why; `docs/balance-updates.md`), as a

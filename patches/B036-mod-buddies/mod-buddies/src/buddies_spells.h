@@ -19,6 +19,7 @@
 #define MOD_BUDDIES_SPELLS_H
 
 #include "Define.h"
+#include <map>
 #include <string>
 
 class Creature;
@@ -70,6 +71,15 @@ uint32 BuddyLearnEverything(Player* bot);
 // Never lowers a skill. Safe before the buddy is in the world. Returns how
 // many skills and recipes changed; `problems` gains what could not be done.
 uint32 BuddyRaiseProfessions(Player* bot, std::string& problems);
+// }}}
+
+// {{{ BuddyProfessionsByRatio
+// After a level change by the level command (185): each profession named
+// in `ratio` (skill id -> value over maximum, read before the change) at
+// the rank its new level allows and the same share of that rank's
+// maximum; ranks above the level unlearned. Recipes untouched. Returns how
+// many professions changed.
+uint32 BuddyProfessionsByRatio(Player* p, std::map<uint32, float> const& ratio);
 // }}}
 
 // {{{ BuddyForgetLessons

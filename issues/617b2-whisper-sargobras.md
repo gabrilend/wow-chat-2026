@@ -28,7 +28,7 @@ The owner, 2026-10-14:
 
 ## Current Behavior
 
-**Built 2026-10-30, not yet compiled or run (steps 2 to 5 below):**
+**Built 2026-10-30, compiled 2026-10-31, not yet tried in game (steps 2 to 5 below):**
 - the reader: `patches/E066-sargobras/helpers/lib/sargobras-whisper.lua`
   turns a whisper into one of his menu's choices (a class, a people,
   "flexible", "help", "owed", or unknown), checked offline by
@@ -45,12 +45,23 @@ The owner, 2026-10-14:
   (`PickName`, `buddies_create.cpp`), no longer giving up after five
   draws; waiting for the compile.
 
-**Not built (step 1): the character itself.** Nothing makes or logs in a
-character named Sargobras yet, so a whisper still finds nobody and the
-handler never fires. Making him (on his own account, the unseen guild
-master's, 630) and logging him in at server start is the buddy module's
-work, in files another session holds (the module's loader and stand-in
-code); it waits for them.
+**The character (step 1), built and compiled 2026-10-31; made and logged in at the first start (guid 3044)**
+(syntax-checked; `buddies_sargobras.cpp`): every 10 seconds after the
+server starts, the buddy module makes the account SARGOBRAS if missing (a
+password nobody is told), then the character Sargobras on it if missing
+(a human man, level 1, as a buddy is made), then logs him in as a bot
+with no master (asked again after a minute if he hasn't arrived). At his
+login he is made invisible, rooted, and sent to the developers' island
+(map 1, out of every player's way). His account goes on the companion
+list, so he is hidden from /who and add-friend and takes no bot commands
+(B044, B045); he is no owner (`BuddyIsNotAPlayer` says so for him, and
+the login pass skips him), and a whisper to him gets no buddy's
+placeholder answer (`buddies_whisper.cpp`). If a character on another
+account already holds the name, the module logs the error once and
+makes none. Not yet run: whether the bot module leaves a masterless bot
+quite still, and whether his whisper back reaches the other faction.
+Known conflict: the add-friend hiding also hides him from `/friend
+Sargobras`, which the friends-list idea below wants to allow.
 
 Before this, Sargobras existed only as creatures (the valley one,
 6170001; the wandering one, 6170002 and 6170003 with his hat), driven by

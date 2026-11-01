@@ -12,6 +12,19 @@
 
 ## Current Behavior
 
+**Short of coin, the best-suited first: built and compiled 2026-10-31,
+not yet seen in game** (`BuddyTrainAtTrainer`, `Suitability` in
+`buddies_spells.cpp`; answer 1 of 2026-10-30): at a class trainer, while
+its purse covers every lesson it can learn now, a buddy buys them
+cheapest first as before; when it can't, it orders them by how well each
+suits it and buys down the list, skipping what it can't afford, until
+nothing listed is affordable. Suitability, the agent's call until 625's
+per-ability stat weights exist: a lesson's kind is read from its spell
+(a heal; magical damage; physical damage; anything else, half a match
+everywhere), and it scores the share of the buddy's talent points in
+trees whose kind of stats matches (healing, spell damage, or the
+melee/tank/ranged trees for physical damage), from its talent plan.
+
 **Refined the same day (verbatim):** "the buddy-bot at each tier spawns
 in with possibly a different weapon type equipped. That one they should
 know. Otherwise, they should learn a random weapon skill from what their
@@ -48,7 +61,7 @@ a buddy is made (at any level):
   kinds left to learn, each also at the maximum for its level;
 - every other kind is learned later, paid for, at weapon masters, as
   class lessons are.
-Built 2026-10-30 in the source, waiting for the compile
+Built 2026-10-30, compiled the same day
 (`BuddyWeaponAllowance`, `BuddyFillWeaponKinds`, `BuddyMaxWeaponSkills` in
 `buddies_spells.cpp`, called by the kit): the owner's trained kinds are
 those it knows less its race and class's starting skills (the server's

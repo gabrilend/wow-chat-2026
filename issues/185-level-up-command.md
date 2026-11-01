@@ -69,7 +69,38 @@ these tools and the `.buddy kit` / `.buddy gems` commands after them.
 
 ## Current Behavior
 
-No such script exists. Levels are changed by hand with the server's own
+**`.levelto <name> <level>`, built and compiled 2026-10-31, not yet run in game**
+(syntax-checked; `buddies_levelup.cpp`, in the buddy module rather than
+Lua, since the gear, gems, lessons and profession ranks it reuses are the
+module's; named `.levelto` because the server already has a `.levelup`
+that only adds levels; registered in `config/custom-gm-commands.lua`,
+console allowed). For a character in the world:
+- every weapon skill, defence and profession keeps its share of its
+  maximum, up or down (question 4): weapon skills and defence of five a
+  level; professions at the rank the level allows (Journeyman from 10,
+  Expert from 20, Artisan from 35, ranks above it unlearned when lowering)
+  (`BuddyProfessionsByRatio`, `buddies_spells.cpp`); recipes are left as
+  they are;
+- what it wears: white and grey items dropped, the rest mailed to itself
+  ("Kept for you"); then fresh white gear for the level by its talent
+  shape (a buddy's own; a player's, the shape nearest its spent points
+  per tree, its role from its spec), gemmed by that shape and role, the
+  kit buddies are made with (question 5). The kit's gear still comes from
+  the tier's gearset (buddy-white-10, -20, ...), not continuously by
+  level;
+- the level set as the server's own command sets it (spent talents past
+  the new allowance reset by the server); a buddy's class lessons
+  forgotten and learned afresh for the level;
+- each of its buddies in the world moves by the same number of kills
+  ahead of (or behind) it, a kill being one of a monster of the owner's
+  level by the server's own experience formula (question 7, the agent's
+  call: the owner's level, before and after); a buddy not in the world is
+  named and left as it is.
+Not built: the purse and visiting trainer (187), recipes for raised
+professions, gear chosen continuously by level, and a character not in
+the world.
+
+Before: no such script existed. Levels are changed by hand with the server's own
 `.character level <name> <level>` command (used on Constine, 2026-09-29).
 What follows from it:
 - the player's level changes, and their talent points with it;

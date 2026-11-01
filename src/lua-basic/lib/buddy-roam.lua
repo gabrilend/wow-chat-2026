@@ -435,6 +435,9 @@ local PLAN = {
     SLOPE_W    = 6,     -- cost per yard of grade squared (1: 45 degrees)
     ROAD_F     = 0.6,   -- a yard of road costs this much of a yard off-road
     MAX_DETOUR = 8,     -- detours per candidate before it is given up
+    TIE        = 0.10,  -- candidates within this share of the cheapest's cost are tied, one drawn
+                        -- at random (the owner, 2026-10-30: "it should randomly pick within like a
+                        -- 10% margin"; the C++ core's tieMargin, drawing the same one number)
     MAX_SIDE   = 16,    -- yards a detour may bulge before that side is given up
     RAMP_MIN   = 3,     -- yards: shortest ease into / out of a detour
 }
@@ -572,13 +575,16 @@ end
 -- {{{ function Roam.plan_path
 -- A path from (ax, ay) to (bx, by) for a body `body` yards wide over the
 -- area's ground. Every bow candidate gets its detours, one obstacle at a
--- time from A toward B; the cheapest candidate that clears wins.
+-- time from A toward B; of those that clear, the ones within PLAN.TIE of
+-- the cheapest are tied, and with `rand` one is drawn among them (one
+-- number, only when two or more tie); without it, or one alone, the first
+-- cheapest.
 -- Returns points = { {x, y, h}, ... } (the test points of the chosen path,
 -- A first, B last) and plan = { candidates = { { points, cost, ok }, ... },
 -- chosen } for drawing. Errors when no candidate clears: the waypoint
 -- picker only chooses spots clear of obstacles, so a trip that cannot be
 -- planned is a map or setting to look at, not something to walk anyway.
-function Roam.plan_path(area, ax, ay, bx, by, body)
+function Roam.plan_path(area, ax, ay, bx, by, body, rand)
     local len = math.sqrt((bx - ax) ^ 2 + (by - ay) ^ 2)
     local ux, uy = (bx - ax) / len, (by - ay) / len
     local plan = { candidates = {} }
@@ -595,6 +601,15 @@ function Roam.plan_path(area, ax, ay, bx, by, body)
         local entry = { points = pts, cost = ok and path_cost(area, pts) or math.huge, ok = ok, detours = #c.detours }
         plan.candidates[#plan.candidates + 1] = entry
         if ok and (not plan.chosen or entry.cost < plan.chosen.cost) then plan.chosen = entry end
+    end
+    -- the tie (each path: one within the margin, or no rand: the first
+    -- cheapest; two or more and rand: one of them, drawn)
+    if plan.chosen and rand and PLAN.TIE >= 0 then
+        local tied = {}
+        for _, e in ipairs(plan.candidates) do
+            if e.ok and e.cost <= plan.chosen.cost * (1 + PLAN.TIE) then tied[#tied + 1] = e end
+        end
+        if #tied > 1 then plan.chosen = tied[math.min(#tied, math.floor(rand() * #tied) + 1)] end
     end
     if not plan.chosen then
         error(string.format("buddy-roam: no path for a %.2f yd body from (%.1f, %.1f) to (%.1f, %.1f): every candidate (%d bows) met an obstacle it could not bulge past within %d yd in %d detours", body, ax, ay, bx, by, #PLAN.BOWS, PLAN.MAX_SIDE, PLAN.MAX_DETOUR))
@@ -910,12 +925,12 @@ local function pick_waypoint(s, b, rand)
             local body = b.body or s.body
             if body > 0 then
                 if b.via then
-                    local leg1 = Roam.plan_path(s.area, b.x, b.y, b.via.x, b.via.y, body)
-                    local leg2, plan = Roam.plan_path(s.area, b.via.x, b.via.y, best.x, best.y, body)
+                    local leg1 = Roam.plan_path(s.area, b.x, b.y, b.via.x, b.via.y, body, rand)
+                    local leg2, plan = Roam.plan_path(s.area, b.via.x, b.via.y, best.x, best.y, body, rand)
                     for i = 2, #leg2 do leg1[#leg1 + 1] = leg2[i] end
                     b.path, b.plan = leg1, plan
                 else
-                    b.path, b.plan = Roam.plan_path(s.area, b.x, b.y, best.x, best.y, body)
+                    b.path, b.plan = Roam.plan_path(s.area, b.x, b.y, best.x, best.y, body, rand)
                 end
                 b.path_i = 2
             end

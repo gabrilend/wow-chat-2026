@@ -34,6 +34,7 @@
  */
 
 #include "buddies.h"
+#include "buddies_sargobras.h"
 #include "Chat.h"
 #include "CompanionAccounts.h"
 #include "GameTime.h"
@@ -83,7 +84,8 @@ public:
     {
         // not a whisper (the hook also serves other private chat), buddies
         // off, or the receiver isn't a buddy: nothing to answer
-        if (!BuddiesEnabled() || type != CHAT_MSG_WHISPER || !CompanionAccounts::Is(receiver->GetSession()->GetAccountId()))
+        if (!BuddiesEnabled() || type != CHAT_MSG_WHISPER || !CompanionAccounts::Is(receiver->GetSession()->GetAccountId())
+            || BuddyIsSargobrasAccount(receiver->GetSession()->GetAccountId()))   // Sargobras answers through his own script (617b2)
             return true;
 
         // a bot whispering (the bot module's own chatter, or a buddy): no

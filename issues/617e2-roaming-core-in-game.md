@@ -226,7 +226,17 @@ over the real world:
   just pick one randomly. Or defer to the smap." Two ways whose costs are
   within 10% of each other count as equal, and one is picked at random
   (the margin a lever); where the smap knows the ground, it decides
-  instead.
+  instead. Built 2026-10-30 in the C++ core and its Lua model alike
+  (`PlanPath`, `Settings::tieMargin`; `Roam.plan_path`, `PLAN.TIE`), one
+  random number per tie, none without one; a negative margin turns the
+  draw off. The parity test (`scripts/test-buddy-roam-core`, 3680
+  checks) runs with the draw off, since near the margin's edge the two
+  versions' costs for an unchosen bow differ by a hair of height sampling
+  and they would tie different bows; the draw is checked by
+  `scripts/test-buddy-roam-tie` (4 checks: different sides on a flat
+  floor, never up a hill on one side, the first cheapest without a draw,
+  one number a tie). The core was compiled 2026-10-31; the smap's say
+  waits on the smap.
 
 ## Related Issues
 

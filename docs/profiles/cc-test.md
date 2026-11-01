@@ -70,30 +70,31 @@ lowest priority first, each line its header's own (`scripts/plan-patches cc-test
 
 **Before the compile (source patches, taken off again once it is through):**
 
-| priority | id   | kind   | about                                                                                                      |
-| -------: | ---- | ------ | ---------------------------------------------------------------------------------------------------------- |
-|      120 | B002 | source | Add ALE OnLogin hook to playerbots bot login                                                               |
-|      140 | B004 | source | Fix ~695 compiler warnings in upstream modules                                                             |
-|      300 | B020 | source | Add LOCK_ALE to ALEEventProcessor::RemoveEvent                                                             |
-|      320 | B022 | source | A --conf-dir option for the servers and dbimport, over the compiled-in module config folder                |
-|      360 | B026 | source | Fix the bot-login Engine::Init crash (dangling strategy on duplicate add)                                  |
-|      370 | B027 | source | Guard Engine::Init against a strategy with a stale/foreign bot facade                                      |
-|      460 | B036 | source | Build the project's buddy module (mod-buddies) into the worldserver                                        |
-|      470 | B037 | source | Playerbots: a switch for the group invite at a bot's login                                                 |
-|      520 | B042 | source | A bot says "AI was reset to defaults" only when asked to reset                                             |
-|      540 | B044 | source | Companion accounts: their characters are not in /who and can't be friended                                 |
-|      550 | B045 | source | Playerbots: a bot on a companion account takes no chat commands                                            |
-|      560 | B046 | source | Playerbots: buddies judge gear by their own talent plan and roll                                           |
-|      570 | B047 | source | Creature outfits: a creature can look like a dressed player character                                      |
-|      580 | B048 | source | Buddies don't whisper their owner about failed item moves                                                  |
-|      600 | B050 | source | Playerbots: a buddy weighs spirit by what it heals                                                         |
-|      620 | B052 | source | Playerbots: a buddy's long walk never ends in a teleport                                                   |
-|      640 | B054 | source | The server accepts navigation tiles built by version 19 of the                                             |
-|      660 | B056 | source | Bots see only as far as they act                                                                           |
-|      670 | B057 | source | The most any view distance may be, as a setting                                                            |
-|      680 | B058 | source | Bots trade with their own guild                                                                            |
-|      740 | B064 | source | a setting: instant attacks count attack power at the real weapon speed (issue 813)                         |
-|      750 | B065 | source | Playerbots: buddies leave quest items on corpses and quest objects untouched, for their owner (issue 617j) |
+| priority | id   | kind   | about                                                                                                         |
+| -------: | ---- | ------ | ------------------------------------------------------------------------------------------------------------- |
+|      120 | B002 | source | Add ALE OnLogin hook to playerbots bot login                                                                  |
+|      140 | B004 | source | Fix ~695 compiler warnings in upstream modules                                                                |
+|      300 | B020 | source | Add LOCK_ALE to ALEEventProcessor::RemoveEvent                                                                |
+|      320 | B022 | source | A --conf-dir option for the servers and dbimport, over the compiled-in module config folder                   |
+|      360 | B026 | source | Fix the bot-login Engine::Init crash (dangling strategy on duplicate add)                                     |
+|      370 | B027 | source | Guard Engine::Init against a strategy with a stale/foreign bot facade                                         |
+|      460 | B036 | source | Build the project's buddy module (mod-buddies) into the worldserver                                           |
+|      470 | B037 | source | Playerbots: a switch for the group invite at a bot's login                                                    |
+|      520 | B042 | source | A bot says "AI was reset to defaults" only when asked to reset                                                |
+|      540 | B044 | source | Companion accounts: their characters are not in /who and can't be friended                                    |
+|      550 | B045 | source | Playerbots: a bot on a companion account takes no chat commands                                               |
+|      560 | B046 | source | Playerbots: buddies judge gear by their own talent plan and roll                                              |
+|      570 | B047 | source | Creature outfits: a creature can look like a dressed player character                                         |
+|      580 | B048 | source | Buddies don't whisper their owner about failed item moves                                                     |
+|      600 | B050 | source | Playerbots: a buddy weighs spirit by what it heals                                                            |
+|      620 | B052 | source | Playerbots: a buddy's long walk never ends in a teleport                                                      |
+|      640 | B054 | source | The server accepts navigation tiles built by version 19 of the                                                |
+|      660 | B056 | source | Bots see only as far as they act                                                                              |
+|      670 | B057 | source | The most any view distance may be, as a setting                                                               |
+|      680 | B058 | source | Bots trade with their own guild                                                                               |
+|      740 | B064 | source | a setting: instant attacks count attack power at the real weapon speed (issue 813)                            |
+|      750 | B065 | source | Playerbots: buddies leave quest items on corpses and quest objects untouched, for their owner (issue 617j)    |
+|      760 | B066 | source | Playerbots: a dead buddy releases by the buddy module's rule (wait for a nearby rez, ask for one) (issue 632) |
 
 **After the compile and install (install steps and settings, mixed by priority):**
 
@@ -122,15 +123,17 @@ lowest priority first, each line its header's own (`scripts/plan-patches cc-test
 
 **After the databases are brought to upstream's state (our SQL):**
 
-| priority | id   | kind | about                                                                      |
-| -------: | ---- | ---- | -------------------------------------------------------------------------- |
-|     2720 | E042 | sql  | The buddy clan and roster tables (issue 617a1): each owner's companion     |
-|     2740 | E044 | sql  | Every named area's borders and middle (issue 617e2), for the buddies'      |
-|     2750 | E045 | sql  | The beds buddies sleep on in towns (issue 617e4), placed by hand in game   |
-|     2800 | E050 | sql  | The world's little towns as circles (issue 617e4a): every cluster of       |
-|     2820 | E052 | sql  | Every gearset profile (issue 617r: src/lua-basic/data/gearsets/*.lua) as   |
-|     2830 | E053 | sql  | The `command` rows for the game master commands the project compiles in    |
-|     2860 | E056 | sql  | The kept stand-ins (issue 617t1): one row per stand-in character the buddy |
+| priority | id   | kind | about                                                                               |
+| -------: | ---- | ---- | ----------------------------------------------------------------------------------- |
+|     2720 | E042 | sql  | The buddy clan and roster tables (issue 617a1): each owner's companion              |
+|     2740 | E044 | sql  | Every named area's borders and middle (issue 617e2), for the buddies'               |
+|     2750 | E045 | sql  | The beds buddies sleep on in towns (issue 617e4), placed by hand in game            |
+|     2800 | E050 | sql  | The world's little towns as circles (issue 617e4a): every cluster of                |
+|     2820 | E052 | sql  | Every gearset profile (issue 617r: src/lua-basic/data/gearsets/*.lua) as            |
+|     2830 | E053 | sql  | The `command` rows for the game master commands the project compiles in             |
+|     2860 | E056 | sql  | The kept stand-ins (issue 617t1): one row per stand-in character the buddy          |
+|     3060 | E076 | sql  | The solo record (issue 623): each buddy's hardest fight won alone, per              |
+|     3070 | E077 | sql  | The way back from a mage's city teleport (issue 723): one spot per caster and spell |
 <!-- patch-lists: end -->
 
 ## Related

@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-31 16:31:50
+Generated on: 2026-10-31 18:30:44
 Models: claude-opus-5-5
 
 ## Contents
@@ -222,6 +222,15 @@ Models: claude-opus-5-5
 52. 2026-10-30 16:39, after Request 160 - Your compile built the buddy pieces,
     the new server came up in its first check, and I committed the built files.
     Once its second check finishes, I'll ask which switches you want on.
+53. 2026-10-31 15:34, after Request 169 - I'm cleaning up how the server is
+    built and checked, now that your new build is live with the forward pass and
+    the start-check fixes. Next I'll make the build skip its first server start
+    when no SQL changed.
+54. 2026-10-31 16:48, after Request 170 - We're making builds faster and
+    quieter: the town bake and the first server start now skip when nothing
+    changed, and today's compile is promoted and running. Next, your next
+    compile runs the first start once to save its SQL fingerprint, and skips it
+    after that.
 
 --------------------------------------------------------------------------------
 
@@ -17137,6 +17146,118 @@ Next:
   compares;
 - the town-bake skip test, which waits so it doesn't disturb your running
   server.
+
+--------------------------------------------------------------------------------
+
+### User Request 170
+
+> - skipping the first start when no SQL has changed;
+
+let's build this
+
+> - the idempotency test, which applies all our SQL twice to a scratch copy and
+> compares;
+
+let's skip this
+
+> - the town-bake skip test, which waits so it doesn't disturb your running
+> server.
+
+I am interested in this. We're currently re-compiling. What can you work on
+while we wait for it to finish?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 170
+
+> Your compile will exercise the bake change by itself. The script is already
+> edited in the working tree, and the install stage runs it. This run has no
+> fingerprint yet, so it bakes and writes one; the next compile should then
+> print "unchanged since the last bake" and skip it. I'll read that line in the
+> log.
+>
+> While it runs, I can't edit `scripts/compile` (bash reads it as it goes). But
+> I can build the skip as its own new script, which the compile will call before
+> Gate 2000. Only the two-line hookup in the compile waits until this run ends.
+> Claiming the compile script now, since it's one of the shared files.
+
+> The skip works: 0.12 s instead of about 40 s, and nothing written. Committing
+> the bake change and the SQL fingerprint script; the compile hookup waits for
+> this run to end.
+
+*[commit] 20a33e735 in wow-chat-2026 - *
+
+> Committed (20a33e7). Releasing the claims on those two files and waiting for
+> your compile to finish before hooking the skip into it.
+
+*[commit] 8fa19ce5e in wow-chat-2026 - ours           scripts/compile (2 of 2 change blocks)*
+
+All three are done and committed. Your server is running on today's build.
+
+**Town bake: only when something changed** (20a33e7). Your compile confirmed it:
+- This run baked once and saved a fingerprint of the towns' area list, the
+  baker's code and the mesh files.
+- Running it again now prints "unchanged since the last bake" and takes 0.12 s
+  instead of about 40 s. `--force` bakes anyway.
+
+**First server start: only when SQL changed** (8fa19ce):
+- **The fingerprint** covers our SQL sources, the profile's SQL steps and their
+  scripts, and the core's and each module's commit.
+- **Same as the last build that passed the first start:** one line, "Gate 2000
+  skipped", and on to our SQL.
+- **Otherwise:** the start runs and saves the fingerprint once it passes.
+- **Starting point:** I didn't seed one. The other session added SQL steps
+  during today's run, so a seed from the files as they are now could vouch for
+  SQL that never went through the start. The next compile runs it once and saves
+  an honest fingerprint, and skips from then on.
+
+**The start check's new output** showed up in this compile: one line, a live
+timer on your terminal, one result line. Both starts were quick (44 s and 1m
+24s). The "under half the usual" notes fired because the recorded average is
+still mostly yesterday's two heavy starts, which re-ran every file, and they'll
+stop once a few normal starts are recorded.
+
+The idempotency test is skipped, as you said.
+
+--------------------------------------------------------------------------------
+
+### User Request 171
+
+okay what else can we work on?
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 171
+
+Here's what I'd suggest, most valuable first:
+
+1. **Try the forward pass in game.** It's built, compiled and running but
+   switched off. Set `Buddies.ForwardPass = 1`, start a fight, and type `.buddy
+   fight` to see what the buddies see. Your reaction to real fights is the best
+   guide for what to change next. I can watch the server log and replay any
+   fight offline if you also set `Buddies.ForwardPass.Replay = 1`.
+2. **Next-quest pointing.** You said to leave it until after this compile, and
+   the compile is done. Buddies would point the way to your next quest.
+3. **The healer's seat.** This is the missing part of the "plans" layer: who to
+   heal and when, when to drink, and spending spare mana on damage when the
+   fight is nearly over. It would make healer buddies use the fight curves
+   directly.
+4. **Buffs actually cast on the right person.** The leans already know that
+   Power Infusion belongs on the mage, but the bot module still picks its own
+   target. This makes the cast follow the choice.
+5. **The tank's load.** Whether there's room to pull more, which tells damage
+   dealers when to slow down or speed up. It's the last open step of the threat
+   economy.
+6. **A round of open questions.** The project has many unanswered ones; ten at a
+   time, with enough context to answer without opening the issues.
+
+There's also a standing reminder: the disks still have no protection against
+silent corruption (bit rot). Neither is checksummed, and fingerprints, recovery
+data or btrfs/ZFS are the options in that issue.
+
+Which would you like? If you want to try the forward pass, tell me what kind of
+fight you're heading into (a dungeon boss, or quest mobs), and I'll say what to
+look for in `.buddy fight`.
 
 --------------------------------------------------------------------------------
 

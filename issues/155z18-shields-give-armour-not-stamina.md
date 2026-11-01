@@ -8,7 +8,7 @@
   155k (the stat budget: what "commensurate" is measured in), 635 (the
   Botanica party's paladin, who prompted it)
 - Priority: Medium
-- State: plan; open questions below
+- State: built 2026-10-30 (E075), off until basic is named in its header
 
 ## Origin
 

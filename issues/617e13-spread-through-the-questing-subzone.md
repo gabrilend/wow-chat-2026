@@ -30,6 +30,24 @@ The owner, 2026-10-26:
 
 ## Current Behavior
 
+**The owner's spawn zones first, built and compiled 2026-10-31, not
+yet seen in game** (question 1): a kind of creature's spawn zone is
+the ground round its spawn points in the world's spawn table, a circle
+round each as wide as it wanders plus 20 yards (at least 30), read once
+when first asked (`buddies_spawn_zones.cpp`, `BuddyInSpawnZone`). A
+roaming buddy choosing its next monster (`PreyNear`,
+`buddies_roam_strategy.cpp`) takes the nearest whose kind's zone holds
+the owner, every overlapping zone counting, before any other; with none
+near (the owner on a road, between zones) the nearest of all as before.
+Only monsters have zones (kinds with an NPC service, and critters, are
+left out); kinds only scripts spawn (the ambush system's) have none. The
+spread across those monsters is the roaming core's, as before. The same
+zones bound the wandering (617e12, question 7): a waypoint is dropped
+unless one of the monster kinds living where the owner stands lives
+there too (`BuddySpawnZonesAt`, `BuddySharesSpawnZone`), the area being
+the owner's sub-zone already; with no monster living where the owner
+stands (a road, a camp) any waypoint of the area will do.
+
 **Following, 2026-10-27; syntax-checked and its core tested, not yet built
 or run.** The owner's following design is a pure core,
 `roam/buddy_follow_core.h` (the track every 2 yards, her table of side
@@ -43,7 +61,7 @@ mesh; with no mesh near, the track point it was measured from). It is
 the dungeon set's following in place of the bot module's "follow", and
 the "told to follow" set of step 5's orders, which are built (617y).
 Past five followers they stand in layered arcs (built 2026-10-30 in the
-core, waiting for the compile; the owner's answer below): three in the
+core, compiled 2026-10-31; the owner's answer below): three in the
 front arc, two behind in its gaps, two behind them, the last size
 repeating for more, each arc 1.5 yards behind the one before
 (`ArcSpots` in `roam/buddy_follow_core.h`, the shared half-circle piece
@@ -193,6 +211,9 @@ reaching 60 yards instead of 30. The knobs:
 
 ## Open Questions
 
+
+
+
 1. **The sub-zone's edges.** The client's area table gives each sub-zone
    (area id) but not its outline; the area centres (617e2) and the map's
    area grid can. Spread "through the sub-zone": over the parts of it that
@@ -229,4 +250,11 @@ reaching 60 yards instead of 30. The knobs:
    should just build a bunch of activities they could do and try to make
    them feel natural." The mingle stays as one activity among many; what
    a buddy does at rest becomes a set of activities to build and judge
-   by feel, not a tuned number.
+   by feel, not a tuned number. **Built and compiled 2026-10-31, not yet
+   seen in game** (`buddies_follow.cpp`, the rest
+   activities): when the core's look says mingle, one of five is drawn
+   by weight: wander near its place (4, the mingle as it was), talk to
+   the nearest fellow follower within 6 yards (3; nobody near: a look
+   round), face a random way (2), a small gesture (laugh, point, cheer
+   or bow; 2), or sit where it stands until the next walk (1). The
+   weights are ours, to be judged in game.

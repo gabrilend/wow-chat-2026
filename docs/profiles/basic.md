@@ -151,6 +151,7 @@ lowest priority first, each line its header's own (`scripts/plan-patches basic`)
 |      730 | B063 | source | a whisper to Sargobras crosses the faction line; every other whisper still doesn't (issue 617b2)                       |
 |      740 | B064 | source | a setting: instant attacks count attack power at the real weapon speed (issue 813)                                     |
 |      750 | B065 | source | Playerbots: buddies leave quest items on corpses and quest objects untouched, for their owner (issue 617j)             |
+|      760 | B066 | source | Playerbots: a dead buddy releases by the buddy module's rule (wait for a nearby rez, ask for one) (issue 632)          |
 
 **After the compile and install (install steps and settings, mixed by priority):**
 
@@ -233,6 +234,8 @@ lowest priority first, each line its header's own (`scripts/plan-patches basic`)
 |     3020 | E072 | sql  | Some gear trades its stamina for spirit: two fifths of each kind, all or half (issue 155k2)              |
 |     3030 | E073 | sql  | Shared loot tables that mix qualities split into one table per quality (issue 181)                       |
 |     3040 | E074 | sql  | Camp Narache's leather merchant sells the Thin Cloth set too, as Cloth & Leather Merchant (issue 617a4a) |
+|     3060 | E076 | sql  | The solo record (issue 623): each buddy's hardest fight won alone, per                                   |
+|     3070 | E077 | sql  | The way back from a mage's city teleport (issue 723): one spot per caster and spell                      |
 <!-- patch-lists: end -->
 
 ## How to switch to basic

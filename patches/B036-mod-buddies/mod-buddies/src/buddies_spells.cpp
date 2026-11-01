@@ -12,6 +12,7 @@
 
 #include "buddies.h"
 #include "buddies_spells.h"
+#include "buddies_loot.h"
 #include "buddies_quest_spells.h"
 #include "Containers.h"
 #include "Creature.h"
@@ -25,6 +26,7 @@
 #include "ScriptMgr.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
+#include <map>
 #include "Trainer.h"
 #include "WorldSession.h"
 #include <algorithm>
@@ -109,7 +111,64 @@ static uint32 LearnQuestSpells(Player* bot)
 }
 // }}}
 
+// {{{ Suitability (617n, answer 1 of 2026-10-30)
+// How well a lesson suits the buddy, 0 to 1, for choosing among lessons
+// when its purse can't buy them all (the owner: "they'll pick ones that
+// their stat weights most align with"). The stats a spell scales with are
+// read from its kind: a heal (healing power), magical damage (spell
+// power), physical damage (attack power: the melee, tank and ranged
+// trees alike); anything else (a buff, a stance, a utility) suits every
+// tree half as well. The buddy's weights are its talent plan's: each
+// tree's share of its points (thirds) and the kind of stats that tree
+// values (BuddyTalentPlan, buddies_loot.cpp). The score is the share of
+// its points in trees whose kind matches the lesson's. A buddy with no
+// plan: every lesson 0.5 (the order falls back to cheapest first by the
+// tie rule below). There are no per-ability stat weights yet (625's
+// action economy): when they come, they replace this reading.
+static float Suitability(Player* bot, uint32 spellId)
+{
+    uint8 thirds[3];
+    CollectorType types[3];
+    if (!BuddyTalentPlan(bot, thirds, types))
+        return 0.5f;
+    SpellInfo const* info = sSpellMgr->GetSpellInfo(spellId);
+    if (!info)
+        return 0.0f;
+    bool heal = false, damage = false;
+    for (SpellEffectInfo const& e : info->GetEffects())
+    {
+        if (e.Effect == SPELL_EFFECT_HEAL || e.ApplyAuraName == SPELL_AURA_PERIODIC_HEAL)
+            heal = true;
+        if (e.Effect == SPELL_EFFECT_SCHOOL_DAMAGE || e.Effect == SPELL_EFFECT_WEAPON_DAMAGE || e.Effect == SPELL_EFFECT_WEAPON_DAMAGE_NOSCHOOL
+            || e.Effect == SPELL_EFFECT_NORMALIZED_WEAPON_DMG || e.Effect == SPELL_EFFECT_WEAPON_PERCENT_DAMAGE
+            || e.ApplyAuraName == SPELL_AURA_PERIODIC_DAMAGE)
+            damage = true;
+    }
+    if (!heal && !damage)
+        return 0.5f;                                   // a buff, stance or utility: suits every tree half as well
+    uint8 want = heal ? uint8(SPELL_HEAL)
+               : (info->SchoolMask == SPELL_SCHOOL_MASK_NORMAL ? uint8(MELEE_DMG | MELEE_TANK | RANGED) : uint8(SPELL_DMG));
+    float score = 0.0f;
+    for (uint8 t = 0; t < 3; ++t)
+        if (uint8(types[t]) & want)
+            score += thirds[t] / 3.0f;
+    return score;
+}
+// }}}
+
 // {{{ BuddyTrainAtTrainer
+// Each lesson, one at a time (a rank learned may open the next rank, so
+// the list is looked at again after each). Each path, per pass:
+//   nothing it can learn now                    - done
+//   its purse covers every lesson listed        - the cheapest first (equal
+//                                                 costs: the lower level,
+//                                                 then the trainer's order)
+//   it doesn't                                  - the best-suited first
+//                                                 (Suitability; equal: the
+//                                                 cheaper), skipping what it
+//                                                 can't afford and going on
+//                                                 down the list
+//   nothing listed is affordable                - done (left for the next visit)
 uint32 BuddyTrainAtTrainer(Player* bot, Creature* npc)
 {
     Trainer::Trainer* trainer = sObjectMgr->GetTrainer(npc->GetEntry());
@@ -120,9 +179,6 @@ uint32 BuddyTrainAtTrainer(Player* bot, Creature* npc)
     // totem or Bear Form ask for them (see BuddyLearnEverything)
     uint32 quest = LearnQuestSpells(bot);
     uint32 learned = 0;
-    // one lesson at a time, the cheapest of what it can learn now: a rank
-    // learned may open the next rank, so the list is looked at again
-    // after each (equal costs: the lower level first, then the trainer's order)
     for (uint32 n = 0; n < MAX_LESSONS; ++n)
     {
         std::vector<Trainer::Spell const*> can;
@@ -134,15 +190,34 @@ uint32 BuddyTrainAtTrainer(Player* bot, Creature* npc)
         std::stable_sort(can.begin(), can.end(), [](Trainer::Spell const* a, Trainer::Spell const* b) {
             return a->MoneyCost != b->MoneyCost ? a->MoneyCost < b->MoneyCost : a->ReqLevel < b->ReqLevel;
         });
-        Trainer::Spell const* next = can.front();
-        int32 cost = int32(next->MoneyCost * discount);
-        if (!bot->HasEnoughMoney(cost))
+        uint64 all = 0;
+        for (Trainer::Spell const* sp : can)
+            all += uint64(sp->MoneyCost * discount);
+        if (all > bot->GetMoney())
         {
-            LOG_DEBUG("module", "mod-buddies: buddy {} stopped training at {}: the cheapest lesson left (spell {}) costs {} "
-                "copper, it has {}", bot->GetName(), npc->GetName(), next->SpellId, cost, bot->GetMoney());
-            BuddyTrace(bot, "town: training ended, the cheapest lesson left costs {} copper and it has {}", cost, bot->GetMoney());
+            // short of coin: the best-suited first (the cheapest order kept for ties)
+            std::map<uint32, float> suits;
+            for (Trainer::Spell const* sp : can)
+                suits[sp->SpellId] = Suitability(bot, sp->SpellId);
+            std::stable_sort(can.begin(), can.end(), [&](Trainer::Spell const* a, Trainer::Spell const* b) {
+                return suits[a->SpellId] > suits[b->SpellId];
+            });
+        }
+        Trainer::Spell const* next = nullptr;
+        for (Trainer::Spell const* sp : can)
+            if (bot->HasEnoughMoney(int32(sp->MoneyCost * discount)))
+            {
+                next = sp;
+                break;
+            }
+        if (!next)
+        {
+            LOG_DEBUG("module", "mod-buddies: buddy {} stopped training at {}: none of the {} lessons left is affordable "
+                "(it has {} copper)", bot->GetName(), npc->GetName(), can.size(), bot->GetMoney());
+            BuddyTrace(bot, "town: training ended, none of the {} lessons left is affordable with {} copper", can.size(), bot->GetMoney());
             break;
         }
+        int32 cost = int32(next->MoneyCost * discount);
         uint32 before = bot->GetMoney();
         trainer->TeachSpell(npc, bot, next->SpellId);
         if (bot->GetMoney() == before && cost > 0)
@@ -446,6 +521,51 @@ static constexpr RodAtSkill ENCHANTING_RODS[] = { { 1, 6218 }, { 100, 6339 }, { 
 
 static std::once_flag sTradeTrainersFound;
 static std::vector<uint32> sTradeTrainers;
+
+// {{{ BuddyProfessionsByRatio (185)
+// A level change by the level command keeps each profession's share of its
+// maximum (the owner, 2026-10-30: "if the player is 80% of the way to the
+// max on that skill, they should be set to 80% of the max after the level
+// adjustment"; and of professions: "set them to the same ratio she had").
+// `ratio`: skill id -> its value over its maximum, read before the level
+// changed. For each profession in it (the table above), at the character's
+// level now:
+//   the rank   - the highest the level allows (RANK_FROM_LEVEL); lower
+//                ranks learned if missing, higher ones unlearned (a lowered
+//                level loses the rank it can no longer have)
+//   the skill  - the rank's maximum (at most SKILL_CAP), the value that
+//                share of it (at least 1)
+// Recipes are left as they are (a raised blacksmith learns them from its
+// trainer; BuddyRaiseProfessions teaches them only by raising to full).
+// Returns how many professions changed.
+uint32 BuddyProfessionsByRatio(Player* p, std::map<uint32, float> const& ratio)
+{
+    uint8 level = p->GetLevel();
+    uint8 rank = 0;
+    for (uint8 r = 0; r < 4; ++r)
+        if (level >= RANK_FROM_LEVEL[r])
+            rank = r;
+    uint32 changed = 0;
+    for (ProfessionRanks const& pr : sProfessionRanks)
+    {
+        auto it = ratio.find(pr.skill);
+        if (it == ratio.end())
+            continue;                                  // a profession it doesn't have
+        for (uint8 r = 0; r < 4; ++r)
+        {
+            if (r <= rank && !p->HasSpell(pr.rank[r]))
+                p->learnSpell(pr.rank[r], false);
+            else if (r > rank && p->HasSpell(pr.rank[r]))
+                p->removeSpell(pr.rank[r], SPEC_MASK_ALL, false);
+        }
+        uint16 max   = std::min(RANK_MAX[rank], SKILL_CAP);
+        uint16 value = std::max<uint16>(1, uint16(std::lround(it->second * max)));
+        p->SetSkill(uint16(pr.skill), rank + 1, std::min(value, max), max);
+        ++changed;
+    }
+    return changed;
+}
+// }}}
 
 uint32 BuddyRaiseProfessions(Player* bot, std::string& problems)
 {

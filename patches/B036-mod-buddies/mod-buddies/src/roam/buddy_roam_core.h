@@ -105,6 +105,12 @@ struct Settings
     float    maxBulge      = 16.0f;              // yards a detour may bulge before that side is given up
     float    rampMin       = 3.0f;               // shortest ease into / out of a detour
     int32_t  maxDetours    = 8;
+    // bows whose costs are within this share of the cheapest's count as tied,
+    // and one of them is drawn at random (the owner, 2026-10-30: "it should
+    // randomly pick within like a 10% margin. So if it's marginally equal it
+    // should just pick one randomly."; until then the first cheapest, and
+    // on a flat floor the last bit of rounding picked the side)
+    double   tieMargin     = 0.10;
     // piercing the middle (2026-09-27): after two inward rolls in a row, a
     // Y at or under this sends the waypoint to the far side of the centre
     // and reverses the buddy's direction; 0 turns it off
@@ -175,9 +181,12 @@ bool NextWaypoint(Buddy& buddy, Area const& area, Point const& at, std::vector<P
                   std::vector<Mob> const& mobs, Ground const& ground, Settings const& settings, Rng const& rng);
 
 // The planner alone: test points from `from` to `to` for a body `body`
-// yards wide, round any obstacle, along the cheapest of five bows. Empty
-// when no candidate gets through.
-std::vector<Point> PlanPath(Point const& from, Point const& to, float body, Ground const& ground, Settings const& settings);
+// yards wide, round any obstacle, along the cheapest of five bows (one of
+// those within Settings::tieMargin of the cheapest, drawn by `rng`, one
+// number, when there are two or more; the first cheapest without `rng`).
+// Empty when no candidate gets through.
+std::vector<Point> PlanPath(Point const& from, Point const& to, float body, Ground const& ground, Settings const& settings,
+                            Rng const* rng = nullptr);
 
 // The chance (0..0.5) to sit and eat or regenerate on reaching a waypoint:
 // half the share of health missing.

@@ -58,7 +58,20 @@ their loyalty is to that party."
 
 ## Current Behavior
 
-Stand-ins (617t1) are characters on their own accounts, drawn into
+**Built and compiled 2026-10-31, not yet seen in game** (syntax-checked;
+`AdoptStandIn` in `buddies_create.cpp`): before a new character is made
+for a chosen roster slot (not a reset slot, which keeps its own name and
+looks), the kept stand-ins of the slot's class and role, of the owner's
+side, within 3 levels of the level the buddy is made at, and not in the
+world, are candidates; one is drawn, weighted by its level. It moves to
+the owner's companion account, its level is set to the buddy's
+(experience 0), it leaves the stand-in list, and the slot takes its race
+and shape; its name, looks and gear stay. With no candidate a new
+character is made as before. Not built: step 3's weapon kinds (cut to the
+owner's count, worn weapons' kinds first); a stand-in lowered by up to 3
+levels keeps spells learned above its new level.
+
+Before: stand-ins (617t1) were characters on their own accounts, drawn into
 dungeons, battlegrounds and arenas, and dismissed after. None ever joins
 a player as a buddy; a buddy is always made fresh from a roster slot
 (617a3).
@@ -90,6 +103,7 @@ knows.
    level.
 
 ## Open Questions
+
 
 1. (Answered 2026-10-15: any level higher than its last stand-in level,
    not only the maximum.) What chance should a matching stand-in have
