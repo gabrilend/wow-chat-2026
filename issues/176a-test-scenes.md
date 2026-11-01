@@ -6,7 +6,8 @@
 - Parent: 176 (the cc-test profile)
 - Blocked by: 176 (the profile must exist to install scenes into)
 - Sub-issues: 176a1 (a full Alterac Valley match), 176a2 (an Arathi
-  Basin match)
+  Basin match), 176a3 (fight scenes: the forward pass against the bot
+  module's way)
 - Related: 173w (queued inputs and test characters: the client's half),
   173v (the client's move to its own project), 173e (what the server
   checks), 127 (patch system improvements), 173b3 (the action names
@@ -185,6 +186,10 @@ with stored references (the client's half, after its move: 173v).
 - 176a2 - an Arathi Basin match: trios of stand-ins spread over the roads
   by an alternating rule, a tank per base taken, bases that grow a bonus
   while held (sub-issues 176a2a to 176a2f).
+- 176a3 - fight scenes: stand-ins against one monster, round after round,
+  each round written down: a duel at 40 (one stand-in the bot module's
+  way, one with the forward pass) and a party of three at 60, 30 and 15
+  against an elite counted as a boss.
 
 ## Open Questions
 
