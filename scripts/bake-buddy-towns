@@ -17,11 +17,32 @@
 # Re-run it after the navigation mesh files change (the server refuses a
 # bake made from other mesh files, logs it, and measures that town live).
 #
-# Usage: scripts/bake-buddy-towns [PROJECT_DIR]
+# Baked once, then only when something it is made from changed (the owner,
+# 2026-10-31: "is there a reason we don't bake this once and then check to
+# see if it changed before re-baking?"): after listing the pieces it takes a
+# fingerprint of what the bake is made from (the pieces' list, the baker's
+# and the shared core's sources, and every mesh file's name, size and time)
+# and compares it with the one the last bake left beside its files
+# (<data dir>/buddy-towns/.fingerprint). The same, and the baked files still
+# there: nothing to do, said in one line. Different, missing, or --force:
+# the bake runs, and the new fingerprint is written after it succeeds.
+#
+# Usage: scripts/bake-buddy-towns [PROJECT_DIR] [--force]
+#   --force  bake even when nothing it is made from changed
+#   --help   this text
 
 set -euo pipefail
 
-DIR="${1:-/mnt/kaun/wow-chat-2026}"
+DIR="/mnt/kaun/wow-chat-2026"
+FORCE=0
+for a in "$@"; do
+    case "${a}" in
+        --help|-h) sed -n '2,32p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --force)   FORCE=1 ;;
+        --*)       echo "bake-buddy-towns: unknown option ${a} (see --help)" >&2; exit 2 ;;
+        *)         DIR="${a}" ;;
+    esac
+done
 PROFILE="$(cat "${DIR}/.profile")"
 DATA="$(sed -n 's|^DataDir[[:space:]]*=[[:space:]]*"\{0,1\}\([^"]*\)"\{0,1\}.*|\1|p' "${DIR}/installed-files-${PROFILE}/etc/worldserver.conf" | tail -1)"
 WORLD_DB="$(sed -n 's|^WorldDatabaseInfo[[:space:]]*=[[:space:]]*"[^;]*;[^;]*;[^;]*;[^;]*;\([^"]*\)".*|\1|p' "${DIR}/installed-files-${PROFILE}/etc/worldserver.conf" | tail -1)"
@@ -54,6 +75,25 @@ COUNT="$(wc -l < "${PIECES}")"
 echo "  ${COUNT} area pieces (only towns are baked)"
 # }}}
 
+# {{{ 1b. anything changed since the last bake?
+# what the bake is made from, as one fingerprint: the pieces, the sources,
+# and each mesh file's name, size and time (reading every mesh file whole
+# would take longer than the bake)
+FINGERPRINT_FILE="${DATA}/buddy-towns/.fingerprint"
+FINGERPRINT="$( {
+    cat "${PIECES}"
+    cat "${BAKER_SRC}" "${CORE}"/buddy_*.h "${CORE}/buddy_explore_core.cpp"
+    find "${DATA}/mmaps" -type f -printf '%f %s %T@\n' | sort
+} | sha1sum | cut -c1-40 )"
+BAKED="$(find "${DATA}/buddy-towns" -maxdepth 1 -name '*.btown' 2>/dev/null | wc -l)"
+#   the same as the last bake's, its files there, no --force: skipped
+#   anything else: baked, and the fingerprint written after it succeeds
+if [[ ${FORCE} -eq 0 && "${BAKED}" -gt 0 && -f "${FINGERPRINT_FILE}" && "$(cat "${FINGERPRINT_FILE}")" == "${FINGERPRINT}" ]]; then
+    echo "  unchanged since the last bake (${BAKED} towns' files in ${DATA}/buddy-towns): not baked again (--force bakes anyway)"
+    exit 0
+fi
+# }}}
+
 # {{{ 2. the baker
 NEWEST_SRC="$(ls -t "${BAKER_SRC}" "${CORE}"/buddy_*.h "${CORE}"/buddy_explore_core.cpp | head -1)"
 if [[ ! -x "${BAKER}" || "${NEWEST_SRC}" -nt "${BAKER}" ]]; then
@@ -84,4 +124,5 @@ fi
 MESHLESS="$(grep -c "nothing kept" "${BAKE_LOG}" || true)"   # grep -c says 0 and fails on none: not an error here
 echo "  $(tail -n 1 "${BAKE_LOG}")"
 echo "  ${MESHLESS} town pieces had no mesh under them (measured live by the server); each piece: ${BAKE_LOG#${DIR}/}"
+echo "${FINGERPRINT}" > "${FINGERPRINT_FILE}"
 # }}}

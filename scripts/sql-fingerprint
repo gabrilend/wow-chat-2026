@@ -1,0 +1,70 @@
+#!/bin/bash
+# sql-fingerprint - one fingerprint of every piece of SQL a profile's build
+# hands the server, so the compile can tell whether any of it changed.
+#
+# For a general audience: after building, the compile starts the new server
+# once on upstream's databases ("Gate 2000"), then places our SQL and starts
+# it again with ours. The first start only matters when some SQL changed
+# (the owner, 2026-10-31: "we only need to do that first startup if we
+# changed the SQL. Can we add a check for that?"). This prints a fingerprint
+# of everything that decides the SQL: our SQL sources (every .sql in
+# patches/ and in the profile's sql/<profile>/*.src/ folders), which SQL
+# steps the profile takes (scripts/plan-patches), and the source versions
+# (the core's commit and each module's: upstream's own SQL comes with them,
+# and our files' first line names them). The same fingerprint as the last
+# build that passed its first start: the compile skips that start.
+#
+# Usage: scripts/sql-fingerprint [PROJECT_DIR] [PROFILE] [--list]
+#   PROFILE  defaults to .profile's
+#   --list   print what goes into it, one line each, instead of the fingerprint
+#   --help   this text
+# Prints a 40-character fingerprint (or the list); exits 1 when the sources
+# it needs (source-beta) are missing.
+
+DIR="/mnt/kaun/wow-chat-2026"
+PROFILE=""
+LIST=0
+for a in "$@"; do
+    case "${a}" in
+        --help|-h) sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --list)    LIST=1 ;;
+        --*)       echo "sql-fingerprint: unknown option ${a} (see --help)" >&2; exit 2 ;;
+        *)         if [[ "${a}" == /* ]]; then DIR="${a}"; else PROFILE="${a}"; fi ;;
+    esac
+done
+[[ -n "${PROFILE}" ]] || PROFILE="$(cat "${DIR}/.profile")"
+SRC="${DIR}/source-beta"
+[[ -d "${SRC}/.git" ]] || { echo "sql-fingerprint: no source tree at ${SRC} (the core's commit is part of the fingerprint)" >&2; exit 1; }
+
+# {{{ what goes in
+# one line each, in a fixed order, so the same inputs give the same lines:
+#   the source versions: the core's commit, each module's
+#   the profile's SQL steps, in their order
+#   each of our SQL sources: its path and its content's hash
+inputs() {
+    echo "core $(git -C "${SRC}" rev-parse HEAD)"
+    local m
+    for m in "${SRC}"/modules/*/; do
+        [[ -d "${m}.git" || -f "${m}.git" ]] && echo "module $(basename "${m}") $(git -C "${m}" rev-parse HEAD)"
+    done
+    local steps
+    steps="$("${DIR}/scripts/plan-patches" "${PROFILE}" --stage sql 2>&1)"
+    echo "sql steps: $(echo "${steps}" | tr '\n' ' ')"
+    # each step's own script too: some write their SQL from inside it
+    echo "${steps}" | awk '{ print $NF }' | grep '\.sh$' | while read -r f; do
+        [[ -f "${DIR}/${f}" ]] && echo "${f} $(sha1sum < "${DIR}/${f}" | cut -c1-40)"
+    done
+    {
+        find "${DIR}/patches" -type f -name '*.sql'
+        find "${DIR}/sql/${PROFILE}" -path '*.src/*' -type f -name '*.sql' 2>/dev/null
+    } | sort | while read -r f; do
+        echo "${f#${DIR}/} $(sha1sum < "${f}" | cut -c1-40)"
+    done
+}
+# }}}
+
+if [[ ${LIST} -eq 1 ]]; then
+    inputs
+else
+    inputs | sha1sum | cut -c1-40
+fi
