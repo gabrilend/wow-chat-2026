@@ -7,7 +7,7 @@
 - Related: 625f (the action economy: the window values), 625h (the
   resource economy: Innervate), 625i (the healer's seat)
 - Priority: Medium
-- State: planned
+- State: in progress (whom and when, and the casting, built; a player's faith not yet)
 
 ## Origin
 
@@ -50,7 +50,29 @@ Use whichever feels best."
 
 ## Current Behavior
 
-Not built. The bot module casts its buffs on fixed targets (Power
+**Built 2026-10-31** (the choosing committed and tested; the casting,
+in the server, written and compiler-checked, waiting for the owner's
+compile), through the forward pass (625n):
+- **Whom**: an empowering buff that goes on one chosen ally goes on the
+  member it gives most to: its own aura effects (cast haste for those who
+  cast with mana, attack haste for the rest, damage for all) on the
+  member's share of the party's damage (Power Infusion on the mage, not
+  the rogue who deals more); Innervate on the healer's seat while it is out
+  of mana (625i), leaning in at 2, a starting value standing in for the
+  mana turned into healing.
+- **When**: when its lean, the share of the gap it closes, is above 1.
+- **Cast**: by the buddy itself on its own update, through the bot
+  module's own cast (so its checks and bookkeeping hold: in reach, ready,
+  free to cast), at most once a second; the bot module's own cast of that
+  buff leans away (0.05), so it isn't cast twice or on someone else.
+Checked: the forward pass test names the mage for Power Infusion and no
+one for Bloodlust; the seat test names the dry priest for Innervate, and
+no one while the seat is fine.
+
+Not yet: the short list made on joining (every member is looked at each
+step, which the half-second step makes cheap enough); a player's saved
+cooldown and the faith that falls with it (planned below); slotting a
+buff into another buddy's cooldown timeline. The bot module casts its buffs on fixed targets (Power
 Infusion on itself or a set role, Innervate on a healer by its own
 rules).
 

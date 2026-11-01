@@ -236,6 +236,10 @@ int main()
         auto ls = Leans(pi, mp, 5, 0);
         std::printf("   (power infusion %.4f, bloodlust %.4f)\n", lp["power infusion"], ls["bloodlust"]);
         check(near(lp["power infusion"], expect, 1e-9), "Power Infusion leans as if on the mage, whose casts it hastens (not the rogue, who deals more)");
+        std::map<std::string, int> to;
+        Leans(pi, mp, 2, 0, nullptr, &to);
+        check(to.count("power infusion") && to["power infusion"] == 3, "and names the mage as its target, for the server to cast it on (625l)");
+        check(!to.count("bloodlust"), "Bloodlust, reaching everyone, names no one");
         Answer lust2; lust2.burstFactor = 1.3; lust2.burstLasts = 40;
         check(near(ls["bloodlust"], Lean(Judge(pi, mp, lust2, 0), Step(pi, mp)), 1e-9), "Bloodlust, reaching everyone, leans on all the party's damage");
     }

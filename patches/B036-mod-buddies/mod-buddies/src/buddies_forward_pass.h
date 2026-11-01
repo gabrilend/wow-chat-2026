@@ -477,7 +477,15 @@ namespace BuddyForwardPass
     // able to heal while the seat is fine; with the seat empty or out of
     // mana, they lean in as worked out ("others can use that as the signal
     // to jump in").
-    inline std::map<std::string, double> Leans(Snapshot const& s, Memory const& memory, int b, double goldPerHour, BuddySeat::Seat const* seat = nullptr)
+    // `targets`, when asked for: the member each buff that goes on one
+    // chosen ally should go on (625l: "Buddies should cast them onto
+    // characters that can use them the most"): an empowering buff on the
+    // member it gives most to (Power Infusion on the mage, not the rogue);
+    // Innervate on the healer's seat while it is out of mana. The server
+    // casts these itself on that member, and the bot module's own cast of
+    // them leans away (buddies_forward_pass.cpp).
+    inline std::map<std::string, double> Leans(Snapshot const& s, Memory const& memory, int b, double goldPerHour, BuddySeat::Seat const* seat = nullptr,
+                                               std::map<std::string, int>* targets = nullptr)
     {
         std::map<std::string, double> out;
         if (b < 0 || static_cast<size_t>(b) >= s.party.size()) return out;
@@ -525,7 +533,16 @@ namespace BuddyForwardPass
                     double add = 0.0;
                     if (r.area) for (Member const& m : s.party) add += shareOf(m) * gainOf(m);
                     else if (r.self) add = myShare * gainOf(me);
-                    else for (Member const& m : s.party) add = std::max(add, shareOf(m) * gainOf(m));
+                    else
+                        for (size_t k = 0; k < s.party.size(); ++k)
+                        {
+                            double gives = shareOf(s.party[k]) * gainOf(s.party[k]);
+                            if (s.party[k].health > 0 && gives > add)
+                            {
+                                add = gives;
+                                if (targets) (*targets)[r.name] = int(k);   // the one it gives most to
+                            }
+                        }
                     a.burstFactor = 1.0 + add;
                     a.burstLasts  = r.lastsMs / 1000.0;
                     a.extras.clear();                                          // its marks are its burst, not a shield
@@ -539,6 +556,16 @@ namespace BuddyForwardPass
                 else if (BuddySeat::CanHeal(me) && seat->holder >= 0 && !seat->oom) lean = 1.0;
             }
             out[r.name] = lean;
+        }
+        // Innervate (mana, not damage or health, so no curve shows it): on
+        // the healer's seat while it is out of mana, leaning in by the whole
+        // of the share of the gap its heals would close (2), a starting value
+        // standing in for the mana it gives turned into healing over the
+        // time left (strategems/everything-is-damage-and-health.md)
+        if (me.cls == 11 && seat && seat->oom && seat->holder >= 0)
+        {
+            out["innervate"] = 2.0;
+            if (targets) (*targets)["innervate"] = seat->holder;
         }
         // the long empowering cooldowns, through the cooldown timeline (625f):
         // each one's lean times its weight, how much worse using it now is

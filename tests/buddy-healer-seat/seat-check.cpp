@@ -94,6 +94,14 @@ int main()
     check(priestDry["flash heal"] == 0.05 && priestFine["flash heal"] > 1.0, "the priest out of mana stops casting its heals; with mana they lean toward the dying tank");
     check(druidFine["wrath"] == druidDry["wrath"], "the druid's damage spells don't change with the seat");
 
+    // Innervate: on the seat while it is dry (625l), not otherwise
+    std::map<std::string, int> to;
+    auto inn = Leans(s, m, 2, 0, &dry, &to);
+    check(to.count("innervate") && to["innervate"] == 1 && inn["innervate"] > 1.0, "the seat dry: the druid's Innervate leans in, on the priest");
+    to.clear();
+    Leans(s, m, 2, 0, &fine, &to);
+    check(!to.count("innervate"), "the seat fine: no Innervate asked for");
+
     std::printf("\n%d passed, %d failed\n", passed, failed);
     return failed == 0 ? 0 : 1;
 }
