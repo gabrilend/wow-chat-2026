@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-31 18:30:44
+Generated on: 2026-10-31 18:57:50
 Models: claude-opus-5-5
 
 ## Contents
@@ -17258,6 +17258,196 @@ data or btrfs/ZFS are the options in that issue.
 Which would you like? If you want to try the forward pass, tell me what kind of
 fight you're heading into (a dungeon boss, or quest mobs), and I'll say what to
 look for in `.buddy fight`.
+
+--------------------------------------------------------------------------------
+
+### User Request 172
+
+<pasted_content id="12ab">
+> 1. Try the forward pass in game. It's built, compiled and running but switched
+> off. Set
+>      Buddies.ForwardPass = 1, start a fight, and type .buddy fight to see what the buddies
+>      see. Your reaction to real fights is the best guide for what to change next. I can
+>      watch the server log and replay any fight offline if you also set
+>      Buddies.ForwardPass.Replay = 1.
+</pasted_content id="12ab">
+
+
+let's build a test scene in the cc-test profile. I think that's the right
+place... anyway it should just be two bots fighting a monster. The monster
+should be level 45 and the bots should be level 40. Then, have one of the bots
+use the playerbots style combat style, and have the other do the new system.
+
+after that, build a second test that is more focused on party mechanics. Make
+one boss monster level 65 and 3 buddy-bots at level 60. They should fight the
+boss monster, and if any of them are slain then they wait until either the boss
+dies, or the entire party dies. When the fight ends, they are all reset and it
+runs again, but any randomization we apply can be re-applied.
+
+then, we should make another test scene that's the same, except at level 30 and
+35 instead of 60 and 65. This is to test what happens with fewer abilities.
+
+we can also do one at 15 and 20, for the earliest dungeon experience.
+
+
+
+<pasted_content id="12ab">
+> 3. The healer's seat. This is the missing part of the "plans" layer: who to
+> heal and
+>      when, when to drink, and spending spare mana on damage when the fight is nearly over.
+>      It would make healer buddies use the fight curves directly.
+</pasted_content id="12ab">
+
+
+sounds like we need to build this.
+
+
+
+<pasted_content id="12ab">
+> 4. Buffs actually cast on the right person. The leans already know that Power
+> Infusion
+>      belongs on the mage, but the bot module still picks its own target. This makes the
+>      cast follow the choice.
+</pasted_content id="12ab">
+
+
+this is part of the new fight mechanics system right? If so, let's build it.
+
+> 5. The tank's load. Whether there's room to pull more, which tells damage
+> dealers when to
+>      slow down or speed up. It's the last open step of the threat economy.
+
+okay let's work on it.
+
+> 6. A round of open questions. The project has many unanswered ones; ten at a
+> time, with
+>      enough context to answer without opening the issues.
+
+once you've returned to me, then we can address anything you bring up, and
+answer any open questions you have.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 172
+
+> Four pieces of work. Setting them up as tasks, then starting with the test
+> scenes, since they're what will show whether everything else works.
+
+> `buddies_release.cpp` is committed and nobody holds it now, so I can add the
+> hold line myself rather than ask. Reading its rule.
+
+> Both are in cc-test. Checking a few server calls before writing the scene:
+> summoning a creature, forcing its level, resurrecting, resetting cooldowns,
+> and grouping bots.
+
+> Still wiring up the test scenes. Same edit without the stray directory change.
+
+> Every edit but the last went in. The loader's last line has changed: the other
+> session added its own registrations after mine. Looking.
+
+> The scene and its hooks pass the compiler check in the cc-test profile.
+> Writing the issue for the fight scenes, under 176a (test scenes), with your
+> words.
+
+*[commit] 2c7110d8d in wow-chat-2026 - *
+
+> The scene issue is committed (2c7110d); its code waits for your compile. On to
+> the healer's seat: reading its issue.
+
+> Everything passes the compiler check for basic too. Recording the seat in its
+> issue and committing the arithmetic and its test; the server part waits for
+> your compile.
+
+*[commit] f2c242a0c in wow-chat-2026 - *
+
+> The bot module can check and cast a spell by name on a target. Adding the
+> targets to the answers: the one ally a single-target buff gives most to, and
+> Innervate for a dry healer.
+
+> Both tests pass, 41 and 15. Now the server: the workers keep each buddy's
+> named targets, the bot module's own cast of those spells leans away, and each
+> buddy's own update casts them on their targets.
+
+*[commit] eed9ef1ea in wow-chat-2026 - *
+
+> Building the tank's load (the last task). The minute of events isn't needed
+> there, so I'm removing that parameter.
+
+> Passes. Recording the load in the threat issue, updating the build ledger with
+> everything now waiting for your compile, and committing.
+
+*[commit] 6c583e551 in wow-chat-2026 - *
+
+All four are built. The server parts pass the compiler check for basic and
+cc-test, and wait for your next compile. Everything that runs outside the server
+is committed and its tests pass.
+
+**1. Fight scenes** (issue 176a3): run `.buddy scene <name> [redraw]` where you
+stand.
+
+| Scene | Stand-ins | Monster |
+|---|---|---|
+| `duel` | two damage stand-ins of one class at 40; one fights the bot module's way, one with the forward pass | level 45 |
+| `party60` | tank, healer and damage at 60 | elite, level 65, counted as a boss |
+| `party30` | tank, healer and damage at 30 | elite, level 35, counted as a boss |
+| `party15` | tank, healer and damage at 15 | elite, level 20, counted as a boss |
+
+- **The monster** is a plain, unscripted humanoid warrior of exactly the scene's
+  level, the same creature every round.
+- **The fallen lie where they fell** until the monster dies or the whole party
+  does.
+- **After each round** everyone is reset: raised, full health and mana,
+  cooldowns cleared, a fresh monster. Five seconds later the next round starts.
+- **The record:** each round is written to the server's logs folder
+  (`buddies-scenes/<scene>.tsv`): damage dealt and taken, healing, falls, time,
+  and the monster's health left. You also get a one-line summary in game.
+- **`.buddy scene stop`** ends it.
+
+**2. The healer's seat:**
+- **Who holds it:** the party's healer while alive; otherwise whoever has
+  healing talents and the most mana.
+- **Out of mana:** it can't afford its cheapest heal. **Ready again:** it has
+  the mana for its own healing over the rest of the fight. Both come from the
+  game's numbers.
+- **While it's dry:** it stops casting so its spirit refills its mana, and the
+  others with healing talents lean in to heal.
+- **It speaks:** a buddy holding it says "oom" and "ready" in party chat. A
+  player holding it is read the same way, but buddies never speak for a player.
+
+**3. Buffs on the right person:**
+- **Power Infusion** goes to whoever gains most: the mage, not the rogue who
+  deals more.
+- **Innervate** goes to the healer when it's out of mana.
+- **The buddy casts these itself** when they're worth it. The bot module's own
+  cast of those spells leans away, so they aren't cast twice.
+
+**4. The tank's load:** with one more enemy like the average one, would the tank
+live to the end of the fight? The health it would have left is the room: above
+nothing means pull more, below means hold. `.buddy fight` shows it, and the
+tank-paced pulls (issue 617z) can ask for it later.
+
+**To run the scenes after your compile:**
+1. Switch to cc-test (`echo cc-test > .profile`, then its install).
+2. Set `Buddies.ForwardPass = 1`. The new settings file (`mod_buddies.conf`)
+   holds it.
+3. Stand somewhere open and type `.buddy scene duel`.
+
+**Questions for you:**
+1. "Any randomization we apply can be re-applied": I redraw each stand-in's
+   start position every round, and with `redraw`, the stand-ins themselves (new
+   classes in the same roles). Is that what you meant, or should something else
+   be redrawn each round, such as their talents and gear, or the monster?
+2. Innervate's lean, when the healer runs dry, is a fixed value (×2) for now:
+   nothing yet turns the mana it gives back into healing. Is a placeholder fine
+   until there's a mana-to-healing measure, or should I build that next?
+3. The healer's fallback behaviour isn't built: a paladin striking with Seal of
+   Wisdom, a priest using a wand, choosing Judgement of Wisdom while the healer
+   is dry. Do you want those next, or after you've seen the scenes?
+
+One housekeeping note: three new quick tests from me aren't in the patch
+registry yet. The registry also holds another session's uncommitted lines, so I
+left its regeneration for whichever of us commits next. The compile's "lists up
+to date" check may complain until then.
 
 --------------------------------------------------------------------------------
 
