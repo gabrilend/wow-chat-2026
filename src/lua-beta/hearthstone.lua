@@ -28,6 +28,16 @@
 -- travellers themselves (GroupHearth.open / GroupHearth.take): the druids'
 -- Moonglade trip (druid-moonglade.lua, issue 211a).
 --
+-- 2026-10-31, the owner's rules of 2026-10-30: saying yes to a hearthstone
+-- starts the member's own hearthstone (its cooldown cleared), which puts
+-- them on the circle when it completes; an interrupted one is started
+-- again; when the hearther's cast ends, windows still open close as a no;
+-- a hearther invites at most every 10 seconds; nobody ignoring the
+-- hearther is asked. Bots ride the same way. A profile may leave members
+-- out (GroupHearth.skip): basic runs this file in place
+-- (src/lua-basic/group-hearth.lua) and leaves out buddies, whose own
+-- script brings them.
+--
 -- Choices made without the owner yet (issue 211's open questions):
 --   bots in the group always come (wow-chat-1 pulled everyone);
 --   a second hearther in the same group while one is under way is asked
@@ -59,7 +69,25 @@ local GOSSIP_EVENT_ON_SELECT     = 2
 -- woods' or similar. For both."); another script's kind brings its own
 -- (GroupHearth.open)
 local HEARTH_KIND = { question = "%s is hearthing to %s. Come along?",
-                      confirm  = "Travel with %s to %s when their hearthstone finishes?" }
+                      confirm  = "Travel with %s to %s when their hearthstone finishes?",
+                      ownCast  = true }   -- "okay" starts the member's own hearthstone (2026-10-30, below)
+
+-- the owner's rules of 2026-10-30 (issue 211, question 1, word for word in
+-- the issue): "pressing "okay" causes them to cast their own hearthstone
+-- (even if it's on cooldown!) and if it's interrupted they'll address the
+-- interruption and then try again. It'll take them to the other party
+-- member's hearthstone location, not to their saved location"; "Once the
+-- original party member's cast expires because it completed successfully
+-- or was cancelled, the in-progress prompts to other players will
+-- immediately pick "no""; "it has a 10 second cooldown before it can start
+-- again"; "players who are on the ignore list should never ever be able to
+-- give other players prompts"
+local HEARTHSTONE       = 8690                 -- what a member casts on "okay", whatever the hearther cast
+local OPEN_COOLDOWN_MS  = 10000                -- a hearther invites their group at most this often
+local RIDE_RETRY_MS     = 2000                 -- an interrupted ride cast is started again after this
+local RIDE_TRIES        = 5                    -- and no more often than this per ride
+local CURRENT_GENERIC_SPELL = 1
+local SOCIAL_FLAG_IGNORED   = 2                -- character_social.flags: the game's ignore list
 -- }}}
 
 -- made here only; druid-moonglade.lua uses it when a spell is cast
@@ -74,6 +102,29 @@ GroupHearth = {}
 -- delay can outlive its player (issue 210's crash).
 GroupHearth.pending = {}
 local nextHearth = 0
+-- members riding along on their own hearthstone, by guid: { hearth = the
+-- hearth they ride with (kept after it leaves `pending`), tries = number }
+GroupHearth.riding = {}
+-- when each hearther last invited their group (game time, ms), for the
+-- 10-second limit
+GroupHearth.lastOpen = {}
+
+-- {{{ GroupHearth.skip
+-- Members this profile leaves out of the invitation altogether, neither
+-- asked nor brought (a profile's own script replaces it after loading
+-- this file; basic's leaves out every buddy, whose hearth its own script
+-- handles). Default: nobody.
+function GroupHearth.skip(member, hearther) return false end
+-- }}}
+
+-- {{{ local function ignores
+-- Whether `member` has `hearther` on their ignore list (the game keeps it
+-- in character_social, the ignored flag): such a member is never asked.
+local function ignores(member, hearther)
+    return CharDBQuery(string.format("SELECT 1 FROM character_social WHERE guid = %d AND friend = %d AND (flags & %d) <> 0",
+        member:GetGUIDLow(), hearther:GetGUIDLow(), SOCIAL_FLAG_IGNORED)) ~= nil
+end
+-- }}}
 
 -- {{{ GroupHearth.circle
 -- Places on a circle round (cx, cy) for n travellers: index k (1..n) at
@@ -122,11 +173,59 @@ local function ask(member, hearth)
 end
 -- }}}
 
+-- {{{ local function ride
+-- A member who said yes to a hearthstone's invitation casts their own
+-- hearthstone, its cooldown cleared first ("even if it's on cooldown!");
+-- where it lands is replaced by the hearther's circle when it completes
+-- (GroupHearth.onCast).
+local function ride(member, h)
+    local r = GroupHearth.riding[member:GetGUID()] or { hearth = h, tries = 0 }
+    r.hearth = h
+    r.tries  = r.tries + 1
+    GroupHearth.riding[member:GetGUID()] = r
+    member:ResetSpellCooldown(HEARTHSTONE, true)
+    member:CastSpell(member, HEARTHSTONE, false)
+end
+-- }}}
+
+-- {{{ local function stopRide
+-- A ride called off: its cast stopped, if it is still being cast.
+local function stopRide(guid)
+    if not GroupHearth.riding[guid] then return end
+    GroupHearth.riding[guid] = nil
+    local m = GetPlayerByGUID(guid)
+    if m then m:InterruptSpell(CURRENT_GENERIC_SPELL) end
+end
+-- }}}
+
+-- {{{ GroupHearth.rideTarget
+-- Where a member riding along will be put when their own hearthstone
+-- completes: { map, x, y, z }, or nil when they are not riding (other
+-- scripts ask, so a rider's buddies follow them there, not home).
+function GroupHearth.rideTarget(guid)
+    local r = GroupHearth.riding[guid]
+    if not r or not r.hearth.home then return nil end
+    local h = r.hearth
+    for k, g in ipairs(h.members) do
+        if g == guid then
+            local spot = GroupHearth.circle(h.home.x, h.home.y, #h.members)[k]
+            return { map = h.home.mapId, x = spot.x, y = spot.y, z = h.home.z }
+        end
+    end
+    return nil
+end
+-- }}}
+
 -- {{{ GroupHearth.open
 -- A cast begins that the group may follow: bots are counted in at once,
--- players are asked. Returns the hearth, or nil.
+-- players are asked. Returns the hearth, or nil. Each path:
 --   not grouped, or alone: nothing to do (nil)
---   grouped: open the hearth and ask
+--   the hearther invited their group under OPEN_COOLDOWN_MS ago: nil, and
+--     they are told
+--   grouped: open the hearth and ask; members this profile skips
+--     (GroupHearth.skip) and members ignoring the hearther are neither
+--     asked nor brought; for a kind that rides (a hearthstone), bots start
+--     their own hearthstone at once
 -- kind: { question, confirm }, each a string with two %s, the hearther's
 -- name and then the place (HEARTH_KIND for a Hearthstone), and withDead =
 -- true to ask the dead too (the druids' glade raises them; a Hearthstone
@@ -134,20 +233,30 @@ end
 function GroupHearth.open(player, kind, place)
     local members = members_of(player)
     if not members or #members < 2 then return nil end
+    local now  = GetCurrTime()
+    local last = GroupHearth.lastOpen[player:GetGUID()]
+    if last and now - last < OPEN_COOLDOWN_MS then
+        player:SendBroadcastMessage("Your group was asked a moment ago; wait a few seconds before asking again.")
+        return nil
+    end
+    GroupHearth.lastOpen[player:GetGUID()] = now
     -- a cast begun again before the first one ended replaces it: the new
     -- window replaces the old on each member's screen, and an answer to the
     -- old one is ignored (onAnswer matches the hearth's own number)
     nextHearth = nextHearth + 1
     local hearth = { id = nextHearth, hearther = player:GetGUID(), name = player:GetName(), kind = kind, place = place,
-                     members = members, accepted = {}, asked = {}, done = false }
+                     members = members, accepted = {}, asked = {}, done = false,
+                     home = kind.ownCast and player:GetHomebind() or nil }
     GroupHearth.pending[hearth.hearther] = hearth
     for _, guid in ipairs(members) do
         if guid ~= hearth.hearther then
             local m = GetPlayerByGUID(guid)
-            -- offline: not asked; dead: not asked, unless the kind takes the dead
-            if m and (kind.withDead or not m:IsDead()) then
+            -- offline: not asked; dead: not asked, unless the kind takes the dead;
+            -- skipped by the profile, or ignoring the hearther: never asked
+            if m and (kind.withDead or not m:IsDead()) and not GroupHearth.skip(m, player) and not ignores(m, player) then
                 if m:IsBot() then
                     hearth.accepted[guid] = true
+                    if kind.ownCast then ride(m, hearth) end
                 else
                     hearth.asked[guid] = true
                     ask(m, hearth)
@@ -181,21 +290,42 @@ end -- }}}
 --   not known (no bind row): nobody is, and the log says why
 function GroupHearth.onPrepare(event, caster, spell)
     if not caster:IsPlayer() or not members_of(caster) then return end   -- nobody to invite
+    if GroupHearth.riding[caster:GetGUID()] then return end              -- riding along on someone's hearth: no invitation of its own
     local place = GroupHearth.homeName(caster)
     if place then GroupHearth.open(caster, HEARTH_KIND, place) end
 end -- }}}
 
 -- {{{ GroupHearth.onCancel
--- The cast was cancelled or interrupted: its hearth is withdrawn.
+-- A cast was cancelled or interrupted. Each path:
+--   a hearther's, their hearth still open    - the hearth is withdrawn
+--   a rider's, its hearth still going         - started again RIDE_RETRY_MS
+--     later ("they'll address the interruption and then try again"), up to
+--     RIDE_TRIES casts; past that the ride ends and they are told
+--   a rider's, its hearth called off          - nothing (withdraw ended it)
 function GroupHearth.onCancel(event, caster, spell, bySelf)
     if not caster:IsPlayer() then return end
-    local h = GroupHearth.pending[caster:GetGUID()]
+    local guid = caster:GetGUID()
+    local r = GroupHearth.riding[guid]
+    if r then
+        if r.tries >= RIDE_TRIES then
+            GroupHearth.riding[guid] = nil
+            caster:SendBroadcastMessage("Your hearthstone was interrupted too often; you stay where you are.")
+            return
+        end
+        caster:RegisterEvent(function(_, _, _, p)
+            local again = GroupHearth.riding[p:GetGUID()]
+            if again and again == r then ride(p, r.hearth) end
+        end, RIDE_RETRY_MS, 1)
+        return
+    end
+    local h = GroupHearth.pending[guid]
     if h and not h.done then GroupHearth.withdraw(h) end
 end -- }}}
 
 -- {{{ GroupHearth.onLogout
 -- A hearther who logs out mid-cast: their hearth is withdrawn.
 function GroupHearth.onLogout(event, player)
+    GroupHearth.riding[player:GetGUID()] = nil                          -- a rider gone: their ride with them
     local h = GroupHearth.pending[player:GetGUID()]
     if h then GroupHearth.withdraw(h) end
 end -- }}}
@@ -227,23 +357,31 @@ end -- }}}
 
 -- {{{ GroupHearth.onAnswer
 -- A member's answer in the window. Only the hearth that asked them counts
--- (sender carries its number).
---   "come along": counted in
---   "stay": counted out
+-- (sender carries its number), and only while it is open.
+--   "come along": counted in; for a hearthstone, their own hearthstone
+--     starts (ride)
+--   "stay": counted out; a ride of theirs under way is stopped (the
+--     party leader's "no" cancels the leader's own cast, 2026-10-30)
 function GroupHearth.onAnswer(event, player, object, sender, intid, code, menuId)
     player:GossipComplete()
     for _, h in pairs(GroupHearth.pending) do
-        if h.id == sender and h.asked[player:GetGUID()] then
+        if h.id == sender and h.asked[player:GetGUID()] and not h.done then
             h.accepted[player:GetGUID()] = (intid == INTID_COME) or nil
-            if intid == INTID_COME then
+            if intid == INTID_COME and h.kind.ownCast then
+                player:SendBroadcastMessage("Your hearthstone takes you with " .. h.name .. ".")
+                ride(player, h)
+            elseif intid == INTID_COME then
                 player:SendBroadcastMessage("You will travel with " .. h.name .. " when their hearthstone finishes.")
+            else
+                stopRide(player:GetGUID())
             end
         end
     end
 end -- }}}
 
 -- {{{ GroupHearth.withdraw
--- The hearth did not happen: close the windows still open and forget it.
+-- The hearth did not happen: close the windows still open, stop the rides
+-- under way (their own hearthstones would take them home), and forget it.
 function GroupHearth.withdraw(h)
     for guid in pairs(h.asked) do
         local m = GetPlayerByGUID(guid)
@@ -251,6 +389,9 @@ function GroupHearth.withdraw(h)
             m:GossipComplete()
             m:SendBroadcastMessage(h.name .. "'s hearth was called off; you stay where you are.")
         end
+    end
+    for guid, r in pairs(GroupHearth.riding) do
+        if r.hearth == h then stopRide(guid) end
     end
     GroupHearth.pending[h.hearther] = nil
 end -- }}}
@@ -262,9 +403,38 @@ end -- }}}
 -- came). Facing: any direction.
 function GroupHearth.onCast(event, player, spell)
     if not HEARTH_SPELLS[spell:GetEntry()] then return end
+
+    -- a rider's own hearthstone completed: a moment later (once the spell
+    -- has put them home) they are put on the hearther's circle instead
+    local target = GroupHearth.rideTarget(player:GetGUID())
+    if target then
+        GroupHearth.riding[player:GetGUID()] = nil
+        player:RegisterEvent(function(_, _, _, p)
+            if not p:IsDead() then
+                p:GossipComplete()
+                p:Teleport(target.map, target.x, target.y, target.z, math.random() * 2 * math.pi)
+            end
+        end, FOLLOW_MS, 1)
+        return
+    end
+
     local h = GroupHearth.pending[player:GetGUID()]
     if not h or h.done then return end
     h.done = true
+
+    -- a hearth whose members ride on their own hearthstones: the windows
+    -- still open answer "no" at once, the riders arrive by their own casts,
+    -- and the hearth is closed now
+    if h.kind.ownCast then
+        for guid in pairs(h.asked) do
+            if not h.accepted[guid] then
+                local m = GetPlayerByGUID(guid)
+                if m then m:GossipComplete() end
+            end
+        end
+        GroupHearth.pending[h.hearther] = nil
+        return
+    end
     player:RegisterEvent(function(_, _, _, p)
         local home = p:GetHomebind()
         local spots = GroupHearth.circle(home.x, home.y, #h.members)

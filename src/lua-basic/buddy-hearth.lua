@@ -91,12 +91,19 @@ local function on_spell_cast(event, player, spell)
         return
     end
     if #roster_of(low) == 0 then return end                -- a player without buddies
+    -- a partner riding along on someone's group hearth (group-hearth.lua,
+    -- 211): their hearthstone ends on that hearth's circle, not at home, so
+    -- the buddies go there; asked now, while the ride is still known
+    local ride = GroupHearth and GroupHearth.rideTarget and GroupHearth.rideTarget(player:GetGUID())
     -- a partner's hearthstone: everyone follows, round where they arrive
     player:RegisterEvent(function(_, _, _, p)
         local home = p:GetHomebind()
+        if ride then home = { mapId = ride.map, x = ride.x, y = ride.y, z = ride.z } end
         local x, y, z, o = p:GetLocation()
-        if p:GetMapId() ~= home.mapId then
-            x, y, z, o = home.x, home.y, home.z, 0         -- not arrived yet (a slow map load): the bind spot itself
+        if ride or p:GetMapId() ~= home.mapId then
+            -- riding: the circle spot itself (the partner is moved there at
+            -- this same moment); not arrived yet (a slow map load): the bind spot
+            x, y, z, o = home.x, home.y, home.z, 0
         end
         local moved, total = place_round(p:GetGUIDLow(), nil, home.mapId, x, y, z, o)
         if moved < total then

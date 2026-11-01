@@ -35,6 +35,30 @@ when the hearth was cancelled. Shown how the buddies' version works
 
 ## Current Behavior
 
+**The 2026-10-30 rules, and basic, built 2026-10-31** (Lua; not yet seen
+in game; `scripts/test-hearthstone`, 167 checks):
+- saying yes to a hearthstone's invitation starts the member's own
+  Hearthstone, its cooldown cleared first; when it completes the member
+  is put on the first hearther's circle (by their number in the group),
+  not at their own bind point; an interrupted one starts again 2 seconds
+  later, up to 5 casts, then the member is told and stays;
+- bots ride the same way, starting their Hearthstone at once;
+- a rider's own cast never opens an invitation of its own;
+- when the hearther's cast completes, windows still open close as a no;
+  when it is cancelled, the windows close and the rides under way stop;
+- a hearther invites their group at most once every 10 seconds (told
+  to wait otherwise);
+- nobody who has the hearther on their ignore list is asked (the game's
+  own ignore list, read from the characters database);
+- a profile may leave members out (`GroupHearth.skip`).
+On basic, `src/lua-basic/group-hearth.lua` runs beta's very file in
+place (as cc-test runs basic's talent script) and leaves out every
+buddy: the hearther's own buddies come by `buddy-hearth.lua`, round where
+the hearther arrives, and a rider's buddies follow the rider to the
+circle; another player's buddies stay with that player. Not built: the
+party leader's "no" cancelling more than the leader's own ride (see the
+open question below).
+
 **Built on branch beta-homework (2026-10-17, reworked 2026-10-18)** as
 described in Intended Behavior, with the open questions answered by
 default for now (each marked in the script's header): bots in the group
@@ -171,6 +195,11 @@ the moment the cast begins):
    - a member can start a group hearth at most once every 10 seconds;
    - nobody on a player's ignore list can ever send that player a prompt,
      this one included.
+   **Asked 2026-10-31 (open):** "if the party leader chooses "no" then
+   they'll cancel their cast": whose cast? Built as the leader's own (a
+   "no" stops any ride of the leader's, as anyone's), the reading this
+   issue's summary took. Or does the leader's "no" call off the whole
+   group hearth, stopping the hearther's cast too?
 2. Two members hearthing at once: one circle round the first hearther's
    destination for everyone, or does the second hearther's own pop-up go
    out too?
