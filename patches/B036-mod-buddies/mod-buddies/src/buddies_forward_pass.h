@@ -27,6 +27,7 @@
 
 #include "buddies_curve.h"
 #include "buddies_fight_state.h"
+#include "buddies_healer_seat.h"
 #include "buddies_window_buffs.h"
 
 #include <algorithm>
@@ -266,6 +267,11 @@ namespace BuddyForwardPass
                     // which a shield doesn't: a small kindness, noted)
                     holders[i].health    += one.absorb;
                     holders[i].maxHealth += one.absorb;
+                    // a heal over time: its ticks over its length (or the
+                    // fight's), counted at once and capped at full health (a
+                    // little generous: its last ticks count early)
+                    if (one.tickHealing > 0)
+                        holders[i].health = std::min(holders[i].maxHealth, holders[i].health + one.tickHealing * std::min(x.lasts, v.left));
                 }
         }
         // the enemies' casts in progress: each a lump of damage landing on
@@ -464,7 +470,14 @@ namespace BuddyForwardPass
     // Abilities that answer none of these aren't listed (the draw leaves
     // them at 1). Heals are counted before the caster's healing bonuses, so
     // they lean a little less than they will land: noted, not yet read.
-    inline std::map<std::string, double> Leans(Snapshot const& s, Memory const& memory, int b, double goldPerHour)
+    // `seat`: the healer's seat (625i, buddies_healer_seat.h), when known: a
+    // healing answer (a heal, a heal over time, a shield) leans as worked
+    // out for whoever holds it, away (0.05: stop casting, let spirit refill
+    // the mana) while it is out of mana, and not at all (1) for the others
+    // able to heal while the seat is fine; with the seat empty or out of
+    // mana, they lean in as worked out ("others can use that as the signal
+    // to jump in").
+    inline std::map<std::string, double> Leans(Snapshot const& s, Memory const& memory, int b, double goldPerHour, BuddySeat::Seat const* seat = nullptr)
     {
         std::map<std::string, double> out;
         if (b < 0 || static_cast<size_t>(b) >= s.party.size()) return out;
@@ -517,7 +530,15 @@ namespace BuddyForwardPass
                     a.burstLasts  = r.lastsMs / 1000.0;
                     a.extras.clear();                                          // its marks are its burst, not a shield
                 }
-            out[r.name] = Lean(Judge(s, memory, a, goldPerHour, &base), base);
+            double lean = Lean(Judge(s, memory, a, goldPerHour, &base), base);
+            BuddyMarks::Modifiers m = BuddyMarks::Of(effects);
+            bool healing = r.heal != 0 || m.tickHealing > 0 || m.absorb > 0;
+            if (seat && healing)
+            {
+                if (b == seat->holder) { if (seat->oom) lean = 0.05; }
+                else if (BuddySeat::CanHeal(me) && seat->holder >= 0 && !seat->oom) lean = 1.0;
+            }
+            out[r.name] = lean;
         }
         // the long empowering cooldowns, through the cooldown timeline (625f):
         // each one's lean times its weight, how much worse using it now is

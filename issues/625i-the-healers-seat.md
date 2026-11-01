@@ -7,7 +7,7 @@
 - Related: 625c (every tree's list: a hybrid's minor tree), 625h (the
   resource economy), 617z (tank-paced pulls: the healer's "oom" signals)
 - Priority: Medium
-- State: planned
+- State: in progress (the seat built; mana-regaining fighting not yet)
 
 ## Origin
 
@@ -27,8 +27,37 @@ dying, word for word:
 
 ## Current Behavior
 
-Not built. Each bot heals by its own strategy; nothing names a healer for
-the party or hands the role on.
+**Built 2026-10-31** (the arithmetic committed and tested; the server's
+side written and compiler-checked, waiting for the owner's compile):
+`buddies_healer_seat.h`, read by the forward pass (625n).
+- **Who can heal**: points in a healing tree (a priest's Discipline and
+  Holy, a paladin's Holy, a shaman's and a druid's Restoration), read in
+  the server from the bot module's points per tree.
+- **The seat**: the party's healer (role 2) that is alive, the most mana
+  among several; with none alive, the member able to heal with the most
+  mana, until the fight ends.
+- **Out of mana and ready again**, from the game's own numbers: out of
+  mana when its mana is under its cheapest heal's cost (the cheapest
+  direct heal of its class in the generated tables, a cost in percent of
+  base mana worked on its own base mana); ready again only when its mana
+  covers its own healing for the rest of the fight (its healing a second
+  over the minute, times the fight's time left, at that heal's health a
+  mana), or it is full, so it doesn't flicker at the line.
+- **The leans**: a healing answer (a heal, a heal over time, a shield)
+  leans as worked out for the seat's holder, away (0.05: stop casting, so
+  spirit refills it) while it is out of mana; for the others able to heal,
+  not at all while the seat is fine, and as worked out once it is empty or
+  dry ("others can use that as the signal to jump in"). Heals over time
+  now count in the fight curves (their ticks over their length, capped at
+  full health).
+- **It speaks**: the seat's holder, a buddy or stand-in only, says "oom" in
+  party chat when it runs dry and "ready" when it is ready again; a player
+  in the seat is read the same way and never spoken for.
+Checked by `scripts/test-buddy-healer-seat` (13 checks).
+
+Not yet: the holder fighting in the way that brings mana back (Seal of
+Wisdom, a wand, a form), paladins choosing Judgement of Wisdom while the
+seat is dry, and hearing a player's own "oom" in chat.
 
 ## Intended Behavior
 

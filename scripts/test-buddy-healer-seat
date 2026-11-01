@@ -1,0 +1,28 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-healer-seat
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      the healer's seat: who holds it, out of mana and ready again, and how the others' heals lean by it
+# quick-test: yes
+# ==== end of header ====
+# test-buddy-healer-seat - compiles and runs
+# tests/buddy-healer-seat/seat-check.cpp against the buddy module's
+# healer's seat (issue 625i), with no server.
+#
+# Usage: scripts/test-buddy-healer-seat [DIR]   (--help: this text)
+
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+    sed -n '10,14p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+OUT="${DIR}/tmp/tmp"
+mkdir -p "${OUT}"
+g++ -std=c++17 -O1 -Wall -Wextra -Werror -I"${DIR}/patches/B036-mod-buddies/mod-buddies/src" \
+    "${DIR}/tests/buddy-healer-seat/seat-check.cpp" -o "${OUT}/buddy-healer-seat" || exit 1
+nice -n 19 "${OUT}/buddy-healer-seat"
+# ==== footer of test-buddy-healer-seat ====
+# lines:      28
+# ==== end of footer ====

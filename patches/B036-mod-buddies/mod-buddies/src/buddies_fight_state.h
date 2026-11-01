@@ -53,13 +53,16 @@ namespace BuddyFightState
     // for a character). Role: 0 damage, 1 tank, 2 healer. resourceKind: the
     // game's power type (0 mana, 1 rage, 3 energy, 6 runic power, 2 focus).
     // Armour and level: what its physical damage taken comes from
-    // (buddies_marks.h, ArmourReduction).
+    // (buddies_marks.h, ArmourReduction). healPoints: its talent points in
+    // healing trees (the healer's seat, 625i); baseMana: its base mana, what
+    // a cost in percent of base mana is of.
     struct Member
     {
         uint64_t id = 0, owner = 0;
         double health = 0, maxHealth = 0, resource = 0, maxResource = 0;
         uint8_t resourceKind = 0, role = 0, cls = 0;
         double armour = 0; int level = 1;
+        uint8_t healPoints = 0; double baseMana = 0;
         double x = 0, y = 0, z = 0;
         uint32_t casting = 0; double castLeft = 0;
         std::vector<Cooldown> cooldowns;
@@ -172,6 +175,7 @@ namespace BuddyFightState
         double TakenPerSecond(uint64_t id, double now) const  { auto it = _sums.find(id); return it == _sums.end() ? 0.0 : it->second.taken / Covered(now); }
         double HealedPerSecond(uint64_t id, double now) const { auto it = _sums.find(id); return it == _sums.end() ? 0.0 : it->second.healed / Covered(now); }
         double DealtPerSecond(uint64_t id, double now) const  { auto it = _sums.find(id); return it == _sums.end() ? 0.0 : it->second.dealt / Covered(now); }
+        double HealingPerSecond(uint64_t id, double now) const { auto it = _sums.find(id); return it == _sums.end() ? 0.0 : it->second.healing / Covered(now); }   // healing it did
         // the share of a dealer's damage that was physical; an enemy not yet
         // seen dealing any counts as physical (most enemies' plain attacks)
         double PhysicalShare(uint64_t id) const
@@ -203,7 +207,7 @@ namespace BuddyFightState
         // }}}
 
     private:
-        struct Sums { double taken = 0, healed = 0, dealt = 0, dealtPhysical = 0; };
+        struct Sums { double taken = 0, healed = 0, dealt = 0, dealtPhysical = 0, healing = 0; };   // healed: received; healing: done
 
         // {{{ Count
         // One event into the sums (sign +1) or out of them (-1).
@@ -215,7 +219,11 @@ namespace BuddyFightState
                 _sums[e.from].dealt += sign * e.amount;
                 if (e.physical) _sums[e.from].dealtPhysical += sign * e.amount;
             }
-            else if (e.kind == HEAL) _sums[e.to].healed += sign * e.amount;
+            else if (e.kind == HEAL)
+            {
+                _sums[e.to].healed    += sign * e.amount;
+                _sums[e.from].healing += sign * e.amount;
+            }
         }
         // }}}
 
