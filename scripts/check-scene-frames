@@ -1,0 +1,172 @@
+#!/usr/bin/env luajit
+-- check-scene-frames - reads the fight scenes' frame logs and says whether
+-- they are whole, and how much each combatant's fights differ from round
+-- to round (issue 176a3).
+--
+-- For a general audience: on the cc-test server, ".buddy scene" plays the
+-- same fight again and again and writes, every half second, one line per
+-- combatant: its health, mana, place, targets, auras, threat, the spells it
+-- cast, and what the buddies' forward pass thought of it. Those files are
+-- meant to become one chart per combatant. Before charting, this reads
+-- them: every line must have as many columns as the header names (a line
+-- cut short or a column added on one side only shows here), and for each
+-- combatant it counts the rounds, the frames, and how many different
+-- orders of spells it cast across the rounds. The owner, 2026-10-31: "if
+-- it played out the same way everytime, then we aren't building it
+-- correctly" - so a combatant whose every round cast the same spells in
+-- the same order is pointed out.
+--
+-- Usage: scripts/check-scene-frames [FILE...] [--profile NAME] [--dir DIR]
+--   FILE            a frames file (<scene>-frames.tsv); default every one in
+--                   DIR/logs-<profile>/buddies-scenes/
+--   --profile NAME  whose logs (default: the project's .profile)
+--   --dir DIR       the project folder (default the hard-coded one below)
+--   --help          this text
+-- Exit status: 0 every file whole; 1 a file without its made-by line or
+-- header, or with a line of the wrong width; 2 nothing to read.
+
+local DIR     = "/mnt/kaun/wow-chat-2026"
+local PROFILE = nil
+local FILES   = {}
+
+-- {{{ local function usage()
+local function usage()
+    local f = io.open(arg[0], "r")
+    local n = 0
+    for line in f:lines() do
+        n = n + 1
+        if n >= 2 and n <= 25 then print((line:gsub("^%-%- ?", ""))) end
+    end
+    f:close()
+end
+-- }}}
+
+-- the options
+local i = 1
+while i <= #arg do
+    local a = arg[i]
+    if a == "--help" or a == "-h" then usage() os.exit(0)
+    elseif a == "--profile" then PROFILE = arg[i + 1] i = i + 1
+    elseif a == "--dir" then DIR = arg[i + 1] i = i + 1
+    else FILES[#FILES + 1] = a end
+    i = i + 1
+end
+
+-- {{{ local function split(line)
+-- A line's fields by tab, empty ones kept (a line ending in a tab has an
+-- empty last field).
+local function split(line)
+    local out, from = {}, 1
+    while true do
+        local at = line:find("\t", from, true)
+        if not at then out[#out + 1] = line:sub(from) return out end
+        out[#out + 1] = line:sub(from, at - 1)
+        from = at + 1
+    end
+end
+-- }}}
+
+-- with no files named: every frames file of the profile's logs
+if #FILES == 0 then
+    if not PROFILE then
+        local f = io.open(DIR .. "/.profile", "r")
+        if not f then io.stderr:write("check-scene-frames: no files named and no " .. DIR .. "/.profile to find the logs by (--profile NAME)\n") os.exit(2) end
+        PROFILE = f:read("*l")
+        f:close()
+    end
+    local folder = DIR .. "/logs-" .. PROFILE .. "/buddies-scenes"
+    local ls = io.popen('ls -1 "' .. folder .. '"')
+    for name in ls:lines() do
+        if name:match("%-frames%.tsv$") then FILES[#FILES + 1] = folder .. "/" .. name end
+    end
+    ls:close()
+    if #FILES == 0 then
+        io.stderr:write("check-scene-frames: no frames files in " .. folder .. " (a scene writes them while it fights: .buddy scene <name> on that server)\n")
+        os.exit(2)
+    end
+end
+
+local NEEDED = { "round", "t", "who", "side", "alive", "health", "max-health", "casts" }
+local whole  = true
+
+-- {{{ local function check(path)
+-- One file: its width line by line, then per combatant its rounds, frames,
+-- lowest health, casts a round and how many different orders of casts.
+local function check(path)
+    local f = io.open(path, "r")
+    if not f then print(path .. ": cannot be read") whole = false return end
+    local made = f:read("*l")
+    local head = f:read("*l")
+    if not made or made:sub(1, 1) ~= "#" then print(path .. ": no made-by line first (\"# made by ...\")") whole = false f:close() return end
+    if not head then print(path .. ": no header line") whole = false f:close() return end
+    local names, at = split(head), {}
+    for k, name in ipairs(names) do at[name] = k end
+    for _, name in ipairs(NEEDED) do
+        if not at[name] then print(path .. ": the header has no column \"" .. name .. "\"") whole = false f:close() return end
+    end
+
+    local lines, bad, firstBad = 0, 0, nil
+    local who, order = {}, {}                  -- per combatant: what was seen; and the order they were first seen in
+    local seconds = {}                         -- per round: its last t
+    local n = 2
+    for line in f:lines() do
+        n = n + 1
+        if line ~= "" and line:sub(1, 1) ~= "#" then
+            lines = lines + 1
+            local v = split(line)
+            if #v ~= #names then
+                bad = bad + 1
+                firstBad = firstBad or (n .. " (" .. #v .. " fields, the header names " .. #names .. ")")
+            else
+                local name, round = v[at.who], v[at.round]
+                local c = who[name]
+                if not c then c = { side = v[at.side], rounds = {}, count = 0, frames = 0, low = 1 } who[name] = c order[#order + 1] = name end
+                local r = c.rounds[round]
+                if not r then r = { casts = {} } c.rounds[round] = r c.count = c.count + 1 end
+                c.frames = c.frames + 1
+                local max = tonumber(v[at["max-health"]]) or 0
+                local hp  = tonumber(v[at.health]) or 0
+                if max > 0 and hp / max < c.low then c.low = hp / max end
+                if v[at.alive] == "0" then r.fell = true end
+                if v[at.casts] ~= "-" and v[at.casts] ~= "" then
+                    for cast in v[at.casts]:gmatch("[^;]+") do r.casts[#r.casts + 1] = (cast:gsub(">.*$", "")) end
+                end
+                local t = tonumber(v[at.t]) or 0
+                if not seconds[round] or t > seconds[round] then seconds[round] = t end
+            end
+        end
+    end
+    f:close()
+
+    local rounds, shortest, longest = 0, nil, nil
+    for _, t in pairs(seconds) do
+        rounds = rounds + 1
+        shortest = (not shortest or t < shortest) and t or shortest
+        longest  = (not longest  or t > longest)  and t or longest
+    end
+    print(string.format("%s: %d lines, %d columns, %d of the wrong width%s", path:match("[^/]+$"), lines, #names, bad,
+        firstBad and (" (first: line " .. firstBad .. ")") or ""))
+    if bad > 0 then whole = false end
+    if rounds > 0 then
+        print(string.format("  %d round%s, %.1f to %.1f seconds", rounds, rounds == 1 and "" or "s", shortest, longest))
+    end
+    for _, name in ipairs(order) do
+        local c = who[name]
+        local orders, seen, casts, fell = 0, {}, 0, 0
+        for _, r in pairs(c.rounds) do
+            local key = table.concat(r.casts, ";")
+            if not seen[key] then seen[key] = true orders = orders + 1 end
+            casts = casts + #r.casts
+            if r.fell then fell = fell + 1 end
+        end
+        local note = ""
+        if c.side ~= "monster" and c.count > 1 and orders == 1 then note = "  <- the same casts in the same order every round" end
+        print(string.format("  %-16s %-8s %3d round%s, %5d frames, lowest health %3d%%, fell in %d, %5.1f casts a round, %d different order%s%s",
+            name, c.side, c.count, c.count == 1 and " " or "s", c.frames, math.floor(c.low * 100 + 0.5), fell,
+            casts / math.max(1, c.count), orders, orders == 1 and "" or "s", note))
+    end
+end
+-- }}}
+
+for _, path in ipairs(FILES) do check(path) end
+os.exit(whole and 0 or 1)
