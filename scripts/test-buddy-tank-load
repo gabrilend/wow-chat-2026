@@ -1,0 +1,28 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-tank-load
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      the tank's load: room for one more enemy, said in the health it would have left at the fight's end
+# quick-test: yes
+# ==== end of header ====
+# test-buddy-tank-load - compiles and runs
+# tests/buddy-tank-load/load-check.cpp against the buddy module's
+# tank's load (issue 625j), with no server.
+#
+# Usage: scripts/test-buddy-tank-load [DIR]   (--help: this text)
+
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+    sed -n '10,14p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+OUT="${DIR}/tmp/tmp"
+mkdir -p "${OUT}"
+g++ -std=c++17 -O1 -Wall -Wextra -Werror -I"${DIR}/patches/B036-mod-buddies/mod-buddies/src" \
+    "${DIR}/tests/buddy-tank-load/load-check.cpp" -o "${OUT}/buddy-tank-load" || exit 1
+nice -n 19 "${OUT}/buddy-tank-load"
+# ==== footer of test-buddy-tank-load ====
+# lines:      28
+# ==== end of footer ====

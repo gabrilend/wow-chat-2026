@@ -73,7 +73,7 @@ The pets' part is its own issue, 625m.
 The bot module's tanks taunt what they lose and its damage dealers hold
 back by fixed threat triggers ("medium threat").
 
-**Built 2026-10-30 (committed, offline):** steps 1 to 3, and the tanks' swaps (step 5).
+**Built 2026-10-30 (committed, offline):** steps 1 to 3, the tanks' swaps (step 5), and the tank's load (step 4, 2026-10-31).
 - The levers, read from the game's spell table by
   `scripts/generate-ability-data` (`BUDDY_THREAT_LEVERS`, and a table in
   `docs/ability-data.md`; 42 of them): what each ability's effects and
@@ -116,8 +116,19 @@ back by fixed threat triggers ("medium threat").
   minute too long for one tank, shared; a tank with a stacking debuff
   handing to the other and taking back once clean; a tank marked to take
   half, taunting though no one would die either way.
-Not yet: the tank's load, and the server reading each enemy's list,
-everyone's health and marks, the damage coming in and the healing.
+- Step 4, the tank's load (2026-10-31): `buddies_tank_load.h`. The member
+  holding the most enemies; with one more like the average one on it, it
+  loses that enemy's damage too (through its armour) and the fight lasts
+  longer by that enemy's health at the party's pace; the room is the
+  health it would have left at the fight's end that way (above nothing:
+  room to pull more; below: hold). Checked by `scripts/test-buddy-tank-load`
+  (7 checks): a tank at 25000 under two enemies ends a third 337 above
+  nothing (room); at 15000 it holds as it is but a third would kill it.
+  In the server (waiting for the compile): shown by `.buddy fight`, and
+  asked by `BuddyForwardPassTankRoom` for the tank-paced pulls (617z).
+The server reads each enemy's list, everyone's health and marks, the
+damage coming in and the healing (625n, built by the 2026-10-31 compile).
+Not yet: the damage dealers pulling more or holding by the room (617z).
 
 ## Intended Behavior
 
