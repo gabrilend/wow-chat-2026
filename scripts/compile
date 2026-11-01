@@ -1023,13 +1023,32 @@ do_build() {
     # upstream's always come first. It needs MySQL, as the quick tests do;
     # a start that does not reach "World initialized" stops the compile
     # here, before our SQL is placed (its log names why).
+    #
+    # Only when some SQL changed (the owner, 2026-10-31: "we only need to do
+    # that first startup if we changed the SQL. Can we add a check for
+    # that?"): scripts/sql-fingerprint takes one fingerprint of all the SQL
+    # this build hands the server (our sources, the profile's SQL steps,
+    # the core's and modules' commits). The same as the last build that
+    # passed this start (build-shadow/.gate-2000-<profile>): the databases
+    # are already at upstream's state with this SQL, so it is skipped.
+    #   unchanged: one line, and on to our SQL
+    #   changed, or none kept: the start, and the fingerprint kept once it passes
+    #   no fingerprint (the tool failed): the start, as before, and said why
+    local gate_kept="${BUILD_DIR_SHADOW}/.gate-2000-${PROFILE}" gate_now=""
+    gate_now="$("${DIR}/scripts/sql-fingerprint" "${DIR}" "${PROFILE}")" || gate_now=""
     echo ""
-    echo "Gate 2000: starting the shadow server once, so the databases reach upstream's state..."
-    if ! "${DIR}/scripts/validate" --profile "${PROFILE}" --no-promote; then
-        echo "ERROR: gate 2000 failed: the shadow server did not finish starting, so our SQL was not placed"
-        echo "       (the install stage's work is in the shadow folder; nothing was promoted)"
-        FAILURE_ALREADY_EXPLAINED=true
-        return 1
+    if [[ -n "${gate_now}" && -f "${gate_kept}" && "$(cat "${gate_kept}")" == "${gate_now}" ]]; then
+        echo "Gate 2000 skipped: no SQL changed since the last build that passed it."
+    else
+        [[ -z "${gate_now}" ]] && echo "  (the SQL's fingerprint could not be taken: the first start runs, as before)"
+        echo "Gate 2000: starting the shadow server once, so the databases reach upstream's state..."
+        if ! "${DIR}/scripts/validate" --profile "${PROFILE}" --no-promote; then
+            echo "ERROR: gate 2000 failed: the shadow server did not finish starting, so our SQL was not placed"
+            echo "       (the install stage's work is in the shadow folder; nothing was promoted)"
+            FAILURE_ALREADY_EXPLAINED=true
+            return 1
+        fi
+        [[ -n "${gate_now}" ]] && echo "${gate_now}" > "${gate_kept}"
     fi
     apply_patches_sql
     unset TARGET_INSTALL_DIR
