@@ -1,0 +1,47 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-sell
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      the "go sell" rule holds to issue 623: half full near a vendor, nine tenths far, continuous between, everyone at "everyone go sell"
+# quick-test: yes
+# ==== end of header ====
+# test-buddy-sell - checks the "go sell" rule (roam/buddy_sell_core.h)
+# against issue 623, with no server.
+#
+# For a general audience: told "go sell", a buddy goes when enough of its
+# bag space holds things to sell: about half with a vendor close, nearly
+# all with one far, and smoothly between; "everyone go sell" sends all.
+#
+# Usage: scripts/test-buddy-sell [PROJECT_DIR] [--help]
+# Builds into tmp/tmp/ (the executable tier). Exits non-zero when any
+# check fails.
+
+set -uo pipefail
+
+# {{{ configuration
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+    echo "Usage: scripts/test-buddy-sell [PROJECT_DIR]"
+    echo "  Builds and runs the sell core's offline check (tests/buddy-sell/sell-check.cpp)."
+    exit 0
+fi
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+CORE="${DIR}/patches/B036-mod-buddies/mod-buddies/src/roam"
+SOURCE="${DIR}/tests/buddy-sell/sell-check.cpp"
+EXEC_DIR="${DIR}/tmp/tmp"
+BINARY="${EXEC_DIR}/buddy-sell-check"
+# }}}
+
+[[ -d "${DIR}/tmp" ]] || { echo "ERROR: ${DIR}/tmp missing (the project's link to /tmp/<project>)"; exit 1; }
+mkdir -p "${EXEC_DIR}"
+
+if ! g++ -std=c++17 -O2 -Wall -Wextra -Werror -I"${CORE}" "${SOURCE}" -o "${BINARY}"; then
+    echo "test-buddy-sell: the sell core did not build alone (above); nothing was checked"
+    exit 1
+fi
+"${BINARY}"
+# ==== footer of test-buddy-sell ====
+# lines:      47
+# ==== end of footer ====
