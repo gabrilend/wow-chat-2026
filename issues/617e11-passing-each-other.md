@@ -70,6 +70,22 @@ pass.
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 4), merged with the
+same questions from other sub-issues; answers are written back here.
+
+- **Answered 2026-10-28** (617's question 4, clan-mates): "Clanmates only
+  greet each other when they log in. They should walk to each clan mate
+  and greet them, wait a second or two, and then greet someone else.
+  Sometimes that second or two becomes a chat that has a 20% chance of
+  ending after every /talk emote." So: at login, each buddy walks to each
+  clan-mate in turn, greets, waits a second or two, moves on; now and then
+  the pause becomes a chat of /talk emotes, each with a one-in-five chance
+  of being the last.
+
+- **Answered 2026-10-28** (617's question 4, in part): the lower one kneels
+  to anyone at least double its level; players are passed, greeted and
+  knelt to like anyone else. Whether clan-mates greet each pass stays open.
+
 1. **"Much higher level":** how many levels apart before the lower one
    kneels? For example 10 levels, or a share of the level such as
    double?

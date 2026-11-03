@@ -58,6 +58,9 @@ walked to in a straight line by the server.
 
 ## Open Questions
 
+Gathered 2026-10-28: what was here is a thing to check in game, listed
+under 617's "To check in game".
+
 - (Needs more testing, the owner 2026-10-03: "requires additional
   testing, keep it in the back of your head") "Carago didn't seem to walk
   into the structure in Ammen Vale": he no longer walked through its walls

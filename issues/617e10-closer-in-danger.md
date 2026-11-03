@@ -51,6 +51,19 @@ experience, of any level.
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 3), merged with the
+same questions from other sub-issues; answers are written back here.
+
+- **Answered 2026-10-28** (617's question 3): the roaming radius shrinks
+  step by step as danger rises, down to the close-follow ring (617s) at
+  its worst, and widens again as fights go well.
+
+- **Answered 2026-10-28** (617's question 3): what makes a place
+  dangerous: elites and packs; monsters above the buddies' level; how fights
+  went; close calls, "when allies drop to low health and or die"; and "if
+  the healer nearly runs out of mana". The allies' close calls make it the
+  group's danger, not one buddy's. How close "closer" is stays open.
+
 - What counts as "tougher than they expect": the monsters' levels
   against the buddy's, elites, packs, how fights actually went, or a mix?
 - How close is "closer": a fixed leash (say 30 yards) whenever it's

@@ -53,6 +53,9 @@ trade claims mid-walk.
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 2), merged with the
+same questions from other sub-issues; answers are written back here.
+
 1. When a buddy arrives and its own slot is still the nearest free one
    (the owner stood still), does it stay put (no new waypoint), so the
    ring is calm while the owner rests?

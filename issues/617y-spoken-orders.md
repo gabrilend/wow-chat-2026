@@ -153,6 +153,9 @@ speak in commands.
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 38), merged with the
+same questions from other sub-issues; answers are written back here.
+
 1. (Answered 2026-10-12: the order is wanted; read as: the trip waits for
    it.) Is that right, or should a full buddy also set off by itself after
    a while unheard?

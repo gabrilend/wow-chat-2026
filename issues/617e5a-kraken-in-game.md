@@ -61,6 +61,9 @@ numbers and the spells:
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 40), merged with the
+same questions from other sub-issues; answers are written back here.
+
 - **Who is "a tank"?** The bot module decides by spec (`IsTank`) and by a
   main-tank mark. Is an owner a tank only by spec, or also when they mark
   themselves (or say so to Sargobras)?

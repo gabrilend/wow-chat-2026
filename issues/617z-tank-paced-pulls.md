@@ -121,10 +121,51 @@ what "could hurt" means and what happens to the harmless ones instead).
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 21), merged with the
+same questions from other sub-issues; answers are written back here.
 
+- **Answered 2026-10-28** (617's question 21, the rest):
+  - **The route**: the "skeletonized" pathfinding is the floor skeleton
+    built for the exploration comparison page (`docs/HTML/exploration-compare.html`,
+    `scripts/build-exploration-compare-page`: the floor shaved from its
+    edges to one square wide, Zhang and Suen's thinning, then a graph of
+    knots (ends and forks) and the runs between). Each dungeon's skeleton
+    is its map of ways; at a fork toward the next boss the tank takes one
+    at random.
+  - **Going faster**: no word for it. "If the DPS wants to go faster, they
+    should just pull more mobs. The tank will pick them up and be a little
+    upset. They should sense how well they're doing and if they can handle
+    it, they'll adjust to the new speed and pull accordingly." The tank
+    picks up what a player pulls (saying it's a little put out), and
+    learns the group's pace from how such fights go.
+  - **Harmless packs**: "If they are hostile they are picked up and
+    cleared by AoE on the way to the next patches."
+  - Slowing: any player's "wait", "go slower" and the like (above); a
+    healer's "ready", "oom", "mana".
 
+- **Added 2026-10-28** (617's question 21): "Also any player should be able
+  to say wait and it slows down the tank. Or go slower. Or similar." Any
+  player in the group may slow the tank: "wait", "go slower", "slow down"
+  and words like them; a healer's "oom" and "mana" do the same.
 
+- **Answered 2026-10-28** (617's question 21, the route): "We want to fight
+  our way to each boss in the correct order - make sure if the boss isn't
+  available or whatever that we target the correct one, for example the
+  murloc in wailing caverns. Also, if there are multiple paths we could
+  take, pick one at random. We can use the "skeletonized" path finding
+  mechanism for that." The tank heads for the bosses in the dungeon's
+  order, fighting what is in the way; a boss that isn't there yet (Mutanus
+  the Devourer, the murloc who appears only when the escort ends) is
+  handled as the dungeon intends; where several ways lead on, one is taken
+  at random. The "skeletonized" pathfinding: asked back (the nearest thing
+  built is 617e6's map of rooms and the passages between them).
 
+- **Answered 2026-10-28** (617's question 21, in part): "The healers should
+  be able to say ready and oom or out of mana or mana and the tank slows
+  down or stops. We discussed this before." So a healer's words set the
+  pace: "ready" lets the tank on; "oom", "out of mana" or "mana" slows or
+  stops it; with the 2026-10-12 design above (the tank's own judgement of
+  the healer's mana and the pack).
 
 1. (Answered 2026-10-12: a player or a healer buddy, whispered to the
    tank.) When the player is the healer (Birth is a shaman), does the

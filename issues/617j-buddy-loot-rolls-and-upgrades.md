@@ -201,9 +201,33 @@ bind-on-pickup" flag).
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 27), merged with the
+same questions from other sub-issues; answers are written back here.
 
+- **Answered 2026-10-28** (617's question 27, the class book): "treat it as
+  any item, but class books should always be given to clanmembers (no
+  player preference) unless no clanmate needs them, then they are
+  auctioned." A class book goes to a clan member who can learn it, player
+  or buddy alike; with none, to the auction house.
 
+- **Answered 2026-10-28** (617's question 27): a third-in-each buddy scores
+  items by a blend of its three trees, "but we have to make sure that we
+  have stats that all three would want. I'm concerned that blending the
+  weights might just mean everyone prioritizes things like stamina, that
+  everyone wants. Also if the blend has a healing spec it should
+  disprefer hit rating, this counts for the 2-1 specs as well." So the
+  blend counts a stat only by what each tree wants of it (a stat every
+  tree merely tolerates, like stamina, must not win by being shared), and
+  a blend with a healing tree marks hit rating down (also for two-thirds /
+  one-third shapes with a healing third).
+- **Answered 2026-10-28** (the upgrade bar): "for 0-10% improvement they
+  should only take it if nobody else wants it." An upgrade of 10% or more
+  is worn; a smaller one only when nobody else in the clan wants the item.
 
+- **Set aside 2026-10-28** (617's question 24): a buddy mailing a rare
+  bind-on-equip epic to its owner: "we should treat items as normal and
+  skip that behavior for now". Epics go on the buddy's item lists (617h2)
+  like any item.
 
 - (Answered 2026-09-24) Stat weights: the bot module's level-80 table, as
   is. Verbatim: "level 80 weights are fine. There are no WotLK weights

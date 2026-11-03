@@ -198,6 +198,9 @@ over the real world:
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (questions 1, 9), merged with the
+same questions from other sub-issues; answers are written back here.
+
 - **Baked paths for fixed places, live paths for moving targets** (the
   owner, 2026-10-03, "for another session"): "the world is static and
   baked with it's navmeshes and such. I'm thinking pathfinding between

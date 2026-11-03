@@ -282,6 +282,16 @@ the owner's map), and anything for instances (617c3).
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 11), merged with the
+same questions from other sub-issues; answers are written back here.
+
+- **Answered 2026-10-28** (617's question 11): "They should build a route,
+  as they would with any path finding task, and one of the paths that
+  route might take us through their teleportation spells." The crossing
+  becomes a route search over every way (walking, boats, zeppelins,
+  portals, and a mage's own teleports), the best route taken, not
+  "teleport whenever possible".
+
 - (Answered 2026-10-02) **Portals costing a reagent**: "just mage portals"
   (Ritz), so the Dark Portal and the boats are free. The reagent itself was
   already considered and dropped in 617e (2026-09-27: a spell's reagent is

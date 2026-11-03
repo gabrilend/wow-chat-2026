@@ -33,6 +33,12 @@ server start; not yet run.
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 15), merged with the
+same questions from other sub-issues; answers are written back here.
+
+- **Answered 2026-10-28** (617's question 15): everyone, on Debug builds;
+  the file trimmed to its last hour.
+
 1. **Game masters only?** The owner, of path recording (2026-10-27): "we
    will only record our paths in debug mode. and then, only for GMs." This
    record is of everyone, so that bots with no player can be watched

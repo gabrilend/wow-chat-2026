@@ -43,4 +43,10 @@ in 5 seconds, 1.1 MB.
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 15), merged with the
+same questions from other sub-issues; answers are written back here.
+
+- **Answered 2026-10-28** (617's question 15): "Depends on what we're
+  using them for": the size is chosen per use (`--size`), as built.
+
 1. The screen's size: 1920 x 1080 is ours. What is the owner's?

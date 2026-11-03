@@ -373,6 +373,17 @@ cutting through walls or teleporting.
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 24), merged with the
+same questions from other sub-issues; answers are written back here.
+
+- **Answered 2026-10-28** (617's question 24): the selling rounds give way
+  to per-item lists (617h2): "They should always sell as much as they
+  need. When they acquire an item they should place it on a list that
+  determines what they want to do with it. These lists can be per bot and
+  in lua, recalculated when the bot logs in. They should attempt to resolve
+  any lists they have entries in when they are near a vendor, AH,
+  profession trainer, etc. Bots should not receive quest items".
+
 - (Answered 2026-09-24) After a sale the rising price resets.
 - (Answered 2026-09-24) Price rise: +0.5× vendor price per unsold expiry,
   no ceiling. Epics: upgrades equipped; bind-on-equip non-upgrades mailed

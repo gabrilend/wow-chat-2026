@@ -57,6 +57,12 @@ not typed by hand.
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 29), merged with the
+same questions from other sub-issues; answers are written back here.
+
+- **Answered 2026-10-28** (617's question 29): buddies only, out of combat
+  only; the main hand decides (a dual-wielder's off hand does not).
+
 1. Buddies only, or players too?
 2. In combat as well, or only out of combat (a mid-fight weapon swap
    rewriting talents)?

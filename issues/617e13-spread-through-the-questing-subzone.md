@@ -211,8 +211,22 @@ reaching 60 yards instead of 30. The knobs:
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (questions 1, 10, 12, 39), merged with the
+same questions from other sub-issues; answers are written back here.
 
+- **Answered 2026-10-28** (617's question 10): "Never. But we must ensure
+  they can navigate the map with ease." No buddy counts as left behind.
 
+- **Answered 2026-10-28** (617's question 2): the formation built here is
+  the **arc follow**, for moving distances; the **close follow** (617s's
+  ring round the owner) is for combat or when asked. (The owner: "When
+  moving distances, we should do an "arc follow" which means they trail
+  behind you. When doing a "close follow" in combat or when specified,
+  they circle around you.")
+- **Answered 2026-10-28** (617's question 12): tests may log in a test
+  clan of their own on basic ("they're all testing servers right now"),
+  with the realm locked to game masters while a test runs (1100e); never
+  on beta.
 
 1. **The sub-zone's edges.** The client's area table gives each sub-zone
    (area id) but not its outline; the area centres (617e2) and the map's

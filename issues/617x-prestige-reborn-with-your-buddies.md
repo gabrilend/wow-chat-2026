@@ -105,6 +105,18 @@ reborn is an open question.
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 36), merged with the
+same questions from other sub-issues; answers are written back here.
+
+- **Answered 2026-10-28** (617's question 36, where): "they can do so by
+  talking to a faction leader. The faction leader will congratulate them
+  on their success and retirement, and then the screen will fade-to-black
+  and they will re-appear at that faction leader's starting zone, with
+  Sargobras ready to greet them with a smile." The rebirth is asked of a
+  faction leader (a capital's king or warchief), who congratulates them on
+  their success and retirement; the screen fades to black; they appear in
+  that leader's people's starting zone, where Sargobras greets them.
+
 1. (Answered 2026-10-12: Magisters' Terrace's, 24664.) Always, or a
    chance?
 2. (Answered 2026-10-12: nothing, "for now".) Do titles, achievements, or

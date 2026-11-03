@@ -35,4 +35,11 @@ paid for, by the same rules as now.
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 34), merged with the
+same questions from other sub-issues; answers are written back here.
+
+- **Answered 2026-10-28** (617's question 34, through 24): the item lists
+  are per buddy and in Lua, worked out again at login (617h2); so the
+  errands that settle them are Lua's too.
+
 1. Why Lua: easier to change while the server runs (reload), or something more?

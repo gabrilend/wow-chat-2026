@@ -106,6 +106,9 @@ a zoomable view when the dots are too small to follow.
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 24), merged with the
+same questions from other sub-issues; answers are written back here.
+
 - The page's random numbers are not the GIF's (JavaScript can't hold the
   Lua generator's products exactly), so the live run differs from the
   recorded one in its details. Acceptable?

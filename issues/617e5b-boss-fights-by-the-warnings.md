@@ -10,6 +10,13 @@
 - Priority: Medium
 - State: plan only; nothing built
 
+## Credits
+
+Boss mechanics are researched with **Deadly Boss Mods** as a reference
+(http://www.deadlybossmods.com; DBM-Core by Paul Emmerich, DBM-GUI by
+Martin Verges, boss mods by Adam Williams; the 3.3.5 version maintained as
+DBM-Warmane). Nothing of DBM's code or files is copied into this project.
+
 ## Origin
 
 The owner, 2026-10-27:
@@ -70,6 +77,90 @@ mechanics, and nothing measures how often a player fails a mechanic.
    failing about as often as the owner.
 
 ## Open Questions
+
+Gathered 2026-10-28 into 617's own list (question 22), merged with the
+same questions from other sub-issues; answers are written back here.
+
+- **Answered 2026-10-28** (617's question 22): "order doesn't matter, we
+  want to build all of them". A failure is being hit by what could have
+  been avoided, and also a missed duty: an interrupt not made, a dispel not
+  cast, a stack taken late.
+
+- **Decided 2026-10-28** (617's question 22): "Okay let's read them as a
+  reference. We can find out WHAT they are paying attention to, and then
+  build our own tracking capabilities. We are using it for buddy-bots. Be
+  sure to credit them." So: DBM is read as a reference only, to learn what
+  it watches in each fight (which spells, auras, emotes and timings); our
+  own tracking is built from that understanding and from the game itself
+  (the server's boss scripts), for the buddies' use; no DBM file or
+  transformed table enters the project; and DBM is credited wherever its
+  guidance shaped our work: a credits line in this issue, in the tracking
+  code's header and in the project's credits ("Boss mechanics researched
+  with Deadly Boss Mods as a reference, http://www.deadlybossmods.com, by
+  Paul Emmerich, Martin Verges and Adam Williams").
+
+- **The licence's specifics** (asked again 2026-10-28; engineering notes,
+  not legal advice). DBM-Core's own header (the 3.3.5 version, DBM-Warmane),
+  word for word: "The code of this addon is licensed under a Creative
+  Commons Attribution-Noncommercial-Share Alike 3.0 License. (see
+  license.txt) All included textures and sounds are copyrighted by their
+  respective owners ... You are free: to Share - to copy, distribute,
+  display, and perform the work; to Remix - to make derivative works.
+  Under the following conditions: Attribution. You must attribute the
+  work in the manner specified by the author or licensor (but not in any
+  way that suggests that they endorse you or your use of the work). (A
+  link to http://www.deadlybossmods.com is sufficient). Noncommercial. You
+  may not use this work for commercial purposes. Share Alike. If you
+  alter, transform, or build upon this work, you may distribute the
+  resulting work only under the same or similar license to this one."
+  Copyright: Paul Emmerich, Martin Verges, Adam Williams.
+  What that means here:
+  - **Reading it** is not something a licence governs: a licence covers
+    copying, changing and handing on the work. Reading DBM to learn how a
+    boss behaves needs no permission.
+  - **Copying it in** (its files, or a table made by transforming them)
+    makes a derived work: non-commercial only, under CC BY-NC-SA, credited.
+    That cannot sit in RGPL code (the AGPL lets anyone sell; CC's
+    "non-commercial" forbids it), so nothing transformed from DBM's files
+    goes into the project.
+  - **Facts are free**: a boss's spells and timings are the game's; a
+    table we write from the game (the server's boss scripts) is ours, even
+    if DBM taught us where to look.
+  - **"Commercial"** in CC 3.0 means intended for commercial advantage or
+    money; a project never sold until its assets are its own is
+    non-commercial meanwhile, but its code is meant to be sellable later,
+    which is why nothing of DBM may enter it.
+  - The textures and sounds are licensed apart; not needed.
+
+- **The licence, in detail** (asked 2026-10-28: "How compatible is it with
+  the RGPL? ... I need more details on the license"; engineering notes,
+  not legal advice):
+  - **What DBM's licence says.** Creative Commons Attribution-
+    NonCommercial-ShareAlike 3.0: anyone may copy it and make works from
+    it, if they (1) credit DBM with a link, (2) never use it commercially
+    (no selling, no paid product), and (3) put what they make from it
+    under the same licence.
+  - **The RGPL** is the AGPL (a GPL-family licence) with this project's
+    own clauses. GPL-family licences require that anyone may sell the
+    work; CC's NonCommercial forbids it, and its ShareAlike requires CC's
+    terms instead of the GPL's. The two can't hold one work at once: a
+    table derived from DBM's files couldn't be part of RGPL'd code, and
+    couldn't be in a product that is sold.
+  - **What isn't DBM's.** Facts about the game (a boss casts spell N, every
+    30 seconds) belong to no one in most places; DBM's own wording, code,
+    and its selection and arrangement of those facts are its own. Reading
+    DBM to learn facts and writing our own table from the game itself is
+    the usual safe line; copying its files in is not.
+  - **What fits the owner's plan.** The bosses will be new ("we need to
+    create entirely new bosses anyway"), so no DBM-derived file is ever
+    part of the product. For today's bosses, the table can be written by
+    our own tool from the server's own boss scripts (the code that makes
+    each boss act), and players may run DBM as their own addon. The
+    server's boss scripts carry the server's licence, which the project
+    already builds on.
+  - Still the owner's to decide: whether to read DBM at all during
+    development (for ideas and to check our own table), knowing nothing
+    of it ships.
 
 1. **Deadly Boss Mods' licence**: may its encounter files be read and
    their knowledge written into the project's own table, or must the table

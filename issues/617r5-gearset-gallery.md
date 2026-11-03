@@ -111,6 +111,9 @@ A5. The model set as a setting; the generator regenerates the figures it
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 30), merged with the
+same questions from other sub-issues; answers are written back here.
+
 1. Which race and sex per card: one fixed per class, random (the first
    plan's "a random gender"), or a picker?
 2. Where the extracted model files live (they are the game's, large):

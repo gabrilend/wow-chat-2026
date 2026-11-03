@@ -91,6 +91,12 @@ since 189e), so E074's rename reaches clients at their next login.
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 31), merged with the
+same questions from other sub-issues; answers are written back here.
+
+- **2026-10-28** (617's question 31): no preference given; the report's
+  candidate vendors stand until the owner changes them.
+
 1. (Answered 2026-10-27, Intended 4) Starting gear only.
 2. (Answered 2026-10-27, Intended 5) Weapons too.
 3. The vendors of each valley: the candidate list to be confirmed.

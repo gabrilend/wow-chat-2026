@@ -58,6 +58,24 @@ are judged per 617j (need, greed or pass by the clan's needs).
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 27), merged with the
+same questions from other sub-issues; answers are written back here.
+
+- **Answered 2026-10-28** (617's question 27, turns): "Yes, the owner takes
+  turns too. If there are multiple clans represented in a group or raid,
+  they each will be treated as a monolith for the loot distribution. If
+  there are only coins on an item, as with the recently created/planned
+  patch, then that doesn't count as their loot since it's split amongst
+  everyone anyway." So the owner counts like a buddy; with several clans
+  in a group, each clan is one block in the turns (and within a clan, its
+  members take turns); a corpse holding only coins (lootable by the
+  group, B062) counts as no one's turn.
+
+- **Answered 2026-10-28** (617's question 27): "Buddies don't pass. They are
+  as intrinsic to your character as you are. They level up and gear up in
+  tandem with the player." Buddies roll like players, on their own needs;
+  passing for the owner is not wanted.
+
 - Free for all, or group loot with buddies passing on everything? Under
   free for all the turns decide who gets every item on a corpse; under
   group loot, items of the roll threshold and above are rolled for and

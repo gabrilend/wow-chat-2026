@@ -77,6 +77,19 @@ and never had them (his backpack was full and he had no bags):
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 26), merged with the
+same questions from other sub-issues; answers are written back here.
+
+- **Answered 2026-10-28** (617's question 26): "It's the opposite actually,
+  you should prioritize full stacks over partial. One or two of a thing is
+  less valuable than 20." When room is short, small part-stacks go first;
+  full stacks are kept.
+- **Answered 2026-10-28** (the upgrade line): "When it's a big upgrade. If
+  they are congratulated they should say what they're replacing too. Each
+  buddy-bot has a 10% chance to congratulate them." A big upgrade is
+  announced in the guild; each other buddy has a one-in-ten chance to
+  congratulate; a congratulated buddy answers with what it replaced.
+
 1. **"Plenty of"**: when is a stack of trade goods or food "plenty" (to be
    destroyed before other items), and is selling it next time in town
    better than destroying it now?

@@ -227,6 +227,8 @@ in opposite directions does the nearer one simply win.
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (questions 5, 6, 7), merged with the
+same questions from other sub-issues; answers are written back here.
 
 1. (Answered 2026-10-08) **How an area is drawn:** polygons, drawn by an
    AI from pictures, quest overlays, spawn queries and wiki pages (above).

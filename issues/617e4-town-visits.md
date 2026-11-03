@@ -332,6 +332,9 @@ Everything here is from the owner's decisions recorded in 617e (2026-09-23,
 
 ## Open Questions
 
+Gathered 2026-10-28: what was here is a thing to check in game, listed
+under 617's "To check in game".
+
 - (Answered 2026-09-27) The long walk's teleport: replaced by a teleport
   to a random spot within 30 yards, "like the unstuck command".
 - **Seated animations**: does a talking or eating animation played on a

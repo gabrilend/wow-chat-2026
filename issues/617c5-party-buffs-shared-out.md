@@ -109,6 +109,33 @@ for casters, if there are two shamans), and never the same one twice.
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 20), merged with the
+same questions from other sub-issues; answers are written back here.
+
+- **Answered 2026-10-28** (617's question 20, judgement order): "We should
+  dynamically evaluate this as the fight goes on. Light if the party needs
+  health, wisdom if the party needs mana." Judged again through the fight.
+
+- **Answered 2026-10-28** (617's question 20): a wish is whispered to one
+  buddy, and holds for that buddy until logout.
+
+- **Answered 2026-10-28** (617's question 20, its planning part): "Buddies
+  plan around any player in the group. They should send each other a
+  message if they have an improved version of the aura, and the other
+  person if a buddy will switch to a different one. They need to have
+  awareness of the current buffs and try to fill them, with stuff relevant
+  to the party or if we start for example taking fire damage, they might
+  resist a fire aura. Or shadow for shadow aura. If we're fighting a mage
+  primarily there's no need for stone wall totem. Etc. Plan your auras and
+  totems and such around the team you have and the threats you face." So:
+  every player in the group counts (not only the owner); buddies say when
+  one has the improved version (a talented aura) or will switch; the plan
+  reads what is already on the party and fills gaps; and it answers the
+  threats: the damage schools the party has taken lately choose the
+  resistance aura or totem, and the enemy's kind (casters) rules out
+  answers that don't help (Stoneskin Totem against a mage). Still open:
+  the words for a preference, and judgement order.
+
 1. **Players as paladins in the plan.** The owner is a paladin too: should
    buddies plan around the auras and blessings the owner gives (read from
    what is on the party), and leave the owner's choice alone?

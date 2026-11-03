@@ -7,10 +7,14 @@
   (whisper Sargobras), 189e (Sargobras his own patch), 192 (econ, which
   takes Sargobras too)
 - Priority: Medium
-- State: a design reference, not built for any current profile (the
-  owner, 2026-10-20: "the current design doesn't have space for it, so
-  alas we cannot include it"); the standard future profiles design toward
-  (`docs/roadmap.md`, Project-wide decisions)
+- State: planned for the basic profile (the Sargobras realms), server
+  side first, not yet built (decided 2026-10-23, below); also the standard
+  future profiles design toward (`docs/roadmap.md`, Project-wide
+  decisions). The 2026-10-20 reading that no profile had room for it
+  ("the current design doesn't have space for it, so alas we cannot
+  include it") was overturned on 2026-10-23: being in many guilds is a
+  capability Sargobras uses, not something a player's guild has to make
+  room for
 
 ## Origin
 
@@ -42,7 +46,12 @@ the clan relates to many guilds, the owner, 2026-10-20, verbatim:
 > yes the clan is all of them. the tribe of tribes, one for each half of
 > the life. Horde vs Alliance, Rando vs Stranger.
 
-## Why no current profile can build it
+## Why it first looked unbuildable (2026-10-20; overturned 2026-10-23)
+
+This was the reasoning before the decision below. It held while the
+unseen guild master was imagined as a member of a player's one guild;
+it stopped holding once Sargobras became a bot character who belongs to
+every guild at once, beside each clan rather than inside it.
 
 The line appears only when the character is the only member of the guild
 online. In basic (and cc-test, and econ as planned), a player's guild is

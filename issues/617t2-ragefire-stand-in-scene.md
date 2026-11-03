@@ -75,6 +75,9 @@ the first refusal, naming it.
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 23), merged with the
+same questions from other sub-issues; answers are written back here.
+
 1. Which level: 15 (the middle of Ragefire's 13 to 18)? **Answered
    2026-10-30:** "let's do 13".
 2. (Answered 2026-10-12: left for Sargobras; a stand-in sits in until

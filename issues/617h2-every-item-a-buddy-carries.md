@@ -94,9 +94,27 @@ later.").
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 25), merged with the
+same questions from other sub-issues; answers are written back here.
 
+- **Answered 2026-10-28** (617's question 25): openable items (bags of
+  coin, clams, lockboxes a rogue can pick) are opened at once; a recipe the
+  buddy's profession and skill can use is learned (others go on another
+  list); buddies do buy more (potions, better gear at the auction house,
+  bags); stat scrolls follow the inscription overhaul's rules (155o: one
+  scroll active at a time per character, 30 minutes, stacking with class
+  buffs), so a buddy keeps its best scroll up.
 
+- **Answered 2026-10-28**: rare epics are treated as any item ("we should
+  treat items as normal and skip that behavior for now"): no mailing them
+  to the owner for now.
 
+- **The design, 2026-10-28** (617's question 24): every item a buddy gets
+  is put on a list of what to do with it, per buddy, kept in Lua and
+  worked out again when the buddy logs in; each list is settled when the
+  buddy is near what settles it (a vendor, the auction house, a profession
+  trainer, a mailbox...); a buddy sells as much as it needs to. Quest
+  items never reach buddies.
 
 1. Openable items (a bag of coins, a clam, a locked box a rogue opens):
    open at once on pickup, or keep?

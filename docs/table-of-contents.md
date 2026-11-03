@@ -31,6 +31,7 @@ wow-chat-2026/
 │   ├── toy-world.md               The pretend world: testing game scripts without a server (the tests and demo built on it)
 │   ├── pathfinding-improvements.md Ten ideas for buddy movement beyond 617e13's first fixes, each with how it would be measured
 │   ├── pathfinding-questing-and-dungeons.md How buddies move while questing and in dungeons, why they climb hills, and the plan for the five ideas the owner commented on
+│   ├── credits.md                 Prior work the project learned from or builds on, credited (Deadly Boss Mods first)
 │   ├── buddy-gear-spec.md         How a buddy is trained and dressed, by rule (checked by scripts/check-buddies)
 │   ├── reports/valley-vendor-gear.md  Generated: each starting zone's vendors and the slots they fill, by class (617a4a)
 │   ├── roadmap.md                 Development phases and milestones

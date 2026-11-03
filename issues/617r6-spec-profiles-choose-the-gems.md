@@ -67,6 +67,9 @@ want from it; the gems make the difference.
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 28), merged with the
+same questions from other sub-issues; answers are written back here.
+
 1. (Answered 2026-10-05: "yep") The loot scoring (617j: upgrades,
    need or greed, quest rewards) reads the spec profile too, so one set of
    weights decides gems, upgrades and rolls alike. The bot module asks the

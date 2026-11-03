@@ -35,6 +35,15 @@ maelstrom of swirls but in all directions at once."
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 16), merged with the
+same questions from other sub-issues; answers are written back here.
+
+- **2026-10-28, the owner** (617's question 16): "I dunno I could talk
+  about this a bit if you want. The goal is to just describe a movement
+  pattern and then try and get it working by having the human relate to
+  the behavior pattern with imagery and analogy, rather than specified
+  code." Open: to be talked through.
+
 1. **Which image model**: one run on this computer (which, and is there
    one installed?), or a hosted one (Claude, by the project's API key, if
    it has one)? A hosted model sends the pictures off this computer.

@@ -104,6 +104,8 @@ knows.
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 23), merged with the
+same questions from other sub-issues; answers are written back here.
 
 1. (Answered 2026-10-15: any level higher than its last stand-in level,
    not only the maximum.) What chance should a matching stand-in have

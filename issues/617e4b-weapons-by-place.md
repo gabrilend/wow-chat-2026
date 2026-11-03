@@ -117,6 +117,12 @@ draws them at once.
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 29), merged with the
+same questions from other sub-issues; answers are written back here.
+
+- **Answered 2026-10-28** (617's question 29): ranged weapons and wands are
+  put away in town too, as built; the rule is for buddies only.
+
 - Later (owner, 2026-10-15): "eventually we will implement piercing,
   blunt, and slashing damage. Then we will have more reasons to wear more
   than one type of weapon." The best-and-runner-up rule is where a buddy

@@ -65,6 +65,9 @@ And on the fishing pole:
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 8), merged with the
+same questions from other sub-issues; answers are written back here.
+
 1. Where do roads come from? The game draws roads as ground textures in
    its map files (a road texture layer per map chunk); or the paths
    wandering guards and caravans walk (creature waypoints); or flight

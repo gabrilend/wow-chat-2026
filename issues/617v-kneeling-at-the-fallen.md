@@ -71,4 +71,10 @@ strategy).
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 35), merged with the
+same questions from other sub-issues; answers are written back here.
+
+- **Answered 2026-10-28** (617's question 35): an emptied corpse is not
+  knelt at.
+
 1. A buddy's kneeling when the player has already emptied the corpse: still kneel, or skip?

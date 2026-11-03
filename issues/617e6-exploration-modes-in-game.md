@@ -170,6 +170,9 @@ Read into the design:
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 1), merged with the
+same questions from other sub-issues; answers are written back here.
+
 - **Grid size**: 3-yard cells and at most 250,000 cells (big zone-wide
   areas get coarser cells): right, or should huge areas be refused?
 - **Measuring load**: 600 ground measurements a world tick (a few

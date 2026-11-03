@@ -128,6 +128,12 @@ online, and the owner's orders stand until then.
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 19), merged with the
+same questions from other sub-issues; answers are written back here.
+
+- **Answered 2026-10-28** (617's question 19): raids are invited by hand,
+  as decided 2026-09-24; nothing is drawn into a raid.
+
 - (Asked 2026-10-04) "For raids, all of your characters join you so...":
   today nothing is drawn into a raid. Should entering a raid bring every
   online buddy of every player in the raid group, and must the raid then

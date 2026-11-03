@@ -149,6 +149,11 @@ game.
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 28), merged with the
+same questions from other sub-issues; answers are written back here.
+
+- **Answered 2026-10-28** (617's question 28): the gem choice stays in C++.
+
 - (Answered 2026-10-03) Meta sockets: "We shouldn't let them have meta
   slots... Not on white gear at least." Checked the same day: no white or
   green item has one (a single grey test item does).

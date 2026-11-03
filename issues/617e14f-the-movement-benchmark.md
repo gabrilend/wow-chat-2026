@@ -59,6 +59,15 @@ next change is aimed.
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 17), merged with the
+same questions from other sub-issues; answers are written back here.
+
+- **Answered 2026-10-28** (617's question 17): "No numbers. We're trying to
+  get a feel." The measures describe a run; they are not pass marks. The
+  verdict is the owner's judging (617e16b), and later a judge's only as
+  far as it agrees with hers. (The targets file's numbers become what the
+  measures are compared with for a description, to be reworked.)
+
 1. **The targets are ours**: the owner described the look ("whirling, but
    semi chaotic, like a maelstrom of swirls but in all directions at
    once"), not numbers. The first targets are in the targets file with

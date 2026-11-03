@@ -39,6 +39,23 @@ goat goddess? Then you will wander wherever goats are blessed."
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (questions 12, 13), merged with the
+same questions from other sub-issues; answers are written back here.
+
+- **Asked back 2026-10-28:** "When would bots ever quest without a
+  player?" The buddies always have a player: in a test, the test clan's
+  own character (a game master's), set down by a click on the map page.
+  What this issue meant was no person watching, not no player. The
+  "kind of creature" a fence holds is as built (one exact kind).
+
+- **Answered 2026-10-28** (617's question 13): "test clan, we define the
+  players position when we click": a test clan; its player stands where a
+  click on the map page (617e16) puts it.
+
+- **Answered 2026-10-28** (617's question 12): a test clan of its own on
+  basic, the realm locked to game masters while it runs (1100e); never on
+  beta. Which bots quest (question 13) is still open.
+
 1. **Which bots**: buddies of offline owners (logged in for this), a test
    clan of buddies with no owner, or the bot module's random bots taught
    our roaming?

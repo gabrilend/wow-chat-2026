@@ -168,6 +168,9 @@ bot, with the skill and tool checks.
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 9), merged with the
+same questions from other sub-issues; answers are written back here.
+
 - (Answered 2026-10-02) A vein the buddy can't path to within 3 yards of:
   moved to the nearest spawn spot of its group and its own spot retired
   (Intended Behavior). Known cost: a spot a player could reach by jumping,

@@ -7,7 +7,8 @@
 - Related: 617e6 (exploring as painting: the "bricks"), 617e14 (watching
   it from above), 617e5 (fighting together)
 - Priority: Medium
-- State: plan only (the owner's design, written down)
+- State: deferred (2026-10-28: "that's a later feature, let's defer it
+for now"); for dungeons and raids
 
 ## Origin
 
@@ -51,6 +52,21 @@ after. Monsters spawn and fight as stock.
 3. Shown from above (617e14c): held cells in the clan's colour.
 
 ## Open Questions
+
+Gathered 2026-10-28 into 617's own list (question 14), merged with the
+same questions from other sub-issues; answers are written back here.
+
+- **Answered 2026-10-28** (617's question 14): "Oh it's for dungeons and
+  raids and such. The idea is a monster group will push forth and attack
+  the player party periodically until they fight their way in to the
+  boss. But that's a later feature, let's defer it for now." So the
+  design is for dungeons and raids: groups of monsters push out and
+  attack the party now and then until the party fights its way in to the
+  boss. Deferred.
+
+- **Asked back 2026-10-28** (617's question 14): "I have no idea what this
+  is about." The origin above is the owner's message of 2026-10-27; kept
+  as a design to build, or as how it should feel?
 
 1. **What conquering a place gives**: a mark only (seen from above), or
    something in play (safer rest, a camp, a vendor)?

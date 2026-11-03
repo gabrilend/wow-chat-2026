@@ -182,7 +182,27 @@ they are near and you don't have a full group."
   60-yard join distance with room in the owner's party, it leaves the far
   party and joins the owner's in the same pass.
 
+### Decision, 2026-10-29: many buddies near a full party
 
+The owner, raising an army of 64 stand-ins treated as their buddies
+(617e17): "Buddy-bot stand-ins should be sorted into groups correctly."
+The rules above were written for an owner with up to seven buddies; with
+64 round the owner, the owner's party fills at four, and every other
+buddy within 74 yards was in no group (the far parties took only buddies
+past 74, and a far-party buddy within 74 left its party). So the
+buddies' own parties (called far parties above) are for every buddy that
+has no seat in the owner's party:
+- **Joining one**: an ungrouped buddy joins or starts one of its owner's
+  buddy parties (by the 70-yard nearness above) when it is past 74 yards
+  from the owner, or nearer while the owner's party has no seat free.
+- **Leaving one for the owner's**: a buddy leaves its buddy party within
+  74 yards of the owner only when the owner's party has a seat free ("when
+  it could join the player's party", the 2026-09-27 rule), so a full
+  party round the owner never empties the parties beside it.
+- Leaving one that drifted apart (more than 74 yards from every other
+  member) and merging two near ones are as above.
+With an owner's ordinary few buddies nothing changes: their party has a
+seat, so the buddies within 74 yards behave as before.
 
 ## Suggested Implementation Steps
 
@@ -194,7 +214,18 @@ they are near and you don't have a full group."
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 18), merged with the
+same questions from other sub-issues; answers are written back here.
 
+- **Answered 2026-10-28** (617's question 18): "The far buddies will quest
+  outside of the dungeon entrance right? Protecting and exploring and
+  maybe PvPing... The leader isn't too important, there might be two
+  groups if for example you're playing with three humans and two
+  buddy-bots at level 60, there will be 6 or more left out of the dungeon.
+  So they should try and spread out amongst groups and cover different
+  ground." The buddies left outside a dungeon make one or more groups of
+  their own (any leader), quest about the entrance, guard it and explore,
+  and spread out so each group covers different ground.
 
 - **Answered 2026-10-30** (asked again as "the far party's leader", the
   owner, word for word): "we already discussed this, try and find that

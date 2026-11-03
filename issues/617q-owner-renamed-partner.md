@@ -55,6 +55,11 @@ there and in `src/lua-basic/`, counted 2026-10-04 with `grep -rho
 
 ## Open Questions
 
+Gathered 2026-10-28 into 617's own list (question 33), merged with the
+same questions from other sub-issues; answers are written back here.
+
+- **Answered 2026-10-28** (617's question 33): "player-partner".
+
 - (Open) "Partner" or "player-partner" in names? The first is shorter in
   code; the second is what the project's owner said.
 
