@@ -13568,7 +13568,7 @@ project version that did (parameters)
 > Checking whether the gif generator's version at drawing time can still be
 > pinned.
 
-> The generator hasn't changed since the drawing: it's at commit 9d32166e6 from
+> The generator hasn't changed since the drawing: it's at commit f7e2b935a from
 > 28 October, with nothing uncommitted in its code, so this drawing can still be
 > pinned. Writing the plan, then the tools.
 
@@ -13613,7 +13613,7 @@ byte for byte.
 
 **Proven on the first set:** the 25 ideas are kept in
 `assets/gifs/architecture-ideas/attempt-1/`, pinned to the generator at commit
-9d32166e6.
+f7e2b935a.
 - Drawn again with the pinned renderer, all 25 were identical to the originals.
 - Redrawn from the git copy with the code pulled from the repository, all 25
   matched the recipe.

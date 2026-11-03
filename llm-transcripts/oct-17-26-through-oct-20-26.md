@@ -1990,7 +1990,7 @@ cd's. Can you make an issue file for it somewhere that is appropriate?
 > That's next to the issue about a separate account for Claude, which concerns
 > the same kind of session safeguard.
 
-*[commit] a0d9f6b3f in ai-stuff - Plan: the folder gate's permission dies with its request, and a folder with two names is explained*
+*[commit] d703e18bd in ai-stuff - Plan: the folder gate's permission dies with its request, and a folder with two names is explained*
 
 The issue is written and committed as issue 041 in the scripts project, where
 the folder gate lives.
@@ -2069,11 +2069,11 @@ implementation doesn't suit it. Please work on it until you're done or tired.
 > That preview also picked up my soren-ds "looks" issue and its link lines from
 > earlier, still uncommitted. Committing the folder gate on its own first:
 
-*[commit] 7b2950bf3 in ai-stuff - The folder gate lets the session move when the person allows it, by name, for a while*
+*[commit] c00755a97 in ai-stuff - The folder gate lets the session move when the person allows it, by name, for a while*
 
 > Now the soren-ds "looks" issue and its seven link lines, as their own commit:
 
-*[commit] e7f403055 in ai-stuff - Plan: every soren-ds app split into its state and a look the user chooses*
+*[commit] c036e033f in ai-stuff - Plan: every soren-ds app split into its state and a look the user chooses*
 
 Moving the session's folder now works when you allow it, including between two
 names of the same folder. It's committed in the scripts project, and the gate
@@ -2192,7 +2192,7 @@ output)</bash-stdout><bash-stderr></bash-stderr>
 
 ### Assistant Response 37
 
-*[commit] fb4150483 in ai-stuff - The folder gate tried live: it lets the move through, and Claude Code puts the name back*
+*[commit] 7b037c1e7 in ai-stuff - The folder gate tried live: it lets the move through, and Claude Code puts the name back*
 
 The gate now does its part, but the session still won't keep the new name. Both
 live tries:
@@ -2333,7 +2333,7 @@ anything else about them so they're essentially static.
 > All 207 cases pass. The gate's own header comment and the guide still describe
 > the one-step behaviour, so updating both before the live try:
 
-*[commit] 929e40452 in ai-stuff - The folder gate changes a folder's name in two steps, so Claude Code keeps it*
+*[commit] 840c859a9 in ai-stuff - The folder gate changes a folder's name in two steps, so Claude Code keeps it*
 
 I've recorded your four answers and committed them:
 - **Battlegrounds:** the most desperate section gets help last, on purpose, so
@@ -7895,7 +7895,7 @@ Shell cwd was reset to /mnt/kaun/wow-chat-2026</bash-stderr>
 
 ### Assistant Response 44
 
-*[commit] 08f96d391 in ai-stuff - A hook carries the folder name Claude Code has on record into every command's shell*
+*[commit] e7c1282f5 in ai-stuff - A hook carries the folder name Claude Code has on record into every command's shell*
 
 I found the real cause of the old folder name, and built a hook for it. I
 couldn't prove it works in this session, though.
@@ -7963,7 +7963,7 @@ Shell cwd was reset to /mnt/kaun/wow-chat-2026</bash-stderr>
 > gate to allow a one-step move between names when permitted, and updating its
 > tests:
 
-*[commit] b441efdab in ai-stuff - A permitted change of a folder's name is one move again, and the name hook outlives a reset*
+*[commit] dcf0593b2 in ai-stuff - A permitted change of a folder's name is one move again, and the name hook outlives a reset*
 
 Here's the path forward, all inside this session: one more permission from you
 and one move by me.
@@ -8013,7 +8013,7 @@ Shell cwd was reset to /mnt/kaun/wow-chat-2026</bash-stderr>
 
 ### Assistant Response 48
 
-*[commit] b89dd1249 in ai-stuff - The session that could not be restarted now shows its folder's new name*
+*[commit] eb43884bc in ai-stuff - The session that could not be restarted now shows its folder's new name*
 
 Fixed, in this session with no restart: `pwd` now shows
 `/mnt/kaun/wow-chat-2026`, and it held across several commands.
@@ -8080,7 +8080,7 @@ please continue
 > Next, bringing issue 041 up to date: your answers settle three of its five
 > open questions. Recording them:
 
-*[commit] 80d2b5d89 in ai-stuff - The folder gate issue records the owner's answers*
+*[commit] 79188db47 in ai-stuff - The folder gate issue records the owner's answers*
 
 I've recorded your answers to the folder-gate issue and committed it. That
 leaves one question there, and the issue stays open until it's answered.
@@ -10154,7 +10154,7 @@ seems wrong if it's a per-character thing.
 > only the installer's `.gitignore` line in my throwaway folder; clearing it,
 > then committing the fix in ai-stuff:
 
-*[commit] 2a9159f00 in ai-stuff - The conversation-pages hook rebuilds the folder being pushed, not the last one it was installed from*
+*[commit] e53277c09 in ai-stuff - The conversation-pages hook rebuilds the folder being pushed, not the last one it was installed from*
 
 > Nearly done with the copy. Pointing the table of contents at where the report
 > lives now, then removing the old file from `docs/`:

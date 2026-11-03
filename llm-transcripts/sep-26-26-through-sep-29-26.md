@@ -6394,9 +6394,9 @@ follows:
   - The project is documents only: `docs/architecture.md`, six `datapath-*.md`
     files, `strategems/`, `notes/spoken-while-building.md`.
   - **Git** (`git -C /home/ritz/programming/ai-stuff log --
-    3d-generation-multiplayer-server`): the project work runs from 0489f5c0d
-    2026-07-31 ("the seed") to cd7b25cd4 2026-08-01. 688de86d2 2026-08-04 is the
-    founding transcript. Everything after that (to f66054c93 2026-09-26) is
+    3d-generation-multiplayer-server`): the project work runs from d4c45536b
+    2026-07-31 ("the seed") to 97e99cebf 2026-08-01. 8eecb7cb2 2026-08-04 is the
+    founding transcript. Everything after that (to 6a374f7ce 2026-09-26) is
     repo-wide transcript and archive commits. **No project work since
     2026-08-01.**
 

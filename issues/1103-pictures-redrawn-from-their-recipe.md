@@ -38,7 +38,7 @@ repository) from scores this project's composer writes.
   checkout is never touched.
 - The first set, the 25 ideas for the architecture pages, is kept as its
   scores and recipe in `assets/gifs/architecture-ideas/attempt-1/`
-  (generator at 9d32166e6). Proven twice: drawn again pinned, all 25 were
+  (generator at f7e2b935a). Proven twice: drawn again pinned, all 25 were
   identical to the originals of 2026-10-29; redrawn from the archive, all
   25 matched the recipe.
 - The shrunk copies are gone from the dormant answer pages; their README

@@ -1413,7 +1413,7 @@ something...?
 
 *[commit] fc3c3fc74 in custom-client - The one-off conversion and migration tools are removed*
 
-*[commit] 8392538e8 in ai-stuff - world-edit-to-execute: the W client has code now, and WC3 maps go to AzerothCore*
+*[commit] d02044e54 in ai-stuff - world-edit-to-execute: the W client has code now, and WC3 maps go to AzerothCore*
 
 The merge is done: the client now lives in the W client
 (`/mnt/mtwo/games/azeroth-core/custom-client/`) and is built, run and tested
@@ -1502,7 +1502,7 @@ or whatever. We'll need to reference this project from time-to-time anyway.
 
 *[commit] fc993e633 in custom-client - Copies of the conversations that built the client, and W08 put right*
 
-*[commit] 5d7ae6bc2 in ai-stuff - world-edit-to-execute: W08 isn't put in question by WC3 maps moving to AzerothCore*
+*[commit] 424014c75 in ai-stuff - world-edit-to-execute: W08 isn't put in question by WC3 maps moving to AzerothCore*
 
 > Both committed. With the conversations copied, nothing is left in 173v, so I'm
 > recording your answer and filing it as completed.

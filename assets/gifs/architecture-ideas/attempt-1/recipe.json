@@ -1,7 +1,7 @@
 {
   "written_by": "scripts/render-gif-scores: how these gifs were drawn, so scripts/redraw-gifs can draw them again byte for byte (issue 1103)",
   "drawn": "2026-10-30 08:53",
-  "generator": { "repository": "/mnt/mtwo/programming/ai-stuff", "folder": "gif-generator", "commit": "9d32166e6e5b2729ba168daa069e69831ec4e873" },
+  "generator": { "repository": "/mnt/mtwo/programming/ai-stuff", "folder": "gif-generator", "commit": "f7e2b935a8ee88396ae19deaf5720ea8f2bd074c" },
   "gifs": [
     { "id": "1a", "score_sha256": "fc723fff2fe9925453a62fb67850e122de770d20b7106ffa33c317c8c0ebb0d7", "gif_sha256": "c196f628d5fd28fedbe556eb55346d96662bdb67aea20da80ddbc4c02570bf79", "bytes": 948728 },
     { "id": "1b", "score_sha256": "8007220c85ac2c704aea2225606547368883a36dcf40e42b265554f6bbcc1107", "gif_sha256": "62232badfbb3e569e0226d0c9c6868c42b2df32ea7526fbb8c0ac889709d5018", "bytes": 526954 },
