@@ -174,3 +174,12 @@ logs-basic
 # The custom client's player settings (issue 173b1): the player's, not the project's
 src/custom-client-c/settings/
 src/custom-client-c/world/
+
+# cc-test's install dir and log symlink, derived like basic's above
+installed-files-cc-test/
+logs-cc-test
+
+# Characters' saves from before a change made to them (scripts/change-character-class,
+# scripts/teach-character-lessons, scripts/party-checkpoint): the players', not
+# the project's; kept on this machine only (the owner, 2026-11-03)
+backups/
