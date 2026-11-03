@@ -58,12 +58,24 @@ if ! flock -n 9; then
     flock 9
 fi
 
-# {{{ remove_tree
-# The commit's copy goes once the tests are done, whatever happened.
+# {{{ on_exit
+# The commit's copy goes once the tests are done, whatever happened; and a
+# MySQL this run started (STARTED_MYSQL=1, set where it is started below)
+# is stopped. One trap for both: bash keeps one EXIT trap, so a second
+# `trap ... EXIT` would replace the first.
+STARTED_MYSQL=0
 remove_tree() {
     [[ -d "${TREE}" ]] && git -C "${DIR}" worktree remove --force "${TREE}"
 }
-trap remove_tree EXIT
+on_exit() {
+    remove_tree
+    if [[ ${STARTED_MYSQL} -eq 1 ]]; then
+        # ours: started by this run, so stopped by it
+        "${DIR}/scripts/stop-mysql" "${DIR}" >> "${OUT}/stop-mysql.log" 2>&1
+        say "  MySQL stopped again (this run started it): ${OUT}/stop-mysql.log"
+    fi
+}
+trap on_exit EXIT
 # }}}
 
 # {{{ the commit's copy of the project
@@ -137,8 +149,26 @@ if [[ ${#TO_RUN[@]} -eq 0 && ${#THOROUGH[@]} -eq 0 ]]; then
 fi
 
 # {{{ the tests, and their results kept
-# MySQL is started if it is down, as the compile does (issue 1100a).
-"${DIR}/scripts/start-mysql" "${DIR}" > "${OUT}/start-mysql.log" 2>&1 || { say "ERROR: MySQL did not start; ${OUT}/start-mysql.log"; exit 2; }
+# MySQL is started if it is down, as the compile does (issue 1100a), and
+# then stopped again when this run ends, however it ends (the owner,
+# 2026-11-03: "if we ever automatically start mysql, we should close it
+# when we're done with it"). A MySQL that was already answering is
+# someone else's (the owner's servers, a compile) and is left running.
+# Until 2026-11-03 it was left running either way, and the mysqld it
+# started inherited the open lock file of whatever ran this hook (the
+# commit tool's commit lock), so every later commit waited on that lock
+# until MySQL was stopped by hand.
+if "${DIR}/mysql/installed-files/bin/mysqladmin" "--defaults-file=${DIR}/mysql/conf/client.cnf" --socket="${DIR}/mysql/databases/mysql.sock" \
+        ping > /dev/null 2>&1; then
+    # already answering: not ours to stop
+    say "  MySQL was already running; left running"
+else
+    # down: started here, and stopped on the way out (on_exit, above, runs
+    # on every exit below, a failed start included, and on Ctrl-C)
+    STARTED_MYSQL=1
+    "${DIR}/scripts/start-mysql" "${DIR}" > "${OUT}/start-mysql.log" 2>&1 || { say "ERROR: MySQL did not start; ${OUT}/start-mysql.log"; exit 2; }
+    say "  MySQL started for this run; it is stopped when the run ends"
+fi
 say "  running ${#TO_RUN[@]} quick tests${THOROUGH[*]:+ and ${#THOROUGH[@]} whole-database builds}..."
 status=0
 "${DIR}/scripts/run-tests-in-parallel" "${TREE}" "${OUT}" "${TO_RUN[@]}" "${THOROUGH[@]}" || status=$?

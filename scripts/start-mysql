@@ -136,11 +136,29 @@ echo "Data:   ${DATA_DIR}"
 # started MySQL. setsid keeps the process number (a background job of a
 # script is no group leader, so setsid needs no fork), so $! is mysqld's.
 # Its own few lines on standard output go to the error log, beside the rest.
-setsid "${INSTALL_DIR}/bin/mysqld" \
-    --defaults-file="${CONF_FILE}" \
-    --user="$(whoami)" \
-    --pid-file="${PID_FILE}" \
-    < /dev/null >> "${ERROR_LOG}" 2>&1 &
+#
+# And it starts holding no file of its launcher's. A program started from
+# another is handed every file its parent has open, and mysqld lives on
+# long after its launcher is gone, so whatever it is handed stays open
+# until MySQL stops. On 2026-11-03 that was the commit tool's lock file
+# (a commit's hook ran the commit tests, which started MySQL): the lock
+# stayed taken while MySQL ran, and every later commit waited 120 s for it
+# and gave up. So the launch runs in a subshell that first closes every
+# open file above standard error (0, 1 and 2 are set by the redirections
+# on the exec), then becomes mysqld through exec; exec keeps the process
+# number, so $! is still mysqld's.
+(
+    for fd_path in /proc/"${BASHPID}"/fd/*; do
+        fd="${fd_path##*/}"
+        # above 2: the launcher's, closed; 0-2: mysqld's own, redirected below
+        [[ ${fd} -gt 2 ]] && eval "exec ${fd}>&-"
+    done
+    exec setsid "${INSTALL_DIR}/bin/mysqld" \
+        --defaults-file="${CONF_FILE}" \
+        --user="$(whoami)" \
+        --pid-file="${PID_FILE}" \
+        < /dev/null >> "${ERROR_LOG}" 2>&1
+) &
 MYSQLD_PID=$!
 
 for i in $(seq 1 "${READY_TIMEOUT}"); do

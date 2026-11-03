@@ -23,8 +23,17 @@
 # twice changes nothing.
 #
 # Usage: scripts/install-commit-test-hook [PROJECT_DIR]
+#        scripts/install-commit-test-hook --help
 
 DIR="/mnt/kaun/wow-chat-2026"
+# --help: the usage, and nothing installed (until 2026-11-03 it was taken
+# for a folder name, and the install was tried at /hooks/post-commit)
+if [[ "${1:-}" == "--help" ]]; then
+    echo "install-commit-test-hook [PROJECT_DIR]: installs the git hook that tests each commit on main"
+    echo "  in the background (scripts/test-commit, issue 1100b); a post-commit hook already there"
+    echo "  is kept as post-commit.before-tests and run first. Running it twice changes nothing."
+    exit 0
+fi
 [[ -n "${1:-}" ]] && DIR="$1"
 MARK="# installed by install-commit-test-hook"
 
@@ -54,7 +63,12 @@ ${MARK} (issue 1100b)
 # After a commit: any hook that was here before (post-commit.before-tests)
 # runs first; then, for a commit on main in ${DIR}, the commit's tests
 # start in the background, in a session of their own (setsid), so neither
-# the commit nor a Ctrl-C at the terminal that made it stops them.
+# the commit nor a Ctrl-C at the terminal that made it stops them. They
+# start holding none of the commit's open files: a program is handed every
+# file its parent has open, and the commit tool runs git while holding its
+# commit lock open, so tests handed that lock kept every later commit
+# waiting until they ended (2026-11-03). So every open file above standard
+# error is closed first, in a subshell that then becomes the tests (exec).
 # Remade by scripts/install-commit-test-hook.
 if [[ -x "${before}" ]]; then
     "${before}" "\$@" || exit \$?
@@ -64,7 +78,14 @@ fi
 commit="\$(git rev-parse HEAD)"
 out="${DIR}/tmp/shared-memory/commit-tests"
 mkdir -p "\${out}" || { echo "commit tests: can't make \${out} (is tmp/shared-memory linked?); not started"; exit 0; }
-setsid "${DIR}/scripts/test-commit" "${DIR}" "\${commit}" < /dev/null > "\${out}/\${commit}.log" 2>&1 &
+(
+    for fd_path in /proc/"\${BASHPID}"/fd/*; do
+        fd="\${fd_path##*/}"
+        # above 2: the commit's, closed; 0-2: the tests' own, redirected below
+        [[ \${fd} -gt 2 ]] && eval "exec \${fd}>&-"
+    done
+    exec setsid "${DIR}/scripts/test-commit" "${DIR}" "\${commit}" < /dev/null > "\${out}/\${commit}.log" 2>&1
+) &
 echo "commit tests: started in the background for \${commit:0:9} (report: tmp/shared-memory/commit-tests/\${commit}/summary)"
 exit 0
 EOF
