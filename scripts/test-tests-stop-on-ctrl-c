@@ -1,0 +1,142 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-tests-stop-on-ctrl-c
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      Ctrl-C during the compile's quick tests ends every test and its compilers (issue 199)
+# quick-test: yes
+# ==== end of header ====
+# test-tests-stop-on-ctrl-c - checks that interrupting the
+# compile's parallel test runner ends every test it started, and the
+# programs those tests started in turn.
+#
+# For a general audience: until 2026-10-26, Ctrl-C during the compile's
+# quick tests stopped the compile but left the tests, C++ compilers
+# included, running on for up to ten minutes (issue 199). This builds a
+# pretend project with three pretend tests (one that finishes at once, two
+# that start a long-running program and wait on it), starts the runner,
+# interrupts it once with Ctrl-C's signal and once with terminate, and
+# checks: nothing the pretend tests started is left running, the runner
+# says it was interrupted (status 130), and the test that had finished
+# still counts as passed.
+#
+# Usage: scripts/test-tests-stop-on-ctrl-c [PROJECT_DIR]
+
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+RUNNER="${DIR}/scripts/run-tests-in-parallel"
+SCRATCH="${DIR}/tmp/tmp/test-tests-stop-on-ctrl-c"
+
+# A sleep length no other program on the machine will be using, so the
+# check for survivors can find exactly the pretend tests' programs by it.
+MARKER_SLEEP="299.1990$$"
+
+FAILURES=0
+
+# {{{ make_pretend_project
+# A project folder holding only scripts/: the runner looks a test up as
+# PROJECT_DIR/scripts/NAME, so these stand in for real tests.
+make_pretend_project() {
+    rm -rf "${SCRATCH}"
+    mkdir -p "${SCRATCH}/project/scripts" "${SCRATCH}/logs" || exit 1
+
+    printf '#!/bin/bash\nexit 0\n' > "${SCRATCH}/project/scripts/quick-one"
+
+    # Starts a long program and waits on it, as a test running g++ does.
+    printf '#!/bin/bash\nsleep %s\n' "${MARKER_SLEEP}" > "${SCRATCH}/project/scripts/slow-one"
+
+    # One layer deeper: a shell that starts the long program, as g++
+    # starts cc1plus.
+    printf '#!/bin/bash\nbash -c "sleep %s; true"\n' "${MARKER_SLEEP}" > "${SCRATCH}/project/scripts/slow-two"
+
+    chmod +x "${SCRATCH}/project/scripts/"*
+}
+# }}}
+
+# {{{ check_one_signal
+# Runs the runner, waits until the quick test has finished and both slow
+# tests' programs are running, sends SIGNAL, and checks what is left.
+check_one_signal() {
+    local signal="$1"
+    make_pretend_project
+
+    # env --default-signal: a program started in the background by a script
+    # begins with Ctrl-C's signal ignored, and bash cannot catch a signal it
+    # began ignoring. The compile runs the runner in the foreground, where
+    # Ctrl-C is not ignored; this puts the runner back in that state.
+    env --default-signal=INT "${RUNNER}" "${SCRATCH}/project" "${SCRATCH}/logs" \
+        quick-one slow-one slow-two > "${SCRATCH}/runner.out" 2>&1 &
+    local runner_pid=$!
+
+    # Up to ten seconds for everything to be under way.
+    local tries=0
+    local running=0
+    while [[ ${tries} -lt 100 ]]; do
+        running="$(pgrep -c -f "^sleep ${MARKER_SLEEP}")"   # the programs themselves, not the shell that started one
+        [[ -f "${SCRATCH}/logs/quick-one.done" && "${running}" -ge 2 ]] && break
+        sleep 0.1
+        tries=$((tries + 1))
+    done
+    if [[ ${tries} -ge 100 ]]; then
+        echo "FAIL (${signal}): the pretend tests never got going (quick-one done: $([[ -f "${SCRATCH}/logs/quick-one.done" ]] && echo yes || echo no), long programs running: ${running})"
+        kill -TERM "${runner_pid}"
+        pkill -f "sleep ${MARKER_SLEEP}"
+        FAILURES=$((FAILURES + 1))
+        return
+    fi
+
+    kill "-${signal}" "${runner_pid}"
+    wait "${runner_pid}"
+    local status=$?
+
+    # The runner waits for its tests before it exits; a short grace for the
+    # last of them to be reaped.
+    sleep 0.5
+    local survivors
+    survivors="$(pgrep -c -f "sleep ${MARKER_SLEEP}")"
+
+    # Each check: what was expected, what was found.
+    if [[ "${survivors}" -ne 0 ]]; then
+        echo "FAIL (${signal}): ${survivors} of the pretend tests' programs still running after the runner exited"
+        pkill -f "sleep ${MARKER_SLEEP}"
+        FAILURES=$((FAILURES + 1))
+    else
+        echo "ok   (${signal}): nothing the pretend tests started is left running"
+    fi
+
+    if [[ ${status} -ne 130 ]]; then
+        echo "FAIL (${signal}): the runner exited ${status}, not 130 (interrupted)"
+        FAILURES=$((FAILURES + 1))
+    else
+        echo "ok   (${signal}): the runner says it was interrupted (130)"
+    fi
+
+    if [[ ! -f "${SCRATCH}/logs/quick-one.ok" ]]; then
+        echo "FAIL (${signal}): the test that finished before the interrupt lost its pass mark"
+        FAILURES=$((FAILURES + 1))
+    else
+        echo "ok   (${signal}): the finished test still counts as passed"
+    fi
+
+    if ! grep -q "slow-one" "${SCRATCH}/runner.out" || grep -q "quick-one" "${SCRATCH}/runner.out"; then
+        echo "FAIL (${signal}): the runner's list of unfinished tests is wrong:"
+        sed 's/^/      /' "${SCRATCH}/runner.out"
+        FAILURES=$((FAILURES + 1))
+    else
+        echo "ok   (${signal}): the runner names the unfinished tests, and only those"
+    fi
+}
+# }}}
+
+check_one_signal INT
+check_one_signal TERM
+
+rm -rf "${SCRATCH}"
+if [[ ${FAILURES} -gt 0 ]]; then
+    echo "${FAILURES} check(s) failed"
+    exit 1
+fi
+echo "all checks passed"
+# ==== footer of test-tests-stop-on-ctrl-c ====
+# lines:      142
+# ==== end of footer ====

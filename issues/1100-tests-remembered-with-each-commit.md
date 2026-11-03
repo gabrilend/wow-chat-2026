@@ -6,7 +6,7 @@
 - Related: 199 (the quick tests stop on Ctrl-C; its runner is what these
   build on), 189f (each test's header says whether it is quick), 144 (the
   compile's validate-and-promote pipeline), `docs/datapaths/`
-- Sub-issues: 1100a, 1100b, 1100c
+- Sub-issues: 1100a, 1100b, 1100c, 1100d, 1100e
 - Priority: Medium
 - State: in progress
 
@@ -58,6 +58,7 @@ when MySQL was down, and kept no record of any result past the RAM logs in
 | 1100a | quick-tests-start-mysql                | None         | the compile's quick-test step starts MySQL instead of stopping |
 | 1100b | test-results-kept-in-git-notes         | 1100a        | what each test reads, results kept with commits, the commit hook, the compile reusing them |
 | 1100c | tests-that-follow-a-datapath-end-to-end | None        | one datum along each datapath, and the install's links checked |
+| 1100d | tests-after-a-failed-build              | 1100b       | the quick tests only when the build fails; a clean run earns one more build; a second failure, a design session |
 
 Order: 1100a → 1100b; 1100c in parallel (its tests join the compile and
 the commit runs like any quick test).

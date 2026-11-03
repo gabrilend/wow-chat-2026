@@ -1,0 +1,103 @@
+#!/bin/bash
+# run-tests-in-parallel - runs a set of the project's test scripts all at
+# once, one per processor, each with its own log, and stops every one of
+# them, compilers and all, when it is interrupted.
+#
+# For a general audience: the compile checks the project with its quick
+# tests before it builds anything, and runs them side by side to save time.
+# Each test runs under a ten-minute limit. Pressing Ctrl-C used to stop the
+# compile but leave the tests running in the background, because the
+# ten-minute limit keeps each test in a group of its own that the keyboard's
+# interrupt does not reach (issue 199). This script remembers those groups
+# and, when interrupted, ends each one itself.
+#
+# Usage: scripts/run-tests-in-parallel PROJECT_DIR LOG_DIR TEST_NAME...
+#   PROJECT_DIR  the project folder; each test is PROJECT_DIR/scripts/TEST_NAME
+#                and is given PROJECT_DIR as its one argument
+#   LOG_DIR      where each test's output goes, as LOG_DIR/TEST_NAME.log;
+#                a test that passed also leaves LOG_DIR/TEST_NAME.ok
+#
+# Exit status:
+#   0    every test ran to its end (passed or not: the .ok marks are the
+#        verdict, read by the caller)
+#   130  interrupted (Ctrl-C or a terminate signal); every test was ended
+#        and the ones that had not finished are named
+#
+# Written 2026-10-26 out of scripts/compile, where the same running lived
+# inside the quick-test step, so that stopping it can be tested on its own
+# (scripts/test-tests-stop-on-ctrl-c).
+
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+LOG_DIR="${2:?usage: run-tests-in-parallel PROJECT_DIR LOG_DIR TEST_NAME...}"
+shift 2
+TESTS=("$@")
+
+# A test's limit, in seconds. On running out, timeout ends the test's whole
+# group, the test and anything it started.
+TEST_TIME_LIMIT=600
+
+# The parallel launcher's process number, set once it starts; the trap
+# below needs it to find the tests.
+LAUNCHER_PID=""
+
+# {{{ stop_the_tests
+# Called on Ctrl-C (interrupt) or terminate. The process tree at that moment:
+#   this script
+#     └ xargs (the launcher, started in the background)
+#         └ bash -c, one small wrapper per running test (writes the .ok)
+#             └ timeout   ← its own process group: group number = its pid
+#                 └ the test, and whatever the test started (g++, cc1plus)
+# Ctrl-C reaches only the terminal's front group, which the timeouts left,
+# so each timeout's group is sent terminate here by hand: kill with a
+# negative number signals the whole group at once. The wrappers and the
+# launcher then end by themselves, their children gone.
+stop_the_tests() {
+    trap '' INT TERM   # a second Ctrl-C while stopping changes nothing
+
+    echo ""
+    echo "INTERRUPTED: stopping the tests..."
+
+    # Which tests had not finished, read before stopping them: a wrapper
+    # touches .done after its test ends, whether the test passed or not.
+    local unfinished=()
+    local t
+    for t in "${TESTS[@]}"; do
+        [[ -f "${LOG_DIR}/${t}.done" ]] || unfinished+=("${t}")
+    done
+
+    local wrappers
+    wrappers="$(pgrep -P "${LAUNCHER_PID}")"
+    local wrapper timeouts timeout_pid
+    for wrapper in ${wrappers}; do
+        timeouts="$(pgrep -P "${wrapper}")"
+        for timeout_pid in ${timeouts}; do
+            kill -TERM -- "-${timeout_pid}"
+        done
+    done
+    wait "${LAUNCHER_PID}"
+
+    echo "  ${#unfinished[@]} of ${#TESTS[@]} tests had not finished and were stopped:"
+    for t in "${unfinished[@]}"; do
+        echo "    ${t}: ${LOG_DIR}/${t}.log"
+    done
+    exit 130
+}
+# }}}
+
+# The launcher runs in the background so this script stays free to catch
+# the signal while it waits (a script waiting on a job in the foreground
+# runs its trap only after that job ends, which is the very thing that
+# never came). Running in the background also makes the launcher and its
+# wrappers ignore Ctrl-C themselves (bash does that to background jobs when
+# it is not interactive), so they are still there to be read by the trap.
+trap stop_the_tests INT TERM
+printf '%s\n' "${TESTS[@]}" | xargs -P "$(nproc)" -I{} bash -c \
+    'timeout '"${TEST_TIME_LIMIT}"' "$1/scripts/$2" "$1" > "$3/$2.log" 2>&1 && touch "$3/$2.ok"; touch "$3/$2.done"' \
+    _ "${DIR}" {} "${LOG_DIR}" &
+LAUNCHER_PID=$!
+
+# xargs exits 123 when any test failed; that is not this script's verdict
+# (the .ok marks are), so the status is left unread.
+wait "${LAUNCHER_PID}"
+trap - INT TERM
+exit 0
