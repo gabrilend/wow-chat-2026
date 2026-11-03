@@ -5,7 +5,7 @@
 - Parent: Issue 157 (three-machine-deployment)
 - Phase: 1
 - **Blocked by:** 157a
-- **Blocks:** 157d, 157e, 157f
+- **Blocks:** 157d, 157e, 157f, 157g
 
 ## Overview
 

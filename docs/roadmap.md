@@ -38,6 +38,27 @@ Everland Ghostsong is a WoW 3.3.5a private server with roguelike survival mechan
   lone member is always alone), so no current profile builds it. A new
   profile's design says how it would make room for him, or why it cannot,
   citing 630 as a case is cited.
+- **Every realm is built and run as if all the others are too**
+  (2026-10-26, issues 136c, 157g). The owner: "I want to be able to run
+  every single realm at once, so we should design all of our issue plans
+  as if each realm profile is built in parallel." Every issue's plan says
+  which of its files, folders, ports and databases are per profile and
+  which are shared, and how a shared one is guarded (a lock, or one
+  writer). Nothing assumes it is the only build, or the only server,
+  running.
+- **The public game runs on Linode machines, all day, every realm**
+  (2026-10-26, issues 157g, 157h). One machine per realm, each with its own databases on it; the login
+  database on a hardened device of its own that answers only a fixed
+  list of numbered instructions, never SQL (157j); each machine boots a
+  Linux built here from only the files its duty uses, with runit (157i). A promote sends a
+  profile only when something changed for it, by rmail, the only way into
+  a machine; the machine decides when to take it and restarts only its
+  realm. Only the login machine is public; realms let in only addresses
+  that just logged in (157k). `wow.ritzmenardi.com` stays the owner's own computer.
+- **What a player saw is kept in their own journal, locked to their
+  password** (2026-10-26, issue 1008). The server can write it and cannot
+  read it; the player fetches it by rmail and opens it at home. No text
+  is ever kept unlocked.
 
 ---
 

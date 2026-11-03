@@ -4,7 +4,7 @@
 - Created: 2026-09-23
 - Parent: Issue 157 (three-machine-deployment)
 - Phase: 1
-- **Blocks:** 157b, 157c
+- **Blocks:** 157b, 157c, 157g
 
 ## Overview
 

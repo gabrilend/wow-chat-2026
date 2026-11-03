@@ -6,6 +6,7 @@
 - Parent: 136 (canonical-profile-definitions)
 - Builds on: 136a (unified realmlist: one login, one realm row per profile)
 - Priority: High for beta (installing beta empties release's world today)
+- **Blocks:** 157g (the Linode machines, one per realm)
 
 ## Origin
 
@@ -140,6 +141,21 @@ open questions 2 and 4 are answered. Ports are unchanged (question 3).
   data apart and plainly labelled. Several at once comes with more
   machines (157).
 
+## Decision, 2026-10-26 (owner): every realm at once, each on its own Linode machine
+
+> I want to be able to run every single realm at once, so we should
+> design all of our issue plans as if each realm profile is built in
+> parallel. I want the system to be running 24/7
+
+The public game moves to rented Linode machines: "one for each
+profile", with login and the database on machines of their own (157g);
+a promote ships there when something changed (157h). The 2026-10-17
+"no more than one" still describes the development machine. Each realm
+has a machine to itself, so its ports cannot collide there; the own
+ports (open question 3) still matter on the development machine and for
+telling realms apart. Building every profile at the same time
+is 136c.
+
 ## Open Questions
 
 1. **Families of shared characters.** The owner, verbatim: "or maybe we
@@ -173,7 +189,8 @@ open questions 2 and 4 are answered. Ports are unchanged (question 3).
   nothing has to be switched off
 - 147 (alpha-mysql-instance-isolation): alpha's separate database server
 - 157 (three-machine deployment): where each realm runs when they are
-  spread over machines
+  spread over machines; 157g (a Linode machine per realm), 157h (promotion ships there)
+- 136c (every profile built at once)
 - 176 (cc-test profile): its question 4 asked whether cc-test gets its own
   port; this answers it for every profile
 - `docs/profiles/beta-roadmap.md`: this is step 1 of bringing beta back

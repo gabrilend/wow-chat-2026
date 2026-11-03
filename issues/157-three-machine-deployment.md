@@ -59,13 +59,25 @@ router exactly as before.
 | 157d | database-machine | 157b, 157c | MySQL on its own box, listening on the LAN, grants for the two server machines only, data moved over |
 | 157e | auth-machine-and-router | 157b, 157c | authserver on its box; realm list points at the world machine; router forwards two ports to two machines |
 | 157f | world-machine | 157b, 157c | worldserver plus its map data, Lua scripts and module configs on its box |
+| 157g | linode-machines-one-per-realm | 157a, 157b, 157c, 136b | Rented Linode machines, each with one duty: one auth, the database, one per realm; Void Linux with runit, which restarts what crashes |
+| 157h | promotion-ships-to-the-host | 157g, 157b, 136c, 157i | After a promote, a changed profile is sent to its machine by rmail; the machine decides, warns its players, restarts, rolls back a failed start, and replies |
+| 157i | a-linux-of-only-what-runs | 157i1 | Each rented machine boots a system built here from only the parts its duty uses |
+| 157j | the-login-database-behind-an-instruction-door | None | The login database on a hardened device that answers only numbered instructions, never SQL |
+| 157k | realms-closed-until-you-log-in | 157g, 157i | Only the login machine is public; each realm's firewall lets in only addresses that just logged in |
+
+**Added 2026-10-26:** the owner asked for the public game to run on
+Linode machines, every realm at once, "one for each profile", the
+duties on separate machines, and for promotion to ship there when
+something changed. 157g and 157h use the same roles file and deploy tool
+as the LAN machines; each rented machine is one more host in it.
 
 **Why split:** each role can be brought up and checked on its own, and
 the database move is the one step that carries risk to player data, so it
 gets its own issue and its own test.
 
 **Order:**
-`157a → 157b, 157c (parallel) → 157d → 157e, 157f (parallel)`
+`157a → 157b, 157c (parallel) → 157d → 157e, 157f (parallel)`;
+`157i1 → 157i; 157a, 157b, 157c, 157i, 157j → 157g → 157h, 157k`
 
 ## Implementation Steps
 
@@ -77,10 +89,22 @@ gets its own issue and its own test.
 
 ## Open Questions
 
-1. What CPU architecture and operating system do the mini-computers run?
-   If they match this machine (x86-64 Linux, same library versions), the
-   built binaries can be copied. If not, each one builds from source
-   through issue 154.
+1. ~~What the mini-computers run~~. Answered in part 2026-10-29 (passed
+   on by the pathfinding session; saved in `notes/conversation-asides.md`,
+   commit b0467a8e9): "they run alpine linux but I don't remember much
+   about them. We can reflash a new OS to them if we need to, and if we
+   can do it without a mouse-and-keyboard, over like SSH or something."
+   Alpine's C library is musl; this machine's is glibc 2.41 (Void Linux,
+   x86-64), so binaries built here do not run there as they are. The
+   rented machines' plan already answers this for any machine: each boots
+   a system built here from parts (157i), and every part is built for
+   both glibc and musl (157i, 2026-10-26: "better to support both"). So
+   the mini-computers need no change of system to start with: the musl
+   build of each part is theirs, and a reflash over ssh (write a prepared
+   image with `dd`, reboot) is only needed when they move to the
+   images of 157i. Still unknown: their processor architecture (if not
+   x86-64, the parts are built a third way, for theirs), memory, and
+   whether ssh reaches them today.
 2. Are the mini-computers on fixed LAN addresses, or should the router
    reserve addresses for them?
 3. Does the development machine stay a fourth place where the server can
