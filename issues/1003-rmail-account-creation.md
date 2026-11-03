@@ -15,7 +15,10 @@ and ephemeral rmail accounts tied to message lifecycle.
 ### Pathway 1: Guest Accounts (Permanent)
 
 Public accounts with shared credentials that anyone can use. These are never
-deleted by the system.
+deleted by the system. They are listed on the public connection page (1008f;
+the owner, 2026-10-27: "we should tell them about the guest accounts on the
+login page"), generated from the SQL that creates them, so the page and the
+accounts never disagree.
 
 ```
 *------------------------------*
@@ -269,6 +272,12 @@ See `docs/rmail-integration.md` for full setup instructions.
 - `docs/wiki/` - AzerothCore database structure
 - `docs/wiki/docs/account.md` - Account table schema (username max 20 chars, no char restriction)
 - Custom SQL location: `/mnt/mtwo/games/azeroth-core/azerothcore/data/sql/custom/db_auth/`
+- `issues/1008-journals-of-what-each-player-saw.md` - an account's journal
+  key is made from its password when the account is created, which for
+  rmail accounts is the moment the message above is read (1008a). Guest
+  accounts keep no journal, since their passwords are public, and "can
+  be kicked off whenever" (owner, 2026-10-26): a realm restarting or
+  full does not wait for them (157h)
 
 ## Open Questions
 

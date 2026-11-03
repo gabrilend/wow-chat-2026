@@ -169,3 +169,4 @@ Pattern: 4x62 where x increments per service.
 - **Priority:** Medium (quality of life, organization)
 - **Complexity:** Low (parser changes only)
 - **Dependencies:** None (backwards compatible)
+- **Blocks:** 1008d (the journal request address, `wow.ritzmenardi.com/journal`)
