@@ -1,6 +1,6 @@
 # Conversation Summary: 03547e04-6a50-4e0d-97ee-ae0ce7474312
 
-Generated on: 2026-10-31 18:57:50
+Generated on: 2026-10-31 20:18:16
 Models: claude-opus-5-5
 
 ## Contents
@@ -231,6 +231,10 @@ Models: claude-opus-5-5
     changed, and today's compile is promoted and running. Next, your next
     compile runs the first start once to save its SQL fingerprint, and skips it
     after that.
+55. 2026-10-31 19:00, after Request 172 - Goal: test the buddies' new fight
+    logic. The fight scenes, healer's seat, buff targeting and tank-load check
+    are built and await your next compile. Next: compile, switch to cc-test, set
+    Buddies.ForwardPass = 1 and run .buddy scene duel.
 
 --------------------------------------------------------------------------------
 
@@ -17448,6 +17452,639 @@ One housekeeping note: three new quick tests from me aren't in the patch
 registry yet. The registry also holds another session's uncommitted lines, so I
 left its regeneration for whichever of us commits next. The compile's "lists up
 to date" check may complain until then.
+
+--------------------------------------------------------------------------------
+
+### User Request 173
+
+<pasted_content id="12ab">
+>   - The record: each round is written to the server's logs folder
+>     (buddies-scenes/<scene>.tsv): damage dealt and taken, healing, falls, time, and the
+>     monster's health left. You also get a one-line summary in game.
+</pasted_content id="12ab">
+
+
+we don't need the in-game summary. Also, we're less interested in the result of
+the fight, and more on the system that creates it - can we create comprehensive
+logging that shows at each "frame" the exact status of the combatants? We will
+then use these logs to create a mesh of curves, one chart for each combatant,
+that show their dynamism.
+
+> - Who holds it: the party's healer while alive; otherwise whoever has healing
+> talents and
+>     the most mana.
+
+but we should only update this role when the current healer runs out of mana or
+dies. Also, for raids, we should have as many healers as we had when the fight
+started - we can count 1/3rd specs as 1/3rd of a healer, off-specs (2/3rd and
+1/3rd with 1/3rd being healing talents) as 1/3rd of a healer, and full specs and
+main specs (2/3rd healing talents 1/3rd non healing tree) as 1 whole healer.
+
+> - Out of mana: it can't afford its cheapest heal. Ready again: it has the mana
+> for its
+>     own healing over the rest of the fight. Both come from the game's numbers.
+
+I don't know what this means
+
+
+
+<pasted_content id="12ab">
+> 1. "Any randomization we apply can be re-applied": I redraw each stand-in's
+> start
+>      position every round, and with redraw, the stand-ins themselves (new classes in the
+>      same roles). Is that what you meant, or should something else be redrawn each round,
+>      such as their talents and gear, or the monster?
+</pasted_content id="12ab">
+
+
+I mean, ability choices and such. We're trying to attach non-linearities to
+their combat mechanics, and if it played out the same way everytime, then we
+aren't building it correctly.
+
+
+
+<pasted_content id="12ab">
+> 2. Innervate's lean, when the healer runs dry, is a fixed value (×2) for now:
+> nothing yet
+>      turns the mana it gives back into healing. Is a placeholder fine until there's a
+>      mana-to-healing measure, or should I build that next?
+</pasted_content id="12ab">
+
+
+well, the dps of the (potential) targets is known, alongside their hps. so, we
+should know roughly who would most empower us to defeat the target and emerge
+victorious. Remember, we're combining curves to coalesce toward a solution that
+provides the results we want (victory) and avoids defeats and losses. I am
+picturing many different composite curves that are multiplied together or
+whatever, with a final "output curve" that shows how the fight will progress.
+Each bot only has the current status, they don't know other bot's behavior
+plans.
+
+
+
+<pasted_content id="12ab">
+> 3. The healer's fallback behaviour isn't built: a paladin striking with Seal
+> of Wisdom, a
+>      priest using a wand, choosing Judgement of Wisdom while the healer is dry. Do you
+>      want those next, or after you've seen the scenes?
+</pasted_content id="12ab">
+
+
+I don't need to see the scenes. I want to see the curves we create, and possibly
+a live viewer for them in-game through an addon or something, but that can come
+later. For now, we just need the data.
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 173
+
+> I'll write your words into the issues, then build. Here's what I take from
+> each:
+>
+> 1. **Scenes:**
+>    - no in-game summary;
+>    - a frame-by-frame log of every combatant's exact state, the data for a
+>      chart of curves per combatant;
+>    - the buddies' ability choices must vary between rounds, so the forward
+>      pass's leans go through the weighted random draw instead of being applied
+>      as fixed multipliers.
+> 2. **The healer's seat:**
+>    - it changes hands only when its holder runs out of mana or dies;
+>    - in raids, the party keeps as much healing as it started with, counted by
+>      spec: a main or full healing spec is 1 healer, a third in healing is ⅓.
+> 3. **Innervate:** goes to whoever its mana would turn into the most damage or
+>    healing before the fight ends, read from each member's own output and how
+>    fast it's spending mana.
+> 4. **Healer fallback behaviour:** that waits. The data comes first.
+>
+> And to explain the part that was unclear, in plainer words:
+> - **"Out of mana"** means: not enough mana left to cast even the healer's
+>   cheapest heal.
+> - **"Ready again"** means: the healer has recovered enough mana to keep
+>   healing at its usual pace until the fight ends. Until then it stays "out",
+>   so it doesn't flip back and forth every time a little mana trickles in.
+>
+> Under your new rule this mostly decides when an out-of-mana healer can be
+> given the seat again.
+
+> Recording your words in the four issues first.
+
+> Adding your "composite curves, each bot knowing only the current state" words
+> to the forward-pass issue too, then the first build: leans through the
+> weighted draw. Reading the draw's factor first.
+
+> The arithmetic is in. Now the server side for the seats:
+> - read total talent points;
+> - record each member's mana every step;
+> - reset the seats at a new fight;
+> - speak "oom" and "ready" per healer.
+
+> Nothing was written: one anchor didn't match. Looking at the actual lines.
+
+The server's seat changes are in. Rewriting the seat test for the new rules:
+sticky seats, shares by spec, a raid's count kept, and Innervate by output.
+
+--------------------------------------------------------------------------------
+
+*Prompt is too long*
+
+--------------------------------------------------------------------------------
+
+### User Request 174
+
+/compact
+
+--------------------------------------------------------------------------------
+
+### Session Recap (written by the harness, not by either speaker)
+
+This session is being continued from a previous conversation that ran out of
+context. The summary below covers the earlier portion of the conversation.
+
+Summary:
+1. Primary Request and Intent:
+   - Ongoing project: Everland Ghostsong (AzerothCore 3.3.5a + buddy module
+     B036). Goal: the next compile builds every described issue; new behaviour
+     behind switches that start off; the agent makes design calls, writes the
+     owner's words verbatim into issues, and asks afterwards.
+   - This segment's requests, in order:
+     - Finish `.elite` removal (done).
+     - The action economy (cooldown timeline, fight length), with owner corrections: bosses burn everything at the end, trash keeps big cooldowns for the next pack; the horizon uses the "longest regularly used cooldown" (not Lay on Hands); Bloodlust is saved for a harder next boss; rare elites count as boss fights, regular elites don't; Forbearance and similar lockouts, including Hand of Protection landing on others (all done).
+     - The threat model: threat stored vs attention, levers, fight curves, pets as their own lane ("the plain attack can be autocast"), tank swaps decided by the fight curves (all done).
+     - The forward-pass architecture modelled on an LLM forward pass, with these answers: desired = victory, then fewer consumables and faster kills (gold and xp per hour when questing); bots may see all numbers; a minute of events; weights mostly fixed; gold "for whatever price the bot can acquire it by"; an HTML page (published).
+     - "start building" / "keep going" (all forward-pass layers and the server side built).
+     - Compile monitoring.
+     - The validate limit: "average of how long previous starts have taken… last 5 starts… Plus/minus 50%" (whole start time). The owner was annoyed at seeding the limit at 3 minutes.
+     - Output 1/10th as busy, with a live timer.
+     - Bake once, then check for changes.
+     - Skip the first start (Gate 2000) when the SQL is unchanged.
+     - The idempotency test: owner said "let's skip this".
+     - Explain the SQL pipeline. Fix the missing-config warnings, and explain the "AC_" name ("They aren't Azerothcore's buddies, they're my buddies").
+     - Then: build fight test scenes in cc-test, the healer's seat, buffs cast on the right person, and the tank's load.
+   - **Latest owner feedback (to implement now):**
+     - No in-game scene summary. Instead, "comprehensive logging that shows at each "frame" the exact status of the combatants", to "create a mesh of curves, one chart for each combatant". "I don't need to see the scenes. I want to see the curves we create, and possibly a live viewer… in-game through an addon… later. For now, we just need the data."
+     - Seat: "only update this role when the current healer runs out of mana or dies. Also, for raids, we should have as many healers as we had when the fight started - 1/3rd specs as 1/3rd of a healer, off-specs (2/3rd and 1/3rd with 1/3rd being healing talents) as 1/3rd, full specs and main specs (2/3rd healing) as 1 whole healer."
+     - "I don't know what this means" (oom/ready). Explained in plain words: oom = can't afford its cheapest heal; ready = has enough mana to keep healing at its pace to the fight's end, so it doesn't flip back and forth.
+     - Randomization: "ability choices and such. We're trying to attach non-linearities… if it played out the same way everytime, then we aren't building it correctly."
+     - Innervate: "the dps of the (potential) targets is known, alongside their hps… who would most empower us to defeat the target… composite curves multiplied together… a final "output curve"… Each bot only has the current status, they don't know other bot's behavior plans."
+     - Then "please continue".
+
+2. Key Technical Concepts:
+   - **Forward pass (625n):**
+     - Snapshot + a minute of events with running sums (Memory) form the context.
+     - Six layers: rates, marks to modifiers, attention, fight curves, plans, answers.
+     - Leans = the share of the gap closed (health first, then group time).
+     - Worker threads; per-party verdicts; `.buddy fight`; replays.
+   - **Fight curves:** holders, stretches, marks with expiry, lumps (casts
+     landing), Shortfall/Follow, Swap plans, TimeToDeath.
+   - **Cooldown timeline:** DP with running totals + monotonic deque; LineUp
+     tries every order; Ending (fight kind, nextWorth, nextIn); lockouts
+     (BUDDY_LOCKOUTS); horizon (REGULAR_MOST 600 s).
+   - **Data:** marks (AuraEffect, Modifiers); threat levers
+     (BUDDY_THREAT_LEVERS); generated tables from Spell.dbc via
+     scripts/generate-ability-data (BUDDY_ABILITIES, BUDDY_LOCKOUTS,
+     BUDDY_THREAT_LEVERS, BUDDY_ABILITY_AURAS, BUDDY_ABILITY_REACH with
+     self/heal/lastsMs/area).
+   - **Healer seats (625i):** HealerShare thirds, Seats {want, holders, dry,
+     short_}, Oom/ReadyAt.
+   - **Buff targeting (625l):** targets map, HandOutBuffs via ai->CastSpell,
+     lean 0.05 veto of the bot module's own cast.
+   - **Tank load (625j step 4):** room in health.
+   - **Strategems:** everything is damage and health; grown-and-relearnable.
+   - **Process rules:**
+     - Commit only own lines with `commit-own-changes … -F file -- paths` (sometimes silently fails; retry). Use `claim-own-change` for scripted edits.
+     - Server code is committed only after the owner's compile builds it; check with `scripts/test-patched-syntax /mnt/kaun/wow-chat-2026 <profile>`.
+     - The file-claims protocol in tmp/shared-memory/file-claims.
+     - No `cd` (a hook blocks it); no permission prompts while the owner is away.
+     - Never edit a script while it is running (bash reads incrementally).
+     - Background waits must use anchored `pgrep -f '^/bin/bash /mnt/kaun/wow-chat-2026/scripts/...'`.
+
+3. Files and Code Sections:
+   - **patches/B036-mod-buddies/mod-buddies/src/buddies_healer_seat.h**
+     (reworked, uncommitted). New API:
+     ```cpp
+     inline double HealerShare(Member const& m) { if (m.talentPoints == 0) return m.role == 2 ? 1.0 : 0.0;
+         double thirds = std::round(3.0 * m.healPoints / m.talentPoints); return thirds >= 2.0 ? 1.0 : thirds >= 1.0 ? 1.0/3.0 : 0.0; }
+     struct Seats { double want = -1; std::vector<int> holders, dry; bool short_ = false; };
+     inline bool CanHeal(Member const& m) { return (m.healPoints > 0 || (m.talentPoints == 0 && m.role == 2)) && m.health > 0; }
+     inline bool Oom(Member const& m); inline double ReadyAt(Member const& m, double healingPerSecond, double left);
+     inline bool Has(std::vector<int> const& v, int i);
+     inline Seats Now(Snapshot const& s, Memory const& memory, Seats was, double left);
+     ```
+     - Now(): at the fight's start (want<0), the role-2 alive members are holders and want = the sum of their shares.
+     - Otherwise holders persist while alive; dry members stay dry until ReadyAt; a holder that goes Oom moves to dry.
+     - Refill while the holders' total < want: pick a candidate (CanHeal, share>0, not holder/dry/Oom) with **most mana** (BUG: should prefer larger share first); none left → short_ = true.
+     - Also keeps HealingTree(cls, tab) and CheapestHeal(cls, baseMana).
+   - **buddies_fight_state.h:**
+     - Member gains `uint8_t healPoints = 0, talentPoints = 0; double baseMana = 0;`.
+     - Memory gains HealingPerSecond (healing done), SampleResource(id, t, value), ResourceFalling(id, now, look=10) and `_resources`.
+     - Enemy has castDamage, castOn; Cooldown has name.
+   - **buddies_fight_replay.h:** the M line carries healPoints, talentPoints and
+     baseMana; the N line carries castDamage and castOn; Replay() samples each
+     member's resource.
+   - **buddies_forward_pass.h:**
+     - Leans(s, memory, b, goldPerHour, BuddySeat::Seats const* seats = nullptr, std::map<std::string,int>* targets = nullptr).
+     - Healing answers: dry → 0.05; a non-holder able to heal while the seats are not short → 1.0.
+     - Innervate by output: mana = regen 2.25 × druid baseMana. For each mana member whose mana falls (ResourceFalling) and runs out before base.left, extra = min(mana/falling, left − outAt); Score{min(shortfall, hps×extra), dps×extra/pace}; the best gets the lean and the target.
+     - Also: PlanWeights, OpenWindows, burst by reach (area/self/single ally with targets), lumps from casts, shortOf per member, a heal-over-time's ticks counted in extras, absorb raises maxHealth.
+   - **buddies_forward_pass.cpp** (server, uncommitted):
+     - Party has seats (BuddySeat::Seats), saidOom set, dryNow set, load.
+     - The Job carries seats; the worker computes seats = Now(...) and passes &seats into Leans; dryNow is updated.
+     - TakeSnapshot fills talentPoints and healPoints (AiFactory::GetPlayerSpecTabs) and baseMana (GetCreateMana).
+     - The leader update samples resources, speaks "oom"/"ready" for buddies and stand-ins only via BuildChatPacket(CHAT_MSG_PARTY), and resets seats on a new fight.
+     - HandOutBuffs; BuddyForwardPassLean returns 0.05 for spells it hands out; BuddyForwardPassTankRoom(groupId); the `.buddy fight` load line.
+     - Stand-ins are included in leans; BuddySceneForwardPass decides first; BuddySceneIsBoss → rank 3.
+     - The syntax check after the seat rework has NOT been run yet.
+   - **buddies_scenes.cpp** (new, uncommitted, compiler-checked for cc-test
+     before the seat rework):
+     - `.buddy scene <duel|party60|party30|party15|stop> [redraw]`.
+     - KINDS: duel 40v45, rank 0, seats {0,false,-1},{0,true,0}; party60/30/15 at 60v65, 30v35 and 15v20, elite, boss, roles 1, 2, 0, all forward.
+     - PickMonster via a WorldDatabase query (lowest-entry humanoid warrior of exactly the level and rank, no script).
+     - Stages BRINGING/FIGHTING/BREATH; Begin (resurrect, full health and power, cooldowns, random angle, stay strategy, summon, faction 14, threat).
+     - Watch: end conditions, Write to LogsDir/buddies-scenes/<scene>.tsv, and `Tell` the round summary (**to remove**).
+     - Unit hooks tally damage and healing.
+     - BuddySceneHolds / BuddySceneForwardPass / BuddySceneIsBoss.
+     - Constants: PASS_MS 500, ROUND_MOST_MS 600000, MONSTER_AHEAD 12, CIRCLE 4, BREATH_MS 5000.
+   - **buddies_release.cpp:** BuddyReleaseRule starts with `if
+     (BuddySceneHolds(bot->GetGUID().GetCounter())) return 0;`.
+   - **buddies.h:** declarations for BuddySceneHolds, BuddySceneForwardPass,
+     BuddySceneIsBoss and BuddyForwardPassTankRoom.
+   - **buddies_loader.cpp:** AddSC_buddies_scenes added. The other session added
+     solo, levelup, sargobras and board.
+   - **buddies_talents.cpp:** the multiplier returns `lean *
+     BuddyTalentDraw::Factor(weight * lean, rand_norm())`; the strategy is on
+     when the talents or forward-pass switch is on.
+   - **tests/buddy-healer-seat/seat-check.cpp** (just rewritten): fixture
+     fight(s, m, priestMana) with priest (healPoints 40/51), druid (17/51 → a
+     third), tank, plus Paladin() (51/51, mana 12000). 15 pass, 4 fail (see
+     Errors).
+   - **Other tests:**
+     - tests/buddy-tank-load/load-check.cpp (7 pass); tests/buddy-forward-pass/pass-check.cpp (41 pass); fight-state 12, replay 6, curve 27, cooldown-plan 30, lockouts 21, threat 23, marks 18, fight-length 20.
+     - Scripts test-buddy-* each have a header with `quick-test: yes`.
+   - **Issues:**
+     - 176a3-fight-scenes.md (new; owner's newest words added); 625i (seat; owner's 10-31 words added; Current Behavior describes the old single seat and needs updating); 625l (Innervate words added; Current Behavior needs updating); 625n (composite-curves words added); 625j (load done).
+     - docs/build-ledger.md lists the waiting files.
+   - **Scripts:**
+     - scripts/validate: total-time learned limit + grace + one line + tty timer.
+     - scripts/compile: gate-2000 skip via scripts/sql-fingerprint and build-shadow/.gate-2000-<profile>.
+     - scripts/bake-buddy-towns: fingerprint, --force, --help.
+     - scripts/generate-buddies-conf → mod-buddies/conf/mod_buddies.conf.dist; scripts/test-buddies-conf.
+     - scripts/replay-fight; scripts/generate-fight-forward-pass-page.
+
+4. Errors and fixes:
+   - **Seeding the validate history** with a 131 s start, then a quiet-based
+     measure. The owner objected ("silly computer"; "should work as I plainly
+     described"). Changed to timing whole starts against the last 5 starts'
+     average ×1.5, plus a grace extension while updates finish. The seed was
+     removed.
+   - **Validate counted update rows**, which re-applied files don't change.
+     Fixed to count rows with `UNIX_TIMESTAMP(timestamp) >= START_EPOCH`.
+   - **Validate test edge case:** fixed by GRACE ≥ 2×PROBE_EVERY.
+   - **bash syntax errors** in the edited validate (apostrophe inside
+     `${…:+}`, `}# }}}`): fixed.
+   - **Seeding the gate fingerprint** was unearned (the other session was
+     changing SQL); removed.
+   - **A wait loop's pgrep matched itself:** use an anchored pattern.
+   - **Python edit scripts that failed their asserts wrote nothing:** redid
+     them. Avoid `cd` in commands.
+   - **commit-own-changes sometimes silent:** retry with `-F` file.
+   - **Ambiguous `Event`/`HEAL`** with playerbots: qualified with
+     BuddyFightState::.
+   - **The shield absorb was capped by max health:** it now raises maxHealth.
+   - **Rejuvenation** wasn't counted in the curves: tick healing is now added.
+   - **CURRENT:** the seat test fails 4 checks because the refill picks the
+     druid (⅓ share, 15000 mana) before the paladin (whole share, 12000 mana).
+     Planned fix: order candidates by HealerShare descending, then mana.
+
+5. Problem Solving:
+   - The 10-31 compile built the forward pass and promoted it; validation now
+     works (435 s, 529 s, then 44 s and 84 s starts recorded).
+   - Config warnings are fixed by the generated mod_buddies.conf.dist (effective
+     next compile).
+   - The town bake skip works (0.12 s).
+   - The SQL pipeline: our steps place files in folders registered in
+     updates_include; the worldserver's updater applies them at start. The two
+     starts each apply them: the gate start re-runs the previous build's files,
+     the validation start this build's.
+
+6. All user messages:
+   - "please continue" (after compaction)
+   - " - What a use is worth: whatever the moment multiplies it by… for trash
+     mobs, yes it diminishes the value. But for a boss, even if it's the end of
+     the fight we still wanna burn it down as fast as we can, so use everything.
+     [pasted: how it decides] sounds performance intensive, maybe someday we can
+     make this stuff into equations rather than discrete checks. For now this is
+     fine. [pasted: design call] longest regularly used cooldown. I think Lay on
+     Hands has a 1 hour cooldown for example? Dont' wanna plan around that... we
+     can worry about next-quest pointing later, after this compile. For now
+     let's continue."
+   - "[pasted regularly used] isn't bloodlust 30 minute timer? I'm concerned we
+     won't use it... But, better to get the full use of a BL on the next boss
+     than waste it on an easier boss. [pasted design call] should be for rare
+     elites in the open world as well, but not regular elites."
+   - "[pasted Bloodlust] consider a paladin's forebearance similarly. But keep
+     in mind some spells like Blessing of Protection can put it on other
+     targets, not just the casting paladin. let's continue."
+   - Long threat message: "make sure we add as a consequence of casting divine
+     shield or divine protection or similar that all threat from the target is
+     wiped. Because that's what happens, right? … threat is something that has
+     to be managed… worker placement game… hunters should treat their pets
+     abilities as their own… cost 1 pet gcd… BoP the main tank… Rogues
+     should feint and mages should vanish… composite curves… optimize toward
+     a "victory" condition… We are less interested in optimizing for perfect
+     output, and more toward feelings of serenity in flow, searching for
+     familiarity and wholesome friendly."
+   - "[pasted open question] the plain attack can be autocast I guess."
+   - "[pasted off-tank question] the main and off-tank roles can switch
+     naturally and elegantly during the fight. But, they should keep in mind
+     which tank would be best suited to hold the attention, and they should
+     taunt accordingly… "fight curves" as we should call them…"
+   - "okay so the curve is a path through a series of weights, sorta like when
+     an LLM is processing a long string of output text… new, and extended, and
+     desired, state. tell me soooo much about how you plan to architect this."
+   - Answers: "depends on the group. What do they value? besides victory, bots
+     prefer lower gold cost (use fewer consumables) and faster time (3 minute
+     kill instead of 4). When questing and such, they prefer things like
+     gold-per-hour, and exp-per-hour. If the player is grinding a certain mob…
+     later…" / "we can let them know. Yes, it's not human… let's just let
+     them see the numbers for now." / "a minute is fine." / "I don't imagine
+     they will grow very much. They are things like, how much certain talents
+     benefit certain abilities, how critical strike rating relates to certain
+     spells, how resistant a target is to a certain type of shadow blast, how
+     important mana is to this particular fight, stuff like that. I wouldn't
+     mind looking at an HTML document."
+   - "[pasted gold cost question] for whatever price the bot can acquire it by.
+     can we start building?"
+   - "okay let's keep going."
+   - "the compile is in-progress so check up every once in a while. Then, let's
+     keep working."
+   - "hi"
+   - "[pasted] this five minute limit should be set based on the average of how
+     long previous starts have taken. It should count the last like, 5 starts,
+     and average them. Plus/minus 50%."
+   - "[pasted seed] silly computer. if the limit is 3 minutes, and we just timed
+     out on a 5 minute timer, then why would you set the limit to 3 minutes?
+     silly computer!"
+   - "[pasted] girl are you being stupid on purpose? we want the limit, but
+     starting it at 3 minutes is silly. This isn't like you! [pasted Which
+     should the limit follow?] um it should work as I plainly described. How
+     does it work right now?"
+   - "okay sure fine whatever that's good enough. [pasted bake output] is there
+     a reason we don't bake this once and then check to see if it changed before
+     re-baking? also we're at this: [pasted validation lines]"
+   - "[pasted validation lines] this is way too busy. We could make this like,
+     1/10th of the text. Can we also add an updating timer that says how long
+     we've waited so far?"
+   - "also what the heck, just above the SQL patches we have this: [pasted] so,
+     we're testing the server launches twice? Why?"
+   - "got it, okay, well, we only need to do that first startup if we changed
+     the SQL. Can we add a check for that? Our systems are idempotent. They must
+     be, it is important. So, when we apply the same SQL twice, it should not
+     duplicate the impact. If we change the underlying records, they should not
+     be altered unless we change them specifically. This is critical for the
+     design. Can you validate that for me? Also, it kinda sounds like we apply
+     sql at two parts of the compilation process. Is there a reason for that?
+     Can you find out?"
+   - "okay remember our SQL patches aren't really modifying the database
+     directly, they're instead connecting to the Azerothcore pipeline by putting
+     SQL files into the update directory that the worldserver picks up when it
+     starts. Is that right? also, the worldserver has a bunch of weird errors.
+     Can you find out? Like this: > Config: Missing property
+     Buddies.ForwardPass… also why is it AC buddies? They aren't Azerothcore's
+     buddies, they're my buddies. I made them. I'm using playerbots, which isn't
+     part of Azerothcore, but even still our systems are mostly just using them
+     as inspiration and general guidance for how to accomplish things
+     correctly."
+   - " - skipping the first start when no SQL has changed; let's build this / -
+     the idempotency test…; let's skip this / - the town-bake skip test…; I
+     am interested in this. We're currently re-compiling. What can you work on
+     while we wait for it to finish?"
+   - "okay what else can we work on?"
+   - "[pasted option 1] let's build a test scene in the cc-test profile… two
+     bots fighting a monster. The monster should be level 45 and the bots should
+     be level 40. Then, have one of the bots use the playerbots style combat
+     style, and have the other do the new system. after that, build a second
+     test… one boss monster level 65 and 3 buddy-bots at level 60… if any of
+     them are slain then they wait until either the boss dies, or the entire
+     party dies. When the fight ends, they are all reset and it runs again, but
+     any randomization we apply can be re-applied. then… level 30 and 35… we
+     can also do one at 15 and 20… [healer's seat] sounds like we need to
+     build this. [buffs] this is part of the new fight mechanics system right?
+     If so, let's build it. [tank's load] okay let's work on it. [open
+     questions] once you've returned to me, then we can address anything you
+     bring up, and answer any open questions you have."
+   - Latest: "[pasted record bullet] we don't need the in-game summary. Also,
+     we're less interested in the result of the fight, and more on the system
+     that creates it - can we create comprehensive logging that shows at each
+     "frame" the exact status of the combatants? We will then use these logs to
+     create a mesh of curves, one chart for each combatant, that show their
+     dynamism. [pasted who holds it] but we should only update this role when
+     the current healer runs out of mana or dies. Also, for raids, we should
+     have as many healers as we had when the fight started - we can count 1/3rd
+     specs as 1/3rd of a healer, off-specs (2/3rd and 1/3rd with 1/3rd being
+     healing talents) as 1/3rd of a healer, and full specs and main specs (2/3rd
+     healing talents 1/3rd non healing tree) as 1 whole healer. [pasted
+     oom/ready] I don't know what this means [pasted Q1] I mean, ability choices
+     and such. We're trying to attach non-linearities to their combat mechanics,
+     and if it played out the same way everytime, then we aren't building it
+     correctly. [pasted Q2] well, the dps of the (potential) targets is known,
+     alongside their hps. so, we should know roughly who would most empower us
+     to defeat the target and emerge victorious. Remember, we're combining
+     curves to coalesce toward a solution that provides the results we want
+     (victory) and avoids defeats and losses. I am picturing many different
+     composite curves that are multiplied together or whatever, with a final
+     "output curve" that shows how the fight will progress. Each bot only has
+     the current status, they don't know other bot's behavior plans. [pasted Q3]
+     I don't need to see the scenes. I want to see the curves we create, and
+     possibly a live viewer for them in-game through an addon or something, but
+     that can come later. For now, we just need the data."
+   - "please continue"
+
+7. Pending Tasks:
+   - **Task #27 (in progress), healer seats sticky and counted by spec:**
+     - fix the refill order;
+     - get the seat test passing;
+     - compiler-check the server (basic and cc-test);
+     - update 625i's Current Behavior;
+     - commit the pure parts (healer_seat.h, fight_state.h, fight_replay.h, forward_pass.h, the seat test, the issues).
+   - **Task #28 Innervate by output:** the code is written in forward_pass.h,
+     and its test passes in seat-check. Update 625l's Current Behavior; commit.
+   - **Task #25 scene frame log:**
+     - remove the in-game round summary (Tell lines) in buddies_scenes.cpp;
+     - add comprehensive per-frame logging of every combatant (each bot and the monster): time, health/max, power/max, position, target, cast and cast left, auras (marks), threat on the monster, alive, cumulative damage dealt/taken and healing, and the forward pass's view per bot (time to death, shortfall, incoming, healing, top leans, seat state);
+     - write to LogsDir/buddies-scenes/<scene>-frames.tsv (or one file per round), for later per-combatant curve charts;
+     - update 176a3.
+   - Task #26 is done (lean × Factor), and its code waits for the compile.
+   - Everything server-side waits for the owner's next compile; then commit the
+     built files (scenes, release hook, forward_pass.cpp, buddies.h, loader,
+     talents.cpp, config and reference).
+   - **Later (not now):** charts or a live in-game viewer of curves; the
+     healer's fallback behaviours (Seal of Wisdom, wand, Judgement of Wisdom);
+     next-quest pointing (617e18); patch-registry regeneration (shared with the
+     other session's uncommitted lines).
+
+8. Current Work:
+   - Reworking the healer seats per the owner's feedback. The seat test
+     (tests/buddy-healer-seat/seat-check.cpp) was just rewritten and run: 15
+     passed, 4 failed:
+     ```
+     FAILED: a Holy paladin there: it takes the seat, a whole healer, nothing short
+     FAILED: ready again: no longer dry, and the paladin keeps the seat (it hasn't run dry)
+     FAILED: the paladin falls: the priest, ready, takes the seat back
+        (rejuvenation: seats filled 1.009, seats short 1.009; the dry priest's flash heal 0.050)
+     FAILED: the seats filled by the paladin: the druid's Rejuvenation doesn't lean (it does its own job)
+        (innervate: 1.556, on member 1)
+     ```
+   - Diagnosis: in `BuddySeat::Now`, the refill loop picks the candidate with
+     the most mana (`if (best < 0 || m.resource > s.party[best].resource) best =
+     int(i);`). That seats the druid (⅓ share, 15000 mana) before the paladin
+     (whole share, 12000 mana), so the holders become {2,3} instead of {3}.
+   - Fix to make: prefer the larger HealerShare first, then most mana, e.g.
+     `if (best < 0 || HealerShare(m) > HealerShare(s.party[best]) + 1e-9 || (std::fabs(HealerShare(m) - HealerShare(s.party[best])) <= 1e-9 && m.resource > s.party[best].resource)) best = int(i);`
+     and update the comment ("whole healers before thirds, then most mana").
+
+9. Optional Next Step:
+   - Fix the refill order in buddies_healer_seat.h's `Now()` (larger share
+     first, then most mana) and rerun `scripts/test-buddy-healer-seat` and the
+     other forward-pass tests.
+   - Then run `scripts/test-patched-syntax /mnt/kaun/wow-chat-2026 basic` and
+     `cc-test` for the reworked buddies_forward_pass.cpp.
+   - Update the 625i and 625l Current Behavior sections, and commit the pure
+     parts.
+   - Then move to task #25, per the owner: "can we create comprehensive logging
+     that shows at each "frame" the exact status of the combatants? We will then
+     use these logs to create a mesh of curves, one chart for each combatant…
+     For now, we just need the data." Remove the in-game summary ("we don't need
+     the in-game summary") from buddies_scenes.cpp and add the per-frame
+     combatant log.
+
+If you need specific details from before compaction (like exact code snippets,
+error messages, or content you generated), read the full transcript at:
+/home/ritz/.claude/projects/-mnt-kaun-wow-chat-2026/03547e04-6a50-4e0d-97ee-ae0ce7474312.jsonl
+Continue the conversation from where it left off without asking the user any
+further questions. Resume directly — do not acknowledge the summary, do not
+recap what was happening, do not preface with "I'll continue" or similar. Pick
+up the last task as if the break never happened.
+
+--------------------------------------------------------------------------------
+
+`/compact` - Compacted (ctrl+o to see full summary)
+
+--------------------------------------------------------------------------------
+
+### User Request 175
+
+please continue
+
+--------------------------------------------------------------------------------
+
+### Assistant Response 175
+
+> All 19 pass. Now the other forward-pass tests and the server syntax check.
+
+> cc-test compiler check passes. Now the issue texts for 625i and 625l.
+
+> Now commit the pure parts (the arithmetic headers, tests, and issues).
+
+*[commit] cddbc17e0 in wow-chat-2026 - Healer seats kept to the count the fight began with, and Innervate by what its mana becomes*
+
+> Now the frame log. First, what the forward pass keeps per buddy that a frame
+> could carry:
+
+> A real bug spotted here: the tank's load is computed from the verdict after
+> the verdict was moved away (so it reads an emptied verdict). Fixing that, then
+> checking what a verdict holds per member.
+
+> Now the per-member view the frame log will carry. Looking at how `.buddy
+> fight` prints a party's verdict and how the tank load is shaped:
+
+> Seat rework is committed (19/19 checks pass). Now adding the per-frame
+> combatant log to the fight scenes. First, the forward pass's side of each
+> frame:
+
+> Now the scene side. Checking a few game API names first:
+
+> Now the scene file edits: drop the in-game summary, add the frame log and the
+> cast record.
+
+> Both files compile clean for cc-test. Running the basic profile check in the
+> background, and checking the command's help text for the old summary wording:
+
+> Now its quick test, with two made-up frame files (one whole, one with a line
+> cut short):
+
+> 8/8. Giving it the quick-test header so the compile runs it:
+
+> Basic passes too. Updating the state line and the build ledger, then
+> committing the checker, its test and the issue:
+
+*[commit] 87276c403 in wow-chat-2026 - A checker for the fight scenes' frame logs, and the scenes' design rewritten around them*
+
+> The owner already answered the scene issue's open question ("I mean, ability
+> choices and such."). Writing that answer into the issue:
+
+*[commit] 390b5219a in wow-chat-2026 - The fight scenes' question about what is drawn again, answered by the owner*
+
+All three of your changes are built, and the code compiles cleanly for cc-test
+and basic. Nothing has run in game yet: the server parts wait for your next
+compile.
+
+**The healer seats** now work the way you described. Committed, and 19 of 19
+checks pass.
+- When a fight starts, the party counts its healers in thirds by talent points.
+  Two thirds or more of a member's points in healing trees make a whole healer;
+  a third makes a third of one. The party keeps that count for the whole fight.
+- A seat changes hands only when its holder runs out of mana or dies. Whole
+  healers are seated before thirds, and the most mana wins among equals. If the
+  count can't be made up, the party is "short" and everyone able to heal leans
+  in.
+- A healer that ran out of mana stays out until its mana covers its healing for
+  the rest of the fight. After that it takes a seat back only when one comes
+  free.
+
+**Innervate** goes to whoever its mana does the most for. The bot works out who
+will run out of mana before the fight ends, gives each of them the seconds the
+mana would buy, and turns those seconds into damage and healing at that member's
+own rates. It only reads the party's state now, never the other bots' plans.
+Committed.
+
+**The frame log:**
+- Nothing is told in game any more, apart from problems (a stand-in that
+  couldn't be brought, no monster).
+- Every half second of a fight, one line per combatant (each stand-in and the
+  monster) goes to `logs-cc-test/buddies-scenes/<scene>-frames.tsv`:
+  - health, power, position, targets, the current cast, every aura, and the
+    monster's threat on it;
+  - running damage and healing;
+  - the spells it chose since the last frame;
+  - what the forward pass thinks of it: time to death, incoming damage, its
+    healer seat, every lean.
+- The file is written to disk every frame, so it can be read while the scene
+  runs.
+- A small Lua checker, `scripts/check-scene-frames`, runs against those files.
+  It fails a file if any line has a different number of columns than the header.
+  For each combatant it counts how many different orders of spells it cast
+  across the rounds, and points out one that cast the same way every round. That
+  follows your "if it played out the same way everytime…". Committed with its
+  quick test (8 checks).
+
+**A bug fixed on the way:** the tank's "room for one more enemy" was being read
+after the fight's verdict had already been handed off and emptied, so it always
+read nothing. The fix waits for the compile with the rest of the server code.
+
+**Two problems in the other session's files, which I didn't touch:**
+- The command reference page won't regenerate, because their new `.buddy board`
+  command has no system assigned.
+- The patch registry page is missing its two marker lines, so the patch lists
+  can't regenerate. The compile's quick tests will flag both until they're
+  fixed.
+
+Reminder: the two disks still don't guard against bit rot (the guard-the-disks
+issue).
+
+One open question: should the charts come first as an HTML page that reads a
+frames file, one chart per combatant, before any in-game viewer? I'd draw
+health, mana, threat, time to death and the leans over time.
 
 --------------------------------------------------------------------------------
 
