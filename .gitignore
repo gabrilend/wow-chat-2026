@@ -66,6 +66,9 @@ mysql/installed-files/
 # change; this rule takes effect for any machine that has not got one.
 mysql/conf/my.cnf
 mysql/conf/my.cnf.bak
+# The login file the MySQL tools read (scripts/mysql-client-options writes
+# it from secrets.conf): private, never committed.
+mysql/conf/client.cnf
 
 # TRACKED: Database files containing custom world/character data
 # Per-profile databases (acore_world_release, acore_characters_beta, etc.)
@@ -159,6 +162,11 @@ logs-vanilla
 # as a change to commit)
 .profile
 
+# The realm branches (issue 136d): each line names databases that exist
+# only in this machine's MySQL, made by scripts/branch-realm; a fresh
+# checkout has none
+config/branches
+
 # basic's install dir and log symlink, derived like vanilla's above
 installed-files-basic/
 logs-basic
@@ -166,3 +174,12 @@ logs-basic
 # The custom client's player settings (issue 173b1): the player's, not the project's
 src/custom-client-c/settings/
 src/custom-client-c/world/
+
+# cc-test's install dir and log symlink, derived like basic's above
+installed-files-cc-test/
+logs-cc-test
+
+# Characters' saves from before a change made to them (scripts/change-character-class,
+# scripts/teach-character-lessons, scripts/party-checkpoint): the players', not
+# the project's; kept on this machine only (the owner, 2026-11-03)
+backups/

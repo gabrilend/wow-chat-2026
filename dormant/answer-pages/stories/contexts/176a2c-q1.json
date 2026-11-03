@@ -1,0 +1,76 @@
+{
+  "unexplained":[],
+  "questions":["176a2c#1","176a2c#2","176a2c#3","176a2c#4","176a2c#5"],
+  "group":"176a2c-q1",
+  "written":"2026-10-30 02:17",
+  "tries":1,
+  "fingerprint":"08084678",
+  "written_by":"scripts/write-question-contexts (issue 1102a): a context for these questions, for the open-questions walkthrough",
+  "model":"claude-sonnet-5-5",
+  "context":"Arathi Basin is a battleground with seven places joined by roads: two home bases (one per side) and five bases in between (Stables, Farm, Gold Mine, Lumber Mill, Blacksmith). The project fills a match with computer-driven squads, small groups of stand-in fighters that walk those roads. They do not choose a path by planning or by dice. Wherever roads meet, at a crossing, each squad takes any road except the one it just arrived by. To decide which one, each side keeps a pointer at each crossing. A pointer is a bookmark that names the next road to use and moves on to the following road after each squad passes. Squads therefore take the roads in turn, spread evenly, and the same match played twice sends the same squads the same ways. The pointers are tracked separately for each side, for each crossing, and for each road a squad arrived by. A squad that appeared at a base, instead of walking there, arrived by no road, so every road there is open to it.\n\nTwo things about those pointers are undecided. The first is their lifetime. If each match starts with fresh pointers, every match opens in the same way and can be repeated and checked exactly. If the pointers carry over from the previous match, the spreading of squads over the roads keeps going across matches, but a match's early moves then depend on how the earlier match ended. The second is what happens when a squad's route brings it to a base its own side already holds. Passing through by the rule keeps the squads moving toward the enemy. Stopping to guard follows the squads' separate guarding behaviour: at least one fighter stays at a captured base, and a squad whose route arrives at a base its side holds can stay and guard it too, while the rest attack. That would thin the squads that reach the enemy.\n\nThe rule says squads walk \"toward the enemy base\", yet it does not say when a walk ends. Once a squad stands at the enemy's home, it could turn around by the same rule and head back toward its own home, it could fight there, or it could wait. Each choice gives a different picture of the late match: continual back-and-forth traffic, a siege at the enemy's gate, or a quiet pile-up.\n\nThe roads are drawn as a table of crossings, which is a list of forks. Each base has two exits, and each exit leads to a fork where several roads are offered. The four parts of the table question ask whether the forks are drawn consistently, so that the same crossing is not counted as two or two crossings merged into one. First, the Stables' left exit offers the Farm \"along the cliff\". That could be the long road round the west, which the battleground bot module already uses and which is 595 yards long, or it could be a road passing the Gold Mine. Second, both of the Farm's exits may lead to the same crossing between the Blacksmith and the Farm, one by the Lumber Mill road and one by the Gold Mine road, or one of them may lead to a different crossing. Third, the Gold Mine's right fork and the Blacksmith's \"one way\" fork both offer the Gold Mine and the Stables, and the Lumber Mill's right fork and the Blacksmith's \"other way\" fork both offer the Lumber Mill and the Farm. Each pair may be a single shared crossing, seen from two sides, or two separate forks. Fourth, each home base has one road out. Which of those crossings it first reaches decides which bases a squad meets first when it leaves home. Merging forks lets every squad from a home reach its nearest base first. Keeping every exit as its own fork spreads the squads over three first bases.",
+  "components":[{
+      "explained_by":"A pointer is a bookmark that names the next road to use and moves on to the following road after each squad passes.",
+      "question":"176a2c#1",
+      "component":"Pointer: a bookmark per side, per crossing, per road arrived by, naming the next road and advancing after each squad"
+    },{
+      "explained_by":"Squads therefore take the roads in turn, spread evenly, and the same match played twice sends the same squads the same ways.",
+      "question":"176a2c#1",
+      "component":"Rotating pointers give an even spread and repeatable matches"
+    },{
+      "explained_by":"If each match starts with fresh pointers, every match opens in the same way and can be repeated and checked exactly. If the pointers carry over from the previous match, the spreading of squads over the roads keeps going across matches, but a match's early moves then depend on how the earlier match ended.",
+      "question":"176a2c#1",
+      "component":"Reset at each new match versus carried over: what each would bring"
+    },{
+      "explained_by":"The pointers are tracked separately for each side, for each crossing, and for each road a squad arrived by.",
+      "question":"176a2c#1",
+      "component":"Pointers are kept separately for each side"
+    },{
+      "explained_by":"The project fills a match with computer-driven squads, small groups of stand-in fighters that walk those roads. They do not choose a path by planning or by dice. Wherever roads meet, at a crossing, each squad takes any road except the one it just arrived by.",
+      "question":"176a2c#2",
+      "component":"Squad, crossing, and the rule of taking any road except the one arrived by"
+    },{
+      "explained_by":"Passing through by the rule keeps the squads moving toward the enemy. Stopping to guard follows the squads' separate guarding behaviour: at least one fighter stays at a captured base, and a squad whose route arrives at a base its side holds can stay and guard it too, while the rest attack. That would thin the squads that reach the enemy.",
+      "question":"176a2c#2",
+      "component":"Passing through a held base versus stopping to guard, and the guarding behaviour of 176a2b"
+    },{
+      "explained_by":"Once a squad stands at the enemy's home, it could turn around by the same rule and head back toward its own home, it could fight there, or it could wait. Each choice gives a different picture of the late match: continual back-and-forth traffic, a siege at the enemy's gate, or a quiet pile-up.",
+      "question":"176a2c#3",
+      "component":"The goal: reaching the enemy's home and the options of turning round, fighting, or waiting"
+    },{
+      "explained_by":"Arathi Basin is a battleground with seven places joined by roads: two home bases (one per side) and five bases in between (Stables, Farm, Gold Mine, Lumber Mill, Blacksmith).",
+      "question":"176a2c#3",
+      "component":"The seven places: two homes and five bases"
+    },{
+      "explained_by":"Wherever roads meet, at a crossing, each squad takes any road except the one it just arrived by.",
+      "question":"176a2c#4",
+      "component":"What \"forward\" means: any road but the one just come by (already answered)"
+    },{
+      "explained_by":"A squad that appeared at a base, instead of walking there, arrived by no road, so every road there is open to it.",
+      "question":"176a2c#4",
+      "component":"A squad that appeared at a base arrived by no road"
+    },{
+      "explained_by":"The roads are drawn as a table of crossings, which is a list of forks. Each base has two exits, and each exit leads to a fork where several roads are offered.",
+      "question":"176a2c#5",
+      "component":"The crossings table: each base has two exits, each leading to a fork"
+    },{
+      "explained_by":"First, the Stables' left exit offers the Farm \"along the cliff\". That could be the long road round the west, which the battleground bot module already uses and which is 595 yards long, or it could be a road passing the Gold Mine.",
+      "question":"176a2c#5",
+      "component":"(a) The Stables' left exit offering the Farm along the cliff: the long 595-yard road round the west or a road by the Gold Mine"
+    },{
+      "explained_by":"Second, both of the Farm's exits may lead to the same crossing between the Blacksmith and the Farm, one by the Lumber Mill road and one by the Gold Mine road, or one of them may lead to a different crossing.",
+      "question":"176a2c#5",
+      "component":"(b) The Farm's two exits leading to the same Blacksmith-Farm crossing or a different one"
+    },{
+      "explained_by":"Third, the Gold Mine's right fork and the Blacksmith's \"one way\" fork both offer the Gold Mine and the Stables, and the Lumber Mill's right fork and the Blacksmith's \"other way\" fork both offer the Lumber Mill and the Farm. Each pair may be a single shared crossing, seen from two sides, or two separate forks.",
+      "question":"176a2c#5",
+      "component":"(c) Whether matching forks of two bases are one shared crossing or separate forks"
+    },{
+      "explained_by":"Fourth, each home base has one road out. Which of those crossings it first reaches decides which bases a squad meets first when it leaves home. Merging forks lets every squad from a home reach its nearest base first. Keeping every exit as its own fork spreads the squads over three first bases.",
+      "question":"176a2c#5",
+      "component":"(d) Which crossing each home's road reaches, and what merged versus separate forks would bring"
+    },{
+      "explained_by":"The four parts of the table question ask whether the forks are drawn consistently, so that the same crossing is not counted as two or two crossings merged into one.",
+      "question":"176a2c#5",
+      "component":"Purpose of the question: the table read as one map must be consistent"
+    }]
+}

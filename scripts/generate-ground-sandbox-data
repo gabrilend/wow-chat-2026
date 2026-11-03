@@ -1,0 +1,167 @@
+#!/usr/bin/env luajit
+
+local DIR, ZONES, JOBS, OUT = "/mnt/kaun/wow-chat-2026", {}, 6, nil
+local G           = 533.3333
+local STEP        = G / 128
+local MID         = 0.5 * 64 * G
+local LARGE_YARDS = 40
+local BODY_LOW    = -1
+local BODY_HIGH   = 2
+local MAPS        = { 0, 1 }
+local NO_GROUND   = -32768
+
+local i = 1
+while i <= #arg do
+    local a = arg[i]
+    if a == "--help" then
+        print("generate-ground-sandbox-data [PROJECT_DIR] [--zone MAP-ZONE]... [--jobs N] [--out DIR]")
+        print("  writes docs/HTML/ground-sandbox/zone-<map>-<zone>.js: each zone's ground heights and")
+        print("  the footprints of what blocks walking (issue 617e16c). No --zone: every zone of maps 0")
+        print("  and 1, N processes at a time (default 6). --out DIR: write there instead (a test's scratch folder).")
+        os.exit(0)
+    elseif a == "--zone" then ZONES[#ZONES + 1] = arg[i + 1]; i = i + 2
+    elseif a == "--jobs" then JOBS = tonumber(arg[i + 1]); i = i + 2
+    elseif a == "--out"  then OUT  = arg[i + 1]; i = i + 2
+    elseif a:sub(1, 2) == "--" then io.stderr:write("generate-ground-sandbox-data: unknown option " .. a .. " (--help lists them)\n"); os.exit(1)
+    else DIR = a; i = i + 1 end
+end
+local OUT_DIR = OUT or (DIR .. "/docs/HTML/ground-sandbox")
+local VMAPS   = DIR .. "/data-files/vmaps/"
+local WORK    = DIR .. "/tmp/shared-memory/ground-sandbox"
+os.execute("mkdir -p '" .. OUT_DIR .. "' '" .. WORK .. "'")
+local function die(msg) io.stderr:write("generate-ground-sandbox-data: " .. msg .. "\n"); os.exit(1) end
+
+if #ZONES == 0 then
+    local list = {}
+    for _, m in ipairs(MAPS) do
+        local h = io.popen(("ls '%s/assets/zone-maps/' | grep '^%d-.*[.]lua$'"):format(DIR, m))
+        for name in h:lines() do list[#list + 1] = name:gsub("%.lua$", "") end
+        h:close()
+    end
+    if #list == 0 then die("no zone data in assets/zone-maps/ (scripts/generate-zone-maps writes it)") end
+    local listing = WORK .. "/zones.txt"
+    local f = assert(io.open(listing, "w")); f:write(table.concat(list, "\n"), "\n"); f:close()
+    print(("generate-ground-sandbox-data: %d zones, %d at a time"):format(#list, JOBS))
+    local r = os.execute(("xargs -P %d -I{} '%s' '%s' --out '%s' --zone {} < '%s'"):format(JOBS, arg[0], DIR, OUT_DIR, listing))
+    if r ~= true and r ~= 0 then die("one or more zones failed (their messages are above); the others were written") end
+    print("generate-ground-sandbox-data: all zones written -> " .. OUT_DIR)
+    os.exit(0)
+end
+
+local ffi     = require("ffi")
+local Heights = dofile(DIR .. "/scripts/lib/map-heights.lua")
+
+local function reader(path)
+    local f = io.open(path, "rb")
+    if not f then return nil end
+    local d = f:read("*a"); f:close()
+    local buf = ffi.new("uint8_t[?]", #d); ffi.copy(buf, d, #d)
+    local r = { pos = 0, size = #d, data = d }
+    function r.u32() local v = ffi.cast("uint32_t*", buf + r.pos)[0]; r.pos = r.pos + 4; return v end
+    function r.u16() local v = ffi.cast("uint16_t*", buf + r.pos)[0]; r.pos = r.pos + 2; return v end
+    function r.f32() local v = ffi.cast("float*", buf + r.pos)[0]; r.pos = r.pos + 4; return v end
+    function r.bytes(n) local s = d:sub(r.pos + 1, r.pos + n); r.pos = r.pos + n; return s end
+    return r
+end
+
+local function spawns_of(map)
+    local out, seen = {}, {}
+    local h = io.popen(("ls '%s' | grep '^%03d_.*[.]vmtile$'"):format(VMAPS, map))
+    for name in h:lines() do
+        local r = reader(VMAPS .. name)
+        if not r or r.bytes(8):sub(1, 4) ~= "VMAP" then die("not a collision tile: " .. name) end
+        for _ = 1, r.u32() do
+            local s = { flags = r.u32() }
+            r.u16(); s.id = r.u32()
+            s.px, s.py, s.pz = r.f32(), r.f32(), r.f32()
+            s.rx, s.ry, s.rz = r.f32(), r.f32(), r.f32()
+            s.scale = r.f32()
+            if bit.band(s.flags, 4) ~= 0 then s.bound = { r.f32(), r.f32(), r.f32(), r.f32(), r.f32(), r.f32() } end
+            s.name = r.bytes(r.u32())
+            r.u32()
+            local key = s.id .. "|" .. s.name
+            if not seen[key] then seen[key] = true; out[#out + 1] = s end
+        end
+    end
+    h:close()
+    return out
+end
+
+local map, zone = (ZONES[1]):match("^(%d+)%-(%d+)$")
+if not map then die("--zone is MAP-ZONE, as the zone files are named (1-17): " .. ZONES[1]) end
+map, zone = tonumber(map), tonumber(zone)
+local ok, Z = pcall(dofile, ("%s/assets/zone-maps/%d-%d.lua"):format(DIR, map, zone))
+if not ok then die(("no zone data for %d-%d: %s"):format(map, zone, tostring(Z))) end
+
+local sx0, sy0 = (Z.Y0 / 16 - 32) * G, (Z.X0 / 16 - 32) * G
+local cols, rows = (Z.Y1 - Z.Y0 + 1) * 8 + 1, (Z.X1 - Z.X0 + 1) * 8 + 1
+local sx1, sy1 = sx0 + (cols - 1) * STEP, sy0 + (rows - 1) * STEP
+
+local terrain = Heights.map(DIR, map)
+local n = cols * rows
+local v = ffi.new("int16_t[?]", n)
+local lo, hi, have = 1e9, -1e9, 0
+for r = 0, rows - 1 do
+    local x = -(sy0 + r * STEP)
+    for c = 0, cols - 1 do
+        local y = -(sx0 + c * STEP)
+        local hgt = terrain:height(x, y)
+        local k = r * cols + c
+        if hgt then
+            local t = math.floor(hgt * 10 + 0.5)
+            if t < -32767 or t > 32767 then die(("a height out of range at %.1f, %.1f: %.1f"):format(x, y, hgt)) end
+            v[k] = t; have = have + 1
+            if hgt < lo then lo = hgt end
+            if hgt > hi then hi = hgt end
+        else v[k] = NO_GROUND end
+    end
+end
+local d = ffi.new("int16_t[?]", n)
+local prev = 0
+for k = 0, n - 1 do
+    d[k] = ffi.cast("int16_t", bit.band(v[k] - prev, 0xFFFF))
+    prev = v[k]
+end
+local raw = WORK .. ("/heights-%d-%d.bin"):format(map, zone)
+local f = assert(io.open(raw, "wb")); f:write(ffi.string(d, n * 2)); f:close()
+local h = io.popen(("gzip -9 -n -c < '%s' | base64 -w0"):format(raw))
+local packed = h:read("*a"); h:close()
+os.remove(raw)
+if #packed == 0 then die("gzip or base64 gave nothing for the heights") end
+
+local quads, kept, skipped_large, skipped_high = {}, 0, 0, 0
+local function ground_at(sx, sy) return terrain:height(-sy, -sx) end
+local function block(corners, zlo, zhi)
+    local cx, cy = 0, 0
+    for k = 1, 8, 2 do cx = cx + corners[k] / 4; cy = cy + corners[k + 1] / 4 end
+    if cx < sx0 - 5 or cx > sx1 + 5 or cy < sy0 - 5 or cy > sy1 + 5 then return end
+    local g = ground_at(cx, cy)
+    if g and (zhi < g + BODY_LOW or zlo > g + BODY_HIGH) then skipped_high = skipped_high + 1; return end
+    for k = 1, 8 do quads[#quads + 1] = string.format("%.1f", corners[k]) end
+    kept = kept + 1
+end
+for _, s in ipairs(spawns_of(map)) do
+    local b = s.bound
+    if not b then die(("a spawn without its placed box: %s (%d); the collision files' format has changed"):format(s.name, s.id)) end
+    local w, l = b[4] - b[1], b[5] - b[2]
+    local mx, my = (b[2] + b[5]) / 2 - MID, (b[1] + b[4]) / 2 - MID
+    if mx < sx0 - 5 or mx > sx1 + 5 or my < sy0 - 5 or my > sy1 + 5 then
+    elseif w > LARGE_YARDS or l > LARGE_YARDS then skipped_large = skipped_large + 1
+    else
+        block({ b[2] - MID, b[1] - MID,  b[5] - MID, b[1] - MID,  b[5] - MID, b[4] - MID,  b[2] - MID, b[4] - MID }, b[3], b[6])
+    end
+end
+
+local out = ("%s/zone-%d-%d.js"):format(OUT_DIR, map, zone)
+f = assert(io.open(out, "w"))
+local named = out:sub(1, #DIR + 1) == DIR .. "/" and out:sub(#DIR + 2) or out
+f:write(("// %s - GENERATED by scripts/generate-ground-sandbox-data (issue 617e16c)\n"):format(named))
+f:write("// from the server's map files (heights) and collision files (doodads), for the page in the folder above it.\n")
+f:write("// heights: base64 of gzip of 16-bit differences of heights in tenths of a yard (-32768: no ground), row by row,\n")
+f:write("// rows south from sy0, columns east from sx0, `step` yards apart; doodads: 8 numbers each, a footprint's corners.\n")
+f:write(("GROUND_LOADED({ map: %d, zone: %d, name: %q, sx0: %.4f, sy0: %.4f, step: %.6f, cols: %d, rows: %d,\n"):format(map, zone, Z.name, sx0, sy0, STEP, cols, rows))
+f:write(("  lowest: %.1f, highest: %.1f, heights: \"%s\",\n"):format(lo, hi, packed))
+f:write(("  doodads: [%s] });\n"):format(table.concat(quads, ",")))
+f:close()
+print(("generate-ground-sandbox-data: %-28s %5d x %-5d points (%d%% with ground), %5d doodads (%d large and %d off the ground left out), %4d KB"):format(
+    Z.name, cols, rows, math.floor(100 * have / n), kept, skipped_large, skipped_high, math.floor((#packed + #quads * 6) / 1024)))

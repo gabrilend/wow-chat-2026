@@ -18,7 +18,7 @@ local MAPS  = MAIN .. "/data-files/dbc/Map.dbc"
 local function q(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
 
 local function rows_of(sql)
-    local h = io.popen(q(MYSQL) .. " -h127.0.0.1 -P3307 -uritz -pmenardi -N -B acore_world_beta -e " .. q(sql) .. " 2>&1")
+    local h = io.popen(q(MYSQL) .. " --defaults-file=" .. DIR .. "/mysql/conf/client.cnf -h127.0.0.1 -P3307 -N -B acore_world_beta -e " .. q(sql) .. " 2>&1")
     local out = {}
     for l in h:lines() do
         if not l:match("Using a password") then

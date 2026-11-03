@@ -1,0 +1,56 @@
+#!/usr/bin/env luajit
+
+local DIR = arg[1] or "/mnt/kaun/wow-chat-2026"
+local checks, fails = 0, 0
+local function check(ok, what)
+    checks = checks + 1
+    if not ok then fails = fails + 1; print("FAIL " .. what) end
+end
+
+local files = {}
+local h = io.popen("ls '" .. DIR .. "/assets/zone-maps/' 2>/dev/null")
+for name in h:lines() do if name:find("^%d+%-%d+%.lua$") then files[#files + 1] = name end end
+h:close()
+check(#files > 60, ("zone files found: %d (scripts/generate-zone-maps writes them)"):format(#files))
+
+local bad_box, bad_count, touching, zones = 0, 0, 0, 0
+for _, name in ipairs(files) do
+    local ok, Z = pcall(dofile, DIR .. "/assets/zone-maps/" .. name)
+    check(ok, name .. " loads")
+    if ok then
+        zones = zones + 1
+        local ROWS, COLS = Z.X1 - Z.X0 + 1, Z.Y1 - Z.Y0 + 1
+        local grid, n = {}, 0
+        if #Z.rows ~= ROWS then bad_box = bad_box + 1 end
+        for r, row in ipairs(Z.rows) do
+            local c = 0
+            for v, k in row:gmatch("(%d+)%*(%d+)") do
+                v, k = tonumber(v), tonumber(k)
+                for _ = 1, k do
+                    c = c + 1
+                    grid[r * 4096 + c] = v
+                    if v ~= 0 then n = n + 1 end
+                end
+            end
+            if c ~= COLS then bad_box = bad_box + 1 end
+        end
+        if n ~= Z.squares then bad_count = bad_count + 1 end
+        for key, v in pairs(grid) do
+            if v ~= 0 then
+                for _, o in ipairs({ key + 1, key + 4096 }) do
+                    local w = grid[o]
+                    if w and w ~= 0 and w ~= v and Z.subzones[v].tint == Z.subzones[w].tint then touching = touching + 1 end
+                end
+            end
+        end
+        if Z.map == 1 and Z.zone == 17 then
+            check(Z.squares < 13432 and Z.squares > 11000,
+                  ("The Barrens has under 13,432 squares (617e7's count with the sea) and over 11,000 (here %d)"):format(Z.squares))
+        end
+    end
+end
+check(bad_box == 0, ("every zone's rows fill its box exactly (%d rows wrong)"):format(bad_box))
+check(bad_count == 0, ("every zone's square count is its rows' (%d zones wrong)"):format(bad_count))
+check(touching == 0, ("no two touching sub-zones share a tint (%d touching pairs of squares do)"):format(touching))
+print(("test-zone-maps: %d zones; %d checks, %d failed"):format(zones, checks, fails))
+os.exit(fails == 0 and 0 or 1)

@@ -1,0 +1,72 @@
+#!/bin/bash
+
+set -uo pipefail
+
+DIR="/mnt/kaun/wow-chat-2026"
+[[ "${1:-}" == "--help" ]] && { sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'; exit 0; }
+[[ -n "${1:-}" ]] && DIR="$1"
+MYSQL="${DIR}/mysql/installed-files/bin/mysql"
+CLIENT=("--defaults-file=${DIR}/mysql/conf/client.cnf" -h127.0.0.1 -P3307)
+WORK="${DIR}/tmp/tmp/branch-realm-test"          # a pretend project folder: its own branch list and installed settings
+SRC="brtsrc"; NAME="brtcopy"
+
+sql() { "${MYSQL}" "${CLIENT[@]}" -N -B -e "$1"; }
+FAILED=0; CHECKS=0
+check() { CHECKS=$((CHECKS + 1)); if [[ "$1" == "$2" ]]; then echo "  ok:   $3"; else echo "  FAIL: $3 (wanted '$2', got '$1')"; FAILED=$((FAILED + 1)); fi; }
+
+cleanup() {
+    for s in "${SRC}" "${NAME}"; do
+        for k in world characters playerbots; do sql "DROP DATABASE IF EXISTS \`acore_${k}_${s}\`" > /dev/null; done
+        sql "DELETE FROM acore_auth.realmlist WHERE name = '${s}'" > /dev/null
+    done
+    rm -rf "${WORK}"
+}
+trap cleanup EXIT
+
+sql "SELECT 1" > /dev/null || { echo "test-branch-realm: MySQL is not answering (scripts/start-mysql); nothing was checked"; exit 1; }
+for s in "${SRC}" "${NAME}"; do
+    [[ -z "$(sql "SHOW DATABASES LIKE 'acore\\_%\\_${s}'")$(sql "SELECT id FROM acore_auth.realmlist WHERE name = '${s}'")" ]] \
+        || { trap - EXIT; echo "test-branch-realm: something named ${s} is already there (left by an earlier run?); nothing touched, nothing checked"; exit 1; }
+done
+
+echo "the pretend realm ${SRC}:"
+for k in world characters playerbots; do
+    sql "CREATE DATABASE \`acore_${k}_${SRC}\`; CREATE TABLE \`acore_${k}_${SRC}\`.rows_here (n INT PRIMARY KEY, word VARCHAR(16)); INSERT INTO \`acore_${k}_${SRC}\`.rows_here VALUES (1, '${k}'), (2, 'two'), (3, 'three')"
+done
+mkdir -p "${WORK}/config" "${WORK}/installed-files-${SRC}/etc/modules"
+ln -s "${DIR}/mysql" "${WORK}/mysql"
+printf 'WorldDatabaseInfo     = "127.0.0.1;3307;user;pass;acore_world_%s"\nCharacterDatabaseInfo = "127.0.0.1;3307;user;pass;acore_characters_%s"\n' "${SRC}" "${SRC}" \
+    > "${WORK}/installed-files-${SRC}/etc/worldserver.conf"
+printf 'PlayerbotsDatabaseInfo = "127.0.0.1;3307;user;pass;acore_playerbots_%s"\n' "${SRC}" > "${WORK}/installed-files-${SRC}/etc/modules/playerbots.conf"
+SRC_ID="$(sql "SELECT MAX(id) + 1 FROM acore_auth.realmlist")"
+sql "INSERT INTO acore_auth.realmlist (id, name, address, localAddress, localSubnetMask, port, icon, flag, timezone, allowedSecurityLevel, population, gamebuild)
+     VALUES (${SRC_ID}, '${SRC}', '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 0, 0, 1, 0, 0, 12340)"
+echo "  made: three databases of 3 rows, realm entry ${SRC_ID}"
+
+echo "branching ${SRC} into ${NAME}:"
+OUT="$("${DIR}/scripts/branch-realm" --dir "${WORK}" "${SRC}" "${NAME}" 2>&1)"; RC=$?
+echo "${OUT}" | sed 's/^/    /'
+check "${RC}" 0 "the tool says it made the branch"
+for k in world characters playerbots; do
+    check "$(sql "SELECT GROUP_CONCAT(n, word ORDER BY n) FROM \`acore_${k}_${NAME}\`.rows_here")" "1${k},2two,3three" "acore_${k}_${NAME} holds the source's rows"
+done
+ROW="$(sql "SELECT CONCAT(id > ${SRC_ID}, ',', flag, ',', allowedSecurityLevel, ',', port) FROM acore_auth.realmlist WHERE name = '${NAME}'")"
+check "${ROW}" "1,2,1,4462" "a realm entry of its own: a new id, offline (flag 2), game masters only (level 1), the source's port"
+BRANCH_ID="$(sql "SELECT id FROM acore_auth.realmlist WHERE name = '${NAME}'")"
+check "$(awk '{print $1, $2, $3}' "${WORK}/config/branches")" "${NAME} ${SRC} ${BRANCH_ID}" "the branch list has its line (name, source, realm)"
+check "$("${DIR}/scripts/branch-realm" --dir "${WORK}" --list | grep -c "^${NAME} ")" 1 "--list shows it"
+
+echo "branching onto a name already taken:"
+"${DIR}/scripts/branch-realm" --dir "${WORK}" "${SRC}" "${NAME}" > /dev/null 2>&1; RC=$?
+check "$([[ ${RC} -ne 0 ]] && echo refused)" refused "a second branch called ${NAME} is refused"
+check "$(sql "SELECT COUNT(*) FROM acore_auth.realmlist WHERE name = '${NAME}'")" 1 "and no second realm entry is made"
+
+echo "dropping ${NAME}:"
+"${DIR}/scripts/branch-realm" --dir "${WORK}" --drop "${NAME}" | sed 's/^/    /'
+check "$(sql "SHOW DATABASES LIKE 'acore\\_%\\_${NAME}'" | wc -l)" 0 "its three databases are gone"
+check "$(sql "SELECT COUNT(*) FROM acore_auth.realmlist WHERE name = '${NAME}'")" 0 "its realm entry is gone"
+check "$(grep -c "^${NAME} " "${WORK}/config/branches")" 0 "its line is gone from the branch list"
+check "$(sql "SELECT COUNT(*) FROM \`acore_world_${SRC}\`.rows_here")" 3 "the source is untouched"
+
+echo "${CHECKS} checks, ${FAILED} failed"
+exit "${FAILED}"

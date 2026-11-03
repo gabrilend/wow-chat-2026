@@ -41,6 +41,10 @@ run_case "up-and-promoted" 0 "SUCCEEDED" \
     "compiled; validation and promotion follow" \
     "Promotion complete" \
     "Updating World database...\nWorld initialized in 40 sec"
+run_case "the-server-s-own-capitals" 0 "SUCCEEDED" \
+    "compiled; validation and promotion follow" \
+    "Promotion complete" \
+    "\e[36mWORLD: World Initialized In 0 Minutes 43 Seconds"
 run_case "warnings-are-listed" 0 "missing in your update directory" \
     "compiled; validation and promotion follow" \
     "Promotion complete" \

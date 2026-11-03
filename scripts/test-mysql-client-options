@@ -1,0 +1,71 @@
+#!/bin/bash
+
+set -uo pipefail
+
+DIR="/mnt/kaun/wow-chat-2026"
+if [[ -n "${1:-}" ]]; then DIR="$1"; fi
+TOOL="${DIR}/scripts/mysql-client-options"
+SCRATCH="${DIR}/tmp/shared-memory/test-mysql-client-options"
+mkdir -p "${SCRATCH}"
+FAILED=0
+CHECKS=0
+
+expect() {
+    local name="$1" first="$2" input="$3" expected="$4"
+    CHECKS=$((CHECKS + 1))
+    printf '%s\n%s\n' "${first}" "${input}" > "${SCRATCH}/${name}"
+    if ! "${TOOL}" --dir "${DIR}" rewrite "${SCRATCH}/${name}" > "${SCRATCH}/${name}.out" 2>&1; then
+        echo "FAIL ${name}: the rewriter refused it:"
+        sed 's/^/    /' "${SCRATCH}/${name}.out"
+        FAILED=$((FAILED + 1))
+        return
+    fi
+    local got
+    got="$(tail -n +2 "${SCRATCH}/${name}")"
+    if [[ "${got}" != "${expected}" ]]; then
+        echo "FAIL ${name}:"
+        echo "    expected: ${expected}"
+        echo "    got:      ${got}"
+        FAILED=$((FAILED + 1))
+    else
+        echo "ok   ${name}"
+    fi
+}
+
+expect bash-no-defaults '#!/bin/bash' \
+    '"${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${S}" -uritz -pmenardi -N "${db}"' \
+    '"${MYSQL_DIR}/bin/mysql" "--defaults-file=${DIR}/mysql/conf/client.cnf" --socket="${S}" -N "${db}"'
+expect bash-two-lines '#!/bin/bash' \
+    "$(printf '%s\n%s' '"${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${S}" \' '    -u ritz -pmenardi "${DB}" -e "SELECT 1"')" \
+    "$(printf '%s\n%s' '"${MYSQL_DIR}/bin/mysql" "--defaults-file=${DIR}/mysql/conf/client.cnf" --socket="${S}" \' '    "${DB}" -e "SELECT 1"')"
+expect bash-variable '#!/bin/bash' \
+    '"${MYSQL}" -h127.0.0.1 -P3307 -uritz -pmenardi -N -B -e "$1"' \
+    '"${MYSQL}" "--defaults-file=${DIR}/mysql/conf/client.cnf" -h127.0.0.1 -P3307 -N -B -e "$1"'
+expect bash-in-a-string '#!/bin/bash' \
+    'M="\"${MYSQL_DIR}/bin/mysql\" -h127.0.0.1 -P3307 -uritz -pmenardi -N -B"' \
+    'M="\"${MYSQL_DIR}/bin/mysql\" --defaults-file=${DIR}/mysql/conf/client.cnf -h127.0.0.1 -P3307 -N -B"'
+expect bash-command-substitution '#!/bin/bash' \
+    'X="$("${DIR}/mysql/installed-files/bin/mysql" -h127.0.0.1 -P3307 -uritz -pmenardi -N -e "SELECT 1")"' \
+    'X="$("${DIR}/mysql/installed-files/bin/mysql" "--defaults-file=${DIR}/mysql/conf/client.cnf" -h127.0.0.1 -P3307 -N -e "SELECT 1")"'
+expect lua-string '#!/usr/bin/env luajit' \
+    'local MYSQL = DIR .. "/mysql/installed-files/bin/mysql -h127.0.0.1 -P3307 -uritz -pmenardi -N -B " .. DB' \
+    'local MYSQL = DIR .. "/mysql/installed-files/bin/mysql --defaults-file=" .. DIR .. "/mysql/conf/client.cnf -h127.0.0.1 -P3307 -N -B " .. DB'
+expect lua-format '#!/usr/bin/env luajit' \
+    "local q = string.format(\"'%s/bin/mysql' --no-defaults --socket='%s/s.sock' -uritz -pmenardi -N\", DIR, DIR)" \
+    "local q = string.format(\"'%s/bin/mysql' --defaults-file=\" .. DIR .. \"/mysql/conf/client.cnf --socket='%s/s.sock' -N\", DIR, DIR)"
+expect python-list '#!/usr/bin/env python3' \
+    'MYSQL = [DIR + "/mysql/installed-files/bin/mysql", "-h127.0.0.1", "-uritz", "-pmenardi", "-N"]' \
+    'MYSQL = [DIR + "/mysql/installed-files/bin/mysql", "--defaults-file=" + DIR + "/mysql/conf/client.cnf", "-h127.0.0.1", "-N"]'
+
+CHECKS=$((CHECKS + 1))
+if "${TOOL}" --dir "${DIR}" check > "${SCRATCH}/check.out" 2>&1; then
+    echo "ok   no script passes the password on a command line"
+else
+    echo "FAIL some scripts pass the MySQL password on a command line:"
+    sed 's/^/    /' "${SCRATCH}/check.out"
+    FAILED=$((FAILED + 1))
+fi
+
+echo "${CHECKS} checks, ${FAILED} failed"
+[[ "${FAILED}" -eq 0 ]] && exit 0
+exit 1

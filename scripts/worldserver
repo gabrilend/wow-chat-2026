@@ -11,6 +11,7 @@ fi
 DEFAULT_PROFILE="${PROFILE}"
 
 DEBUG_MODE=0
+AFTER_COMPILE=0
 
 
 parse_args() {
@@ -35,6 +36,10 @@ parse_args() {
                 ;;
             --debug)
                 DEBUG_MODE=1
+                shift
+                ;;
+            --after-compile)
+                AFTER_COMPILE=1
                 shift
                 ;;
             --help|-h)
@@ -68,16 +73,24 @@ show_help() {
 
 
 get_profile_paths() {
-    case "${PROFILE}" in
+    SERVER_PROFILE="${PROFILE}"; BRANCH_REALM=""
+    local line
+    for _ in 1 2 3 4 5 6 7 8; do
+        line="$(grep "^${SERVER_PROFILE} " "${DIR}/config/branches" 2>/dev/null)"
+        [[ -n "${line}" ]] || break
+        [[ -n "${BRANCH_REALM}" ]] || BRANCH_REALM="$(echo "${line}" | awk '{print $3}')"
+        SERVER_PROFILE="$(echo "${line}" | awk '{print $2}')"
+    done
+    case "${SERVER_PROFILE}" in
         release) AC_CODE_DIR="${DIR}/source-beta"  ;;
         beta)    AC_CODE_DIR="${DIR}/source-beta"  ;;
         vanilla) AC_CODE_DIR="${DIR}/source-beta"  ;;
         basic)   AC_CODE_DIR="${DIR}/source-beta"  ;;
         cc-test) AC_CODE_DIR="${DIR}/source-beta"  ;;
         alpha)   AC_CODE_DIR="${DIR}/source-alpha" ;;
-        *)       echo "ERROR: Unknown profile '${PROFILE}'"; exit 1 ;;
+        *)       echo "ERROR: Unknown profile '${PROFILE}' (not a profile, and not a branch in config/branches)"; exit 1 ;;
     esac
-    INSTALL_DIR="${DIR}/installed-files-${PROFILE}"
+    INSTALL_DIR="${DIR}/installed-files-${SERVER_PROFILE}"
     MYSQL_DIR="${DIR}/mysql/installed-files"
 }
 
@@ -103,6 +116,28 @@ check_mysql() {
 
 
 parse_args "$@"
+
+quiet_until_ready() {
+    local line last=()
+    while IFS= read -r line; do
+        last+=("${line}")
+        (( ${#last[@]} > 25 )) && last=("${last[@]:1}")
+        if [[ "${line}" == *"ready..."* ]]; then
+            echo "Compilation and promotion successful, server is now online."
+            exec cat
+        fi
+    done
+    echo "ERROR: the new server stopped before it was ready; its last lines (all of them: logs-${PROFILE}/Server.log):"
+    printf '  %s\n' "${last[@]}"
+    return 1
+}
+
+if [[ "${AFTER_COMPILE}" -eq 1 ]]; then
+    echo "Starting the new server (its start-up lines: logs-${PROFILE}/Server.log)..."
+    script -qfec "$(printf '%q ' "${DIR}/scripts/worldserver" --profile "${PROFILE}")" /dev/null | quiet_until_ready
+    exit "${PIPESTATUS[0]}"
+fi
+
 get_profile_paths
 setup_log_symlinks
 check_mysql
@@ -142,8 +177,25 @@ if [[ -f "${INSTALL_DIR}/bin/.build-type" ]] && [[ "$(cat "${INSTALL_DIR}/bin/.b
     DEBUG_MODE=1
 fi
 
-echo "Starting worldserver (profile: ${PROFILE})"
+echo "Starting worldserver (profile: ${PROFILE}$([[ -n "${BRANCH_REALM}" ]] && echo ", a branch of ${SERVER_PROFILE}"))"
 export LD_LIBRARY_PATH="${MYSQL_DIR}/lib:${LD_LIBRARY_PATH}"
+
+if [[ -n "${BRANCH_REALM}" ]]; then
+    B_SUFFIX="${PROFILE//-/_}"
+    B_CONF="${INSTALL_DIR}/etc"
+    b_info() { grep -m1 "^$1" "$2" | sed 's/^[^"]*"\(.*\)"$/\1/' | sed "s/;[^;]*\$/;$3/"; }
+    export AC_WORLD_DATABASE_INFO="$(b_info WorldDatabaseInfo "${B_CONF}/worldserver.conf" "acore_world_${B_SUFFIX}")"
+    export AC_CHARACTER_DATABASE_INFO="$(b_info CharacterDatabaseInfo "${B_CONF}/worldserver.conf" "acore_characters_${B_SUFFIX}")"
+    export AC_PLAYERBOTS_DATABASE_INFO="$(b_info PlayerbotsDatabaseInfo "${B_CONF}/modules/playerbots.conf" "acore_playerbots_${B_SUFFIX}")"
+    export AC_REALM_ID="${BRANCH_REALM}"
+    export AC_LOGS_DIR="${DIR}/logs-${PROFILE}"
+    mkdir -p "${AC_LOGS_DIR}"                       # the server writes there, but doesn't make it
+    export AC_BUDDIES_TEST_REALM=1
+    for v in AC_WORLD_DATABASE_INFO AC_CHARACTER_DATABASE_INFO AC_PLAYERBOTS_DATABASE_INFO; do
+        [[ "${!v}" == *";acore_"* ]] || { echo "ERROR: branch ${PROFILE}: could not form ${v} from ${SERVER_PROFILE}'s settings"; exit 1; }
+    done
+    echo "  branch ${PROFILE}: realm ${BRANCH_REALM}, databases acore_*_${B_SUFFIX}, logs logs-${PROFILE}"
+fi
 cd "${INSTALL_DIR}/bin"
 
 if [[ "${DEBUG_MODE}" -eq 1 ]]; then

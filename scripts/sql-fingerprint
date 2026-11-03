@@ -1,0 +1,42 @@
+#!/bin/bash
+
+DIR="/mnt/kaun/wow-chat-2026"
+PROFILE=""
+LIST=0
+for a in "$@"; do
+    case "${a}" in
+        --help|-h) sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --list)    LIST=1 ;;
+        --*)       echo "sql-fingerprint: unknown option ${a} (see --help)" >&2; exit 2 ;;
+        *)         if [[ "${a}" == /* ]]; then DIR="${a}"; else PROFILE="${a}"; fi ;;
+    esac
+done
+[[ -n "${PROFILE}" ]] || PROFILE="$(cat "${DIR}/.profile")"
+SRC="${DIR}/source-beta"
+[[ -d "${SRC}/.git" ]] || { echo "sql-fingerprint: no source tree at ${SRC} (the core's commit is part of the fingerprint)" >&2; exit 1; }
+
+inputs() {
+    echo "core $(git -C "${SRC}" rev-parse HEAD)"
+    local m
+    for m in "${SRC}"/modules/*/; do
+        [[ -d "${m}.git" || -f "${m}.git" ]] && echo "module $(basename "${m}") $(git -C "${m}" rev-parse HEAD)"
+    done
+    local steps
+    steps="$("${DIR}/scripts/plan-patches" "${PROFILE}" --stage sql 2>&1)"
+    echo "sql steps: $(echo "${steps}" | tr '\n' ' ')"
+    echo "${steps}" | awk '{ print $NF }' | grep '\.sh$' | while read -r f; do
+        [[ -f "${DIR}/${f}" ]] && echo "${f} $(sha1sum < "${DIR}/${f}" | cut -c1-40)"
+    done
+    {
+        find "${DIR}/patches" -type f -name '*.sql'
+        find "${DIR}/sql/${PROFILE}" -path '*.src/*' -type f -name '*.sql' 2>/dev/null
+    } | sort | while read -r f; do
+        echo "${f#${DIR}/} $(sha1sum < "${f}" | cut -c1-40)"
+    done
+}
+
+if [[ ${LIST} -eq 1 ]]; then
+    inputs
+else
+    inputs | sha1sum | cut -c1-40
+fi

@@ -1,6 +1,7 @@
 
 #include "buddies.h"
 #include "buddies_crossing.h"
+#include "buddies_navmesh.h"
 #include "buddies_recorder.h"
 #include "buddies_town.h"
 #include "DBCStores.h"
@@ -694,6 +695,46 @@ static bool StepTransport(Player* bot, Player* owner, BuddyTrip& trip, BuddyCros
     return true;
 }
 
+static bool StopByLand(Player* bot, uint32 entry, uint8 ownerStop, uint8& outStop, Spot& outPier)
+{
+    TransportRoute const* route = RouteOf(entry);
+    if (!route || ownerStop >= route->stops.size())
+        return false;
+    std::vector<BuddyRoam::Point> pts;
+    Spot pier;
+    if (PierOf(route->stops[ownerStop], pier)
+        && BuddyMeshRoute(bot, { pier.x, pier.y, pier.z }, pts) == BuddyRouteKind::Complete)
+        return false;
+    float best = 0.0f;
+    bool  found = false;
+    for (uint8 k = 0; k < route->stops.size(); ++k)
+    {
+        if (k == ownerStop || route->stops[k].mapId != bot->GetMapId() || !PierOf(route->stops[k], pier))
+            continue;
+        if (BuddyMeshRoute(bot, { pier.x, pier.y, pier.z }, pts) != BuddyRouteKind::Complete)
+            continue;
+        float len = 0.0f;
+        for (size_t i = 1; i < pts.size(); ++i)
+            len += std::hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+        if (!found || len < best)
+        {
+            found   = true;
+            best    = len;
+            outStop = k;
+            outPier = pier;
+        }
+    }
+    if (found)
+        LOG_INFO("module", "mod-buddies: buddy {} has no walk to its owner's dock (transport {}, stop {}); it walks {:.0f} yards "
+            "to stop {} of that ship and sails", bot->GetName(), entry, ownerStop, best, outStop);
+    else
+        LOG_ERROR("module", "mod-buddies: buddy {} on map {} at ({:.0f}, {:.0f}) has no walk to its owner's dock (transport {}, "
+            "stop {}) nor to any other stop of that ship on its map; it walks toward the dock. To debug: is the walking mesh "
+            "built here? does the bot module's travel graph have a pier node near each stop?", bot->GetName(), bot->GetMapId(),
+            bot->GetPositionX(), bot->GetPositionY(), entry, ownerStop);
+    return found;
+}
+
 static bool StepSameShip(Player* bot, Player* owner, BuddyTrip& trip, BuddyCrossingMove& move)
 {
     auto w = sWaiting.find(owner->GetGUID().GetCounter());
@@ -736,16 +777,29 @@ static bool StepSameShip(Player* bot, Player* owner, BuddyTrip& trip, BuddyCross
                 trip.dockEntry = 0;
 
             uint8 myStop = 0;
-            if (trip.dockEntry
+            bool  atStop = trip.dockEntry
                 && BuddyTransportStop(trip.dockEntry, bot->GetMapId(), bot->GetPositionX(), bot->GetPositionY(),
-                                      DOCK_NEAR_YARDS, myStop)
-                && myStop != trip.dockStop)
+                                      DOCK_NEAR_YARDS, myStop);
+            bool viaLand = false;
+            Spot landPier;
+            if (trip.dockEntry && !atStop)
+            {
+                uint8 byLand = 0;
+                if (StopByLand(bot, trip.dockEntry, trip.dockStop, byLand, landPier))
+                {
+                    atStop  = true;
+                    myStop  = byLand;
+                    viaLand = true;
+                }
+            }
+            if (atStop && myStop != trip.dockStop)
             {
                 BuddyTrip plan;
                 plan.way       = Way::Transport;
                 plan.toMap     = owner->GetMapId();
                 plan.entry     = trip.dockEntry;
-                plan.departure = { bot->GetMapId(), bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ() };
+                plan.departure = viaLand ? landPier
+                                         : Spot{ bot->GetMapId(), bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ() };
                 auto seen = sDeckSeen.find(trip.dockEntry);
                 if (seen != sDeckSeen.end())
                     plan.deck = seen->second;

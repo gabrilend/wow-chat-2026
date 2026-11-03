@@ -1,0 +1,246 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+local LIBS = "/home/ritz/programming/ai-stuff/libs/lua"
+
+local jobs, limit, only, list, model = 1, nil, nil, false, "claude-sonnet-5-5"
+do
+    local i = 1
+    while i <= #arg do
+        local a = arg[i]
+        if a == "--help" or a == "-h" then
+            for line in io.lines(arg[0]) do
+                if not line:match("^%-%-") and not line:match("^#!") then break end
+                print((line:gsub("^%-%- ?", "")))
+            end
+            os.exit(0)
+        elseif a == "--jobs"  then jobs = tonumber(arg[i + 1]) or error("--jobs takes a number"); i = i + 1
+        elseif a == "--limit" then limit = tonumber(arg[i + 1]) or error("--limit takes a number"); i = i + 1
+        elseif a == "--group" then only = arg[i + 1]; i = i + 1
+        elseif a == "--model" then model = arg[i + 1]; i = i + 1
+        elseif a == "--list"  then list = true
+        elseif a:sub(1, 2) ~= "--" then DIR = a
+        else error("unknown option " .. a .. " (see --help)") end
+        i = i + 1
+    end
+end
+
+package.path = LIBS .. "/?.lua;" .. package.path
+local json = require("dkjson")
+local QUESTIONS = DIR .. "/tmp/shared-memory/all-questions.json"
+local CONTEXTS  = DIR .. "/docs/answer-pages/contexts"
+local LOG       = DIR .. "/tmp/shared-memory/question-contexts.log"
+local GROUP_MAX = 5
+
+local function log(text)
+    local line = os.date("%Y-%m-%d %H:%M:%S ") .. text
+    print(line)
+    local f = io.open(LOG, "a")
+    if f then f:write(line, "\n"); f:close() end
+end
+
+local function slurp(path)
+    local f = io.open(path, "r")
+    if not f then return nil end
+    local t = f:read("*a")
+    f:close()
+    return t
+end
+
+local function fingerprint(text)
+    local h = 2166136261
+    for i = 1, #text do
+        h = bit.bxor(h, text:byte(i))
+        h = (h * 16777619) % 4294967296
+    end
+    return string.format("%08x", h)
+end
+
+local function groups_of(data)
+    local groups, cur = {}, nil
+    for _, it in ipairs(data.issues) do
+        for _, q in ipairs(it.questions) do
+            if not cur or cur.family ~= it.family or #cur.questions >= GROUP_MAX then
+                cur = { id = it.id .. "-q" .. q.n, family = it.family, ring = it.ring, questions = {} }
+                groups[#groups + 1] = cur
+            end
+            cur.questions[#cur.questions + 1] = { key = it.id .. "#" .. q.n, issue = it.id, title = it.title,
+                file = "issues/" .. it.file, text = q.text, answered = q.answered }
+        end
+    end
+    for _, g in ipairs(groups) do
+        local parts = {}
+        for _, q in ipairs(g.questions) do parts[#parts + 1] = q.key .. "\n" .. q.text end
+        g.fingerprint = fingerprint("writer 2\n" .. table.concat(parts, "\n\n"))
+    end
+    return groups
+end
+
+local function needs_writing(g)
+    local old = slurp(CONTEXTS .. "/" .. g.id .. ".json")
+    if not old then return true end
+    local t = json.decode(old)
+    return not t or t.fingerprint ~= g.fingerprint
+end
+
+local SCHEMA = json.encode({
+    type = "object",
+    properties = {
+        context = { type = "string" },
+        components = { type = "array", items = { type = "object",
+            properties = { question = { type = "string" }, component = { type = "string" }, explained_by = { type = "string" } },
+            required = { "question", "component", "explained_by" } } },
+        terms = { type = "array", items = { type = "object",
+            properties = { term = { type = "string" },
+                           kind = { type = "string", enum = { "mechanism", "number", "choice", "place", "decision" } } },
+            required = { "term", "kind" } } },
+    },
+    required = { "context", "components", "terms" },
+})
+
+local function prompt_for(g, missing, before)
+    local lines = {
+        "You are writing one entry of a walkthrough of a software project: Everland Ghostsong, a World of Warcraft 3.3.5a private server (AzerothCore) with roguelike survival changes: an empty world where monsters spawn around players, treasure, wandering travellers, and \"buddies\", AI companion characters (built on the playerbots module) that follow and fight beside each player.",
+        "",
+        "The walkthrough lists every question the project's issue files ask, in groups of a few, each group under a short context. A reader who knows World of Warcraft and the project broadly, but not this corner of it, reads the context and can then answer the group's questions.",
+        "",
+        "Here is one group. Read the issue files named (they are in the project folder you are in) for what each question rests on; read docs/concept-catalog.md or docs/capability-architecture.md only if you need the wider picture.",
+        "",
+    }
+    for i, q in ipairs(g.questions) do
+        lines[#lines + 1] = string.format("Question %s (from %s, \"%s\"; %s):", q.key, q.file, q.title, q.answered and "already answered there" or "still open")
+        lines[#lines + 1] = q.text
+        lines[#lines + 1] = ""
+    end
+    lines[#lines + 1] = "First, for each question, list its components: every term, mechanism, number, earlier decision or choice a reader must understand to answer it."
+    lines[#lines + 1] = "Then write the context: two to four short paragraphs of plain English that explain every component of every question. Rules: no issue numbers, no code names (functions, files, variables, settings by their code names); say what things do, by mechanism or analogy; name numbers with their units; for a choice, say what each option would bring. Do not answer the questions, and do not repeat them."
+    lines[#lines + 1] = "Then, for each component, quote exactly the sentence of your context that explains it (\"explained_by\": copied character for character from the context)."
+    lines[#lines + 1] = "Finally, list the key terms: the words and short phrases of the questions that matter most for answering them, each copied exactly as it appears in your context (so it can be highlighted there), each with a kind: mechanism (how something works), number (a quantity or setting), choice (an option the question offers), place (a place, creature or thing in the game), decision (something already decided)."
+    if before and #before > 0 then
+        lines[#lines + 1] = ""
+        lines[#lines + 1] = "This context follows others in the walkthrough. These were already explained earlier; don't explain them again (name them briefly if you need them, and explain only what is new): " .. table.concat(before, "; ")
+    end
+    if missing then
+        lines[#lines + 1] = ""
+        lines[#lines + 1] = "A first attempt left these components unexplained, or quoted a sentence that is not in the context; make sure the new context explains each, and quote exactly: " .. missing
+    end
+    return table.concat(lines, "\n")
+end
+
+local function ask(prompt)
+    local promptFile = os.tmpname()
+    local f = io.open(promptFile, "w")
+    f:write(prompt)
+    f:close()
+    local cmd = string.format("cd '%s' && claude -p --output-format json --model '%s' --allowedTools Read Grep Glob --json-schema '%s' < '%s'",
+        DIR, model, SCHEMA:gsub("'", "'\\''"), promptFile)
+    local p = io.popen(cmd)
+    local out = p:read("*a")
+    p:close()
+    os.remove(promptFile)
+    local wrapper = json.decode(out)
+    if type(wrapper) ~= "table" then return nil, "the writer gave no JSON: " .. out:sub(1, 300) end
+    local result = wrapper.structured_output or wrapper.result
+    if type(result) == "string" then result = json.decode(result) end
+    if type(result) ~= "table" or type(result.context) ~= "string" then
+        return nil, "the writer's answer has no context: " .. out:sub(1, 300)
+    end
+    return result
+end
+
+local function unexplained(g, result)
+    local missing, seen = {}, {}
+    for _, c in ipairs(result.components or {}) do
+        seen[c.question] = true
+        local quote = (c.explained_by or ""):gsub("^%s+", ""):gsub("%s+$", "")
+        if quote == "" or not result.context:find(quote, 1, true) then missing[#missing + 1] = c.component end
+    end
+    for _, q in ipairs(g.questions) do
+        if not seen[q.key] then missing[#missing + 1] = "every component of question " .. q.key end
+    end
+    return missing
+end
+
+local function explained_before(groups, g)
+    local seen, names = {}, {}
+    for _, h in ipairs(groups) do
+        if h.id == g.id then break end
+        local t = slurp(CONTEXTS .. "/" .. h.id .. ".json")
+        local c = t and json.decode(t)
+        for _, comp in ipairs(c and c.components or {}) do
+            local name = comp.component
+            if name and not seen[name:lower()] then seen[name:lower()] = true; names[#names + 1] = name end
+        end
+    end
+    while #names > 300 do table.remove(names, 1) end
+    return names
+end
+
+local function write_group(g, before)
+    local result, err = ask(prompt_for(g, nil, before))
+    if not result then return false, err end
+    local missing = unexplained(g, result)
+    local tries = 1
+    if #missing > 0 then
+        log(g.id .. ": " .. #missing .. " components unexplained on the first try; asked again")
+        local again, err2 = ask(prompt_for(g, table.concat(missing, "; "), before))
+        tries = 2
+        if again then result, missing = again, unexplained(g, again) else return false, err2 end
+    end
+    local keys = {}
+    for _, q in ipairs(g.questions) do keys[#keys + 1] = q.key end
+    local f = io.open(CONTEXTS .. "/" .. g.id .. ".json", "w") or error("cannot write " .. CONTEXTS .. "/" .. g.id .. ".json")
+    f:write(json.encode({
+        written_by = "scripts/write-question-contexts (issue 1102a): a context for these questions, for the open-questions walkthrough",
+        group = g.id, fingerprint = g.fingerprint, questions = keys, written = os.date("%Y-%m-%d %H:%M"),
+        model = model, tries = tries, context = result.context, components = result.components, unexplained = missing,
+        terms = (function()
+            local kept = {}
+            for _, t in ipairs(result.terms or {}) do
+                if type(t.term) == "string" and t.term ~= "" and result.context:find(t.term, 1, true) then kept[#kept + 1] = t end
+            end
+            return kept
+        end)(),
+    }, { indent = true }))
+    f:close()
+    return true, #missing == 0 and "every component explained" or (#missing .. " components still unexplained (kept, marked)")
+end
+
+local text = slurp(QUESTIONS)
+if not only then
+    os.execute("'" .. DIR .. "/scripts/generate-answer-pages' '" .. DIR .. "' --questions '" .. QUESTIONS .. "' > /dev/null")
+    text = slurp(QUESTIONS)
+end
+if not text then error("no questions at " .. QUESTIONS .. " (scripts/generate-answer-pages --questions makes them)") end
+local groups = groups_of(json.decode(text))
+os.execute("mkdir -p '" .. CONTEXTS .. "'")
+
+if only then
+    for _, g in ipairs(groups) do
+        if g.id == only then
+            local ok, said = write_group(g, explained_before(groups, g))
+            log(g.id .. ": " .. (ok and "" or "FAILED: ") .. said)
+            os.exit(ok and 0 or 1)
+        end
+    end
+    error("no group " .. only .. " (see --list)")
+end
+
+local todo = {}
+for _, g in ipairs(groups) do if needs_writing(g) then todo[#todo + 1] = g end end
+if list then
+    for _, g in ipairs(groups) do print(string.format("%-16s %d questions %s", g.id, #g.questions, needs_writing(g) and "to write" or "written")) end
+    print(string.format("%d groups, %d to write", #groups, #todo))
+    os.exit(0)
+end
+if limit then while #todo > limit do table.remove(todo) end end
+log(string.format("%d groups in all; writing %d, %d at a time", #groups, #todo, jobs))
+local cmdFile = DIR .. "/tmp/shared-memory/question-context-commands"
+local f = io.open(cmdFile, "w") or error("cannot write " .. cmdFile)
+for _, g in ipairs(todo) do f:write(string.format("luajit '%s' '%s' --model '%s' --group '%s'\n", arg[0], DIR, model, g.id)) end
+f:close()
+os.execute("xargs -P " .. jobs .. " -I{} sh -c '{}' < '" .. cmdFile .. "'")
+local written = 0
+for _, g in ipairs(todo) do if not needs_writing(g) then written = written + 1 end end
+log(string.format("done: %d of %d written this run", written, #todo))
+os.exit(written == #todo and 0 or 1)

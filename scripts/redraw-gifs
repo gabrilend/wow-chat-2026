@@ -1,0 +1,77 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+local LIBS = "/home/ritz/programming/ai-stuff/libs/lua"
+
+local set, out
+do
+    local i = 1
+    while i <= #arg do
+        local a = arg[i]
+        if a == "--help" or a == "-h" then
+            for line in io.lines(arg[0]) do
+                if not line:match("^%-%-") and not line:match("^#!") then break end
+                print((line:gsub("^%-%- ?", "")))
+            end
+            os.exit(0)
+        elseif a == "--out" then out = arg[i + 1]; i = i + 1
+        elseif a:sub(1, 2) == "--" then error("unknown option " .. a .. " (see --help)")
+        elseif not set and (a:find("recipe", 1, true) or io.open((a:sub(1, 1) == "/" and a or DIR .. "/" .. a) .. "/recipe.json")) then set = a
+        elseif a:sub(1, 1) == "/" and not set and not io.open(a .. "/recipe.json") then DIR = a
+        else set = a end
+        i = i + 1
+    end
+end
+if not set then error("which set? (a folder with recipe.json and scores/; see --help)") end
+if set:sub(1, 1) ~= "/" then set = DIR .. "/" .. set end
+set = set:gsub("/$", "")
+out = out or (DIR .. "/tmp/shared-memory/gifs/redrawn/" .. set:match("([^/]+/[^/]+)$"))
+
+package.path = LIBS .. "/?.lua;" .. package.path
+local json = require("dkjson")
+
+local function sh(cmd)
+    local p = io.popen(cmd)
+    local o = p:read("*a")
+    local ok = p:close()
+    return (o:gsub("%s+$", "")), ok
+end
+
+local function sha256(path) return (sh("sha256sum '" .. path .. "'"):match("^(%x+)")) end
+
+local f = io.open(set .. "/recipe.json") or error("no recipe.json in " .. set)
+local recipe = json.decode(f:read("*a"))
+f:close()
+local gen = recipe.generator
+local bad = {}
+for _, g in ipairs(recipe.gifs) do
+    local have = sha256(set .. "/scores/" .. g.id .. ".lua")
+    if have ~= g.score_sha256 then bad[#bad + 1] = g.id .. " (its score " .. (have and "changed" or "is missing") .. ")" end
+end
+if #bad > 0 then error("these scores are not what the recipe drew: " .. table.concat(bad, ", ")) end
+
+local copy = DIR .. "/tmp/shared-memory/gif-generator-" .. gen.commit:sub(1, 12)
+if not io.open(copy .. "/" .. gen.folder .. "/src/026-render-main.lua") then
+    os.execute("mkdir -p '" .. copy .. "'")
+    local _, ok = sh(string.format("git -C '%s' archive '%s' '%s/src' | tar -x -C '%s'", gen.repository, gen.commit, gen.folder, copy))
+    if not io.open(copy .. "/" .. gen.folder .. "/src/026-render-main.lua") then
+        error("could not take the generator's code at " .. gen.commit .. " out of " .. gen.repository)
+    end
+end
+print("the generator at " .. gen.commit:sub(1, 9) .. ", taken out into " .. copy)
+
+os.execute("mkdir -p '" .. out .. "/scores'")
+os.execute("cp '" .. set .. "/scores/'*.lua '" .. out .. "/scores/'")
+local drawn = os.execute(string.format("'%s/scripts/render-gif-scores' '%s' --scores '%s/scores' --gen '%s/%s' --no-recipe > '%s/render.log' 2>&1",
+    DIR, DIR, out, copy, gen.folder, out))
+local same, differ, missing = 0, {}, {}
+for _, g in ipairs(recipe.gifs) do
+    local have = sha256(out .. "/" .. g.id .. ".gif")
+    if not have then missing[#missing + 1] = g.id
+    elseif have ~= g.gif_sha256 then differ[#differ + 1] = g.id
+    else same = same + 1 end
+end
+print(string.format("%d of %d gifs redrawn byte for byte into %s", same, #recipe.gifs, out))
+if #differ > 0 then print("DIFFERENT from the recipe: " .. table.concat(differ, ", ")) end
+if #missing > 0 then print("NOT DRAWN (see " .. out .. "/render.log): " .. table.concat(missing, ", ")) end
+os.exit((#differ == 0 and #missing == 0) and 0 or 1)

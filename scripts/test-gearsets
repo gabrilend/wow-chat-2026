@@ -219,7 +219,7 @@ do
     setfenv(chunk, env)()
     check(type(handler_fn) == "function", "the script registers a command handler")
     local console = { SendSysMessage = function(_, text) said[#said + 1] = text end }
-    local handled = handler_fn(42, nil, "elite growth", console)
+    local handled = handler_fn(42, nil, "gearset elite buddies growth", console)
     check(handled == false, "the console command is reported handled")
     local want = profile.records[108][6].items
     local all = true

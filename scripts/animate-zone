@@ -1,0 +1,49 @@
+#!/bin/bash
+
+set -uo pipefail
+
+DIR="/mnt/kaun/wow-chat-2026"
+ZONE=""; RECORD=""; FROM=""; TO=""; EVERY=5; SIZE="960x540"; TAIL=60; OUT=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --zone)   ZONE="$2"; shift 2 ;;
+        --record) RECORD="$2"; shift 2 ;;
+        --from)   FROM="$2"; shift 2 ;;
+        --to)     TO="$2"; shift 2 ;;
+        --every)  EVERY="$2"; shift 2 ;;
+        --size)   SIZE="$2"; shift 2 ;;
+        --tail)   TAIL="$2"; shift 2 ;;
+        --out)    OUT="$2"; shift 2 ;;
+        --*)      echo "animate-zone: unknown option $1"; exit 1 ;;
+        *)        DIR="$1"; shift ;;
+    esac
+done
+[[ -n "${ZONE}" ]] || { echo "animate-zone: --zone MAP-ZONE is needed (a file of assets/zone-maps/, e.g. 1-17)"; exit 1; }
+RECORD="${RECORD:-${DIR}/tmp/shared-memory/world-positions.tsv}"
+[[ -f "${RECORD}" ]] || { echo "animate-zone: no record at ${RECORD}"; exit 1; }
+MAP="${ZONE%%-*}"; ZID="${ZONE##*-}"
+
+TIMES="$(awk -F'\t' -v m="${MAP}" -v z="${ZID}" '
+    NF == 13 && ($4 == "player" || $4 == "buddy" || $4 == "bot") && $5 == m && $6 == z { print $1 }
+    NF == 13 && ($5 == "owner"  || $5 == "buddy")                && $6 == m && $7 == z { print $1 }' "${RECORD}" | sort -n -u)"
+[[ -n "${TIMES}" ]] || { echo "animate-zone: nobody in zone ${ZONE} in ${RECORD}"; exit 1; }
+FROM="${FROM:-$(head -1 <<< "${TIMES}")}"
+TO="${TO:-$(tail -1 <<< "${TIMES}")}"
+FRAMES_DIR="${DIR}/tmp/shared-memory/zone-frames/${ZONE}-${FROM}-${TO}"
+OUT="${OUT:-${DIR}/tmp/shared-memory/zone-frames/${ZONE}-${FROM}-${TO}.gif}"
+mkdir -p "${FRAMES_DIR}"
+
+seq "${FROM}" "${EVERY}" "${TO}" | xargs -P "$(nproc)" -I{} \
+    "${DIR}/scripts/render-zone" "${DIR}" --zone "${ZONE}" --record "${RECORD}" --at {} --tail "${TAIL}" \
+        --size "${SIZE}" --out "${FRAMES_DIR}/frame-{}.png" > "${FRAMES_DIR}/render.log" 2>&1
+COUNT="$(ls "${FRAMES_DIR}"/frame-*.png 2>/dev/null | wc -l)"
+WANTED="$(seq "${FROM}" "${EVERY}" "${TO}" | wc -l)"
+if [[ "${COUNT}" -ne "${WANTED}" ]]; then
+    echo "animate-zone: ${COUNT} of ${WANTED} frames drawn; the renderer said:"
+    grep -v "^render-zone: .* drawn" "${FRAMES_DIR}/render.log" | head -5
+    exit 1
+fi
+
+ls "${FRAMES_DIR}"/frame-*.png | sort -t- -k2 -n > "${FRAMES_DIR}/order"
+magick -delay 10 -loop 0 @"${FRAMES_DIR}/order" "${OUT}" || { echo "animate-zone: ImageMagick could not join the frames"; exit 1; }
+echo "animate-zone: ${ZONE}, ${COUNT} frames ($(( (TO - FROM) / 60 )) record minutes, every ${EVERY} s), ${SIZE} -> ${OUT} ($(du -h "${OUT}" | cut -f1))"

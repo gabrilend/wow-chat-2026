@@ -42,6 +42,12 @@ bool BuddyMeshSnap(Map const* map, BuddyRoam::Point const& at, float reach, floa
     return q && BuddyMeshCore::Snap(q, Filter(), at, reach, rise, out);
 }
 
+bool BuddyMeshWallDistance(Map const* map, BuddyRoam::Point const& at, float maxRadius, float& dist)
+{
+    dtNavMeshQuery const* q = Query(map);
+    return q && BuddyMeshCore::WallDistance(q, Filter(), at, BuddyMeshCore::LINE_ON_MESH, BuddyMeshCore::LINE_RISE, maxRadius, dist);
+}
+
 bool BuddyMeshLineClear(Map const* map, BuddyRoam::Point const& from, BuddyRoam::Point const& to)
 {
     dtNavMeshQuery const* q = Query(map);

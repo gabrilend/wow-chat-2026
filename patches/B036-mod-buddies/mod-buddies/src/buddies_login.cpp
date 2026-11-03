@@ -1,5 +1,6 @@
 
 #include "buddies.h"
+#include "buddies_sargobras.h"
 #include "buddies_steer.h"
 #include "Creature.h"
 #include "DatabaseEnv.h"
@@ -81,7 +82,7 @@ static void KeepBuddies(uint64 now)
             continue;
         }
         uint32 missing = 0;
-        QueryResult buddies = CharacterDatabase.Query("SELECT buddy FROM buddy_roster WHERE owner = {} AND buddy <> 0 AND stage IN (0, 3)", it->first);
+        QueryResult buddies = CharacterDatabase.Query("SELECT buddy FROM buddy_roster WHERE owner = {} AND buddy <> 0 AND stage IN (0, 3, 6, 7)", it->first);
         if (buddies)
             do
             {
@@ -306,6 +307,8 @@ public:
             return;
         uint64 now = uint64(GameTime::GetGameTimeMS().count());
         if (BuddyIsStandInAccount(player->GetSession()->GetAccountId()))
+            return;
+        if (BuddyIsSargobrasAccount(player->GetSession()->GetAccountId()))
             return;
         if (BuddyIsCompanionAccount(player->GetSession()->GetAccountId()))
             sBuddiesDue[player->GetGUID().GetCounter()] = { now + BUDDY_SETTLE_MS, 0 };

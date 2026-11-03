@@ -35,13 +35,13 @@ local function nearest_graveyard(partner)
     return q:GetFloat(0), q:GetFloat(1), q:GetFloat(2)
 end
 
-local function place(roster, buddies, map, map_id, ax, ay, az, ao, shape, revive)
+local function place(roster, buddies, map, map_id, ax, ay, az, ao, shape, revive, kept_out)
     local spots = Arc.places(ax, ay, ao, #roster, shape)
     local moved, notes = 0, {}
     for i, guid in ipairs(roster) do
         local b = buddies[guid]
         if not b then
-            notes[#notes + 1] = string.format("character %d: not in the world", guid)
+            if not kept_out[guid] then notes[#notes + 1] = string.format("character %d: not in the world", guid) end
         elseif revive and not b:IsDead() then
         elseif not revive and b:IsDead() then
             notes[#notes + 1] = b:GetName() .. ": dead, left where it lies (use .buddies revive)"
@@ -60,14 +60,16 @@ end
 local function run(gm, words, say)
     local verb, rest = words:match("^(%a+)%s*(.*)$")
     local dest, name, shape
-    if verb == "to" then
+    if verb == "summon" then
+        dest = "partner"
+    elseif verb == "to" then
         dest, rest = rest:match("^(%a+)%s*(.*)$")
     elseif verb == "revive" then
         local before, at = rest:match("^(.-)%s*at%s+(%a+).*$")
         if not at then return say(TAG .. "revive needs where: .buddies revive [name] at me|partner|graveyard [ring|centre]") end
         dest, rest = at, before .. " " .. (rest:match("at%s+%a+%s*(.*)$") or "")
     else
-        return say(TAG .. "commands: .buddies to partner [name] | .buddies to me [name] | .buddies revive [name] at me|partner|graveyard; each may end in ring or centre")
+        return say(TAG .. "commands: .buddies summon [name] | .buddies to partner [name] | .buddies to me [name] | .buddies revive [name] at me|partner|graveyard; each may end in ring or centre")
     end
     for word in (rest or ""):gmatch("%a+") do
         if word == "ring" or word == "centre" or word == "center" then shape = (word == "ring") and "ring" or "centre"
@@ -112,8 +114,18 @@ local function run(gm, words, say)
         map, map_id = anchor:GetMap(), anchor:GetMapId()
         ax, ay, az, ao = anchor:GetLocation()
     end
+    local kept_out = {}
+    if map:IsDungeon() or map:IsRaid() or map:IsBattleground() then
+        local group = partner:GetGroup()
+        for guid, b in pairs(buddies) do
+            if not (group and group:IsMember(b:GetGUID())) then
+                buddies[guid], kept_out[guid] = nil, true
+                say(TAG .. b:GetName() .. ": not in " .. partner:GetName() .. "'s party or raid, so not brought into the instance")
+            end
+        end
+    end
     shape = Arc.pick_shape(shape, math.random())
-    local moved, notes = place(roster, buddies, map, map_id, ax, ay, az, ao, shape, verb == "revive")
+    local moved, notes = place(roster, buddies, map, map_id, ax, ay, az, ao, shape, verb == "revive", kept_out)
     for _, line in ipairs(notes) do say(TAG .. line) end
     say(string.format("%s%d of %s's %d buddies %s %s (%s)", TAG, moved, partner:GetName(), #roster,
         verb == "revive" and "revived at" or "moved to",

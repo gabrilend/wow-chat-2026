@@ -1,0 +1,76 @@
+#!/bin/bash
+
+set -uo pipefail
+
+DIR="/mnt/kaun/wow-chat-2026"
+VARIANT=""; ASK=false; THEME="night sea"; LIST=false
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --ask)   ASK=true; shift ;;
+        --theme) THEME="$2"; shift 2 ;;
+        --list)  LIST=true; shift ;;
+        --*)     echo "judge-run: unknown option $1"; exit 1 ;;
+        *)       if [[ -d "$1" ]]; then DIR="$1"; else VARIANT="$1"; fi; shift ;;
+    esac
+done
+PAGE="${DIR}/docs/HTML/fish-sandbox.html"
+VARIANTS="${DIR}/src/lua-basic/data/judge-variants.lua"
+JUDGEMENTS="${DIR}/docs/judgements.tsv"
+PROFILE_DIR="${DIR}/tmp/tmp/judge-firefox-profile"
+
+if [[ "${LIST}" == "true" ]]; then
+    luajit -e "for _, v in ipairs(dofile('${VARIANTS}')) do print(v.name) end"
+    exit 0
+fi
+[[ -n "${VARIANT}" ]] || { echo "judge-run: name a variant (--list shows them)"; exit 1; }
+[[ -f "${PAGE}" ]] || { echo "judge-run: no page at ${PAGE} (scripts/generate-fish-sandbox-page writes it)"; exit 1; }
+
+read -r CONTINENT ZONE_Q FENCE BOTS TURN MOMENTS <<< "$(luajit -e "
+for _, v in ipairs(dofile('${VARIANTS}')) do
+  if v.name == '${VARIANT}' then
+    print(v.continent, (v.zone:gsub(' ', '%%20')), v.fence, v.bots, v.turn, table.concat(v.moments, ','))
+    os.exit(0)
+  end
+end
+os.exit(1)")" || { echo "judge-run: no variant named ${VARIANT} (--list shows them)"; exit 1; }
+FINGERPRINT="$(sha1sum "${PAGE}" | cut -c1-10)"            # the flock's code and data as it stands
+RUN="${VARIANT}@${FINGERPRINT}"
+OUT="${DIR}/tmp/shared-memory/judging/${RUN}"
+mkdir -p "${OUT}" "${PROFILE_DIR}"
+THEME_Q="${THEME// /%20}"
+
+FRAMES=()
+for m in ${MOMENTS//,/ }; do
+    frame="${OUT}/after-${m}s.png"
+    timeout 180 firefox --headless --no-remote --profile "${PROFILE_DIR}" --window-size=1600,900 --screenshot "${frame}" \
+        "file://${PAGE}#continent=${CONTINENT}&zone=${ZONE_Q}&theme=${THEME_Q}&sim=${m}&turn=${TURN}&bots=${BOTS}&fence=${FENCE}&view=fence" > /dev/null 2>&1
+    [[ -s "${frame}" ]] || { echo "judge-run: Firefox made no picture for ${m} s (${frame})"; exit 1; }
+    FRAMES+=("${frame}")
+done
+magick "${FRAMES[@]}" +append -resize 2400x "${OUT}/strip.png" || { echo "judge-run: ImageMagick could not join the frames"; exit 1; }
+echo "judge-run: ${RUN}: ${#FRAMES[@]} frames (after ${MOMENTS//,/, } s of play) -> ${OUT}/strip.png"
+
+FILE_SHOT="${DIR}/scripts/file-screenshot"
+STORY="Judging run of the fish-school sandbox's flock (issue 617e16b): variant ${VARIANT}, ${BOTS} bots, turning ${TURN}, theme ${THEME}; pictures after ${MOMENTS//,/, } s of play, for the owner to judge whether it moves like a school of fish."
+for frame in "${FRAMES[@]}" "${OUT}/strip.png"; do
+    shot="$(basename "${frame}" .png)"
+    "${FILE_SHOT}" --dir "${DIR}" --name "judging-${VARIANT}-${shot}" \
+        --made "scripts/judge-run ${VARIANT} --theme '${THEME}' (run ${RUN}): ${shot}" \
+        --source scripts/judge-run --source src/lua-basic/data/judge-variants.lua --source scripts/templates/fish-sandbox.html \
+        --story "${STORY}" "${frame}" \
+        || { echo "judge-run: the pictures are made (${OUT}), but filing ${shot} in development-history/ failed"; exit 1; }
+done
+
+if [[ "${ASK}" == "true" ]]; then
+    feh --title "${RUN}: does this move like a school of fish?" "${OUT}/strip.png" &
+    VIEWER=$!
+    echo "Does this move like a school of fish? A score from 0 (not at all) to 10 (yes):"
+    read -r SCORE
+    [[ "${SCORE}" =~ ^([0-9]|10)$ ]] || { kill "${VIEWER}" 2>/dev/null; echo "judge-run: a score is a whole number from 0 to 10; nothing kept"; exit 1; }
+    echo "A note (what is right or wrong; Enter for none):"
+    read -r NOTE
+    kill "${VIEWER}" 2>/dev/null
+    [[ -f "${JUDGEMENTS}" ]] || printf '# docs/judgements.tsv - judgements of the fish-school sandbox runs (issue 617e16b), written by\n# scripts/judge-run (the owner) and the machine judges; read by scripts/judge-compare.\n# when\trun\tjudge\tquestion\tscore (0-10)\tnote\n' > "${JUDGEMENTS}"
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(date '+%Y-%m-%d %H:%M')" "${RUN}" "owner" "school of fish" "${SCORE}" "${NOTE//$'\t'/ }" >> "${JUDGEMENTS}"
+    echo "judge-run: kept in docs/judgements.tsv"
+fi

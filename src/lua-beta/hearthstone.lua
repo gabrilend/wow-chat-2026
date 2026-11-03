@@ -16,12 +16,29 @@ local SPELL_EVENT_ON_CAST_CANCEL = 3
 local GOSSIP_EVENT_ON_SELECT     = 2
 
 local HEARTH_KIND = { question = "%s is hearthing to %s. Come along?",
-                      confirm  = "Travel with %s to %s when their hearthstone finishes?" }
+                      confirm  = "Travel with %s to %s when their hearthstone finishes?",
+                      ownCast  = true }
+
+local HEARTHSTONE       = 8690
+local OPEN_COOLDOWN_MS  = 10000
+local RIDE_RETRY_MS     = 2000
+local RIDE_TRIES        = 5
+local CURRENT_GENERIC_SPELL = 1
+local SOCIAL_FLAG_IGNORED   = 2
 
 GroupHearth = {}
 
 GroupHearth.pending = {}
 local nextHearth = 0
+GroupHearth.riding = {}
+GroupHearth.lastOpen = {}
+
+function GroupHearth.skip(member, hearther) return false end
+
+local function ignores(member, hearther)
+    return CharDBQuery(string.format("SELECT 1 FROM character_social WHERE guid = %d AND friend = %d AND (flags & %d) <> 0",
+        member:GetGUIDLow(), hearther:GetGUIDLow(), SOCIAL_FLAG_IGNORED)) ~= nil
+end
 
 function GroupHearth.circle(cx, cy, n)
     local out = {}
@@ -53,19 +70,57 @@ local function ask(member, hearth)
     member:GossipSendMenu(NPC_TEXT, member, MENU_ID)
 end
 
+local function ride(member, h)
+    local r = GroupHearth.riding[member:GetGUID()] or { hearth = h, tries = 0 }
+    r.hearth = h
+    r.tries  = r.tries + 1
+    GroupHearth.riding[member:GetGUID()] = r
+    member:ResetSpellCooldown(HEARTHSTONE, true)
+    member:CastSpell(member, HEARTHSTONE, false)
+end
+
+local function stopRide(guid)
+    if not GroupHearth.riding[guid] then return end
+    GroupHearth.riding[guid] = nil
+    local m = GetPlayerByGUID(guid)
+    if m then m:InterruptSpell(CURRENT_GENERIC_SPELL) end
+end
+
+function GroupHearth.rideTarget(guid)
+    local r = GroupHearth.riding[guid]
+    if not r or not r.hearth.home then return nil end
+    local h = r.hearth
+    for k, g in ipairs(h.members) do
+        if g == guid then
+            local spot = GroupHearth.circle(h.home.x, h.home.y, #h.members)[k]
+            return { map = h.home.mapId, x = spot.x, y = spot.y, z = h.home.z }
+        end
+    end
+    return nil
+end
+
 function GroupHearth.open(player, kind, place)
     local members = members_of(player)
     if not members or #members < 2 then return nil end
+    local now  = GetCurrTime()
+    local last = GroupHearth.lastOpen[player:GetGUID()]
+    if last and now - last < OPEN_COOLDOWN_MS then
+        player:SendBroadcastMessage("Your group was asked a moment ago; wait a few seconds before asking again.")
+        return nil
+    end
+    GroupHearth.lastOpen[player:GetGUID()] = now
     nextHearth = nextHearth + 1
     local hearth = { id = nextHearth, hearther = player:GetGUID(), name = player:GetName(), kind = kind, place = place,
-                     members = members, accepted = {}, asked = {}, done = false }
+                     members = members, accepted = {}, asked = {}, done = false,
+                     home = kind.ownCast and player:GetHomebind() or nil }
     GroupHearth.pending[hearth.hearther] = hearth
     for _, guid in ipairs(members) do
         if guid ~= hearth.hearther then
             local m = GetPlayerByGUID(guid)
-            if m and (kind.withDead or not m:IsDead()) then
+            if m and (kind.withDead or not m:IsDead()) and not GroupHearth.skip(m, player) and not ignores(m, player) then
                 if m:IsBot() then
                     hearth.accepted[guid] = true
+                    if kind.ownCast then ride(m, hearth) end
                 else
                     hearth.asked[guid] = true
                     ask(m, hearth)
@@ -87,17 +142,33 @@ end
 
 function GroupHearth.onPrepare(event, caster, spell)
     if not caster:IsPlayer() or not members_of(caster) then return end
+    if GroupHearth.riding[caster:GetGUID()] then return end
     local place = GroupHearth.homeName(caster)
     if place then GroupHearth.open(caster, HEARTH_KIND, place) end
 end
 
 function GroupHearth.onCancel(event, caster, spell, bySelf)
     if not caster:IsPlayer() then return end
-    local h = GroupHearth.pending[caster:GetGUID()]
+    local guid = caster:GetGUID()
+    local r = GroupHearth.riding[guid]
+    if r then
+        if r.tries >= RIDE_TRIES then
+            GroupHearth.riding[guid] = nil
+            caster:SendBroadcastMessage("Your hearthstone was interrupted too often; you stay where you are.")
+            return
+        end
+        caster:RegisterEvent(function(_, _, _, p)
+            local again = GroupHearth.riding[p:GetGUID()]
+            if again and again == r then ride(p, r.hearth) end
+        end, RIDE_RETRY_MS, 1)
+        return
+    end
+    local h = GroupHearth.pending[guid]
     if h and not h.done then GroupHearth.withdraw(h) end
 end
 
 function GroupHearth.onLogout(event, player)
+    GroupHearth.riding[player:GetGUID()] = nil
     local h = GroupHearth.pending[player:GetGUID()]
     if h then GroupHearth.withdraw(h) end
 end
@@ -122,10 +193,15 @@ end
 function GroupHearth.onAnswer(event, player, object, sender, intid, code, menuId)
     player:GossipComplete()
     for _, h in pairs(GroupHearth.pending) do
-        if h.id == sender and h.asked[player:GetGUID()] then
+        if h.id == sender and h.asked[player:GetGUID()] and not h.done then
             h.accepted[player:GetGUID()] = (intid == INTID_COME) or nil
-            if intid == INTID_COME then
+            if intid == INTID_COME and h.kind.ownCast then
+                player:SendBroadcastMessage("Your hearthstone takes you with " .. h.name .. ".")
+                ride(player, h)
+            elseif intid == INTID_COME then
                 player:SendBroadcastMessage("You will travel with " .. h.name .. " when their hearthstone finishes.")
+            else
+                stopRide(player:GetGUID())
             end
         end
     end
@@ -139,14 +215,41 @@ function GroupHearth.withdraw(h)
             m:SendBroadcastMessage(h.name .. "'s hearth was called off; you stay where you are.")
         end
     end
+    for guid, r in pairs(GroupHearth.riding) do
+        if r.hearth == h then stopRide(guid) end
+    end
     GroupHearth.pending[h.hearther] = nil
 end
 
 function GroupHearth.onCast(event, player, spell)
     if not HEARTH_SPELLS[spell:GetEntry()] then return end
+
+    local target = GroupHearth.rideTarget(player:GetGUID())
+    if target then
+        GroupHearth.riding[player:GetGUID()] = nil
+        player:RegisterEvent(function(_, _, _, p)
+            if not p:IsDead() then
+                p:GossipComplete()
+                p:Teleport(target.map, target.x, target.y, target.z, math.random() * 2 * math.pi)
+            end
+        end, FOLLOW_MS, 1)
+        return
+    end
+
     local h = GroupHearth.pending[player:GetGUID()]
     if not h or h.done then return end
     h.done = true
+
+    if h.kind.ownCast then
+        for guid in pairs(h.asked) do
+            if not h.accepted[guid] then
+                local m = GetPlayerByGUID(guid)
+                if m then m:GossipComplete() end
+            end
+        end
+        GroupHearth.pending[h.hearther] = nil
+        return
+    end
     player:RegisterEvent(function(_, _, _, p)
         local home = p:GetHomebind()
         local spots = GroupHearth.circle(home.x, home.y, #h.members)

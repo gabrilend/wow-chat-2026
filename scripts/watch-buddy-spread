@@ -1,0 +1,98 @@
+#!/usr/bin/env luajit
+
+local DIR, FILE, ONCE = "/mnt/kaun/wow-chat-2026", nil, false
+do
+    local i = 1
+    while i <= #arg do
+        if arg[i] == "--file" then i = i + 1; FILE = arg[i]
+        elseif arg[i] == "--once" then ONCE = true
+        else DIR = arg[i] end
+        i = i + 1
+    end
+end
+FILE = FILE or (DIR .. "/tmp/shared-memory/buddy-spread.tsv")
+
+local STILL_SECONDS = 30
+local STILL_YARDS   = 1
+local REST_YARDS    = 10
+local STACK_YARDS   = 1
+local STACK_SECONDS = 10
+local FAR_YARDS     = 150
+local POLL_SECONDS  = 1
+
+local last, owners, since, stackSince, open = {}, {}, {}, {}, {}
+local said = 0
+
+local function say(t, text)
+    said = said + 1
+    print(os.date("%H:%M:%S", t) .. "  " .. text)
+    io.stdout:flush()
+end
+
+local function episode(key, t, now_open, start_text, end_text)
+    if now_open and not open[key] then open[key] = true; say(t, start_text())
+    elseif not now_open and open[key] then open[key] = nil; say(t, end_text()) end
+end
+
+local function dist(a, b) return math.sqrt((a.x - b.x) ^ 2 + (a.y - b.y) ^ 2) end
+
+local function judge(t)
+    for guid, b in pairs(last) do
+        local o = owners[b.owner]
+        if o and b.t == t then
+            local s = since[guid]
+            if not s or dist(s, b) >= STILL_YARDS then since[guid] = { x = b.x, y = b.y, t = t }; s = since[guid] end
+            local stuck = not b.fighting and not b.dead and t - s.t >= STILL_SECONDS and dist(b, o) > REST_YARDS
+            episode("still " .. guid, t, stuck,
+                function() return ("still     %s has not moved for %d s, %.0f yd from %s"):format(b.name, t - s.t, dist(b, o), o.name) end,
+                function() return ("moving    %s again"):format(b.name) end)
+            local far = b.area ~= o.area and dist(b, o) > FAR_YARDS
+            episode("far " .. guid, t, far,
+                function() return ("far       %s is %.0f yd from %s, in another sub-zone (%d, its owner %d)"):format(b.name, dist(b, o), o.name, b.area, o.area) end,
+                function() return ("near      %s is back with %s"):format(b.name, o.name) end)
+            for other, c in pairs(last) do
+                if other > guid and c.owner == b.owner and c.t == t and not b.dead and not c.dead then
+                    local key = guid .. "-" .. other
+                    if dist(b, c) < STACK_YARDS then stackSince[key] = stackSince[key] or t else stackSince[key] = nil end
+                    local stacked = stackSince[key] ~= nil and t - stackSince[key] >= STACK_SECONDS
+                    episode("stack " .. key, t, stacked,
+                        function() return ("stacked   %s and %s on one spot for %d s"):format(b.name, c.name, t - stackSince[key]) end,
+                        function() return ("apart     %s and %s"):format(b.name, c.name) end)
+                end
+            end
+        end
+    end
+end
+
+local current = nil
+local function take(line)
+    local t, owner, guid, name, role, map, zone, area, x, y, z, fighting, dead =
+        line:match("^(%d+)\t(%d+)\t(%d+)\t([^\t]+)\t(%a+)\t(%d+)\t(%d+)\t(%d+)\t([-%d.]+)\t([-%d.]+)\t([-%d.]+)\t(%d)\t(%d)$")
+    if not t then return end
+    t = tonumber(t)
+    if current and t ~= current then judge(current) end
+    current = t
+    local r = { t = t, owner = tonumber(owner), guid = tonumber(guid), name = name, map = tonumber(map), zone = tonumber(zone),
+                area = tonumber(area), x = tonumber(x), y = tonumber(y), z = tonumber(z), fighting = fighting == "1", dead = dead == "1" }
+    if role == "owner" then owners[r.owner] = r else last[r.guid] = r end
+end
+
+local f = io.open(FILE)
+if not f then
+    io.stderr:write("watch-buddy-spread: no record at " .. FILE .. " (the recorder writes it on a Debug build, for game masters' walks)\n")
+    os.exit(1)
+end
+local partial = ""
+while true do
+    local chunk = f:read("*a")
+    if chunk and #chunk > 0 then
+        partial = partial .. chunk
+        for line in partial:gmatch("([^\n]*)\n") do take(line) end
+        partial = partial:match("[^\n]*$")
+    end
+    if ONCE then break end
+    os.execute("sleep " .. POLL_SECONDS)
+end
+if current then judge(current) end
+f:close()
+print(("watch-buddy-spread: %d line(s) said"):format(said))

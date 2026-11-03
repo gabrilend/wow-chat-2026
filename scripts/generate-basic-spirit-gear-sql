@@ -3,7 +3,7 @@
 local DIR   = arg[1] and arg[1] ~= "" and arg[1] or "/mnt/kaun/wow-chat-2026"
 local WORLD = arg[2] or "acore_world_basic"
 local HERE  = DIR .. "/patches/E072-basic-spirit-on-gear/"
-local MYSQL = DIR .. "/mysql/installed-files/bin/mysql -h127.0.0.1 -P3307 -uritz -pmenardi -N -B " .. WORLD
+local MYSQL = DIR .. "/mysql/installed-files/bin/mysql --defaults-file=" .. DIR .. "/mysql/conf/client.cnf -h127.0.0.1 -P3307 -N -B " .. WORLD
 local Spells = dofile(DIR .. "/scripts/lib/spell-data.lua").open(DIR, MYSQL)
 
 local function query(sql)

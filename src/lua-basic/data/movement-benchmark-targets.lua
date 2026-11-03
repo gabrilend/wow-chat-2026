@@ -1,0 +1,16 @@
+return {
+    { measure = "moving",    least = 0.60,
+      why = "\"circle about\": buddies are mostly on the move" },
+    { measure = "circling",  least = 0.30,
+      why = "\"whirling\", \"a maelstrom of swirls\"" },
+    { measure = "both_ways", least = 0.40,
+      why = "\"in all directions at once\"" },
+    { measure = "winding",   least = 1.5, most = 8.0,
+      why = "\"semi chaotic\": not straight lines, not shuffling on a spot" },
+    { measure = "covering",  least = 0.25,
+      why = "\"They should explore, paving exploration bricks onto each part of the floor\"" },
+    { measure = "still",     most = 0.5,
+      why = "a buddy standing 30 s while its owner is over 10 yards off: nothing moving it" },
+    { measure = "stacked",   most = 0.5,
+      why = "two on one spot for 10 s" },
+}

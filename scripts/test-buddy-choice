@@ -130,6 +130,69 @@ for _, team in ipairs({ "alliance", "horde" }) do
     check(n >= 8, team .. " any: only " .. n .. " classes ever drawn")
 end
 
+for _, team in ipairs({ "alliance", "horde" }) do
+    for rid, race in pairs(RC.races) do
+        if race.team == team then
+            local menu = Choice.menu_for_race(RC, rid)
+            local offered = {}
+            for _, c in ipairs(menu) do
+                offered[c.id] = true
+                check(c.id ~= 6, team .. " reset " .. race.name .. ": a death knight offered")
+                local b, err = Choice.resolve({ RC = RC, TD = TD, Spender = Spender, rand = function(n) return math.random(n) end,
+                    team = team, owner_is_dk = false, slot = 3, roster = {}, pick = { kind = "class", id = c.id }, kept_race = rid })
+                check(b ~= nil and b.race == rid and b.class == c.id, team .. " reset " .. race.name .. " class " .. c.id .. ": " .. tostring(err))
+            end
+            for cid in pairs(RC.classes) do
+                if not offered[cid] and cid ~= 6 then
+                    local b = Choice.resolve({ RC = RC, TD = TD, Spender = Spender, rand = function(n) return math.random(n) end,
+                        team = team, owner_is_dk = false, slot = 3, roster = {}, pick = { kind = "class", id = cid }, kept_race = rid })
+                    check(b == nil, team .. " reset " .. race.name .. ": class " .. cid .. " it can't play was accepted")
+                end
+            end
+            for i = 1, 20 do
+                local b = Choice.resolve({ RC = RC, TD = TD, Spender = Spender, rand = function(n) return math.random(n) end,
+                    team = team, owner_is_dk = false, slot = 3, roster = {}, pick = { kind = "flexible" }, kept_race = rid })
+                check(b ~= nil and b.race == rid and offered[b.class], team .. " reset " .. race.name .. " flexible")
+            end
+        end
+    end
+end
+
+local first, last = function(n) return 1 end, function(n) return n end
+check(Choice.lacking_role({}, first) == "damage", "lacking role, empty group: damage (3 short) first")
+check(Choice.lacking_role({ damage = 3 }, first) == "tank", "lacking role, three damage: tank before healer at the first draw")
+check(Choice.lacking_role({ damage = 3 }, last) == "healer", "lacking role, three damage: healer at the last draw")
+check(Choice.lacking_role({ tank = 1, damage = 1 }, first) == "damage", "lacking role, a tank and one damage: damage (2 short)")
+check(Choice.lacking_role({ tank = 1, healer = 1, damage = 3 }, last) == "damage", "lacking role, a full group: all tie at 0, the last is damage")
+check(Choice.lacking_role({ tank = 2, healer = 1, damage = 3 }, last) == "damage", "lacking role, two tanks: the tank is no longer tied")
+for _, team in ipairs({ "alliance", "horde" }) do
+    for _, role in ipairs({ "tank", "healer", "damage" }) do
+        for i = 1, 40 do
+            local b, err = Choice.resolve({ RC = RC, TD = TD, Spender = Spender, rand = function(n) return math.random(n) end,
+                team = team, owner_is_dk = false, slot = 1 + (i % 5), roster = {}, pick = { kind = "role", role = role } })
+            check(b ~= nil, team .. " role " .. role .. ": " .. tostring(err))
+            if b then
+                check(b.class ~= 6, team .. " role " .. role .. ": a death knight")
+                check(RC.races[b.race].team == team, team .. " role " .. role .. ": race of the other faction")
+                check(b.role == ROLE[role], team .. " role " .. role .. ": got role " .. b.role)
+            end
+        end
+    end
+end
+
+local function read_all(path)
+    local f = io.open(path, "rb")
+    if not f then return nil end
+    local s = f:read("*a")
+    f:close()
+    return s
+end
+for _, pair in ipairs({ { "src/lua-basic/lib/buddy-choice.lua", "patches/E066-sargobras/helpers/lib/sargobras-buddy-choice.lua" },
+                        { "src/lua-basic/lib/buddy-talent-spender.lua", "patches/E066-sargobras/helpers/lib/sargobras-buddy-talent-spender.lua" } }) do
+    local a, b = read_all(DIR .. "/" .. pair[1]), read_all(DIR .. "/" .. pair[2])
+    check(a ~= nil and a == b, pair[2] .. " differs from " .. pair[1] .. " (copy the changed one over the other)")
+end
+
 print(string.format("test-buddy-choice: %d checks over %d clans per faction and owner kind", checks, RUNS))
 for _, f in ipairs(fails) do print("FAIL " .. f) end
 print(#fails == 0 and "Result: all checks passed." or ("Result: " .. #fails .. " failure(s) shown."))

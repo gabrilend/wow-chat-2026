@@ -1,13 +1,24 @@
 #!/usr/bin/env bash
 
+
+_e001_lua_src() {
+    local profile="$1"
+    case "${profile}" in
+        release) echo "${DIR}/src/lua-beta" ;;          # release: beta's corpus
+        *)       echo "${DIR}/src/lua-${profile}" ;;    # every other profile: its own
+    esac
+}
+
 patch_E001_lua_script_symlinks() {
     local TARGET="${TARGET_INSTALL_DIR:-${INSTALL_DIR}}"
-    local LUA_SRC="${DIR}/src/lua-${PROFILE}"
+    local LUA_SRC
+    LUA_SRC="$(_e001_lua_src "${PROFILE}")"
     if [[ ! -d "${LUA_SRC}" ]]; then
         echo "  [E001] ERROR: Lua source directory missing: ${LUA_SRC}"
         echo "         profile='${PROFILE}'; nothing was linked into ${TARGET}/bin/lua_scripts/"
-        echo "         to debug: does src/lua-${PROFILE}/ exist in git? (every profile"
-        echo "         owns one, even if it holds only a README); is .profile spelled right?"
+        echo "         to debug: does ${LUA_SRC#${DIR}/}/ exist in git? (every profile owns"
+        echo "         one, even if it holds only a README, or runs another's: _e001_lua_src);"
+        echo "         is .profile spelled right?"
         return 1
     fi
     mkdir -p "${TARGET}/bin/lua_scripts"

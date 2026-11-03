@@ -1,0 +1,38 @@
+#!/bin/bash
+
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+SCRATCH="${DIR}/tmp/shared-memory/test-watch-buddy-spread"
+FAILS=0
+CHECKS=0
+check()    { CHECKS=$((CHECKS + 1)); grep -qF -- "$2" <<< "${OUT}" || { echo "  FAIL: $1 (wanted \"$2\")"; FAILS=$((FAILS + 1)); }; }
+check_no() { CHECKS=$((CHECKS + 1)); ! grep -qF -- "$2" <<< "${OUT}" || { echo "  FAIL: $1 (did not want \"$2\")"; FAILS=$((FAILS + 1)); }; }
+
+mkdir -p "${SCRATCH}"
+REC="${SCRATCH}/record.tsv"
+: > "${REC}"
+row() { printf '%s\t1\t%s\t%s\t%s\t0\t1\t%s\t%s\t%s\t0\t0\t0\n' "$1" "$2" "$3" "$4" "$5" "$6" "$7" >> "${REC}"; }
+for k in $(seq 0 12); do
+    t=$((1000 + k * 5))
+    ox=$((k * 3))                                       # the owner walks east, 3 yards a sample
+    row "${t}" 1 Owner  owner 10 "${ox}" 0
+    if (( k <= 8 )); then row "${t}" 2 Stuck buddy 10 0 0; else row "${t}" 2 Stuck buddy 10 $((ox - 2)) 0; fi   # still 40 s, then moves
+    if (( k >= 2 && k <= 6 )); then ax=5; bx=5; else ax=$((ox - 1)); bx=$((ox + 2)); fi
+    row "${t}" 3 Ann  buddy 10 "${ax}" 5
+    row "${t}" 4 Bea  buddy 10 "${bx}" 5.5
+    row "${t}" 5 Far  buddy 11 $((400 + k * 2)) 0       # another sub-zone, 400 yards off, wandering
+    row "${t}" 6 Calm buddy 10 $((ox - 3)) 0            # always 3 yards behind the owner: following
+done
+OUT="$("${DIR}/scripts/watch-buddy-spread" "${DIR}" --file "${REC}" --once 2>&1)"
+echo "${OUT}" | sed 's/^/    /'
+
+check    "a buddy still while its owner walks off is called still"   "still     Stuck has not moved for 30 s"
+check    "and moving again when it moves"                            "moving    Stuck again"
+check    "two buddies on one spot for 10 s are called stacked"       "stacked   Ann and Bea on one spot for 10 s"
+check    "and apart when they part"                                  "apart     Ann and Bea"
+check    "a buddy 400 yards off in another sub-zone is called far"   "far       Far is"
+check_no "a buddy keeping near its owner is never called still"      "still     Calm"
+check_no "each episode is said once"                                 "still     Stuck has not moved for 35 s"
+check    "the count of lines said: five"                             "watch-buddy-spread: 5 line(s) said"
+
+echo "test-watch-buddy-spread: ${CHECKS} checks, ${FAILS} failed"
+[[ ${FAILS} -eq 0 ]]

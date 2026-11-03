@@ -4,7 +4,7 @@ patch_E049_basic_buddy_town_bake() {
     local WORLD_DB
     WORLD_DB="$(_profile_db_name acore_world)"
     local PIECES
-    PIECES="$("${DIR}/mysql/installed-files/bin/mysql" -h127.0.0.1 -P3307 -uritz -pmenardi -N --batch "${WORLD_DB}" \
+    PIECES="$("${DIR}/mysql/installed-files/bin/mysql" "--defaults-file=${DIR}/mysql/conf/client.cnf" -h127.0.0.1 -P3307 -N --batch "${WORLD_DB}" \
         -e "SELECT COUNT(*) FROM buddy_area_centre" 2>&1 | grep -v "Using a password" | tail -1)"
     if ! [[ "${PIECES}" =~ ^[0-9]+$ ]] || [[ "${PIECES}" -eq 0 ]]; then
         echo "  [E049] the database answered: ${PIECES}"

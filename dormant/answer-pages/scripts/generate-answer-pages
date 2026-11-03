@@ -1,0 +1,575 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+local LIBS = "/home/ritz/programming/ai-stuff/libs/lua"
+
+local gifsFrom, regif, check, exportTo
+do
+    local i = 1
+    while i <= #arg do
+        local a = arg[i]
+        if a == "--help" or a == "-h" then
+            for line in io.lines(arg[0]) do
+                if not line:match("^%-%-") and not line:match("^#!") then break end
+                print((line:gsub("^%-%- ?", "")))
+            end
+            os.exit(0)
+        elseif a == "--gifs"  then gifsFrom = arg[i + 1]; i = i + 1
+        elseif a == "--regif" then regif = true
+        elseif a == "--check" then check = true
+        elseif a == "--questions" then exportTo = arg[i + 1]; i = i + 1
+        elseif a:sub(1, 2) ~= "--" then DIR = a
+        else error("unknown option " .. a .. " (see --help)") end
+        i = i + 1
+    end
+end
+gifsFrom = gifsFrom or (DIR .. "/tmp/shared-memory/gifs/attempt-1")
+
+package.path = LIBS .. "/?.lua;" .. package.path
+local json = require("dkjson")
+
+local PAGES = { "open-questions", "pathfinding", "talents", "stand-ins", "alterac-weather" }
+local OUT   = DIR .. "/docs/HTML/answer-pages"
+
+local function slurp(path)
+    local f = io.open(path, "r") or error("cannot read " .. path)
+    local t = f:read("*a")
+    f:close()
+    return t
+end
+
+local function esc(s) return (tostring(s):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"):gsub('"', "&quot;")) end
+
+local function inline(s)
+    s = esc(s)
+    s = s:gsub("`([^`]+)`", "<code>%1</code>")
+    s = s:gsub("%*%*(.-)%*%*", "<strong>%1</strong>")
+    s = s:gsub("%[([^%]]+)%]%(([^%)]+)%)", '<a href="%2">%1</a>')
+    return s
+end
+
+local ISSUES, IDS = {}, {}
+for path in io.popen("ls " .. DIR .. "/issues/*.md"):lines() do
+    local name = path:match("([^/]+)%.md$")
+    local id = name:match("^(%d+%a*%d*%a*%d*)%-")
+    if id then
+        local text = slurp(path)
+        local it = { id = id, name = name, deps = {}, blocks = {}, questions = {} }
+        it.title = (text:match("^#%s*[^\n]-%s+%-%s+([^\n]+)") or text:match("^#%s*([^\n]+)") or name)
+        it.state = text:match("\n%-%s*State:%s*([^\n]+)") or text:match("\n%*%*State%*%*:?%s*([^\n]+)") or ""
+        it.now = text:match("## Current Behavior%s*\n%s*\n?([^\n]+)") or ""
+        it.cb = text:match("## Current Behavior%s*\n(.-)\n## ") or text:match("## Current Behavior%s*\n(.*)$")
+        it.phase = tonumber(text:match("\n%-%s*%**Phase%**:%s*(%d+)") or "")
+        for line in text:gmatch("[^\n]+") do
+            local l = line:lower()
+            local dep = l:match("^%s*%-?%s*%**blocked by%**:") or l:match("^%s*%-?%s*%**depends on%**:") or l:match("^%s*%-?%s*%**dependencies%**:")
+            local blk = l:match("^%s*%-?%s*%**blocks%**:")
+            if dep or blk then
+                for ref in line:gmatch("%f[%w](%d%d%d+%a*%d*%a*%d*)%f[%W]") do
+                    table.insert(dep and it.deps or it.blocks, ref)
+                end
+            end
+        end
+        local section = text:match("\n## Open [Qq]uestions[^\n]*\n(.-)\n## ") or text:match("\n## Open [Qq]uestions[^\n]*\n(.*)$")
+        if section then
+            local group, cur = nil, nil
+            for line in (section .. "\n"):gmatch("([^\n]*)\n") do
+                if line:match("^###%s") then
+                    group, cur = line:gsub("^###%s+", ""), nil
+                elseif line:match("^%d+%.%s") or line:match("^%-%s") then
+                    cur = { text = line:gsub("^%d+%.%s+", ""):gsub("^%-%s+", ""), group = group }
+                    table.insert(it.questions, cur)
+                elseif cur and line:match("^%s+%S") then
+                    cur.text = cur.text .. " " .. line:gsub("^%s+", "")
+                elseif line:match("^%S") then
+                    cur = nil
+                end
+            end
+            local ANSWER_MARKS = { "answered", "settled by later work", "decided" }
+            local OPEN_MARKS   = { "still open", "stays open", "stay open", "; open", "open.", "to be asked again", "still to be asked", "to be talked through" }
+            local function last(l, marks)
+                local at = 0
+                for _, m in ipairs(marks) do
+                    local from = 1
+                    while true do
+                        local s = l:find(m, from, true)
+                        if not s then break end
+                        at, from = math.max(at, s), s + 1
+                    end
+                end
+                return at
+            end
+            for n, q in ipairs(it.questions) do
+                local l = q.text:lower()
+                q.n = n
+                local a, o = last(l, ANSWER_MARKS), last(l, OPEN_MARKS)
+                q.answered = a > 0 and a > o
+            end
+        end
+        ISSUES[id] = it
+        IDS[#IDS + 1] = id
+    end
+end
+
+local dependents = {}
+local function add(on, who)
+    if on ~= who and ISSUES[who] then dependents[on] = dependents[on] or {}; dependents[on][who] = true end
+end
+for id, it in pairs(ISSUES) do
+    for _, d in ipairs(it.deps) do add(d, id) end
+    for _, b in ipairs(it.blocks) do add(id, b) end
+end
+for _, a in ipairs(IDS) do for _, b in ipairs(IDS) do
+    local nxt, aEndsInLetter = b:sub(#a + 1, #a + 1), a:sub(-1):match("%a") ~= nil
+    if a ~= b and b:sub(1, #a) == a and ((aEndsInLetter and nxt:match("%d")) or (not aEndsInLetter and nxt:match("%a"))) then add(a, b) end
+end end
+for id, it in pairs(ISSUES) do
+    local seen, stack, n = {}, { id }, 0
+    while #stack > 0 do
+        local x = table.remove(stack)
+        for y in pairs(dependents[x] or {}) do
+            if not seen[y] then seen[y] = true; n = n + 1; stack[#stack + 1] = y end
+        end
+    end
+    it.unblocks = n
+end
+
+local RING_OF, RINGS = {}, {}
+do
+    local arch, ring = slurp(DIR .. "/docs/capability-architecture.md"), nil
+    local inside = false
+    for line in arch:gmatch("[^\n]+") do
+        if line:match("^## The capabilities, ring by ring") then inside = true
+        elseif line:match("^## ") then inside = false end
+        local r = inside and line:match("^### %d+%.%s+(.+)")
+        if r then ring = r; RINGS[#RINGS + 1] = r end
+        if inside and ring and line:match("^|") then
+            for ref in line:gmatch("%f[%w](%d%d%d+%a*%d*%a*%d*)%f[%W]") do RING_OF[ref] = RING_OF[ref] or ring end
+        end
+    end
+end
+for id, it in pairs(ISSUES) do
+    local probe = id
+    while #probe > 0 and not RING_OF[probe] do probe = probe:sub(1, -2) end
+    it.ring = RING_OF[probe] or "not yet placed"
+end
+
+local function state_kind(state, now, cb)
+    local s, c, all = (state or ""):lower(), (now or ""):lower(), (cb or ""):lower()
+    if all:find("not yet compiled") or all:find("waiting for the owner's compile") or all:find("waits for the owner's compile") then return "waiting for the compile" end
+    if s:find("will not") then return "will not implement" end
+    if s:find("planned") or s:find("plan only") or s:find("^plan") or s:find("an idea") or s:find("a goal") or s:find("deferred") then return "planned" end
+    if c:match("^%*?%*?not built") or c:match("^not started") then return "not started" end
+    local built = all:find("%*%*built") or all:find("built 20%d%d") or all:find("built and") or all:find("written and")
+                  or all:find("is built") or all:find("are built") or all:find("now built")
+    if s:find("in progress") or c:find("in progress") then return built and "built" or "in progress" end
+    if s:find("built") or s:find("done") or built then return "built" end
+    if cb then return "not started" end
+    return "unclear"
+end
+
+local function questions_for(issueList)
+    local list = {}
+    if issueList[1] == "all" then
+        for _, id in ipairs(IDS) do if #ISSUES[id].questions > 0 then list[#list + 1] = id end end
+        table.sort(list, function(a, b)
+            if ISSUES[a].unblocks ~= ISSUES[b].unblocks then return ISSUES[a].unblocks > ISSUES[b].unblocks end
+            return a < b end)
+    else
+        for _, id in ipairs(issueList) do
+            if not ISSUES[id] then error("the page names issue " .. id .. ", which is not an open issue file") end
+            list[#list + 1] = id
+        end
+    end
+    local out = {}
+    for _, id in ipairs(list) do
+        local it = ISSUES[id]
+        local qs = {}
+        for _, q in ipairs(it.questions) do qs[#qs + 1] = { n = q.n, html = inline(q.text), text = q.text, answered = q.answered, group = q.group } end
+        out[#out + 1] = { id = id, title = it.title, file = it.name .. ".md", ring = it.ring, state = state_kind(it.state, it.now, it.cb),
+                          stateText = it.state, phase = it.phase, unblocks = it.unblocks, questions = qs }
+    end
+    return out
+end
+
+if exportTo then
+    local all = questions_for({ "all" })
+    local ringIndex = {}
+    for i, r in ipairs(RINGS) do ringIndex[r] = i end
+    for _, it in ipairs(all) do
+        it.ringIndex = ringIndex[it.ring] or (#RINGS + 1)
+        it.family = it.id:match("^(%d+%a?)") or it.id
+        for _, q in ipairs(it.questions) do q.html = nil end
+    end
+    table.sort(all, function(a, b)
+        if a.ringIndex ~= b.ringIndex then return a.ringIndex < b.ringIndex end
+        if (a.phase or 99) ~= (b.phase or 99) then return (a.phase or 99) < (b.phase or 99) end
+        return a.id < b.id end)
+    local f = io.open(exportTo, "w") or error("cannot write " .. exportTo)
+    f:write(json.encode({ rings = RINGS, issues = all }, { indent = true }))
+    f:close()
+    print("questions of " .. #all .. " issues written to " .. exportTo)
+    os.exit(0)
+end
+
+local WALK = { order = {}, contexts = {} }
+do
+    local ringIndex = {}
+    for i, r in ipairs(RINGS) do ringIndex[r] = i end
+    local ids = {}
+    for _, id in ipairs(IDS) do if #ISSUES[id].questions > 0 then ids[#ids + 1] = id end end
+    table.sort(ids, function(a, b)
+        local A, B = ISSUES[a], ISSUES[b]
+        local ra, rb = ringIndex[A.ring] or (#RINGS + 1), ringIndex[B.ring] or (#RINGS + 1)
+        if ra ~= rb then return ra < rb end
+        if (A.phase or 99) ~= (B.phase or 99) then return (A.phase or 99) < (B.phase or 99) end
+        return a < b end)
+    WALK.order = ids
+    for name in io.popen("ls '" .. DIR .. "/docs/answer-pages/contexts/' 2>/dev/null"):lines() do
+        if name:match("%.json$") then
+            local c = json.decode(slurp(DIR .. "/docs/answer-pages/contexts/" .. name))
+            if c and c.questions and c.questions[1] and c.context then
+                local terms = {}
+                for _, t in ipairs(c.terms or {}) do terms[#terms + 1] = t end
+                table.sort(terms, function(a, b) return #a.term > #b.term end)
+                local paras = {}
+                for para in (c.context .. "\n\n"):gmatch("(.-)\n%s*\n") do
+                    para = para:gsub("^%s+", ""):gsub("%s+$", "")
+                    if para ~= "" then
+                        local h = esc(para)
+                        local marks = {}
+                        for _, t in ipairs(terms) do
+                            local needle = esc(t.term)
+                            local out, from = {}, 1
+                            while true do
+                                local a, b = h:find(needle, from, true)
+                                if not a then break end
+                                out[#out + 1] = h:sub(from, a - 1)
+                                marks[#marks + 1] = "<mark class=\"t-" .. (t.kind or "mechanism") .. "\"><strong>" .. needle .. "</strong></mark>"
+                                out[#out + 1] = "\1" .. #marks .. "\2"
+                                from = b + 1
+                            end
+                            out[#out + 1] = h:sub(from)
+                            h = table.concat(out)
+                        end
+                        h = h:gsub("\1(%d+)\2", function(k) return marks[tonumber(k)] end)
+                        paras[#paras + 1] = h
+                    end
+                end
+                WALK.contexts[c.questions[1]] = { paras = paras, size = #c.questions }
+            end
+        end
+    end
+end
+
+local function story(page)
+    local text = slurp(DIR .. "/docs/answer-pages/" .. page .. ".md")
+    local meta, body = {}, text:match("^.-\n\n(.*)$")
+    for k, v in text:match("^(.-)\n\n"):gmatch("([%w]+):%s*([^\n]*)") do meta[k] = v end
+    local html, heads, para, list, tbl = {}, {}, {}, nil, nil
+    local function flush()
+        if #para > 0 then html[#html + 1] = "<p>" .. inline(table.concat(para, " ")) .. "</p>"; para = {} end
+        if list then html[#html + 1] = "<" .. list.kind .. ">" .. table.concat(list.items) .. "</" .. list.kind .. ">"; list = nil end
+        if tbl then
+            local rows = {}
+            for r, cells in ipairs(tbl) do
+                local tag = r == 1 and "th" or "td"
+                local cs = {}
+                for _, c in ipairs(cells) do
+                    local num = c:match("^%s*[%d%.%%]+%s*$") and " class=num" or ""
+                    cs[#cs + 1] = "<" .. tag .. num .. ">" .. inline(c:match("^%s*(.-)%s*$")) .. "</" .. tag .. ">"
+                end
+                rows[#rows + 1] = (r == 1 and "<thead>" or "") .. "<tr>" .. table.concat(cs) .. "</tr>" .. (r == 1 and "</thead>" or "")
+            end
+            html[#html + 1] = "<div class=table><table>" .. table.concat(rows) .. "</table></div>"
+            tbl = nil
+        end
+    end
+    local gifCount = {}
+    for line in (body .. "\n"):gmatch("([^\n]*)\n") do
+        local h2, h3 = line:match("^## (.+)"), line:match("^### (.+)")
+        local gif = line:match("^gif:%s*(%w+)")
+        if h2 or h3 then
+            flush()
+            local t = h2 or h3
+            local slug = t:lower():gsub("[^%w]+", "-"):gsub("^%-+", ""):gsub("%-+$", "")
+            heads[#heads + 1] = { slug = slug, text = t, level = h2 and 2 or 3 }
+            html[#html + 1] = string.format("<h%d id=%q>%s</h%d>", h2 and 2 or 3, slug, inline(t), h2 and 2 or 3)
+        elseif gif then
+            flush()
+            gifCount[gif] = true
+            html[#html + 1] = string.format("<figure class=gif><img src=\"gifs/%s.gif\" alt=\"\" loading=lazy width=256 height=256><figcaption>%s</figcaption></figure>",
+                gif, esc(meta["caption" .. gif] or ""))
+        elseif line:match("^questions:") then
+            flush()
+            html[#html + 1] = "<div id=questions></div>"
+        elseif line:match("^|") then
+            if not line:match("^|[%s%-:|]+|%s*$") then
+                tbl = tbl or {}
+                local cells = {}
+                for c in line:gsub("^|", ""):gsub("|%s*$", ""):gmatch("([^|]*)") do cells[#cells + 1] = c end
+                tbl[#tbl + 1] = cells
+            end
+        elseif line:match("^%- ") or line:match("^%d+%. ") then
+            if #para > 0 then html[#html + 1] = "<p>" .. inline(table.concat(para, " ")) .. "</p>"; para = {} end
+            local kind = line:match("^%d") and "ol" or "ul"
+            list = list or { kind = kind, items = {} }
+            list.items[#list.items + 1] = "<li>" .. inline(line:gsub("^%d+%. ", ""):gsub("^%- ", "")) .. "</li>"
+        elseif line:match("^%s+%S") and list then
+            local more = inline((line:gsub("^%s+", "")))
+            list.items[#list.items] = list.items[#list.items]:sub(1, -6) .. " " .. more .. "</li>"
+        elseif line:match("^%s*$") then
+            flush()
+        else
+            if list then flush() end
+            para[#para + 1] = line
+        end
+    end
+    flush()
+    for g in (meta.gifs or ""):gmatch("%w+") do
+        if not gifCount[g] then error(page .. ": its gif " .. g .. " is not placed in the story (a \"gif: " .. g .. "\" line)") end
+    end
+    return meta, table.concat(html, "\n"), heads
+end
+
+local function copy_gifs(wanted)
+    local cmds = {}
+    for g in pairs(wanted) do
+        local dest = OUT .. "/gifs/" .. g .. ".gif"
+        local have = io.open(dest, "rb")
+        if have then have:close() end
+        if regif or not have then
+            local src = gifsFrom .. "/" .. g .. ".gif"
+            local s = io.open(src, "rb") or error("no drawn gif " .. src .. " (draw them: scripts/compose-architecture-gifs, scripts/render-gif-scores)")
+            s:close()
+            cmds[#cmds + 1] = string.format("magick '%s' -coalesce -fuzz 3%% -layers Optimize '%s'", src, dest)
+        end
+    end
+    if #cmds == 0 then return 0 end
+    os.execute("mkdir -p '" .. OUT .. "/gifs'")
+    local listFile = DIR .. "/tmp/shared-memory/answer-page-gif-commands"
+    local f = io.open(listFile, "w") or error("cannot write " .. listFile)
+    f:write(table.concat(cmds, "\n"), "\n")
+    f:close()
+    os.execute("xargs -P 8 -I{} sh -c '{}' < '" .. listFile .. "'")
+    return #cmds
+end
+
+local STYLE = [[
+:root{--bg:#f3f4f6;--panel:#fff;--ink:#1c2127;--dim:#5d6670;--line:#d6dae0;--accent:#8a6a00;--accent-soft:#f1e6bd;--ok:#2f7d4a;--warn:#a0441c;
+--display:"Barlow Semi Condensed","Arial Narrow",system-ui,sans-serif;--body:"Source Sans 3",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121418;--panel:#1a1d22;--ink:#e6e6e3;--dim:#9aa0a6;--line:#2c3138;--accent:#e8c547;--accent-soft:#3a3320;--ok:#6fcf8f;--warn:#f08a5d;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#121418;--panel:#1a1d22;--ink:#e6e6e3;--dim:#9aa0a6;--line:#2c3138;--accent:#e8c547;--accent-soft:#3a3320;--ok:#6fcf8f;--warn:#f08a5d;color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font:16px/1.6 var(--body);margin:0}
+.wrap{display:grid;grid-template-columns:15rem minmax(0,1fr);gap:2.5rem;max-width:78rem;margin:0 auto;padding-inline:16px;padding-block:1.5rem 4rem}
+nav{position:sticky;top:0;align-self:start;max-height:100vh;overflow-y:auto;padding-block:1rem}
+nav .eyebrow{font:600 .72rem/1 var(--display);letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin:1rem 0 .6rem}
+nav a{display:block;color:var(--dim);text-decoration:none;font-size:.86rem;line-height:1.35;padding:.28rem 0 .28rem .6rem;border-left:2px solid transparent}
+nav a.here{color:var(--ink);border-left-color:var(--accent)}nav a:hover{color:var(--ink);border-left-color:var(--accent)}
+main{min-width:0;max-width:50rem}
+h1{font:700 clamp(2rem,4.5vw,2.8rem)/1.05 var(--display);margin:.5rem 0 .3rem}.subtitle{color:var(--dim);font-size:1.1rem;margin:0 0 .6rem}
+.badges span{display:inline-block;font:600 .74rem/1 var(--display);letter-spacing:.06em;text-transform:uppercase;background:var(--accent-soft);padding:.35rem .5rem;border-radius:4px;margin:0 .3rem .3rem 0}
+h2{font:600 1.55rem/1.15 var(--display);margin:2.6rem 0 .7rem;padding-top:1rem;border-top:1px solid var(--line)}
+h3{font:600 1.15rem/1.2 var(--display);color:var(--accent);margin:1.8rem 0 .5rem}
+p,li{max-width:65ch}code{font:500 .84em var(--mono);background:var(--accent-soft);padding:.05em .35em;border-radius:3px;overflow-wrap:anywhere}a{color:var(--accent)}
+.table{overflow-x:auto;margin:1rem 0;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:.9rem}th,td{text-align:left;padding:.5rem .7rem;border-bottom:1px solid var(--line)}
+th{font:600 .78rem/1.2 var(--display);letter-spacing:.06em;text-transform:uppercase;color:var(--dim);background:var(--bg)}td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+figure.gif{float:right;margin:.2rem 0 1rem 1.5rem;width:200px;background:#000;border-radius:6px;overflow:hidden}figure.gif img{display:block;width:100%;height:auto}
+figure.gif figcaption:empty{display:none}h2{clear:both}
+.server{border:1px solid var(--line);border-left:4px solid var(--warn);background:var(--panel);padding:.7rem 1rem;border-radius:6px;margin:1rem 0}
+.server.on{border-left-color:var(--ok)}
+.filters{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;margin:1rem 0;padding:.7rem;background:var(--panel);border:1px solid var(--line);border-radius:6px}
+.filters select,.filters input{font:inherit;font-size:.9rem;padding:.3rem .4rem;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:4px}
+.count{color:var(--dim);font-size:.9rem;margin:.4rem 0 1rem}
+.issue{background:var(--panel);border:1px solid var(--line);border-radius:6px;margin:1rem 0;padding:.8rem 1rem}
+.issue h4{font:600 1.05rem/1.25 var(--display);margin:0 0 .3rem}.issue .meta{color:var(--dim);font-size:.82rem;margin-bottom:.4rem}
+.q{border-top:1px dashed var(--line);padding:.7rem 0}.q:first-of-type{border-top:none}.q .group{font:600 .75rem/1 var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:.3rem}
+.q.answered>.text{color:var(--dim)}.q .tag{font:600 .7rem/1 var(--display);letter-spacing:.06em;text-transform:uppercase;color:var(--ok);margin-left:.3rem}
+.q details summary{cursor:pointer;color:var(--dim);font-size:.9rem}
+.box{display:flex;gap:.5rem;align-items:flex-start;margin-top:.5rem}.box textarea{flex:1;min-height:2.4rem;font:inherit;font-size:.92rem;padding:.4rem;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:4px;resize:vertical}
+.box button{font:600 .85rem var(--display);letter-spacing:.04em;padding:.5rem .8rem;border:none;border-radius:4px;background:var(--accent);color:var(--bg);cursor:pointer}.box button:disabled{opacity:.45;cursor:default}
+.kept{background:var(--accent-soft);border-radius:4px;padding:.4rem .6rem;margin-top:.4rem;font-size:.92rem;white-space:pre-wrap}.kept .when{display:block;font-size:.75rem;color:var(--dim)}
+.said{font-size:.8rem;color:var(--dim);margin-top:.2rem}
+.source{font-size:.8rem;color:var(--dim);margin-top:3rem}
+.context{background:var(--accent-soft);border-left:4px solid var(--accent);border-radius:4px;padding:.6rem .9rem;margin:.8rem 0}.context .label{font:600 .72rem/1 var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:.3rem}.context p{margin:.4rem 0}.context mark{background:none;padding:0 .1em;border-radius:3px}.t-mechanism{color:#1f5fa8}.t-number{color:#8a5a00}.t-choice{color:#2f7d4a}.t-place{color:#6b3fa0}.t-decision{color:#a0335a}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .t-mechanism{color:#7fb3f0}:root:not([data-theme="light"]) .t-number{color:#e8c547}:root:not([data-theme="light"]) .t-choice{color:#6fcf8f}:root:not([data-theme="light"]) .t-place{color:#b99af0}:root:not([data-theme="light"]) .t-decision{color:#f08ab0}}.context .key{font-size:.75rem;color:var(--dim);margin-top:.3rem}
+@media (max-width:760px){.wrap{grid-template-columns:minmax(0,1fr);gap:.5rem}nav{position:static;max-height:none;border-bottom:1px solid var(--line)}figure.gif{float:none;margin:1rem auto;width:min(256px,100%)}}
+]]
+
+local SCRIPT = [[
+(function(){
+const PAGE=document.body.dataset.page, ALL=PAGE==="open-questions";
+const DATA=JSON.parse(document.getElementById("data").textContent);
+const WALK=JSON.parse(document.getElementById("walk").textContent);
+const served=location.protocol.startsWith("http");
+let kept={};
+const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e};
+const box=document.getElementById("server");
+if(served){box.classList.add("on");box.innerHTML="Answers go to the answer server on this computer, which keeps them in <code>notes/answers/"+PAGE+".md</code>.";}
+else{box.innerHTML="The answer server isn't running for this page (it was opened as a plain file), so the boxes can't send. Start it with <code>scripts/answer-server</code>, then open <code>http://127.0.0.1:8642/answer-pages/"+PAGE+".html</code>.";}
+function render(){
+  const mount=document.getElementById("questions"); if(!mount) return;
+  mount.innerHTML="";
+  const f=ALL?{ring:document.getElementById("f-ring").value,state:document.getElementById("f-state").value,phase:document.getElementById("f-phase").value,
+    text:document.getElementById("f-text").value.toLowerCase(),answered:document.getElementById("f-answered").checked,sort:document.getElementById("f-sort").value}:{answered:true};
+  let issues=DATA.slice();
+  const walking=ALL&&f.sort==="walkthrough";
+  if(ALL&&f.sort==="issue") issues.sort((a,b)=>a.id.localeCompare(b.id,undefined,{numeric:true}));
+  if(walking){const at={};WALK.order.forEach((id,i)=>at[id]=i);issues.sort((a,b)=>(at[a.id]??1e9)-(at[b.id]??1e9));f.answered=true;}
+  let shownQ=0, openQ=0;
+  for(const it of DATA) for(const q of it.questions) if(!q.answered) openQ++;
+  for(const it of issues){
+    if(ALL&&((f.ring&&it.ring!==f.ring)||(f.state&&it.state!==f.state)||(f.phase&&String(it.phase)!==f.phase))) continue;
+    const qs=it.questions.filter(q=>(f.answered||!q.answered)&&(!f.text||(q.html+" "+it.title+" "+it.id).toLowerCase().includes(f.text)));
+    if(!qs.length) continue;
+    const card=el("section","issue");
+    card.appendChild(el("h4",null,"<code>"+it.id+"</code> "+it.title.replace(/&/g,"&amp;").replace(/</g,"&lt;")));
+    card.appendChild(el("div","meta",[it.ring,it.state,it.phase?"phase "+it.phase:"",it.unblocks+" open issues wait on it"].filter(Boolean).join(" · ")+(it.stateText?" — "+it.stateText.replace(/</g,"&lt;"):"")));
+    let lastGroup=null;
+    for(const q of qs){
+      shownQ++;
+      const ctx=WALK.contexts[it.id+"#"+q.n];
+      if(ctx){const c=el("div","context");c.appendChild(el("div","label","Context for the next "+ctx.size+" question"+(ctx.size>1?"s":"")));
+        for(const para of ctx.paras){c.appendChild(el("p",null,para));}card.appendChild(c);}
+      const d=el("div","q"+(q.answered?" answered":""));
+      if(q.group&&q.group!==lastGroup){d.appendChild(el("div","group",q.group.replace(/</g,"&lt;")));lastGroup=q.group;}
+      const head="<strong>"+q.n+".</strong> ";
+      if(q.answered){const det=el("details");det.appendChild(el("summary",null,head+"answered in the issue <span class=tag>answered</span>"));det.appendChild(el("div","text",q.html));d.appendChild(det);}
+      else d.appendChild(el("div","text",head+q.html));
+      const key=it.id+"#"+q.n;
+      for(const a of (kept[key]||[])){const k=el("div","kept");k.appendChild(el("span","when","answered "+a.when));k.appendChild(document.createTextNode(a.answer));d.appendChild(k);}
+      const b=el("div","box"),ta=el("textarea"),btn=el("button",null,"Send"),said=el("div","said");
+      ta.placeholder=served?"Your answer…":"Start the answer server to answer here";ta.setAttribute("aria-label","Answer to "+key);
+      btn.disabled=!served;
+      btn.onclick=async()=>{
+        const text=ta.value.trim(); if(!text) return;
+        btn.disabled=true; said.textContent="Sending…";
+        try{
+          const plain=d.querySelector(".text").textContent;
+          const r=await fetch("/answer",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({page:PAGE,issue:it.id,number:q.n,question:plain,answer:text})});
+          const j=await r.json();
+          if(!r.ok) throw new Error(j.error||r.status);
+          said.textContent="Kept in "+j.kept+".";
+          (kept[key]=kept[key]||[]).push({when:"just now",answer:text}); ta.value="";
+          const k=el("div","kept");k.appendChild(el("span","when","answered just now"));k.appendChild(document.createTextNode(text));d.insertBefore(k,b);
+        }catch(e){said.textContent="Not sent: "+e.message+". Is scripts/answer-server still running?";}
+        btn.disabled=false;
+      };
+      b.appendChild(ta);b.appendChild(btn);d.appendChild(b);d.appendChild(said);
+      card.appendChild(d);
+    }
+    mount.appendChild(card);
+  }
+  const c=document.getElementById("count");
+  if(c) c.textContent=shownQ+" questions shown; "+openQ+" still open across "+DATA.length+" issues.";
+}
+if(ALL) for(const id of ["f-ring","f-state","f-phase","f-text","f-answered","f-sort"]) document.getElementById(id).addEventListener("input",render);
+render();
+if(served) fetch("/answers/"+PAGE).then(r=>r.json()).then(j=>{kept={};for(const a of j.answers){(kept[a.key]=kept[a.key]||[]).push(a)} render();}).catch(()=>{});
+})();
+]]
+
+local function page_html(page, meta, body, heads, data, titles)
+    local nav = { "<div class=eyebrow>Answer pages</div>" }
+    for _, p in ipairs(PAGES) do
+        nav[#nav + 1] = string.format("<a href=\"%s.html\"%s>%s</a>", p, p == page and " class=here" or "", esc(titles[p]))
+    end
+    nav[#nav + 1] = "<div class=eyebrow>On this page</div>"
+    for _, h in ipairs(heads) do
+        if h.level == 2 then nav[#nav + 1] = string.format("<a href=\"#%s\">%s</a>", h.slug, esc(h.text)) end
+    end
+    nav[#nav + 1] = "<div class=eyebrow>More</div><a href=\"../capability-architecture.html\">The capability architecture</a>"
+
+    local filters = ""
+    if page == "open-questions" then
+        local rings, phases = {}, {}
+        for _, r in ipairs(RINGS) do rings[#rings + 1] = "<option>" .. esc(r) .. "</option>" end
+        rings[#rings + 1] = "<option>not yet placed</option>"
+        local seenPhase = {}
+        for _, it in ipairs(data) do if it.phase and not seenPhase[it.phase] then seenPhase[it.phase] = true; phases[#phases + 1] = it.phase end end
+        table.sort(phases)
+        for i, p in ipairs(phases) do phases[i] = "<option>" .. p .. "</option>" end
+        filters = "<div class=filters><label>Ring <select id=f-ring><option value=\"\">all</option>" .. table.concat(rings) .. "</select></label>"
+            .. "<label>State <select id=f-state><option value=\"\">all</option><option>waiting for the compile</option><option>built</option><option>in progress</option><option>planned</option><option>not started</option><option>unclear</option></select></label>"
+            .. "<label>Phase <select id=f-phase><option value=\"\">all</option>" .. table.concat(phases) .. "</select></label>"
+            .. "<label>Sort <select id=f-sort>" .. (next(WALK.contexts) and "<option value=walkthrough>walkthrough, with contexts</option>" or "") .. "<option value=unblocks>unblocks the most</option><option value=issue>issue number</option><option value=walkthrough>walkthrough order</option></select></label>"
+            .. "<input id=f-text type=search placeholder=\"Search\" aria-label=\"Search the questions\">"
+            .. "<label><input id=f-answered type=checkbox> show answered</label></div><div class=count id=count></div>"
+    end
+    body = body:gsub("<div id=questions></div>", function() return filters .. "<div id=questions></div>" end)
+
+    local badges = string.format("<div class=badges><span>%s</span><span>%s</span></div>", esc(meta.part or ""), esc(meta.state or ""))
+    return table.concat({
+        "<!doctype html>",
+        "<!-- docs/HTML/answer-pages/" .. page .. ".html - GENERATED by scripts/generate-answer-pages from docs/answer-pages/" .. page
+            .. ".md and the open issues' Open Questions sections, so the owner can read and answer them (issue 1102); don't edit, run it again. -->",
+        "<html lang=en><head><meta charset=utf-8><meta name=viewport content=\"width=device-width, initial-scale=1, viewport-fit=cover\">",
+        "<title>" .. esc(meta.title) .. "</title>",
+        "<link rel=preconnect href=\"https://fonts.googleapis.com\"><link rel=stylesheet href=\"https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap\">",
+        "<style>" .. STYLE .. "</style></head>",
+        "<body data-page=\"" .. page .. "\"><div class=wrap><nav aria-label=Contents>" .. table.concat(nav) .. "</nav><main>",
+        "<h1>" .. esc(meta.title) .. "</h1><p class=subtitle>" .. esc(meta.subtitle or "") .. "</p>" .. badges,
+        "<div class=server id=server></div>",
+        body,
+        "<p class=source>Written by <code>scripts/generate-answer-pages</code> from <code>docs/answer-pages/" .. page
+            .. ".md</code> and the issue files on " .. os.date("%Y-%m-%d %H:%M") .. ". Answers: <code>notes/answers/" .. page .. ".md</code>.</p>",
+        "</main></div>",
+        "<script type=application/json id=data>" .. json.encode(data):gsub("</", "<\\/") .. "</script>",
+        "<script type=application/json id=walk>" .. json.encode(page == "open-questions" and WALK or { order = {}, contexts = WALK.contexts }):gsub("</", "<\\/") .. "</script>",
+        "<script>" .. SCRIPT .. "</script></body></html>",
+    }, "\n")
+end
+
+local titles, written, gifsWanted, outputs = {}, {}, {}, {}
+for _, page in ipairs(PAGES) do
+    local meta, body, heads = story(page)
+    titles[page] = meta.title
+    written[page] = { meta = meta, body = body, heads = heads }
+    for g in (meta.gifs or ""):gmatch("%w+") do gifsWanted[g] = true end
+    for g in body:gmatch("gifs/(%w+)%.gif") do gifsWanted[g] = true end
+end
+for _, page in ipairs(PAGES) do
+    local w = written[page]
+    local issueList = {}
+    for id in (w.meta.issues or ""):gmatch("%S+") do issueList[#issueList + 1] = id end
+    outputs[page] = page_html(page, w.meta, w.body, w.heads, questions_for(issueList), titles)
+end
+do
+    local cards = {}
+    for _, page in ipairs(PAGES) do
+        local m = written[page].meta
+        cards[#cards + 1] = string.format("<a class=card href=\"%s.html\"><img src=\"gifs/%s.gif\" alt=\"\" width=128 height=128><span><strong>%s</strong><br>%s<br><em>%s</em></span></a>",
+            page, (m.gifs or ""):match("%w+") or "", esc(m.title), esc(m.subtitle or ""), esc(m.state or ""))
+    end
+    outputs.index = table.concat({ "<!doctype html>",
+        "<!-- docs/HTML/answer-pages/index.html - GENERATED by scripts/generate-answer-pages: the five answer pages (issue 1102); don't edit, run it again. -->",
+        "<html lang=en><head><meta charset=utf-8><meta name=viewport content=\"width=device-width, initial-scale=1\"><title>Answer Pages</title><style>" .. STYLE
+            .. ".cards{display:grid;gap:1rem;grid-template-columns:repeat(auto-fill,minmax(20rem,1fr))}.card{display:flex;gap:1rem;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:.8rem;color:var(--ink);text-decoration:none}.card img{background:#000;border-radius:4px;flex:none}.card em{color:var(--dim);font-size:.85rem}</style></head>",
+        "<body><main style=\"max-width:70rem;margin:0 auto;padding:1.5rem 16px\"><h1>Answer pages</h1><p class=subtitle>Five parts of the architecture, each with its open questions and a box to answer each. Start <code>scripts/answer-server</code> and open <code>http://127.0.0.1:8642/answer-pages/</code> to answer.</p><div class=cards>",
+        table.concat(cards), "</div></main></body></html>" }, "\n")
+end
+
+if check then
+    local stale = {}
+    for name, html in pairs(outputs) do
+        local f = io.open(OUT .. "/" .. name .. ".html", "r")
+        local old = f and f:read("*a") or ""
+        if f then f:close() end
+        if old:gsub("on %d+%-%d+%-%d+ %d+:%d+", "") ~= html:gsub("on %d+%-%d+%-%d+ %d+:%d+", "") then stale[#stale + 1] = name end
+    end
+    table.sort(stale)
+    print(#stale == 0 and "ok: the answer pages are up to date" or ("stale: " .. table.concat(stale, ", ") .. " (run scripts/generate-answer-pages)"))
+    os.exit(#stale == 0 and 0 or 1)
+end
+
+os.execute("mkdir -p '" .. OUT .. "'")
+local copied = copy_gifs(gifsWanted)
+local total, open = 0, 0
+for _, it in pairs(ISSUES) do for _, q in ipairs(it.questions) do total = total + 1; if not q.answered then open = open + 1 end end end
+for name, html in pairs(outputs) do
+    local f = io.open(OUT .. "/" .. name .. ".html", "w") or error("cannot write " .. OUT .. "/" .. name .. ".html")
+    f:write(html)
+    f:close()
+end
+print(string.format("6 pages written to %s; %d gifs copied; %d questions in %d open issues, %d still open",
+    OUT, copied, total, #IDS, open))

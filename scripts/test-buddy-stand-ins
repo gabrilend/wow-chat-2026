@@ -20,7 +20,7 @@ else
     exit 1
 fi
 
-MYSQL=("${DIR}/mysql/installed-files/bin/mysql" --no-defaults --socket="${DIR}/mysql/databases/mysql.sock" -uritz -pmenardi -N -B)
+MYSQL=("${DIR}/mysql/installed-files/bin/mysql" "--defaults-file=${DIR}/mysql/conf/client.cnf" --socket="${DIR}/mysql/databases/mysql.sock" -N -B)
 SRC="${DIR}/patches/E056-basic-buddy-stand-ins"   # carried by its step since issue 189e
 COUNT="SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '_smoke_test' AND table_name = 'buddy_stand_in';"
 SQL_SCRIPT="CREATE DATABASE IF NOT EXISTS _smoke_test; USE _smoke_test; ${COUNT}

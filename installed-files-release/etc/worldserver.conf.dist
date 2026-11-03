@@ -177,6 +177,9 @@ Allow.IP.Based.Action.Logging = 0
 LogSpamReports = 1
 
 
+ChatLog.Enable = 0
+
+
 Appender.Console=1,4,0,"1 9 3 6 5 8"
 Appender.Server=2,5,0,Server.log,w
 Appender.Playerbots=2,5,0,Playerbots.log,w
@@ -242,12 +245,6 @@ Expansion = 2
 
 
 ClientCacheVersion = 0
-
-
-SessionAddDelay = 10000
-
-
-CloseIdleConnections = 1
 
 
 SocketTimeOutTime = 900000
@@ -347,6 +344,12 @@ Visibility.GroupMode = 1
 Visibility.Distance.Continents = 100
 Visibility.Distance.Instances = 170
 Visibility.Distance.BGArenas = 250
+
+
+Visibility.Distance.Max = 250
+
+
+Visibility.Distance.InstanceOverrides = 1
 
 
 Visibility.ObjectSparkles = 1
@@ -463,6 +466,9 @@ DisableWaterBreath = 4
 AllFlightPaths = 0
 
 
+TaxiFlightSpeed = 32.0
+
+
 InstantFlightPaths = 0
 
 
@@ -481,7 +487,35 @@ PlayerStart.CustomSpells = 0
 PlayerStart.MapsExplored = 0
 
 
-InstantLogout = 1
+
+Trial.LevelCap = 20
+
+
+Trial.MoneyCap = 100000
+
+
+Trial.TradeSkillCap = 100
+
+
+Trial.Restriction.Chat = 1
+
+
+Trial.Restriction.Mail = 1
+
+
+Trial.Restriction.Trade = 1
+
+
+Trial.Restriction.Auction = 1
+
+
+Trial.Restriction.Party = 1
+
+
+Trial.Restriction.Guild = 1
+
+
+Trial.Restriction.Queue = 1
 
 
 
@@ -492,6 +526,9 @@ PlayerSave.Stats.MinLevel = 0
 
 
 PlayerSave.Stats.SaveOnlyOnLogout = 1
+
+
+PlayerSave.AdditionalSaves = 0
 
 
 CleanCharacterDB = 0
@@ -613,7 +650,6 @@ Rate.RunicPower.Income = 1
 Rate.RunicPower.Loss   = 1
 Rate.Focus             = 1
 Rate.Energy            = 1
-Rate.Loyalty           = 1
 
 
 Rate.Rest.InGame                 = 1
@@ -644,6 +680,9 @@ SpellQueue.Window = 400
 
 
 Achievement.RealmFirstKillWindow = 60
+
+
+Achievement.RealmFirstRaceLimitOnePerCharacter = 1
 
 
 
@@ -782,6 +821,9 @@ DurabilityLoss.InPvP = 0
 
 
 DurabilityLoss.OnDeath = 10
+
+
+DurabilityLoss.OnSpiritResurrect = 25
 
 
 DurabilityLossChance.Damage = 0.5
@@ -960,13 +1002,10 @@ Creature.MovingStopTimeForPlayer = 180000
 WaypointMovementStopTimeForPlayer = 120
 
 
-NpcEvadeIfTargetIsUnreachable = 5
-
-
 NpcRegenHPIfTargetIsUnreachable = 1
 
 
-NpcRegenHPTimeIfTargetIsUnreachable = 10
+Creature.Instance.TeleportToUnreachableTarget = 0
 
 
 Creatures.CustomIDs = "190010,55005,999991,25462,98888,601014,34567,34568"
@@ -1044,7 +1083,14 @@ DungeonAccessRequirements.OptionalStringID = 0
 
 
 
+CAIS.Enable = 0
+
+
+
 JoinBGAndLFG.Enable = 0
+
+
+LFG.MailItemOnFullInventory = 0
 
 
 DungeonFinder.OptionsMask = 5
@@ -1144,6 +1190,15 @@ Wintergrasp.CrashRestartTimer = 10
 Wintergrasp.SkipBattleSessionCount = 3500
 
 
+Wintergrasp.KickVoAPlayers = 1
+
+
+Wintergrasp.EssenceBothFactions = 0
+
+
+Wintergrasp.DeferShutdownTimer = 0
+
+
 
 Battleground.PrepTime = 120
 
@@ -1228,6 +1283,14 @@ Battleground.SpeedBuffRespawn = 150
 Battleground.Override.LowLevels.MinPlayers = 0
 
 
+Battleground.Override.LowLevels.MinPlayers.AV = 0
+Battleground.Override.LowLevels.MinPlayers.WS = 0
+Battleground.Override.LowLevels.MinPlayers.AB = 0
+Battleground.Override.LowLevels.MinPlayers.EY = 0
+Battleground.Override.LowLevels.MinPlayers.SA = 0
+Battleground.Override.LowLevels.MinPlayers.IC = 0
+
+
 Battleground.Warsong.Flags = 3
 
 
@@ -1310,6 +1373,9 @@ MaxAllowedMMRDrop = 500
 MailDeliveryDelay = 3600
 
 
+Mail.PushInboxOnDelivery = 0
+
+
 LevelReq.Mail = 1
 
 
@@ -1363,9 +1429,6 @@ Channel.RestrictedLfg = 1
 Channel.SilentlyGMJoin = 0
 
 
-Channel.ModerationGMLevel = 1
-
-
 ChatLevelReq.Channel = 1
 
 
@@ -1384,6 +1447,12 @@ PreserveCustomChannels = 0
 PreserveCustomChannelDuration = 14
 
 
+ChatFilter.Whisper = 1
+ChatFilter.Say     = 0
+ChatFilter.Yell    = 0
+ChatFilter.Emote   = 0
+
+
 
 AllowTwoSide.Accounts = 1
 
@@ -1392,9 +1461,6 @@ AllowTwoSide.Interaction.Calendar = 0
 
 
 AllowTwoSide.Interaction.Chat = 0
-
-
-AllowTwoSide.Interaction.Emote = 0
 
 
 AllowTwoSide.Interaction.Channel = 0
@@ -1410,18 +1476,6 @@ AllowTwoSide.Interaction.Arena = 0
 
 
 AllowTwoSide.Interaction.Auction = 0
-
-
-AllowTwoSide.Interaction.Mail = 0
-
-
-AllowTwoSide.WhoList = 0
-
-
-AllowTwoSide.AddFriend = 0
-
-
-AllowTwoSide.Trade = 0
 
 
 TalentsInspecting = 1
@@ -1477,8 +1531,8 @@ PlayerDump.DisallowOverwrite = 1
 
 
 
-ICC.Buff.Horde    = 73822
 ICC.Buff.Alliance = 73828
+ICC.Buff.Horde    = 73822
 
 
 WipeGunshipBlizzlike.Enable = 1
@@ -1526,5 +1580,23 @@ Respawn.DynamicRateGameObject = 1
 
 
 Respawn.DynamicMinimumGameObject = 10
+
+
+Respawn.DynamicEscortNPC = 0
+
+
+Respawn.ForceCompatibilityMode = 0
+
+
+
+
+
+Cluster.Enabled=0
+
+
+Cluster.AvailableMaps=""
+
+
+Cluster.IsCrossrealm=0
 
 

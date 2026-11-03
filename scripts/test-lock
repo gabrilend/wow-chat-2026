@@ -1,0 +1,49 @@
+#!/bin/bash
+
+set -uo pipefail
+
+DIR="/mnt/kaun/wow-chat-2026"
+PROFILE=""; DRY=false; VERB=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --dir)     DIR="$2"; shift 2 ;;
+        --profile) PROFILE="$2"; shift 2 ;;
+        --dry-run) DRY=true; shift ;;
+        on|off|status) VERB="$1"; shift ;;
+        *) echo "test-lock: unknown argument $1 (on, off or status)"; exit 1 ;;
+    esac
+done
+[[ -n "${VERB}" ]] || { echo "usage: test-lock [--dir DIR] [--profile P] [--dry-run] on|off|status"; exit 1; }
+[[ -n "${PROFILE}" ]] || PROFILE="$(cat "${DIR}/.profile" 2>/dev/null)"
+[[ -n "${PROFILE}" ]] || { echo "test-lock: no profile (.profile is missing; give --profile)"; exit 1; }
+MYSQL=("${DIR}/mysql/installed-files/bin/mysql" "--defaults-file=${DIR}/mysql/conf/client.cnf" -h127.0.0.1 -P3307 -N -B acore_auth)
+
+if [[ "${PROFILE}" == "beta" && "${VERB}" != "status" ]]; then
+    echo "test-lock: not on beta (the owner, 2026-10-28: \"Only on a separate testing server. Not beta.\"); nothing changed"
+    exit 1
+fi
+
+LEVEL="$("${MYSQL[@]}" -e "SELECT allowedSecurityLevel FROM realmlist WHERE name = '${PROFILE}'")"
+[[ -n "${LEVEL}" ]] || { echo "test-lock: no realm named ${PROFILE} in the realm list"; exit 1; }
+SERVER="not running (or its console doesn't answer)"
+if "${DIR}/scripts/gm-command" --dir "${DIR}" "server info" > /dev/null 2>&1; then SERVER="running"; fi
+
+case "${VERB}" in
+    status)
+        echo "test-lock: realm ${PROFILE}: lowest account level allowed in: ${LEVEL} ($([[ "${LEVEL}" == 0 ]] && echo "everyone" || echo "game masters only")); the server is ${SERVER}"
+        ;;
+    on|off)
+        want=$([[ "${VERB}" == on ]] && echo 1 || echo 0)
+        word=$([[ "${VERB}" == on ]] && echo "moderator" || echo "reset")
+        if [[ "${DRY}" == "true" ]]; then
+            echo "test-lock (dry run): would set realm ${PROFILE}'s lowest account level from ${LEVEL} to ${want}$([[ "${SERVER}" == running ]] && echo ", and send \"server plimit ${word}\" to the running server")"
+            exit 0
+        fi
+        "${MYSQL[@]}" -e "UPDATE realmlist SET allowedSecurityLevel = ${want} WHERE name = '${PROFILE}'" || { echo "test-lock: the realm list could not be changed"; exit 1; }
+        if [[ "${SERVER}" == "running" ]]; then
+            "${DIR}/scripts/gm-command" --dir "${DIR}" "server plimit ${word}" || { echo "test-lock: the realm list is set (${want}), but the running server refused \"server plimit ${word}\"; it takes the list's value at its next start"; exit 1; }
+        fi
+        echo "test-lock: realm ${PROFILE} is $([[ "${VERB}" == on ]] && echo "closed to all but game masters" || echo "open to everyone") ($([[ "${SERVER}" == running ]] && echo "now, and after restarts" || echo "from the server's next start"))"
+        ;;
+esac
+# }}}

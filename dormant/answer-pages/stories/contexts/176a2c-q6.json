@@ -1,0 +1,64 @@
+{
+  "context":"In the Arathi Basin battleground, computer-run stand-in squads (small groups of three or six characters that fill out each side) do not choose their own way. They walk a network of fixed roads that join the two home bases and the five bases between them: Stables, Farm, Gold Mine, Lumber Mill and Blacksmith. Wherever roads meet is a crossing. At a crossing, a squad takes any road except the one it just arrived by, and the choices are dealt out in turn, so successive squads spread evenly over every road without any randomness.\n\nBecause the rule never asks which road is \"nearer the enemy\", nothing in it tells a squad to stop. A squad keeps passing through crossings until something else interrupts it. That could be a base to capture or to stay and guard, a fight with enemy players or squads, or arrival at the enemy side's home base, which is where the roads from their side end. If the enemy's home counts as an end, squads that reach it stop there. That makes it a clear goal, but squads pile up and idle there. If it is not an end, they keep taking the rule's roads, turn round at the home and head back across the map. That keeps the match moving, but squads would never settle at their goal.\n\nThe Basin also has a river that runs from the Blacksmith. It is not a road and is deliberately not walkable. The Lumber Mill sits on a cliff above the river. A stand-in only ends up in the river by accident, knocked back, cycloned (spun helpless) or feared (forced to run) off an edge. A stand-in that lands there walks out to the nearest point of the nearest road, carries on from the first crossing it reaches, and joins the first group it meets. In effect it is \"recovered\" back onto the roads. The map has one more place to decide: the Lumber Mill cliff. If a fall from the cliff counts as the same accident as being knocked into the river, the stand-in gets that recovery. If instead any way down from the cliff counts as a fall, the rule treats every descent the same, whatever caused it.",
+  "components":[{
+      "question":"176a2c#6",
+      "component":"Stand-in squads follow fixed roads between home bases and five bases",
+      "explained_by":"They walk a network of fixed roads that join the two home bases and the five bases between them: Stables, Farm, Gold Mine, Lumber Mill and Blacksmith."
+    },{
+      "question":"176a2c#6",
+      "component":"The rule: any road but the one arrived by, dealt out in turn, with no 'nearer the enemy' test",
+      "explained_by":"At a crossing, a squad takes any road except the one it just arrived by, and the choices are dealt out in turn, so successive squads spread evenly over every road without any randomness."
+    },{
+      "question":"176a2c#6",
+      "component":"Nothing in the rule stops a squad; only outside events do (base to capture or guard, a fight, the enemy's home)",
+      "explained_by":"A squad keeps passing through crossings until something else interrupts it."
+    },{
+      "question":"176a2c#6",
+      "component":"What the interruptions are: a base to capture or guard, a fight, the enemy's home",
+      "explained_by":"That could be a base to capture or to stay and guard, a fight with enemy players or squads, or arrival at the enemy side's home base, which is where the roads from their side end."
+    },{
+      "question":"176a2c#6",
+      "component":"Option: reaching the enemy's home is an end",
+      "explained_by":"If the enemy's home counts as an end, squads that reach it stop there."
+    },{
+      "question":"176a2c#6",
+      "component":"Option: squads keep walking the rule past the enemy's home",
+      "explained_by":"If it is not an end, they keep taking the rule's roads, turn round at the home and head back across the map."
+    },{
+      "question":"176a2c#6",
+      "component":"Trade-offs of each option",
+      "explained_by":"That makes it a clear goal, but squads pile up and idle there."
+    },{
+      "question":"176a2c#7",
+      "component":"The river from the Blacksmith is not walkable and is not a road",
+      "explained_by":"The Basin also has a river that runs from the Blacksmith."
+    },{
+      "question":"176a2c#7",
+      "component":"Stand-ins and 'knocked off' (knockback, cyclone, fear) as the only ways into the river",
+      "explained_by":"A stand-in only ends up in the river by accident, knocked back, cycloned (spun helpless) or feared (forced to run) off an edge."
+    },{
+      "question":"176a2c#7",
+      "component":"Lumber Mill cliff above the river",
+      "explained_by":"The Lumber Mill sits on a cliff above the river."
+    },{
+      "question":"176a2c#7",
+      "component":"Recovery from the river: walk to the nearest road and join the first group met",
+      "explained_by":"A stand-in that lands there walks out to the nearest point of the nearest road, carries on from the first crossing it reaches, and joins the first group it meets."
+    },{
+      "question":"176a2c#7",
+      "component":"Option: the cliff fall counts as knocked off, versus any descent from the cliff counting as a fall",
+      "explained_by":"If a fall from the cliff counts as the same accident as being knocked into the river, the stand-in gets that recovery."
+    },{
+      "question":"176a2c#7",
+      "component":"Option: any way down from the cliff is a fall to recover from",
+      "explained_by":"If instead any way down from the cliff counts as a fall, the rule treats every descent the same, whatever caused it."
+    }],
+  "model":"claude-sonnet-5-5",
+  "unexplained":[],
+  "written_by":"scripts/write-question-contexts (issue 1102a): a context for these questions, for the open-questions walkthrough",
+  "fingerprint":"2092e991",
+  "group":"176a2c-q6",
+  "written":"2026-10-30 02:17",
+  "questions":["176a2c#6","176a2c#7"],
+  "tries":1
+}

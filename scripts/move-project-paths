@@ -99,8 +99,8 @@ end
 local rowsMoved = 0
 if opt.databases then
     print("database update folders:")
-    local mysql = "'" .. DIR .. "/mysql/installed-files/bin/mysql' --no-defaults --socket='" .. DIR ..
-                  "/mysql/databases/mysql.sock' -uritz -pmenardi -N 2>/dev/null"
+    local mysql = "'" .. DIR .. "/mysql/installed-files/bin/mysql' --defaults-file=" .. DIR .. "/mysql/conf/client.cnf --socket='" .. DIR ..
+                  "/mysql/databases/mysql.sock' -N 2>/dev/null"
     local dbs = lines_of(mysql .. " -e \"SELECT table_schema FROM information_schema.tables WHERE table_name = 'updates_include'\"")
     if #dbs == 0 then
         io.stderr:write("move-project-paths: no database answered with an updates_include table (is the project's MySQL running at " ..

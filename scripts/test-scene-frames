@@ -1,0 +1,58 @@
+#!/bin/bash
+
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+    sed -n '10,15p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+OUT="${DIR}/tmp/tmp/scene-frames-test"
+mkdir -p "${OUT}"
+T=$'\t'
+HEAD="round${T}frame${T}t${T}who${T}side${T}alive${T}health${T}max-health${T}casts${T}fp-leans"
+
+{
+    echo "# made by test-scene-frames (a made-up scene)"
+    echo "${HEAD}"
+    echo "1${T}1${T}0.5${T}Ana${T}stand-in${T}1${T}900${T}1000${T}Smite>Ogre${T}-"
+    echo "1${T}1${T}0.5${T}Bo${T}stand-in${T}1${T}1000${T}1000${T}Strike>Ogre${T}strike=1.200"
+    echo "1${T}1${T}0.5${T}Ogre${T}monster${T}1${T}5000${T}6000${T}-${T}-"
+    echo "1${T}2${T}1.0${T}Ana${T}stand-in${T}0${T}0${T}1000${T}-${T}-"
+    echo "2${T}1${T}0.5${T}Ana${T}stand-in${T}1${T}1000${T}1000${T}Renew>Bo;Smite>Ogre${T}-"
+    echo "2${T}1${T}0.5${T}Bo${T}stand-in${T}1${T}500${T}1000${T}Strike>Ogre${T}-"
+    echo "2${T}1${T}0.5${T}Ogre${T}monster${T}0${T}0${T}6000${T}-${T}-"
+} > "${OUT}/whole-frames.tsv"
+{
+    echo "# made by test-scene-frames (a line cut short)"
+    echo "${HEAD}"
+    echo "1${T}1${T}0.5${T}Ana${T}stand-in${T}1${T}900${T}1000${T}Smite>Ogre${T}-"
+    echo "1${T}1${T}0.5${T}Bo${T}stand-in${T}1${T}1000"
+} > "${OUT}/cut-frames.tsv"
+
+passed=0
+failed=0
+check() {
+    if [ "$1" = "0" ]; then echo "ok: $2"; passed=$((passed + 1)); else echo "FAILED: $2"; failed=$((failed + 1)); fi
+}
+
+WHOLE=$(luajit "${DIR}/scripts/check-scene-frames" "${OUT}/whole-frames.tsv")
+WHOLE_STATUS=$?
+echo "${WHOLE}" | sed 's/^/   /'
+check "$([ ${WHOLE_STATUS} -eq 0 ] && echo 0 || echo 1)" "a whole file passes"
+ANA=$(echo "${WHOLE}" | grep '^  Ana ')
+BO=$(echo "${WHOLE}" | grep '^  Bo ')
+OGRE=$(echo "${WHOLE}" | grep '^  Ogre ')
+check "$(echo "${ANA}" | grep -q '2 different orders' && echo 0 || echo 1)" "Ana cast differently in her two rounds: two orders"
+check "$(echo "${ANA}" | grep -q 'fell in 1' && echo 0 || echo 1)" "Ana fell in one round"
+check "$(echo "${BO}" | grep -q 'the same casts in the same order every round' && echo 0 || echo 1)" "Bo cast the same both rounds: pointed out"
+check "$(echo "${OGRE}" | grep -q 'same casts' && echo 1 || echo 0)" "the monster is never pointed out"
+check "$(echo "${WHOLE}" | grep -q '2 rounds, 0.5 to 1.0 seconds' && echo 0 || echo 1)" "the rounds and their lengths"
+
+CUT=$(luajit "${DIR}/scripts/check-scene-frames" "${OUT}/cut-frames.tsv")
+CUT_STATUS=$?
+echo "${CUT}" | sed 's/^/   /'
+check "$([ ${CUT_STATUS} -eq 1 ] && echo 0 || echo 1)" "a line cut short fails the file"
+check "$(echo "${CUT}" | grep -q 'first: line 4 (7 fields, the header names 10)' && echo 0 || echo 1)" "and says which line, and how wide"
+
+echo
+echo "${passed} passed, ${failed} failed"
+[ "${failed}" -eq 0 ]

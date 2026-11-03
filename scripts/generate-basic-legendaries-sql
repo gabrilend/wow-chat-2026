@@ -28,7 +28,7 @@ local RATING_BIT_TO_STAT = { [1 << 24] = 44, [131072] = 36, [1 << 7] = 32, [1 <<
 local problems = {}
 local function problem(t) problems[#problems + 1] = t end
 
-local MYSQL = string.format("'%s/mysql/installed-files/bin/mysql' --no-defaults --socket='%s/mysql/databases/mysql.sock' -uritz -pmenardi acore_world_basic -B", DIR, DIR)
+local MYSQL = string.format("'%s/mysql/installed-files/bin/mysql' --defaults-file=" .. DIR .. "/mysql/conf/client.cnf --socket='%s/mysql/databases/mysql.sock' acore_world_basic -B", DIR, DIR)
 local function query(sql)
     local h = io.popen(MYSQL .. " -e \"" .. sql:gsub('"', '\\"') .. "\" 2>&1")
     local header, rows = nil, {}

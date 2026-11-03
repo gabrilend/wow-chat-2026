@@ -1,6 +1,7 @@
 
 #include "buddies.h"
 #include "buddies_spells.h"
+#include "buddies_loot.h"
 #include "buddies_quest_spells.h"
 #include "Containers.h"
 #include "Creature.h"
@@ -14,6 +15,7 @@
 #include "ScriptMgr.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
+#include <map>
 #include "Trainer.h"
 #include "WorldSession.h"
 #include <algorithm>
@@ -86,6 +88,36 @@ static uint32 LearnQuestSpells(Player* bot)
     return learned;
 }
 
+static float Suitability(Player* bot, uint32 spellId)
+{
+    uint8 thirds[3];
+    CollectorType types[3];
+    if (!BuddyTalentPlan(bot, thirds, types))
+        return 0.5f;
+    SpellInfo const* info = sSpellMgr->GetSpellInfo(spellId);
+    if (!info)
+        return 0.0f;
+    bool heal = false, damage = false;
+    for (SpellEffectInfo const& e : info->GetEffects())
+    {
+        if (e.Effect == SPELL_EFFECT_HEAL || e.ApplyAuraName == SPELL_AURA_PERIODIC_HEAL)
+            heal = true;
+        if (e.Effect == SPELL_EFFECT_SCHOOL_DAMAGE || e.Effect == SPELL_EFFECT_WEAPON_DAMAGE || e.Effect == SPELL_EFFECT_WEAPON_DAMAGE_NOSCHOOL
+            || e.Effect == SPELL_EFFECT_NORMALIZED_WEAPON_DMG || e.Effect == SPELL_EFFECT_WEAPON_PERCENT_DAMAGE
+            || e.ApplyAuraName == SPELL_AURA_PERIODIC_DAMAGE)
+            damage = true;
+    }
+    if (!heal && !damage)
+        return 0.5f;
+    uint8 want = heal ? uint8(SPELL_HEAL)
+               : (info->SchoolMask == SPELL_SCHOOL_MASK_NORMAL ? uint8(MELEE_DMG | MELEE_TANK | RANGED) : uint8(SPELL_DMG));
+    float score = 0.0f;
+    for (uint8 t = 0; t < 3; ++t)
+        if (uint8(types[t]) & want)
+            score += thirds[t] / 3.0f;
+    return score;
+}
+
 uint32 BuddyTrainAtTrainer(Player* bot, Creature* npc)
 {
     Trainer::Trainer* trainer = sObjectMgr->GetTrainer(npc->GetEntry());
@@ -105,15 +137,33 @@ uint32 BuddyTrainAtTrainer(Player* bot, Creature* npc)
         std::stable_sort(can.begin(), can.end(), [](Trainer::Spell const* a, Trainer::Spell const* b) {
             return a->MoneyCost != b->MoneyCost ? a->MoneyCost < b->MoneyCost : a->ReqLevel < b->ReqLevel;
         });
-        Trainer::Spell const* next = can.front();
-        int32 cost = int32(next->MoneyCost * discount);
-        if (!bot->HasEnoughMoney(cost))
+        uint64 all = 0;
+        for (Trainer::Spell const* sp : can)
+            all += uint64(sp->MoneyCost * discount);
+        if (all > bot->GetMoney())
         {
-            LOG_DEBUG("module", "mod-buddies: buddy {} stopped training at {}: the cheapest lesson left (spell {}) costs {} "
-                "copper, it has {}", bot->GetName(), npc->GetName(), next->SpellId, cost, bot->GetMoney());
-            BuddyTrace(bot, "town: training ended, the cheapest lesson left costs {} copper and it has {}", cost, bot->GetMoney());
+            std::map<uint32, float> suits;
+            for (Trainer::Spell const* sp : can)
+                suits[sp->SpellId] = Suitability(bot, sp->SpellId);
+            std::stable_sort(can.begin(), can.end(), [&](Trainer::Spell const* a, Trainer::Spell const* b) {
+                return suits[a->SpellId] > suits[b->SpellId];
+            });
+        }
+        Trainer::Spell const* next = nullptr;
+        for (Trainer::Spell const* sp : can)
+            if (bot->HasEnoughMoney(int32(sp->MoneyCost * discount)))
+            {
+                next = sp;
+                break;
+            }
+        if (!next)
+        {
+            LOG_DEBUG("module", "mod-buddies: buddy {} stopped training at {}: none of the {} lessons left is affordable "
+                "(it has {} copper)", bot->GetName(), npc->GetName(), can.size(), bot->GetMoney());
+            BuddyTrace(bot, "town: training ended, none of the {} lessons left is affordable with {} copper", can.size(), bot->GetMoney());
             break;
         }
+        int32 cost = int32(next->MoneyCost * discount);
         uint32 before = bot->GetMoney();
         trainer->TeachSpell(npc, bot, next->SpellId);
         if (bot->GetMoney() == before && cost > 0)
@@ -168,27 +218,39 @@ static void FindWeaponLessons()
     });
 }
 
-static uint32 WeaponKindsKnown(Player const* p)
-{
-    uint32 n = 0;
-    for (uint32 skill : sWeaponKinds)
-        if (p->HasSkill(skill))
-            ++n;
-    return n;
-}
-
 uint32 BuddyWeaponAllowance(uint32 ownerGuid)
 {
     FindWeaponLessons();
-    uint32 n = 0;
+    std::set<uint32> known;
+    uint8 race = 0, cls = 0;
     if (Player* owner = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(ownerGuid)))
-        n = WeaponKindsKnown(owner);
-    else if (QueryResult rows = CharacterDatabase.Query("SELECT skill FROM character_skills WHERE guid = {}", ownerGuid))
-        do
-            if (sWeaponKinds.count((*rows)[0].Get<uint16>()))
-                ++n;
-        while (rows->NextRow());
-    return std::max<uint32>(n, 1);
+    {
+        for (uint32 skill : sWeaponKinds)
+            if (owner->HasSkill(skill))
+                known.insert(skill);
+        race = owner->getRace();
+        cls  = owner->getClass();
+    }
+    else
+    {
+        if (QueryResult rows = CharacterDatabase.Query("SELECT skill FROM character_skills WHERE guid = {}", ownerGuid))
+            do
+                if (sWeaponKinds.count((*rows)[0].Get<uint16>()))
+                    known.insert((*rows)[0].Get<uint16>());
+            while (rows->NextRow());
+        if (QueryResult who = CharacterDatabase.Query("SELECT race, class FROM characters WHERE guid = {}", ownerGuid))
+        {
+            race = (*who)[0].Get<uint8>();
+            cls  = (*who)[1].Get<uint8>();
+        }
+    }
+    if (PlayerInfo const* info = sObjectMgr->GetPlayerInfo(race, cls))
+        for (PlayerCreateInfoSkill const& s : info->skills)
+            known.erase(s.SkillId);
+    else
+        LOG_ERROR("module", "mod-buddies: owner {} (race {}, class {}) has no starting-skill record; every weapon kind it "
+            "knows counts as trained", ownerGuid, race, cls);
+    return uint32(known.size());
 }
 
 static WeaponLesson const* LessonFor(Player* bot, uint32 skill)
@@ -229,7 +291,7 @@ uint32 BuddyFillWeaponKinds(Player* bot, uint32 allowance)
     uint32 learned = 0;
     for (uint32 skill : open)
     {
-        if (WeaponKindsKnown(bot) >= allowance)
+        if (learned >= allowance)
             break;
         std::string why;
         if (BuddyLearnWeaponKind(bot, skill, why))
@@ -238,6 +300,23 @@ uint32 BuddyFillWeaponKinds(Player* bot, uint32 allowance)
             LOG_ERROR("module", "mod-buddies: buddy {} could not learn weapon kind {}: {}", bot->GetName(), skill, why);
     }
     return learned;
+}
+
+uint32 BuddyMaxWeaponSkills(Player* bot)
+{
+    FindWeaponLessons();
+    uint32 raised = 0;
+    for (uint32 skill : sWeaponKinds)
+    {
+        if (!bot->HasSkill(skill))
+            continue;
+        uint16 most = bot->GetPureMaxSkillValue(skill);
+        if (bot->GetPureSkillValue(skill) >= most)
+            continue;
+        bot->SetSkill(uint16(skill), bot->GetSkillStep(uint16(skill)), most, most);
+        ++raised;
+    }
+    return raised;
 }
 
 static std::once_flag sTrainersFound;
@@ -305,6 +384,34 @@ static constexpr RodAtSkill ENCHANTING_RODS[] = { { 1, 6218 }, { 100, 6339 }, { 
 
 static std::once_flag sTradeTrainersFound;
 static std::vector<uint32> sTradeTrainers;
+
+uint32 BuddyProfessionsByRatio(Player* p, std::map<uint32, float> const& ratio)
+{
+    uint8 level = p->GetLevel();
+    uint8 rank = 0;
+    for (uint8 r = 0; r < 4; ++r)
+        if (level >= RANK_FROM_LEVEL[r])
+            rank = r;
+    uint32 changed = 0;
+    for (ProfessionRanks const& pr : sProfessionRanks)
+    {
+        auto it = ratio.find(pr.skill);
+        if (it == ratio.end())
+            continue;
+        for (uint8 r = 0; r < 4; ++r)
+        {
+            if (r <= rank && !p->HasSpell(pr.rank[r]))
+                p->learnSpell(pr.rank[r], false);
+            else if (r > rank && p->HasSpell(pr.rank[r]))
+                p->removeSpell(pr.rank[r], SPEC_MASK_ALL, false);
+        }
+        uint16 max   = std::min(RANK_MAX[rank], SKILL_CAP);
+        uint16 value = std::max<uint16>(1, uint16(std::lround(it->second * max)));
+        p->SetSkill(uint16(pr.skill), rank + 1, std::min(value, max), max);
+        ++changed;
+    }
+    return changed;
+}
 
 uint32 BuddyRaiseProfessions(Player* bot, std::string& problems)
 {

@@ -1,0 +1,119 @@
+#!/usr/bin/env luajit
+
+local ffi = require("ffi")
+
+local DIR   = "/mnt/kaun/wow-chat-2026"
+local MODEL = "/mnt/kaun/stable-diffusion/models/diffusers/Dreamshaper-8"
+local OUT   = "/mnt/kaun/stable-diffusion/models/embeddings"
+local dry   = false
+do
+    local i = 1
+    while i <= #arg do
+        local a = arg[i]
+        if a == "--model" then MODEL = arg[i + 1]; i = i + 1
+        elseif a == "--out" then OUT = arg[i + 1]; i = i + 1
+        elseif a == "--dry-run" then dry = true
+        elseif a == "--help" or a == "-h" then
+            print("Usage: scripts/make-off-brand-embeddings [DIR] [--model DIR] [--out DIR] [--dry-run]"); os.exit(0)
+        elseif a:sub(1, 1) == "-" then
+            io.stderr:write("make-off-brand-embeddings: unknown option " .. a .. " (see --help)\n"); os.exit(2)
+        elseif a ~= "" then DIR = a end
+        i = i + 1
+    end
+end
+
+local WIDTH = 768
+local cfg   = dofile(DIR .. "/config/box-art/off-brand-tokens.lua")
+
+local function read_all(path)
+    local f = io.open(path, "rb")
+    if not f then error("make-off-brand-embeddings: cannot read " .. path) end
+    local s = f:read("*a"); f:close(); return s
+end
+
+local vocab_text = read_all(MODEL .. "/tokenizer/vocab.json")
+local function row_of(word)
+    local key = '"' .. word .. '</w>": *(%d+)'
+    local n = vocab_text:match(key)
+    if not n then
+        error(string.format("make-off-brand-embeddings: \"%s\" is not one whole word in the text encoder's vocabulary "
+            .. "(%s/tokenizer/vocab.json has no \"%s</w>\"); choose another word in config/box-art/off-brand-tokens.lua",
+            word, MODEL, word))
+    end
+    return tonumber(n)
+end
+
+local enc_path = MODEL .. "/text_encoder/model.fp16.safetensors"
+local enc = io.open(enc_path, "rb")
+if not enc then error("make-off-brand-embeddings: cannot read " .. enc_path) end
+local hlen_bytes = enc:read(8)
+local hlen = 0
+for k = 8, 1, -1 do hlen = hlen * 256 + hlen_bytes:byte(k) end
+local header = enc:read(hlen)
+local entry = header:match('"text_model%.embeddings%.token_embedding%.weight":(%b{})')
+if not entry then error("make-off-brand-embeddings: " .. enc_path .. " has no token_embedding.weight") end
+local dtype = entry:match('"dtype":"(%w+)"')
+local rows, width = entry:match('"shape":%[(%d+),(%d+)%]')
+local start = tonumber(entry:match('"data_offsets":%[(%d+),'))
+if dtype ~= "F16" or tonumber(width) ~= WIDTH then
+    error(string.format("make-off-brand-embeddings: expected a half-precision table %d wide, found %s %s wide", WIDTH, dtype, width))
+end
+local DATA_START = 8 + hlen
+
+local function half(u)
+    local sign = (u >= 0x8000) and -1 or 1
+    local e = math.floor(u / 1024) % 32
+    local m = u % 1024
+    if e == 0 then return sign * m * 2 ^ -24 end
+    if e == 31 then return sign * math.huge end
+    return sign * (1 + m / 1024) * 2 ^ (e - 15)
+end
+local function row(n)
+    if n >= tonumber(rows) then error("make-off-brand-embeddings: row " .. n .. " is past the table's " .. rows .. " rows") end
+    enc:seek("set", DATA_START + start + n * WIDTH * 2)
+    local raw = enc:read(WIDTH * 2)
+    local u = ffi.new("uint16_t[?]", WIDTH)
+    ffi.copy(u, raw, WIDTH * 2)
+    local v = {}
+    for k = 0, WIDTH - 1 do v[k + 1] = half(u[k]) end
+    return v
+end
+local function length(v) local s = 0; for k = 1, WIDTH do s = s + v[k] * v[k] end; return math.sqrt(s) end
+
+local function write_embedding(path, v)
+    local hdr = string.format('{"emb_params":{"dtype":"F32","shape":[1,%d],"data_offsets":[0,%d]}}', WIDTH, WIDTH * 4)
+    hdr = hdr .. string.rep(" ", (8 - #hdr % 8) % 8)
+    local n = ffi.new("uint64_t[1]", #hdr)
+    local data = ffi.new("float[?]", WIDTH)
+    for k = 1, WIDTH do data[k - 1] = v[k] end
+    local f = assert(io.open(path, "wb"))
+    f:write(ffi.string(n, 8), hdr, ffi.string(data, WIDTH * 4))
+    f:close()
+end
+
+local made = 0
+if not dry then os.execute("mkdir -p '" .. OUT .. "'") end
+for _, tok in ipairs(cfg.tokens) do
+    local sum, weight_total, length_total, count = {}, 0, 0, 0
+    for k = 1, WIDTH do sum[k] = 0 end
+    local function add(word, w)
+        local v = row(row_of(word))
+        for k = 1, WIDTH do sum[k] = sum[k] + v[k] * w end
+        weight_total = weight_total + w
+        length_total = length_total + length(v)
+        count = count + 1
+    end
+    for _, word in ipairs(tok.looks) do add(word, 1) end
+    for _, word in ipairs(cfg.KNOCKOFF) do add(word, cfg.KNOCKOFF_WEIGHT) end
+    for k = 1, WIDTH do sum[k] = sum[k] / weight_total end
+    local target = length_total / count
+    local scale = target / length(sum)
+    for k = 1, WIDTH do sum[k] = sum[k] * scale end
+
+    local path = OUT .. "/" .. tok.file .. ".safetensors"
+    print(string.format("%-34s %-24s %s + knock-off  (length %.3f)%s", tok.file, '"' .. tok.says .. '"',
+        table.concat(tok.looks, " "), length(sum), dry and "" or ("  -> " .. path)))
+    if not dry then write_embedding(path, sum); made = made + 1 end
+end
+enc:close()
+print(string.format("%d token(s) %s", dry and #cfg.tokens or made, dry and "checked, nothing written (--dry-run)" or "written"))

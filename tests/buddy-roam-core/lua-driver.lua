@@ -21,6 +21,7 @@ end
 
 if MODE == "run" then
     local Roam = dofile(DIR .. "/src/lua-basic/lib/buddy-roam.lua")
+    Roam.PLAN.TIE = -1
     local by_name = {}
     for _, a in ipairs(Maps.list) do by_name[a.name] = a end
     local out = assert(io.open(arg[4], "w"))

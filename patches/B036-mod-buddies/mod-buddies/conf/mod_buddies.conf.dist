@@ -1,0 +1,35 @@
+
+[worldserver]
+
+
+Buddies.AlteracWeather = 0
+
+
+Buddies.CloseFollow.InCombat = 0
+
+
+Buddies.ForwardPass = 0
+
+
+Buddies.ForwardPass.Replay = 0
+
+
+Buddies.ForwardPass.Threads = 2
+
+
+Buddies.MapStream.Port = DEFAULT_PORT
+
+
+Buddies.PaintDir = 
+
+
+Buddies.Sidestep = 0
+
+
+Buddies.TalentWeights = 0
+
+
+Buddies.TalentWeights.Broad = 100
+
+
+Buddies.TestRealm = false

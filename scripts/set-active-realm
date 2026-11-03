@@ -17,8 +17,11 @@ case "${PROFILE}" in
     basic)    ACTIVE_ID=5 ;;
     cc-test)  ACTIVE_ID=6 ;;
     *)
-        echo "ERROR: unknown profile '${PROFILE}' (expected release|beta|vanilla|alpha|basic|cc-test)"
-        exit 1
+        ACTIVE_ID="$(grep "^${PROFILE} " "${DIR}/config/branches" 2>/dev/null | awk '{print $3}')"
+        if [[ -z "${ACTIVE_ID}" ]]; then
+            echo "ERROR: unknown profile '${PROFILE}' (expected release|beta|vanilla|alpha|basic|cc-test, or a branch in config/branches)"
+            exit 1
+        fi
         ;;
 esac
 
@@ -31,8 +34,8 @@ if [[ ! -S "${MYSQL_SOCKET}" ]]; then
     exit 0
 fi
 
-"${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" \
-    -u ritz -pmenardi acore_auth 2>/dev/null <<'SQL'
+"${MYSQL_DIR}/bin/mysql" "--defaults-file=${DIR}/mysql/conf/client.cnf" --socket="${MYSQL_SOCKET}" \
+    acore_auth 2>/dev/null <<'SQL'
 INSERT IGNORE INTO realmlist (id, name, address, localAddress, localSubnetMask, port, gamebuild)
 VALUES
   (1, 'release', '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340),
@@ -43,8 +46,8 @@ VALUES
   (6, 'cc-test', '127.0.0.1', '127.0.0.1', '255.255.255.0', 4462, 12340);
 SQL
 
-"${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" \
-    -u ritz -pmenardi acore_auth <<'SQL'
+"${MYSQL_DIR}/bin/mysql" "--defaults-file=${DIR}/mysql/conf/client.cnf" --socket="${MYSQL_SOCKET}" \
+    acore_auth <<'SQL'
 UPDATE realmlist SET name = CASE id
     WHEN 1 THEN 'release'
     WHEN 2 THEN 'beta'
@@ -55,8 +58,8 @@ UPDATE realmlist SET name = CASE id
     ELSE name END;
 SQL
 
-"${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" \
-    -u ritz -pmenardi acore_auth 2>/dev/null <<SQL
+"${MYSQL_DIR}/bin/mysql" "--defaults-file=${DIR}/mysql/conf/client.cnf" --socket="${MYSQL_SOCKET}" \
+    acore_auth 2>/dev/null <<SQL
 UPDATE realmlist SET flag = 2;
 UPDATE realmlist SET flag = 0 WHERE id = ${ACTIVE_ID};
 SQL

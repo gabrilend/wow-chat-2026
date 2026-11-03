@@ -3,6 +3,7 @@
 #include "buddies_gems.h"
 #include "buddies_kit.h"
 #include "buddies_loot.h"
+#include "buddies_solo.h"
 #include "buddies_spells.h"
 #include "DatabaseEnv.h"
 #include "Item.h"
@@ -22,7 +23,8 @@
 static constexpr uint32 RECORD_AFTER_MS = 5000;
 static constexpr uint32 PASS_EVERY_MS   = 1000;
 
-enum BuddyStage : uint8 { STAGE_WITH_OWNER = 0, STAGE_STORED = 1, STAGE_REMAKE = 3, STAGE_RECORDING = 4 };
+enum BuddyStage : uint8 { STAGE_WITH_OWNER = 0, STAGE_STORED = 1, STAGE_REMAKE = 3, STAGE_RECORDING = 4, STAGE_SET_ASIDE = 5,
+                          STAGE_RECLASSED = 6, STAGE_TO_SPEC = 7 };
 
 struct RecordDue { uint64 dueMs; bool remake; };
 static std::mutex                    sRecordLock;
@@ -105,7 +107,7 @@ void BuddyStageCheck(Player* owner)
 static constexpr char const* KEPT_SUBJECT = "Kept for you";
 static constexpr uint32 KEPT_DAYS = 900;
 
-static uint32 MailOldGear(Player* bot)
+uint32 BuddyMailOldGear(Player* bot)
 {
     std::vector<Item*> items;
     for (uint8 b = INVENTORY_SLOT_BAG_START; b < INVENTORY_SLOT_BAG_END; ++b)
@@ -166,16 +168,18 @@ static void Remake(Player* bot, uint32 owner, uint8 profile, uint8 role)
         return;
     }
 
-    uint32 items = MailOldGear(bot);
+    uint32 items = BuddyMailOldGear(bot);
     uint32 forgotten = BuddyForgetLessons(bot);
 
     uint8 was = bot->GetLevel();
+    BuddySoloForget(guid);
     bot->GiveLevel(level);
     bot->SetUInt32Value(PLAYER_XP, 0);
     bot->InitTalentForLevel();
     bot->resetTalents(true);
 
     uint32 lessons = BuddyLearnEverything(bot);
+    bot->UpdateSkillsToMaxSkillsForLevel();
     std::string problems;
     lessons += BuddyRaiseProfessions(bot, problems);
     problems += BuddyGiveStartingKit(bot, owner, profile);
@@ -185,6 +189,23 @@ static void Remake(Player* bot, uint32 owner, uint8 profile, uint8 role)
     LOG_INFO("module", "mod-buddies: buddy {} made again: level {} -> {}, {} items and its money mailed to it, {} spells forgotten, "
         "{} learned, starting kit given{}{}", bot->GetName(), was, level, items, forgotten, lessons,
         problems.empty() ? "" : "; kit incomplete: ", problems);
+}
+
+static void Reclassed(Player* bot, uint8 profile, uint8 role)
+{
+    uint32 lessons = BuddyLearnEverything(bot);
+    bot->UpdateSkillsToMaxSkillsForLevel();
+    std::string problems = BuddyRegear(bot, profile);
+    if (bot->GetLevel() >= BUDDY_PVP_JEWELLERY_FROM)
+        problems += BuddyGivePvpJewellery(bot, profile, role);
+    problems += BuddyGemKit(bot, profile, role);
+    bot->UpdateSkillsToMaxSkillsForLevel();
+    bot->SaveToDB(false, false);
+    CharacterDatabase.DirectExecute("UPDATE buddy_roster SET stage = {} WHERE buddy = {}", uint8(STAGE_WITH_OWNER),
+        bot->GetGUID().GetCounter());
+    LOG_INFO("module", "mod-buddies: buddy {} (level {}) dressed and taught for its new class: {} lessons learned, kit, "
+        "jewellery and gems by plan {} (role {}){}{}", bot->GetName(), bot->GetLevel(), lessons, uint32(profile), uint32(role),
+        problems.empty() ? "" : "; ", problems);
 }
 
 class buddies_stage_player : public PlayerScript
@@ -202,6 +223,16 @@ public:
             player->GetGUID().GetCounter());
         if (row && (*row)[1].Get<uint8>() == STAGE_REMAKE)
             Remake(player, (*row)[0].Get<uint32>(), (*row)[2].Get<uint8>(), (*row)[3].Get<uint8>());
+        else if (row && (*row)[1].Get<uint8>() == STAGE_RECLASSED)
+            Reclassed(player, (*row)[2].Get<uint8>(), (*row)[3].Get<uint8>());
+        else if (row && (*row)[1].Get<uint8>() == STAGE_TO_SPEC)
+        {
+            std::string problems = BuddyBringToSpec(player, (*row)[2].Get<uint8>(), (*row)[3].Get<uint8>());
+            CharacterDatabase.DirectExecute("UPDATE buddy_roster SET stage = {} WHERE buddy = {}", uint8(STAGE_WITH_OWNER),
+                player->GetGUID().GetCounter());
+            LOG_INFO("module", "mod-buddies: buddy {} (level {}) brought up to the gear spec at login{}{}", player->GetName(),
+                player->GetLevel(), problems.empty() ? "" : ": ", problems);
+        }
     }
 
     void OnPlayerLevelChanged(Player* player, uint8 oldLevel) override
@@ -227,6 +258,7 @@ private:
         uint8  role    = (*row)[3].Get<uint8>();
         uint32 forgotten = level < oldLevel ? BuddyForgetLessons(bot) : 0;
         uint32 lessons = BuddyLearnEverything(bot);
+        bot->UpdateSkillsToMaxSkillsForLevel();
         std::string problems;
         if (level > oldLevel)
             lessons += BuddyRaiseProfessions(bot, problems);

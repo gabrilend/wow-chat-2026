@@ -1,0 +1,256 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+
+local out, listing, cpp
+do
+    local i = 1
+    while i <= #arg do
+        local a = arg[i]
+        if a == "--help" or a == "-h" then
+            for line in io.lines(arg[0]) do
+                if not line:match("^%-%-") and not line:match("^#!") then break end
+                print((line:gsub("^%-%- ?", "")))
+            end
+            os.exit(0)
+        elseif a == "--out"     then out = arg[i + 1]; i = i + 1
+        elseif a == "--listing" then listing = arg[i + 1]; i = i + 1
+        elseif a == "--cpp"     then cpp = arg[i + 1]; i = i + 1
+        elseif a:sub(1, 2) ~= "--" then DIR = a
+        else error("unknown option " .. a .. " (see --help)") end
+        i = i + 1
+    end
+end
+out     = out or (DIR .. "/src/lua-basic/data/buddy-talent-touches.lua")
+listing = listing or (DIR .. "/docs/talent-touches.md")
+cpp     = cpp or (DIR .. "/patches/B036-mod-buddies/mod-buddies/src/buddies_talent_touches_data.h")
+local DBC = DIR .. "/data-files/dbc/"
+
+local CLASSES = {
+    { id = 1,  name = "Warrior",      family = 4  },
+    { id = 2,  name = "Paladin",      family = 10 },
+    { id = 3,  name = "Hunter",       family = 9  },
+    { id = 4,  name = "Rogue",        family = 8  },
+    { id = 5,  name = "Priest",       family = 6  },
+    { id = 6,  name = "Death Knight", family = 15 },
+    { id = 7,  name = "Shaman",       family = 11 },
+    { id = 8,  name = "Mage",         family = 3  },
+    { id = 9,  name = "Warlock",      family = 5  },
+    { id = 11, name = "Druid",        family = 7  },
+}
+local MOD_WORDS = {
+    [0] = "damage or healing", [1] = "duration", [2] = "threat", [3] = "first effect", [4] = "charges",
+    [5] = "range", [6] = "radius", [7] = "critical chance", [8] = "all effects", [9] = "pushback",
+    [10] = "cast time", [11] = "cooldown", [12] = "second effect", [13] = "armor ignored", [14] = "cost",
+    [15] = "critical bonus", [16] = "hit chance", [17] = "targets", [18] = "chance of success",
+    [19] = "activation time", [20] = "damage multiplier", [21] = "global cooldown", [22] = "over time",
+    [23] = "third effect", [24] = "bonus multiplier", [26] = "procs per minute", [27] = "value multiplier",
+    [28] = "dispel resistance", [29] = "critical bonus", [30] = "cost refund",
+}
+local AURA_FLAT, AURA_PCT, AURA_DUMMY, AURA_PROC = 107, 108, 4, 42
+local SCHOOL_AURAS = { [13] = "damage", [79] = "damage", [71] = "critical chance" }
+local SCHOOLS = { [1] = "Physical", [2] = "Holy", [4] = "Fire", [8] = "Nature", [16] = "Frost", [32] = "Shadow", [64] = "Arcane" }
+local EFFECT_LEARN = 36
+local ATTR0_PASSIVE = 0x40
+
+local function u32(d, o) local a, b, c, e = d:byte(o + 1, o + 4); return a + b * 256 + c * 65536 + e * 16777216 end
+local function load_dbc(name)
+    local f = io.open(DBC .. name, "rb") or error("cannot open " .. DBC .. name)
+    local d = f:read("*a")
+    f:close()
+    if d:sub(1, 4) ~= "WDBC" then error(name .. " is not a WDBC file") end
+    local n, rs = u32(d, 4), u32(d, 12)
+    local strings = 20 + n * rs
+    local rows = {}
+    for r = 0, n - 1 do
+        local b = 20 + r * rs
+        rows[#rows + 1] = {
+            u = function(field) return u32(d, b + field * 4) end,
+            s = function(field)
+                local s = strings + u32(d, b + field * 4)
+                return d:sub(s + 1, (d:find("\0", s + 1, true) or s + 1) - 1)
+            end,
+        }
+    end
+    return rows
+end
+
+local SPELL = {}
+for _, r in ipairs(load_dbc("Spell.dbc")) do
+    local s = { id = r.u(0), name = r.s(136), rank = r.s(153), family = r.u(208),
+                flags = { r.u(209), r.u(210), r.u(211) }, passive = bit.band(r.u(4), ATTR0_PASSIVE) ~= 0,
+                itemClass = r.u(68), dmgClass = r.u(213), school = r.u(225), effects = {} }
+    for e = 0, 2 do
+        local base = r.u(80 + e)
+        if base >= 2147483648 then base = base - 4294967296 end
+        s.effects[e + 1] = { effect = r.u(71 + e), aura = r.u(95 + e), misc = r.u(110 + e), trigger = r.u(116 + e), base = base,
+                             mask = { r.u(122 + e * 3), r.u(123 + e * 3), r.u(124 + e * 3) } }
+    end
+    SPELL[s.id] = s
+end
+local LEARNABLE = {}
+for _, r in ipairs(load_dbc("SkillLineAbility.dbc")) do LEARNABLE[r.u(2)] = true end
+
+local TABS = {}
+for _, r in ipairs(load_dbc("TalentTab.dbc")) do
+    if r.u(20) ~= 0 then TABS[r.u(0)] = { name = r.s(1), classMask = r.u(20), page = r.u(22) } end
+end
+local TALENTS, TALENT_SPELL = {}, {}
+for _, r in ipairs(load_dbc("Talent.dbc")) do
+    local tab = TABS[r.u(1)]
+    if tab then
+        local t = { id = r.u(0), tab = tab, row = r.u(2), col = r.u(3), spells = {} }
+        for k = 4, 8 do if r.u(k) ~= 0 then t.spells[#t.spells + 1] = r.u(k); TALENT_SPELL[r.u(k)] = true end end
+        TALENTS[#TALENTS + 1] = t
+    end
+end
+
+local function abilities_of(cls)
+    local byName = {}
+    for id, s in pairs(SPELL) do
+        if s.family == cls.family and LEARNABLE[id] and not s.passive and not TALENT_SPELL[id] and s.name ~= "" then
+            local a = byName[s.name]
+            if not a then a = { name = s.name, spells = {}, school = 0, dmgClass = s.dmgClass }; byName[s.name] = a end
+            a.spells[#a.spells + 1] = id
+            a.school = bit.bor(a.school, s.school)
+            a.flags = a.flags or { 0, 0, 0 }
+            for w = 1, 3 do a.flags[w] = bit.bor(a.flags[w], s.flags[w]) end
+        end
+    end
+    return byName
+end
+
+local function touches_of(t, abilities, cls)
+    local found, teaches = {}, {}
+    local function mark(name, how, broad, pct)
+        found[name] = found[name] or { hows = {}, pct = 0 }
+        found[name].hows[how] = true
+        if broad then found[name].broad = broad end
+        if pct and math.abs(pct) > math.abs(found[name].pct) then found[name].pct = pct end
+    end
+    local first = SPELL[t.spells[1]]
+    if first and not first.passive then
+        teaches[first.name] = true
+        return found, teaches, true
+    end
+    for _, sid in ipairs(t.spells) do
+        local s = SPELL[sid]
+        for _, e in ipairs(s and s.effects or {}) do
+            local masked = e.mask[1] ~= 0 or e.mask[2] ~= 0 or e.mask[3] ~= 0
+            if e.effect == EFFECT_LEARN and e.trigger ~= 0 and SPELL[e.trigger] then
+                teaches[SPELL[e.trigger].name] = true
+            elseif masked then
+                local how = (e.aura == AURA_FLAT or e.aura == AURA_PCT) and (MOD_WORDS[e.misc] or ("modifier " .. e.misc))
+                            or (e.aura == AURA_PROC and "a proc on it") or "an effect on it"
+                local pct = (e.aura == AURA_PCT) and (e.base + 1) or nil
+                for name, a in pairs(abilities) do
+                    for w = 1, 3 do
+                        if bit.band(a.flags[w], e.mask[w]) ~= 0 then mark(name, how, nil, pct); break end
+                    end
+                end
+            elseif SCHOOL_AURAS[e.aura] and e.misc ~= 0 and e.misc ~= 127 then
+                local schools = {}
+                for m, n in pairs(SCHOOLS) do if bit.band(e.misc, m) ~= 0 then schools[#schools + 1] = n end end
+                table.sort(schools)
+                local broad = (s.itemClass == 2 and "every attack with a weapon") or ("every " .. table.concat(schools, " and ") .. " ability")
+                for name, a in pairs(abilities) do
+                    local strikes = a.dmgClass == 2 or a.dmgClass == 3
+                    local weaponHit = s.itemClass == 2 and strikes
+                    local schoolHit = s.itemClass ~= 2 and bit.band(a.school, e.misc) ~= 0
+                        and (bit.band(a.school, 1) == 0 or strikes)
+                    if weaponHit or schoolHit then
+                        mark(name, SCHOOL_AURAS[e.aura], broad, e.aura == 79 and (e.base + 1) or nil)
+                    end
+                end
+            end
+        end
+    end
+    return found, teaches
+end
+
+local data, md = {}, {}
+data[#data + 1] = "-- buddy-talent-touches.lua - GENERATED by scripts/generate-talent-touches from the client's Talent, TalentTab, Spell and SkillLineAbility tables, so buddies can favour the abilities their talents improve (issue 625a); don't edit, run it again."
+data[#data + 1] = "-- touches[talent id] = { name, class, tree, row, abilities = { [ability name] = { how = { words }, broad = text or nil } }, teaches = { names } }"
+data[#data + 1] = "return {"
+md[#md + 1] = "<!-- docs/talent-touches.md - GENERATED by scripts/generate-talent-touches from the client's tables (issue 625a), to check by eye which abilities each talent improves; don't edit, run it again. -->"
+md[#md + 1] = "# What Each Talent Touches"
+md[#md + 1] = ""
+md[#md + 1] = "Read from the game's own data: the hidden flags the server applies talents by, and talents aimed at a whole school of magic or every weapon attack (marked *broad*). A talent with nothing listed improves no ability directly (a passive bonus, or a weapon kind)."
+local totals = { talents = 0, touching = 0, links = 0 }
+CPP_TOUCH, CPP_RANKS = {}, {}
+for _, cls in ipairs(CLASSES) do
+    local abilities = abilities_of(cls)
+    local mine = {}
+    for _, t in ipairs(TALENTS) do if bit.band(t.tab.classMask, 2 ^ (cls.id - 1)) ~= 0 then mine[#mine + 1] = t end end
+    table.sort(mine, function(a, b)
+        if a.tab.page ~= b.tab.page then return a.tab.page < b.tab.page end
+        if a.row ~= b.row then return a.row < b.row end
+        return a.col < b.col end)
+    md[#md + 1] = ""
+    md[#md + 1] = "## " .. cls.name
+    local lastTab
+    for _, t in ipairs(mine) do
+        local name = SPELL[t.spells[1]] and SPELL[t.spells[1]].name or ("talent " .. t.id)
+        local found, teaches, isAbility = touches_of(t, abilities, cls)
+        if t.tab.name ~= lastTab then md[#md + 1] = ""; md[#md + 1] = "### " .. t.tab.name; lastTab = t.tab.name end
+        local names = {}
+        for n in pairs(found) do names[#names + 1] = n end
+        table.sort(names)
+        local parts, dparts = {}, {}
+        for _, n in ipairs(names) do
+            local hows = {}
+            for h in pairs(found[n].hows) do hows[#hows + 1] = h end
+            table.sort(hows)
+            parts[#parts + 1] = n .. " (" .. table.concat(hows, ", ") .. (found[n].broad and "; broad: " .. found[n].broad or "") .. ")"
+            local q = {}
+            for _, h in ipairs(hows) do q[#q + 1] = string.format("%q", h) end
+            dparts[#dparts + 1] = string.format("[%q] = { how = { %s }%s }", n, table.concat(q, ", "),
+                found[n].broad and string.format(", broad = %q", found[n].broad) or "")
+            totals.links = totals.links + 1
+        end
+        for _, n in ipairs(names) do
+            CPP_TOUCH[#CPP_TOUCH + 1] = string.format("    { %d, %q, %d, %d },", t.id, n:lower(), found[n].broad and 1 or 0, found[n].pct)
+        end
+        if #names > 0 then
+            local r = {}
+            for k = 1, 5 do r[k] = t.spells[k] or 0 end
+            CPP_RANKS[#CPP_RANKS + 1] = string.format("    { %d, { %s } },", t.id, table.concat(r, ", "))
+        end
+        local taught = {}
+        for n in pairs(teaches) do taught[#taught + 1] = n end
+        table.sort(taught)
+        totals.talents = totals.talents + 1
+        if #names > 0 then totals.touching = totals.touching + 1 end
+        md[#md + 1] = "- **" .. name .. "** (row " .. (t.row + 1) .. "): "
+            .. (isAbility and "an ability itself, learned through the tree"
+                or ((#parts > 0 and table.concat(parts, "; ") or "nothing directly")
+                    .. (#taught > 0 and ("; teaches " .. table.concat(taught, ", ")) or "")))
+        local tq = {}
+        for _, n in ipairs(taught) do tq[#tq + 1] = string.format("%q", n) end
+        data[#data + 1] = string.format("    [%d] = { name = %q, class = %q, tree = %q, row = %d, abilities = { %s }, teaches = { %s } },",
+            t.id, name, cls.name, t.tab.name, t.row + 1, table.concat(dparts, ", "), table.concat(tq, ", "))
+    end
+end
+data[#data + 1] = "}"
+local f = io.open(out, "w") or error("cannot write " .. out)
+f:write(table.concat(data, "\n"), "\n")
+f:close()
+f = io.open(listing, "w") or error("cannot write " .. listing)
+f:write(table.concat(md, "\n"), "\n")
+f:close()
+f = io.open(cpp, "w") or error("cannot write " .. cpp)
+f:write("// buddies_talent_touches_data.h - GENERATED by scripts/generate-talent-touches from the client's talent and spell tables,\n",
+    "// so buddies can favour the abilities their talents improve (issues 625, 625a); don't edit, run it again.\n",
+    "#ifndef MOD_BUDDIES_TALENT_TOUCHES_DATA_H\n#define MOD_BUDDIES_TALENT_TOUCHES_DATA_H\n\n#include <cstdint>\n\n",
+    "// one row per talent and ability it improves: the talent's id, the ability's name in lower case\n",
+    "// (as a cast action names its spell), 1 when broad (a school or every weapon attack), and the\n",
+    "// percent its top rank states (0 when it states a flat amount or none)\n",
+    "struct BuddyTalentTouchRow { uint32_t talent; char const* ability; uint8_t broad; int16_t percent; };\n",
+    "// each such talent's rank spells (0 past its last rank): a character's points in it are the\n",
+    "// highest rank it knows\n",
+    "struct BuddyTalentRanksRow { uint32_t talent; uint32_t rank[5]; };\n\n",
+    "static BuddyTalentTouchRow const BUDDY_TALENT_TOUCHES[] = {\n", table.concat(CPP_TOUCH, "\n"), "\n};\n\n",
+    "static BuddyTalentRanksRow const BUDDY_TALENT_RANKS[] = {\n", table.concat(CPP_RANKS, "\n"), "\n};\n\n#endif\n")
+f:close()
+print(string.format("%d talents read; %d touch at least one ability (%d links); written to %s and %s",
+    totals.talents, totals.touching, totals.links, out, listing))

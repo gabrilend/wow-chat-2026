@@ -1,0 +1,160 @@
+#!/usr/bin/env luajit
+
+local DIR       = "/mnt/kaun/wow-chat-2026"
+local SERVER    = "http://127.0.0.1:8188"
+local SD_OUTPUT = "/mnt/kaun/stable-diffusion/output"
+local count, seed, keep_realm, keep_n = 4, nil, nil, nil
+local chosen = {}
+do
+    local i = 1
+    while i <= #arg do
+        local a = arg[i]
+        if a == "--count" then count = tonumber(arg[i + 1]); i = i + 1
+        elseif a == "--seed" then seed = tonumber(arg[i + 1]); i = i + 1
+        elseif a == "--server" then SERVER = arg[i + 1]; i = i + 1
+        elseif a == "--keep" then keep_realm, keep_n = arg[i + 1], tonumber(arg[i + 2]); i = i + 2
+        elseif a == "--help" or a == "-h" then
+            print("Usage: scripts/make-box-art [DIR] [REALM...] [--count N] [--seed N] [--server URL]\n"
+               .. "       scripts/make-box-art [DIR] --keep REALM N"); os.exit(0)
+        elseif a:sub(1, 1) == "-" then io.stderr:write("make-box-art: unknown option " .. a .. " (see --help)\n"); os.exit(2)
+        elseif a:sub(1, 1) == "/" then DIR = a
+        else chosen[#chosen + 1] = a end
+        i = i + 1
+    end
+end
+local cfg  = dofile(DIR .. "/config/box-art/realms.lua")
+local WORK = DIR .. "/tmp/shared-memory/box-art"
+local KEEP = DIR .. "/assets/box-art"
+
+local function sh(cmd)
+    local p = io.popen(cmd .. " 2>&1; echo \"__exit=$?\"")
+    local out = p:read("*a"); p:close()
+    local code = tonumber(out:match("__exit=(%d+)%s*$"))
+    out = out:gsub("__exit=%d+%s*$", "")
+    return out, code
+end
+local function q(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
+
+if keep_realm then
+    if not keep_n then io.stderr:write("make-box-art: --keep needs a realm and a candidate number\n"); os.exit(2) end
+    local from = string.format("%s/%s-%d", WORK, keep_realm, keep_n)
+    if not io.open(from .. ".png", "rb") then
+        io.stderr:write("make-box-art: no candidate " .. from .. ".png (run the realm first; candidates live in RAM until kept)\n"); os.exit(1)
+    end
+    sh("mkdir -p " .. q(KEEP))
+    local _, c1 = sh("cp " .. q(from .. ".png") .. " " .. q(KEEP .. "/" .. keep_realm .. ".png"))
+    local _, c2 = sh("cp " .. q(from .. ".info") .. " " .. q(KEEP .. "/" .. keep_realm .. ".png.info"))
+    if c1 ~= 0 or c2 ~= 0 then io.stderr:write("make-box-art: copying failed\n"); os.exit(1) end
+    print("kept " .. from .. ".png as " .. KEEP .. "/" .. keep_realm .. ".png")
+    os.exit(0)
+end
+
+local function json(v)
+    local t = type(v)
+    if t == "string" then
+        return '"' .. v:gsub('[%c"\\]', function(c)
+            local map = { ['"'] = '\\"', ["\\"] = "\\\\", ["\n"] = "\\n", ["\t"] = "\\t" }
+            return map[c] or string.format("\\u%04x", c:byte())
+        end) .. '"'
+    elseif t == "number" then return (v == math.floor(v)) and string.format("%d", v) or tostring(v)
+    elseif t == "boolean" then return tostring(v)
+    elseif t == "table" then
+        if #v > 0 or next(v) == nil then
+            local parts = {}
+            for _, x in ipairs(v) do parts[#parts + 1] = json(x) end
+            return "[" .. table.concat(parts, ",") .. "]"
+        end
+        local keys = {}
+        for k in pairs(v) do keys[#keys + 1] = k end
+        table.sort(keys)
+        local parts = {}
+        for _, k in ipairs(keys) do parts[#parts + 1] = json(tostring(k)) .. ":" .. json(v[k]) end
+        return "{" .. table.concat(parts, ",") .. "}"
+    end
+    error("make-box-art: cannot write a " .. t .. " as JSON")
+end
+
+local function workflow(realm, positive, s)
+    return {
+        ["1"] = { class_type = "DiffusersLoader", inputs = { model_path = "Dreamshaper-8" } },
+        ["2"] = { class_type = "CLIPTextEncode", inputs = { text = positive, clip = { "1", 1 } } },
+        ["3"] = { class_type = "CLIPTextEncode", inputs = { text = cfg.NEGATIVE, clip = { "1", 1 } } },
+        ["4"] = { class_type = "EmptyLatentImage", inputs = { width = cfg.WIDTH, height = cfg.HEIGHT, batch_size = count } },
+        ["5"] = { class_type = "KSampler", inputs = {
+            model = { "1", 0 }, positive = { "2", 0 }, negative = { "3", 0 }, latent_image = { "4", 0 },
+            seed = s, steps = cfg.STEPS, cfg = cfg.CFG, sampler_name = "dpmpp_2m", scheduler = "karras", denoise = 1 } },
+        ["6"] = { class_type = "VAEDecode", inputs = { samples = { "5", 0 }, vae = { "1", 2 } } },
+        ["7"] = { class_type = "SaveImage", inputs = { images = { "6", 0 }, filename_prefix = "ghostsong-box-" .. realm } },
+    }
+end
+
+do
+    local _, code = sh("curl -sf " .. q(SERVER .. "/system_stats") .. " -o /dev/null")
+    if code ~= 0 then
+        io.stderr:write("make-box-art: ComfyUI does not answer at " .. SERVER .. ". Start it with "
+            .. "/mnt/kaun/stable-diffusion/run (it listens on 127.0.0.1:8188), then run this again.\n")
+        os.exit(1)
+    end
+end
+
+local names = {}
+if #chosen > 0 then names = chosen else
+    for name in pairs(cfg.realms) do names[#names + 1] = name end
+    table.sort(names)
+end
+seed = seed or os.time()
+sh("mkdir -p " .. q(WORK))
+local started, made, seeds = os.time(), 0, {}
+
+for _, realm in ipairs(names) do
+    local r = cfg.realms[realm]
+    if not r then error("make-box-art: no realm \"" .. realm .. "\" in config/box-art/realms.lua") end
+    local positive = r.cover .. ", " .. cfg.STYLE
+    local body = json({ prompt = workflow(realm, positive, seed), client_id = "ghostsong-box-art" })
+    local body_path = WORK .. "/" .. realm .. "-request.json"
+    local f = assert(io.open(body_path, "wb")); f:write(body); f:close()
+
+    local reply, code = sh("curl -s -X POST -H 'Content-Type: application/json' --data-binary @" .. q(body_path) .. " " .. q(SERVER .. "/prompt"))
+    local id = reply:match('"prompt_id"%s*:%s*"([^"]+)"')
+    if code ~= 0 or not id then
+        error("make-box-art: ComfyUI refused " .. realm .. "'s workflow; its answer:\n" .. reply)
+    end
+    io.write(realm .. ": painting " .. count .. " (seed " .. seed .. ") "); io.flush()
+
+    local history
+    for _ = 1, 600 do
+        history = sh("curl -s " .. q(SERVER .. "/history/" .. id))
+        if history:find('"outputs"', 1, true) then break end
+        io.write("."); io.flush()
+        os.execute("sleep 2")
+    end
+    if not history:find('"filename"', 1, true) then
+        error("make-box-art: " .. realm .. " never finished, or finished without pictures; ComfyUI's history said:\n" .. history:sub(1, 2000))
+    end
+    local k = 0
+    for name, sub in history:gmatch('"filename"%s*:%s*"([^"]+)"%s*,%s*"subfolder"%s*:%s*"([^"]*)"') do
+        k = k + 1
+        local src = SD_OUTPUT .. "/" .. (sub ~= "" and (sub .. "/") or "") .. name
+        local dst = string.format("%s/%s-%d", WORK, realm, k)
+        local _, c = sh("cp " .. q(src) .. " " .. q(dst .. ".png"))
+        if c ~= 0 then error("make-box-art: could not copy " .. src) end
+        local info = assert(io.open(dst .. ".info", "wb"))
+        info:write(string.format("made by scripts/make-box-art (wow-chat-2026, issue 1008g), %s\nrealm: %s\ncandidate: %d of %d (one batch)\n"
+            .. "model: Dreamshaper-8 (SD 1.5, diffusers layout)\nsize: %dx%d\nsteps: %d\ncfg: %s\nsampler: dpmpp_2m, karras\n"
+            .. "seed: %d (the batch's; ComfyUI gives each picture in a batch its own noise from it)\n"
+            .. "positive: %s\nnegative: %s\noff-brand tokens: config/box-art/off-brand-tokens.lua, made by scripts/make-off-brand-embeddings\n",
+            os.date("!%Y-%m-%d %H:%M UTC"), realm, k, count, cfg.WIDTH, cfg.HEIGHT, cfg.STEPS, tostring(cfg.CFG), seed,
+            positive, cfg.NEGATIVE))
+        info:close()
+        made = made + 1
+    end
+    print(" " .. k .. " made")
+    seeds[#seeds + 1] = realm .. "=" .. seed
+    seed = seed + 1
+end
+
+local g = assert(io.open(WORK .. "/make-box-art.goodbye", "wb"))
+g:write(string.format("ended: %s\npictures: %d\nrealms: %d\nseconds: %d\nseeds: %s\ncandidates in: %s\n",
+    os.date("!%Y-%m-%d %H:%M:%S UTC"), made, #names, os.time() - started, table.concat(seeds, " "), WORK))
+g:close()
+print(string.format("%d pictures in %d s; candidates in %s; keep one with --keep REALM N", made, os.time() - started, WORK))

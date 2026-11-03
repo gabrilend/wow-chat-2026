@@ -1,6 +1,7 @@
 
 #include "buddies.h"
 #include "buddies_roam.h"
+#include "buddies_army.h"
 #include "roam/buddy_town_rules.h"
 #include "DBCEnums.h"
 #include "DBCStores.h"
@@ -23,21 +24,32 @@ static constexpr float  PROBE_DEPTH       = 50.0f;
 static constexpr float  EDGE_CAP          = 300.0f;
 static constexpr int    CLEAR_RING_POINTS = 8;
 static constexpr float  CENTRE_ABOVE      = 10.0f;
+static constexpr float  WALK_SLOPE_DEGREES = 50.0f;
+static float const      WALK_RISE_PER_YARD = std::tan(WALK_SLOPE_DEGREES * float(M_PI) / 180.0f);
 
 std::vector<std::pair<uint32, uint32>> const& BuddyRosterPairs()
 {
-    static std::vector<std::pair<uint32, uint32>> pairs;
+    static std::vector<std::pair<uint32, uint32>> pairs, army, joined;
     static uint64 readAt = 0;
     uint64 now = uint64(GameTime::GetGameTimeMS().count());
-    if (readAt != 0 && now - readAt < ROSTER_REFRESH_MS)
-        return pairs;
-    readAt = now;
-    pairs.clear();
-    if (QueryResult rows = CharacterDatabase.Query("SELECT buddy, owner FROM buddy_roster WHERE buddy <> 0"))
-        do
-            pairs.emplace_back((*rows)[0].Get<uint32>(), (*rows)[1].Get<uint32>());
-        while (rows->NextRow());
-    return pairs;
+    bool read = readAt == 0 || now - readAt >= ROSTER_REFRESH_MS;
+    if (read)
+    {
+        readAt = now;
+        pairs.clear();
+        if (QueryResult rows = CharacterDatabase.Query("SELECT buddy, owner FROM buddy_roster WHERE buddy <> 0"))
+            do
+                pairs.emplace_back((*rows)[0].Get<uint32>(), (*rows)[1].Get<uint32>());
+            while (rows->NextRow());
+    }
+    std::vector<std::pair<uint32, uint32>> nowArmy = BuddyArmyPairs();
+    if (read || nowArmy != army)
+    {
+        army = std::move(nowArmy);
+        joined = pairs;
+        joined.insert(joined.end(), army.begin(), army.end());
+    }
+    return joined;
 }
 
 bool BuddyAreaIsTown(uint32 areaId)
@@ -94,6 +106,8 @@ static float WalkLine(Map const* map, uint32 phaseMask, uint32 areaId, float ste
         float change = z - lastZ;
         if (IsSharpStep(change, prevChange, stepRise))
             return float(i - 1);
+        if (std::fabs(change) > WALK_RISE_PER_YARD)
+            return float(i - 1);
         prevChange = change;
         lastZ = z;
     }
@@ -122,7 +136,7 @@ BuddyRoam::Ground BuddyRoamGround(Map const* map, uint32 phaseMask, uint32 areaI
             float px = x + std::cos(a) * clearance, py = y + std::sin(a) * clearance;
             if (!ProbeHeight(map, phaseMask, px, py, hc, h[i]) || map->GetAreaId(phaseMask, px, py, h[i]) != areaId)
                 return false;
-            if (std::fabs(h[i] - hc) > clearance)
+            if (std::fabs(h[i] - hc) > clearance * WALK_RISE_PER_YARD)
                 return false;
         }
         for (int i = 0; i < CLEAR_RING_POINTS / 2; ++i)

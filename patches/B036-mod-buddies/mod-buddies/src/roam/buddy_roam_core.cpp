@@ -368,8 +368,8 @@ bool NextWaypoint(Buddy& buddy, Area const& area, Point const& at, std::vector<P
         }
         if (via)
         {
-            std::vector<Point> leg1 = PlanPath(at, *via, buddy.body, ground, settings);
-            std::vector<Point> leg2 = PlanPath(*via, buddy.waypoint, buddy.body, ground, settings);
+            std::vector<Point> leg1 = PlanPath(at, *via, buddy.body, ground, settings, &rng);
+            std::vector<Point> leg2 = PlanPath(*via, buddy.waypoint, buddy.body, ground, settings, &rng);
             if (leg1.empty() || leg2.empty())
                 return false;
             leg1.insert(leg1.end(), leg2.begin() + 1, leg2.end());
@@ -377,7 +377,7 @@ bool NextWaypoint(Buddy& buddy, Area const& area, Point const& at, std::vector<P
         }
         else
         {
-            buddy.path = PlanPath(at, buddy.waypoint, buddy.body, ground, settings);
+            buddy.path = PlanPath(at, buddy.waypoint, buddy.body, ground, settings, &rng);
             if (buddy.path.empty())
                 return false;
         }
@@ -387,15 +387,15 @@ bool NextWaypoint(Buddy& buddy, Area const& area, Point const& at, std::vector<P
     return false;
 }
 
-std::vector<Point> PlanPath(Point const& from, Point const& to, float body, Ground const& ground, Settings const& settings)
+std::vector<Point> PlanPath(Point const& from, Point const& to, float body, Ground const& ground, Settings const& settings,
+                            Rng const* rng)
 {
     double len = std::sqrt(double(to.x - from.x) * (to.x - from.x) + double(to.y - from.y) * (to.y - from.y));
     if (len < 1e-6)
         return { from, to };
     double ux = (double(to.x) - from.x) / len, uy = (double(to.y) - from.y) / len;
 
-    std::optional<std::vector<Sample>> chosen;
-    double chosenCost = 0.0;
+    std::vector<std::pair<double, std::vector<Sample>>> cleared;
     for (double bow : BOWS)
     {
         Curve c{ from.x, from.y, from.z, len, ux, uy, -uy, ux, bow, body, {} };
@@ -416,18 +416,25 @@ std::vector<Point> PlanPath(Point const& from, Point const& to, float body, Grou
             ok = false;
         if (!ok)
             continue;
-        double cost = PathCost(pts, settings);
-        if (!chosen || cost < chosenCost)
-        {
-            chosen = std::move(pts);
-            chosenCost = cost;
-        }
+        cleared.emplace_back(PathCost(pts, settings), std::move(pts));
     }
     std::vector<Point> out;
-    if (!chosen)
+    if (cleared.empty())
         return out;
-    out.reserve(chosen->size());
-    for (Sample const& p : *chosen)
+    size_t first = 0;
+    for (size_t i = 1; i < cleared.size(); ++i)
+        if (cleared[i].first < cleared[first].first)
+            first = i;
+    std::vector<size_t> tied;
+    for (size_t i = 0; i < cleared.size(); ++i)
+        if (cleared[i].first <= cleared[first].first * (1.0 + settings.tieMargin))
+            tied.push_back(i);
+    size_t pick = first;
+    if (rng && settings.tieMargin >= 0.0 && tied.size() > 1)
+        pick = tied[std::min(tied.size() - 1, size_t(std::floor((*rng)() * double(tied.size()))))];
+    std::vector<Sample> const& chosen = cleared[pick].second;
+    out.reserve(chosen.size());
+    for (Sample const& p : chosen)
         out.push_back({ float(p.x), float(p.y), float(p.h) });
     return out;
 }

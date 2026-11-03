@@ -10,11 +10,13 @@
 #include "buddies_town.h"
 #include "buddies_beds.h"
 #include "buddies_crossing.h"
+#include "buddies_follow.h"
 #include "Bag.h"
 #include "Containers.h"
 #include "FishingAction.h"
 #include "Spell.h"
 #include "SpellMgr.h"
+#include "StatsWeightCalculator.h"
 #include "Timer.h"
 #include "CellImpl.h"
 #include "Creature.h"
@@ -52,6 +54,7 @@
 #include <mutex>
 #include <set>
 #include <unordered_map>
+#include <unordered_set>
 
 WorldPosition FindLandFromPosition(PlayerbotAI* botAI, float startDistance, float endDistance, float increment,
                                    float orientation, WorldPosition targetPos, float fishingSearchWindow, bool checkLOS);
@@ -88,10 +91,15 @@ static constexpr uint32 FISH_MAX_CASTS      = 30;
 static constexpr uint32 FISH_GIVE_UP_MS     = 900000;
 static constexpr float  FISH_WATER_MIN      = 10.0f;
 static constexpr float  FISH_WATER_MAX      = 20.0f;
+static constexpr float  HELP_YARDS          = 40.0f;
+static constexpr uint64 ERRAND_PATIENCE_MS  = 60000;
+static constexpr float  NEXT_ERRAND_FAR_CAP = 4.0f;
 static constexpr uint32 STUCK_MS            = 90000;
 static constexpr float  PROGRESS_YARDS      = 10.0f;
-static constexpr float  UNSTUCK_YARDS       = 30.0f;
-static constexpr uint32 UNSTUCK_TRIES       = 12;
+static constexpr uint32 FAILS_BEFORE_REPORT = 3;
+static constexpr float  ARRIVE_RADIUS       = 5.0f;
+static constexpr float  ARRIVE_SPACING      = 4.0f;
+static constexpr uint64 ARRIVE_CLAIM_MS     = 30000;
 static constexpr float  WANDER_SCAN_YARDS   = 100.0f;
 static constexpr float  WANDER_CONE         = 0.785f;
 static constexpr float  FULL_BAGS_SHARE     = 0.9f;
@@ -99,7 +107,7 @@ static constexpr uint32 MEAL_STOCK          = 20;
 static constexpr uint32 MEAL_LOW            = 10;
 static constexpr float  MEAL_SPEND_SHARE    = 0.25f;
 
-enum class Errand : uint8 { Train, Sell, Repair, Mail, Auction };
+enum class Errand : uint8 { Train, Sell, Repair, Mail, Auction, Runeforge };
 enum class Doing  : uint8 { Nothing, Errand, Visit, Sit, Sleep, Fish };
 
 struct ErrandStop
@@ -128,6 +136,7 @@ struct TownState
     ObjectGuid              mainHand;
     ObjectGuid              offHand;
     ObjectGuid              lastVisit;
+    uint64                  helpingSince = 0;
 };
 
 struct TravelProgress
@@ -135,8 +144,21 @@ struct TravelProgress
     uint32 toArea  = 0;
     float  nearest = 0.0f;
     uint64 since   = 0;
+    uint32 fails   = 0;
+    uint32 reports = 0;
 };
+struct ArriveClaim { uint32 place = 0; uint64 at = 0; float x = 0.0f, y = 0.0f; };
+static std::unordered_map<uint32, std::unordered_map<uint32, ArriveClaim>> sArrive;
 static std::unordered_map<uint32, TravelProgress> sTravel;
+struct CrossingProgress
+{
+    float  tx = 0.0f, ty = 0.0f;
+    float  nearest = 0.0f;
+    uint64 since   = 0;
+    uint32 reports = 0;
+};
+static constexpr float LEG_YARDS = 5.0f;
+static std::unordered_map<uint32, CrossingProgress> sCrossTravel;
 static std::mutex sTownLock;
 static std::unordered_map<uint32, TownState> sTown;
 
@@ -327,6 +349,60 @@ static GameObject* NearestMailbox(Player* bot)
     return best;
 }
 
+static constexpr uint32 RUNE_SPELLS[] = { 53323, 53331, 53341, 53342, 53343, 53344, 54446, 54447, 62158, 70164 };
+
+static GameObject* NearestRuneforge(Player* bot)
+{
+    SpellInfo const* rune = sSpellMgr->GetSpellInfo(RUNE_SPELLS[0]);
+    if (!rune || !rune->RequiresSpellFocus)
+        return nullptr;
+    std::list<GameObject*> objects;
+    Acore::GameObjectInRangeCheck check(bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(), TOWN_SCAN_YARDS);
+    Acore::GameObjectListSearcher<Acore::GameObjectInRangeCheck> searcher(bot, objects, check);
+    Cell::VisitObjects(bot, searcher, TOWN_SCAN_YARDS);
+    GameObject* best = nullptr;
+    for (GameObject* go : objects)
+        if (go->GetGoType() == GAMEOBJECT_TYPE_SPELL_FOCUS && go->GetGOInfo()->spellFocus.focusId == rune->RequiresSpellFocus
+            && go->isSpawned() && (!best || bot->GetDistance(go) < bot->GetDistance(best)))
+            best = go;
+    return best;
+}
+
+static void DoRuneforge(PlayerbotAI* ai, Player* bot, GameObject* )
+{
+    Player* owner = ai->GetMaster();
+    for (uint8 slot : { uint8(EQUIPMENT_SLOT_MAINHAND), uint8(EQUIPMENT_SLOT_OFFHAND) })
+    {
+        Item* weapon = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot);
+        if (!weapon || weapon->GetTemplate()->Class != ITEM_CLASS_WEAPON)
+            continue;
+        uint32 kindBit = 1u << weapon->GetTemplate()->SubClass;
+        uint32 current = weapon->GetEnchantmentId(PERM_ENCHANTMENT_SLOT);
+        std::vector<std::pair<uint32, SpellInfo const*>> suits;
+        for (uint32 id : RUNE_SPELLS)
+            if (SpellInfo const* s = sSpellMgr->GetSpellInfo(id))
+                if (s->EquippedItemClass == ITEM_CLASS_WEAPON && (s->EquippedItemSubClassMask & kindBit))
+                    for (SpellEffectInfo const& e : s->GetEffects())
+                        if (e.IsEffect(SPELL_EFFECT_ENCHANT_ITEM) && uint32(e.MiscValue) != current
+                            && sSpellItemEnchantmentStore.LookupEntry(uint32(e.MiscValue)))
+                            suits.push_back({ uint32(e.MiscValue), s });
+        if (suits.empty())
+        {
+            LOG_INFO("module", "mod-buddies: buddy {} found no other rune to suit its {}", bot->GetName(), weapon->GetTemplate()->Name1);
+            continue;
+        }
+        auto const& [enchant, spell] = suits[urand(0, uint32(suits.size()) - 1)];
+        bot->ApplyEnchantment(weapon, PERM_ENCHANTMENT_SLOT, false);
+        weapon->SetEnchantment(PERM_ENCHANTMENT_SLOT, enchant, 0, 0, bot->GetGUID());
+        bot->ApplyEnchantment(weapon, PERM_ENCHANTMENT_SLOT, true);
+        std::string line = "I switched to " + std::string(spell->SpellName[0]) + " on my " + weapon->GetTemplate()->Name1 + ".";
+        if (owner && owner->IsInWorld())
+            bot->Whisper(line, LANG_UNIVERSAL, owner);
+        LOG_INFO("module", "mod-buddies: buddy {} runeforged its {} with {} (enchantment {})", bot->GetName(),
+            weapon->GetTemplate()->Name1, spell->SpellName[0], enchant);
+    }
+}
+
 static void CountAuctionMail(Player* bot, Mail const* m);
 static void MailToOwner(PlayerbotAI* ai, Player* bot);
 static void DoMail(PlayerbotAI* ai, Player* bot, GameObject* box)
@@ -400,6 +476,28 @@ static uint32 FixedPrice(uint32 entry)
     return 0;
 }
 
+static constexpr float OWNER_UPGRADE_MARGIN = 1.05f;
+static bool OwnerUpgrade(PlayerbotAI* ai, Item* item)
+{
+    Player* owner = ai->GetMaster();
+    ItemTemplate const* p = item->GetTemplate();
+    if (!owner || !owner->IsInWorld() || !IsGear(p) || item->IsSoulBound())
+        return false;
+    if (owner->CanUseItem(p) != EQUIP_ERR_OK)
+        return false;
+    uint8 slot = owner->FindEquipSlot(p, NULL_SLOT, true);
+    if (slot == NULL_SLOT)
+        return false;
+    Item* worn = owner->GetItemByPos(INVENTORY_SLOT_BAG_0, slot);
+    if (!worn)
+        return true;
+    StatsWeightCalculator scorer(owner);
+    scorer.SetOverflowPenalty(false);
+    float mine = scorer.CalculateItem(p->ItemId, item->GetItemRandomPropertyId());
+    float now  = scorer.CalculateItem(worn->GetEntry(), worn->GetItemRandomPropertyId());
+    return mine > now * OWNER_UPGRADE_MARGIN;
+}
+
 static Fate FateOf(PlayerbotAI* ai, Item* item)
 {
     ItemTemplate const* p = item->GetTemplate();
@@ -416,6 +514,8 @@ static Fate FateOf(PlayerbotAI* ai, Item* item)
         default:
             break;
     }
+    if (OwnerUpgrade(ai, item))
+        return Fate::MailOwner;
     if (p->Quality >= ITEM_QUALITY_EPIC && IsGear(p) && p->RequiredLevel > 0)
     {
         if (item->IsSoulBound())
@@ -604,17 +704,59 @@ static void CountAuctionMail(Player* bot, Mail const* m)
             "WHERE pool = {} AND item = {}", uint32(float(p->SellPrice) * AH_RISE), m->sender, entry);
 }
 
+static constexpr float  TREAT_CHANCE          = 0.10f;
+static constexpr float  TREAT_PURSE_CHANCE    = 0.25f;
+static constexpr uint32 TREAT_PURSE_PER_LEVEL2 = 28;
+static char const* const PENNY_LINE = "I found a lucky penny for you.";
+static char const* const TREAT_LINES[] = {
+    "Some coin from the road. Spend it on something shiny.",
+    "Took this off a brute who swung first. Buy yourself a whetstone.",
+    "The Light provides, and today it provided this. Share it well.",
+    "Found this in a nest my pet dug up. Don't ask what else was in there.",
+    "this fell out of some rich guy's pocket while I was walking close behind him in Stormwind, don't worry about it",
+    "An offering left at a shrine. I'm sure they meant it for you.",
+    "The dead don't need it. I asked.",
+    "The spirits pointed me to it under a stone. Thank them, not me.",
+    "Conjured? No. Found. Probably. Enjoy it.",
+    "A small contract, fulfilled. Your share.",
+    "Squirrels hoard the strangest things.",
+    "A bear was sitting on it. I asked nicely.",
+};
+
 static void MailToOwner(PlayerbotAI* ai, Player* bot)
 {
     std::vector<Item*> items = ItemsForOwner(ai, bot);
-    if (items.empty())
+    uint32 money = 0;
+    std::string line = "Found this and thought of you.";
+    if (rand_norm() < TREAT_CHANCE)
+    {
+        uint32 purse = bot->GetLevel() * bot->GetLevel() * TREAT_PURSE_PER_LEVEL2;
+        if (rand_norm() < TREAT_PURSE_CHANCE && bot->GetMoney() >= purse)
+        {
+            money = purse;
+            uint8 cls = bot->getClass();
+            line = TREAT_LINES[cls < std::size(TREAT_LINES) ? cls : 0];
+        }
+        else
+        {
+            money = 1;
+            line  = PENNY_LINE;
+        }
+    }
+    if (items.empty() && !money)
         return;
     QueryResult row = CharacterDatabase.Query("SELECT owner FROM buddy_roster WHERE buddy = {}", bot->GetGUID().GetCounter());
     if (!row)
         return;
     ObjectGuid owner = ObjectGuid::Create<HighGuid::Player>((*row)[0].Get<uint32>());
     CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
-    MailDraft draft("For the clan", "Found this and thought of you.");
+    MailDraft draft("For the clan", line);
+    if (money)
+    {
+        if (money > 1)
+            bot->ModifyMoney(-int32(money));
+        draft.AddMoney(money);
+    }
     uint32 n = 0;
     for (Item* item : items)
     {
@@ -873,6 +1015,9 @@ static std::vector<ErrandStop> BuildTodo(PlayerbotAI* ai, Player* bot, uint32 ar
     if (MailWaiting(bot) || !ItemsForOwner(ai, bot).empty())
         if (GameObject* box = NearestMailbox(bot))
             todo.push_back({ Errand::Mail, box->GetGUID() });
+    if (bot->getClass() == CLASS_DEATH_KNIGHT)
+        if (GameObject* forge = NearestRuneforge(bot))
+            todo.push_back({ Errand::Runeforge, forge->GetGUID() });
     bool auctioning = auctioneer && AnythingToAuction(ai, bot);
     if (auctioning)
         todo.push_back({ Errand::Auction, auctioneer->GetGUID() });
@@ -927,6 +1072,8 @@ float BuddyBagFullness(Player* bot) { return BagFullness(bot); }
 float BuddyFullBagsShare() { return FULL_BAGS_SHARE; }
 void  BuddySellAtVendor(PlayerbotAI* ai, Player* bot, Creature* npc) { DoSell(ai, bot, npc); }
 std::vector<Item*> BuddyDisposableItems(PlayerbotAI* ai, Player* bot) { return Disposable(ai, bot); }
+std::vector<Item*> BuddyEarmarkedItems(PlayerbotAI* ai, Player* bot) { return ItemsForOwner(ai, bot); }
+uint32 BuddyBagSlots(Player* bot) { return BagSlots(bot); }
 
 using ErrandFn = void (*)(PlayerbotAI*, Player*, Creature*);
 static std::unordered_map<uint8, ErrandFn> const sErrands = {
@@ -990,9 +1137,41 @@ public:
                      false,  false);
                 return true;
             }
+            if (move.mapId == bot->GetMapId())
+            {
+                uint32 guid = bot->GetGUID().GetCounter();
+                uint64 now  = Now();
+                float  dist = std::hypot(bot->GetPositionX() - move.x, bot->GetPositionY() - move.y);
+                uint32 times = 0;
+                {
+                    std::lock_guard<std::mutex> lock(sTownLock);
+                    CrossingProgress& c = sCrossTravel[guid];
+                    if (c.since == 0 || std::hypot(c.tx - move.x, c.ty - move.y) > LEG_YARDS)
+                        c = { move.x, move.y, dist, now, 0 };
+                    else if (dist + PROGRESS_YARDS < c.nearest)
+                    {
+                        c.nearest = dist;
+                        c.since   = now;
+                        c.reports = 0;
+                    }
+                    else if (now - c.since >= STUCK_MS)
+                    {
+                        c.nearest = dist;
+                        c.since   = now;
+                        times = ++c.reports;
+                    }
+                }
+                if (times)
+                    ReportStuck("the crossing (a dock, portal or tower) on its way to its owner", move.mapId, move.x, move.y, move.z,
+                        dist, "no 10-yard gain toward the crossing in 90 seconds", times);
+            }
             return MoveFarTo(WorldPosition(move.mapId, move.x, move.y, move.z));
         }
         BuddyCrossingForget(bot);
+        {
+            std::lock_guard<std::mutex> lock(sTownLock);
+            sCrossTravel.erase(bot->GetGUID().GetCounter());
+        }
 
         uint32 guid = bot->GetGUID().GetCounter();
         uint64 now  = Now();
@@ -1015,40 +1194,111 @@ public:
                 p.since = now;
             }
         }
-        if (stuck && Unstick())
-            return true;
+        if (stuck)
+        {
+            uint32 times;
+            {
+                std::lock_guard<std::mutex> lock(sTownLock);
+                times = ++sTravel[guid].reports;
+            }
+            ReportStuck(owner, "no 10-yard gain toward its owner in 90 seconds", times);
+        }
 
         botAI->rpgInfo.stuckTs = getMSTime();
         botAI->rpgInfo.stuckAttempts = 0;
-        return MoveFarTo(WorldPosition(owner->GetMapId(), owner->GetPositionX(), owner->GetPositionY(), owner->GetPositionZ()));
+        float ax, ay, az;
+        ArrivalPlace(owner, ax, ay, az);
+        bool walking = MoveFarTo(WorldPosition(owner->GetMapId(), ax, ay, az));
+        if (!walking)
+        {
+            float tx, ty, tz;
+            if (BuddyFollowTrackAhead(owner->GetGUID().GetCounter(), bot->GetPositionX(), bot->GetPositionY(), tx, ty, tz)
+                && MoveFarTo(WorldPosition(owner->GetMapId(), tx, ty, tz)))
+            {
+                BuddyTrace(bot, "travel: no way to its owner's arc; along the owner's track to ({:.0f}, {:.0f})", tx, ty);
+                walking = true;
+            }
+        }
+        uint32 fails, times;
+        {
+            std::lock_guard<std::mutex> lock(sTownLock);
+            TravelProgress& p = sTravel[guid];
+            p.fails = walking ? 0 : p.fails + 1;
+            if (walking)
+                p.reports = 0;
+            fails = p.fails;
+            times = p.reports;
+            if (fails >= FAILS_BEFORE_REPORT)
+            {
+                p.fails = 0;
+                times = ++p.reports;
+            }
+        }
+        if (!walking && fails >= FAILS_BEFORE_REPORT)
+            ReportStuck(owner, "three long walks in a row found no way (to the owner's arc, nor along the owner's track)", times);
+        return walking;
+    }
+
+    void ArrivalPlace(Player* owner, float& x, float& y, float& z)
+    {
+        uint32 me = bot->GetGUID().GetCounter(), boss = owner->GetGUID().GetCounter();
+        uint64 now = Now();
+        float ox = owner->GetPositionX(), oy = owner->GetPositionY(), oz = owner->GetPositionZ(), oo = owner->GetOrientation();
+        std::lock_guard<std::mutex> lock(sTownLock);
+        auto& claims = sArrive[boss];
+        for (auto it = claims.begin(); it != claims.end();)
+            it = (it->first != me && now - it->second.at > ARRIVE_CLAIM_MS) ? claims.erase(it) : std::next(it);
+        ArriveClaim& mine = claims[me];
+        mine.at = now;
+        mine.x  = bot->GetPositionX();
+        mine.y  = bot->GetPositionY();
+
+        uint32 n = uint32(claims.size());
+        float radius = std::max(ARRIVE_RADIUS, ARRIVE_SPACING * float(n) / (2.0f * float(M_PI)));
+        float step   = std::min(ARRIVE_SPACING / radius, 2.0f * float(M_PI) / float(n));
+        std::vector<std::pair<float, float>> places(n);
+        for (uint32 k = 0; k < n; ++k)
+        {
+            float a = oo + (float(k) - float(n - 1) / 2.0f) * step;
+            places[k] = { ox + std::cos(a) * radius, oy + std::sin(a) * radius };
+        }
+        struct Pair { float d; uint32 who; uint32 place; };
+        std::vector<Pair> pairs;
+        for (auto const& [who, c] : claims)
+            for (uint32 k = 0; k < n; ++k)
+                pairs.push_back({ std::hypot(places[k].first - c.x, places[k].second - c.y), who, k });
+        std::sort(pairs.begin(), pairs.end(), [](Pair const& a, Pair const& b) { return a.d < b.d; });
+        std::unordered_set<uint32> placed, used;
+        for (Pair const& pr : pairs)
+        {
+            if (placed.count(pr.who) || used.count(pr.place))
+                continue;
+            claims[pr.who].place = pr.place;
+            placed.insert(pr.who);
+            used.insert(pr.place);
+        }
+        x = places[mine.place].first;
+        y = places[mine.place].second;
+        z = bot->GetMap()->GetHeight(bot->GetPhaseMask(), x, y, oz + 5.0f, true, 15.0f);
+        if (z <= INVALID_HEIGHT)
+            z = oz;
     }
 
 private:
-    bool Unstick()
+    void ReportStuck(Player* owner, char const* why, uint32 times)
     {
-        Map* map = bot->GetMap();
-        float bx = bot->GetPositionX(), by = bot->GetPositionY(), bz = bot->GetPositionZ();
-        for (uint32 attempt = 0; attempt < UNSTUCK_TRIES; ++attempt)
-        {
-            float angle = frand(0.0f, 2.0f * float(M_PI));
-            float d     = frand(5.0f, UNSTUCK_YARDS);
-            float x = bx + std::cos(angle) * d;
-            float y = by + std::sin(angle) * d;
-            float z = map->GetHeight(bot->GetPhaseMask(), x, y, bz + 10.0f, true, 30.0f);
-            if (z <= INVALID_HEIGHT || std::fabs(z - bz) > 15.0f)
-                continue;
-            if (map->IsInWater(bot->GetPhaseMask(), x, y, z, bot->GetCollisionHeight()))
-                continue;
-            if (!bot->IsWithinLOS(x, y, z + 1.0f))
-                continue;
-            LOG_INFO("module", "mod-buddies: buddy {} made no progress toward its owner for {} s; moved {:.0f} yards to walk on",
-                bot->GetName(), STUCK_MS / 1000, d);
-            bot->NearTeleportTo(x, y, z + 0.5f, angle);
-            return true;
-        }
-        LOG_WARN("module", "mod-buddies: buddy {} is stuck but none of {} spots within {:.0f} yards was walkable; it keeps trying",
-            bot->GetName(), UNSTUCK_TRIES, UNSTUCK_YARDS);
-        return false;
+        std::string goingTo = "its owner " + owner->GetName() + " in area " + std::to_string(owner->GetAreaId());
+        ReportStuck(goingTo.c_str(), owner->GetMapId(), owner->GetPositionX(), owner->GetPositionY(), owner->GetPositionZ(),
+            bot->GetExactDist(owner), why, times);
+    }
+    void ReportStuck(char const* goingTo, uint32 mapId, float x, float y, float z, float left, char const* why, uint32 times)
+    {
+        LOG_ERROR("module", "mod-buddies: STUCK buddy {} on map {} zone {} area {} at ({:.1f}, {:.1f}, {:.1f}), going to {} "
+            "on map {} at ({:.1f}, {:.1f}, {:.1f}), {:.0f} yards left: {} (report {} in a row); it stays and keeps trying",
+            bot->GetName(), bot->GetMapId(), bot->GetZoneId(), bot->GetAreaId(),
+            bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(),
+            goingTo, mapId, x, y, z, left, why, times);
+        BuddyTrace(bot, "travel: STUCK, {} (report {} in a row)", why, times);
     }
 };
 
@@ -1110,6 +1360,12 @@ public:
             s.todo   = BuildTodo(botAI, bot, areaId);
         }
 
+        if (HelpTheGuards(s, areaId, now))
+        {
+            StoreTown(guid, s);
+            return true;
+        }
+
         if (s.doing == Doing::Nothing)
         {
             if (now < s.idleUntil)
@@ -1118,7 +1374,10 @@ public:
                 return false;
             }
             if (!s.todo.empty())
+            {
+                NextErrandFirst(s);
                 Begin(s, Doing::Errand, s.todo.front().npc, now);
+            }
             else
                 ChoosePastime(s, areaId, now);
         }
@@ -1138,6 +1397,55 @@ public:
     }
 
 private:
+    bool HelpTheGuards(TownState& s, uint32 areaId, uint64 now)
+    {
+        Creature* foe   = nullptr;
+        float     foeD  = HELP_YARDS + 1.0f;
+        for (Unit* u : UnitsNear(bot, HELP_YARDS))
+        {
+            Creature* c = u->ToCreature();
+            if (!c || !c->IsAlive() || !c->IsInCombat() || !c->IsHostileTo(bot))
+                continue;
+            Unit* victim = c->GetVictim();
+            if (!victim || victim->IsHostileTo(bot) || !InTown(c, areaId))
+                continue;
+            float d = bot->GetDistance(c);
+            if (d < foeD)
+            {
+                foe  = c;
+                foeD = d;
+            }
+        }
+        if (!foe)
+        {
+            s.helpingSince = 0;
+            return false;
+        }
+
+        bool errandsWaiting = !s.todo.empty();
+        if (errandsWaiting && s.helpingSince && now - s.helpingSince > ERRAND_PATIENCE_MS)
+            return false;
+        if (errandsWaiting && !s.helpingSince)
+            s.helpingSince = now;
+
+        if (s.doing == Doing::Errand)
+            s.began = now;
+        else if (s.doing != Doing::Nothing)
+            Finish(s, now);
+        StandUp();
+
+        bool melee = botAI->IsMelee(bot);
+        bot->SetSelection(foe->GetGUID());
+        context->GetValue<Unit*>("current target")->Set(foe);
+        botAI->ChangeEngine(BOT_STATE_COMBAT);
+        bot->Attack(foe, melee);
+        if (melee)
+            bot->GetMotionMaster()->MoveChase(foe);
+        BuddyTrace(bot, "town: helping against {} ({:.0f} yards, fighting {})",
+            foe->GetName(), foeD, foe->GetVictim()->GetName());
+        return true;
+    }
+
     void Begin(TownState& s, Doing what, ObjectGuid target, uint64 now)
     {
         s.doing = what;
@@ -1173,10 +1481,36 @@ private:
         s.nextEmote = now + urand(EMOTE_MIN_MS, EMOTE_MAX_MS);
     }
 
+    void NextErrandFirst(TownState& s)
+    {
+        if (s.todo.size() < 2)
+            return;
+        size_t nearI = 0, farI = 0;
+        float  nearD = 1e30f, farD = -1.0f;
+        for (size_t i = 0; i < s.todo.size(); ++i)
+        {
+            float d = ErrandYards(s.todo[i]);
+            if (d < nearD) { nearD = d; nearI = i; }
+            if (d > farD)  { farD  = d; farI  = i; }
+        }
+        size_t pick = (farD > NEXT_ERRAND_FAR_CAP * nearD || urand(0, 1) == 0) ? nearI : farI;
+        std::rotate(s.todo.begin(), s.todo.begin() + pick, s.todo.begin() + pick + 1);
+    }
+    float ErrandYards(ErrandStop const& e)
+    {
+        if (e.kind == Errand::Mail || e.kind == Errand::Runeforge)
+        {
+            GameObject* box = ObjectAccessor::GetGameObject(*bot, e.npc);
+            return box ? bot->GetDistance(box) : 0.0f;
+        }
+        Creature* npc = ObjectAccessor::GetCreature(*bot, e.npc);
+        return npc ? bot->GetDistance(npc) : 0.0f;
+    }
+
     bool RunErrand(TownState& s, uint64 now)
     {
         ErrandStop stop = s.todo.front();
-        if (stop.kind == Errand::Mail)
+        if (stop.kind == Errand::Mail || stop.kind == Errand::Runeforge)
         {
             GameObject* box = ObjectAccessor::GetGameObject(*bot, stop.npc);
             if (!box || TooLong(s, now))
@@ -1188,7 +1522,10 @@ private:
             if (bot->GetDistance(box) > ARRIVED_YARDS)
                 return WalkTo(box, NPC_YARDS);
             bot->SetFacingToObject(box);
-            DoMail(botAI, bot, box);
+            if (stop.kind == Errand::Runeforge)
+                DoRuneforge(botAI, bot, box);
+            else
+                DoMail(botAI, bot, box);
             s.todo.erase(s.todo.begin());
             Finish(s, now);
             return true;

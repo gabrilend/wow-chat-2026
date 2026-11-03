@@ -45,7 +45,7 @@ local function read_outfits(path)
 end
 
 local function query(sql)
-    local cmd = string.format("%s --no-defaults --socket=%s -uritz -pmenardi -N -B -D %s -e %q 2>/dev/null",
+    local cmd = string.format("%s --defaults-file=" .. DIR .. "/mysql/conf/client.cnf --socket=%s -N -B -D %s -e %q 2>/dev/null",
                               MYSQL, SOCK, opt.db, sql)
     local out, h = {}, io.popen(cmd)
     for l in h:lines() do out[#out + 1] = l end

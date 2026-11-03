@@ -1,0 +1,34 @@
+#!/bin/bash
+
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+SCRATCH="${DIR}/tmp/tmp/test-measure-buddy-spread"
+FAILS=0
+CHECKS=0
+check() { CHECKS=$((CHECKS + 1)); grep -qF -- "$2" <<< "${OUT}" || { echo "  FAIL: $1 (wanted \"$2\")"; FAILS=$((FAILS + 1)); }; }
+
+mkdir -p "${SCRATCH}"
+printf '%s\n' \
+    $'100\t1\t1\tOwn\towner\t0\t85\t10\t0\t0\t0\t0\t0' \
+    $'100\t1\t2\tAa\tbuddy\t0\t85\t10\t10\t0\t0\t0\t0' \
+    $'100\t1\t3\tBb\tbuddy\t0\t85\t10\t11\t0\t0\t0\t0' \
+    $'105\t1\t1\tOwn\towner\t0\t28\t20\t50\t0\t0\t0\t0' \
+    $'105\t1\t2\tAa\tbuddy\t0\t85\t10\t10\t0\t0\t0\t0' \
+    $'105\t1\t3\tBb\tbuddy\t0\t85\t10\t5\t0\t0\t0\t0' \
+    $'115\t1\t1\tOwn\towner\t0\t28\t20\t50\t0\t0\t0\t0' \
+    $'115\t1\t2\tAa\tbuddy\t0\t28\t20\t45\t0\t0\t0\t0' \
+    $'115\t1\t3\tBb\tbuddy\t0\t85\t10\t0\t0\t0\t0\t0' > "${SCRATCH}/spread.tsv"
+OUT="$("${DIR}/scripts/measure-buddy-spread" --file "${SCRATCH}/spread.tsv" 2>&1)"
+
+check "three samples over 15 seconds"                     "3 samples over 15 s"
+check "half the buddy samples in the owner's sub-zone"    "50% of buddy samples in the owner's sub-zone"
+check "one stacked pair"                                  "stacked (two within 3 yd): 1"
+check "one change of sub-zone"                            "1 sub-zone changes"
+check "Aa arrived after 10 seconds"                       "arrived after 10 s (median, 1 arrivals)"
+check "Bb never arrived"                                  "never arrived: Bb"
+check "three samples of walking away"                     "wandering: 3 samples"
+
+rm -rf "${SCRATCH}"
+if [[ ${FAILS} -eq 0 ]]; then echo "test-measure-buddy-spread: all ${CHECKS} checks passed"; exit 0; fi
+echo "${OUT}" | sed 's/^/    | /'
+echo "test-measure-buddy-spread: ${FAILS} of ${CHECKS} checks failed"
+exit 1

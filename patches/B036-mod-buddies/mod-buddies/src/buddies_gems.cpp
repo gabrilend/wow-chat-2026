@@ -62,6 +62,10 @@ static void ReadTiers()
         Gem g;
         if (!GemOf(&p, g) || p.HasFlag(ITEM_FLAG_UNIQUE_EQUIPPABLE) || p.ItemLimitCategory || p.RequiredSkill)
             continue;
+        std::string const& n = p.Name1;
+        if (n.rfind("Test ", 0) == 0 || n.find(" Test ") != std::string::npos || n.find("[PH]") != std::string::npos
+            || n.rfind("Deprecated", 0) == 0 || n.rfind("QA ", 0) == 0)
+            continue;
         for (int t = 0; t < 3; ++t)
             if (p.ItemLevel == GEM_TIERS[t].itemLevel && p.Quality == GEM_TIERS[t].quality)
                 sTierGems[t].push_back(g);
@@ -323,8 +327,9 @@ static std::map<Player*, GemScorer> ScorersFor(std::vector<Player*> const& clan)
     std::map<Player*, GemScorer> scorers;
     for (Player* m : clan)
     {
-        QueryResult row = CharacterDatabase.Query("SELECT profile, role FROM buddy_roster WHERE buddy = {}", m->GetGUID().GetCounter());
-        scorers.emplace(m, GemScorer(m, row ? (*row)[0].Get<uint8>() : 0, row ? (*row)[1].Get<uint8>() : 0));
+        uint8 profile, role;
+        BuddyPlanOf(m->GetGUID().GetCounter(), profile, role);
+        scorers.emplace(m, GemScorer(m, profile, role));
     }
     return scorers;
 }
@@ -511,8 +516,9 @@ uint32 BuddyBuyGemsAtAuction(Player* bot, Creature* auctioneer)
     if (empty.empty())
         return 0;
 
-    QueryResult row = CharacterDatabase.Query("SELECT profile, role FROM buddy_roster WHERE buddy = {}", bot->GetGUID().GetCounter());
-    GemScorer scorer(bot, row ? (*row)[0].Get<uint8>() : 0, row ? (*row)[1].Get<uint8>() : 0);
+    uint8 profile, role;
+    BuddyPlanOf(bot->GetGUID().GetCounter(), profile, role);
+    GemScorer scorer(bot, profile, role);
     uint64 budget = uint64(float(bot->GetMoney()) * GEM_SPEND_SHARE);
     std::set<uint32> taken;
     uint32 bought = 0;
@@ -560,22 +566,24 @@ public:
         return commandTable;
     }
 
-    static bool HandleGems(ChatHandler* handler, std::string name)
+    static bool HandleGems(ChatHandler* handler, Optional<PlayerIdentifier> who)
     {
-        if (!normalizePlayerName(name))
+        if (!who)
+            who = PlayerIdentifier::FromTarget(handler);
+        if (!who)
         {
-            handler->PSendSysMessage("Usage: .buddy gems <buddy name>");
+            handler->PSendSysMessage("Usage: .buddy gems [buddy name] (no name: the selected buddy)");
             return false;
         }
-        Player* buddy = ObjectAccessor::FindPlayerByName(name, true);
-        if (!buddy || !BuddyIsCompanionAccount(buddy->GetSession()->GetAccountId()))
+        std::string name = who->GetName();
+        Player* buddy = who->GetConnectedPlayer();
+        if (!buddy || !buddy->IsInWorld() || !BuddyIsCompanionAccount(buddy->GetSession()->GetAccountId()))
         {
             handler->PSendSysMessage("{} is not a buddy in the world (a buddy is in the world while its owner is online).", name);
             return false;
         }
-        QueryResult row = CharacterDatabase.Query("SELECT profile, role FROM buddy_roster WHERE buddy = {}", buddy->GetGUID().GetCounter());
-        uint8 profile = row ? (*row)[0].Get<uint8>() : 0;
-        uint8 role    = row ? (*row)[1].Get<uint8>() : 0;
+        uint8 profile, role;
+        BuddyPlanOf(buddy->GetGUID().GetCounter(), profile, role);
         std::string problems = BuddyGemKit(buddy, profile, role);
         handler->PSendSysMessage("{} re-gemmed by its plan {} (role {}){}{}", name, uint32(profile), uint32(role),
             problems.empty() ? "" : "; ", problems);

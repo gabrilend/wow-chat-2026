@@ -3,6 +3,7 @@
 #include "buddies_loot.h"
 #include "buddies_roam.h"
 #include "buddies_roles.h"
+#include "roam/buddy_far_party_core.h"
 #include "BattlegroundMgr.h"
 #include "BattlegroundQueue.h"
 #include "DatabaseEnv.h"
@@ -80,6 +81,12 @@ static bool IsFarParty(Group* group, std::set<uint32> const& buddies)
         if (!buddies.count(slot.guid.GetCounter()))
             return false;
     return true;
+}
+
+static bool OwnerSeatFree(Player* owner)
+{
+    Group* g = owner->GetGroup();
+    return !g || (!g->isRaidGroup() && g->GetMembersCount() < PARTY_SIZE);
 }
 
 static bool IsOwnersBuddyRaid(Group* group, Player* owner, std::set<uint32> const& buddies)
@@ -176,10 +183,76 @@ static void ArrangeOwner(Player* owner, std::vector<uint32> const& buddyGuids)
             if (b.yards > LEAVE_OWNER_YARDS && sSeatedByPass.erase(guid))
                 g->RemoveMember(b.bot->GetGUID());
         }
-        else if (IsFarParty(g, buddySet) && (b.yards <= FAR_YARDS || !NearAnyMember(b.bot, g, FAR_LEAVE_YARDS)))
+        else if (IsFarParty(g, buddySet) && ((b.yards <= FAR_YARDS && OwnerSeatFree(owner)) || !NearAnyMember(b.bot, g, FAR_LEAVE_YARDS)))
             g->RemoveMember(b.bot->GetGUID());
     }
 
+}
+
+static void EvenOutFar(Player* owner, std::vector<Near> const& buddies, std::set<uint32> const& buddySet, bool seatFree)
+{
+    std::vector<Player*> far;
+    std::vector<BuddyFarParty::Spot> at;
+    for (Near const& b : buddies)
+    {
+        Group* g = b.bot->GetGroup();
+        bool loose = !g && (b.yards > FAR_YARDS || !seatFree);
+        bool inFar = g && IsFarParty(g, buddySet) && !g->isRaidGroup();
+        if (!loose && !inFar)
+            continue;
+        far.push_back(b.bot);
+        at.push_back({ b.bot->GetPositionX(), b.bot->GetPositionY() });
+    }
+
+    for (std::vector<uint32_t> const& cluster : BuddyFarParty::Clusters(at, FAR_LEAVE_YARDS))
+    {
+        if (cluster.size() < 2)
+            continue;
+        std::map<Group*, uint32> sizes;
+        bool allGrouped = true;
+        for (uint32_t i : cluster)
+        {
+            if (Group* g = far[i]->GetGroup())
+                ++sizes[g];
+            else
+                allGrouped = false;
+        }
+        std::vector<uint32_t> want = BuddyFarParty::GroupSizes(uint32_t(cluster.size()));
+        uint32 lo = 0xFFFFFFFF, hi = 0;
+        for (auto const& [g, n] : sizes)
+        {
+            lo = std::min(lo, n);
+            hi = std::max(hi, n);
+        }
+        if (allGrouped && sizes.size() == want.size() && hi - lo <= 1)
+            continue;
+
+        std::vector<BuddyFarParty::Spot> mine;
+        for (uint32_t i : cluster)
+            mine.push_back(at[i]);
+        for (uint32_t i : cluster)
+            if (Group* g = far[i]->GetGroup())
+                g->RemoveMember(far[i]->GetGUID());
+        uint32 made = 0;
+        for (std::vector<uint32_t> const& group : BuddyFarParty::Groups(mine, FAR_LEAVE_YARDS))
+        {
+            if (group.size() < 2)
+                continue;
+            Player* leader = far[cluster[group[0]]];
+            if (leader->GetGroup())
+                continue;
+            Group* g = NewParty(leader);
+            if (!g)
+                continue;
+            for (size_t k = 1; k < group.size(); ++k)
+                if (!g->AddMember(far[cluster[group[k]]]))
+                    LOG_ERROR("module", "mod-buddies: {} could not join the evened far party led by {} (server refused)",
+                        far[cluster[group[k]]]->GetName(), leader->GetName());
+            ++made;
+        }
+        LOG_DEBUG("module", "mod-buddies: {}'s {} far buddies near each other evened out into {} parties",
+            owner->GetName(), cluster.size(), made);
+    }
 }
 
 static void ArrangeFar(Player* owner, std::vector<uint32> const& buddyGuids)
@@ -191,8 +264,9 @@ static void ArrangeFar(Player* owner, std::vector<uint32> const& buddyGuids)
     std::vector<Near> buddies = BuddiesNear(owner, buddyGuids);
 
     std::vector<Player*> farLoose;
+    bool seatFree = OwnerSeatFree(owner);
     for (Near const& b : buddies)
-        if (b.yards > FAR_YARDS && !b.bot->GetGroup())
+        if ((b.yards > FAR_YARDS || !seatFree) && !b.bot->GetGroup())
             farLoose.push_back(b.bot);
     std::sort(farLoose.begin(), farLoose.end(), [](Player* a, Player* b) { return a->GetGUID() < b->GetGUID(); });
     for (Player* bot : farLoose)
@@ -277,6 +351,8 @@ static void ArrangeFar(Player* owner, std::vector<uint32> const& buddyGuids)
         if (!moved)
             break;
     }
+
+    EvenOutFar(owner, buddies, buddySet, seatFree);
 }
 
 static void AskOrWait(Player* owner, std::vector<uint32> const& buddyGuids)
@@ -552,8 +628,9 @@ static std::set<uint32> sDrawnIn;
 
 static BuddyRole RosterRole(uint32 buddy)
 {
-    QueryResult r = CharacterDatabase.Query("SELECT role FROM buddy_roster WHERE buddy = {}", buddy);
-    return r ? BuddyRole((*r)[0].Get<uint8>()) : BuddyRole::Damage;
+    uint8 profile, role;
+    BuddyPlanOf(buddy, profile, role);
+    return BuddyRole(role);
 }
 
 static constexpr uint32 ROLE_FULL    = 10;

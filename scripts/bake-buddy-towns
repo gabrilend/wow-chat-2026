@@ -2,7 +2,16 @@
 
 set -euo pipefail
 
-DIR="${1:-/mnt/kaun/wow-chat-2026}"
+DIR="/mnt/kaun/wow-chat-2026"
+FORCE=0
+for a in "$@"; do
+    case "${a}" in
+        --help|-h) sed -n '2,32p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --force)   FORCE=1 ;;
+        --*)       echo "bake-buddy-towns: unknown option ${a} (see --help)" >&2; exit 2 ;;
+        *)         DIR="${a}" ;;
+    esac
+done
 PROFILE="$(cat "${DIR}/.profile")"
 DATA="$(sed -n 's|^DataDir[[:space:]]*=[[:space:]]*"\{0,1\}\([^"]*\)"\{0,1\}.*|\1|p' "${DIR}/installed-files-${PROFILE}/etc/worldserver.conf" | tail -1)"
 WORLD_DB="$(sed -n 's|^WorldDatabaseInfo[[:space:]]*=[[:space:]]*"[^;]*;[^;]*;[^;]*;[^;]*;\([^"]*\)".*|\1|p' "${DIR}/installed-files-${PROFILE}/etc/worldserver.conf" | tail -1)"
@@ -23,12 +32,24 @@ PIECES="${SHM_DIR}/buddy-town-pieces.tsv"
 [[ -d "${DETOUR}/Source" ]] || { echo "ERROR: the mesh library's sources are missing (${DETOUR}); is source-beta cloned?"; exit 1; }
 
 echo "Listing area pieces from ${WORLD_DB}..."
-"${MYSQL}" -h127.0.0.1 -P3307 -uritz -pmenardi -N --batch "${WORLD_DB}" \
+"${MYSQL}" "--defaults-file=${DIR}/mysql/conf/client.cnf" -h127.0.0.1 -P3307 -N --batch "${WORLD_DB}" \
     -e "SELECT map, area, piece, min_x + 0e0, max_x + 0e0, min_y + 0e0, max_y + 0e0 FROM buddy_area_centre ORDER BY map, area, piece" \
     2>&1 > "${PIECES}" | grep -v "Using a password" || true
 COUNT="$(wc -l < "${PIECES}")"
 [[ "${COUNT}" -gt 0 ]] || { echo "ERROR: buddy_area_centre in ${WORLD_DB} is empty (install step E044 makes it)"; exit 1; }
 echo "  ${COUNT} area pieces (only towns are baked)"
+
+FINGERPRINT_FILE="${DATA}/buddy-towns/.fingerprint"
+FINGERPRINT="$( {
+    cat "${PIECES}"
+    cat "${BAKER_SRC}" "${CORE}"/buddy_*.h "${CORE}/buddy_explore_core.cpp"
+    find "${DATA}/mmaps" -type f -printf '%f %s %T@\n' | sort
+} | sha1sum | cut -c1-40 )"
+BAKED="$(find "${DATA}/buddy-towns" -maxdepth 1 -name '*.btown' 2>/dev/null | wc -l)"
+if [[ ${FORCE} -eq 0 && "${BAKED}" -gt 0 && -f "${FINGERPRINT_FILE}" && "$(cat "${FINGERPRINT_FILE}")" == "${FINGERPRINT}" ]]; then
+    echo "  unchanged since the last bake (${BAKED} towns' files in ${DATA}/buddy-towns): not baked again (--force bakes anyway)"
+    exit 0
+fi
 
 NEWEST_SRC="$(ls -t "${BAKER_SRC}" "${CORE}"/buddy_*.h "${CORE}"/buddy_explore_core.cpp | head -1)"
 if [[ ! -x "${BAKER}" || "${NEWEST_SRC}" -nt "${BAKER}" ]]; then
@@ -39,4 +60,15 @@ if [[ ! -x "${BAKER}" || "${NEWEST_SRC}" -nt "${BAKER}" ]]; then
 fi
 
 mkdir -p "${DATA}/buddy-towns"
-"${BAKER}" "${DATA}" "${PIECES}"
+BAKE_LOG="${DIR}/tmp/shared-memory/bake-buddy-towns.log"
+BAKE_STATUS=0
+"${BAKER}" "${DATA}" "${PIECES}" > "${BAKE_LOG}" || BAKE_STATUS=$?
+if [[ ${BAKE_STATUS} -ne 0 ]]; then
+    echo "ERROR: the town baker exited ${BAKE_STATUS}; its last lines (all of them: ${BAKE_LOG#${DIR}/}):"
+    tail -n 5 "${BAKE_LOG}" | sed 's/^/  /'
+    exit "${BAKE_STATUS}"
+fi
+MESHLESS="$(grep -c "nothing kept" "${BAKE_LOG}" || true)"   # grep -c says 0 and fails on none: not an error here
+echo "  $(tail -n 1 "${BAKE_LOG}")"
+echo "  ${MESHLESS} town pieces had no mesh under them (measured live by the server); each piece: ${BAKE_LOG#${DIR}/}"
+echo "${FINGERPRINT}" > "${FINGERPRINT_FILE}"

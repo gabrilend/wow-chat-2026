@@ -1,0 +1,24 @@
+#!/bin/bash
+
+set -uo pipefail
+
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+    echo "Usage: scripts/test-buddy-radius [PROJECT_DIR]"
+    echo "  Builds and runs the radius core's offline check (tests/buddy-radius/radius-check.cpp)."
+    exit 0
+fi
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+CORE="${DIR}/patches/B036-mod-buddies/mod-buddies/src/roam"
+SOURCE="${DIR}/tests/buddy-radius/radius-check.cpp"
+EXEC_DIR="${DIR}/tmp/tmp"
+BINARY="${EXEC_DIR}/buddy-radius-check"
+
+[[ -d "${DIR}/tmp" ]] || { echo "ERROR: ${DIR}/tmp missing (the project's link to /tmp/<project>)"; exit 1; }
+mkdir -p "${EXEC_DIR}"
+
+if ! g++ -std=c++17 -O2 -Wall -Wextra -Werror -I"${CORE}" "${SOURCE}" -o "${BINARY}"; then
+    echo "test-buddy-radius: the radius core did not build alone (above); nothing was checked"
+    exit 1
+fi
+"${BINARY}"

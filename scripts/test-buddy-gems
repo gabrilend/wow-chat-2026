@@ -9,7 +9,7 @@ WORLD="acore_world_basic"
 [[ -x "${MYSQL}" ]] || { echo "ERROR: no mysql client at ${MYSQL}"; exit 1; }
 
 ask() {
-    "${MYSQL}" -h127.0.0.1 -P3307 -uritz -pmenardi -N -B "${WORLD}" -e "$1" 2>&1 | grep -v "Using a password"
+    "${MYSQL}" "--defaults-file=${DIR}/mysql/conf/client.cnf" -h127.0.0.1 -P3307 -N -B "${WORLD}" -e "$1" 2>&1 | grep -v "Using a password"
 }
 
 failed=0

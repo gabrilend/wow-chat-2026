@@ -126,15 +126,9 @@ local function for_buddies(profile, partner, say)
 end
 
 local function on_command(event, player, command, handler)
-    local name, buddies, who
-    local partner = command:match("^elite%s+(%a+)%s*$")
-    if partner then
-        name, buddies, who = "elite", true, partner
-    else
-        name, who = command:match("^gearset%s+([%w%-]+)%s+buddies%s+(%a+)%s*$")
-        buddies = name ~= nil
-        if not name then name, who = command:match("^gearset%s+([%w%-]+)%s+(%a+)%s*$") end
-    end
+    local name, who = command:match("^gearset%s+([%w%-]+)%s+buddies%s+(%a+)%s*$")
+    local buddies = name ~= nil
+    if not name then name, who = command:match("^gearset%s+([%w%-]+)%s+(%a+)%s*$") end
     if not name then return end
     if player and player:GetGMRank() < GM_RANK then return end
     local say = player and function(text) player:SendBroadcastMessage(text) end

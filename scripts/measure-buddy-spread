@@ -1,0 +1,122 @@
+#!/usr/bin/env luajit
+
+local DIR, SINCE, FILE = "/mnt/kaun/wow-chat-2026", 0, nil
+do
+    local i = 1
+    while i <= #arg do
+        if arg[i] == "--since" then i = i + 1; SINCE = tonumber(arg[i])
+        elseif arg[i] == "--file" then i = i + 1; FILE = arg[i]
+        else DIR = arg[i] end
+        i = i + 1
+    end
+end
+FILE = FILE or (DIR .. "/tmp/shared-memory/buddy-spread.tsv")
+
+local STACKED_YARDS, ON_TOP_YARDS = 3, 2
+
+local samples, names = {}, {}
+local f = io.open(FILE)
+if not f then io.stderr:write("measure-buddy-spread: no record at " .. FILE .. " (touch tmp/shared-memory/buddy-spread.on while the server runs)\n"); os.exit(1) end
+local rows = 0
+for line in f:lines() do
+    local t, owner, guid, name, role, map, zone, area, x, y, z, fighting, dead =
+        line:match("^(%d+)\t(%d+)\t(%d+)\t([^\t]+)\t(%a+)\t(%d+)\t(%d+)\t(%d+)\t([-%d.]+)\t([-%d.]+)\t([-%d.]+)\t(%d)\t(%d)$")
+    if t and tonumber(t) >= SINCE then
+        rows = rows + 1
+        local r = { t = tonumber(t), owner = tonumber(owner), guid = tonumber(guid), name = name, map = tonumber(map),
+                    zone = tonumber(zone), area = tonumber(area), x = tonumber(x), y = tonumber(y), z = tonumber(z),
+                    fighting = fighting == "1", dead = dead == "1" }
+        names[r.guid] = name
+        samples[r.owner] = samples[r.owner] or {}
+        local s = samples[r.owner][r.t] or { buddies = {} }
+        samples[r.owner][r.t] = s
+        if role == "owner" then s.owner = r else table.insert(s.buddies, r) end
+    end
+end
+f:close()
+if rows == 0 then print("measure-buddy-spread: no samples" .. (SINCE > 0 and " since " .. SINCE or "")); os.exit(0) end
+
+local function dist(a, b) return math.sqrt((a.x - b.x) ^ 2 + (a.y - b.y) ^ 2 + (a.z - b.z) ^ 2) end
+local function median(list)
+    if #list == 0 then return nil end
+    table.sort(list)
+    local m = math.floor((#list + 1) / 2)
+    return #list % 2 == 1 and list[m] or (list[m] + list[m + 1]) / 2
+end
+local function yards(v) return v and string.format("%.1f yd", v) or "-" end
+
+for owner, by_time in pairs(samples) do
+    local times = {}
+    for t in pairs(by_time) do times[#times + 1] = t end
+    table.sort(times)
+
+    local buddy_samples, in_area, from_owner, nearest, stacked, on_top = 0, 0, {}, {}, 0, 0
+    for _, t in ipairs(times) do
+        local s = by_time[t]
+        if s.owner then
+            for i, b in ipairs(s.buddies) do
+                buddy_samples = buddy_samples + 1
+                if b.map == s.owner.map and b.area == s.owner.area then in_area = in_area + 1 end
+                if b.map == s.owner.map then
+                    local d = dist(b, s.owner)
+                    from_owner[#from_owner + 1] = d
+                    if d <= ON_TOP_YARDS then on_top = on_top + 1 end
+                end
+                local best
+                for j, o in ipairs(s.buddies) do
+                    if j ~= i and o.map == b.map then
+                        local d = dist(b, o)
+                        if not best or d < best then best = d end
+                        if j > i and d <= STACKED_YARDS then stacked = stacked + 1 end
+                    end
+                end
+                if best then nearest[#nearest + 1] = best end
+            end
+        end
+    end
+
+    local changes, lags, never = 0, {}, {}
+    local last_area
+    for k, t in ipairs(times) do
+        local s = by_time[t]
+        if s.owner then
+            local area = s.owner.map * 100000 + s.owner.area
+            if last_area and area ~= last_area then
+                changes = changes + 1
+                for _, b in ipairs(s.buddies) do
+                    local arrived
+                    for m = k, #times do
+                        local later = by_time[times[m]]
+                        if not later.owner or later.owner.map * 100000 + later.owner.area ~= area then break end
+                        for _, lb in ipairs(later.buddies) do
+                            if lb.guid == b.guid and lb.map * 100000 + lb.area == area then arrived = times[m] - t; break end
+                        end
+                        if arrived then break end
+                    end
+                    if arrived then lags[#lags + 1] = arrived else never[#never + 1] = names[b.guid] end
+                end
+            end
+            last_area = area
+        end
+    end
+
+    local wandering, prev = 0, {}
+    for _, t in ipairs(times) do
+        local s = by_time[t]
+        if s.owner then
+            for _, b in ipairs(s.buddies) do
+                local d = b.map == s.owner.map and dist(b, s.owner) or nil
+                if d and b.area ~= s.owner.area and prev[b.guid] and d > prev[b.guid] + 1 then wandering = wandering + 1 end
+                prev[b.guid] = d
+            end
+        end
+    end
+
+    print(string.format("owner %s (%d): %d samples over %d s", names[owner] or "?", owner, #times, times[#times] - times[1]))
+    print(string.format("  spread:    %d%% of buddy samples in the owner's sub-zone; from the owner %s (median); to the nearest buddy %s (median)",
+        buddy_samples > 0 and math.floor(100 * in_area / buddy_samples + 0.5) or 0, yards(median(from_owner)), yards(median(nearest))))
+    print(string.format("             stacked (two within %d yd): %d; on top of the owner (within %d yd): %d", STACKED_YARDS, stacked, ON_TOP_YARDS, on_top))
+    print(string.format("  following: %d sub-zone changes; arrived after %s s (median, %d arrivals); never arrived: %s", changes,
+        median(lags) and string.format("%d", median(lags)) or "-", #lags, #never > 0 and table.concat(never, ", ") or "none"))
+    print(string.format("  wandering: %d samples of a buddy outside the owner's sub-zone moving away from the owner", wandering))
+end

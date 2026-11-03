@@ -1,5 +1,13 @@
 #!/usr/bin/env luajit
 
+if arg[1] == "--help" or arg[1] == "-h" then
+    for line in io.lines(arg[0]) do
+        if not line:match("^%-%-") and not line:match("^#!") then break end
+        if not line:match("^%-%-%-%-%-") and not line:match("^#!") then print((line:gsub("^%-%- ?", ""))) end
+    end
+    os.exit(0)
+end
+
 local DIR = "/mnt/kaun/wow-chat-2026"
 if arg[1] and arg[1] ~= "" then DIR = arg[1] end
 local PROFILE = arg[2] or "basic"
@@ -78,7 +86,7 @@ end
 
 local db = DATABASE[PROFILE]
 if not db then io.stderr:write("ERROR: unknown profile '" .. PROFILE .. "'\n"); os.exit(1) end
-local mysql = string.format("'%s/mysql/installed-files/bin/mysql' --no-defaults --socket='%s/mysql/databases/mysql.sock' -uritz -pmenardi -B -N %s -e 'SELECT name, security, help FROM command' 2>&1",
+local mysql = string.format("'%s/mysql/installed-files/bin/mysql' --defaults-file=" .. DIR .. "/mysql/conf/client.cnf --socket='%s/mysql/databases/mysql.sock' -B -N %s -e 'SELECT name, security, help FROM command' 2>&1",
     DIR, DIR, db)
 local raw_rows, ok = shell_lines(mysql)
 local rows = {}
@@ -107,7 +115,7 @@ local RBAC_LEVEL = {}
 RBAC_PENDING = {}
 do
     local auth = (PROFILE == "vanilla") and "acore_auth_vanilla" or "acore_auth"
-    local q = string.format("'%s/mysql/installed-files/bin/mysql' --no-defaults --socket='%s/mysql/databases/mysql.sock' -uritz -pmenardi -B -N %s -e "
+    local q = string.format("'%s/mysql/installed-files/bin/mysql' --defaults-file=" .. DIR .. "/mysql/conf/client.cnf --socket='%s/mysql/databases/mysql.sock' -B -N %s -e "
         .. "\"SELECT 'd', secId, permissionId FROM rbac_default_permissions UNION ALL SELECT 'l', id, linkedId FROM rbac_linked_permissions\" 2>&1", DIR, DIR, auth)
     local lines = shell_lines(q)
     local roots, links = {}, {}
@@ -123,7 +131,7 @@ do
     end
     if #roots == 0 then io.stderr:write("ERROR: " .. auth .. ".rbac_default_permissions is empty\n"); os.exit(1) end
     local applied = {}
-    for _, line in ipairs(shell_lines(string.format("'%s/mysql/installed-files/bin/mysql' --no-defaults --socket='%s/mysql/databases/mysql.sock' -uritz -pmenardi -B -N %s -e 'SELECT name FROM updates' 2>&1", DIR, DIR, auth))) do
+    for _, line in ipairs(shell_lines(string.format("'%s/mysql/installed-files/bin/mysql' --defaults-file=" .. DIR .. "/mysql/conf/client.cnf --socket='%s/mysql/databases/mysql.sock' -B -N %s -e 'SELECT name FROM updates' 2>&1", DIR, DIR, auth))) do
         applied[line] = true
     end
     local pending_dir = SRC .. "/data/sql/updates/db_auth"

@@ -2,6 +2,7 @@
 #ifndef MOD_BUDDIES_STAND_INS_PICK_H
 #define MOD_BUDDIES_STAND_INS_PICK_H
 
+#include <algorithm>
 #include <cstdint>
 #include <utility>
 #include <vector>
@@ -55,18 +56,23 @@ namespace BuddyStandIn
         return shapes;
     }
 
-    inline uint32_t PickKept(std::vector<Kept> const& kept, uint8_t race, uint8_t cls, uint8_t role, uint8_t level)
+    inline uint32_t PickKept(std::vector<Kept> const& kept, uint8_t race, uint8_t cls, uint8_t role, uint8_t level,
+        uint32_t roll)
     {
-        Kept const* best = nullptr;
+        std::vector<uint32_t> fits;
         for (Kept const& k : kept)
         {
             if (k.inWorld || k.race != race || k.cls != cls || k.role != role || k.level > level)
                 continue;
-            if (!best || k.level > best->level || (k.level == best->level && k.guid < best->guid))
-                best = &k;
+            fits.push_back(k.guid);
         }
-        return best ? best->guid : 0;
+        if (fits.empty())
+            return 0;
+        std::sort(fits.begin(), fits.end());
+        return fits[roll % fits.size()];
     }
+
+    static constexpr uint8_t ANY_ROLE = 3;
 
     template <class SideOfRace>
     std::vector<std::pair<uint8_t, uint8_t>> PairsFor(std::vector<std::pair<uint8_t, uint8_t>> const& gamePairs,
@@ -77,7 +83,7 @@ namespace BuddyStandIn
         {
             if (sideOfRace(p.first) != side)
                 continue;
-            if (ShapesForRole(p.second, role).empty())
+            if (role != ANY_ROLE && ShapesForRole(p.second, role).empty())
                 continue;
             out.push_back(p);
         }

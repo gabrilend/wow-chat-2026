@@ -1,0 +1,19 @@
+#!/bin/bash
+
+set -uo pipefail
+
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+CORE="${DIR}/patches/B036-mod-buddies/mod-buddies/src/roam"
+SOURCE="${DIR}/tests/buddy-follow-core/follow-check.cpp"
+EXEC_DIR="${DIR}/tmp/tmp"
+BINARY="${EXEC_DIR}/buddy-follow-check"
+
+[[ -d "${DIR}/tmp" ]] || { echo "ERROR: ${DIR}/tmp missing (the project's link to /tmp/<project>)"; exit 1; }
+mkdir -p "${EXEC_DIR}"
+
+if ! g++ -std=c++17 -O2 -Wall -Wextra -Werror -I"${CORE}" "${SOURCE}" -o "${BINARY}"; then
+    echo "test-buddy-follow-core: the following core did not build alone (above); nothing was checked"
+    exit 1
+fi
+"${BINARY}"

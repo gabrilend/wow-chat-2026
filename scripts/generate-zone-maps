@@ -1,0 +1,194 @@
+#!/usr/bin/env luajit
+
+local ffi = require("ffi")
+
+local DIR, MAPS_WANTED = "/mnt/kaun/wow-chat-2026", {}
+do
+    local i = 1
+    while i <= #arg do
+        if arg[i] == "--help" then
+            local f = io.open(arg[0]); local text = f:read("*a"); f:close()
+            io.write((text:match("%-%- (Usage:.-)\n\nlocal") or "see the header of " .. arg[0]):gsub("\n%-%- ?", "\n"), "\n")
+            os.exit(0)
+        elseif arg[i] == "--map" then i = i + 1; MAPS_WANTED[#MAPS_WANTED + 1] = tonumber(arg[i])
+        elseif arg[i] == "--one" then i = i + 1; MAPS_WANTED = { tonumber(arg[i]) }; ONE = true
+        else DIR = arg[i] end
+        i = i + 1
+    end
+end
+if #MAPS_WANTED == 0 then MAPS_WANTED = { 0, 1, 530, 571 } end
+local MAPS = DIR .. "/data-files/maps"
+local DBC  = DIR .. "/data-files/dbc"
+local OUT  = DIR .. "/assets/zone-maps"
+
+if not ONE then
+    os.execute("mkdir -p '" .. OUT .. "'")
+    local pipes = {}
+    for _, m in ipairs(MAPS_WANTED) do
+        pipes[#pipes + 1] = io.popen(("luajit '%s' '%s' --one %d 2>&1"):format(arg[0], DIR, m))
+    end
+    local failed = false
+    for _, p in ipairs(pipes) do
+        local out = p:read("*a")
+        io.write(out)
+        if out:find("ERROR") then failed = true end
+        p:close()
+    end
+    os.exit(failed and 1 or 0)
+end
+
+local SIZE_OF_GRIDS = 533.3333
+ffi.cdef [[
+typedef struct { uint32_t magic, version, build, areaOffset, areaSize, heightOffset, heightSize,
+                 liquidOffset, liquidSize, holesOffset, holesSize; } zm_map_header;
+typedef struct { uint32_t fourcc; uint16_t flags; uint16_t gridArea; } zm_area_header;
+typedef struct __attribute__((packed)) { uint32_t fourcc; uint8_t flags; uint8_t liquidFlags; uint16_t liquidType;
+                 uint8_t offsetX, offsetY, width, height; float liquidLevel; } zm_liquid_header;
+]]
+local MAP_AREA_NO_AREA = 1
+local MAP_LIQUID_NO_TYPE, MAP_LIQUID_TYPE_OCEAN = 0x01, 0x02
+
+local function read_dbc(path)
+    local f = io.open(path, "rb") or error("generate-zone-maps: ERROR cannot open " .. path)
+    local d = f:read("*a"); f:close()
+    if d:sub(1, 4) ~= "WDBC" then error("generate-zone-maps: ERROR " .. path .. " is not a WDBC file") end
+    local p = ffi.cast("const uint8_t*", d)
+    local h = ffi.cast("const uint32_t*", p)
+    local size, base, sbase = h[3], 20, 20 + h[1] * h[3]
+    return {
+        recs = h[1], keep = d,
+        u = function(r, i) return ffi.cast("const uint32_t*", p + base + r * size + i * 4)[0] end,
+        s = function(r, i) return ffi.string(p + sbase + ffi.cast("const uint32_t*", p + base + r * size + i * 4)[0]) end,
+    }
+end
+
+local area_name, area_parent = {}, {}
+do
+    local t = read_dbc(DBC .. "/AreaTable.dbc")
+    for r = 0, t.recs - 1 do
+        local id = t.u(r, 0)
+        area_parent[id], area_name[id] = t.u(r, 2), t.s(r, 11)
+    end
+end
+local zone_cache = {}
+local function zone_of(id)
+    if zone_cache[id] then return zone_cache[id] end
+    local z, seen = id, 0
+    while area_parent[z] and area_parent[z] ~= 0 and seen < 16 do z, seen = area_parent[z], seen + 1 end
+    zone_cache[id] = z
+    return z
+end
+
+local MAP_ID = MAPS_WANTED[1]
+local by_zone = {}
+local files, seas = 0, 0
+do
+    local ls = io.popen(("ls '%s' | grep '^%03d[0-9][0-9][0-9][0-9]\\.map$'"):format(MAPS, MAP_ID))
+    for name in ls:lines() do
+        local gx, gy = tonumber(name:sub(4, 5)), tonumber(name:sub(6, 7))
+        local f = io.open(MAPS .. "/" .. name, "rb")
+        local data = f:read("*a"); f:close()
+        files = files + 1
+        local p = ffi.cast("const uint8_t*", data)
+        local mh = ffi.cast("const zm_map_header*", p)
+        if mh.magic ~= 0x5350414D or mh.version ~= 9 then error("generate-zone-maps: ERROR " .. name .. " is not a version-9 map file") end
+        local ocean = {}
+        if mh.liquidOffset ~= 0 then
+            local lh = ffi.cast("const zm_liquid_header*", p + mh.liquidOffset)
+            if bit.band(lh.flags, MAP_LIQUID_NO_TYPE) ~= 0 then
+                if bit.band(lh.liquidFlags, MAP_LIQUID_TYPE_OCEAN) ~= 0 then for i = 0, 255 do ocean[i] = true end end
+            else
+                local lf = ffi.cast("const uint8_t*", p + mh.liquidOffset + ffi.sizeof("zm_liquid_header") + 512)
+                for i = 0, 255 do if bit.band(lf[i], MAP_LIQUID_TYPE_OCEAN) ~= 0 then ocean[i] = true end end
+            end
+        end
+        if mh.areaOffset ~= 0 then
+            local ah = ffi.cast("const zm_area_header*", p + mh.areaOffset)
+            local ids = (bit.band(ah.flags, MAP_AREA_NO_AREA) == 0) and ffi.cast("const uint16_t*", p + mh.areaOffset + ffi.sizeof("zm_area_header")) or nil
+            for i = 0, 255 do
+                local id = ids and ids[i] or ah.gridArea
+                if ocean[i] then seas = seas + 1
+                elseif id ~= 0 then
+                    local z = zone_of(id)
+                    local lx, ly = math.floor(i / 16), i % 16
+                    by_zone[z] = by_zone[z] or {}
+                    by_zone[z][(gx * 16 + lx) * 1024 + gy * 16 + ly] = id
+                end
+            end
+        end
+    end
+    ls:close()
+end
+if files == 0 then error(("generate-zone-maps: ERROR no map files for map %d in %s"):format(MAP_ID, MAPS)) end
+
+local function tints_for(squares)
+    local nb = {}
+    for key, a in pairs(squares) do
+        nb[a] = nb[a] or {}
+        for _, o in ipairs({ key + 1024, key + 1 }) do
+            local b = squares[o]
+            if b and b ~= a then nb[a][b] = true; nb[b] = nb[b] or {}; nb[b][a] = true end
+        end
+    end
+    local order = {}
+    for a in pairs(nb) do order[#order + 1] = a end
+    local deg = {}
+    for a, set in pairs(nb) do local d = 0; for _ in pairs(set) do d = d + 1 end; deg[a] = d end
+    table.sort(order, function(p, q) if deg[p] ~= deg[q] then return deg[p] > deg[q] end return p < q end)
+    local tint = {}
+    for _, a in ipairs(order) do
+        local taken = {}
+        for b in pairs(nb[a]) do if tint[b] then taken[tint[b]] = true end end
+        local t = 1
+        while taken[t] and t < 6 do t = t + 1 end
+        tint[a] = t
+    end
+    return tint
+end
+
+local written, squares_total = 0, 0
+for zone, squares in pairs(by_zone) do
+    local X0, X1, Y0, Y1 = math.huge, -math.huge, math.huge, -math.huge
+    local index, list, n = {}, {}, 0
+    for key, a in pairs(squares) do
+        local X, Y = math.floor(key / 1024), key % 1024
+        X0, X1, Y0, Y1 = math.min(X0, X), math.max(X1, X), math.min(Y0, Y), math.max(Y1, Y)
+        if not index[a] then list[#list + 1] = a; index[a] = true end
+        n = n + 1
+    end
+    table.sort(list)
+    for i, a in ipairs(list) do index[a] = i end
+    local tint = tints_for(squares)
+    local rows = {}
+    for X = X0, X1 do
+        local runs, cur, count = {}, nil, 0
+        for Y = Y1, Y0, -1 do
+            local a = squares[X * 1024 + Y]
+            local v = a and index[a] or 0
+            if v == cur then count = count + 1
+            else
+                if cur then runs[#runs + 1] = cur .. "*" .. count end
+                cur, count = v, 1
+            end
+        end
+        runs[#runs + 1] = cur .. "*" .. count
+        rows[#rows + 1] = '"' .. table.concat(runs, ",") .. '"'
+    end
+    local subs = {}
+    for i, a in ipairs(list) do
+        subs[i] = ("{ id = %d, name = %q, tint = %d }"):format(a, area_name[a] or ("area " .. a), tint[a] or 1)
+    end
+    local path = ("%s/%d-%d.lua"):format(OUT, MAP_ID, zone)
+    local f = io.open(path, "w") or error("generate-zone-maps: ERROR cannot write " .. path)
+    f:write("-- ", path:sub(#DIR + 2), " - GENERATED by scripts/generate-zone-maps from the server's map files and the\n")
+    f:write("-- client's area table, so scripts/render-zone can draw the zone (issue 617e14b). Don't edit; run it again.\n")
+    f:write("-- Square (X, Y): the server's ~33-yard squares; X grows southward, Y westward. Row r is X0 + r - 1,\n")
+    f:write("-- column c is Y1 - c + 1 (north up, east right). A row: index*count runs over `subzones` (0: not the zone).\n")
+    f:write(("return {\n    map = %d, zone = %d, name = %q, squares = %d,\n"):format(MAP_ID, zone, area_name[zone] or ("zone " .. zone), n))
+    f:write(("    X0 = %d, X1 = %d, Y0 = %d, Y1 = %d, square_yards = %.6f, grid_yards = %.4f,\n"):format(X0, X1, Y0, Y1, SIZE_OF_GRIDS / 16, SIZE_OF_GRIDS))
+    f:write("    subzones = {\n        " .. table.concat(subs, ",\n        ") .. ",\n    },\n")
+    f:write("    rows = {\n        " .. table.concat(rows, ",\n        ") .. ",\n    },\n}\n")
+    f:close()
+    written, squares_total = written + 1, squares_total + n
+end
+print(("generate-zone-maps: map %d: %d zones, %d squares (%d ocean squares left out), from %d map files -> %s/%d-*.lua"):format(MAP_ID, written, squares_total, seas, files, OUT:sub(#DIR + 2), MAP_ID))

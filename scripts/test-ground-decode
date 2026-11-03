@@ -1,0 +1,52 @@
+#!/bin/bash
+
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+SCRATCH="${DIR}/tmp/shared-memory/test-ground-decode"
+ZONE="1-14"                                     # Durotar: small, cliffs and coast
+rm -rf "${SCRATCH}"
+mkdir -p "${SCRATCH}"
+
+"${DIR}/scripts/generate-ground-sandbox-data" "${DIR}" --zone "${ZONE}" --out "${SCRATCH}" > /dev/null \
+    || { echo "test-ground-decode: the generator failed for ${ZONE}"; exit 1; }
+
+EXPECTED="$(luajit - "${DIR}" "${SCRATCH}/zone-${ZONE}.js" <<'EOF'
+local DIR, file = arg[1], arg[2]
+local f = io.open(file); local s = f:read("*a"); f:close()
+local num = function(k) return tonumber(s:match(k .. ": ([%-%d%.]+)")) end
+local sx0, sy0, step, cols, rows, map = num("sx0"), num("sy0"), num("step"), num("cols"), num("rows"), num("map")
+local T = dofile(DIR .. "/scripts/lib/map-heights.lua").map(DIR, map)
+math.randomseed(14)
+for _ = 1, 400 do
+    local r, c = math.random(0, rows - 1), math.random(0, cols - 1)
+    local h = T:height(-(sy0 + r * step), -(sx0 + c * step))
+    print(r * cols + c, h and math.floor(h * 10 + 0.5) or -32768)
+end
+EOF
+)"
+# }}}
+
+# {{{ the page's decoder on the file, the same points
+CHECK="$(cat <<'EOF'
+const fs = require("fs");                           // node -e: process.argv[1] is the first argument after the code
+const { decodeHeights } = require(process.argv[1]);
+let G = null;
+global.GROUND_LOADED = g => { G = g; };
+eval(fs.readFileSync(process.argv[2], "utf8"));
+const h = decodeHeights(G.heights, G.cols * G.rows);
+let checks = 0, failed = 0;
+for (const line of fs.readFileSync(0, "utf8").trim().split("\n")) {
+  const [i, want] = line.split(/\s+/).map(Number);       // Lua's print separates with a tab
+  checks++;
+  if (!Number.isInteger(i) || !Number.isInteger(want)) { failed++; console.log(`FAIL: an unreadable line: ${JSON.stringify(line)}`); continue; }
+  if (h[i] !== want) { failed++; if (failed <= 5) console.log(`FAIL: point ${i}: ${h[i]}, expected ${want}`); }
+}
+let none = 0; for (let i = 0; i < h.length; i++) if (h[i] === -32768) none++;
+console.log(`${checks} points checked, ${failed} wrong; ${h.length} decoded, ${none} with no ground; ${G.doodads.length / 8} doodads`);
+process.exit(failed ? 1 : 0);
+EOF
+)"
+echo "${EXPECTED}" | node -e "${CHECK}" "${DIR}/scripts/templates/ground-decode.js" "${SCRATCH}/zone-${ZONE}.js"
+# }}}
+# ==== footer of test-ground-decode ====
+# lines:      74
+# ==== end of footer ====

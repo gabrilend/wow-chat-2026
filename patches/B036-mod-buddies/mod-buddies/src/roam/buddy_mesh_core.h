@@ -34,6 +34,20 @@ inline bool Snap(dtNavMeshQuery const* q, dtQueryFilter const& f, BuddyRoam::Poi
     return true;
 }
 
+inline bool WallDistance(dtNavMeshQuery const* q, dtQueryFilter const& f, BuddyRoam::Point const& at, float onMesh, float rise,
+                         float maxRadius, float& dist)
+{
+    float const centre[3] = { at.y, at.z, at.x };
+    float const ext[3]    = { onMesh, rise, onMesh };
+    float on[3], hit[3], normal[3];
+    dtPolyRef ref = 0;
+    if (dtStatusFailed(q->findNearestPoly(centre, ext, &f, &ref, on)) || !ref)
+        return false;
+    if (dtStatusFailed(q->findDistanceToWall(ref, on, maxRadius, &f, &dist, hit, normal)))
+        return false;
+    return true;
+}
+
 inline bool LineClear(dtNavMeshQuery const* q, dtQueryFilter const& f, BuddyRoam::Point const& from,
                       BuddyRoam::Point const& to, float onMesh, float rise)
 {

@@ -1,0 +1,120 @@
+#!/bin/bash
+
+DIR="/mnt/kaun/wow-chat-2026"
+if [[ $# -ge 2 ]]; then DIR="$1"; shift; fi
+COMMIT_ARG="${1:?usage: test-commit [PROJECT_DIR] COMMIT}"
+
+COMMIT="$(git -C "${DIR}" rev-parse --verify "${COMMIT_ARG}^{commit}")" || { echo "ERROR: ${COMMIT_ARG} is not a commit in ${DIR}"; exit 2; }
+SHORT="${COMMIT:0:7}"
+OUT="${DIR}/tmp/shared-memory/commit-tests/${COMMIT}"
+TREE="${DIR}/tmp/tmp/ct-${SHORT}"
+LOCK="${DIR}/tmp/shared-memory/test-runs.lock"
+mkdir -p "${OUT}" "${DIR}/tmp/tmp" || { echo "ERROR: can't make ${OUT} (is tmp/shared-memory linked?)"; exit 2; }
+SUMMARY="${OUT}/summary"
+: > "${SUMMARY}"
+say() { echo "$*" | tee -a "${SUMMARY}"; }
+
+exec 9> "${LOCK}"
+say "test-commit ${SHORT}: $(git -C "${DIR}" log -1 --format=%s "${COMMIT}")"
+if ! flock -n 9; then
+    say "  waiting for another test run to finish (lock: ${LOCK})"
+    flock 9
+fi
+
+STARTED_MYSQL=0
+remove_tree() {
+    [[ -d "${TREE}" ]] && git -C "${DIR}" worktree remove --force "${TREE}"
+}
+on_exit() {
+    remove_tree
+    if [[ ${STARTED_MYSQL} -eq 1 ]]; then
+        "${DIR}/scripts/stop-mysql" "${DIR}" >> "${OUT}/stop-mysql.log" 2>&1
+        say "  MySQL stopped again (this run started it): ${OUT}/stop-mysql.log"
+    fi
+}
+trap on_exit EXIT
+
+remove_tree
+git -C "${DIR}" worktree prune
+git -C "${DIR}" worktree add --detach --quiet "${TREE}" "${COMMIT}" || { say "ERROR: could not lay out the commit's copy at ${TREE}"; exit 2; }
+IGNORED="$(git -C "${DIR}" ls-files -o -i --exclude-standard --directory)"
+RUNTIME="$(git -C "${DIR}" ls-files -o --exclude-standard --directory | grep -E '^(mysql/databases/|installed-files-[^/]+/|logs-[^/]+/?)$')"
+IGNORED="$(printf '%s\n%s\n' "${RUNTIME}" "${IGNORED}")"
+while IFS= read -r entry; do
+    [[ -z "${entry}" ]] && continue
+    entry="${entry%/}"
+    [[ -e "${TREE}/${entry}" || -L "${TREE}/${entry}" ]] && continue
+    mkdir -p "$(dirname "${TREE}/${entry}")"
+    ln -s "${DIR}/${entry}" "${TREE}/${entry}"
+done <<< "${IGNORED}"
+
+QUICK="$("${TREE}/scripts/plan-patches" "${TREE}" --quick-tests 2>&1)" || { say "ERROR: the commit's quick tests could not be gathered:"; say "${QUICK}"; exit 2; }
+mapfile -t QUICK_TESTS <<< "${QUICK}"
+
+ADDED="$(git -C "${DIR}" show --format= --unified=0 "${COMMIT}" | grep -E '^\+' | grep -v '^+++')"
+NEW_KINDS="$(echo "${ADDED}" | grep -ioE 'CREATE TABLE( IF NOT EXISTS)? `?[a-z0-9_]+`?|ALTER TABLE `?[a-z0-9_]+`? +ADD( COLUMN)? `?[a-z0-9_]+`?' | sort -u)"
+PLAN="$("${DIR}/scripts/test-memory" "${TREE}" plan --commit "${COMMIT}" --touched-by "${COMMIT}" "${QUICK_TESTS[@]}")" || { say "ERROR: test-memory could not plan this commit's tests"; exit 2; }
+
+TO_RUN=()
+declare -A FINGERPRINT
+while IFS=$'\t' read -r test fp verdict detail; do
+    FINGERPRINT["${test}"]="${fp}"
+    case "${verdict}" in
+        run|never) TO_RUN+=("${test}") ;;                       # its files changed, or never remembered
+        remembered) say "  remembered  ${test}: ${detail}" ;;   # the same files passed before
+        untouched)
+            if [[ -n "${NEW_KINDS}" ]] && grep -q 'mysql/installed-files/bin/mysql' "${TREE}/scripts/${test}"; then
+                TO_RUN+=("${test}")
+            fi ;;
+    esac
+done <<< "${PLAN}"
+THOROUGH=()
+if [[ -n "${NEW_KINDS}" ]]; then
+    say "  new kinds of record in this commit:"
+    while IFS= read -r k; do say "    ${k}"; done <<< "${NEW_KINDS}"
+    for t in test-basic-sql-in-ram test-beta-sql-in-ram; do
+        [[ -x "${TREE}/scripts/${t}" ]] && THOROUGH+=("${t}")
+    done
+fi
+
+if [[ ${#TO_RUN[@]} -eq 0 && ${#THOROUGH[@]} -eq 0 ]]; then
+    say "  nothing to run: no quick test reads a file this commit changed"
+    exit 0
+fi
+
+if "${DIR}/mysql/installed-files/bin/mysqladmin" "--defaults-file=${DIR}/mysql/conf/client.cnf" --socket="${DIR}/mysql/databases/mysql.sock" \
+        ping > /dev/null 2>&1; then
+    say "  MySQL was already running; left running"
+else
+    STARTED_MYSQL=1
+    "${DIR}/scripts/start-mysql" "${DIR}" > "${OUT}/start-mysql.log" 2>&1 || { say "ERROR: MySQL did not start; ${OUT}/start-mysql.log"; exit 2; }
+    say "  MySQL started for this run; it is stopped when the run ends"
+fi
+say "  running ${#TO_RUN[@]} quick tests${THOROUGH[*]:+ and ${#THOROUGH[@]} whole-database builds}..."
+status=0
+"${DIR}/scripts/run-tests-in-parallel" "${TREE}" "${OUT}" "${TO_RUN[@]}" "${THOROUGH[@]}" || status=$?
+if [[ ${status} -ne 0 ]]; then
+    say "  STOPPED: the test runner exited ${status} (130: interrupted); nothing recorded"
+    exit 2
+fi
+
+RESULTS=""
+FAILED=0
+for t in "${TO_RUN[@]}"; do
+    if [[ -f "${OUT}/${t}.ok" ]]; then r=pass; else r=fail; FAILED=$((FAILED + 1)); fi
+    say "  ${r}  ${t}$([[ ${r} == fail ]] && echo ": ${OUT}/${t}.log")"
+    [[ "${FINGERPRINT[${t}]}" != "-" ]] && RESULTS+="${r} ${t} ${FINGERPRINT[${t}]}"$'\n'
+done
+for t in "${THOROUGH[@]}"; do
+    if [[ -f "${OUT}/${t}.ok" ]]; then say "  pass  ${t} (whole database)"; else say "  fail  ${t} (whole database): ${OUT}/${t}.log"; FAILED=$((FAILED + 1)); fi
+done
+if [[ -n "${RESULTS}" ]]; then
+    printf '%s' "${RESULTS}" | "${DIR}/scripts/test-memory" "${DIR}" record "${COMMIT}" commit | tee -a "${SUMMARY}"
+fi
+
+if [[ ${FAILED} -gt 0 ]]; then
+    say "test-commit ${SHORT}: ${FAILED} failed (logs in ${OUT}/)"
+    exit 1
+fi
+say "test-commit ${SHORT}: every test run passed"
+exit 0

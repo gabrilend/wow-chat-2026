@@ -1,0 +1,50 @@
+#!/bin/bash
+
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+LOG_DIR="${2:?usage: run-tests-in-parallel PROJECT_DIR LOG_DIR TEST_NAME...}"
+shift 2
+TESTS=("$@")
+
+TEST_TIME_LIMIT=600
+
+LAUNCHER_PID=""
+
+stop_the_tests() {
+    trap '' INT TERM   # a second Ctrl-C while stopping changes nothing
+
+    echo ""
+    echo "INTERRUPTED: stopping the tests..."
+
+    local unfinished=()
+    local t
+    for t in "${TESTS[@]}"; do
+        [[ -f "${LOG_DIR}/${t}.done" ]] || unfinished+=("${t}")
+    done
+
+    local wrappers
+    wrappers="$(pgrep -P "${LAUNCHER_PID}")"
+    local wrapper timeouts timeout_pid
+    for wrapper in ${wrappers}; do
+        timeouts="$(pgrep -P "${wrapper}")"
+        for timeout_pid in ${timeouts}; do
+            kill -TERM -- "-${timeout_pid}"
+        done
+    done
+    wait "${LAUNCHER_PID}"
+
+    echo "  ${#unfinished[@]} of ${#TESTS[@]} tests had not finished and were stopped:"
+    for t in "${unfinished[@]}"; do
+        echo "    ${t}: ${LOG_DIR}/${t}.log"
+    done
+    exit 130
+}
+
+trap stop_the_tests INT TERM
+printf '%s\n' "${TESTS[@]}" | xargs -P "$(nproc)" -I{} bash -c \
+    'timeout '"${TEST_TIME_LIMIT}"' "$1/scripts/$2" "$1" > "$3/$2.log" 2>&1 && touch "$3/$2.ok"; touch "$3/$2.done"' \
+    _ "${DIR}" {} "${LOG_DIR}" &
+LAUNCHER_PID=$!
+
+wait "${LAUNCHER_PID}"
+trap - INT TERM
+exit 0

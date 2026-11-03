@@ -47,6 +47,10 @@ DEFAULT_PROFILE="${PROFILE}"
 THREADS="${THREADS:-4}"
 AUTO_VALIDATE=true
 RUN_TESTS=true
+TESTS_FIRST=false
+TESTS_WHEN="nothing was patched or built"
+RETEST=false
+BAKE=false
 
 
 
@@ -55,7 +59,7 @@ declare -A PROFILE_MODULES=(
     ["beta"]="mod-ale mod-aoe-loot mod-grownup mod-playerbots"
     ["release"]="mod-ale mod-playerbots"
     ["vanilla"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
-    ["basic"]="mod-playerbots mod-solo-lfg mod-aoe-loot mod-fireworks-on-level mod-ale"
+    ["basic"]="mod-playerbots mod-aoe-loot mod-ale"   # 2026-10-30, the owner: "we should get area looting built into basic, the other two we can leave out" (solo-lfg, fireworks-on-level)
     ["cc-test"]="mod-playerbots mod-ale"
 )
 
@@ -128,6 +132,18 @@ parse_args() {
                 RUN_TESTS=false
                 shift
                 ;;
+            --retest)
+                RETEST=true
+                shift
+                ;;
+            --tests-first)
+                TESTS_FIRST=true
+                shift
+                ;;
+            --bake)
+                BAKE=true
+                shift
+                ;;
             --help|-h)
                 show_help
                 exit 0
@@ -156,8 +172,14 @@ show_help() {
     echo "  --debug            Build -O0 -g (Debug); the server then auto-runs the"
     echo "                     crash catcher, giving exact file:line in tmp/ traces"
     echo "  --no-validate      Skip auto-validation and promotion"
-    echo "  --skip-tests       Skip the quick tests run before building"
-    echo "                     (they need the project's MySQL running)"
+    echo "  --skip-tests       Run no quick tests (by default they run when the"
+    echo "                     build fails; they start the project's MySQL if it is down)"
+    echo "  --tests-first      Run the quick tests before building, stopping on a"
+    echo "                     failure (the order before 2026-10-28)"
+    echo "  --bake             Stop once promoted (without it, the new server"
+    echo "                     starts here after promotion, its start-up hidden)"
+    echo "  --retest           Run every quick test, even those whose files"
+    echo "                     are unchanged since a remembered pass"
     echo "  --help             Show this help message"
     echo ""
     echo "Pipeline (automatic):"
@@ -394,29 +416,81 @@ run_quick_tests() {
     mapfile -t QUICK_TESTS <<< "${gathered}"
     local out="${DIR}/tmp/shared-memory/compile-tests"
     mkdir -p "${out}" || { echo "ERROR: can't make ${out} (is tmp/shared-memory linked?)"; exit 1; }
-    rm -f "${out}"/*.log "${out}"/*.ok
+    rm -f "${out}"/*.log "${out}"/*.ok "${out}"/*.done
 
-    if ! "${DIR}/mysql/installed-files/bin/mysqladmin" --no-defaults --socket="${DIR}/mysql/databases/mysql.sock" \
-            -uritz -pmenardi ping > /dev/null 2>&1; then
-        echo "ERROR: the quick tests need the project's MySQL, and it isn't answering."
-        echo "       start it (./scripts/start-mysql) and compile again, or pass --skip-tests"
-        exit 1
+    if ! "${DIR}/mysql/installed-files/bin/mysqladmin" "--defaults-file=${DIR}/mysql/conf/client.cnf" --socket="${DIR}/mysql/databases/mysql.sock" \
+            ping > /dev/null 2>&1; then
+        echo "The quick tests need the project's MySQL, and it isn't answering: starting it."
+        if ! "${DIR}/scripts/start-mysql" "${DIR}"; then
+            echo "ERROR: MySQL did not start (above); nothing was tested, patched or built"
+            echo "       (--skip-tests builds without MySQL)"
+            exit 1
+        fi
     fi
 
-    echo "Running ${#QUICK_TESTS[@]} quick tests..."
     local t
     for t in "${QUICK_TESTS[@]}"; do
         [[ -x "${DIR}/scripts/${t}" ]] || { echo "ERROR: scripts/${t} is missing or not executable (the compile's test list names it)"; exit 1; }
     done
-    printf '%s\n' "${QUICK_TESTS[@]}" | xargs -P "$(nproc)" -I{} bash -c \
-        'timeout 600 "$1/scripts/$2" "$1" > "$3/$2.log" 2>&1 && touch "$3/$2.ok"' _ "${DIR}" {} "${out}" || true
 
-    local failed=()
+    exec 8> "${DIR}/tmp/shared-memory/test-runs.lock"
+    if ! flock -n 8; then
+        echo "A commit's tests are running in the background; waiting for them (tmp/shared-memory/commit-tests/)..."
+        flock 8
+    fi
+
+    local plan
+    plan="$("${DIR}/scripts/test-memory" "${DIR}" plan "${QUICK_TESTS[@]}")" || {
+        echo "ERROR: the remembered test results could not be read (scripts/test-memory, above)"
+        echo "       (--retest runs every test without them; --skip-tests builds without tests)"
+        exit 1
+    }
+    local -A FINGERPRINT=()
+    local to_run=() remembered=0 test fp verdict detail
+    while IFS=$'\t' read -r test fp verdict detail; do
+        FINGERPRINT["${test}"]="${fp}"
+        if [[ "${verdict}" == "remembered" && "${RETEST}" != "true" ]]; then
+            remembered=$((remembered + 1))
+        else
+            to_run+=("${test}")
+        fi
+    done <<< "${plan}"
+    if [[ ${remembered} -gt 0 ]]; then
+        echo "${remembered} quick tests remembered: their files are unchanged since they passed (--retest runs them)"
+    fi
+    if [[ ${#to_run[@]} -eq 0 ]]; then
+        echo "All ${#QUICK_TESTS[@]} quick tests passed before on these files; none to run"
+        exec 8>&-    # the lock: a commit's tests may run while this builds
+        return 0
+    fi
+    QUICK_TESTS=("${to_run[@]}")
+    echo "Running ${#QUICK_TESTS[@]} quick tests..."
+    local runner_status=0
+    "${DIR}/scripts/run-tests-in-parallel" "${DIR}" "${out}" "${QUICK_TESTS[@]}" || runner_status=$?
+    if [[ ${runner_status} -eq 130 ]]; then
+        echo "Compile stopped during the quick tests; ${TESTS_WHEN}."
+        exit 130
+    elif [[ ${runner_status} -ne 0 ]]; then
+        echo "ERROR: the quick-test runner exited ${runner_status}; ${TESTS_WHEN}"
+        echo "  to debug: ${DIR}/scripts/test-tests-stop-on-ctrl-c ${DIR}"
+        exit 1
+    fi
+
+    local failed=() results=""
     for t in "${QUICK_TESTS[@]}"; do
         [[ -f "${out}/${t}.ok" ]] || failed+=("${t}")
+        if [[ "${FINGERPRINT[${t}]}" != "-" ]]; then
+            results+="$([[ -f "${out}/${t}.ok" ]] && echo pass || echo fail) ${t} ${FINGERPRINT[${t}]}"$'\n'
+        fi
     done
+    if [[ -n "${results}" ]]; then
+        printf '%s' "${results}" | "${DIR}/scripts/test-memory" "${DIR}" record "$(git -C "${DIR}" rev-parse HEAD)" compile > /dev/null || {
+            echo "ERROR: the quick tests ran, but their results could not be kept (scripts/test-memory record, above)"
+            exit 1
+        }
+    fi
     if [[ ${#failed[@]} -gt 0 ]]; then
-        echo "ERROR: ${#failed[@]} of ${#QUICK_TESTS[@]} quick tests failed; nothing was patched or built:"
+        echo "ERROR: ${#failed[@]} of ${#QUICK_TESTS[@]} quick tests failed; ${TESTS_WHEN}:"
         for t in "${failed[@]}"; do
             echo "  ${t}: tmp/shared-memory/compile-tests/${t}.log"
             tail -n 3 "${out}/${t}.log" | sed 's/^/      /'
@@ -425,6 +499,47 @@ run_quick_tests() {
         exit 1
     fi
     echo "All ${#QUICK_TESTS[@]} quick tests passed (logs: tmp/shared-memory/compile-tests/)"
+    exec 8>&-    # the lock: a commit's tests may run while this builds
+}
+
+write_design_session_note() {
+    local NOTE="${DIR}/tmp/shared-memory/design-session-${PROFILE}.md"
+    local ERROR_LOG="${BUILD_DIR_SHADOW}/compile-errors.log"
+    {
+        echo "# A design session: the ${PROFILE} build failed twice ($(date '+%Y-%m-%d %H:%M'))"
+        echo ""
+        echo "Written by scripts/compile (issue 1100d). The build failed, the quick tests"
+        if [[ "${RUN_TESTS}" == "true" && "${TESTS_FIRST}" != "true" ]]; then
+            echo "found nothing wrong (their logs: tmp/shared-memory/compile-tests/), and the build failed again."
+        else
+            echo "were not run (--skip-tests or --tests-first), and the build failed again."
+        fi
+        echo ""
+        echo "## The compiler's errors (the first 40)"
+        echo ""
+        echo '```'
+        grep -a -E "error:|Error [0-9]|FAILED" "${ERROR_LOG}" 2>/dev/null | head -40 || true
+        echo '```'
+        echo ""
+        echo "## What differs from the last commit (sources, patches, settings)"
+        echo ""
+        echo '```'
+        git -C "${DIR}" status --short -- patches config src scripts 2>/dev/null | head -60 || true
+        echo '```'
+        echo ""
+        echo "## The last good build"
+        echo ""
+        echo "$(cat "${DIR}/tmp/shared-memory/compile-${PROFILE}.goodbye" 2>/dev/null | grep -E '^(ended|verdict):' || echo 'none on record')"
+        echo ""
+        echo "Full error log: ${ERROR_LOG}"
+    } > "${NOTE}"
+    echo ""
+    echo "==============================================================================="
+    echo "THE BUILD FAILED TWICE, AND THE QUICK TESTS FOUND NOTHING: A DESIGN SESSION"
+    echo "==============================================================================="
+    echo "What is known is written to:"
+    echo "  ${NOTE}"
+    echo "Open a Claude Code session in ${DIR} and ask it to read that note."
 }
 
 do_build() {
@@ -531,7 +646,8 @@ do_build() {
             echo "" >> "${ERROR_LOG}"
             echo "CMAKE FAILED at $(date)" >> "${ERROR_LOG}"
             print_build_failure
-            return 1
+            BUILD_FAILED=true                          # the caller tests, then builds again (issue 1100d)
+            return 0
         fi
     else
         echo ""
@@ -560,7 +676,8 @@ do_build() {
         echo "" >> "${ERROR_LOG}"
         echo "MAKE FAILED with exit code ${make_result} at $(date)" >> "${ERROR_LOG}"
         print_build_failure
-        return 1
+        BUILD_FAILED=true
+        return 0
     fi
 
     echo ""
@@ -578,7 +695,8 @@ do_build() {
         echo "" >> "${ERROR_LOG}"
         echo "MAKE INSTALL FAILED with exit code ${install_result} at $(date)" >> "${ERROR_LOG}"
         print_build_failure
-        return 1
+        BUILD_FAILED=true
+        return 0
     fi
 
     TARGET_INSTALL_DIR="${INSTALL_DIR_SHADOW}"
@@ -586,13 +704,21 @@ do_build() {
 
     apply_patches_end
 
+    local gate_kept="${BUILD_DIR_SHADOW}/.gate-2000-${PROFILE}" gate_now=""
+    gate_now="$("${DIR}/scripts/sql-fingerprint" "${DIR}" "${PROFILE}")" || gate_now=""
     echo ""
-    echo "Gate 2000: starting the shadow server once, so the databases reach upstream's state..."
-    if ! "${DIR}/scripts/validate" --profile "${PROFILE}" --no-promote; then
-        echo "ERROR: gate 2000 failed: the shadow server did not finish starting, so our SQL was not placed"
-        echo "       (the install stage's work is in the shadow folder; nothing was promoted)"
-        FAILURE_ALREADY_EXPLAINED=true
-        return 1
+    if [[ -n "${gate_now}" && -f "${gate_kept}" && "$(cat "${gate_kept}")" == "${gate_now}" ]]; then
+        echo "Gate 2000 skipped: no SQL changed since the last build that passed it."
+    else
+        [[ -z "${gate_now}" ]] && echo "  (the SQL's fingerprint could not be taken: the first start runs, as before)"
+        echo "Gate 2000: starting the shadow server once, so the databases reach upstream's state..."
+        if ! "${DIR}/scripts/validate" --profile "${PROFILE}" --no-promote; then
+            echo "ERROR: gate 2000 failed: the shadow server did not finish starting, so our SQL was not placed"
+            echo "       (the install stage's work is in the shadow folder; nothing was promoted)"
+            FAILURE_ALREADY_EXPLAINED=true
+            return 1
+        fi
+        [[ -n "${gate_now}" ]] && echo "${gate_now}" > "${gate_kept}"
     fi
     apply_patches_sql
     unset TARGET_INSTALL_DIR
@@ -666,8 +792,18 @@ COMPILE_GOODBYE="${DIR}/tmp/shared-memory/compile-${PROFILE}.goodbye"
 COMPILE_STARTED_AT=${SECONDS}
 COMPILE_STAGE="starting"
 rm -f "${COMPILE_GOODBYE}"
-exec > >(tee "${COMPILE_RUN_LOG}") 2>&1
+COMPILE_WARNINGS="${COMPILE_RUN_LOG%.log}.warnings"
+[[ -f "${COMPILE_RUN_LOG}" ]] && mv -f "${COMPILE_RUN_LOG}" "${COMPILE_RUN_LOG%.log}.previous.log"
+[[ -f "${COMPILE_WARNINGS}" ]] && mv -f "${COMPILE_WARNINGS}" "${COMPILE_RUN_LOG%.log}.previous.warnings"
+stamp_lines() {
+    local line
+    while IFS= read -r line || [[ -n "${line}" ]]; do
+        printf '%(%H:%M:%S)T %s\n' -1 "${line}"
+    done
+}
+exec > >(tee >(stamp_lines > "${COMPILE_RUN_LOG}")) 2>&1
 echo "Run log: ${COMPILE_RUN_LOG#${DIR}/}; receipt at the end: ${COMPILE_GOODBYE#${DIR}/}"
+echo "  warnings and errors, sorted as they appear: scripts/compile-ledger (writes ${COMPILE_WARNINGS#${DIR}/})"
 
 echo "Compiling profile: ${PROFILE}"
 echo "  (skipping git checks)"
@@ -692,12 +828,14 @@ fi
 
 source "${DIR}/patches/patches.sh"
 
-COMPILE_STAGE="the quick tests"
-[[ "${RUN_TESTS}" == "true" ]] && run_quick_tests
+if [[ "${RUN_TESTS}" == "true" && "${TESTS_FIRST}" == "true" ]]; then
+    COMPILE_STAGE="the quick tests"; echo "==== stage: the quick tests"
+    run_quick_tests
+fi
 
 check_modules_configured
 
-COMPILE_STAGE="resetting the source trees"
+COMPILE_STAGE="resetting the source trees"; echo "==== stage: resetting the source trees"
 reset_source_trees
 
 PIN="$(sed -n '/^declare -A PROFILE_COMMIT=(/,/^)/p' "${DIR}/scripts/update" \
@@ -716,11 +854,13 @@ fi
 trap 'compile_status=$?; unapply_patches_begin || compile_status=1; leave_source_trees_clean; report_how_compile_ended ${compile_status}' EXIT
 generate_buddy_gear() {
     case "${PROFILE}" in basic|cc-test) ;; *) return 0 ;; esac
-    if ! "${DIR}/mysql/installed-files/bin/mysqladmin" --no-defaults --socket="${DIR}/mysql/databases/mysql.sock" \
-            -uritz -pmenardi ping > /dev/null 2>&1; then
-        echo "ERROR: making the buddy gear lists needs the project's MySQL, and it isn't answering."
-        echo "       start it (./scripts/start-mysql) and compile again"
-        exit 1
+    if ! "${DIR}/mysql/installed-files/bin/mysqladmin" "--defaults-file=${DIR}/mysql/conf/client.cnf" --socket="${DIR}/mysql/databases/mysql.sock" \
+            ping > /dev/null 2>&1; then
+        echo "Making the buddy gear lists needs the project's MySQL, and it isn't answering: starting it."
+        if ! "${DIR}/scripts/start-mysql" "${DIR}"; then
+            echo "ERROR: MySQL did not start (above); nothing was patched or built"
+            exit 1
+        fi
     fi
     echo "Making the buddy gear lists and their gallery..."
     "${DIR}/scripts/translate-buddy-kit-to-gearset" "${DIR}" || { echo "ERROR: scripts/translate-buddy-kit-to-gearset failed (above)"; exit 1; }
@@ -729,19 +869,38 @@ generate_buddy_gear() {
     echo "  gear lists:   ${DIR}/src/lua-basic/data/gearsets/buddy-white-*.lua (into the database at the next install)"
     echo "  gear gallery: ${DIR}/docs/HTML/buddy-gear-gallery.html"
 }
-COMPILE_STAGE="generating the buddy gear"
+COMPILE_STAGE="generating the buddy gear"; echo "==== stage: generating the buddy gear"
 generate_buddy_gear
 
-COMPILE_STAGE="applying the source patches"
+COMPILE_STAGE="applying the source patches"; echo "==== stage: applying the source patches"
 apply_patches_begin
 
 steady_patched_mtimes
 
-COMPILE_STAGE="building and installing (cmake, make, install)"
+COMPILE_STAGE="building and installing (cmake, make, install)"; echo "==== stage: building and installing (cmake, make, install)"
+BUILD_FAILED=false
 do_build
+if [[ "${BUILD_FAILED}" == "true" ]]; then
+    if [[ "${RUN_TESTS}" == "true" && "${TESTS_FIRST}" != "true" ]]; then
+        COMPILE_STAGE="the quick tests, after a failed build"; echo "==== stage: the quick tests, after a failed build"
+        TESTS_WHEN="the build had failed, and the source trees are put back"
+        run_quick_tests
+        echo "The quick tests find nothing wrong: building once more."
+    else
+        echo "Building once more (no quick tests: --skip-tests or --tests-first)."
+    fi
+    COMPILE_STAGE="building again"; echo "==== stage: building again"
+    BUILD_FAILED=false
+    do_build
+    if [[ "${BUILD_FAILED}" == "true" ]]; then
+        COMPILE_STAGE="the design session's note"; echo "==== stage: the design session's note"
+        write_design_session_note
+        exit 1
+    fi
+fi
 
 trap 'compile_status=$?; leave_source_trees_clean; report_how_compile_ended ${compile_status}' EXIT
-COMPILE_STAGE="reverting the source patches"
+COMPILE_STAGE="reverting the source patches"; echo "==== stage: reverting the source patches"
 unapply_patches_begin
 leave_source_trees_clean
 
@@ -754,12 +913,12 @@ echo "==========================================================================
 if [[ "${AUTO_VALIDATE}" == "true" ]]; then
     echo ""
     echo "Starting validation..."
-    COMPILE_STAGE="compiled"
+    COMPILE_STAGE="compiled"; echo "==== stage: compiled"
     write_compile_goodbye validating   # exec replaces this script: the EXIT trap will not run
-    exec "${DIR}/scripts/validate" --profile "${PROFILE}"
+    exec "${DIR}/scripts/validate" --profile "${PROFILE}" $([[ "${BAKE}" == "true" ]] || echo --then-serve)
 else
     echo ""
     echo "Auto-validation disabled. To validate and promote manually:"
     echo "  ./scripts/validate --profile ${PROFILE}"
-    COMPILE_STAGE="compiled"
+    COMPILE_STAGE="compiled"; echo "==== stage: compiled"
 fi

@@ -40,6 +40,15 @@ PREPARE add_stage FROM @add_stage;
 EXECUTE add_stage;
 DEALLOCATE PREPARE add_stage;
 
+SET @has_reset := (SELECT COUNT(*) FROM information_schema.columns
+  WHERE table_schema = DATABASE() AND table_name = 'buddy_roster' AND column_name = 'reset_name');
+SET @add_reset := IF(@has_reset = 0,
+  'ALTER TABLE `buddy_roster` ADD COLUMN `reset_name` varchar(12) NOT NULL DEFAULT \'\' AFTER `stage`, ADD COLUMN `reset_gender` tinyint unsigned NOT NULL DEFAULT 2 AFTER `reset_name`, ADD COLUMN `reset_from` int unsigned NOT NULL DEFAULT 0 AFTER `reset_gender`',
+  'DO 0');
+PREPARE add_reset FROM @add_reset;
+EXECUTE add_reset;
+DEALLOCATE PREPARE add_reset;
+
 CREATE TABLE IF NOT EXISTS `buddy_stage_record` (
   `buddy`    int unsigned     NOT NULL,
   `level`    tinyint unsigned NOT NULL,

@@ -1,0 +1,480 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+local address, preview, out, screenshot, open_realm
+do
+    local i = 1
+    while i <= #arg do
+        local a = arg[i]
+        if a == "--address" then address = arg[i + 1]; i = i + 1
+        elseif a == "--preview" then preview = true
+        elseif a == "--out" then out = arg[i + 1]; i = i + 1
+        elseif a == "--screenshot" then
+            screenshot = true
+            if arg[i + 1] and arg[i + 1]:sub(1, 1) ~= "-" then open_realm = arg[i + 1]; i = i + 1 end
+        elseif a == "--help" or a == "-h" then
+            print("Usage: scripts/write-connection-page [DIR] (--address NAME | --preview) [--out FILE]"); os.exit(0)
+        elseif a:sub(1, 1) == "-" then
+            io.stderr:write("write-connection-page: unknown option " .. a .. " (see --help)\n"); os.exit(2)
+        elseif a ~= "" then DIR = a end
+        i = i + 1
+    end
+end
+if not address and not preview then
+    io.stderr:write("write-connection-page: give --address NAME (the login machine players connect to) or --preview "
+                 .. "(a page whose banner says the name is not chosen yet). The name is still open: issue 157g, question 2.\n")
+    os.exit(2)
+end
+out = out or (DIR .. "/tmp/shared-memory/connection-page/index.html")
+
+local REALMS = {
+    { key = "release", name = "Release" },
+    { key = "beta",    name = "Beta"    },
+    { key = "vanilla", name = "Vanilla" },
+    { key = "alpha",   name = "Alpha"   },
+    { key = "basic",   name = "Basic"   },
+    { key = "cc-test", name = "cc-test" },
+}
+
+local COMPARISON = {
+    { feature = "Levels", cells = {
+        release = { text = "1–20",  proof = { "Starting Level 1 (Beta/Release/Basic)", "Max Level 20 (Beta/Release)" } },
+        beta    = { text = "1–20",  proof = { "Death knights from level 1", "| Level cap                       | 20" } },
+        vanilla = { text = "20–40", proof = { "Level 20 start, level 40 cap" } },
+        alpha   = { text = "40–80", proof = { "Starting Level 40 (Alpha)", "Max Level 80 (Alpha)" } },
+        basic   = { text = "1–60",  proof = { "Level 1 start, level 60 cap" } },
+        ["cc-test"] = { text = "1–80", proof = { "No level-cap change (80)" } } } },
+    { feature = "An empty world that fills in around you with ambushes", cells = {
+        release = { tick = true, proof = { "Empty world by default" } },
+        beta    = { tick = true, proof = { "An empty world", "The ambush." } } } },
+    { feature = "AI playerbots in the world", cells = {
+        release = { tick = true, proof = { "AI companion playerbots" } },
+        beta    = { tick = true, proof = { "Random bots                     | 200" } },
+        vanilla = { tick = true, proof = { "AI companion playerbots" } } } },
+    { feature = "No flight paths: the world is walked", cells = {
+        vanilla = { tick = true, proof = { "No flight paths." } },
+        basic   = { tick = true, proof = { "No flight paths." } } } },
+    { feature = "Slower movement, heavier falls", cells = {
+        vanilla = { tick = true, proof = { "Slower movement (80% of normal), heavier fall damage" } },
+        basic   = { tick = true, proof = { "Slower movement (80%), heavier fall damage" } } } },
+    { feature = "Death knights", cells = {
+        beta    = { text = "from level 1", proof = { "Death knights from level 1" } },
+        basic   = { text = "with two limits", proof = { "Death knights allowed, with two limits" } } } },
+    { feature = "and many more features!", many = true, cells = {
+        release = { tick = true }, beta = { tick = true }, vanilla = { tick = true },
+        basic = { tick = true }, ["cc-test"] = { tick = true } } },
+}
+
+local warnings = {}
+local function warn(s) warnings[#warnings + 1] = s end
+
+local function read_file(path)
+    local f = io.open(path, "rb")
+    if not f then error("write-connection-page: cannot read " .. path) end
+    local s = f:read("*a"); f:close(); return s
+end
+
+local function section(md, title)
+    local lines, inside, found = {}, false, false
+    for line in (md .. "\n"):gmatch("([^\n]*)\n") do
+        if line:match("^## ") then
+            if inside then break end
+            if line:sub(4):lower():find(title:lower(), 1, true) == 1 then inside, found = true, true end
+        elseif inside then
+            lines[#lines + 1] = line
+        end
+    end
+    return found and table.concat(lines, "\n") or nil
+end
+
+local function is_internal(part)
+    part = part:gsub("^%s+", ""):gsub("%s+$", "")
+    return part == ""
+        or part:match("^%d%d%d+%a*%d*$") ~= nil
+        or part:match("^%d%d%d+%a*%d*,") ~= nil
+        or part:lower():find("issue", 1, true) ~= nil
+        or part:find("%f[%w][BCE]%d%d%d") ~= nil
+        or part:find("`", 1, true) ~= nil
+        or part:match("^%d%d%d%d%-%d%d%-%d%d") ~= nil
+end
+local function public_text(s)
+    s = s:gsub("%s*(%b())", function(paren)
+        local kept = {}
+        for part in (paren:sub(2, -2) .. ";"):gmatch("([^;]*);") do
+            if not is_internal(part) then kept[#kept + 1] = (part:gsub("^%s+", ""):gsub("%s+$", "")) end
+        end
+        return #kept > 0 and (" (" .. table.concat(kept, "; ") .. ")") or ""
+    end)
+    local sentences = {}
+    for sentence in (s .. " "):gmatch("(.-[%.!?:]?)%s+") do
+        if sentence ~= "" and not sentence:find("`[^`]*/[^`]*`") then sentences[#sentences + 1] = sentence end
+    end
+    s = table.concat(sentences, " ")
+    s = s:gsub("`([^`]*)`", "%1")
+    return s
+end
+
+local function escape(s)
+    return (s:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"):gsub('"', "&quot;"))
+end
+local function inline(s)
+    s = s:gsub("%[([^%]]*)%]%([^%)]*%)", "%1")
+    s = escape(s)
+    s = s:gsub("%*%*(.-)%*%*", "<strong>%1</strong>")
+    return s
+end
+
+local function points(text)
+    local intro, bullets, current = {}, {}, nil
+    for line in (text .. "\n"):gmatch("([^\n]*)\n") do
+        if line:match("^%- ") then
+            current = { line:sub(3) }
+            bullets[#bullets + 1] = current
+        elseif current and line:match("^%s+%S") then
+            current[#current + 1] = (line:gsub("^%s+", ""))
+        elseif line:match("^%S") and not line:match("^#") and not current then
+            intro[#intro + 1] = line
+        elseif line == "" and current then
+            current = nil
+        end
+    end
+    local out_points = {}
+    for _, b in ipairs(bullets) do
+        local whole = public_text(table.concat(b, " "))
+        local lead, rest = whole:match("^%*%*(.-)%*%*%s*(.*)$")
+        if not lead then lead, rest = whole:match("^(.-%.)%s+(.*)$") end
+        if not lead then lead, rest = whole, "" end
+        out_points[#out_points + 1] = { lead = lead, rest = rest }
+    end
+    local intro_text = public_text(table.concat(intro, " "))
+    return intro_text, out_points
+end
+
+local function check_leftovers(realm, s)
+    for token in s:gmatch("%f[%w]%d%d%d%a%d*%f[%W]") do warn(realm .. ": still names " .. token .. " in: " .. s:sub(1, 90)) end
+    for token in s:gmatch("%f[%w][BCE]%d%d%d%a?%f[%W]") do warn(realm .. ": still names " .. token .. " in: " .. s:sub(1, 90)) end
+end
+
+local boxes = dofile(DIR .. "/config/box-art/realms.lua").realms
+local out_dir = out:match("^(.*)/[^/]*$")
+os.execute("mkdir -p '" .. out_dir .. "/box-art'")
+local function cover_for(key)
+    local src = DIR .. "/assets/box-art/" .. key .. ".png"
+    local fh = io.open(src, "rb")
+    if not fh then
+        if not preview then
+            error("write-connection-page: realm " .. key .. " has no kept cover (" .. src .. "); make one with "
+               .. "scripts/make-box-art " .. key .. " and keep it with --keep, or write a --preview page")
+        end
+        warn(key .. ": no cover kept yet; a plain glass box front is shown (preview only)")
+        return nil
+    end
+    local data = fh:read("*a"); fh:close()
+    local dst = assert(io.open(out_dir .. "/box-art/" .. key .. ".png", "wb")); dst:write(data); dst:close()
+    return "box-art/" .. key .. ".png"
+end
+
+local entries = {}
+for index, realm in ipairs(REALMS) do
+    local md = read_file(DIR .. "/docs/profiles/" .. realm.key .. ".md")
+    local summary = md:match("%*%*One%-line summary:%*%*%s*(.-)\n\n") or md:match("^#[^\n]*\n\n(.-)\n\n")
+    if not summary then error("write-connection-page: docs/profiles/" .. realm.key .. ".md has neither a summary nor a first paragraph") end
+    summary = public_text(summary:gsub("\n", " "))
+    summary = summary:sub(1, 1):upper() .. summary:sub(2)
+    local got = section(md, "What you get")
+    if not got then error("write-connection-page: docs/profiles/" .. realm.key .. ".md has no \"## What you get\" section") end
+    local intro, gets = points(got)
+    local not_got = section(md, "What you do NOT get")
+    local _, lacks = points(not_got or "")
+
+    local function list_html(items, cls)
+        local rows = {}
+        for _, p in ipairs(items) do
+            check_leftovers(realm.name, p.lead .. " " .. p.rest)
+            if p.rest ~= "" then
+                rows[#rows + 1] = string.format('<li><details class="point %s"><summary>%s</summary><p>%s</p></details></li>',
+                    cls, inline(p.lead), inline(p.rest))
+            else
+                rows[#rows + 1] = string.format('<li><div class="point %s">%s</div></li>', cls, inline(p.lead))
+            end
+        end
+        return table.concat(rows)
+    end
+    check_leftovers(realm.name, summary .. " " .. intro)
+
+    local box = boxes[realm.key]
+    if not box then error("write-connection-page: config/box-art/realms.lua has no box for realm " .. realm.key) end
+    local back_lines = {}
+    for k = 2, #box.back do back_lines[#back_lines + 1] = "<li>" .. escape(box.back[k]) .. "</li>" end
+    local back_html = string.format('<div class="box-back"><p class="box-headline">%s</p><ul>%s</ul></div>',
+        escape(box.back[1]), table.concat(back_lines))
+    local cover = cover_for(realm.key)
+
+    entries[#entries + 1] = string.format([[
+<li class="realm" id="realm-%s">
+<details>
+<summary><span class="box" aria-hidden="true"><span class="box-front"%s><span class="box-title">%s</span><span class="orb">%d</span></span></span><span class="realm-name">%s</span><span class="realm-summary">%s</span><span class="chevron" aria-hidden="true"></span></summary>
+<div class="realm-body">
+%s
+%s
+<h3>What is here</h3>
+<ul class="points">%s</ul>
+%s
+<a class="gel" href="#connect">Connect to %s</a>
+</div>
+</details>
+</li>]], realm.key, cover and string.format(' style="background-image:url(\'%s\')"', cover) or "",
+        escape(realm.name), index, escape(realm.name), inline(summary), back_html,
+        intro ~= "" and ("<p class=\"intro\">" .. inline(intro) .. "</p>") or "",
+        list_html(gets, "gets"),
+        #lacks > 0 and ("<h3>Left out on purpose</h3><ul class=\"points\">" .. list_html(lacks, "lacks") .. "</ul>") or "",
+        escape(realm.name))
+end
+
+local comparison_html
+do
+    local pages = {}
+    for _, realm in ipairs(REALMS) do pages[realm.key] = read_file(DIR .. "/docs/profiles/" .. realm.key .. ".md") end
+    local head = { "<th scope=\"col\">Feature</th>" }
+    for _, realm in ipairs(REALMS) do
+        head[#head + 1] = string.format('<th scope="col"><a href="#realm-%s">%s</a></th>', realm.key, escape(realm.name))
+    end
+    local rows = {}
+    for _, row in ipairs(COMPARISON) do
+        local cells = { string.format('<th scope="row">%s</th>', escape(row.feature)) }
+        for _, realm in ipairs(REALMS) do
+            local cell = row.cells[realm.key]
+            if cell then
+                for _, quote in ipairs(cell.proof or {}) do
+                    if not pages[realm.key]:find(quote, 1, true) then
+                        error(string.format("write-connection-page: the comparison says %s has \"%s\", but docs/profiles/%s.md "
+                            .. "no longer contains the words that prove it: \"%s\". Mend the row (in this script's COMPARISON) "
+                            .. "or the page.", realm.name, row.feature, realm.key, quote))
+                    end
+                end
+                cells[#cells + 1] = cell.tick and '<td><span class="tick" role="img" aria-label="yes"></span></td>'
+                    or ("<td>" .. escape(cell.text) .. "</td>")
+            else
+                cells[#cells + 1] = '<td><span class="dash" aria-label="no">–</span></td>'
+            end
+        end
+        rows[#rows + 1] = string.format('<tr%s>%s</tr>', row.many and ' class="many"' or "", table.concat(cells))
+    end
+    comparison_html = '<div class="compare glass"><table><thead><tr>' .. table.concat(head) .. '</tr></thead><tbody>'
+        .. table.concat(rows) .. "</tbody></table></div>"
+end
+
+local seed = 1997
+local function rnd(low, high)
+    seed = (seed * 1103515245 + 12345) % 2147483648
+    return low + (high - low) * (seed / 2147483648)
+end
+local bubbles = {}
+for _ = 1, 24 do
+    local size = rnd(16, 110)
+    bubbles[#bubbles + 1] = string.format('<span style="left:%.1f%%;top:%.1f%%;width:%.0fpx;height:%.0fpx;animation-delay:-%.1fs;animation-duration:%.1fs"></span>',
+        rnd(0, 97), rnd(0, 100), size, size, rnd(0, 30), rnd(18, 40))
+end
+
+local address_html = address and ("<code>set realmlist " .. escape(address) .. "</code>")
+    or '<code>set realmlist <em>(name not chosen yet)</em></code>'
+local banner = preview and not address
+    and '<p class="banner">Preview: the login machine\'s name has not been chosen, so this page cannot be used to connect yet.</p>' or ""
+
+local html = [[
+<!-- made by scripts/write-connection-page (wow-chat-2026), from docs/profiles/*.md, on ]] .. os.date("!%Y-%m-%d %H:%M UTC") .. [[;
+     the public connection page for the login machine (issues 1008f, 157k). Regenerate it; do not edit it. -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Everland Ghostsong Realms</title>
+<style>
+:root{--ink:#0E3B52;--ink-soft:#3E6A7E;--title:#08506F;--link:#0A74A6;--focus:#F29B1D;
+--glass:linear-gradient(180deg,rgba(255,255,255,.9) 0%,rgba(255,255,255,.62) 48%,rgba(232,248,255,.52) 52%,rgba(255,255,255,.78) 100%);
+--glass-border:1px solid rgba(255,255,255,.95);--glass-shadow:0 10px 30px rgba(20,110,160,.18),inset 0 1px 0 #FFF;
+--gel:linear-gradient(180deg,#B8ECFF 0%,#6FD0F7 48%,#25A6DE 52%,#58C6F0 100%);--gel-ink:#04324A;
+--leaf:linear-gradient(180deg,#D8F7B8 0%,#9BE06A 48%,#5FBF2E 52%,#8AD85A 100%)}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;min-height:100vh;color:var(--ink);background:#C8ECFA linear-gradient(180deg,#8FD3F4 0%,#C8ECFA 38%,#E8F8F1 70%,#BFE6B0 100%) fixed;
+font-family:Frutiger,"Frutiger LT Std","Segoe UI","Myriad Pro",Tahoma,"Helvetica Neue",Arial,sans-serif;font-size:17px;line-height:1.55}
+a{color:var(--link)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:3px}
+.bubbles{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.bubbles span{position:absolute;border-radius:50%;animation:rise linear infinite;
+background:radial-gradient(circle at 32% 28%,rgba(255,255,255,.95) 0 8%,rgba(255,255,255,.35) 22%,rgba(160,225,250,.18) 60%,rgba(255,255,255,.5) 100%);
+box-shadow:inset 0 0 12px rgba(255,255,255,.7)}
+@keyframes rise{from{transform:translateY(20vh)}to{transform:translateY(-120vh)}}
+@media (prefers-reduced-motion:reduce){.bubbles span{animation:none}html{scroll-behavior:auto}}
+.page{position:relative;z-index:1;max-width:46rem;margin:0 auto;padding:2.5rem 16px 4rem}
+header h1{font-weight:300;font-size:clamp(2rem,7vw,3.2rem);line-height:1.1;margin:0 0 .3rem;color:var(--title);
+text-shadow:0 1px 0 rgba(255,255,255,.9),0 0 18px rgba(255,255,255,.7)}
+header p{margin:0 0 1.5rem;color:var(--ink-soft)}
+.banner{background:rgba(255,236,200,.85);border:1px solid #F2B45C;border-radius:12px;padding:.6rem .9rem;margin:0 0 1.2rem}
+.glass{background:var(--glass);border:var(--glass-border);border-radius:16px;box-shadow:var(--glass-shadow);
+-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+h2{font-weight:400;color:var(--title);margin:2.2rem 0 .7rem;font-size:1.5rem}
+h3{font-size:.95rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);margin:1.1rem 0 .4rem;font-weight:600}
+/* the list grows with the page: an opened realm scrolls the whole page,
+   never a box inside it (the owner, 2026-10-27) */
+.realms{list-style:none;margin:0;padding:.4rem}
+.realm{margin:.45rem 0;scroll-margin-top:1rem}
+.realm>details{background:var(--glass);border:var(--glass-border);border-radius:14px;box-shadow:0 4px 14px rgba(20,110,160,.14),inset 0 1px 0 #FFF}
+.realm>details>summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:4.6rem 1fr 1.2rem;grid-template-rows:auto auto;
+column-gap:.8rem;align-items:center;padding:.75rem .9rem;border-radius:14px}
+.realm>details>summary::-webkit-details-marker{display:none}
+.realm>details>summary:hover{background:rgba(255,255,255,.45)}
+/* a game box: a front with the cover, turned a little, with a spine on its left */
+.box{grid-row:1/3;perspective:420px;display:block;width:4.6rem;height:6.3rem;margin-right:.2rem}
+.box-front{position:relative;display:flex;flex-direction:column;justify-content:space-between;align-items:center;width:100%;height:100%;
+border-radius:4px;padding:.3rem .2rem;transform:rotateY(-16deg);transform-origin:left center;transition:transform .35s;
+background:linear-gradient(160deg,#7FD4F7 0%,#2C9BD1 55%,#6CC86A 100%) center/cover;
+box-shadow:4px 6px 14px rgba(10,60,90,.35),inset 0 0 0 1px rgba(255,255,255,.6)}
+.box-front::before{content:"";position:absolute;left:-.55rem;top:2px;bottom:2px;width:.55rem;border-radius:3px 0 0 3px;
+background:linear-gradient(90deg,#0E5F86,#2C9BD1);transform:rotateY(-70deg);transform-origin:right center}
+.box-front::after{content:"";position:absolute;inset:0;border-radius:4px;pointer-events:none;
+background:linear-gradient(115deg,rgba(255,255,255,.55) 0%,rgba(255,255,255,0) 38%)}
+details[open]>summary .box-front,.realm>details>summary:hover .box-front{transform:rotateY(-4deg)}
+.box-title{font-size:.62rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#fff;text-align:center;
+text-shadow:0 1px 2px rgba(0,30,50,.9);line-height:1.1}
+.box .orb{width:1.5rem;height:1.5rem;font-size:.75rem}
+.box-back{margin:.3rem 0 .6rem;padding:.8rem 1rem;border-radius:12px;background:linear-gradient(180deg,#0E5F86 0%,#1B7FB0 100%);color:#F2FBFF;
+box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 4px 12px rgba(10,60,90,.25)}
+.box-headline{margin:0 0 .4rem;font-weight:800;letter-spacing:.05em;font-size:1.05rem;color:#FFE27A;text-shadow:0 1px 0 rgba(0,0,0,.35)}
+.box-back ul{margin:0;padding-left:1.1rem}.box-back li{margin:.25rem 0}
+@media (prefers-reduced-motion:reduce){.box-front{transition:none}}
+.orb{grid-row:1/3;width:2.4rem;height:2.4rem;border-radius:50%;display:grid;place-items:center;font-weight:600;color:var(--gel-ink);
+background:var(--gel);border:1px solid #1C8CC0;box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 2px 6px rgba(20,120,170,.35)}
+.realm-name{font-size:1.2rem;font-weight:600;color:var(--title)}
+.realm-summary{grid-column:2;font-size:.92rem;color:var(--ink-soft)}
+.chevron{grid-column:3;grid-row:1/3;width:.7rem;height:.7rem;border-right:2px solid var(--ink-soft);border-bottom:2px solid var(--ink-soft);
+transform:rotate(45deg);transition:transform .2s}
+details[open]>summary .chevron{transform:rotate(225deg)}
+.realm-body{padding:0 1rem 1rem 6.3rem}
+.intro{margin:.2rem 0 .4rem}
+.points{list-style:none;margin:0;padding:0}
+.points li{margin:.25rem 0}
+.point{padding:.35rem .6rem;border-radius:10px;background:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.8)}
+.point>summary{cursor:pointer}
+.point p{margin:.35rem 0 .1rem;color:var(--ink-soft);font-size:.95rem}
+.point.lacks{background:rgba(240,248,252,.55)}
+.gel{display:inline-block;margin-top:.9rem;padding:.45rem 1.1rem;border-radius:999px;text-decoration:none;font-weight:600;color:var(--gel-ink);
+background:var(--gel);border:1px solid #1C8CC0;box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 3px 10px rgba(20,120,170,.35)}
+.gel:hover{filter:brightness(1.06)}
+#connect{padding:1rem 1.2rem}
+#connect ol{padding-left:1.3rem;margin:.4rem 0}
+code{font-family:Consolas,"DejaVu Sans Mono",monospace;background:rgba(255,255,255,.75);border:1px solid rgba(14,59,82,.15);border-radius:6px;padding:.05rem .35rem}
+.note{font-size:.92rem;color:var(--ink-soft)}
+footer{margin-top:2.5rem;font-size:.85rem;color:var(--ink-soft);text-align:center}
+.compare{overflow-x:auto;padding:.4rem}
+.compare table{border-collapse:separate;border-spacing:0;width:100%;font-size:.93rem}
+.compare th,.compare td{padding:.5rem .55rem;text-align:center;border-bottom:1px solid rgba(14,59,82,.1)}
+.compare thead th,.compare td{white-space:nowrap}
+.compare thead th{color:var(--title);font-weight:600}
+.compare thead a{text-decoration:none}
+.compare tbody th{text-align:left;font-weight:400;min-width:11rem}
+.tick{display:inline-block;width:1.15rem;height:1.15rem;border-radius:50%;vertical-align:middle;background:var(--leaf);border:1px solid #4FA324;box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 1px 4px rgba(60,140,30,.35)}
+.dash{color:rgba(14,59,82,.35)}
+.compare tr.many th{font-weight:600;font-style:italic;color:var(--title)}
+.compare tr.many td,.compare tr.many th{border-bottom:none}
+@media (max-width:520px){.realm-body{padding:0 .8rem .9rem}}
+</style>
+</head>
+<body>
+<div class="bubbles" aria-hidden="true">]] .. table.concat(bubbles) .. [[</div>
+<div class="page">
+<header>
+<h1>Everland Ghostsong</h1>
+<p>Every realm runs at once. Open one to see what makes it different; they all connect the same way.</p>
+</header>
+]] .. banner .. [[
+<h2>The realms</h2>
+<ol class="realms glass">
+]] .. table.concat(entries, "\n") .. [[
+</ol>
+
+<h2>Side by side</h2>
+]] .. comparison_html .. [[
+
+<h2 id="connect-title">How to connect</h2>
+<section id="connect" class="glass" aria-labelledby="connect-title">
+<ol>
+<li>Use a World of Warcraft 3.3.5a client (Wrath of the Lich King, build 12340).</li>
+<li>Open <code>Data/enUS/realmlist.wtf</code> (or your language's folder) in a text editor and make it the one line:<br>]] .. address_html .. [[</li>
+<li>Start the game and log in. The realm list shows every realm above; pick one.</li>
+</ol>
+<p class="note">Realms answer only players who have just logged in, so the realm list in the game is the only place their details appear.</p>
+</section>
+<footer>Generated from the realms' own pages. The realms are a private, non-commercial project.</footer>
+</div>
+</body>
+</html>
+]]
+
+os.execute("mkdir -p '" .. out:match("^(.*)/[^/]*$") .. "'")
+local f = assert(io.open(out, "wb")); f:write(html); f:close()
+
+if screenshot then
+    local history = DIR .. "/development-history"
+    os.execute("mkdir -p '" .. history .. "'")
+    local highest = 0
+    local listing = io.popen("ls '" .. history .. "'")
+    for name in listing:lines() do
+        local n = tonumber(name:match("^(%d%d%d)%-"))
+        if n and n > highest then highest = n end
+    end
+    listing:close()
+    local commit = io.popen("git -C '" .. DIR .. "' rev-parse --short HEAD"):read("*l") or "(no commit)"
+    local sources = io.popen("cat '" .. DIR .. "/scripts/write-connection-page' '" .. DIR .. "/docs/profiles/'*.md | b2sum")
+    local fingerprint = (sources:read("*l") or ""):match("^(%x+)") or "(b2sum failed)"
+    sources:close()
+
+    local page = out
+    if open_realm then
+        local text = html:gsub('(<li class="realm" id="realm%-' .. open_realm:gsub("%-", "%%-") .. '">\n)<details>', "%1<details open>")
+        if text == html then error("write-connection-page: --screenshot " .. open_realm .. ": no realm by that name on the page") end
+        page = out:gsub("%.html$", "") .. "-open-" .. open_realm .. ".html"
+        local pf = assert(io.open(page, "wb")); pf:write(text); pf:close()
+    end
+    local profile_dir = DIR .. "/tmp/shared-memory/connection-page/firefox-profile"
+    os.execute("mkdir -p '" .. profile_dir .. "'")
+    for _, shot in ipairs({ { width = 900, height = open_realm and 2200 or 1500, label = "wide" },
+                            { width = 390, height = 1400, label = "phone" } }) do
+        highest = highest + 1
+        local name = string.format("%03d-connection-page-%s%s", highest, shot.label, open_realm and ("-" .. open_realm .. "-open") or "")
+        local png = history .. "/" .. name .. ".png"
+        local status = os.execute(string.format("timeout 90 firefox --headless --no-remote --profile '%s' --window-size=%d,%d --screenshot '%s' 'file://%s' >/dev/null 2>&1",
+            profile_dir, shot.width, shot.height, png, page))
+        if not io.open(png, "rb") then
+            error("write-connection-page: Firefox wrote no picture at " .. png .. " (exit " .. tostring(status) .. "); "
+               .. "to debug: run the same command without '>/dev/null' and read Firefox's own message")
+        end
+        local nf = assert(io.open(history .. "/" .. name .. ".info.md", "wb"))
+        nf:write(string.format([[# %s
+
+## What made it
+- Tool: `scripts/write-connection-page%s --screenshot%s`
+- Commit: %s (the working tree may hold uncommitted changes)
+- Window: %d x %d, headless Firefox
+- Sources fingerprint (BLAKE2b of the script and docs/profiles/*.md): %s
+
+## What changed since the previous picture
+Compare the fingerprint above with the previous picture's.
+
+## What it shows
+(to be filled in)
+
+## The story so far
+(to be filled in)
+]], name, address and (" --address " .. address) or " --preview", open_realm and (" " .. open_realm) or "",
+            commit, shot.width, shot.height, fingerprint))
+        nf:close()
+        print("filed " .. png)
+    end
+end
+
+for _, w in ipairs(warnings) do io.stderr:write("WARNING " .. w .. "\n") end
+print(string.format("wrote %s: %d realms, %d bytes, %d warning(s)%s", out, #entries, #html, #warnings,
+                    (preview and not address) and ", PREVIEW (no login machine name)" or ""))

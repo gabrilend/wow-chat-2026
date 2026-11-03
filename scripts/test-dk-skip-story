@@ -11,6 +11,7 @@ end
 
 local TAUREN = 6
 local menu, heard, executed, items, quests_touched = {}, {}, {}, {}, {}
+local marked_after
 local rewarded, flags, money, xp_while_rewarding = {}, 0, 2000, {}
 local QUEST_ITEM = { [12619] = 38707, [12679] = 39320 }
 local events, timers, clock = {}, {}, 0
@@ -82,6 +83,11 @@ local env = setmetatable({
     RegisterCreatureGossipEvent = function(entry, ev, fn) if entry == 7180001 then handlers[#handlers + 1] = fn end end,
     RegisterPlayerEvent = function() end,
     CharDBQuery = function(sql)
+        if sql:find("^UPDATE") then
+            executed[#executed + 1] = sql
+            if sql:find("SET skipped = 1") then local n = 0; for _ in pairs(rewarded) do n = n + 1 end; marked_after = n end
+            return nil
+        end
         if sql:find("SHOW COLUMNS FROM basic_718_souls") then return {} end
         if sql:find("FROM basic_718_souls") then
             return { GetUInt32 = function(_, c) return ({ 0, 0, 0, 0, 0 })[c + 1] end }
@@ -167,6 +173,7 @@ check((items[39320] or 0) == 0, "no gear: the cloak is taken back")
 local marked = false
 for _, s in ipairs(executed) do if s:find("SET skipped = 1") and s:find("dk = 900") then marked = true end end
 check(marked, "the ledger is marked as skipped")
+check(marked_after == 0, "and marked before the first story quest is rewarded (" .. tostring(marked_after) .. " were before it)")
 local d = tele and math.sqrt((tele.x - 2337.8) ^ 2 + (tele.y - (-5676.7)) ^ 2) or 99
 check(tele and tele.map == 0 and math.abs(tele.z - 382.3) < 0.01 and d <= 6.01, string.format("placed off the Ebon Hold, within 6 yards of its spot (%.2f)", d))
 

@@ -431,11 +431,33 @@ local QUERY = {
 }
 function CharDBQuery(sql)
     for _, q in ipairs(QUERY) do
-        local cap = sql:match(q[1])
-        if cap then return new_query(q[2](cap)) end
+        local caps = { sql:match(q[1]) }
+        if caps[1] then return new_query(q[2](unpack(caps))) end
     end
     error("toy CharDBQuery does not know this question: " .. sql, 2)
 end
+
+function GetCurrTime() return World.now end
+local base_player_r = new_player
+new_player = function(name, guidLow)
+    local p = base_player_r(name, guidLow)
+    p.casts, p.cooldownResets = {}, 0
+    function p:ResetSpellCooldown(id) self.cooldownResets = self.cooldownResets + 1 end
+    function p:CastSpell(target, id)
+        self.casts[#self.casts + 1] = id
+        self.casting = id
+        Toy.spellEvent(1, self, id)
+    end
+    function p:InterruptSpell(slot)
+        local id = self.casting
+        self.casting = nil
+        if id then Toy.spellEvent(3, self, id, false) end
+    end
+    return p
+end
+Toy.chardb.ignores = {}
+table.insert(QUERY, { "^SELECT 1 FROM character_social WHERE guid = (%d+) AND friend = (%d+) AND %(flags & 2%) <> 0$",
+    function(g, f) local list = Toy.chardb.ignores[tonumber(g)]; return (list and list[tonumber(f)]) and { { 1 } } or {} end })
 
 Toy.World, Toy.handlers = World, handlers
 Toy.schedule, Toy.advance, Toy.pending = schedule, advance, pending

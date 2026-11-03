@@ -1,0 +1,155 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local PROFILE = io.open(DIR .. "/.profile"):read("*l")
+local WORLD = "acore_world_" .. PROFILE
+local MYSQL = DIR .. "/mysql/installed-files/bin/mysql --defaults-file=" .. DIR .. "/mysql/conf/client.cnf --socket=" .. DIR ..
+              "/mysql/databases/mysql.sock -N -B " .. WORLD
+local OUT = DIR .. "/docs/reports/valley-vendor-gear.md"
+local MAX_LEVEL = 1
+
+local function rows(sql)
+    local f = os.tmpname()
+    local h = assert(io.open(f, "w")); h:write(sql); h:close()
+    local p = io.popen(MYSQL .. " < " .. f .. " 2>&1; echo __status $?")
+    local out = {}
+    for line in p:lines() do
+        if line:match("^__status ") then
+            if line ~= "__status 0" then error("query failed: " .. sql) end
+        elseif not line:find("Using a password", 1, true) then
+            if line:match("^ERROR") then error(line) end
+            local r = {}
+            for field in (line .. "\t"):gmatch("([^\t]*)\t") do r[#r + 1] = field end
+            out[#out + 1] = r
+        end
+    end
+    p:close(); os.remove(f)
+    return out
+end
+
+local CAPITALS = { { 1519, 0 }, { 1537, 0 }, { 1657, 1 }, { 3557, 530 }, { 1637, 1 }, { 1638, 1 }, { 1497, 0 }, { 3487, 530 } }
+local ZONES = {
+    { area = 9,    map = 0,   name = "Northshire (Elwynn Forest)" },
+    { area = 132,  map = 0,   name = "Coldridge Valley (Dun Morogh)" },
+    { area = 188,  map = 1,   name = "Shadowglen (Teldrassil)" },
+    { area = 3526, map = 530, name = "Ammen Vale (Azuremyst Isle)" },
+    { area = 363,  map = 1,   name = "Valley of Trials (Durotar)" },
+    { area = 220,  map = 1,   name = "Camp Narache (Mulgore)" },
+    { area = 154,  map = 0,   name = "Deathknell (Tirisfal Glades)" },
+    { area = 3431, map = 530, name = "Sunstrider Isle (Eversong Woods)" },
+}
+local CLASSES = {
+    { id = 1,  name = "warrior", armour = 3, shield = true,  weapons = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 13, 15, 16, 18 } },
+    { id = 2,  name = "paladin", armour = 3, shield = true,  weapons = { 0, 1, 4, 5, 6, 7, 8 } },
+    { id = 3,  name = "hunter",  armour = 2, shield = false, weapons = { 0, 1, 2, 3, 6, 7, 8, 10, 13, 15, 16, 18 } },
+    { id = 4,  name = "rogue",   armour = 2, shield = false, weapons = { 0, 2, 3, 4, 7, 13, 15, 16, 18 } },
+    { id = 5,  name = "priest",  armour = 1, shield = false, weapons = { 4, 10, 15, 19 } },
+    { id = 7,  name = "shaman",  armour = 2, shield = true,  weapons = { 0, 1, 4, 5, 10, 13, 15 } },
+    { id = 8,  name = "mage",    armour = 1, shield = false, weapons = { 7, 10, 15, 19 } },
+    { id = 9,  name = "warlock", armour = 1, shield = false, weapons = { 7, 10, 15, 19 } },
+    { id = 11, name = "druid",   armour = 2, shield = false, weapons = { 4, 5, 6, 10, 13, 15 } },
+}
+local SLOT_OF = { [1] = "head", [3] = "shoulders", [5] = "chest", [20] = "chest", [6] = "waist", [7] = "legs",
+                  [8] = "feet", [9] = "wrists", [10] = "hands", [16] = "back", [13] = "main hand", [17] = "main hand",
+                  [21] = "main hand", [14] = "off hand", [22] = "off hand", [23] = "off hand",
+                  [15] = "ranged", [25] = "ranged", [26] = "ranged" }
+local SLOTS = { "head", "shoulders", "chest", "waist", "legs", "feet", "wrists", "hands", "back", "main hand", "off hand", "ranged" }
+
+local lines = {
+    "<!-- made by scripts/generate-valley-vendor-report from the " .. WORLD .. " database, " .. os.date("%Y-%m-%d") ..
+        ", for issue 617a4a; run it again rather than editing this -->",
+    "",
+    "# Starting valleys' vendor gear, by class",
+    "",
+    "*Generated. For each starting zone: the vendors standing in it that sell armour or weapons usable by level " ..
+        MAX_LEVEL .. " for plain money (candidates, to be confirmed per valley by hand), and for each class the gear " ..
+        "slots their wares can fill; the rest fall back to the kit or the starting outfit (issue 617a4a). A zone is its " ..
+        "box in `buddy_area_centre`, so a vendor near an edge may belong to the next zone.*",
+    "",
+}
+
+local function capitals_clause(map)
+    local parts = {}
+    for _, c in ipairs(CAPITALS) do
+        if c[2] == map then
+            for _, b in ipairs(rows(string.format("SELECT min_x, max_x, min_y, max_y FROM buddy_area_centre WHERE map = %d AND area = %d", map, c[1]))) do
+                parts[#parts + 1] = string.format("AND NOT (c.position_x BETWEEN %s AND %s AND c.position_y BETWEEN %s AND %s)", b[1], b[2], b[3], b[4])
+            end
+        end
+    end
+    return table.concat(parts, " ")
+end
+
+for _, z in ipairs(ZONES) do
+    local pieces = rows(string.format("SELECT min_x, max_x, min_y, max_y FROM buddy_area_centre WHERE map = %d AND area = %d", z.map, z.area))
+    local box = #pieces > 0 and pieces or nil
+    lines[#lines + 1] = "## " .. z.name
+    lines[#lines + 1] = ""
+    if not box then
+        lines[#lines + 1] = "No box for area " .. z.area .. " in `buddy_area_centre`; nothing found."
+        lines[#lines + 1] = ""
+    else
+        local within = {}
+        for _, b in ipairs(box) do
+            within[#within + 1] = string.format("(c.position_x BETWEEN %s AND %s AND c.position_y BETWEEN %s AND %s)", b[1], b[2], b[3], b[4])
+        end
+        local wares = rows(string.format([[
+SELECT DISTINCT ct.entry, ct.name, ct.subname, it.entry, it.name, it.class, it.subclass, it.InventoryType, it.AllowableClass
+  FROM creature c JOIN creature_template ct ON ct.entry = c.id JOIN npc_vendor v ON v.entry = ct.entry
+  JOIN item_template it ON it.entry = v.item
+ WHERE c.map = %d AND (]] .. table.concat(within, " OR ") .. [[)
+   AND it.class IN (2, 4) AND it.RequiredLevel <= %d AND v.ExtendedCost = 0
+   AND NOT (it.class = 2 AND it.subclass IN (14, 20))
+   AND c.guid NOT IN (SELECT guid FROM game_event_creature)
+   %s
+ ORDER BY ct.name, it.name]], z.map, MAX_LEVEL, capitals_clause(z.map)))
+        local vendors, order = {}, {}
+        for _, w in ipairs(wares) do
+            if not vendors[w[1]] then vendors[w[1]] = { name = w[2], sub = w[3], n = 0 }; order[#order + 1] = w[1] end
+            vendors[w[1]].n = vendors[w[1]].n + 1
+        end
+        lines[#lines + 1] = "Candidate vendors (creature entry, name, title, items):"
+        lines[#lines + 1] = ""
+        for _, e in ipairs(order) do
+            local v = vendors[e]
+            lines[#lines + 1] = string.format("- %s %s%s: %d items", e, v.name, v.sub ~= "" and v.sub ~= "NULL" and (" <" .. v.sub .. ">") or "", v.n)
+        end
+        if #order == 0 then lines[#lines + 1] = "- none found" end
+        lines[#lines + 1] = ""
+        lines[#lines + 1] = "| Class | Slots its vendors fill | Slots that fall back |"
+        lines[#lines + 1] = "|---|---|---|"
+        for _, c in ipairs(CLASSES) do
+            local kinds = {}
+            for _, k in ipairs(c.weapons) do kinds[k] = true end
+            local filled = {}
+            for _, w in ipairs(wares) do
+                local class, sub, inv, allow = tonumber(w[6]), tonumber(w[7]), tonumber(w[8]), tonumber(w[9])
+                local slot = SLOT_OF[inv]
+                local usable = (allow == -1 or allow == 0 or bit.band(allow, bit.lshift(1, c.id - 1)) ~= 0)
+                if slot and usable then
+                    if class == 4 then
+                        if (sub == 6 and c.shield) or (sub ~= 6 and (inv == 16 or sub <= c.armour)) or (sub == 0 and inv == 23) then
+                            filled[slot] = true
+                        end
+                    elseif class == 2 and kinds[sub] then
+                        filled[slot] = true
+                    end
+                end
+            end
+            local yes, no = {}, {}
+            for _, s in ipairs(SLOTS) do
+                if filled[s] then yes[#yes + 1] = s else no[#no + 1] = s end
+            end
+            lines[#lines + 1] = string.format("| %s | %s | %s |", c.name, #yes > 0 and table.concat(yes, ", ") or "none",
+                #no > 0 and table.concat(no, ", ") or "none")
+        end
+        lines[#lines + 1] = ""
+    end
+end
+
+os.execute("mkdir -p '" .. DIR .. "/docs/reports'")
+local f = assert(io.open(OUT, "w"))
+f:write(table.concat(lines, "\n"), "\n")
+f:close()
+print("wrote " .. OUT:sub(#DIR + 2))

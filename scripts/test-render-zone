@@ -1,0 +1,49 @@
+#!/bin/bash
+
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+SCRATCH="${DIR}/tmp/shared-memory/test-render-zone"
+CHECKS=0
+FAILS=0
+check() { CHECKS=$((CHECKS + 1)); if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; FAILS=$((FAILS + 1)); fi; }
+mkdir -p "${SCRATCH}"
+
+read -r PX1 PY1 X1 Y1 PX2 PY2 X2 Y2 <<< "$(luajit -e '
+local Z = dofile("'"${DIR}"'/assets/zone-maps/1-17.lua")
+local W, H = 960, 540
+local ROWS, COLS = Z.X1 - Z.X0 + 1, Z.Y1 - Z.Y0 + 1
+local S = math.min(W / COLS, H / ROWS)
+local OX, OY = (W - COLS * S) / 2, (H - ROWS * S) / 2
+local function sq(r, c)                         -- row r, column c (1-based) of the box, if the zone has it
+    local row, col = Z.rows[r], 0
+    for v, n in row:gmatch("(%d+)%*(%d+)") do
+        if c > col and c <= col + tonumber(n) then return tonumber(v) end
+        col = col + tonumber(n)
+    end
+end
+local out = {}
+for _, rc in ipairs({ { math.floor(ROWS / 2), math.floor(COLS / 2) }, { math.floor(ROWS / 3), math.floor(COLS / 2) } }) do
+    local r, c = rc[1], rc[2]
+    assert(sq(r, c) ~= 0, "the test square is not in the zone")
+    local X, Y = Z.X0 + r - 1, Z.Y1 - c + 1
+    local x = (32 - (X + 0.5) / 16) * 533.3333
+    local y = (32 - (Y + 0.5) / 16) * 533.3333
+    out[#out + 1] = string.format("%d %d %.2f %.2f", math.floor(OX + (c - 0.5) * S), math.floor(OY + (r - 0.5) * S), x, y)
+end
+print(table.concat(out, " "))')"
+
+REC="${SCRATCH}/record.tsv"
+printf '1000\t1\tPerson\tplayer\t1\t17\t17\t%s\t%s\t0\t0\t0\t0\n' "${X1}" "${Y1}" > "${REC}"
+printf '1000\t2\tBuddy\tbuddy\t1\t17\t17\t%s\t%s\t0\t0\t0\t1\n' "${X2}" "${Y2}" >> "${REC}"
+printf '1000\t3\tElsewhere\tbot\t1\t14\t14\t%s\t%s\t0\t0\t0\t0\n' "${X1}" "${Y1}" >> "${REC}"
+OUT="$("${DIR}/scripts/render-zone" "${DIR}" --zone 1-17 --record "${REC}" --size 960x540 --out "${SCRATCH}/frame.png" 2>&1)"
+echo "    ${OUT}"
+pixel() { magick "${SCRATCH}/frame.png" -format "%[fx:int(255*p{$1,$2}.r)],%[fx:int(255*p{$1,$2}.g)],%[fx:int(255*p{$1,$2}.b)]" info:; }
+
+check "two drawn: the person and the buddy, not the bot in another zone" '[[ "${OUT}" == *"2 drawn (1 players, 1 buddies, 0 bots)"* ]]'
+check "the person is a white dot where the record puts them" '[[ "$(pixel ${PX1} ${PY1})" == "255,255,255" ]]'
+B="$(pixel ${PX2} ${PY2})"
+check "the buddy is a dot of its owner's colour, not white and not the ground (${B})" '[[ "${B}" != "255,255,255" && "${B}" != "$(pixel $((PX2 + 30)) ${PY2})" ]]'
+check "away from the dots the ground is a zone tint, not the grey outside" '[[ "$(pixel $((PX1 + 30)) ${PY1})" != "104,104,104" ]]'
+
+echo "test-render-zone: ${CHECKS} checks, ${FAILS} failed"
+[[ ${FAILS} -eq 0 ]]

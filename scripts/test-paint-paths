@@ -1,0 +1,7 @@
+#!/bin/bash
+
+set -uo pipefail
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+command -v node > /dev/null || { echo "test-paint-paths: node is not installed; nothing was checked"; exit 1; }
+node "${DIR}/tests/paint-paths/paint-check.js" "${DIR}"

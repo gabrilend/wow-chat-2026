@@ -38,6 +38,17 @@ function Choice.menu(RC, team, owner_is_dk)
     return classes, races
 end
 
+function Choice.menu_for_race(RC, race)
+    local classes = {}
+    local r = RC.races[race]
+    if not r then return classes end
+    for _, c in ipairs(r.classes) do
+        if c ~= DEATH_KNIGHT then classes[#classes + 1] = { id = c, name = RC.classes[c].name } end
+    end
+    table.sort(classes, function(a, b) return a.name < b.name end)
+    return classes
+end
+
 function Choice.needed_role(slot, roster, owner_is_dk)
     if owner_is_dk or not GUARANTEE_SLOTS[slot] then return nil end
     local have = {}
@@ -48,13 +59,59 @@ function Choice.needed_role(slot, roster, owner_is_dk)
     return nil
 end
 
+local WANTED_ROLES = { { "tank", 1 }, { "healer", 1 }, { "damage", 3 } }
+function Choice.lacking_role(have, rand)
+    local best, top = nil, {}
+    for _, w in ipairs(WANTED_ROLES) do
+        local short = w[2] - (have[w[1]] or 0)
+        if not best or short > best then
+            best, top = short, { w[1] }
+        elseif short == best then
+            top[#top + 1] = w[1]
+        end
+    end
+    return top[rand(#top)]
+end
+
 function Choice.resolve(a)
     local RC, rand   = a.RC, a.rand
     local team_races = races_of(RC, a.team)
     local need       = Choice.needed_role(a.slot, a.roster, a.owner_is_dk)
     local class, race
 
-    if a.owner_is_dk then
+    if a.kept_race and a.kept_race ~= 0 then
+        local r = RC.races[a.kept_race]
+        if not r or r.team ~= a.team then return nil, "the kept race " .. tostring(a.kept_race) .. " is not of the " .. a.team end
+        local playable = {}
+        for _, c in ipairs(Choice.menu_for_race(RC, a.kept_race)) do
+            if a.TD.classes[c.id] then playable[#playable + 1] = c.id end
+        end
+        if a.pick and a.pick.kind == "class" then
+            if not race_can(r, a.pick.id) or a.pick.id == DEATH_KNIGHT then
+                return nil, "a " .. r.name .. " can't be class " .. tostring(a.pick.id) .. " (or a death knight)"
+            end
+            class = a.pick.id
+        elseif a.pick and a.pick.kind == "flexible" then
+            local pool = {}
+            for _, c in ipairs(playable) do
+                local taken = false
+                for _, b in ipairs(a.roster) do if b.class == c and b.profile == EVEN_SHAPE then taken = true end end
+                if not taken then pool[#pool + 1] = c end
+            end
+            if #pool == 0 then return nil, "every class this race plays already has a clan-mate in the even shape" end
+            class = pool[rand(#pool)]
+            local cls = a.TD.classes[class]
+            return { class = class, race = a.kept_race, profile = EVEN_SHAPE,
+                     role = ROLE_NUMBER[cls.shapes[EVEN_SHAPE].role], filled = false }
+        else
+            return nil, "a reset slot takes a class or \"I'm flexible\", not " .. tostring(a.pick and a.pick.kind)
+        end
+        race = a.kept_race
+    end
+
+    if class then
+
+    elseif a.owner_is_dk then
         class = DEATH_KNIGHT
         local fits = {}
         for _, rid in ipairs(team_races) do
@@ -103,6 +160,27 @@ function Choice.resolve(a)
             if race_can(RC.races[rid], class) then fits[#fits + 1] = rid end
         end
         race = fits[rand(#fits)]
+
+    elseif a.pick and a.pick.kind == "role" then
+        local classes = {}
+        for _, rid in ipairs(team_races) do
+            for _, c in ipairs(RC.races[rid].classes) do
+                if c ~= DEATH_KNIGHT and a.TD.classes[c] and a.Spender.can_fill(a.TD.classes[c], a.pick.role) then
+                    classes[c] = true
+                end
+            end
+        end
+        local pool = {}
+        for c in pairs(classes) do pool[#pool + 1] = c end
+        table.sort(pool)
+        if #pool == 0 then return nil, "no " .. a.team .. " class has a shape of role " .. tostring(a.pick.role) end
+        class = pool[rand(#pool)]
+        local fits = {}
+        for _, rid in ipairs(team_races) do
+            if race_can(RC.races[rid], class) then fits[#fits + 1] = rid end
+        end
+        race = fits[rand(#fits)]
+        need = a.pick.role
 
     elseif a.pick and a.pick.kind == "flexible" then
         local classes = {}

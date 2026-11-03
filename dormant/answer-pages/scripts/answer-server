@@ -1,0 +1,182 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+local LIBS = "/home/ritz/programming/ai-stuff/libs/lua"
+
+local port, check = 8642, false
+do
+    local i = 1
+    while i <= #arg do
+        local a = arg[i]
+        if a == "--help" or a == "-h" then
+            for line in io.lines(arg[0]) do
+                if not line:match("^%-%-") and not line:match("^#!") then break end
+                print((line:gsub("^%-%- ?", "")))
+            end
+            os.exit(0)
+        elseif a == "--port"  then port = tonumber(arg[i + 1]) or error("--port takes a number"); i = i + 1
+        elseif a == "--check" then check = true
+        elseif a:sub(1, 2) ~= "--" then DIR = a
+        else error("unknown option " .. a .. " (see --help)") end
+        i = i + 1
+    end
+end
+
+package.path  = LIBS .. "/?.lua;" .. LIBS .. "/luasocket/share/lua/5.1/?.lua;" .. package.path
+package.cpath = LIBS .. "/luasocket/lib/lua/5.1/?.so;" .. LIBS .. "/luasocket/?.so;" .. package.cpath
+local socket = require("socket")
+local json   = require("dkjson")
+
+local ROOT    = DIR .. "/docs/HTML"
+local ANSWERS = DIR .. "/notes/answers"
+local LOG     = DIR .. "/tmp/shared-memory/answer-server.log"
+os.execute("mkdir -p '" .. ANSWERS .. "' '" .. DIR .. "/tmp/shared-memory'")
+
+local function log(text)
+    local line = os.date("%Y-%m-%d %H:%M:%S ") .. text
+    print(line)
+    local f = io.open(LOG, "a")
+    if f then f:write(line, "\n"); f:close() end
+end
+
+local function answers_path(page) return ANSWERS .. "/" .. page .. ".md" end
+
+local function append_answer(page, a)
+    local path = answers_path(page)
+    local fresh = not io.open(path, "r")
+    local f = io.open(path, "a") or error("cannot write " .. path)
+    if fresh then
+        f:write("<!-- notes/answers/", page, ".md - written by scripts/answer-server from the answer boxes on docs/HTML/answer-pages/",
+            page, ".html, to keep the owner's answers word for word; each answer is appended, never edited (issue 1102) -->\n\n# Answers: ",
+            page, "\n")
+    end
+    local quoted = ("> " .. tostring(a.question or ""):gsub("\n", "\n> "))
+    f:write("\n## ", os.date("%Y-%m-%d %H:%M"), " · ", a.issue, " question ", a.number, "\n",
+        "<!-- key: ", a.issue, "#", a.number, " -->\n\n", quoted, "\n\n", a.answer, "\n")
+    f:close()
+end
+
+local function read_answers(page)
+    local f = io.open(answers_path(page), "r")
+    if not f then return {} end
+    local text = f:read("*a")
+    f:close()
+    local out = {}
+    local pos = 1
+    while true do
+        local s = text:find("\n## ", pos, true)
+        if not s then break end
+        local e = text:find("\n## ", s + 4, true) or (#text + 1)
+        local chunk = text:sub(s + 4, e - 1)
+        local when = chunk:match("^(%d+%-%d+%-%d+ %d+:%d+)")
+        local key = chunk:match("<!%-%- key: (%S+) %-%->")
+        if when and key then
+            local lines, stage = {}, "head"
+            for line in (chunk .. "\n"):gmatch("([^\n]*)\n") do
+                if stage == "answer" then lines[#lines + 1] = line
+                elseif line:match("^>") then stage = "quote"
+                elseif stage == "quote" then stage = "answer"; lines[#lines + 1] = line end
+            end
+            local answer = table.concat(lines, "\n"):gsub("^\n+", ""):gsub("\n+$", "")
+            out[#out + 1] = { key = key, when = when, answer = answer }
+        end
+        pos = e
+    end
+    return out
+end
+
+local TYPES = { html = "text/html; charset=utf-8", css = "text/css", js = "text/javascript", json = "application/json",
+                gif = "image/gif", png = "image/png", svg = "image/svg+xml", md = "text/markdown; charset=utf-8" }
+
+local function reply(client, status, ctype, body)
+    client:send(string.format("HTTP/1.1 %s\r\nContent-Type: %s\r\nContent-Length: %d\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n",
+        status, ctype, #body) .. body)
+end
+
+local function page_ok(page) return type(page) == "string" and page:match("^[%w%-]+$") ~= nil and #page <= 80 end
+
+local function handle(client)
+    client:settimeout(5)
+    local first = client:receive("*l")
+    if not first then return end
+    local method, target = first:match("^(%u+) (%S+)")
+    local length = 0
+    while true do
+        local h = client:receive("*l")
+        if not h or h == "" then break end
+        local n = h:lower():match("^content%-length:%s*(%d+)")
+        if n then length = tonumber(n) end
+    end
+    local body = length > 0 and client:receive(length) or ""
+    local path = (target or "/"):gsub("%?.*$", "")
+
+    if method == "POST" and path == "/answer" then
+        local a = json.decode(body or "")
+        if type(a) ~= "table" or not page_ok(a.page) or type(a.issue) ~= "string" or not a.issue:match("^[%w]+$")
+            or not tonumber(a.number) or type(a.answer) ~= "string" or a.answer:match("^%s*$") then
+            reply(client, "400 Bad Request", "application/json", json.encode({ error =
+                "an answer needs page (letters, digits, dashes), issue (letters and digits), number, and a non-empty answer" }))
+            log("refused an answer: " .. tostring(body):sub(1, 200))
+            return
+        end
+        append_answer(a.page, a)
+        log("answer kept: " .. a.page .. " " .. a.issue .. "#" .. a.number .. " (" .. #a.answer .. " characters)")
+        reply(client, "200 OK", "application/json", json.encode({ kept = answers_path(a.page):sub(#DIR + 2) }))
+        return
+    end
+
+    local page = path:match("^/answers/([%w%-]+)$")
+    if method == "GET" and page then
+        reply(client, "200 OK", "application/json", json.encode({ answers = read_answers(page) }))
+        return
+    end
+
+    if method == "GET" then
+        if path:find("%.%.") then reply(client, "403 Forbidden", "text/plain", "no"); return end
+        if path:sub(-1) == "/" then path = path .. "index.html" end
+        local f = io.open(ROOT .. path, "rb")
+        if not f then reply(client, "404 Not Found", "text/plain", "not found: " .. path); return end
+        local data = f:read("*a")
+        f:close()
+        reply(client, "200 OK", TYPES[path:match("%.(%w+)$") or ""] or "application/octet-stream", data)
+        return
+    end
+    reply(client, "405 Method Not Allowed", "text/plain", "only GET and POST /answer")
+end
+
+if check then
+    local p = 18000 + math.random(0, 999)
+    os.execute(string.format("luajit '%s' '%s' --port %d > /dev/null 2>&1 &", arg[0], DIR, p))
+    socket.sleep(0.6)
+    local http = require("socket.http")
+    local ltn12 = require("ltn12")
+    local sent = json.encode({ page = "check-answer-server", issue = "1102", number = 1,
+        question = "Does it keep answers?", answer = "Yes, word for word." })
+    local got = {}
+    local _, code = http.request({ url = "http://127.0.0.1:" .. p .. "/answer", method = "POST",
+        headers = { ["content-type"] = "application/json", ["content-length"] = #sent },
+        source = ltn12.source.string(sent), sink = ltn12.sink.table(got) })
+    local back = {}
+    http.request({ url = "http://127.0.0.1:" .. p .. "/answers/check-answer-server", sink = ltn12.sink.table(back) })
+    local refused = {}
+    local _, badCode = http.request({ url = "http://127.0.0.1:" .. p .. "/answer", method = "POST",
+        headers = { ["content-length"] = 30 }, source = ltn12.source.string('{"page":"../../etc","answer":"x"}'),
+        sink = ltn12.sink.table(refused) })
+    os.execute("pkill -f -- '--port " .. p .. "'")
+    os.remove(answers_path("check-answer-server"))
+    local list = (json.decode(table.concat(back)) or {}).answers or {}
+    local good = code == 200 and #list == 1 and list[1].key == "1102#1" and list[1].answer == "Yes, word for word."
+        and badCode == 400
+    print(good and "ok: an answer was kept, read back word for word, and a bad page name was refused"
+        or ("FAILED: post " .. tostring(code) .. ", read back " .. table.concat(back) .. ", bad name " .. tostring(badCode)))
+    os.exit(good and 0 or 1)
+end
+
+local server = assert(socket.bind("127.0.0.1", port))
+log("answer server: http://127.0.0.1:" .. port .. "/answer-pages/ (pages from docs/HTML, answers into notes/answers)")
+while true do
+    local client = server:accept()
+    local ok, err = pcall(handle, client)
+    if not ok then log("error: " .. tostring(err)) end
+    client:close()
+end

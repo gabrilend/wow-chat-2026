@@ -27,7 +27,7 @@ PROFESSION_SKILLS="129,164,165,171,182,185,186,197,202,333,356,393,755,762,773"
 AT_LOGIN_RESET_TALENTS=4                            # Player.h: AtLoginFlags
 
 sql() {
-    "${MYSQL}" -h127.0.0.1 -P3307 -uritz -pmenardi -D "${CHARS}" -N -B -e "$1" 2>&1 | grep -v "Using a password" || true
+    "${MYSQL}" "--defaults-file=${DIR}/mysql/conf/client.cnf" -h127.0.0.1 -P3307 -D "${CHARS}" -N -B -e "$1" 2>&1 | grep -v "Using a password" || true
 }
 
 stop() {

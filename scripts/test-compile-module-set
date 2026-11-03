@@ -32,7 +32,7 @@ AC_CODE_DIR="${FAKE}/source"
 BUILD_DIR_SHADOW="${FAKE}/build"
 
 declare -A EXPECT_ON=(
-    [basic]="mod-ale mod-aoe-loot mod-buddies mod-fireworks-on-level mod-playerbots mod-solo-lfg"
+    [basic]="mod-ale mod-aoe-loot mod-buddies mod-playerbots"
     [cc-test]="mod-ale mod-buddies mod-playerbots"
     [beta]="mod-ale mod-aoe-loot mod-grownup mod-playerbots"
     [vanilla]="mod-ale mod-aoe-loot mod-fireworks-on-level mod-playerbots mod-solo-lfg"

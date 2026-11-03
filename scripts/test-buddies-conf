@@ -1,0 +1,8 @@
+#!/bin/bash
+
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+    sed -n '10,16p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+"${DIR}/scripts/generate-buddies-conf" "${DIR}" --check

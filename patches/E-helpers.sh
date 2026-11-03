@@ -24,8 +24,8 @@ _register_with_updatefetcher() {
         return 0
     fi
 
-    "${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" \
-        -u ritz -pmenardi "${DB}" <<SQL || { echo "    ERROR: could not register ${DIR_PATH} in ${DB}.updates_include (database=${DB}, socket=${MYSQL_SOCKET})"; return 1; }
+    "${MYSQL_DIR}/bin/mysql" "--defaults-file=${DIR}/mysql/conf/client.cnf" --socket="${MYSQL_SOCKET}" \
+        "${DB}" <<SQL || { echo "    ERROR: could not register ${DIR_PATH} in ${DB}.updates_include (database=${DB}, socket=${MYSQL_SOCKET})"; return 1; }
 CREATE TABLE IF NOT EXISTS \`updates_include\` (
   \`path\` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'directory to include. \$ means relative to the source directory.',
   \`state\` enum('RELEASED','ARCHIVED','CUSTOM','PENDING') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'RELEASED' COMMENT 'defines if the directory contains released or archived updates.',
@@ -91,7 +91,7 @@ _forget_z_prefixed_updates() {
         return 1
     fi
     local gone
-    gone="$("${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" -u ritz -pmenardi -N "${db}" -e \
+    gone="$("${MYSQL_DIR}/bin/mysql" "--defaults-file=${DIR}/mysql/conf/client.cnf" --socket="${MYSQL_SOCKET}" -N "${db}" -e \
         "DELETE FROM updates WHERE name IN (${names}); SELECT ROW_COUNT();" 2> >(grep -v "Using a password on the command line" >&2))" ||
         { echo "    ERROR: could not forget the z_ update records in ${db} (${staging#${DIR}/})"; return 1; }
     [[ "${gone}" == "0" ]] || echo "    ${db}: ${gone} z_ update record(s) forgotten; those files apply again under their own names at the next start (issue 189d)"
@@ -110,8 +110,8 @@ _unregister_one() {
 
     [[ ! -S "${MYSQL_SOCKET}" ]] && return 0
 
-    "${MYSQL_DIR}/bin/mysql" --no-defaults --socket="${MYSQL_SOCKET}" \
-        -u ritz -pmenardi "${DB}" \
+    "${MYSQL_DIR}/bin/mysql" "--defaults-file=${DIR}/mysql/conf/client.cnf" --socket="${MYSQL_SOCKET}" \
+        "${DB}" \
         -e "DELETE FROM updates_include WHERE path = '${DIR_PATH}';" 2>/dev/null || true
 }
 

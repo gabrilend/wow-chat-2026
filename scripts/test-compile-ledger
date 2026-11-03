@@ -1,0 +1,66 @@
+#!/bin/bash
+
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+LEDGER_TOOL="${DIR}/scripts/compile-ledger"
+SCRATCH="${DIR}/tmp/tmp/test-compile-ledger"
+FAILS=0
+CHECKS=0
+
+check() {
+    CHECKS=$((CHECKS + 1))
+    if eval "$2"; then :; else echo "  FAIL: $1"; FAILS=$((FAILS + 1)); fi
+}
+
+rm -rf "${SCRATCH}"
+mkdir -p "${SCRATCH}/tmp/shared-memory"
+echo "pretend" > "${SCRATCH}/.profile"
+LOG="${SCRATCH}/tmp/shared-memory/compile-pretend.log"
+WARN="${SCRATCH}/tmp/shared-memory/compile-pretend.warnings"
+RECEIPT="${SCRATCH}/tmp/shared-memory/compile-pretend.goodbye"
+OUT="${SCRATCH}/follower.out"
+
+say() { printf '%(%H:%M:%S)T %s\n' -1 "$1" >> "${LOG}"; }
+
+: > "${LOG}"
+"${LEDGER_TOOL}" "${SCRATCH}" follow --max 2 > "${OUT}" 2>&1 &
+FOLLOWER=$!
+sleep 1
+
+say "Run log: tmp/shared-memory/compile-pretend.log"
+say "==== stage: the quick tests"
+say "  FAIL: the ledger is marked as skipped"
+say "  [B004] Applied: patch_B004_upstream_warning_fixes"
+say "==== stage: building and installing (cmake, make, install)"
+say "CMake Warning at CMakeLists.txt:12 (message):"
+say "src/game/Unit.cpp:120:7: warning: unused variable 'x' [-Wunused-variable]"
+say "mysql: [Warning] Using a password on the command line interface can be insecure."
+say "  flags: -Wall -Werror=return-type"
+sleep 3
+check "a warning is caught as it comes, before the run ends" 'grep -q "compiler-warning" "${WARN}"'
+say "src/game/Unit.cpp:200:1: error: expected ';'"
+say "make[2]: *** [game.dir/Unit.cpp.o] Error 1"
+say "  using the fallback path for the maps"
+printf 'verdict:     FAILED (exit status 1)\n' > "${RECEIPT}"
+wait "${FOLLOWER}"
+STATUS=$?
+
+check "the follower ends with the run, status 1 for its errors (got ${STATUS})" '[[ ${STATUS} -eq 1 ]]'
+check "the ledger says what made it"                    'head -1 "${WARN}" | grep -q "^# made by scripts/compile-ledger"'
+check "a failed check: test-failure, in the quick tests" 'grep -P "\ttest-failure\tthe quick tests\t" "${WARN}" | grep -q "marked as skipped"'
+check "cmake's warning: cmake-warning"                  'grep -q -P "\tcmake-warning\tbuilding" "${WARN}"'
+check "the compiler's warning: compiler-warning"        'grep -q -P "\tcompiler-warning\t.*unused variable" "${WARN}"'
+check "the compiler's error: compiler-error"            'grep -q -P "\tcompiler-error\t.*expected" "${WARN}"'
+check "make stopping: build-stopped"                    'grep -q -P "\tbuild-stopped\t" "${WARN}"'
+check "mysql's warning: mysql-warning"                  'grep -q -P "\tmysql-warning\t" "${WARN}"'
+check "a fallback: fallback"                            'grep -q -P "\tfallback\t" "${WARN}"'
+check "a patch named for warnings is no warning"        '! grep -q "B004" "${WARN}"'
+check "a -Werror flag is no error"                      '! grep -q "Werror" "${WARN}"'
+check "the stage lines are not findings"                '! grep -q "==== stage" "${WARN}"'
+check "each entry says its line in the log"             'grep -P "\tcompiler-error\t" "${WARN}" | grep -q -P "\trun:10\t"'
+check "chosen kinds only: show --kinds compiler-error"  '[[ "$("${LEDGER_TOOL}" "${SCRATCH}" show --kinds compiler-error | wc -l)" -eq 1 ]]'
+check "an unknown kind is refused"                      '! "${LEDGER_TOOL}" "${SCRATCH}" show --kinds no-such-kind 2> /dev/null'
+
+rm -rf "${SCRATCH}"
+if [[ ${FAILS} -eq 0 ]]; then echo "test-compile-ledger: all ${CHECKS} checks passed"; exit 0; fi
+echo "test-compile-ledger: ${FAILS} of ${CHECKS} checks failed"
+exit 1

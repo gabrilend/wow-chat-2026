@@ -44,6 +44,7 @@ struct Settings
     float    maxBulge      = 16.0f;
     float    rampMin       = 3.0f;
     int32_t  maxDetours    = 8;
+    double   tieMargin     = 0.10;
     int32_t  piercePercent = 25;
     float    lureReach     = 25.0f;
     float    lureDepth     = 0.7f;
@@ -83,7 +84,8 @@ void Begin(Buddy& buddy, Area const& area, Point const& at, Rng const& rng);
 bool NextWaypoint(Buddy& buddy, Area const& area, Point const& at, std::vector<Point> const& others,
                   std::vector<Mob> const& mobs, Ground const& ground, Settings const& settings, Rng const& rng);
 
-std::vector<Point> PlanPath(Point const& from, Point const& to, float body, Ground const& ground, Settings const& settings);
+std::vector<Point> PlanPath(Point const& from, Point const& to, float body, Ground const& ground, Settings const& settings,
+                            Rng const* rng = nullptr);
 
 float RestChance(float health, float maxHealth);
 

@@ -1,0 +1,69 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+local files = {}
+local interactive = false
+local i = 1
+while i <= #arg do
+    if arg[i] == "--dir" then DIR = arg[i + 1]; i = i + 2
+    elseif arg[i] == "-I" then interactive = true; i = i + 1
+    elseif arg[i] == "--help" or arg[i] == "-h" then
+        print("Usage: scripts/open-journal [--dir PROJECT_DIR] [-I] FILE...\n"
+           .. "  -I  ask for the password(s) at the keyboard (hidden), until an empty line\n"
+           .. "  without -I: passwords one per line on standard input (a pipe or a file)")
+        os.exit(0)
+    else files[#files + 1] = arg[i]; i = i + 1 end
+end
+if #files == 0 then
+    io.stderr:write("open-journal: name at least one journal file (see --help)\n")
+    os.exit(2)
+end
+local Seal = dofile(DIR .. "/scripts/lib/journal-seal.lua")
+
+local function read_passwords()
+    local passwords = {}
+    local rc  = os.execute("test -t 0")
+    local tty = rc == 0 or rc == true
+    if tty and not interactive then
+        io.stderr:write("open-journal: standard input is the keyboard; give -I to be asked for the password, "
+                     .. "or pipe the password(s) in, one per line\n")
+        os.exit(2)
+    end
+    if interactive then
+        os.execute("stty -echo")
+        while true do
+            io.stderr:write(#passwords == 0 and "Password: " or "Another password (empty to start): ")
+            local pw = io.read("*l")
+            io.stderr:write("\n")
+            if not pw or pw == "" then break end
+            passwords[#passwords + 1] = pw
+        end
+        os.execute("stty echo")
+    else
+        for pw in io.lines() do if pw ~= "" then passwords[#passwords + 1] = pw end end
+    end
+    if #passwords == 0 then
+        io.stderr:write("open-journal: no password given\n")
+        os.exit(2)
+    end
+    return passwords
+end
+
+local passwords = read_passwords()
+local refused = 0
+for _, path in ipairs(files) do
+    local ok, j = pcall(Seal.open, path, passwords)
+    if not ok then
+        refused = refused + 1
+        io.stderr:write("REFUSED " .. tostring(j) .. "\n")
+    else
+        print(string.format("== %s (account %d, %d lines%s)", path, j.account_id, #j.lines,
+                            j.finished and "" or ", CUT SHORT: the server stopped before closing it"))
+        for _, line in ipairs(j.lines) do
+            local r = Seal.parse_record(line)
+            print(string.format("%s  %-8s %s%s", os.date("!%Y-%m-%d %H:%M:%S", r.time), r.kind,
+                                r.sender ~= "" and (r.sender .. ": ") or "", r.text))
+        end
+    end
+end
+os.exit(refused == 0 and 0 or 1)

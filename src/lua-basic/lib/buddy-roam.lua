@@ -207,6 +207,7 @@ local PLAN = {
     SLOPE_W    = 6,
     ROAD_F     = 0.6,
     MAX_DETOUR = 8,
+    TIE        = 0.10,
     MAX_SIDE   = 16,
     RAMP_MIN   = 3,
 }
@@ -300,7 +301,7 @@ local function add_detour(area, c, s0, s1)
     return true
 end
 
-function Roam.plan_path(area, ax, ay, bx, by, body)
+function Roam.plan_path(area, ax, ay, bx, by, body, rand)
     local len = math.sqrt((bx - ax) ^ 2 + (by - ay) ^ 2)
     local ux, uy = (bx - ax) / len, (by - ay) / len
     local plan = { candidates = {} }
@@ -317,6 +318,13 @@ function Roam.plan_path(area, ax, ay, bx, by, body)
         local entry = { points = pts, cost = ok and path_cost(area, pts) or math.huge, ok = ok, detours = #c.detours }
         plan.candidates[#plan.candidates + 1] = entry
         if ok and (not plan.chosen or entry.cost < plan.chosen.cost) then plan.chosen = entry end
+    end
+    if plan.chosen and rand and PLAN.TIE >= 0 then
+        local tied = {}
+        for _, e in ipairs(plan.candidates) do
+            if e.ok and e.cost <= plan.chosen.cost * (1 + PLAN.TIE) then tied[#tied + 1] = e end
+        end
+        if #tied > 1 then plan.chosen = tied[math.min(#tied, math.floor(rand() * #tied) + 1)] end
     end
     if not plan.chosen then
         error(string.format("buddy-roam: no path for a %.2f yd body from (%.1f, %.1f) to (%.1f, %.1f): every candidate (%d bows) met an obstacle it could not bulge past within %d yd in %d detours", body, ax, ay, bx, by, #PLAN.BOWS, PLAN.MAX_SIDE, PLAN.MAX_DETOUR))
@@ -503,12 +511,12 @@ local function pick_waypoint(s, b, rand)
             local body = b.body or s.body
             if body > 0 then
                 if b.via then
-                    local leg1 = Roam.plan_path(s.area, b.x, b.y, b.via.x, b.via.y, body)
-                    local leg2, plan = Roam.plan_path(s.area, b.via.x, b.via.y, best.x, best.y, body)
+                    local leg1 = Roam.plan_path(s.area, b.x, b.y, b.via.x, b.via.y, body, rand)
+                    local leg2, plan = Roam.plan_path(s.area, b.via.x, b.via.y, best.x, best.y, body, rand)
                     for i = 2, #leg2 do leg1[#leg1 + 1] = leg2[i] end
                     b.path, b.plan = leg1, plan
                 else
-                    b.path, b.plan = Roam.plan_path(s.area, b.x, b.y, best.x, best.y, body)
+                    b.path, b.plan = Roam.plan_path(s.area, b.x, b.y, best.x, best.y, body, rand)
                 end
                 b.path_i = 2
             end

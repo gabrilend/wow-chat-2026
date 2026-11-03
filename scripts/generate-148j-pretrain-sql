@@ -17,8 +17,8 @@ require_mysql_running() {
         echo "       Start MySQL first: ${DIR}/scripts/start-mysql" >&2
         exit 1
     fi
-    if ! "${MYSQL_BIN}" --no-defaults --socket="${MYSQL_SOCKET}" \
-        -u ritz -pmenardi "${SUBSTRATE_DB}" \
+    if ! "${MYSQL_BIN}" "--defaults-file=${DIR}/mysql/conf/client.cnf" --socket="${MYSQL_SOCKET}" \
+        "${SUBSTRATE_DB}" \
         -e "SELECT 1;" >/dev/null 2>&1; then
         echo "ERROR: cannot read ${SUBSTRATE_DB} as user ritz" >&2
         exit 1
@@ -26,8 +26,8 @@ require_mysql_running() {
 }
 
 count_pairs() {
-    "${MYSQL_BIN}" --no-defaults --socket="${MYSQL_SOCKET}" \
-        -u ritz -pmenardi "${SUBSTRATE_DB}" -N -e "
+    "${MYSQL_BIN}" "--defaults-file=${DIR}/mysql/conf/client.cnf" --socket="${MYSQL_SOCKET}" \
+        "${SUBSTRATE_DB}" -N -e "
         SELECT COUNT(DISTINCT t.Requirement, ts.SpellId)
         FROM trainer t
         JOIN trainer_spell ts ON ts.TrainerId = t.Id
@@ -91,8 +91,8 @@ HEADER_END
 }
 
 emit_inserts() {
-    "${MYSQL_BIN}" --no-defaults --socket="${MYSQL_SOCKET}" \
-        -u ritz -pmenardi "${SUBSTRATE_DB}" -N -e "
+    "${MYSQL_BIN}" "--defaults-file=${DIR}/mysql/conf/client.cnf" --socket="${MYSQL_SOCKET}" \
+        "${SUBSTRATE_DB}" -N -e "
         SELECT CONCAT(
             'INSERT INTO playercreateinfo_spell_custom (racemask, classmask, Spell, Note) VALUES (0, ',
             (1 << (cs.class_id - 1)), ', ', cs.spell_id,

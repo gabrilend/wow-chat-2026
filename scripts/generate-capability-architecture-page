@@ -1,0 +1,255 @@
+#!/usr/bin/env luajit
+
+local DIR, FRAGMENT = "/mnt/kaun/wow-chat-2026", nil
+local i = 1
+while i <= #arg do
+    local a = arg[i]
+    if a == "--help" then
+        print("generate-capability-architecture-page [PROJECT_DIR] [--fragment PATH]: writes docs/HTML/capability-architecture.html")
+        print("  from docs/capability-architecture.md; --fragment PATH also writes the page without its skeleton (for an artifact).")
+        os.exit(0)
+    elseif a == "--fragment" then FRAGMENT = arg[i + 1]; i = i + 2
+    elseif a:sub(1, 2) == "--" then io.stderr:write("generate-capability-architecture-page: unknown option " .. a .. "\n"); os.exit(1)
+    else DIR = a; i = i + 1 end
+end
+local SRC = DIR .. "/docs/capability-architecture.md"
+local OUT = DIR .. "/docs/HTML/capability-architecture.html"
+
+local f = io.open(SRC)
+if not f then io.stderr:write("generate-capability-architecture-page: cannot read " .. SRC .. "\n"); os.exit(1) end
+local md = f:read("*a"); f:close()
+
+local function esc(s) return (s:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")) end
+local function inline(s)
+    local parts, pos = {}, 1
+    while true do
+        local a, b, code = s:find("`([^`]+)`", pos)
+        local before = s:sub(pos, (a or #s + 1) - 1)
+        before = esc(before)
+        before = before:gsub("%*%*(.-)%*%*", "<strong>%1</strong>")
+        before = before:gsub("%[([^%]]+)%]%(([^%)]+)%)", function(text, href)
+            if href:match("^https?://") then return '<a href="' .. href .. '">' .. text .. "</a>" end
+            return '<span class="file">' .. text .. "</span>"
+        end)
+        parts[#parts + 1] = before
+        if not a then break end
+        parts[#parts + 1] = "<code>" .. esc(code) .. "</code>"
+        pos = b + 1
+    end
+    return table.concat(parts)
+end
+local function slug(s) return (s:lower():gsub("<[^>]+>", ""):gsub("[^%w]+", "-"):gsub("^%-+", ""):gsub("%-+$", "")) end
+
+local lines = {}
+for line in (md .. "\n"):gmatch("([^\n]*)\n") do lines[#lines + 1] = line end
+local body, toc = {}, {}
+local function emit(s) body[#body + 1] = s end
+local n = #lines
+local k = 1
+local function list(k0, indent)
+    local first = lines[k0]:sub(indent + 1)
+    local ordered = first:match("^%d+%.%s") ~= nil
+    emit(ordered and "<ol>" or "<ul>")
+    local k = k0
+    while k <= n do
+        local line = lines[k]
+        local ind = #(line:match("^(%s*)"))
+        local rest = line:sub(ind + 1)
+        local marker = rest:match("^%- ") or rest:match("^%d+%.%s")
+        if line:match("^%s*$") then
+            local nx = lines[k + 1] or ""
+            local nind = #(nx:match("^(%s*)"))
+            local nrest = nx:sub(nind + 1)
+            if nind > indent or (nind == indent and (nrest:match("^%- ") or nrest:match("^%d+%.%s"))) then k = k + 1 else break end
+        elseif ind == indent and marker then
+            local text = rest:gsub("^%- ", ""):gsub("^%d+%.%s+", "")
+            local j = k + 1
+            while j <= n do
+                local l2 = lines[j]
+                local i2 = #(l2:match("^(%s*)"))
+                local r2 = l2:sub(i2 + 1)
+                if l2:match("^%s*$") or i2 <= indent or r2:match("^%- ") or r2:match("^%d+%.%s") then break end
+                text = text .. " " .. r2
+                j = j + 1
+            end
+            emit("<li>" .. inline(text))
+            while true do
+                local p = j
+                while p <= n and lines[p]:match("^%s*$") do p = p + 1 end
+                local lp = lines[p] or ""
+                local ip = #(lp:match("^(%s*)"))
+                local rp = lp:sub(ip + 1)
+                if p > n or ip <= indent then break end
+                if rp:match("^%- ") or rp:match("^%d+%.%s") then
+                    j = list(p, ip)
+                else
+                    local para = {}
+                    while p <= n and not lines[p]:match("^%s*$") and #(lines[p]:match("^(%s*)")) > indent do para[#para + 1] = (lines[p]:gsub("^%s+", "")); p = p + 1 end
+                    emit("<p>" .. inline(table.concat(para, " ")) .. "</p>")
+                    j = p
+                end
+            end
+            emit("</li>")
+            k = j
+        else
+            break
+        end
+    end
+    emit(ordered and "</ol>" or "</ul>")
+    return k
+end
+while k <= n do
+    local line = lines[k]
+    local h, title = line:match("^(#+)%s+(.+)$")
+    if h then
+        local level = #h
+        local id = slug(title)
+        if level == 1 then emit('<h1 id="' .. id .. '">' .. inline(title) .. "</h1>")
+        else
+            emit(("<h%d id=\"%s\">%s</h%d>"):format(level, id, inline(title), level))
+            toc[#toc + 1] = { level = level, id = id, title = inline(title) }
+        end
+        k = k + 1
+    elseif line:match("^|") then
+        local rows = {}
+        while k <= n and lines[k]:match("^|") do rows[#rows + 1] = lines[k]; k = k + 1 end
+        local function cells(r) local t = {} for c in r:gsub("^|", ""):gsub("|%s*$", ""):gmatch("([^|]*)|?") do t[#t + 1] = c:gsub("^%s+", ""):gsub("%s+$", "") end if t[#t] == "" then t[#t] = nil end return t end
+        local head = cells(rows[1])
+        local align = {}
+        for j, c in ipairs(cells(rows[2] or "")) do align[j] = c:match(":$") and "num" or "" end
+        emit('<div class="table"><table><thead><tr>')
+        for j, c in ipairs(head) do emit("<th" .. (align[j] == "num" and ' class="num"' or "") .. ">" .. inline(c) .. "</th>") end
+        emit("</tr></thead><tbody>")
+        for r = 3, #rows do
+            emit("<tr>")
+            for j, c in ipairs(cells(rows[r])) do emit("<td" .. (align[j] == "num" and ' class="num"' or "") .. ">" .. inline(c) .. "</td>") end
+            emit("</tr>")
+        end
+        emit("</tbody></table></div>")
+    elseif line:match("^%s*%- ") or line:match("^%s*%d+%.%s") then
+        k = list(k, #(line:match("^(%s*)")))
+    elseif line:match("^%s*$") then
+        k = k + 1
+    else
+        local para = {}
+        while k <= n and not lines[k]:match("^%s*$") and not lines[k]:match("^#") and not lines[k]:match("^|") and not lines[k]:match("^%s*%- ") and not lines[k]:match("^%s*%d+%.%s") do
+            para[#para + 1] = lines[k]; k = k + 1
+        end
+        emit("<p>" .. inline(table.concat(para, " ")) .. "</p>")
+    end
+end
+
+local RINGS = { "Ground", "Knowledge", "Rules", "Minds", "Bodies", "Views", "Operations" }
+local svg = { '<svg class="rings" viewBox="0 0 640 400" role="img" aria-label="Seven rings from ground at the centre to operations at the edge, with the tests drawn as dashed seams between every two rings">' }
+local cx, cy = 200, 200
+for r = #RINGS, 1, -1 do
+    local radius = 26 + r * 24
+    svg[#svg + 1] = ('<circle cx="%d" cy="%d" r="%d" class="ring r%d"/>'):format(cx, cy, radius, r)
+end
+for r = 1, #RINGS do
+    local radius = 26 + r * 24
+    svg[#svg + 1] = ('<circle cx="%d" cy="%d" r="%d" class="seam"/>'):format(cx, cy, radius)
+end
+for r = 1, #RINGS do
+    local y = cy - (26 + r * 24) + 15
+    svg[#svg + 1] = ('<text x="%d" y="%d" class="ring-label">%s</text>'):format(cx, y, RINGS[r])
+end
+svg[#svg + 1] = ('<text x="%d" y="%d" class="core-label">][tests][</text>'):format(cx, cy + 5)
+svg[#svg + 1] = '<line x1="400" y1="150" x2="440" y2="150" class="seam"/>'
+svg[#svg + 1] = '<text x="450" y="155" class="key">the tests, in every seam</text>'
+svg[#svg + 1] = '<text x="400" y="190" class="key">Each ring uses the one</text>'
+svg[#svg + 1] = '<text x="400" y="210" class="key">inside it, and never</text>'
+svg[#svg + 1] = '<text x="400" y="230" class="key">overrides it.</text>'
+svg[#svg + 1] = "</svg>"
+
+local navItems = {}
+for _, t in ipairs(toc) do
+    navItems[#navItems + 1] = ('<a href="#%s" class="l%d">%s</a>'):format(t.id, t.level, t.title:gsub("<[^>]+>", ""))
+end
+local style = [[
+<title>Capability Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* layout: a contents rail on the left, one reading column, wide tables scroll in place */
+  :root {
+    --bg: #f3f4f6; --panel: #ffffff; --ink: #1c2127; --dim: #5d6670; --line: #d6dae0;
+    --accent: #8a6a00; --accent-soft: #f1e6bd; --seam: #8a6a00;
+    --ring1: #e7e1d3; --ring2: #e3e7da; --ring3: #dfe5e9; --ring4: #e6dfe9; --ring5: #e9e0dc; --ring6: #dde6e4; --ring7: #e4e4e4;
+    --display: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+    --body: "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #121418; --panel: #1a1d22; --ink: #e6e6e3; --dim: #9aa0a6; --line: #2c3138;
+    --accent: #e8c547; --accent-soft: #3a3320; --seam: #e8c547;
+    --ring1: #2a2620; --ring2: #232920; --ring3: #1f262b; --ring4: #29222c; --ring5: #2c2421; --ring6: #1f2a28; --ring7: #26272a;
+    color-scheme: dark } }
+  :root[data-theme="dark"] {
+    --bg: #121418; --panel: #1a1d22; --ink: #e6e6e3; --dim: #9aa0a6; --line: #2c3138;
+    --accent: #e8c547; --accent-soft: #3a3320; --seam: #e8c547;
+    --ring1: #2a2620; --ring2: #232920; --ring3: #1f262b; --ring4: #29222c; --ring5: #2c2421; --ring6: #1f2a28; --ring7: #26272a;
+    color-scheme: dark }
+  body { background: var(--bg); color: var(--ink); font: 16px/1.6 var(--body); margin: 0; }
+  .wrap { display: grid; grid-template-columns: 15rem minmax(0, 1fr); gap: 2.5rem; max-width: 76rem; margin: 0 auto; padding-inline: 16px; padding-block: 1.5rem 4rem; }
+  nav { position: sticky; top: env(safe-area-inset-top, 0px); align-self: start; max-height: 100vh; overflow-y: auto; padding-block: 1rem; }
+  nav .eyebrow { font: 600 0.72rem/1 var(--display); letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); margin-bottom: 0.75rem; }
+  nav a { display: block; color: var(--dim); text-decoration: none; font-size: 0.86rem; line-height: 1.35; padding-block: 0.28rem; border-left: 2px solid transparent; padding-left: 0.6rem; }
+  nav a.l3 { padding-left: 1.4rem; font-size: 0.8rem; }
+  nav a:hover, nav a:focus-visible { color: var(--ink); border-left-color: var(--accent); outline: none; }
+  main { min-width: 0; max-width: 46rem; }
+  h1 { font: 700 clamp(2rem, 4.5vw, 2.9rem)/1.05 var(--display); letter-spacing: -0.01em; text-wrap: balance; margin: 0.5rem 0 1rem; }
+  h2 { font: 600 1.6rem/1.15 var(--display); text-wrap: balance; margin: 3rem 0 0.75rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+  h3 { font: 600 1.2rem/1.2 var(--display); letter-spacing: 0.02em; margin: 2rem 0 0.5rem; color: var(--accent); }
+  p, li { max-width: 65ch; }
+  ul, ol { padding-left: 1.3rem; }
+  li { margin-block: 0.35rem; }
+  li > ul, li > ol { margin-block: 0.25rem; }
+  strong { font-weight: 600; }
+  code, .file { font: 500 0.84em var(--mono); background: var(--accent-soft); color: var(--ink); padding: 0.05em 0.35em; border-radius: 3px; overflow-wrap: anywhere; }
+  a { color: var(--accent); }
+  .table { overflow-x: auto; margin-block: 1rem; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; font-size: 0.88rem; line-height: 1.4; }
+  th, td { text-align: left; vertical-align: top; padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--line); }
+  th { font: 600 0.78rem/1.2 var(--display); letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); background: var(--bg); position: sticky; top: 0; }
+  tr:last-child td { border-bottom: none; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td:first-child { font-weight: 600; min-width: 9rem; }
+  figure { margin: 1.5rem 0 2rem; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+  figcaption { font-size: 0.85rem; color: var(--dim); margin-top: 0.5rem; }
+  .rings { width: 100%; max-width: 40rem; height: auto; display: block; }
+  .ring { stroke: var(--line); stroke-width: 1; }
+  .r1 { fill: var(--ring1) } .r2 { fill: var(--ring2) } .r3 { fill: var(--ring3) } .r4 { fill: var(--ring4) }
+  .r5 { fill: var(--ring5) } .r6 { fill: var(--ring6) } .r7 { fill: var(--ring7) }
+  .seam { fill: none; stroke: var(--seam); stroke-width: 1.5; stroke-dasharray: 4 4; }
+  .ring-label { font: 600 12px var(--display); fill: var(--ink); text-anchor: middle; letter-spacing: 0.06em; text-transform: uppercase; }
+  .core-label { font: 500 13px var(--mono); fill: var(--accent); text-anchor: middle; }
+  .key { font: 13px var(--body); fill: var(--dim); }
+  .source { font-size: 0.8rem; color: var(--dim); margin-top: 3rem; }
+  @media (max-width: 760px) {
+    .wrap { grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }
+    nav { position: static; max-height: none; border-bottom: 1px solid var(--line); }
+    nav .links { display: flex; flex-wrap: wrap; gap: 0.2rem 0.9rem; }
+    nav a.l3 { display: none; }
+    nav a { border-left: none; padding-left: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+  html { scroll-behavior: smooth; }
+</style>
+]]
+local html = table.concat(body, "\n")
+local fig = '<figure>' .. table.concat(svg, "") .. '<figcaption>The seven rings, from the ground at the centre to operations at the edge. The dashed circles are the tests, standing in every seam.</figcaption></figure>'
+local at = html:find('<h2 id="the-core-rule', 1, true)
+if at then html = html:sub(1, at - 1) .. fig .. "\n" .. html:sub(at) else html = fig .. html end
+local content = style .. '<div class="wrap"><nav aria-label="Contents"><div class="eyebrow">Contents</div><div class="links">' ..
+    table.concat(navItems, "") .. '</div></nav><main>' .. html ..
+    '<p class="source">Made from docs/capability-architecture.md by scripts/generate-capability-architecture-page; change the document and run it again.</p></main></div>'
+local note = "<!-- docs/HTML/capability-architecture.html - GENERATED by scripts/generate-capability-architecture-page from docs/capability-architecture.md; don't edit, run it again. -->\n"
+local page = "<!doctype html>\n" .. note .. '<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n' ..
+    content:gsub("\n<style>", "\n<style>", 1):match("^(.-</style>)") .. "\n</head>\n<body>\n" .. content:match("</style>\n(.*)$") .. "\n</body>\n</html>\n"
+local o = assert(io.open(OUT, "w")); o:write(page); o:close()
+print(("generate-capability-architecture-page: %d bytes -> %s (%d sections in the contents)"):format(#page, OUT:sub(#DIR + 2), #toc))
+if FRAGMENT then
+    local fr = assert(io.open(FRAGMENT, "w")); fr:write(note:gsub("docs/HTML/capability%-architecture%.html", "the artifact's page"), content, "\n"); fr:close()
+    print("generate-capability-architecture-page: the page without its skeleton -> " .. FRAGMENT)
+end

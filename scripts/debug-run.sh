@@ -162,6 +162,8 @@ debug_run_binary() {
             -ex 'set pagination off' \
             -ex 'set confirm off' \
             -ex 'set print pretty on' \
+            -ex 'handle SIGINT nostop noprint pass' \
+            -ex 'handle SIGTERM nostop noprint pass' \
             -ex 'run' \
             -ex 'printf "\n=== CRASHING THREAD (full: frames + locals) ===\n"' \
             -ex 'backtrace full' \

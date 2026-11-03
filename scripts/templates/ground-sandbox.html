@@ -1,0 +1,2351 @@
+<!doctype html>
+<!-- GENERATED_NOTE -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ground Sandbox</title>
+<style>
+  :root { --panel: rgba(20, 22, 26, 0.86); --ink: #e8e8e8; --dim: #9aa0a6; --accent: #e8c547; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #111; color: var(--ink);
+               font: 13px/1.4 system-ui, sans-serif; }
+  canvas { display: block; width: 100vw; height: 100vh; cursor: crosshair; }
+  #panel { position: fixed; top: 10px; left: 10px; background: var(--panel); padding: 10px 12px; border-radius: 8px;
+           width: 340px; max-height: calc(100vh - 40px); overflow: auto; }
+  #panel h1 { font-size: 15px; margin: 0 0 6px; }
+  #panel label { display: flex; justify-content: space-between; align-items: center; margin: 4px 0; gap: 8px; }
+  #panel select, #panel input[type=range] { width: 140px; }
+  #panel button { margin: 3px 3px 0 0; padding: 4px 8px; border-radius: 5px; border: 1px solid #555; background: #2a2d33; color: var(--ink); cursor: pointer; }
+  #panel button:hover { border-color: var(--accent); }
+  #where { color: var(--accent); margin: 6px 0; min-height: 1.4em; }
+  #measures { font-variant-numeric: tabular-nums; white-space: pre; color: var(--dim); margin-top: 6px; }
+  #hint { position: fixed; bottom: 10px; left: 10px; color: var(--dim); background: var(--panel); padding: 4px 8px; border-radius: 6px; }
+  @media (max-width: 600px) { #panel { width: calc(100vw - 44px); } }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="panel">
+  <h1>Ground sandbox</h1>
+  <div><a href="battleground-sandbox.html" style="color: var(--accent)">the battleground sandbox</a> (Arathi Basin, two sides)</div>
+  <label>Continent <select id="continent"></select></label>
+  <label>Theme <select id="theme"></select></label>
+  <label>Bots <input id="bots" type="range" min="6" max="72" value="36"><span id="botsN">36</span></label>
+  <label>Speed <select id="speed"><option value="1">1x</option><option value="4" selected>4x</option><option value="10">10x</option></select></label>
+  <label>Turning <select id="turn"><option value="1">clockwise</option><option value="-1">anticlockwise</option><option value="0">each its own</option><option value="2">wanderers</option><option value="3">wedges</option></select></label>
+  <label>Formation <select id="form"><option value="none" selected>none</option><option value="line">line</option><option value="column">column</option><option value="wedge">wedge</option><option value="ring">ring</option><option value="square">square</option></select></label>
+  <label>Formed <input id="formN" type="range" min="3" max="16" value="8"><span id="formNN">8</span></label>
+  <label>Shape turns <input id="formTurn" type="checkbox" checked><span id="formTurnN">turning</span></label>
+  <label>Tails <input id="tail" type="range" min="0" max="120" value="40"><span id="tailN">40 s</span></label>
+  <label>Steepest <input id="slope" type="range" min="15" max="85" value="50"><span id="slopeN">50°</span></label>
+  <label>Stuck check <input id="check" type="range" min="0.25" max="3" step="0.25" value="1"><span id="checkN">1 s</span></label>
+  <label>Pathfinding <select id="way"><option value="orbit" selected>orbit</option><option value="flow">flow field</option><option value="astar">graph and A*</option><option value="potential">potential field</option><option value="learn">learn the map</option><option value="paint">painted map</option></select></label>
+  <label>Ground <select id="shade"><option value="2" selected>hills and blocks</option><option value="1">hills</option><option value="0">flat</option></select></label>
+  <label>Live players <input id="live" type="checkbox"><span id="liveN">off</span></label>
+  <div>
+    <button id="world">World</button>
+    <button id="scatter">Scatter bots</button>
+    <button id="close">Close up</button>
+    <button id="strip">Save a frame strip</button>
+  </div>
+  <div id="where"></div>
+  <div id="measures"></div>
+</div>
+<div id="hint">Click a zone to fly there. In a zone, click to move the player (white). Scroll to zoom, middle-drag to pan; zoom out for the world. Red ground is too steep; dark marks are trees, rocks and buildings.</div>
+<script>
+/*SANDBOX_DATA*/
+</script>
+<script>
+// {{{ the ground's files: one per zone, beside the page (issue 617e16c)
+// docs/HTML/ground-sandbox/zone-<map>-<zone>.js, written by
+// scripts/generate-ground-sandbox-data, each calls GROUND_LOADED with its
+// zone's packed heights and doodads; kept here by "map-zone" until used.
+// When the address names a zone, its file is written into the page while
+// the page is still being read, so it is there before the page counts as
+// loaded (a headless screenshot waits for that, and no longer).
+/*GROUND_DECODE*/
+/*PAINT_PATHS*/
+window.GROUND_FILES = {};
+function GROUND_LOADED(g) { GROUND_FILES[g.map + "-" + g.zone] = g; }
+// the continent's monsters (617e16g): monsters-<map>.js, by map
+window.MONSTER_FILES = {};
+function MONSTERS_LOADED(m) { MONSTER_FILES[m.map] = m; }
+(function () {
+  const Q = new URLSearchParams(location.hash.slice(1));
+  if (!Q.has("zone")) return;
+  const c = SANDBOX.continents[Q.has("continent") ? +Q.get("continent") : 0];
+  const z = c && c.zones.find(z => z.name === Q.get("zone"));
+  if (z) document.write(`<script src="ground-sandbox/zone-${c.map}-${z.zone}.js"><\/script><script src="ground-sandbox/monsters-${c.map}.js"><\/script>`);
+})();
+// }}}
+</script>
+<script>
+"use strict";
+// {{{ the page, in short
+// Data: window.SANDBOX (scripts/generate-fish-sandbox-data): continents,
+// their zones as grids of ~33-yard squares (rows north to south, columns
+// east to west of the game's Y), each zone's fences (where one kind of
+// monster spawns). Coordinates here are "screen yards": east right, south
+// down, sx = -y, sy = -x of the game's (x north, y west). Clockwise on the
+// screen is then an increasing angle (y grows down).
+// }}}
+
+const G = 533.3333, SQ = G / 16;                  // yards a grid, a square
+const cv = document.getElementById("c"), ctx = cv.getContext("2d");
+const $ = id => document.getElementById(id);
+
+// {{{ themes: ground tints (six, as 617e7), the outside, fences, bots, player
+const THEMES = {
+  "grey patchwork": { bg: "#686868", tints: tintsFrom([104,104,104], 0.90, 0.82, 9, 15), border: null,
+      fence: "rgba(232,197,71,0.55)", fenceOn: "#ffd400", fenceFill: "rgba(255,212,0,0.10)", bot: "#4ade80", player: "#ffffff", glow: 0 },
+  "parchment": { bg: "#d9c9a3", tints: ["#e9dcc0","#e3d3b0","#efe2c6","#ddcba5","#e6d6b6","#d4c196"], border: "rgba(80,60,30,0.35)",
+      fence: "rgba(150,105,20,0.55)", fenceOn: "#9b6a00", fenceFill: "rgba(180,130,20,0.12)", bot: "#2f6b2f", player: "#3b2a1a", glow: 0 },
+  "night sea": { bg: "#040b14", tints: ["#0b2236","#0e2a42","#09304a","#0c263f","#103550","#0a1f33"], border: "rgba(120,180,255,0.18)",
+      fence: "rgba(255,209,102,0.45)", fenceOn: "#ffd166", fenceFill: "rgba(255,209,102,0.08)", bot: "#9dff6b", player: "#ffffff", glow: 8 },
+  "ninja": { bg: "#000000", tints: ["#0d0d0d","#121212","#0b100b","#151515","#0f130f","#101010"], border: "rgba(57,255,20,0.22)",
+      fence: "rgba(255,230,0,0.45)", fenceOn: "#ffe600", fenceFill: "rgba(255,40,40,0.07)", bot: "#39ff14", player: "#ff2a2a", glow: 10 },
+};
+function tintsFrom(rgb, a, b, da, db) {                    // 617e7's: darker grey nudged toward r, g or b
+  const out = [];
+  for (const [k, d] of [[a, da], [b, db]]) for (let ch = 0; ch < 3; ch++) {
+    const v = rgb.map(c => c * k); v[ch] += d; out.push(`rgb(${v.map(Math.round).join(",")})`);
+  }
+  return out;
+}
+// }}}
+
+// {{{ the continent picture: one pixel a square, painted per theme
+let C = null;            // the continent in view: { data, X0, Y0, W, H, zoneAt, canvas }
+function buildContinent(i, themeName) {
+  const d = SANDBOX.continents[i], T = THEMES[themeName];
+  let X0 = 1e9, X1 = -1e9, Y0 = 1e9, Y1 = -1e9;
+  for (const z of d.zones) { X0 = Math.min(X0, z.X0); X1 = Math.max(X1, z.X1); Y0 = Math.min(Y0, z.Y0); Y1 = Math.max(Y1, z.Y1); }
+  const W = Y1 - Y0 + 1, H = X1 - X0 + 1;
+  const oc = document.createElement("canvas"); oc.width = W; oc.height = H;
+  const o = oc.getContext("2d"), img = o.createImageData(W, H);
+  const zoneAt = new Int16Array(W * H).fill(-1), subAt = new Int16Array(W * H).fill(-1);
+  const rgb = T.tints.map(css => css[0] === "#" ? hex(css) : css.match(/\d+/g).map(Number));   // "#rrggbb" or "rgb(r,g,b)"
+  d.zones.forEach((z, zi) => {
+    z.rows.forEach((row, r) => {
+      let c = 0;
+      for (const run of row.split(",")) {
+        const [v, n] = run.split("*").map(Number);
+        for (let k = 0; k < n; k++, c++) {
+          if (!v) continue;
+          const X = z.X0 + r, Y = z.Y1 - c;               // the square
+          const col = Y - Y0, rowp = X - X0, at = rowp * W + col;   // Y grows eastward: east right
+          zoneAt[at] = zi; subAt[at] = zi * 4096 + v;
+          const t = rgb[(z.subzones[v - 1].tint - 1) % rgb.length];
+          img.data.set([t[0], t[1], t[2], 255], at * 4);
+        }
+      }
+    });
+  });
+  o.putImageData(img, 0, 0);
+  if (T.border) {                                       // zone outlines
+    o.fillStyle = T.border;
+    for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
+      const z = zoneAt[r * W + c];
+      if (z >= 0 && ((c + 1 < W && zoneAt[r * W + c + 1] !== z) || (r + 1 < H && zoneAt[(r + 1) * W + c] !== z))) o.fillRect(c, r, 1, 1);
+    }
+  }
+  // subAt (617e16j): each square's sub-zone, as zone index x 4096 + the
+  // sub-zone's number in its zone (its name: zones[zi].subzones[v - 1])
+  C = { data: d, X0, Y0, Y1, W, H, zoneAt, subAt, canvas: oc };
+}
+function hex(h) { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+// game yards -> screen yards, and screen yards -> the continent picture's pixels
+const toScreen = (x, y) => [-y, -x];
+const pixOf = (sx, sy) => [16 * (32 + sx / G) - C.Y0, 16 * (32 + sy / G) - C.X0];   // col, row (fractional); square Y = 16 (32 - y/G), east right
+const yardsOf = (col, row) => [((col + C.Y0) / 16 - 32) * G, ((row + C.X0) / 16 - 32) * G];
+// }}}
+
+// {{{ the camera: centre (in picture pixels) and pixels per square, gliding
+const cam = { cx: 0, cy: 0, z: 1 }, camTo = { cx: 0, cy: 0, z: 1 };
+let glide = null;                                           // { from, to, t0, ms }
+function fit(c0, r0, c1, r1, margin) {
+  const w = cv.width, h = cv.height;
+  const z = Math.min(w / (c1 - c0 + 1), h / (r1 - r0 + 1)) * (margin || 0.9);
+  return { cx: (c0 + c1 + 1) / 2, cy: (r0 + r1 + 1) / 2, z };
+}
+function glideTo(t, ms) { glide = { from: { ...cam }, to: t, t0: performance.now(), ms: ms || 1400 }; }
+function worldFit() { return fit(0, 0, C.W - 1, C.H - 1, 0.95); }
+function zoneFit(zi) {
+  const z = C.data.zones[zi];
+  return fit(z.Y0 - C.Y0, z.X0 - C.X0, z.Y1 - C.Y0, z.X1 - C.X0, 0.85);
+}
+function fenceFit(f) {                                      // the fence and some ground round it
+  let c0 = 1e9, c1 = -1e9, r0 = 1e9, r1 = -1e9;
+  for (const [x, y] of f.poly) { const [c, r] = pixOf(x, y); c0 = Math.min(c0, c); c1 = Math.max(c1, c); r0 = Math.min(r0, r); r1 = Math.max(r1, r); }
+  const pad = Math.max(c1 - c0, r1 - r0) * 0.6;
+  return fit(c0 - pad, r0 - pad, c1 + pad - 1, r1 + pad - 1, 0.9);
+}
+function stepCamera(now) {
+  if (!glide) return;
+  const k = Math.min(1, (now - glide.t0) / glide.ms), e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+  const lz = Math.log(glide.from.z) + (Math.log(glide.to.z) - Math.log(glide.from.z)) * e;   // zoom glides in proportion
+  cam.z = Math.exp(lz);
+  cam.cx = glide.from.cx + (glide.to.cx - glide.from.cx) * e;
+  cam.cy = glide.from.cy + (glide.to.cy - glide.from.cy) * e;
+  if (k >= 1) glide = null;
+}
+const toCanvas = (col, row) => [(col - cam.cx) * cam.z + cv.width / 2, (row - cam.cy) * cam.z + cv.height / 2];
+const fromCanvas = (px, py) => [(px - cv.width / 2) / cam.z + cam.cx, (py - cv.height / 2) / cam.z + cam.cy];
+// }}}
+
+// {{{ the zone in play, its fences (in screen yards), the player, the bots
+let zoneIdx = -1, fences = [], active = -1;
+const player = { x: 0, y: 0, tx: 0, ty: 0, speed: 7 };       // screen yards; walks 7 yards a second
+let bots = [];
+function enterZone(zi) {
+  areaCache.clear(); inPlay = null; orbitSign = 1; lastEdgeMove = null;   // a new zone: its areas worked out afresh
+  known.clear();                                             // and its map of known open ground and walls (617e16h)
+  comboCache.clear();                                        // and its joined overlaps (617e16f)
+  zoneIdx = zi;
+  const z = C.data.zones[zi];
+  // its ground: here already (named in the address, so written in as the
+  // page was read), or fetched now and painted when it comes; a zone with
+  // no file goes on flat, and the panel says so
+  GROUND = groundFor(zi);
+  if (GROUND) paintGround();
+  else {
+    const s = document.createElement("script");
+    s.src = `ground-sandbox/zone-${C.data.map}-${z.zone}.js`;
+    s.onload = () => { if (zoneIdx === zi) { GROUND = groundFor(zi); paintGround(); mobsUnder(); } };
+    document.head.appendChild(s);
+  }
+  // its monsters (617e16g): the continent's file, here already or fetched
+  mobs = [];
+  if (MONSTER_FILES[C.data.map]) mobsFor(zi);
+  else {
+    const s = document.createElement("script");
+    s.src = `ground-sandbox/monsters-${C.data.map}.js`;
+    s.onload = () => { if (zoneIdx === zi) mobsFor(zi); };
+    document.head.appendChild(s);
+  }
+  fences = z.fences.map(f => {
+    const poly = [];
+    for (let i = 0; i < f.poly.length; i += 2) poly.push(toScreen(f.poly[i], f.poly[i + 1]));
+    return prepareFence({ name: f.name, spawns: f.spawns, poly });
+  });
+  // the player starts in the largest fence's middle (or the zone's middle)
+  const f0 = fences[0];
+  const [mc, mr] = [((z.Y0 + z.Y1 + 1) / 2 - C.Y0), ((z.X0 + z.X1) / 2 - C.X0)];
+  const mid = f0 ? [f0.cx, f0.cy] : yardsOf(mc, mr);
+  player.x = player.tx = mid[0]; player.y = player.ty = mid[1];
+  spawnBots(+$("bots").value, player.x, player.y, 25);
+  glideTo(zoneFit(zi));
+  $("where").textContent = z.name + " — " + fences.length + " fences";
+}
+function prepareFence(f) {
+  // area centroid, area, and the distance to the fence along 72 bearings
+  let a = 0, cx = 0, cy = 0;
+  const p = f.poly;
+  for (let i = 0; i < p.length; i++) {
+    const [x0, y0] = p[i], [x1, y1] = p[(i + 1) % p.length], k = x0 * y1 - x1 * y0;
+    a += k; cx += (x0 + x1) * k; cy += (y0 + y1) * k;
+  }
+  a /= 2; cx /= (6 * a); cy /= (6 * a);
+  f.area = Math.abs(a); f.cx = cx; f.cy = cy;
+  f.R = new Float32Array(72);
+  for (let b = 0; b < 72; b++) f.R[b] = rayToPoly(cx, cy, b * Math.PI / 36, p);
+  return f;
+}
+function rayToPoly(cx, cy, th, p) {
+  const dx = Math.cos(th), dy = Math.sin(th);
+  let best = 0;
+  for (let i = 0; i < p.length; i++) {
+    const [x0, y0] = p[i], [x1, y1] = p[(i + 1) % p.length];
+    const ex = x1 - x0, ey = y1 - y0, den = dx * ey - dy * ex;
+    if (Math.abs(den) < 1e-9) continue;
+    const t = ((x0 - cx) * ey - (y0 - cy) * ex) / den, u = ((x0 - cx) * dy - (y0 - cy) * dx) / den;
+    if (t > 0 && u >= 0 && u <= 1) best = Math.max(best, t);
+  }
+  return best;
+}
+function edgeAt(f, th) {                                    // the fence's distance along bearing th, interpolated
+  const b = ((th / (Math.PI / 36)) % 72 + 72) % 72, i = Math.floor(b), k = b - i;
+  return f.R[i] * (1 - k) + f.R[(i + 1) % 72] * k;
+}
+function inside(f, x, y) {
+  if (f.contains) return f.contains(x, y);                    // a walkable part (617e16f): its own points
+  let c = false;
+  for (let i = 0, j = f.poly.length - 1; i < f.poly.length; j = i++) {
+    const [xi, yi] = f.poly[i], [xj, yj] = f.poly[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c;
+  }
+  return c;
+}
+function spawnBots(n, x, y, r) {
+  bots = [];
+  patrol.x = x; patrol.y = y; patrol.ang = null;             // the formation's anchor starts where the bots do
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * 6.283, d = Math.sqrt(Math.random()) * r;
+    bots.push({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, vx: 0, vy: 0, depth: 0.2 + Math.random() * 0.7,
+                depthTo: Math.random(), nextPick: Math.random() * 8, own: Math.random() < 0.5 ? 1 : -1, tail: [], ang: [] });
+  }
+}
+// }}}
+
+// {{{ the ground: heights, steepness, doodads (issue 617e16c)
+// GROUND, for the zone in play (null until its file has come, or when it
+// has none), all in screen yards:
+//   sx0, sy0, step, cols, rows: the height points' grid (point (r, c) at
+//     sx0 + c*step, sy0 + r*step), the map files' own 4.17-yard spacing;
+//   h: Int16Array, heights in tenths of a yard, -32768 no ground;
+//   slope: Float32Array, each point's steepness in degrees (90: no ground
+//     here or beside it), from the heights on either side;
+//   steep: Uint8Array, 1 where steeper than the slider's limit;
+//   rects: Float32Array, 4 a doodad (sx0, sy0, sx1, sy1), its footprint
+//     grown by BODY_R so a bot's middle keeps its body clear;
+//   buckets: Map of "i,j" (BUCKET-yard cells) to the doodads touching it;
+//   canvas: the shaded picture, one pixel a point, redrawn when the
+//     slider or the shading moves.
+const NO_GROUND = -32768, BODY_R = 0.6, BUCKET = 8;
+let GROUND = null;
+function groundFor(zi) {
+  const z = C.data.zones[zi], key = C.data.map + "-" + z.zone, g = GROUND_FILES[key];
+  if (!g) return null;
+  if (g.ready) return g;
+  g.h = decodeHeights(g.heights, g.cols * g.rows);
+  delete g.heights;
+  const { cols, rows, step, h } = g, sl = new Float32Array(cols * rows);
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    const k = r * cols + c;
+    // a point at the edge, or beside one with no ground, counts as a cliff
+    if (r === 0 || c === 0 || r === rows - 1 || c === cols - 1) { sl[k] = 90; continue; }
+    const e = h[k + 1], w = h[k - 1], s = h[k + cols], n = h[k - cols];
+    if (h[k] === NO_GROUND || e === NO_GROUND || w === NO_GROUND || s === NO_GROUND || n === NO_GROUND) { sl[k] = 90; continue; }
+    const gx = (e - w) / (20 * step), gy = (s - n) / (20 * step);   // tenths of a yard over two steps
+    sl[k] = Math.atan(Math.hypot(gx, gy)) * 180 / Math.PI;
+  }
+  g.slope = sl; g.steep = new Uint8Array(cols * rows);
+  const nd = g.doodads.length / 8;
+  g.rects = new Float32Array(nd * 4); g.buckets = new Map();
+  for (let i = 0; i < nd; i++) {
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    for (let k = 0; k < 8; k += 2) { const x = g.doodads[i * 8 + k], y = g.doodads[i * 8 + k + 1]; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+    x0 -= BODY_R; y0 -= BODY_R; x1 += BODY_R; y1 += BODY_R;
+    g.rects.set([x0, y0, x1, y1], i * 4);
+    for (let bi = Math.floor(x0 / BUCKET); bi <= Math.floor(x1 / BUCKET); bi++)
+      for (let bj = Math.floor(y0 / BUCKET); bj <= Math.floor(y1 / BUCKET); bj++) {
+        const key2 = bi + "," + bj; if (!g.buckets.has(key2)) g.buckets.set(key2, []); g.buckets.get(key2).push(i);
+      }
+  }
+  g.canvas = document.createElement("canvas"); g.canvas.width = cols; g.canvas.height = rows;
+  g.knownDoodad = new Uint8Array(nd); g.knownDoodads = 0;     // which doodads the bots have been shown (617e16h)
+  g.ready = true;
+  return g;
+}
+// The steep mask for the slider's limit, and the shaded picture: hill
+// shading as a dark veil (light from the north-west, above), steep ground in
+// the theme's warning red, doodads drawn separately (they are smaller than
+// a point).
+function paintGround() {
+  const g = GROUND; if (!g) return;
+  const limit = +$("slope").value, mode = +$("shade").value, { cols, rows, step, h, slope, steep } = g;
+  const o = g.canvas.getContext("2d"), img = o.createImageData(cols, rows), px = img.data;
+  const lx = -0.5, ly = -0.5, lz = 0.707;                          // toward the light: north-west, up
+  let open = 0;
+  for (let k = 0; k < cols * rows; k++) {
+    const st = slope[k] > limit ? 1 : 0;
+    steep[k] = st; if (!st) open++;
+    if (h[k] === NO_GROUND) continue;
+    if (st && mode === 2) { px.set([220, 40, 40, 150], k * 4); continue; }
+    if (mode === 0) continue;
+    const c = k % cols, r = (k - c) / cols;
+    if (c === 0 || r === 0 || c === cols - 1 || r === rows - 1) continue;
+    const gx = (h[k + 1] - h[k - 1]) / (20 * step), gy = (h[k + cols] - h[k - cols]) / (20 * step);
+    const nl = Math.hypot(gx, gy, 1), lit = (-gx * lx - gy * ly + lz) / nl;   // the surface's normal is (-gx, -gy, 1)
+    px.set([0, 0, 0, Math.max(0, Math.min(200, (1 - lit) * 230))], k * 4);
+  }
+  o.putImageData(img, 0, 0);
+  g.openShare = open / (cols * rows);
+  // The zone's level (617e16d): the average height of its walkable ground,
+  // the points inside the zone's own squares (the zone data leaves ocean
+  // squares out) and not steeper than the limit; every other point, a
+  // neighbouring zone's in the box, is not the zone's. Every second point
+  // each way is enough for an average.
+  let sum = 0, cnt = 0;
+  for (let r = 1; r < rows - 1; r += 2) for (let c = 1; c < cols - 1; c += 2) {
+    const k = r * cols + c;
+    if (steep[k] || h[k] === NO_GROUND) continue;
+    const [pc, pr] = pixOf(g.sx0 + c * step, g.sy0 + r * step);
+    const col = Math.floor(pc), row = Math.floor(pr);
+    if (col < 0 || row < 0 || col >= C.W || row >= C.H || C.zoneAt[row * C.W + col] !== zoneIdx) continue;
+    sum += h[k] / 10; cnt++;
+  }
+  g.level = cnt ? sum / cnt : undefined;
+  fenceOpen = null;                                          // the fence's open share is counted again
+  if (inPlay && inPlay.paintMap) PaintPaths.setGround(inPlay.paintMap, paintKind(inPlay));   // steep by the new limit; the paint kept
+}
+// Whether a bot's middle may stand at (x, y): not on ground steeper than
+// the limit (the nearest height point's), not inside a doodad's grown
+// footprint. Off the zone's grid, nothing is known: open.
+// What the bots know and what the world holds (617e16h, the owner: "the
+// geometry disagreed with your movement resolution pathfinding duties
+// believed"): a bot steers by what it knows, the ground's steepness (as the
+// navigation mesh knows it) and what bots have learned (known walls,
+// buffers); the world holds that and the doodads too, and a step into one
+// is refused (the server pulling the client back). blocked() is the world;
+// steepAt() is the part of it a bot knows before it bumps into anything.
+// Doodads shown to the bots (617e16h): a doodad a bot has been refused by
+// is known to every bot from then on, by its whole footprint
+// (GROUND.knownDoodad, one flag a doodad). knownDoodadAt: inside a known
+// one; revealAt: makes known every doodad whose footprint holds the point.
+function knownDoodadAt(x, y) {
+  const g = GROUND; if (!g) return false;
+  const list = g.buckets.get(Math.floor(x / BUCKET) + "," + Math.floor(y / BUCKET));
+  if (list) for (const i of list) {
+    if (!g.knownDoodad[i]) continue;
+    const q = i * 4;
+    if (x >= g.rects[q] && x <= g.rects[q + 2] && y >= g.rects[q + 1] && y <= g.rects[q + 3]) return true;
+  }
+  return false;
+}
+function revealAt(x, y) {
+  const g = GROUND; if (!g) return;
+  const list = g.buckets.get(Math.floor(x / BUCKET) + "," + Math.floor(y / BUCKET));
+  if (list) for (const i of list) {
+    const q = i * 4;
+    if (!g.knownDoodad[i] && x >= g.rects[q] && x <= g.rects[q + 2] && y >= g.rects[q + 1] && y <= g.rects[q + 3]) { g.knownDoodad[i] = 1; g.knownDoodads++; }
+  }
+}
+function steepAt(x, y) {
+  const g = GROUND; if (!g) return false;
+  const c = Math.round((x - g.sx0) / g.step), r = Math.round((y - g.sy0) / g.step);
+  if (c < 0 || r < 0 || c >= g.cols || r >= g.rows) return false;
+  return g.steep[r * g.cols + c] === 1;
+}
+function blocked(x, y) {
+  const g = GROUND; if (!g) return false;
+  const c = Math.round((x - g.sx0) / g.step), r = Math.round((y - g.sy0) / g.step);
+  if (c < 0 || r < 0 || c >= g.cols || r >= g.rows) return false;
+  if (g.steep[r * g.cols + c]) return true;
+  const list = g.buckets.get(Math.floor(x / BUCKET) + "," + Math.floor(y / BUCKET));
+  if (list) for (const i of list) {
+    const q = i * 4;
+    if (x >= g.rects[q] && x <= g.rects[q + 2] && y >= g.rects[q + 1] && y <= g.rects[q + 3]) return true;
+  }
+  return false;
+}
+// The fence's share of open ground (5-yard cells whose middle isn't
+// blocked), counted once per fence and limit.
+let fenceOpen = null;
+function openShareOf(f) {
+  if (fenceOpen && fenceOpen.f === f) return fenceOpen.share;
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9, all = 0, open = 0;
+  for (const [x, y] of f.poly) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  for (let x = x0; x <= x1; x += 5) for (let y = y0; y <= y1; y += 5) {
+    if (!inside(f, x, y)) continue;
+    all++; if (!blocked(x, y)) open++;
+  }
+  fenceOpen = { f, share: all ? open / all : 1 };
+  return fenceOpen.share;
+}
+// }}}
+
+// {{{ areas: a fence's name, its walkable parts (issue 617e16f)
+// An area is every fence of one monster in the zone (merged by their
+// shared name), less the ground steeper than the limit, on the ground's
+// own points; its walkable points are gathered into connected parts
+// (four neighbours), and parts smaller than MIN_PART points dropped. Each
+// part is shaped like a fence for the flock: name, spawns, cx/cy (its
+// points' middle), R (its reach along 72 bearings: the farthest of its
+// points along each), area (square yards), poly (its bounding box, for
+// the camera), contains(x, y) (the point nearest is one of its own).
+// Worked out once per name and limit; the zone or the limit changing
+// starts again. inPlay: the part the player stands in (or, standing on
+// none of its points, the nearest); null outside every fence.
+const MIN_PART = 12;
+const areaCache = new Map();
+let inPlay = null;
+// The sub-zone fence (617e16j): the sub-zone a point is in (zone index x
+// 4096 + its number), -1 off every square.
+function subOf(x, y) {
+  const [pc, pr] = pixOf(x, y), col = Math.floor(pc), row = Math.floor(pr);
+  return col < 0 || row < 0 || col >= C.W || row >= C.H ? -1 : C.subAt[row * C.W + col];
+}
+function subName(s) { return s < 0 ? "-" : C.data.zones[Math.floor(s / 4096)].subzones[s % 4096 - 1].name; }
+// The player's monster cluster (617e16j, the owner's answer: "your monster
+// cluster"): the fences of monster `name` the player stands in, and every
+// fence of the same monster touching one of them (a corner of either
+// inside the other), and so on outward; no longer every fence of that
+// monster in the zone, which made areas as big as the zone. Returns the
+// fences (outlines, not parts).
+function clusterOf(name) {
+  const same = fences.filter(f => f.name === name && !f.contains);
+  const touch = (a, b) => a.poly.some(([x, y]) => inside(b, x, y)) || b.poly.some(([x, y]) => inside(a, x, y));
+  const group = same.filter(f => inside(f, player.x, player.y));
+  for (let grew = true; grew; ) {
+    grew = false;
+    for (const f of same) if (!group.includes(f) && group.some(gf => touch(gf, f))) { group.push(f); grew = true; }
+  }
+  return group;
+}
+// An area per monster cluster and sub-zone: a point counts only if it is
+// in one of the cluster's fences, walkable, and in sub-zone `sub` (the
+// player's: "anywhere in the sub-zone that all the monsters that you're in
+// the spawning area of can visit"). sub -1 (the player off every square):
+// no cut.
+function areaOf(name, sub) {
+  const group = clusterOf(name);
+  const g = GROUND, key = name + "|" + group.map(f => fences.indexOf(f)).sort((a, b) => a - b).join(",") + "|" + $("slope").value + "|" + sub;
+  if (areaCache.has(key)) return areaCache.get(key);
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+  for (const f of group) for (const [x, y] of f.poly) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  const st = g.step;
+  const c0 = Math.max(0, Math.floor((x0 - g.sx0) / st)), c1 = Math.min(g.cols - 1, Math.ceil((x1 - g.sx0) / st));
+  const r0 = Math.max(0, Math.floor((y0 - g.sy0) / st)), r1 = Math.min(g.rows - 1, Math.ceil((y1 - g.sy0) / st));
+  const w = c1 - c0 + 1, h = r1 - r0 + 1, walk = new Uint8Array(w * h), label = new Int32Array(w * h).fill(-1);
+  for (let r = 0; r < h; r++) for (let c = 0; c < w; c++) {
+    const k = (r0 + r) * g.cols + (c0 + c), x = g.sx0 + (c0 + c) * st, y = g.sy0 + (r0 + r) * st;
+    if (!g.steep[k] && g.h[k] !== NO_GROUND && (sub < 0 || subOf(x, y) === sub) && group.some(f => inside(f, x, y))) walk[r * w + c] = 1;
+  }
+  // connected parts, by flood from each unlabelled walkable point
+  const parts = [], stack = [];
+  for (let s = 0; s < w * h; s++) {
+    if (!walk[s] || label[s] >= 0) continue;
+    const id = parts.length, cells = [];
+    label[s] = id; stack.push(s);
+    while (stack.length) {
+      const q = stack.pop(), qc = q % w, qr = (q - qc) / w;
+      cells.push(q);
+      for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nc = qc + dc, nr = qr + dr;
+        if (nc < 0 || nr < 0 || nc >= w || nr >= h) continue;
+        const n = nr * w + nc;
+        if (walk[n] && label[n] < 0) { label[n] = id; stack.push(n); }
+      }
+    }
+    parts.push(cells);
+  }
+  const keep = [];
+  parts.forEach((cells, id) => {
+    if (cells.length < MIN_PART) { for (const q of cells) label[q] = -1; return; }
+    let sx = 0, sy = 0, px0 = 1e9, px1 = -1e9, py0 = 1e9, py1 = -1e9;
+    for (const q of cells) {
+      const x = g.sx0 + (c0 + q % w) * st, y = g.sy0 + (r0 + Math.floor(q / w)) * st;
+      sx += x; sy += y; px0 = Math.min(px0, x); px1 = Math.max(px1, x); py0 = Math.min(py0, y); py1 = Math.max(py1, y);
+    }
+    const p = { name, id, sub, spawns: group.reduce((a, f) => a + f.spawns, 0), cx: sx / cells.length, cy: sy / cells.length,
+                area: cells.length * st * st, size: cells.length, poly: [[px0, py0], [px1, py0], [px1, py1], [px0, py1]] };
+    p.contains = (x, y) => {
+      const c = Math.round((x - g.sx0) / st) - c0, r = Math.round((y - g.sy0) / st) - r0;
+      return c >= 0 && r >= 0 && c < w && r < h && label[r * w + c] === id;
+    };
+    p.R = new Float32Array(72);
+    for (let b = 0; b < 72; b++) {                           // the farthest of its points along each bearing
+      const dx = Math.cos(b * Math.PI / 36), dy = Math.sin(b * Math.PI / 36);
+      let far = 0;
+      for (let t = 0; t < 900; t += st / 2) if (p.contains(p.cx + dx * t, p.cy + dy * t)) far = t;
+      p.R[b] = Math.max(far, st);
+    }
+    keep.push(p);
+  });
+  keep.sort((a, b) => b.size - a.size);
+  keep.forEach((p, i) => { p.rank = i; p.of = keep.length; });
+  // the picture: the part in play filled, the others faint (painted per part in play)
+  const area = { name, parts: keep, c0, r0, w, h, label, canvas: document.createElement("canvas"), painted: -1 };
+  area.canvas.width = w; area.canvas.height = h;
+  areaCache.set(key, area);
+  return area;
+}
+function paintArea(area, part, T) {
+  if (area.painted === part.id) return;
+  const o = area.canvas.getContext("2d"), img = o.createImageData(area.w, area.h), px = img.data;
+  const on = hex(T.fenceOn.length === 7 ? T.fenceOn : "#ffd400");
+  for (let q = 0; q < area.w * area.h; q++) {
+    const id = area.label[q];
+    if (id < 0) continue;
+    px.set([on[0], on[1], on[2], id === part.id ? 55 : 22], q * 4);
+  }
+  o.putImageData(img, 0, 0);
+  area.painted = part.id;
+}
+// The part in play from the player's place: in the fence (polygon) holding
+// the player, the area of its name, the part whose points the player
+// stands on, or the nearest part's middle.
+function partFor(f) {
+  if (!f || !GROUND) return f;
+  const area = areaOf(f.name, subOf(player.x, player.y));    // cut to the player's sub-zone (617e16j)
+  if (!area.parts.length) return f;                         // nothing walkable: the outline as it was
+  let best = area.parts.find(p => p.contains(player.x, player.y));
+  if (!best) best = area.parts.reduce((a, p) => Math.hypot(p.cx - player.x, p.cy - player.y) < Math.hypot(a.cx - player.x, a.cy - player.y) ? p : a);
+  best.areaRef = area;
+  best.names = [best.name];
+  return best;
+}
+// {{{ peninsulas (issue 617e16i)
+// A peninsula is walkable ground joined to the rest of its part only
+// through a narrow way: a room behind a door, a pocket up a gully. Found
+// on the area's own grid (the ground's points): the part's points shrunk
+// by ERODE points each way (a way narrower than about twice that is cut),
+// the pieces the shrunk ground falls into, each grown back over the part's
+// points (every point to the piece that reaches it first). The largest
+// piece is the main body; every other piece of at least PEN_MIN points is
+// a peninsula; its points touching the main body's are its door. Worked
+// out once per part. Each peninsula: { cells (area grid indices), size,
+// cx, cy (middle), dx, dy (its door's middle), seen (Uint8Array over its
+// cells), seenN, explorers (bots in it now) }; the part's penOf: area grid
+// index -> peninsula number, or -1.
+const ERODE = 2, PEN_MIN = 15, SEE = 2;                      // points: the shrink, the least peninsula, sight each way
+function peninsulasOf(p) {
+  if (p.pens) return p.pens;
+  const a = p.areaRef, w = a.w, h = a.h, mine = q => a.label[q] === p.id;
+  // the shrink: a point stays if every point within ERODE of it is the part's
+  const core = new Uint8Array(w * h);
+  for (let r = 0; r < h; r++) for (let c = 0; c < w; c++) {
+    if (!mine(r * w + c)) continue;
+    let keep = true;
+    for (let dr = -ERODE; dr <= ERODE && keep; dr++) for (let dc = -ERODE; dc <= ERODE; dc++) {
+      const rr = r + dr, cc = c + dc;
+      if (rr < 0 || cc < 0 || rr >= h || cc >= w || !mine(rr * w + cc)) { keep = false; break; }
+    }
+    if (keep) core[r * w + c] = 1;
+  }
+  // its pieces, then grown back over the part from all pieces at once
+  const owner = new Int32Array(w * h).fill(-1), queue = new Int32Array(w * h), sizes = [];
+  let head = 0, tail = 0;
+  for (let s = 0; s < w * h; s++) {
+    if (!core[s] || owner[s] >= 0) continue;
+    const id = sizes.length; let n = 0, qh = tail;
+    owner[s] = id; queue[tail++] = s;
+    while (qh < tail) {
+      const q = queue[qh++], qc = q % w; n++;
+      for (const nb of [qc + 1 < w ? q + 1 : -1, qc > 0 ? q - 1 : -1, q + w < w * h ? q + w : -1, q - w]) {
+        if (nb >= 0 && core[nb] && owner[nb] < 0) { owner[nb] = id; queue[tail++] = nb; }
+      }
+    }
+    sizes.push(n);
+  }
+  while (head < tail) {                                      // growing back: every piece outward at once
+    const q = queue[head++], qc = q % w;
+    for (const nb of [qc + 1 < w ? q + 1 : -1, qc > 0 ? q - 1 : -1, q + w < w * h ? q + w : -1, q - w]) {
+      if (nb >= 0 && mine(nb) && owner[nb] < 0) { owner[nb] = owner[q]; queue[tail++] = nb; }
+    }
+  }
+  let main = 0; sizes.forEach((n, i) => { if (n > sizes[main]) main = i; });
+  const g = GROUND, st = g.step, at = q => [g.sx0 + (a.c0 + q % w) * st, g.sy0 + (a.r0 + Math.floor(q / w)) * st];
+  const pens = [], penOf = new Int16Array(w * h).fill(-1), byPiece = new Map();
+  for (let q = 0; q < w * h; q++) {
+    const o = owner[q];
+    if (o < 0 || o === main) continue;
+    if (!byPiece.has(o)) byPiece.set(o, []);
+    byPiece.get(o).push(q);
+  }
+  for (const cells of byPiece.values()) {
+    if (cells.length < PEN_MIN) continue;
+    const id = pens.length, pen = { id, cells, size: cells.length, seen: new Uint8Array(cells.length), seenN: 0, explorers: 0, index: new Map() };
+    let sx = 0, sy = 0, dx = 0, dy = 0, nd = 0;
+    cells.forEach((q, i) => {
+      pen.index.set(q, i); penOf[q] = id;
+      const [x, y] = at(q); sx += x; sy += y;
+      const qc = q % w;
+      for (const nb of [qc + 1 < w ? q + 1 : -1, qc > 0 ? q - 1 : -1, q + w < w * h ? q + w : -1, q - w]) {
+        if (nb >= 0 && owner[nb] === main) { dx += x; dy += y; nd++; break; }
+      }
+    });
+    pen.cx = sx / cells.length; pen.cy = sy / cells.length;
+    // a peninsula touching the main body nowhere (joined only through
+    // another peninsula): its door is its middle
+    pen.dx = nd ? dx / nd : pen.cx; pen.dy = nd ? dy / nd : pen.cy;
+    pens.push(pen);
+  }
+  p.penOf = penOf; p.pens = pens; p.cellAt = at;
+  return pens;
+}
+// Seeing: every peninsula point within SEE points of a bot is seen.
+function see(p, x, y) {
+  const a = p.areaRef, g = GROUND, c = Math.round((x - g.sx0) / g.step) - a.c0, r = Math.round((y - g.sy0) / g.step) - a.r0;
+  for (let dr = -SEE; dr <= SEE; dr++) for (let dc = -SEE; dc <= SEE; dc++) {
+    const rr = r + dr, cc = c + dc;
+    if (rr < 0 || cc < 0 || rr >= a.h || cc >= a.w) continue;
+    const q = rr * a.w + cc, pid = p.penOf[q];
+    if (pid < 0) continue;
+    const pen = p.pens[pid], i = pen.index.get(q);
+    if (!pen.seen[i]) { pen.seen[i] = 1; pen.seenN++; }
+  }
+}
+function penAt(p, x, y) {
+  const a = p.areaRef, g = GROUND, c = Math.round((x - g.sx0) / g.step) - a.c0, r = Math.round((y - g.sy0) / g.step) - a.r0;
+  if (r < 0 || c < 0 || r >= a.h || c >= a.w) return null;
+  const pid = p.penOf[r * a.w + c];
+  return pid >= 0 ? p.pens[pid] : null;
+}
+// The parts in play's peninsulas (one part, or each of joined parts).
+function partsInPlay() { return inPlay && GROUND ? (inPlay.parts || [inPlay]).filter(p => p.areaRef) : []; }
+// A bot's exploring, each step: returns the point it walks to, or null.
+// A bot already exploring a peninsula walks to its nearest unseen corner
+// (chosen again every second), and is done when every corner is seen. A
+// bot not exploring, within DOOR_NEAR yards of a peninsula's door that
+// isn't seen whole and has fewer than MAX_EXPLORERS in it, goes in. The
+// player inside a peninsula (617e16i: "they treat it like an instance, as
+// if they were tanks"): every bot explores that one, ahead of the player,
+// corner by corner.
+const DOOR_NEAR = 15, MAX_EXPLORERS = 3;
+const explore = { entered: 0, done: 0 };
+function exploreTarget(b, dt) {
+  const parts = partsInPlay();
+  if (!parts.length) { b.pen = null; return null; }
+  for (const p of parts) { peninsulasOf(p); see(p, b.x, b.y); }
+  // the player in a peninsula: an instance, every bot its tank
+  let inst = null, instPart = null;
+  for (const p of parts) { const pn = penAt(p, player.x, player.y); if (pn) { inst = pn; instPart = p; } }
+  if (inst && inst.seenN < inst.size && b.pen !== inst) { if (b.pen) b.pen.explorers--; b.pen = inst; b.penPart = instPart; inst.explorers++; b.penPick = 0; }
+  if (!b.pen) {
+    for (const p of parts) for (const pen of p.pens) {
+      if (pen.seenN >= pen.size || pen.explorers >= MAX_EXPLORERS) continue;
+      if (Math.hypot(pen.dx - b.x, pen.dy - b.y) < DOOR_NEAR) { b.pen = pen; b.penPart = p; pen.explorers++; b.penPick = 0; explore.entered++; break; }
+    }
+    if (!b.pen) return null;
+  }
+  const pen = b.pen;
+  if (pen.seenN >= pen.size) { pen.explorers--; b.pen = null; explore.done++; return null; }
+  if ((b.penPick -= dt) <= 0 || !b.penGoal || pen.seen[b.penGoalI]) {
+    let best = -1, bd = 1e9;
+    pen.cells.forEach((q, i) => {
+      if (pen.seen[i]) return;
+      const [x, y] = b.penPart.cellAt(q), d = Math.hypot(x - b.x, y - b.y);
+      if (d < bd) { bd = d; best = i; }
+    });
+    if (best < 0) return null;
+    b.penGoal = b.penPart.cellAt(pen.cells[best]); b.penGoalI = best; b.penPick = 1;
+  }
+  return b.penGoal;
+}
+// }}}
+
+// Overlapping fences (the owner, 2026-10-28: "if a person is in a
+// venn-diagram style shape in the center of two semi-overlapping zones,
+// then both of them are wandering targets"): the parts the player stands
+// in, one per fence name, joined into one area shaped like a part: inside
+// any of them; its middle their middles weighted by size; its reach on
+// each bearing the farthest point of any of them from that middle. Kept by
+// which parts it joins, so the same overlap is the same area each step.
+const comboCache = new Map();
+function joinParts(parts) {
+  const key = parts.map(p => p.name + "#" + p.sub + "#" + p.id).sort().join("|");
+  if (comboCache.has(key)) return comboCache.get(key);
+  const area = parts.reduce((a, p) => a + p.area, 0);
+  const c = { parts, names: parts.map(p => p.name), name: parts.map(p => p.name).join(" + "),
+              spawns: parts.reduce((a, p) => a + p.spawns, 0), area,
+              cx: parts.reduce((a, p) => a + p.cx * p.area, 0) / area, cy: parts.reduce((a, p) => a + p.cy * p.area, 0) / area,
+              contains: (x, y) => parts.some(p => p.contains(x, y)) };
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+  for (const p of parts) for (const [x, y] of p.poly) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  c.poly = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+  c.R = new Float32Array(72);
+  const st = GROUND.step;
+  for (let b = 0; b < 72; b++) {
+    const dx = Math.cos(b * Math.PI / 36), dy = Math.sin(b * Math.PI / 36);
+    let far = 0;
+    for (let t = 0; t < 1200; t += st / 2) if (c.contains(c.cx + dx * t, c.cy + dy * t)) far = t;
+    c.R[b] = Math.max(far, st);
+  }
+  comboCache.set(key, c);
+  return c;
+}
+// }}}
+
+// {{{ monsters and fights (issue 617e16g)
+// mobs: the zone's monster spawns, each { x, y, z (screen yards, height),
+// name, level (the middle of its range), hp, respawn (seconds), ttk (seconds
+// a stand-in of its level takes to kill it), alive, backAt (simT it comes
+// back), fighter (the bot fighting it, or null), under (true: far below the
+// ground, in a cave: not a fight for the surface) }.
+// A stand-in's damage a second at level L: STANDIN_DPS (617e16g's open
+// question 1: a stated guess, about 21 at level 10, 83 at 30, 236 at 60).
+const STANDIN_DPS = L => 2 + 1.5 * L + 0.04 * L * L;
+const ENGAGE = 12, FRONT = 2.5, UNDER = 8;                   // yards: to notice one, to stand from it, below ground = a cave
+let mobs = [];
+const fights = { done: 0, secs: 0, catchups: 0, deadEnds: 0 };
+function mobsFor(zi) {
+  const m = MONSTER_FILES[C.data.map], sp = m.spawns;
+  mobs = [];
+  for (let i = 0; i < sp.length; i += 5) {
+    const x = sp[i], y = sp[i + 1], [pc, pr] = pixOf(x, y), col = Math.floor(pc), row = Math.floor(pr);
+    if (col < 0 || row < 0 || col >= C.W || row >= C.H || C.zoneAt[row * C.W + col] !== zi) continue;
+    const [name, lo, hi, hp] = m.kinds[sp[i + 3]], level = (lo + hi) / 2;
+    mobs.push({ x, y, z: sp[i + 2], name, level, hp, respawn: sp[i + 4], ttk: hp / STANDIN_DPS(level),
+                alive: true, backAt: 0, fighter: null, under: false });
+  }
+  mobsUnder();
+}
+function mobsUnder() {                                       // once the ground is here: which are in caves
+  for (const mb of mobs) { const g = groundHeight(mb.x, mb.y); mb.under = g !== null && g - mb.z > UNDER; }
+}
+function stepMobs() {
+  for (const mb of mobs) if (!mb.alive && simT >= mb.backAt) { mb.alive = true; mb.fighter = null; }
+}
+// A bot's fight, each step. Returns null (no fight: wander as usual),
+// "standing" (in front of its monster, killing it), or the point it walks
+// to (in front of its monster). A bot without a fight takes the nearest
+// living monster within ENGAGE that no other bot has, on the surface and
+// in the part in play.
+// On the way (the owner, 2026-10-28: "They fight monsters along the way,
+// unless they're more than half a zone away"): a bot outside the area
+// takes a monster it passes too, unless it is more than half the zone's
+// size from the player, when it takes none and keeps going.
+function fightStep(b, dt, f) {
+  if (!b.fight) {
+    const zone = C.data.zones[zoneIdx], half = Math.max(zone.X1 - zone.X0 + 1, zone.Y1 - zone.Y0 + 1) * SQ / 2;
+    const away = !f || !f.contains || !f.contains(b.x, b.y);
+    if (away && Math.hypot(b.x - player.x, b.y - player.y) > half) return null;
+    let best = null, bd = ENGAGE;
+    for (const mb of mobs) {
+      if (!mb.alive || mb.fighter || mb.under) continue;
+      const d = Math.hypot(mb.x - b.x, mb.y - b.y);
+      if (d < bd && (away || !f.contains || f.contains(mb.x, mb.y))) { best = mb; bd = d; }
+    }
+    if (!best) return null;
+    best.fighter = b; b.fight = best; b.fightLeft = best.ttk;
+  }
+  const mb = b.fight, dx = b.x - mb.x, dy = b.y - mb.y, d = Math.hypot(dx, dy) || 1;
+  if (d > FRONT + 0.8) return [mb.x + dx / d * FRONT, mb.y + dy / d * FRONT];
+  b.fightLeft -= dt;
+  if (b.fightLeft <= 0) {                                    // dead: back after its respawn time
+    mb.alive = false; mb.backAt = simT + mb.respawn; mb.fighter = null;
+    fights.done++; fights.secs += mb.ttk; b.fight = null;
+    return null;
+  }
+  return "standing";
+}
+function dropFight(b) { if (b.fight) { b.fight.fighter = null; b.fight = null; } }
+// }}}
+
+// {{{ catching up, and dead ends (issue 617e16g)
+// Far: the player more than CATCH_SHARE of the continent's size from the
+// bots' middle: every bot appears at a random walkable point of the part
+// in play within POCKET yards of its middle (30 tries; none walkable: the
+// middle itself).
+// Dead ends: from the part in play, every point of the zone's ground that
+// can walk to it (not steeper than the limit, joined by neighbours): reach.
+// A bot on a point outside reach can never get in, so it is moved onward:
+// to the first point in reach on its straight line to the part's middle.
+// Checked for each bot once a second.
+const CATCH_SHARE = 0.25, POCKET = 100;
+function catchUp(f) {
+  if (!f || !bots.length) return;
+  let mx = 0, my = 0;
+  for (const b of bots) { mx += b.x; my += b.y; }
+  mx /= bots.length; my /= bots.length;
+  const far = Math.max(C.W, C.H) * SQ * CATCH_SHARE;
+  if (Math.hypot(player.x - mx, player.y - my) <= far) return;
+  for (const b of bots) {
+    dropFight(b);
+    let x = f.cx, y = f.cy;
+    for (let t = 0; t < 30; t++) {
+      const a = Math.random() * 6.283, r = Math.sqrt(Math.random()) * POCKET;
+      const px = f.cx + Math.cos(a) * r, py = f.cy + Math.sin(a) * r;
+      if ((!f.contains || f.contains(px, py)) && !blocked(px, py)) { x = px; y = py; break; }
+    }
+    b.x = x; b.y = y; b.vx = b.vy = 0; b.tail = [];
+  }
+  fights.catchups++;
+}
+function reachOf(f) {
+  const g = GROUND;
+  if (g && f && f.parts) {                                    // joined parts: reaching any of them
+    if (f.reach) return f.reach;
+    const all = new Uint8Array(g.cols * g.rows);
+    for (const p of f.parts) { const r = reachOf(p); if (r) for (let k = 0; k < all.length; k++) all[k] |= r[k]; }
+    return (f.reach = all);
+  }
+  if (!g || !f || !f.areaRef) return null;
+  if (f.reach) return f.reach;
+  const a = f.areaRef, reach = new Uint8Array(g.cols * g.rows), queue = new Int32Array(g.cols * g.rows);
+  let head = 0, tail = 0;
+  for (let q = 0; q < a.w * a.h; q++) if (a.label[q] === f.id) {
+    const k = (a.r0 + Math.floor(q / a.w)) * g.cols + (a.c0 + q % a.w);
+    reach[k] = 1; queue[tail++] = k;
+  }
+  while (head < tail) {
+    const k = queue[head++], c = k % g.cols;
+    for (const n of [c + 1 < g.cols ? k + 1 : -1, c > 0 ? k - 1 : -1, k + g.cols < g.cols * g.rows ? k + g.cols : -1, k - g.cols]) {
+      if (n < 0 || reach[n] || g.steep[n] || g.h[n] === NO_GROUND) continue;
+      reach[n] = 1; queue[tail++] = n;
+    }
+  }
+  f.reach = reach;
+  return reach;
+}
+function unstick(b, f) {
+  const reach = reachOf(f), g = GROUND;
+  if (!reach) return;
+  const at = (x, y) => { const c = Math.round((x - g.sx0) / g.step), r = Math.round((y - g.sy0) / g.step);
+                         return c < 0 || r < 0 || c >= g.cols || r >= g.rows ? -1 : r * g.cols + c; };
+  const k = at(b.x, b.y);
+  if (k < 0 || reach[k]) return;                             // in reach (or off the zone's grid: not known)
+  const dx = f.cx - b.x, dy = f.cy - b.y, d = Math.hypot(dx, dy);
+  for (let t = g.step; t < d; t += g.step / 2) {
+    const x = b.x + dx / d * t, y = b.y + dy / d * t, n = at(x, y);
+    if (n >= 0 && reach[n]) { dropFight(b); b.x = x; b.y = y; b.vx = b.vy = 0; fights.deadEnds++; return; }
+  }
+}
+// }}}
+
+// {{{ circulation: no cocoons (issue 617e16k)
+// The owner, 2026-10-28: "if they're staying in the same quadrant of the
+// spawn zone for too long, then we know they're not circulating. We want
+// them to spread out and be dynamically spread throughout the subzone."
+// The area in play is cut into SECTORS wedges by bearing round its middle
+// (wedge numbers grow with the bearing, so +1 is one way round, -1 the
+// other).
+//
+// Which wedge next (the owner's second message: "go to a random pie-slice
+// in the two that are next to the one that it's in ... typically through
+// momentum direction but sometimes that gets reversed or it flips to the
+// opposite side of the arena"): the wedge beside it in its momentum's
+// direction; with chance P_REVERSE the momentum reverses first (the
+// other neighbour); with chance P_FLIP, the wedge across the arena instead.
+// (The first build, the emptiest wedge, gave way to this.)
+//
+// The "wedges" turning mode (wedgeTarget): each bot has its wedge
+// (b.wedge) and its momentum (b.wedgeDir, kept between moves); every
+// waypoint it walks to is a walkable point inside its wedge, a new one on
+// arriving (MOVE_ARRIVE yards) or after WAYPOINT_LIMIT seconds, until it is
+// reassigned, every CIRCULATE seconds.
+//
+// The other modes (circulate): a bot CIRCULATE seconds in one wedge makes
+// one move (through buffers, b.move) to the wedge the rule gives, its
+// momentum the way it has been going round the middle, then its mode goes on.
+const SECTORS = 8, CIRCULATE = 30, MOVE_ARRIVE = 8, MOVE_LIMIT = 60, WAYPOINT_LIMIT = 20;
+const P_REVERSE = 0.15, P_FLIP = 0.1;
+const circulation = { moves: 0, reversed: 0, flipped: 0 };  // not "circ": measure() has a local of that name
+function sectorOf(f, x, y) {
+  const a = Math.atan2(y - f.cy, x - f.cx);                  // -pi .. pi
+  return Math.min(SECTORS - 1, Math.floor((a + Math.PI) / (2 * Math.PI) * SECTORS));
+}
+// a walkable point inside wedge w of area f (40 tries), or null
+function pointInWedge(f, w) {
+  for (let t = 0; t < 40; t++) {
+    // even over the wedge's area: a wedge is narrow at the middle and wide at
+    // the edge, so a distance drawn evenly crowds the middle (picture 050);
+    // the square root of an even draw spreads the points by area
+    const a = -Math.PI + (w + Math.random()) * 2 * Math.PI / SECTORS, r = Math.sqrt(0.02 + 0.93 * Math.random()) * edgeAt(f, a);
+    const x = f.cx + Math.cos(a) * r, y = f.cy + Math.sin(a) * r;
+    if (f.contains(x, y) && !blocked(x, y)) return [x, y];
+  }
+  return null;
+}
+// the next wedge from wedge s with momentum dir (+1 or -1); returns [wedge, dir]
+function nextWedge(s, dir) {
+  const roll = Math.random();
+  circulation.moves++;
+  if (roll < P_FLIP) { circulation.flipped++; return [(s + SECTORS / 2) % SECTORS, dir]; }
+  if (roll < P_FLIP + P_REVERSE) { circulation.reversed++; dir = -dir; }
+  return [((s + dir) % SECTORS + SECTORS) % SECTORS, dir];
+}
+// the way round the middle a bot is going: +1 (bearing growing) or -1
+function momentumOf(b, f) { return ((b.x - f.cx) * b.vy - (b.y - f.cy) * b.vx) >= 0 ? 1 : -1; }
+function wedgeTarget(b, f, dt) {
+  if (b.wedge === undefined || b.wpArea !== f) {
+    b.wedge = sectorOf(f, b.x, b.y); b.wedgeDir = b.wedgeDir || (Math.random() < 0.5 ? 1 : -1);
+    b.wedgeFor = Math.random() * CIRCULATE; b.wp = null; b.wpArea = f;     // their clocks apart, so they don't move together
+  }
+  b.sector = sectorOf(f, b.x, b.y);
+  if ((b.wedgeFor += dt) >= CIRCULATE) { [b.wedge, b.wedgeDir] = nextWedge(b.wedge, b.wedgeDir); b.wedgeFor = 0; b.wp = null; }
+  if (!b.wp || Math.hypot(b.wp[0] - b.x, b.wp[1] - b.y) < MOVE_ARRIVE || (b.wpFor -= dt) <= 0) {
+    b.wp = pointInWedge(f, b.wedge); b.wpFor = WAYPOINT_LIMIT;
+  }
+  return b.wp || [f.cx, f.cy];
+}
+// (Tried 2026-10-29 and undone: choosing a wedge's waypoint as the least-
+// walked of five, by the painted map's counts, with other bots' waypoints
+// counted against it. Coverage rose barely, 27-28% against 26%, and spacing
+// fell to 15.8 and 14.1 yards from about 19, since several bots chased the
+// same fresh corner. Pictures 079-080; 617o8 records it.)
+function circulate(b, f, dt) {
+  if (!f || !f.contains) { b.move = null; return null; }
+  const s = sectorOf(f, b.x, b.y);
+  if (s !== b.sector) { b.sector = s; b.sectorFor = 0; } else b.sectorFor = (b.sectorFor || 0) + dt;
+  if (b.move) {
+    b.move.left -= dt;
+    if (Math.hypot(b.move.x - b.x, b.move.y - b.y) < MOVE_ARRIVE || b.move.left <= 0) { b.move = null; b.sectorFor = 0; }
+    else return [b.move.x, b.move.y];
+  }
+  if (b.sectorFor < CIRCULATE) return null;
+  b.sectorFor = 0;
+  const [want] = nextWedge(s, momentumOf(b, f));
+  const p = pointInWedge(f, want);
+  if (!p) return null;
+  b.move = { x: p[0], y: p[1], left: MOVE_LIMIT };
+  return p;
+}
+// }}}
+
+// {{{ the flock
+// Each bot, each step:
+//   in a fence: circles its middle (the turning chosen: clockwise,
+//     anticlockwise, or each its own), aiming LEAD ahead on its circle at
+//     its own depth between the middle and the fence; its depth eases to a
+//     target re-chosen every 6-12 s as the least-crossed band of the fence
+//     lately (so the whole shape gets swept: "fills all the gaps");
+//   keeps SEP yards from its neighbours, and leans toward their heading
+//     (a school), more weakly;
+//   outside the fence: heads for its middle;
+//   no fence (the player outside all): follows the player, on a ring round them.
+const SPEED = 5, LEAD = 0.45, SEP = 4, ALIGN_R = 14, BANDS = 6;
+const bandSeen = new Float32Array(BANDS);                    // recent crossings per depth band, decaying
+function stepFlock(dt) {
+  const turnSel = +$("turn").value;
+  const f = inPlay;                                          // the part in play (617e16f), or the fence as it was
+  for (let i = 0; i < BANDS; i++) bandSeen[i] *= Math.exp(-dt / 30);
+  const formed = stepPatrol(dt, f);                          // how many bots hold formation places (617e16e)
+  stepMobs();                                                // monsters coming back (617e16g)
+  catchUp(f);                                                // the player far away: the bots appear near them
+  if (wayNow() === "paint" && f && f.contains && GROUND) paintBegin(f);   // the painted map (617o8)
+  bots.forEach((b, bi) => {
+    if (f && (b.unstickIn = (b.unstickIn || Math.random()) - dt) <= 0) { b.unstickIn = 1; unstick(b, f); }
+    let tx, ty;
+    if (bi < formed) {                                       // a formation member: its place round the anchor
+      [tx, ty] = placeOf(bi);
+    } else if (f && turnSel === 3) {                         // wedges (617e16k): waypoints inside its assigned wedge
+      [tx, ty] = wedgeTarget(b, f, dt);
+    } else if (f && turnSel === 2) {                         // a wanderer (617e16d)
+      [tx, ty] = wanderTarget(b, f, dt);
+    } else if (f) {
+      const rx = b.x - f.cx, ry = b.y - f.cy, th = Math.atan2(ry, rx), r = Math.hypot(rx, ry), R = edgeAt(f, th);
+      const dir = (turnSel === 0 ? b.own : turnSel) * orbitSign;   // orbitSign: turned round by the player at the edge
+      b.nextPick -= dt;
+      if (b.nextPick <= 0) {                               // the least-crossed band lately
+        let best = 0; for (let k = 1; k < BANDS; k++) if (bandSeen[k] < bandSeen[best]) best = k;
+        b.depthTo = 0.12 + 0.83 * (best + Math.random()) / BANDS;
+        b.nextPick = 6 + Math.random() * 6;
+      }
+      b.depth += (b.depthTo - b.depth) * Math.min(1, dt * 0.25);
+      if (r > R * 1.05) { tx = f.cx; ty = f.cy; }
+      else {
+        const ta = th + dir * LEAD, Ra = edgeAt(f, ta) * b.depth;
+        tx = f.cx + Math.cos(ta) * Ra; ty = f.cy + Math.sin(ta) * Ra;
+        bandSeen[Math.min(BANDS - 1, Math.floor((r / Math.max(R, 1)) * BANDS))] += dt;
+      }
+    } else {
+      const a = Math.atan2(b.y - player.y, b.x - player.x);
+      tx = player.x + Math.cos(a) * 6; ty = player.y + Math.sin(a) * 6;
+    }
+    // A fight overrides the wandering (617e16g): walking up to its monster,
+    // or standing in front of it until it is dead. Formation members hold
+    // their places and don't take fights.
+    // Exploring a peninsula (617e16i) overrides the wandering; a fight
+    // (below) overrides exploring.
+    if (bi >= formed) { const ex = exploreTarget(b, dt); if (ex) [tx, ty] = ex; }
+    // Circulating (617e16k): a bot too long in one sector moves to the
+    // emptiest one; not while it explores a peninsula.
+    if (bi >= formed && !b.pen && turnSel !== 3) { const mv = circulate(b, f, dt); if (mv) [tx, ty] = mv; }   // wedges circulate by their own clock
+    if (bi >= formed) {
+      const st = fightStep(b, dt, f);
+      if (st === "standing") { b.vx = 0; b.vy = 0; return; }
+      if (st) [tx, ty] = st;
+    }
+    // The order and the orbit (617e16h): the target is the bot's movement
+    // order; a bot not getting closer to it as fast as it could orbits the
+    // obstacle until it can see a point ahead on its way (orbitStep).
+    // Formation members hold places, not orders.
+    // Which way (617o7): orbit steers straight and orbits when stuck; the
+    // other four give the point to steer to from their own planning.
+    if (bi >= formed) {
+      if (wayNow() === "orbit") { const ob = orbitStep(b, tx, ty, dt); if (ob) [tx, ty] = ob; }
+      else { const wp = wayStep(b, tx, ty, dt); if (wp) [tx, ty] = wp; }
+    }
+    // Toward the target. A formation member slows as it nears its place
+    // (it should stand in it, not circle it) and hurries when behind; it
+    // keeps only a body's width from others (its places are 3 yards apart)
+    // and doesn't lean toward the school's heading, which isn't its own. A
+    // wanderer doesn't lean either: its heading is its own decision.
+    const member = bi < formed, wander = !member && f && turnSel === 2;
+    let dx = tx - b.x, dy = ty - b.y, dl = Math.hypot(dx, dy) || 1;
+    const want = member ? Math.min(SPEED * 1.5, dl * 1.2) : SPEED;
+    let ax = dx / dl * want - b.vx, ay = dy / dl * want - b.vy;
+    let sx = 0, sy = 0, avx = 0, avy = 0, na = 0;
+    const sep = member ? 1.5 : SEP;
+    for (const o of bots) {
+      if (o === b) continue;
+      const ox = b.x - o.x, oy = b.y - o.y, d = Math.hypot(ox, oy);
+      if (d < sep && d > 0) { sx += ox / d * (sep - d); sy += oy / d * (sep - d); }
+      if (d < ALIGN_R) { avx += o.vx; avy += o.vy; na++; }
+    }
+    ax += sx * 1.6; ay += sy * 1.6;
+    if (na && !member && !wander) { ax += (avx / na - b.vx) * 0.25; ay += (avy / na - b.vy) * 0.25; }
+    b.vx += ax * Math.min(1, dt * 2.2); b.vy += ay * Math.min(1, dt * 2.2);
+    const sp = Math.hypot(b.vx, b.vy), cap = member ? SPEED * 1.5 : f ? SPEED : SPEED * 1.6;
+    if (sp > cap) { b.vx *= cap / sp; b.vy *= cap / sp; }
+    // Backing out (stuckAt): straight away from its target until its back-up
+    // distance is used, then the orbit it was given begins (orbitStep).
+    if (b.backLeft > 0) {
+      b.vx = b.bx * SPEED; b.vy = b.by * SPEED; b.backLeft -= SPEED * dt;
+      if (b.backLeft <= 0 && b.pendingOrbit) { startOrbit(b, b.pendingOrbit[0], b.pendingOrbit[1]); b.pendingOrbit = null; }
+    }
+    // The ground (issue 617e16c): a step that would land on blocked ground
+    // (too steep, or in a doodad) is turned aside, 20 degrees at a time,
+    // left and right in turn (the smaller turn first), up to 140; the first
+    // open way is taken and kept as the bot's heading. No open way: it
+    // stops this step. A bot already standing on blocked ground (spawned
+    // there, or the limit moved under it) walks on unchecked until it is off.
+    // Mental walls (617e16f): the part in play's edge is a wall too, for a
+    // bot inside it ("If we find ourselves outside of the zone, then, well,
+    // we've found it's edge"). Meeting one, the bot keeps the obstacle on
+    // one side and walks round it: it turns to its side (b.wallSide), 20
+    // degrees at a time up to 160, and only if that side is shut tries the
+    // other. Its side is kept while it is still against the obstacle (met
+    // again within WALL_MEMORY seconds), then let go, and its target pulls
+    // it straight again once the way is clear.
+    // Known walls (617e16h), learned by getting stuck, are walls too. Buffers
+    // (left by bumping) are clearance a bot keeps if it can: the way round is
+    // looked for first avoiding them, and only if there is none, through them
+    // (as hard walls they sealed narrow passages: picture 038, 220 steps a
+    // second with no way at all). A bot on a straight crossing walks through
+    // buffers from the start.
+    // All of this is the bot's own steering, by what it knows: steep ground
+    // (steepAt), known walls, buffers, the edge. The doodads it doesn't know
+    // until it has been refused by one (below).
+    // "learn" (617o7): the bot knows no steep ground, only what it has learned
+    const learnOnly = wayNow() === "learn", lp = learnOnly && f && f.contains ? planGrid(f) : null;
+    const knownBlock = (x, y) => lp ? (() => { const q = lp.cellOf(x, y); return q >= 0 && lp.learned[q] === 1; })() : steepAt(x, y);
+    const hard = (x, y) => knownBlock(x, y) || knownDoodadAt(x, y) || knownWall(x, y) || (f && f.contains && f.contains(b.x, b.y) && !f.contains(x, y));
+    const soft = (x, y) => hard(x, y) || (b.wstate !== "cross" && !b.move && knownBuffer(x, y));   // a move to another sector walks through buffers too (617e16k)
+    // Looking LOOK_AHEAD yards ahead, not one step (a quarter of a yard): a
+    // bot turns before it touches, keeping that much clear of walls rather
+    // than sliding along them (the owner: "rubbing up against anything they
+    // can touch"). ahead: seconds of its own speed that make LOOK_AHEAD.
+    const ahead = LOOK_AHEAD / Math.max(Math.hypot(b.vx, b.vy), 0.5);
+    const nx = b.x + b.vx * ahead, ny = b.y + b.vy * ahead;
+    // The whole stretch is checked, the next step, 1 yard and LOOK_AHEAD: the
+    // far point alone jumped over a thin trunk while the next step still hit
+    // it (picture 053: 79 doodads known, 79,120 steps still refused).
+    const rayHit = (test, vx, vy) => { const sp = Math.max(Math.hypot(vx, vy), 0.01);
+      for (const d of [sp * dt, 1, LOOK_AHEAD]) if (test(b.x + vx / sp * d, b.y + vy / sp * d)) return true; return false; };
+    if (rayHit(soft, b.vx, b.vy) && !steepAt(b.x, b.y)) {
+      const sides = b.wallSide ? [b.wallSide, -b.wallSide] : (Math.random() < 0.5 ? [1, -1] : [-1, 1]);
+      let found = 0;
+      for (const walled of [soft, hard]) {
+        if (!rayHit(walled, b.vx, b.vy)) break;               // only a buffer ahead, and none could be avoided: straight on
+        for (const sgn of sides) {
+          for (let k = 1; k <= 8; k++) {
+            const a = sgn * k * Math.PI / 9, ca = Math.cos(a), sa = Math.sin(a);
+            const vx = b.vx * ca - b.vy * sa, vy = b.vx * sa + b.vy * ca;
+            if (!rayHit(walled, vx, vy)) { b.vx = vx; b.vy = vy; found = sgn; break; }
+          }
+          if (found) break;
+        }
+        if (found) break;
+      }
+      if (!found && !rayHit(hard, b.vx, b.vy)) found = b.wallSide || 1;  // through the buffer, as it was heading
+      if (found) { steer.turned++; b.wallSide = found; b.wallFor = WALL_MEMORY; }
+      else { b.vx = 0; b.vy = 0; steer.stopped++; }
+    } else if (b.wallSide && (b.wallFor -= dt) <= 0) b.wallSide = 0;
+    // The bot's input this step (its "keypresses"), and the world's answer:
+    // a step into anything the world holds that the bot didn't know (a tree,
+    // a rock, a hut) is refused, and the bot stays where it was (the server
+    // pulling the client back). Both are kept, and compared each window
+    // (trackProgress). A bot already standing in one (spawned there) walks
+    // out unrefused.
+    const stepX = b.vx * dt, stepY = b.vy * dt;
+    // Refused: learned at once (the owner: "they're just uncomfortably rubbing up
+    // against anything they can touch"; they had pushed on for the rest of
+    // their second, 61,206 refused steps in five minutes, picture 051): the
+    // world shows the bot the thing it hit, its whole footprint (revealAt),
+    // and every bot steers round it from the next step. (Marking the refused
+    // 2-yard cell a wall failed: it was often the cell the bot stood in, and
+    // standing proves a cell open, so the mark was undone at once: 77,942
+    // refused steps, picture 052.)
+    if (blocked(b.x + stepX, b.y + stepY) && !blocked(b.x, b.y)) { b.refusedX = b.x + stepX; b.refusedY = b.y + stepY; steer.refused++; revealAt(b.refusedX, b.refusedY); if (wayNow() === "learn") learnRefusal(b, b.refusedX, b.refusedY);
+      if (wayNow() === "paint" && f && f.contains && GROUND) paintRefused(b, f); }
+    else {
+      b.x += stepX; b.y += stepY;
+      if (wayNow() === "paint" && f && f.paintMap) PaintPaths.walked(f.paintMap, b.x, b.y);
+      // smoothness, for every way (617o8): degrees the heading turned a yard walked
+      const sl = Math.hypot(stepX, stepY);
+      if (sl > 0.01) {
+        const hd = Math.atan2(stepY, stepX);
+        if (b.lastH !== undefined) { let d = hd - b.lastH; d -= Math.round(d / (2 * Math.PI)) * 2 * Math.PI; paintW.turn += Math.abs(d); paintW.yards += sl; }
+        b.lastH = hd;
+      }
+    }
+    learnOpen(b.x, b.y);
+    trackProgress(b, stepX, stepY, dt);
+  });
+}
+const steer = { turned: 0, stopped: 0, refused: 0, since: 0 };   // counted between measures
+const WALL_MEMORY = 1.5;                                      // seconds a bot keeps to its side of a wall
+const LOOK_AHEAD = 2;                                         // yards a bot looks ahead when steering (617e16h)
+// }}}
+
+// {{{ five ways to find a path (issue 617o7)
+// The owner, 2026-10-28: "create at least 3-5 radically different
+// pathfinding solutions with equivalent levels of complexity". Each takes a
+// bot and its target (the point its wandering chose) and gives the point it
+// steers to now; the panel's "Pathfinding" chooses one for every bot:
+//   orbit:     straight at the target; stuck, back out and walk round the
+//              obstacle until the target is in sight (orbitStep, 617e16h);
+//   flow:      a flow field: the walking distance to the target spread over
+//              the planning grid once (breadth-first), shared by every bot
+//              with that target; a bot steps downhill on it;
+//   astar:     a route planned whole by A* over the planning grid, pulled
+//              tight (the farthest point of it in sight is steered to);
+//              planned again when its target or what is known changes;
+//   potential: no route, only forces: the target pulls, obstacles within
+//              6 yards push (harder the nearer), and a bot barely moving for
+//              2 seconds is kicked in a random direction for 1.5;
+//   learn:     the bots start knowing nothing (not even steep ground): a
+//              route by A* over what they have learned (everything else
+//              assumed open); the world refuses a step into steep ground or a
+//              doodad, the refused cell is learned, and the route is planned
+//              again ("you navigate and then it is known").
+//
+// The planning grid (planGrid): the ground's points (4.17 yards apart) over
+// the area in play's box and PLAN_MARGIN round it; a point's base is open if
+// it is in the area and not steep. What is known to block on top of that
+// (doodads shown, known walls) is asked when a point is used; "learn" asks
+// only its own learned points (P.learned).
+const PLAN_MARGIN = 8, ASTAR_REPLAN = 5, PUSH_RANGE = 6, KICK_AFTER = 2, KICK_FOR = 1.5;
+const ways = { plans: 0, fields: 0, learned: 0, kicks: 0, walls: 0 };
+function wayNow() { return $("way").value; }
+function planGrid(f) {
+  if (f.plan) return f.plan;
+  const g = GROUND, st = g.step;
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+  for (const [x, y] of f.poly) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  const c0 = Math.max(0, Math.floor((x0 - PLAN_MARGIN - g.sx0) / st)), c1 = Math.min(g.cols - 1, Math.ceil((x1 + PLAN_MARGIN - g.sx0) / st));
+  const r0 = Math.max(0, Math.floor((y0 - PLAN_MARGIN - g.sy0) / st)), r1 = Math.min(g.rows - 1, Math.ceil((y1 + PLAN_MARGIN - g.sy0) / st));
+  const w = c1 - c0 + 1, h = r1 - r0 + 1, base = new Uint8Array(w * h);
+  const P = { c0, r0, w, h, st, base, learned: new Uint8Array(w * h), fields: new Map() };
+  P.at = q => [g.sx0 + (c0 + q % w) * st, g.sy0 + (r0 + Math.floor(q / w)) * st];
+  P.cellOf = (x, y) => { const c = Math.round((x - g.sx0) / st) - c0, r = Math.round((y - g.sy0) / st) - r0; return c < 0 || r < 0 || c >= w || r >= h ? -1 : r * w + c; };
+  for (let q = 0; q < w * h; q++) { const [x, y] = P.at(q); base[q] = f.contains(x, y) && !steepAt(x, y) ? 1 : 0; }
+  return (f.plan = P);
+}
+// open for planning: by what the bots know (learn: by what they have learned)
+// Each point's answer is kept with the state of knowledge it was worked out
+// in (doodads shown, walls learned), and worked out again only when that
+// changes: the corner rule asks two or three times as often as before, and
+// each fresh answer builds strings and scans the doodads near (the page
+// ran past the picture tool's 90 seconds for 120 seconds of play until
+// this was kept, 2026-10-29).
+function planOpen(P, q, learnOnly) {
+  if (learnOnly) return !P.learned[q];
+  if (!P.base[q]) return false;
+  const stamp = (GROUND.knownDoodads || 0) * 100000 + ways.walls + 1;
+  if (!P.openAt) { P.openAt = new Float64Array(P.w * P.h); P.openIs = new Uint8Array(P.w * P.h); }
+  if (P.openAt[q] !== stamp) {
+    const [x, y] = P.at(q);
+    P.openIs[q] = !knownDoodadAt(x, y) && !knownWall(x, y) ? 1 : 0;
+    P.openAt[q] = stamp;
+  }
+  return P.openIs[q] === 1;
+}
+const N8 = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, 1.414], [1, -1, 1.414], [-1, 1, 1.414], [-1, -1, 1.414]];
+// the eight neighbours of q that `pass` lets through; a diagonal step
+// needs both points beside it passable too, or it slips through the corner
+// of what blocks (the module's offline test found it first, 2026-10-28:
+// a flow-field bot stood at a wall's end ten minutes; mended here the same
+// way, 2026-10-29, so the page and the game agree)
+function neighbours(P, q, fn, pass) {
+  const c = q % P.w, r = (q - c) / P.w;
+  for (const [dc, dr, cost] of N8) {
+    const nc = c + dc, nr = r + dr;
+    if (nc < 0 || nr < 0 || nc >= P.w || nr >= P.h) continue;
+    const n = nr * P.w + nc;
+    if (pass && (!pass(n) || (dc && dr && (!pass(r * P.w + nc) || !pass(nr * P.w + c))))) continue;
+    fn(n, cost);
+  }
+}
+// a straight line clear of what is known (or learned) to block: every grid
+// point the line passes through (crossing whichever cell border comes
+// first), the one it starts at aside; sampled points every half step
+// missed a line clipping a corner (the module's test, 2026-10-28)
+function planSight(P, x0, y0, x1, y1, learnOnly) {
+  const g = GROUND, ax = (x0 - g.sx0) / P.st - P.c0, ay = (y0 - g.sy0) / P.st - P.r0, bx = (x1 - g.sx0) / P.st - P.c0, by = (y1 - g.sy0) / P.st - P.r0;
+  let c = Math.round(ax), r = Math.round(ay);
+  const ce = Math.round(bx), re = Math.round(by), dx = bx - ax, dy = by - ay, sc = dx > 0 ? 1 : -1, sr = dy > 0 ? 1 : -1;
+  let nextC = dx ? ((c + 0.5 * sc) - ax) / dx : Infinity, nextR = dy ? ((r + 0.5 * sr) - ay) / dy : Infinity;
+  const eachC = dx ? 1 / Math.abs(dx) : Infinity, eachR = dy ? 1 / Math.abs(dy) : Infinity;
+  for (let n = Math.abs(ce - c) + Math.abs(re - r); n > 0; n--) {
+    if (nextC < nextR) { c += sc; nextC += eachC; } else { r += sr; nextR += eachR; }
+    if (c < 0 || r < 0 || c >= P.w || r >= P.h || !planOpen(P, r * P.w + c, learnOnly)) return false;
+  }
+  return true;
+}
+// {{{ flow field
+function flowStep(b, tx, ty, f) {
+  const P = planGrid(f), tq = P.cellOf(tx, ty), bq = P.cellOf(b.x, b.y);
+  if (tq < 0 || bq < 0) return null;
+  // one field per target and state of knowledge (doodads shown, walls learned;
+  // not open cells: counting those made every step a new field, 2026-10-28)
+  const key = tq + "|" + (GROUND.knownDoodads || 0) + "|" + ways.walls;
+  let field = P.fields.get(key);
+  if (!field) {
+    if (P.fields.size > 96) P.fields.clear();
+    field = new Float32Array(P.w * P.h).fill(Infinity);
+    const queue = [tq]; field[tq] = 0;
+    for (let i = 0; i < queue.length; i++) {
+      const q = queue[i];
+      neighbours(P, q, (n, cost) => { if (field[n] > field[q] + cost) { field[n] = field[q] + cost; queue.push(n); } }, n => planOpen(P, n, false));
+    }
+    P.fields.set(key, field); ways.fields++;
+  }
+  // downhill, up to three points ahead so the steps run smooth, the
+  // farthest of them in a clear line (the first is always a step the field allowed)
+  let q = bq;
+  for (let k = 0; k < 3; k++) {
+    let best = q;
+    neighbours(P, q, n => { if (field[n] < field[best]) best = n; }, n => planOpen(P, n, false));
+    if (best === q) break;
+    if (k > 0) { const [x, y] = P.at(best); if (!planSight(P, b.x, b.y, x, y, false)) break; }
+    q = best;
+  }
+  return q === bq ? null : P.at(q);
+}
+// }}}
+// {{{ A* (also "learn", over learned knowledge)
+function astarRoute(P, from, to, learnOnly) {
+  const gs = new Float32Array(P.w * P.h).fill(Infinity), came = new Int32Array(P.w * P.h).fill(-1), shut = new Uint8Array(P.w * P.h);
+  const tc = to % P.w, tr = (to - tc) / P.w;
+  const hOf = q => { const c = q % P.w, r = (q - c) / P.w, dx = Math.abs(c - tc), dy = Math.abs(r - tr); return Math.max(dx, dy) + 0.414 * Math.min(dx, dy); };
+  const heap = [[hOf(from), from]]; gs[from] = 0;
+  const push = it => { heap.push(it); let i = heap.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
+  const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top; };
+  while (heap.length) {
+    const [, q] = pop();
+    if (q === to) break;
+    if (shut[q]) continue; shut[q] = 1;
+    neighbours(P, q, (n, cost) => {
+      const ng = gs[q] + cost;
+      if (ng < gs[n]) { gs[n] = ng; came[n] = q; push([ng + hOf(n), n]); }
+    }, n => n === to || planOpen(P, n, learnOnly));
+  }
+  if (gs[to] === Infinity) return null;
+  const route = []; for (let q = to; q !== -1; q = came[q]) route.push(q);
+  return route.reverse();
+}
+function astarStep(b, tx, ty, f, learnOnly) {
+  const P = planGrid(f), tq = P.cellOf(tx, ty), bq = P.cellOf(b.x, b.y);
+  if (tq < 0 || bq < 0) return null;
+  // planned again when what blocks is learned: doodads shown, walls (not
+  // every open cell a bot stands in: that changes every step, and replanned
+  // every bot every step)
+  const knowledge = learnOnly ? ways.learned : (GROUND.knownDoodads || 0) + ways.walls * 100000;
+  if (!b.route || b.routeTo !== tq || b.routeKnew !== knowledge || simT - b.routeAt > ASTAR_REPLAN) {
+    b.route = astarRoute(P, bq, tq, learnOnly); b.routeTo = tq; b.routeKnew = knowledge; b.routeAt = simT; ways.plans++;
+    b.routePts = b.route ? b.route.map(q => P.at(q)) : null;
+  }
+  if (!b.routePts) return null;
+  // pulled tight, and held: the point steered to is kept while the bot is
+  // more than 3 yards from it and it stays in sight on the same route; only
+  // then is the farthest route point in sight chosen again. Choosing afresh
+  // every step (until 2026-10-29) flipped between points round an obstacle,
+  // step by step: 120 degrees turned a yard walked (picture 069), the bots
+  // visibly wobbling; the painted map, which follows a point along its
+  // route, turned 6.3.
+  if (b.pick && b.pickRoute === b.route && Math.hypot(b.pick[0] - b.x, b.pick[1] - b.y) > 3 &&
+      planSight(P, b.x, b.y, b.pick[0], b.pick[1], learnOnly)) return b.pick;
+  let pick = null;
+  for (let i = b.routePts.length - 1; i >= 0; i--) {
+    const [x, y] = b.routePts[i];
+    if (Math.hypot(x - b.x, y - b.y) < 40 && planSight(P, b.x, b.y, x, y, learnOnly)) { pick = [x, y]; break; }
+  }
+  b.pick = pick || (b.routePts[1] || b.routePts[0]); b.pickRoute = b.route;
+  return b.pick;
+}
+// learning: a refused step teaches the planning point it fell on (or, if
+// that is where the bot stands, the next one along the step)
+function learnRefusal(b, x, y) {
+  const f = inPlay; if (!f || !f.contains) return;
+  const P = planGrid(f);
+  let q = P.cellOf(x, y);
+  if (q === P.cellOf(b.x, b.y)) { const sp = Math.max(Math.hypot(x - b.x, y - b.y), 0.01); q = P.cellOf(b.x + (x - b.x) / sp * P.st, b.y + (y - b.y) / sp * P.st); }
+  if (q >= 0 && !P.learned[q]) { P.learned[q] = 1; ways.learned++; }
+}
+// }}}
+// {{{ potential field
+function potentialStep(b, tx, ty, dt) {
+  const f = inPlay, d = Math.max(Math.hypot(tx - b.x, ty - b.y), 0.01);
+  let fx = (tx - b.x) / d, fy = (ty - b.y) / d;
+  for (let k = 0; k < 12; k++) {
+    const a = k * Math.PI / 6;
+    for (let r = 1.5; r <= PUSH_RANGE; r += 1.5) {
+      if (unpathable(b.x + Math.cos(a) * r, b.y + Math.sin(a) * r, f)) { const push = (PUSH_RANGE - r + 1.5) / PUSH_RANGE; fx -= Math.cos(a) * push * 0.6; fy -= Math.sin(a) * push * 0.6; break; }
+    }
+  }
+  // stuck in a dip of the field: a random kick
+  if (Math.hypot(b.vx, b.vy) < 0.8 * dt * 60) b.still = (b.still || 0) + dt; else b.still = 0;
+  if (b.still > KICK_AFTER) { const a = Math.random() * 6.283; b.kick = [Math.cos(a), Math.sin(a), KICK_FOR]; b.still = 0; ways.kicks++; }
+  if (b.kick) { fx = b.kick[0]; fy = b.kick[1]; if ((b.kick[2] -= dt) <= 0) b.kick = null; }
+  const l = Math.max(Math.hypot(fx, fy), 0.01);
+  return [b.x + fx / l * 4, b.y + fy / l * 4];
+}
+// }}}
+// the chosen way's point to steer to, or null (straight at the target)
+function wayStep(b, tx, ty, dt) {
+  const f = inPlay, way = wayNow();
+  if (!f || !f.contains || !GROUND) return null;
+  if (way === "flow") return flowStep(b, tx, ty, f);
+  if (way === "astar") return astarStep(b, tx, ty, f, false);
+  if (way === "learn") return astarStep(b, tx, ty, f, true);
+  if (way === "potential") return potentialStep(b, tx, ty, dt);
+  if (way === "paint") return paintStep(b, tx, ty, f);
+  return null;
+}
+// }}}
+
+// {{{ the painted map (issue 617o8)
+// The owner, 2026-10-29: "we want bots to paint surfaces and collectively
+// get better at navigating as we gather more data. Also they should give
+// space to walls, less if they need something nearby or directly nearby
+// opposite the wall, and they should spread out through an area." The work
+// is scripts/templates/paint-paths.js (inlined above, tested alone by
+// scripts/test-paint-paths); this joins it to the sandbox:
+//   one map per part in play (f.paintMap), yard cells over its box and 8
+//   yards round it; steep ground (by the slider) and the part's edge known
+//   from the start, the doodads not, as for the other ways;
+//   each bot plans from where it is to its wandering's target when the map
+//   says to (a new target, a wall painted near its route, now and then for
+//   the crowd), at most PAINT_BUDGET plans a step (the rest wait a step);
+//   it is given a lane of its own (-1 to 1) and follows its route in it;
+//   it paints the cell it stands in each step; a refused step paints the
+//   doodad it hit (its footprint, grown by a body) and it plans again;
+//   the crowd (where bots stand and their routes run) is remade each second.
+const PAINT_BUDGET = 6;
+const paintW = { budget: 0, crowdAt: 0, drawnAt: -1, turn: 0, yards: 0 };
+function paintKind(f) { return (x, y) => !f.contains(x, y) ? PaintPaths.OUTSIDE : steepAt(x, y) ? PaintPaths.STEEP : PaintPaths.UNKNOWN; }
+function paintMapFor(f) {
+  if (f.paintMap) return f.paintMap;
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+  for (const [x, y] of f.poly) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  x0 -= 8; y0 -= 8; x1 += 8; y1 += 8;
+  // the address may set the map's numbers by name (paint.UNKNOWN=0, paint.WANT=3, ...), to compare
+  // them on the same run (617o8's questions 2 and 3)
+  const opt = {};
+  for (const [k, v] of new URLSearchParams(location.hash.slice(1))) if (k.startsWith("paint.")) opt[k.slice(6)] = +v;
+  const M = PaintPaths.make(Math.ceil(x1 - x0) + 1, Math.ceil(y1 - y0) + 1, 1, x0, y0, opt);
+  PaintPaths.setGround(M, paintKind(f));
+  M.canvas = document.createElement("canvas"); M.canvas.width = M.w; M.canvas.height = M.h;
+  return (f.paintMap = M);
+}
+// once a step, before the bots: the plan budget, and the crowd each second
+function paintBegin(f) {
+  paintW.budget = PAINT_BUDGET;
+  const M = paintMapFor(f);
+  if (simT >= paintW.crowdAt) { PaintPaths.crowd(M, bots.map(b => ({ x: b.x, y: b.y, path: b.ppath }))); paintW.crowdAt = simT + 1; }
+}
+function paintStep(b, tx, ty, f) {
+  const M = paintMapFor(f), PP = PaintPaths;
+  if (b.lane === undefined) { b.lane = Math.random() * 2 - 1; b.jitter = Math.random() * 2; }
+  if (paintW.budget > 0 && PP.needsPlan(M, b.ppath, tx, ty, simT, b.jitter)) {
+    paintW.budget--;
+    b.ppath = PP.plan(M, b.x, b.y, tx, ty);
+    if (b.ppath) { b.ppath.at = simT; PP.crowdRoute(M, b.ppath, b.x, b.y); }
+  }
+  return b.ppath ? PP.follow(M, b.ppath, b.x, b.y, b.lane) : null;
+}
+// a refused step: the doodad holding the refused point (the footprints are
+// kept grown by a body already, GROUND.rects), or none (steep ground the
+// bot's own steering missed): painted for every bot, and this one plans again
+function paintRefused(b, f) {
+  const M = paintMapFor(f), g = GROUND, x = b.refusedX, y = b.refusedY;
+  let box = null;
+  const list = g && g.buckets.get(Math.floor(x / BUCKET) + "," + Math.floor(y / BUCKET));
+  if (list) for (const i of list) { const q = i * 4; if (x >= g.rects[q] && x <= g.rects[q + 2] && y >= g.rects[q + 1] && y <= g.rects[q + 3]) { box = [g.rects[q], g.rects[q + 1], g.rects[q + 2], g.rects[q + 3]]; break; } }
+  PaintPaths.refused(M, x, y, box, b.x, b.y);
+  b.ppath = null;
+}
+// the paint drawn (way "painted map"): walked ground gold, the more walked
+// the stronger; learned walls orange; unknown ground clear. The picture is
+// remade at most twice a second of play.
+function drawPaint(M, yd2px) {
+  if (simT - paintW.drawnAt >= 0.5 || paintW.drawnAt < 0) {
+    paintW.drawnAt = simT;
+    const o = M.canvas.getContext("2d"), img = o.createImageData(M.w, M.h), px = img.data;
+    for (let q = 0; q < M.n; q++) {
+      const k = M.know[q];
+      if (k === PaintPaths.PAINTED) px.set([232, 197, 71, Math.min(170, 40 + M.walks[q] * 3)], q * 4);
+      else if (k === PaintPaths.WALL) px.set([255, 120, 30, 230], q * 4);
+    }
+    o.putImageData(img, 0, 0);
+  }
+  const [ax, ay] = yd2px(M.x0 - M.step / 2, M.y0 - M.step / 2), [bx, by] = yd2px(M.x0 + (M.w - 0.5) * M.step, M.y0 + (M.h - 0.5) * M.step);
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.translate(ax, ay); ctx.scale((bx - ax) / M.w, (by - ay) / M.h);
+  ctx.drawImage(M.canvas, 0, 0);
+  ctx.restore();
+}
+// a bot's route as the curve it walks: through the middles of its straights,
+// each corner a quadratic bend (the arcs the following makes)
+function drawPaintRoute(b, yd2px) {
+  const p = b.ppath && b.ppath.pts; if (!p || p.length < 2) return;
+  ctx.beginPath();
+  let [x, y] = yd2px(b.x, b.y); ctx.moveTo(x, y);
+  for (let i = Math.max(1, b.ppath.seg + 1); i < p.length - 1; i++) {
+    const [cx1, cy1] = yd2px(p[i][0], p[i][1]), [mx, my] = yd2px((p[i][0] + p[i + 1][0]) / 2, (p[i][1] + p[i + 1][1]) / 2);
+    ctx.quadraticCurveTo(cx1, cy1, mx, my);
+  }
+  [x, y] = yd2px(p[p.length - 1][0], p[p.length - 1][1]); ctx.lineTo(x, y);
+  ctx.strokeStyle = "rgba(255,255,255,0.22)"; ctx.lineWidth = 1; ctx.stroke();
+}
+// }}}
+
+// {{{ orbiting what holds a bot back (issue 617e16h, the owner's rule)
+// "if a buddy is on an uninterrupted or redirected movement order for a
+// second or more (configurable, down usually) then we test - are they in a
+// state where they haven't travelled as far as they probably should have
+// been able to? ... snapshot their position every second or so ... range
+// check from that position to the target position. if that's less than the
+// distance they were able to have travelled, then they're stuck on
+// something and need to orbit the obstacle in front of them ... Orbit
+// around them, either clockwise or counter-clockwise. until you get to a
+// position on the other side that is in line-of-sight of a forward
+// position on the path you're trying to follow. Then you should move along
+// that."
+//
+// The order: the bot's target this step (b.order). The same order while
+// the target stays within ORDER_SAME yards of where it was. Each "Stuck
+// check" seconds (the panel's slider, 1 to start) of the same order: how
+// much closer it got to the target, against ABLE_SHARE of how far it could
+// have walked (full speed for that time). Less, and still more than
+// ORDER_ARRIVE yards away: stuck, an orbit begins, clockwise or
+// counter-clockwise at random. (Caught by the world, trackProgress, starts
+// one too.)
+//
+// Orbiting: each step it heads along the obstacle, keeping it on one side:
+// from its heading turned ORBIT_IN toward the obstacle's side, it turns away
+// 15 degrees at a time until 2 yards ahead are clear of what the map marks
+// unpathable (what it knows: steep ground, doodads it has been shown, known
+// walls, the area's edge). It leaves the orbit when it can see its target
+// (a straight line to it clear of the same) and is closer to it than where
+// the orbit began; after ORBIT_LIMIT seconds it turns round (the other way
+// round the obstacle), and after two turns it gives up and walks on.
+const ORDER_SAME = 3, ORDER_ARRIVE = 6, ABLE_SHARE = 0.5, ORBIT_IN = 1.3, ORBIT_LIMIT = 15, ORBIT_FEEL = 4.5, ORBIT_ROUND = 0.52;
+const orbits = { begun: 0, sight: 0, flips: 0, gaveUp: 0 };
+function unpathable(x, y, f) {
+  return steepAt(x, y) || knownDoodadAt(x, y) || knownWall(x, y) || (f && f.contains && !f.contains(x, y));
+}
+function inSight(b, tx, ty, f) {
+  const d = Math.hypot(tx - b.x, ty - b.y), n = Math.ceil(d);
+  for (let i = 1; i < n; i++) if (unpathable(b.x + (tx - b.x) * i / n, b.y + (ty - b.y) * i / n, f)) return false;
+  return true;
+}
+// Backing out first, twice as far each time (the owner: "it should double
+// it's "backup distance" anytime it's trying to back out of something it's
+// stuck on. this distance should be reset when they've travelled farther on
+// the forward axis than the place they were foremost stuck."): stuck, a bot
+// backs straight away from its target b.backDist yards (BACK_FIRST, then
+// doubling up to BACK_MAX), then orbits. Its forwardmost stuck spot
+// (b.front: the spot S and the forward axis u, from S toward the target
+// then) is kept: a new stuck spot further along that axis replaces it.
+// Once the bot stands more than FRONT_PASS yards past S along u, it has
+// solved the forwardmost spot: the back-up distance goes back to BACK_FIRST
+// and the spot is let go ("That's when they can relax").
+const BACK_FIRST = 2, BACK_MAX = 64, FRONT_PASS = 1;
+const backing = { times: 0, yards: 0, relaxed: 0, deepest: BACK_FIRST };
+function stuckAt(b, tx, ty) {
+  const d = Math.max(Math.hypot(tx - b.x, ty - b.y), 0.01), ux = (tx - b.x) / d, uy = (ty - b.y) / d;
+  if (!b.front || (b.x - b.front.x) * b.front.ux + (b.y - b.front.y) * b.front.uy > 0) b.front = { x: b.x, y: b.y, ux, uy };
+  b.backDist = b.backDist || BACK_FIRST;
+  b.backLeft = b.backDist; b.bx = -ux; b.by = -uy; b.pendingOrbit = [tx, ty];
+  backing.times++; backing.yards += b.backDist; backing.deepest = Math.max(backing.deepest, b.backDist);
+  b.backDist = Math.min(b.backDist * 2, BACK_MAX);
+  stuck.events++;
+}
+function relaxIfPast(b) {
+  if (b.front && (b.x - b.front.x) * b.front.ux + (b.y - b.front.y) * b.front.uy > FRONT_PASS) {
+    b.front = null; b.backDist = BACK_FIRST; backing.relaxed++;
+  }
+}
+function startOrbit(b, tx, ty) {
+  b.orbit = { side: Math.random() < 0.5 ? 1 : -1, tx, ty, fromD: Math.hypot(tx - b.x, ty - b.y), t: simT, turns: 0,
+              h: Math.atan2(ty - b.y, tx - b.x) };
+  orbits.begun++;                                           // (stuckAt counts the stuck event)
+}
+function orbitStep(b, tx, ty, dt) {
+  const f = inPlay, d = Math.hypot(tx - b.x, ty - b.y);
+  relaxIfPast(b);                                           // past its forwardmost stuck spot: the back-up distance resets
+  if (b.backLeft > 0) return null;                          // backing out: no orders judged now
+  b.order = [tx, ty];
+  if (!b.orbit) {
+    // the same order? (snapshot: where it stood, how far from the target, when)
+    if (!b.snap || Math.hypot(b.snap.tx - tx, b.snap.ty - ty) > ORDER_SAME) { b.snap = { tx, ty, d, t: simT }; return null; }
+    const check = +$("check").value, el = simT - b.snap.t;
+    if (el < check) return null;
+    const closer = b.snap.d - d;
+    if (d > ORDER_ARRIVE && closer < ABLE_SHARE * SPEED * el) { stuckAt(b, tx, ty); b.snap = null; return null; }   // back out first; the orbit follows
+    b.snap = { tx, ty, d, t: simT };
+    if (!b.orbit) return null;
+  }
+  const o = b.orbit;
+  // the order changed far from the orbit's: the orbit is for that order only
+  if (Math.hypot(o.tx - tx, o.ty - ty) > ORDER_SAME * 4) { b.orbit = null; b.snap = null; return null; }
+  if (d < o.fromD - 0.5 && inSight(b, tx, ty, f)) { b.orbit = null; b.snap = null; orbits.sight++; return null; }
+  if (simT - o.t > ORBIT_LIMIT) {
+    if (++o.turns > 2) { b.orbit = null; b.snap = null; orbits.gaveUp++; return null; }
+    o.side = -o.side; o.t = simT; orbits.flips++;
+  }
+  // Along the obstacle, keeping it on o.side (the module's orbit, roam/
+  // buddy_path_ways.h, the same rule): first walk in at the target until
+  // the way ahead is blocked (it backed out first, so the obstacle is some
+  // yards off), then turn side-on; from then on feel for the wall beside it
+  // (within ORBIT_FEEL yards): felt, hug it (from the heading turned in
+  // toward it, turn away until 2 and 4 yards ahead are clear); not felt
+  // (past its end), round the corner by ORBIT_ROUND. Until 2026-10-29 it
+  // turned in every step, felt or not, and walked rings 3 yards across
+  // when the wall was out of reach (the module's offline test found it).
+  const clear = a => !unpathable(b.x + Math.cos(a) * 2, b.y + Math.sin(a) * 2, f) && !unpathable(b.x + Math.cos(a) * 4, b.y + Math.sin(a) * 4, f);
+  const go = a => { o.h = a; return [b.x + Math.cos(a) * 4, b.y + Math.sin(a) * 4]; };
+  if (!o.touched) {
+    const a = Math.atan2(ty - b.y, tx - b.x);
+    if (clear(a)) return go(a);
+    o.touched = true; o.h = a - o.side * Math.PI / 2;
+  } else {
+    const sp = Math.hypot(b.vx, b.vy);
+    if (sp > 0.5) o.h = Math.atan2(b.vy, b.vx);
+  }
+  const ws = o.h + o.side * Math.PI / 2;
+  let felt = false;
+  for (let r = 1.5; r <= ORBIT_FEEL && !felt; r += 1.5) felt = unpathable(b.x + Math.cos(ws) * r, b.y + Math.sin(ws) * r, f);
+  if (!felt && clear(o.h + o.side * ORBIT_ROUND)) return go(o.h + o.side * ORBIT_ROUND);
+  for (let k = 0; k <= 16; k++) {
+    const a = o.h + o.side * ORBIT_IN - o.side * k * Math.PI / 12;
+    if (clear(a)) return go(a);
+  }
+  return null;
+}
+// }}}
+
+// {{{ stuck: back up, try again, and map the space (issue 617e16h)
+// The owner, 2026-10-28: "if they're moving at full speed in a direction
+// but they aren't making progress moving in that direction, then that means
+// they're stuck on something. When that happens, they need to back up, and
+// try again. If it happens again, then they back up twice as far, and so
+// on, and keep trying until we've fully mapped out the available space."
+//
+// How a bot is judged caught (its inputs against where it got), and what
+// it does then, is written above trackProgress. Earlier measures, each a
+// committed version: the bot's velocity after the walls turned it (a bot
+// scraping along a wall looked fine: never backed up); the straight way to
+// its target (a detour round a patch looked stuck: false walls dropped on
+// open ground, picture 041-043, "dropping a red pixel every once in a
+// while"); three good windows to reset the doubling (back-ups grew to 64
+// yards). The bots also knew every doodad before, so nothing ever refused
+// them; now they know only steep ground until refused (steepAt).
+//
+// known: the zone's map the bots share, KNOWN_CELL-yard cells by "i,j": 1
+// open (a bot has stood there), 2 a wall (a step was refused there), 3 a
+// buffer (the track that led to a refusal: dispreferred, walked round when
+// a way round exists; the owner: "touching objects in this way, implies
+// given buffer spaces that bots route around or walk through if going on a
+// straight shape"). A bot standing in a wall cell proves it open (a wrong
+// mark mends itself); standing in a buffer doesn't clear it, since a
+// crossing walks through buffers. Started afresh with each zone.
+const PROG_WINDOW = 1, FULL_SHARE = 0.6;
+const KNOWN_CELL = 2;
+const known = new Map();
+const stuck = { events: 0, deepest: 0, bumps: 0 };
+const cellKey = (x, y) => Math.floor(x / KNOWN_CELL) + "," + Math.floor(y / KNOWN_CELL);
+function knownWall(x, y) { return known.get(cellKey(x, y)) === 2; }
+function knownBuffer(x, y) { return known.get(cellKey(x, y)) === 3; }
+function learnOpen(x, y) { const k = cellKey(x, y); if (known.get(k) !== 3) known.set(k, 1); }
+// The window's test (the owner, 2026-10-28: "after N seconds or moments,
+// draw a line to your position you were N seconds or moments ago. Then, if
+// you made less progress to your goal than your intended movement input
+// array ... you must have been caught on something, or the geometry
+// disagreed with your movement resolution pathfinding duties believed. And
+// so, you should try and walk around that section. disprefer the movement
+// track that got you onto that path. let other bots come across it and let
+// it be known."): each step's input (the move the bot issued, sx, sy) is
+// summed over the window; the line from the window's start to where the bot
+// is now is what it got. Got less, along its inputs' way, than CAUGHT_SHARE
+// of what it put in, while moving at all (at least FULL_SHARE of full
+// speed): caught. Then the refused spot (where the world turned its step
+// back; or, none known, the cell just ahead) becomes a known wall; the
+// track it came along to it, the last TRACK_CELLS cells, becomes buffer
+// (dispreferred, so others walk round); and it backs up, twice as far each
+// time in a row. A window not caught starts the doubling again.
+const CAUGHT_SHARE = 0.95, TRACK_CELLS = 3;
+function trackProgress(b, mx, my, dt) {
+  if (b.pw === undefined) {                                 // a new window
+    b.pw = 0; b.want = 0; b.mvx = 0; b.mvy = 0; b.px = b.x; b.py = b.y; b.refusedX = undefined;
+    if (b.stuckN === undefined) { b.stuckN = 0; b.goodWins = 0; }
+  }
+  b.pw += dt; b.want += Math.hypot(mx, my); b.mvx += mx; b.mvy += my;   // the inputs, as moves
+  if (b.pw < PROG_WINDOW) return;
+  const ml = Math.hypot(b.mvx, b.mvy) || 1, ux = b.mvx / ml, uy = b.mvy / ml;
+  const got = (b.x - b.px) * ux + (b.y - b.py) * uy;          // how far it got along its inputs' way
+  if (b.want >= FULL_SHARE * SPEED * b.pw && got < CAUGHT_SHARE * Math.min(b.want, ml)) {
+    b.stuckN++; b.goodWins = 0;
+    // no longer backing up: an orbit round what holds it (orbitStep, the
+    // owner's rule of 2026-10-28) is what a caught bot does now
+    if (wayNow() === "orbit" && !b.orbit && !(b.backLeft > 0) && b.order) stuckAt(b, b.order[0], b.order[1]);   // back out, then orbit (the orbit way only, 617o7)
+    const wx = b.refusedX !== undefined ? b.refusedX : b.x + ux * KNOWN_CELL, wy = b.refusedX !== undefined ? b.refusedY : b.y + uy * KNOWN_CELL;
+    known.set(cellKey(wx, wy), 2); ways.walls++;              // (counted: the planners plan again when a wall is learned)
+    // the track that led there, dispreferred: the last TRACK_CELLS cells back along it
+    for (let t = 1; t <= TRACK_CELLS; t++) {
+      const k = cellKey(b.x - ux * KNOWN_CELL * t, b.y - uy * KNOWN_CELL * t);
+      if (known.get(k) !== 2) known.set(k, 3);
+    }
+    stuck.bumps++;
+    // A wanderer stuck on a crossing or turning aside has come to a far
+    // side it can't pass: that is its decision point, not something to try
+    // again (picture 042: crossings aimed past the area's edge met it again
+    // and again, doubling their back-ups)
+    if (b.wstate === "cross") b.crossFor = 0;
+    if (b.wstate === "aside") b.asideFor = 0;
+    stuck.deepest = Math.max(stuck.deepest, b.stuckN);       // (startOrbit counts the event)
+  } else {
+    b.stuckN = 0; b.goodWins = 0;                            // not caught this try: the doubling starts again
+  }
+  b.pw = 0; b.want = 0; b.mvx = 0; b.mvy = 0; b.px = b.x; b.py = b.y; b.refusedX = undefined;
+}
+// The share of the part in play known open: its known-open cells' area
+// over its walkable area.
+function knownShare(f) {
+  if (!f || !f.contains || !f.area) return null;
+  let open = 0;
+  for (const [k, v] of known) {
+    if (v !== 1) continue;
+    const [i, j] = k.split(",").map(Number);
+    if (f.contains((i + 0.5) * KNOWN_CELL, (j + 0.5) * KNOWN_CELL)) open++;
+  }
+  return Math.min(1, open * KNOWN_CELL * KNOWN_CELL / f.area);
+}
+// }}}
+
+// {{{ wanderers: each its own crossings (issue 617e16d)
+// A wanderer is in one of three states:
+//   orbit: circles the fence's middle in its own direction (b.wdir), at
+//     its own depth (eased toward its own target, re-drawn on its own
+//     clock: nothing shared, so no two choose together), until its own
+//     time to cross (b.crossIn) runs out;
+//   cross: walks straight through the middle toward the far side of the
+//     fence (b.hx, b.hy: its heading, fixed when it set out);
+//   aside: at the far side, turned left or right, whichever way the ground
+//     ahead is nearer the zone's level, walks that way a few seconds, then
+//     orbits again. A turn against its orbit direction counts; the third
+//     reverses its orbit and the count starts again.
+// CROSS_MIN, CROSS_MAX: seconds of orbit between a bot's crossings (rare: "that doesn't happen often");
+// AIM_SPREAD: a crossing aims at its own point near the middle, up to this share of
+// the fence's reach to either side, so the crossings don't all meet at one point (seen
+// 2026-10-28: aimed at the exact middle, they made a starburst, the orchestrated look)
+const CROSS_MIN = 40, CROSS_MAX = 120, ASIDE_S = 4, ASIDE_TURN = 1.75, LOOK = 25, AIM_SPREAD = 0.25;
+const wander = { crossings: 0, down: 0, up: 0, reversals: 0 };
+function groundHeight(x, y) {                                // yards, or null off the ground
+  const g = GROUND; if (!g) return null;
+  const c = Math.round((x - g.sx0) / g.step), r = Math.round((y - g.sy0) / g.step);
+  if (c < 0 || r < 0 || c >= g.cols || r >= g.rows) return null;
+  const v = g.h[r * g.cols + c];
+  return v === NO_GROUND ? null : v / 10;
+}
+function wanderTarget(b, f, dt) {
+  if (b.wstate === undefined) {                              // first step: its own direction and clock
+    b.wstate = "orbit"; b.wdir = Math.random() < 0.5 ? 1 : -1; b.against = 0;
+    b.crossIn = Math.random() * CROSS_MAX; b.wdepth = 0.3 + Math.random() * 0.6; b.wdepthTo = b.wdepth; b.wpick = Math.random() * 10;
+  }
+  const rx = b.x - f.cx, ry = b.y - f.cy, th = Math.atan2(ry, rx), r = Math.hypot(rx, ry), R = edgeAt(f, th);
+  if (b.wstate === "orbit") {
+    b.crossIn -= dt; b.wpick -= dt;
+    if (b.wpick <= 0) { b.wdepthTo = 0.25 + Math.random() * 0.7; b.wpick = 5 + Math.random() * 10; }
+    b.wdepth += (b.wdepthTo - b.wdepth) * Math.min(1, dt * 0.25);
+    if (b.crossIn <= 0 && r < R) {                           // its moment: straight through the middle
+      // its moment: straight through its own point near the middle
+      const off = (Math.random() * 2 - 1) * AIM_SPREAD * R, d = Math.max(r, 0.01), px = -ry / d, py = rx / d;
+      const ax = f.cx + px * off - b.x, ay = f.cy + py * off - b.y, al = Math.max(Math.hypot(ax, ay), 0.01);
+      b.wstate = "cross"; b.hx = ax / al; b.hy = ay / al; wander.crossings++;
+      // its time: three times as long as walking to the far side should take
+      // (its own reach plus the far side's, at full speed); a crossing that
+      // can't get there (a pocket walled by steep ground: picture 037, 35 of
+      // 36 crossing at once, pushing at the walls) ends at a decision point anyway
+      b.crossFor = 3 * (r + edgeAt(f, Math.atan2(b.hy, b.hx))) / SPEED;
+    } else {
+      if (r > R * 1.05) return [f.cx, f.cy];
+      const ta = th + b.wdir * LEAD, Ra = edgeAt(f, ta) * b.wdepth;
+      return [f.cx + Math.cos(ta) * Ra, f.cy + Math.sin(ta) * Ra];
+    }
+  }
+  if (b.wstate === "cross") {
+    // past the middle and near the far edge, or out of time: the decision point
+    b.crossFor = (b.crossFor || 0) - dt;
+    if ((rx * b.hx + ry * b.hy > 0 && r > R * 0.85) || b.crossFor <= 0) {
+      const level = GROUND && GROUND.level !== undefined ? GROUND.level : null;
+      const turn = s => { const a = s * ASIDE_TURN, ca = Math.cos(a), sa = Math.sin(a); return [b.hx * ca - b.hy * sa, b.hx * sa + b.hy * ca]; };
+      const [lx, ly] = turn(1), [qx, qy] = turn(-1);
+      const hl = groundHeight(b.x + lx * LOOK, b.y + ly * LOOK), hr = groundHeight(b.x + qx * LOOK, b.y + qy * LOOK);
+      // the way nearer the zone's level; no ground known either way: a coin
+      let s;
+      if (level !== null && hl !== null && hr !== null) s = Math.abs(hl - level) <= Math.abs(hr - level) ? 1 : -1;
+      else s = Math.random() < 0.5 ? 1 : -1;
+      const here = groundHeight(b.x, b.y), chosen = s === 1 ? hl : hr;
+      if (here !== null && chosen !== null) { if (chosen < here) wander.down++; else wander.up++; }
+      [b.hx, b.hy] = turn(s);
+      // which way round the middle that turn goes: the sign of (radius x heading)
+      const goes = rx * b.hy - ry * b.hx > 0 ? 1 : -1;
+      if (goes !== b.wdir && ++b.against >= 3) { b.wdir = -b.wdir; b.against = 0; wander.reversals++; }
+      b.wstate = "aside"; b.asideFor = ASIDE_S;
+    }
+    return [b.x + b.hx * 10, b.y + b.hy * 10];
+  }
+  // aside
+  b.asideFor -= dt;
+  if (b.asideFor <= 0 || r > R * 1.1) { b.wstate = "orbit"; b.crossIn = CROSS_MIN + Math.random() * (CROSS_MAX - CROSS_MIN); }
+  return [b.x + b.hx * 10, b.y + b.hy * 10];
+}
+// }}}
+
+// {{{ formations: guards and patrols (issue 617e16e)
+// A shape is its places, offsets in yards in the formation's own frame:
+// u forward, v to the right. The first N bots (the panel's "Formed") take
+// them in order. The anchor patrols: round the fence at three quarters of
+// its depth in the clockwise sense, at a walk; with no fence it keeps 8
+// yards from the player. Turning: the frame turns so u is the anchor's
+// heading; rigid: u stays screen-north whatever way the anchor walks.
+const GAP = 3, PATROL_SPEED = 3;
+const SHAPES = {
+  line:   n => Array.from({ length: n }, (_, i) => [0, (i - (n - 1) / 2) * GAP]),
+  column: n => Array.from({ length: n }, (_, i) => [-i * GAP, 0]),
+  wedge:  n => Array.from({ length: n }, (_, i) => { const row = Math.ceil(i / 2), side = i === 0 ? 0 : (i % 2 ? 1 : -1); return [-row * GAP, side * row * GAP]; }),
+  ring:   n => { const R = Math.max(GAP, n * GAP / (2 * Math.PI)); return Array.from({ length: n }, (_, i) => [Math.cos(i * 2 * Math.PI / n) * R, Math.sin(i * 2 * Math.PI / n) * R]); },
+  square: n => { const k = Math.ceil(Math.sqrt(n)); return Array.from({ length: n }, (_, i) => [-(Math.floor(i / k) - (k - 1) / 2) * GAP, (i % k - (k - 1) / 2) * GAP]); },
+};
+const patrol = { x: 0, y: 0, ang: null, hx: 0, hy: -1, offsets: [], shape: "", n: 0 };
+function stepPatrol(dt, f) {
+  const shape = $("form").value, n = Math.min(+$("formN").value, bots.length);
+  if (shape === "none") return 0;
+  if (shape !== patrol.shape || n !== patrol.n) { patrol.offsets = SHAPES[shape](n); patrol.shape = shape; patrol.n = n; }
+  let nx, ny;
+  if (f) {
+    if (patrol.ang === null) patrol.ang = Math.atan2(patrol.y - f.cy, patrol.x - f.cx) || 0;
+    const R = edgeAt(f, patrol.ang) * 0.75;
+    patrol.ang += orbitSign * PATROL_SPEED * dt / Math.max(R, 5);
+    nx = f.cx + Math.cos(patrol.ang) * edgeAt(f, patrol.ang) * 0.75; ny = f.cy + Math.sin(patrol.ang) * edgeAt(f, patrol.ang) * 0.75;
+  } else {
+    patrol.ang = null;
+    const dx = player.x - patrol.x, dy = player.y - patrol.y, d = Math.hypot(dx, dy);
+    const s = d > 8 ? Math.min(d - 8, PATROL_SPEED * 1.6 * dt) / d : 0;
+    nx = patrol.x + dx * s; ny = patrol.y + dy * s;
+  }
+  const mx = nx - patrol.x, my = ny - patrol.y, ml = Math.hypot(mx, my);
+  if (ml > 1e-4) { patrol.hx = mx / ml; patrol.hy = my / ml; }
+  patrol.x = nx; patrol.y = ny;
+  return n;
+}
+function placeOf(i) {
+  const [u, v] = patrol.offsets[i] || [0, 0];
+  const turning = $("formTurn").checked;
+  const fx = turning ? patrol.hx : 0, fy = turning ? patrol.hy : -1;   // forward
+  const rx = -fy, ry = fx;                                             // right of forward (y down)
+  return [patrol.x + fx * u + rx * v, patrol.y + fy * u + ry * v];
+}
+// }}}
+
+// {{{ the player and the fence in play
+function stepPlayer(dt) {
+  const dx = player.tx - player.x, dy = player.ty - player.y, d = Math.hypot(dx, dy);
+  if (d > 0.5) { const s = Math.min(d, player.speed * dt); player.x += dx / d * s; player.y += dy / d * s; }
+  // the fence holding the player: the smallest of those it stands in
+  let best = -1;
+  fences.forEach((f, i) => { if (inside(f, player.x, player.y) && (best < 0 || f.area < fences[best].area)) best = i; });
+  // the part in play (617e16f): the walkable part of that fence's name the
+  // player is in; standing where fences of different names overlap, all of
+  // their parts, joined (the owner: "they will all be considered valid")
+  let part = partFor(fences[best]);
+  if (part && part.areaRef) {
+    const names = [...new Set(fences.filter(f => !f.contains && inside(f, player.x, player.y)).map(f => f.name))];
+    if (names.length > 1) {
+      const parts = names.map(n => partFor(fences.find(f => f.name === n && !f.contains))).filter(p => p && p.areaRef && p.contains(player.x, player.y));
+      if (parts.length > 1) part = joinParts(parts);
+    }
+  }
+  if (best !== active || part !== inPlay) {
+    active = best; inPlay = part || null;
+    const p = inPlay;
+    // the zone, the sub-zone the player is in (617e16j), the monsters, the part
+    $("where").textContent = C.data.zones[zoneIdx].name + ", " + subName(subOf(player.x, player.y)) +
+      (p ? " — " + p.name + " (" + p.spawns + " spawns" +
+      (p.of ? `; part ${p.rank + 1} of ${p.of}, ${Math.round(p.area)} sq yd walkable` :
+       p.area ? `; ${Math.round(p.area)} sq yd walkable` : "") + ")" : " — outside every fence: the bots follow");
+  }
+}
+// The player's dot has jumped (a click). Arriving near the edge of the
+// part in play (past EDGE_NEAR of its reach on that bearing) turns every
+// bot's orbit round; arriving near the edge again with a move in the same
+// direction as the last (within 45 degrees: "the same motion") sends the
+// wanderers through the middle to the far edge instead (617e16d, the
+// owner's answer of 2026-10-28).
+const EDGE_NEAR = 0.8;
+let orbitSign = 1, lastEdgeMove = null;
+const edgeEvents = { reversed: 0, crossed: 0 };
+function playerMoved(ox, oy) {
+  const p = inPlay;
+  if (!p) { lastEdgeMove = null; return; }
+  const th = Math.atan2(player.y - p.cy, player.x - p.cx), r = Math.hypot(player.x - p.cx, player.y - p.cy);
+  if (r < EDGE_NEAR * edgeAt(p, th)) { lastEdgeMove = null; return; }
+  const mx = player.x - ox, my = player.y - oy, ml = Math.hypot(mx, my) || 1, move = [mx / ml, my / ml];
+  if (lastEdgeMove && move[0] * lastEdgeMove[0] + move[1] * lastEdgeMove[1] > Math.cos(Math.PI / 4)) {
+    for (const b of bots) if (b.wstate === "orbit") b.crossIn = 0;
+    edgeEvents.crossed++;
+  } else {
+    orbitSign = -orbitSign;
+    for (const b of bots) if (b.wdir) b.wdir = -b.wdir;
+    edgeEvents.reversed++;
+  }
+  lastEdgeMove = move;
+}
+// }}}
+
+// {{{ the measures, over the last minute
+const cover = { cells: new Map(), size: 5 };
+let simT = 0;
+function measure() {
+  const f = inPlay;                                          // the part in play (617e16f), or the fence as it was
+  const lines = [];
+  // turning: each bot's angle round the fence's middle, 30 s ago to now
+  let cw = 0, ccw = 0, circ = 0;
+  for (const b of bots) {
+    if (f) b.ang.push([simT, Math.atan2(b.y - f.cy, b.x - f.cx)]);
+    while (b.ang.length && simT - b.ang[0][0] > 30) b.ang.shift();
+    let net = 0;
+    for (let i = 1; i < b.ang.length; i++) { let d = b.ang[i][1] - b.ang[i - 1][1]; d = (d + Math.PI) % (2 * Math.PI); if (d < 0) d += 2 * Math.PI; net += d - Math.PI; }
+    if (Math.abs(net) >= Math.PI) { circ++; if (net > 0) cw++; else ccw++; }
+  }
+  // covering: the fence's 5-yard cells a bot crossed within the minute
+  let covered = 0, total = 0;
+  if (f) {
+    for (const b of bots) cover.cells.set(Math.floor(b.x / cover.size) + "," + Math.floor(b.y / cover.size), simT);
+    let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+    for (const [x, y] of f.poly) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+    for (let x = Math.floor(x0 / 5); x <= x1 / 5; x++) for (let y = Math.floor(y0 / 5); y <= y1 / 5; y++) {
+      if (!inside(f, x * 5 + 2.5, y * 5 + 2.5)) continue;
+      total++;
+      const t = cover.cells.get(x + "," + y);
+      if (t !== undefined && simT - t <= 60) covered++;
+    }
+  }
+  // spacing: the median distance to the nearest other bot
+  const nn = bots.map(b => Math.min(...bots.filter(o => o !== b).map(o => Math.hypot(o.x - b.x, o.y - b.y)))).sort((a, b) => a - b);
+  lines.push(`bots            ${bots.length}`);
+  lines.push(`circling (30s)  ${circ} of ${bots.length}`);
+  lines.push(`  clockwise     ${cw}   anticlockwise ${ccw}`);
+  lines.push(`fence covered   ${total ? Math.round(100 * covered / total) : 0}% (last minute)`);
+  lines.push(`spacing         ${nn.length ? nn[Math.floor(nn.length / 2)].toFixed(1) : "-"} yd (median nearest)`);
+  // the ground: steps turned aside and stopped a second, since the last
+  // measure; the fence's open share at the slider's limit
+  const secs = Math.max(simT - steer.since, 1e-6);
+  if (GROUND) {
+    lines.push(`turned aside    ${(steer.turned / secs).toFixed(1)} steps a second`);
+    lines.push(`stopped         ${(steer.stopped / secs).toFixed(1)} steps a second`);
+    lines.push(`fence open      ${f ? Math.round(100 * openShareOf(f)) + "%" : "-"} (not steep, no doodad)`);
+    lines.push(`zone doodads    ${GROUND.rects.length / 4}, ${GROUND.knownDoodads} shown to the bots (orange)`);
+    lines.push(`zone level      ${GROUND.level !== undefined ? GROUND.level.toFixed(1) + " yd (walkable ground's average)" : "-"}`);
+    if (f && f.of) lines.push(`area            part ${f.rank + 1} of ${f.of}, ${Math.round(f.area)} sq yd`);
+    lines.push(`player at edge  ${edgeEvents.reversed} reversed, ${edgeEvents.crossed} crossed`);
+  } else lines.push(`ground          ${zoneIdx >= 0 ? "none for this zone (generate-ground-sandbox-data)" : "-"}`);
+  // monsters and fights (617e16g)
+  if (mobs.length) {
+    const alive = mobs.filter(m => m.alive && !m.under).length, dead = mobs.filter(m => !m.alive).length, cave = mobs.filter(m => m.under).length;
+    lines.push(`monsters        ${alive} alive, ${dead} dead, ${cave} in caves`);
+    lines.push(`fights          ${bots.filter(b => b.fight).length} now, ${fights.done} done, ${fights.done ? (fights.secs / fights.done).toFixed(1) : "-"} s each`);
+    lines.push(`caught up       ${fights.catchups}   out of dead ends ${fights.deadEnds}`);
+  } else lines.push(`monsters        ${zoneIdx >= 0 ? "none here (generate-ground-sandbox-monsters)" : "-"}`);
+  // stuck and the map (617e16h)
+  {
+    let walls = 0; for (const v of known.values()) if (v === 2) walls++;
+    const share = knownShare(f);
+    lines.push(`stuck           ${stuck.events} times; backed out ${backing.times} (${Math.round(backing.yards)} yd, longest ${backing.deepest} yd), relaxed ${backing.relaxed}`);
+    lines.push(`orbits          ${orbits.begun} begun, ${orbits.sight} left by sight, ${orbits.flips} turned round, ${orbits.gaveUp} given up`);
+    // the way in use (617o7) and its own counts
+    lines.push(`pathfinding     ${$("way").selectedOptions[0].text}: ${ways.plans} routes planned, ${ways.fields} flow fields, ${ways.learned} points learned, ${ways.kicks} kicks`);
+    if (wayNow() === "paint" && f && f.paintMap) {
+      const M = f.paintMap, st = M.stats;
+      const cl = bots.map(b => { const q = PaintPaths.cellOf(M, b.x, b.y); return q >= 0 ? M.clear[q] : 0; }).sort((a, b) => a - b);
+      lines.push(`painted map     ${(100 * M.painted / Math.max(1, M.inside)).toFixed(0)}% walked, ${M.wallCells} wall cells learned, ${st.bumps} refusals; ` +
+                 `${st.plans} plans, ${(st.ms / Math.max(1, st.plans)).toFixed(2)} ms each; bots ${cl[cl.length >> 1].toFixed(1)} yd from walls (median)`);
+    }
+    lines.push(`smoothness      ${(paintW.turn * 180 / Math.PI / Math.max(1, paintW.yards)).toFixed(1)} degrees turned a yard walked`);
+    let buffers = 0; for (const v of known.values()) if (v === 3) buffers++;
+    lines.push(`mapped          ${share === null ? "-" : Math.round(100 * share) + "% of the part known open"}, ${walls} known walls`);
+    lines.push(`caught          ${stuck.bumps} times; ${steer.refused} steps refused by the world; ${buffers} buffer cells on the tracks that led there`);
+    // circulation (617e16k): moves to the emptiest sector, and the bots per sector now
+    if (f && f.contains) {
+      const count = new Array(SECTORS).fill(0); for (const b of bots) if (b.sector !== undefined) count[b.sector]++;
+      lines.push(`circulating     ${circulation.moves} moves (${circulation.reversed} reversed, ${circulation.flipped} across); bots a sector now ${Math.min(...count)} to ${Math.max(...count)} (${count.join(" ")})`);
+    }
+    // peninsulas (617e16i)
+    const pens = partsInPlay().flatMap(p => p.pens || []);
+    if (pens.length) {
+      const whole = pens.filter(pn => pn.seenN >= pn.size).length, inside = pens.reduce((s, pn) => s + pn.explorers, 0);
+      const inst = partsInPlay().some(p => p.pens && penAt(p, player.x, player.y));
+      lines.push(`peninsulas      ${pens.length} found, ${whole} seen whole, ${inside} bots exploring${inst ? "; the player is in one: an instance" : ""}`);
+    }
+  }
+  // wanderers (617e16d): since the page began, crossings, the turns aside
+  // by the ground (down or up from where they stood), orbit reversals
+  if (+$("turn").value === 2) {
+    const inState = s => bots.filter(b => b.wstate === s).length;
+    lines.push(`crossings       ${wander.crossings}   now crossing ${inState("cross")}`);
+    lines.push(`turned aside    ${wander.down} down, ${wander.up} up`);
+    lines.push(`orbit reversed  ${wander.reversals}`);
+  }
+  // a formation (617e16e): how far, on average, members stand from their places
+  if ($("form").value !== "none" && patrol.n) {
+    let off = 0;
+    for (let i = 0; i < patrol.n; i++) { const [px, py] = placeOf(i); off += Math.hypot(bots[i].x - px, bots[i].y - py); }
+    lines.push(`formation       ${patrol.shape}, ${patrol.n} bots, ${(off / patrol.n).toFixed(1)} yd from places`);
+  }
+  steer.turned = 0; steer.stopped = 0; steer.since = simT;
+  $("measures").textContent = lines.join("\n");
+}
+// }}}
+
+// {{{ live players: the world server's stream (issue 617e16a)
+// Asked once a second at http://127.0.0.1:<port>/positions (the server's
+// Buddies.MapStream.Port, 8097 unless set; #port= in the address moves it).
+// Each character keeps a short tail of where it was. Each answer, and what
+// it shows: characters (drawn on their continent), or none / no answer
+// ("not streaming": the server is down, built without the stream, or on
+// another port).
+const live = { on: false, chars: new Map(), port: 8097, timer: null, said: "off" };
+async function pollLive() {
+  try {
+    const r = await fetch(`http://127.0.0.1:${live.port}/positions`, { cache: "no-store" });
+    const j = await r.json(), now = performance.now() / 1000, seen = new Set();
+    for (const c of j.characters) {
+      seen.add(c.g);
+      const e = live.chars.get(c.g) || { tail: [] };
+      Object.assign(e, c);
+      e.tail.push([now, c.x, c.y]);
+      while (e.tail.length && now - e.tail[0][0] > 60) e.tail.shift();
+      live.chars.set(c.g, e);
+    }
+    for (const g of [...live.chars.keys()]) if (!seen.has(g)) live.chars.delete(g);
+    live.said = j.characters.length + " in the world";
+  } catch (err) { live.said = "not streaming"; live.chars.clear(); }
+  $("liveN").textContent = live.said;
+}
+function drawLive(T) {
+  if (!live.on) return;
+  const now = performance.now() / 1000, r = Math.max(2.5, cam.z / SQ * 1.5);
+  for (const c of live.chars.values()) {
+    if (c.m !== C.data.map) continue;
+    const colour = c.k === "buddy" ? ownerColour(c.o) : (c.k === "bot" ? "#b8b8b8" : T.player);
+    ctx.fillStyle = colour;
+    for (const [t, x, y] of c.tail) {
+      const [sx, sy] = toScreen(x, y), [cc, rr] = pixOf(sx, sy), [px, py] = toCanvas(cc, rr);
+      ctx.globalAlpha = Math.max(0, 1 - (now - t) / 60) * 0.5; ctx.fillRect(px - 1, py - 1, 2, 2);
+    }
+    ctx.globalAlpha = c.d ? 0.4 : 1;
+    const [sx, sy] = toScreen(c.x, c.y), [cc, rr] = pixOf(sx, sy), [px, py] = toCanvas(cc, rr);
+    ctx.beginPath(); ctx.arc(px, py, c.k === "player" ? r * 1.4 : r, 0, 6.283); ctx.fill();
+    if (c.k === "player" && cam.z > 2) { ctx.globalAlpha = 1; ctx.font = "12px system-ui"; ctx.fillText(c.n, px + r * 2, py - r * 2); }
+  }
+  ctx.globalAlpha = 1;
+}
+function ownerColour(o) {                                  // a hue from the owner's number (as scripts/render-zone)
+  const h = (o * 0.6180339887) % 1;
+  return `hsl(${Math.round(h * 360)}, 85%, 60%)`;
+}
+// }}}
+
+// {{{ drawing
+function draw() {
+  const T = THEMES[$("theme").value], w = cv.width, h = cv.height;
+  ctx.fillStyle = T.bg; ctx.fillRect(0, 0, w, h);
+  ctx.imageSmoothingEnabled = false;
+  const [x0, y0] = toCanvas(0, 0);
+  ctx.drawImage(C.canvas, x0, y0, C.W * cam.z, C.H * cam.z);
+  if (zoneIdx < 0) { drawLive(T); return; }
+  const yd2px = (sx, sy) => { const [c, r] = pixOf(sx, sy); return toCanvas(c, r); };
+  // the ground: the shaded picture over the zone (a point's pixel centred
+  // on it), and, once a yard is over a pixel, each doodad's footprint
+  if (GROUND && +$("shade").value > 0) {
+    const g = GROUND, [ax, ay] = yd2px(g.sx0 - g.step / 2, g.sy0 - g.step / 2), [bx, by] = yd2px(g.sx0 + (g.cols - 0.5) * g.step, g.sy0 + (g.rows - 0.5) * g.step);
+    // through a transform, not a stretch: the picture's columns run with
+    // sx, the screen's may run against it (pixOf), and a negative scale
+    // mirrors it the right way where a stretch would not
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.translate(ax, ay); ctx.scale((bx - ax) / g.cols, (by - ay) / g.rows);
+    ctx.drawImage(g.canvas, 0, 0);
+    ctx.restore();
+    ctx.imageSmoothingEnabled = false;
+    if (wayNow() === "paint" && inPlay && inPlay.paintMap) drawPaint(inPlay.paintMap, yd2px);
+    if (+$("shade").value === 2 && cam.z / SQ > 1) {
+      ctx.fillStyle = T.doodad || "rgba(0,0,0,0.55)";
+      const [vx0, vy0] = yardsOf(...fromCanvas(0, 0)), [vx1, vy1] = yardsOf(...fromCanvas(cv.width, cv.height));
+      const lox = Math.min(vx0, vx1), hix = Math.max(vx0, vx1), loy = Math.min(vy0, vy1), hiy = Math.max(vy0, vy1);
+      for (let i = 0; i < g.rects.length; i += 4) {
+        if (g.rects[i + 2] < lox || g.rects[i] > hix || g.rects[i + 3] < loy || g.rects[i + 1] > hiy) continue;
+        const [p0, q0] = yd2px(g.rects[i] + BODY_R, g.rects[i + 1] + BODY_R), [p1, q1] = yd2px(g.rects[i + 2] - BODY_R, g.rects[i + 3] - BODY_R);
+        // a doodad the bots have been shown (617e16h): orange, not dark
+        ctx.fillStyle = g.knownDoodad[i / 4] ? "rgba(255,140,40,0.85)" : (T.doodad || "rgba(0,0,0,0.55)");
+        ctx.fillRect(Math.min(p0, p1), Math.min(q0, q1), Math.max(1, Math.abs(p1 - p0)), Math.max(1, Math.abs(q1 - q0)));
+      }
+    }
+  }
+  // the area in play (617e16f): its walkable parts on the ground's points,
+  // the part in play filled, the others of the same name faint ("accessible
+  // from afar"); drawn through a transform, as the ground is
+  // (overlapping fences joined: each joined part drawn the same way)
+  for (const p of inPlay && GROUND ? (inPlay.parts || [inPlay]) : []) {
+    if (!p.areaRef) continue;
+    const a = p.areaRef, g = GROUND;
+    paintArea(a, p, T);
+    const [ax, ay] = yd2px(g.sx0 + (a.c0 - 0.5) * g.step, g.sy0 + (a.r0 - 0.5) * g.step);
+    const [bx, by] = yd2px(g.sx0 + (a.c0 + a.w - 0.5) * g.step, g.sy0 + (a.r0 + a.h - 0.5) * g.step);
+    ctx.save(); ctx.translate(ax, ay); ctx.scale((bx - ax) / a.w, (by - ay) / a.h); ctx.drawImage(a.canvas, 0, 0); ctx.restore();
+    // its peninsulas (617e16i): unseen corners violet, seen ones faint,
+    // painted again each second; each door a violet ring
+    if (p.pens && p.pens.length) {
+      if (!p.penCanvas) { p.penCanvas = document.createElement("canvas"); p.penCanvas.width = a.w; p.penCanvas.height = a.h; p.penPainted = -1; }
+      if (simT - p.penPainted >= 1 || p.penPainted < 0) {
+        const o = p.penCanvas.getContext("2d"), img = o.createImageData(a.w, a.h);
+        for (const pen of p.pens) pen.cells.forEach((q, i) => img.data.set(pen.seen[i] ? [170, 110, 255, 40] : [170, 110, 255, 120], q * 4));
+        o.putImageData(img, 0, 0); p.penPainted = simT;
+      }
+      ctx.save(); ctx.translate(ax, ay); ctx.scale((bx - ax) / a.w, (by - ay) / a.h); ctx.drawImage(p.penCanvas, 0, 0); ctx.restore();
+      ctx.strokeStyle = "#c08cff"; ctx.lineWidth = 2;
+      for (const pen of p.pens) { const [dx, dy] = yd2px(pen.dx, pen.dy); ctx.beginPath(); ctx.arc(dx, dy, 6, 0, 6.283); ctx.stroke(); }
+    }
+  }
+  // the sub-zone fence (617e16j): the player's sub-zone's squares shaded
+  // white, faintly, on the continent's own picture grid (one pixel a
+  // square); painted again only when the player's sub-zone changes
+  {
+    const s = subOf(player.x, player.y);
+    if (s >= 0) {
+      if (C.subShown !== s) {
+        if (!C.subCanvas) { C.subCanvas = document.createElement("canvas"); C.subCanvas.width = C.W; C.subCanvas.height = C.H; }
+        const o = C.subCanvas.getContext("2d"), img = o.createImageData(C.W, C.H);
+        for (let q = 0; q < C.W * C.H; q++) if (C.subAt[q] === s) img.data.set([255, 255, 255, 34], q * 4);
+        o.putImageData(img, 0, 0); C.subShown = s;
+      }
+      const [sx0, sy0] = toCanvas(0, 0);
+      ctx.drawImage(C.subCanvas, sx0, sy0, C.W * cam.z, C.H * cam.z);
+    }
+  }
+  // known walls (617e16h): each a dark red KNOWN_CELL square; buffers left by
+  // bumping, amber; once a yard is over a pixel
+  if (known.size && cam.z / SQ > 1) {
+    for (const [k, v] of known) {
+      if (v !== 2 && v !== 3) continue;
+      ctx.fillStyle = v === 2 ? "rgba(170,20,20,0.85)" : "rgba(240,170,40,0.45)";
+      const [i, j] = k.split(",").map(Number);
+      const [p0, q0] = yd2px(i * KNOWN_CELL, j * KNOWN_CELL), [p1, q1] = yd2px((i + 1) * KNOWN_CELL, (j + 1) * KNOWN_CELL);
+      ctx.fillRect(Math.min(p0, p1), Math.min(q0, q1), Math.max(1, Math.abs(p1 - p0)), Math.max(1, Math.abs(q1 - q0)));
+    }
+  }
+  // fences
+  fences.forEach((f, i) => {
+    ctx.beginPath();
+    f.poly.forEach(([x, y], k) => { const [px, py] = yd2px(x, y); k ? ctx.lineTo(px, py) : ctx.moveTo(px, py); });
+    ctx.closePath();
+    // every outline of the name in play lit (merged by name, 617e16f); filled only when no walkable part is drawn
+    if (inPlay && (inPlay.names || [inPlay.name]).includes(f.name)) { if (!inPlay.areaRef && !inPlay.parts) { ctx.fillStyle = T.fenceFill; ctx.fill(); } ctx.lineWidth = 2.5; ctx.strokeStyle = T.fenceOn; }
+    else { ctx.lineWidth = 1; ctx.strokeStyle = T.fence; }
+    ctx.stroke();
+  });
+  // bots and their tails
+  const tailS = +$("tail").value, rpx = Math.max(2, cam.z / SQ * 1.2);
+  ctx.shadowColor = T.bot; ctx.shadowBlur = T.glow;
+  // monsters (617e16g): alive a red diamond, being fought ringed, dead a
+  // faint cross, in a cave (far below the ground) a faint hollow diamond;
+  // only those on screen, and only once a square is over 6 pixels
+  if (mobs.length && cam.z > 6) {
+    const s = Math.max(2, Math.min(5, cam.z / SQ * 1.6));
+    for (const mb of mobs) {
+      const [px, py] = yd2px(mb.x, mb.y);
+      if (px < -10 || py < -10 || px > cv.width + 10 || py > cv.height + 10) continue;
+      ctx.beginPath(); ctx.moveTo(px, py - s); ctx.lineTo(px + s, py); ctx.lineTo(px, py + s); ctx.lineTo(px - s, py); ctx.closePath();
+      if (mb.under) { ctx.strokeStyle = "rgba(255,90,90,0.35)"; ctx.lineWidth = 1; ctx.stroke(); continue; }
+      if (!mb.alive) { ctx.strokeStyle = "rgba(255,90,90,0.30)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(px - s, py - s); ctx.lineTo(px + s, py + s); ctx.moveTo(px + s, py - s); ctx.lineTo(px - s, py + s); ctx.stroke(); continue; }
+      ctx.fillStyle = "#ff5a5a"; ctx.fill();
+      if (mb.fighter) { ctx.beginPath(); ctx.arc(px, py, s * 2, 0, 6.283); ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.2; ctx.stroke(); }
+    }
+  }
+  // formation members (617e16e) in the fence's lit colour, the rest in the bots' own
+  const formedN = $("form").value === "none" ? 0 : Math.min(+$("formN").value, bots.length);
+  bots.forEach((b, bi) => {
+    const colour = bi < formedN ? T.fenceOn : T.bot;
+    for (const [t, x, y] of b.tail) {
+      const a = 1 - (simT - t) / Math.max(tailS, 1);
+      if (a <= 0) continue;
+      const [px, py] = yd2px(x, y);
+      ctx.globalAlpha = a * 0.5; ctx.fillStyle = colour; ctx.fillRect(px - 1, py - 1, 2, 2);
+    }
+    ctx.globalAlpha = 1;
+    const [px, py] = yd2px(b.x, b.y);
+    ctx.beginPath(); ctx.arc(px, py, rpx, 0, 6.283); ctx.fillStyle = colour; ctx.fill();
+    // backing up (617e16h): a white ring, so it can be seen happening
+    // orbiting an obstacle (617e16h): a cyan ring
+    if (b.orbit) { ctx.beginPath(); ctx.arc(px, py, rpx * 2.2, 0, 6.283); ctx.strokeStyle = "#5ef0ff"; ctx.lineWidth = 1.5; ctx.stroke(); }
+    if (wayNow() === "paint") drawPaintRoute(b, yd2px);
+    // a planned route (617o7, graph and A*, learn the map): a faint line along it
+    if (b.routePts && (wayNow() === "astar" || wayNow() === "learn")) {
+      ctx.beginPath(); b.routePts.forEach(([x, y], k) => { const [qx, qy] = yd2px(x, y); k ? ctx.lineTo(qx, qy) : ctx.moveTo(qx, qy); });
+      ctx.strokeStyle = "rgba(255,255,255,0.18)"; ctx.lineWidth = 1; ctx.stroke();
+    }
+    // backing out (617e16h): a white ring
+    if (b.backLeft > 0) { ctx.beginPath(); ctx.arc(px, py, rpx * 2.2, 0, 6.283); ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5; ctx.stroke(); }
+  });
+  ctx.shadowBlur = T.glow; ctx.shadowColor = T.player;
+  const [ppx, ppy] = yd2px(player.x, player.y);
+  ctx.beginPath(); ctx.arc(ppx, ppy, rpx * 1.6, 0, 6.283); ctx.fillStyle = T.player; ctx.fill();
+  ctx.shadowBlur = 0;
+  drawLive(T);
+}
+// }}}
+
+// {{{ the loop
+let last = performance.now(), tailClock = 0, measureClock = 0;
+function frame(now) {
+  const dt = Math.min(0.1, (now - last) / 1000) * +$("speed").value;
+  last = now;
+  stepCamera(now);
+  if (zoneIdx >= 0) {
+    for (let k = 0, n = Math.ceil(dt / 0.05), s = dt / n; k < n; k++) { stepPlayer(s); stepFlock(s); simT += s; }
+    tailClock += dt; measureClock += dt;
+    if (tailClock >= 0.5) {
+      tailClock = 0;
+      const keep = +$("tail").value;
+      for (const b of bots) { b.tail.push([simT, b.x, b.y]); while (b.tail.length && simT - b.tail[0][0] > keep) b.tail.shift(); }
+    }
+    if (measureClock >= 1) { measureClock = 0; measure(); }
+  }
+  draw();
+  requestAnimationFrame(frame);
+}
+// }}}
+
+// {{{ input: clicks, the wheel, the panel
+function resize() { cv.width = innerWidth; cv.height = innerHeight; }
+addEventListener("resize", () => { resize(); if (!glide) Object.assign(cam, zoneIdx >= 0 ? zoneFit(zoneIdx) : worldFit()); });
+cv.addEventListener("click", e => {
+  const [col, row] = fromCanvas(e.clientX, e.clientY);
+  const zi = (col >= 0 && row >= 0 && col < C.W && row < C.H) ? C.zoneAt[Math.floor(row) * C.W + Math.floor(col)] : -1;
+  if (zoneIdx < 0) { if (zi >= 0) enterZone(zi); return; }
+  // the player is there at once (the owner, 2026-10-28: "the player click dot should move instantly")
+  if (zi === zoneIdx) { const [x, y] = yardsOf(col, row), ox = player.x, oy = player.y; player.x = player.tx = x; player.y = player.ty = y; playerMoved(ox, oy); stepPlayer(0); }
+  else if (zi >= 0) enterZone(zi);
+});
+cv.addEventListener("wheel", e => {
+  e.preventDefault();
+  glide = null;
+  const [col, row] = fromCanvas(e.clientX, e.clientY);
+  const k = Math.exp(-e.deltaY * 0.0015);
+  cam.z *= k;
+  cam.cx = col - (e.clientX - cv.width / 2) / cam.z; cam.cy = row - (e.clientY - cv.height / 2) / cam.z;
+  const wf = worldFit();
+  if (zoneIdx >= 0 && cam.z < zoneFit(zoneIdx).z * 0.45) { zoneIdx = -1; fences = []; bots = []; active = -1; $("where").textContent = C.data.name; glideTo(wf, 900); }
+  else if (zoneIdx < 0 && cam.z > wf.z * 4) {
+    const zi = C.zoneAt[Math.floor(row) * C.W + Math.floor(col)];
+    if (zi >= 0) enterZone(zi);
+  }
+}, { passive: false });
+// Panning: hold the middle button and drag (the owner, 2026-10-28: "drag
+// the map with middle click just panning"). The camera's centre moves with
+// the pointer, at the zoom's scale; any glide stops. The browser's own
+// middle-button scrolling and paste are kept off the map.
+let pan = null;                                              // { x, y }: the pointer's last place while panning
+cv.addEventListener("mousedown", e => { if (e.button === 1) { e.preventDefault(); glide = null; pan = { x: e.clientX, y: e.clientY }; } });
+addEventListener("mousemove", e => {
+  if (!pan) return;
+  cam.cx -= (e.clientX - pan.x) / cam.z; cam.cy -= (e.clientY - pan.y) / cam.z;
+  pan = { x: e.clientX, y: e.clientY };
+});
+addEventListener("mouseup", e => { if (e.button === 1) pan = null; });
+cv.addEventListener("auxclick", e => { if (e.button === 1) e.preventDefault(); });
+$("close").onclick =() => { if (inPlay) glideTo(fenceFit(inPlay), 900); else if (zoneIdx >= 0) glideTo(zoneFit(zoneIdx), 900); };
+$("world").onclick = () => { zoneIdx = -1; fences = []; bots = []; active = -1; $("where").textContent = C.data.name; glideTo(worldFit()); };
+$("scatter").onclick = () => { if (zoneIdx < 0) return; const z = C.data.zones[zoneIdx]; for (const b of bots) {
+  const c = z.Y0 - C.Y0 + Math.random() * (z.Y1 - z.Y0 + 1), r = z.X0 - C.X0 + Math.random() * (z.X1 - z.X0); [b.x, b.y] = yardsOf(c, r); b.vx = b.vy = 0; } };
+$("bots").oninput = () => { $("botsN").textContent = $("bots").value; if (zoneIdx >= 0) spawnBots(+$("bots").value, player.x, player.y, 25); };
+$("live").onchange = () => {
+  live.on = $("live").checked;
+  clearInterval(live.timer);
+  if (live.on) { pollLive(); live.timer = setInterval(pollLive, 1000); } else { live.chars.clear(); $("liveN").textContent = "off"; }
+};
+$("tail").oninput = () => { $("tailN").textContent = $("tail").value + " s"; };
+$("slope").oninput = () => { $("slopeN").textContent = $("slope").value + "°"; paintGround(); inPlay = null; active = -2; comboCache.clear(); stepPlayer(0); };   // the areas are worked out again for the new limit
+$("formN").oninput = () => { $("formNN").textContent = $("formN").value; };
+$("check").oninput = () => { $("checkN").textContent = $("check").value + " s"; };   // seconds of one order between stuck checks (617e16h)
+$("formTurn").onchange = () => { $("formTurnN").textContent = $("formTurn").checked ? "turning" : "rigid"; };
+$("shade").onchange = () => paintGround();
+$("theme").onchange = () => { buildContinent(+$("continent").value, $("theme").value); };
+$("continent").onchange = () => { zoneIdx = -1; fences = []; bots = []; buildContinent(+$("continent").value, $("theme").value); glideTo(worldFit(), 600); $("where").textContent = C.data.name; };
+// a strip: 8 frames, half a second of play apart, side by side in two rows, saved as a PNG
+$("strip").onclick = async () => {
+  const frames = [];
+  for (let i = 0; i < 8; i++) { frames.push(await createImageBitmap(cv)); await new Promise(r => setTimeout(r, 500)); }
+  const s = document.createElement("canvas"), fw = Math.floor(cv.width / 2), fh = Math.floor(cv.height / 2);
+  s.width = fw * 4; s.height = fh * 2;
+  const sc = s.getContext("2d");
+  frames.forEach((f, i) => sc.drawImage(f, (i % 4) * fw, Math.floor(i / 4) * fh, fw, fh));
+  const a = document.createElement("a"); a.href = s.toDataURL("image/png"); a.download = "ground-strip-" + Date.now() + ".png"; a.click();
+};
+// }}}
+
+// {{{ start
+SANDBOX.continents.forEach((c, i) => $("continent").add(new Option(c.name, i)));
+Object.keys(THEMES).forEach(t => $("theme").add(new Option(t, t)));
+resize();
+// Driven from the address, so a run needs no person (a headless browser's
+// screenshot, the judge's frames): #continent=1&zone=The%20Barrens&theme=ninja&sim=120&turn=1&bots=36&fence=2&view=fence
+//   continent  its index (0 Eastern Kingdoms, 1 Kalimdor); zone: its name;
+//   theme; turn (1 clockwise, -1 anticlockwise, 0 each its own); bots;
+//   fence: put the player in that fence (by its rank, 0 the largest);
+//   sim: seconds of play run at once before the first picture;
+//   view=fence: the close-up of the fence in play (the judge's frames);
+//   live=1: the world server's stream on; port: its port (8097)
+//   slope: the steepest walkable ground, degrees (50); shade: 2 hills and
+//     blocks, 1 hills, 0 flat (issue 617e16c)
+const Q = new URLSearchParams(location.hash.slice(1));
+if (Q.has("slope")) { $("slope").value = Q.get("slope"); $("slopeN").textContent = Q.get("slope") + "°"; }
+if (Q.has("shade")) $("shade").value = Q.get("shade");
+if (Q.has("check")) { $("check").value = Q.get("check"); $("checkN").textContent = Q.get("check") + " s"; }   // check: seconds between stuck checks
+if (Q.has("way")) $("way").value = Q.get("way");   // way: orbit, flow, astar, potential, learn (617o7)
+//   form: a formation (line, column, wedge, ring, square); formN: how many
+//     bots form it; formTurn=0: rigid (617e16e); turn=2: wanderers (617e16d)
+if (Q.has("form")) $("form").value = Q.get("form");
+if (Q.has("formN")) { $("formN").value = Q.get("formN"); $("formNN").textContent = Q.get("formN"); }
+if (Q.get("formTurn") === "0") { $("formTurn").checked = false; $("formTurnN").textContent = "rigid"; }
+if (Q.has("theme") && THEMES[Q.get("theme")]) $("theme").value = Q.get("theme");
+if (Q.has("port")) live.port = +Q.get("port");
+if (Q.get("live") === "1") { $("live").checked = true; $("live").onchange(); }
+if (Q.has("turn")) $("turn").value = Q.get("turn");
+if (Q.has("bots")) { $("bots").value = Q.get("bots"); $("botsN").textContent = Q.get("bots"); }
+const startContinent = Q.has("continent") ? +Q.get("continent") : 0;
+$("continent").value = startContinent;
+buildContinent(startContinent, $("theme").value);
+Object.assign(cam, worldFit());
+$("where").textContent = C.data.name;
+if (Q.has("zone")) {
+  const zi = C.data.zones.findIndex(z => z.name === Q.get("zone"));
+  if (zi >= 0) {
+    enterZone(zi);
+    if (Q.has("fence") && fences[+Q.get("fence")]) { const f = fences[+Q.get("fence")]; player.x = player.tx = f.cx; player.y = player.ty = f.cy; spawnBots(bots.length, f.cx, f.cy, 25); }
+    // start (617e16g's tests): scatter: the bots spread over the whole zone
+    // (some on ground walled off from the fence: the dead ends); far: all of
+    // them north of the player by 1.2 times the catching-up distance (a
+    // quarter of the continent's size: 5000 yards, the first try, was under
+    // Kalimdor's quarter, and nothing happened)
+    // at=X,Y: the player (and the bots round them) at that spot, in screen
+    // yards (617e16f's test of overlapping fences)
+    if (Q.has("at")) { const [ax, ay] = Q.get("at").split(",").map(Number); player.x = player.tx = ax; player.y = player.ty = ay; spawnBots(bots.length, ax, ay, 25); stepPlayer(0); }
+    if (Q.get("start") === "scatter") $("scatter").onclick();
+    if (Q.get("start") === "far") { const far = Math.max(C.W, C.H) * SQ * CATCH_SHARE * 1.2;
+      for (const b of bots) { b.x = player.x + (Math.random() - 0.5) * 20; b.y = player.y - far + (Math.random() - 0.5) * 20; } }
+    glide = null; Object.assign(cam, zoneFit(zi));
+    stepPlayer(0);                                         // the fence in play, before the close-up asks for it
+    const run = +(Q.get("sim") || 0);
+    for (let t = 0; t < run; t += 0.05) {
+      stepPlayer(0.05); stepFlock(0.05); simT += 0.05;
+      if (Math.round(simT * 20) % 10 === 0) { const keep = +$("tail").value; for (const b of bots) { b.tail.push([simT, b.x, b.y]); while (b.tail.length && simT - b.tail[0][0] > keep) b.tail.shift(); } }
+      if (Math.round(simT * 20) % 20 === 0) measure();
+    }
+    if (Q.get("view") === "fence" && inPlay) Object.assign(cam, fenceFit(inPlay));
+  }
+}
+draw();                                      // once now: a screenshot may come before the first frame
+requestAnimationFrame(frame);
+// }}}
+</script>
+</body>
+</html>

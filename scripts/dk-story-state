@@ -23,7 +23,7 @@ LAST_QUEST=13166                                    # The Battle For The Ebon Ho
 BUDDY_ASIDE=5                                       # buddy_roster stage: set aside, back at its level
 
 sql() {
-    "${MYSQL}" -h127.0.0.1 -P3307 -uritz -pmenardi -D "${CHARS}" -N -B -e "$1" 2>&1 | grep -v "Using a password" || true
+    "${MYSQL}" "--defaults-file=${DIR}/mysql/conf/client.cnf" -h127.0.0.1 -P3307 -D "${CHARS}" -N -B -e "$1" 2>&1 | grep -v "Using a password" || true
 }
 
 FAILS=0

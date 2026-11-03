@@ -15,7 +15,7 @@ PLANNER="${DIR}/scripts/lib/lessons-sql.lua"
 BACKUPS="${DIR}/backups/lessons"
 SCRATCH="${DIR}/tmp/shared-memory/lessons"
 
-sql() { "${MYSQL}" -h127.0.0.1 -P3307 -uritz -pmenardi --batch --skip-column-names "$@" 2>&1 | grep -v "Using a password" || true; }
+sql() { "${MYSQL}" "--defaults-file=${DIR}/mysql/conf/client.cnf" -h127.0.0.1 -P3307 --batch --skip-column-names "$@" 2>&1 | grep -v "Using a password" || true; }
 
 NAMES=()
 if [[ "${1:-}" == "--buddies-of" ]]; then
@@ -55,7 +55,7 @@ for NAME in "${NAMES[@]}"; do
     {
         echo "-- written by scripts/teach-character-lessons before teaching ${NAME} (guid ${GUID});"
         echo "-- to put back: DELETE FROM character_spell and character_skills WHERE guid = ${GUID}; then load this file."
-        "${MYSQLDUMP}" -h127.0.0.1 -P3307 -uritz -pmenardi --no-create-info --skip-triggers \
+        "${MYSQLDUMP}" "--defaults-file=${DIR}/mysql/conf/client.cnf" -h127.0.0.1 -P3307 --no-create-info --skip-triggers \
             --where="guid = ${GUID}" "${CHARS}" character_spell character_skills 2>&1 | grep -v "Using a password"
     } > "${BACKUP}"
     echo "Backup: ${BACKUP}"

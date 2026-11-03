@@ -1,0 +1,106 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] == "--help" or arg[1] == "-h" then
+    print("Usage: scripts/test-journal-seal [PROJECT_DIR]\n"
+       .. "Writes journals for a made-up account in tmp/shared-memory/test-journal-seal/ and checks that\n"
+       .. "they open with the password and with nothing else, and that every kind of damage is named.")
+    os.exit(0)
+end
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local Seal = dofile(DIR .. "/scripts/lib/journal-seal.lua")
+
+local WORK = DIR .. "/tmp/shared-memory/test-journal-seal"
+os.execute("mkdir -p '" .. WORK .. "'")
+
+local fails, checks = 0, 0
+local function check(ok, what)
+    checks = checks + 1
+    if not ok then fails = fails + 1; print("  FAIL: " .. what) end
+end
+local function refuses(fn, expect, what)
+    local ok, err = pcall(fn)
+    check(not ok and tostring(err):find(expect, 1, true) ~= nil,
+          what .. " (got: " .. (ok and "no error" or tostring(err)) .. ")")
+end
+local function slurp(p) local f = assert(io.open(p, "rb")); local d = f:read("*a"); f:close(); return d end
+local function spit(p, d) local f = assert(io.open(p, "wb")); f:write(d); f:close() end
+
+local OPS, MEM   = 1, 8192
+local ACCOUNT    = 4242
+local PASSWORD   = "Cherry-Ribbon"
+local key        = Seal.make_key(PASSWORD, nil, OPS, MEM)
+local lines_in   = {
+    Seal.record(1793000000, "say",     "Feldowinn", "hello there"),
+    Seal.record(1793000004, "whisper", "Azurelen",  "a tab\there and a\nnewline"),
+    Seal.record(1793000009, "system",  "",          "Azurelen has come online."),
+}
+
+local good = WORK .. "/good.journal"
+local w = Seal.writer(good, ACCOUNT, { salt = key.salt, ops = key.ops, mem = key.mem, public_key = key.public_key })
+for _, l in ipairs(lines_in) do w:line(l) end
+w:close()
+
+local j = Seal.open(good, "cherry-ribbon")
+check(j.account_id == ACCOUNT, "account id read back: " .. j.account_id)
+check(j.finished, "a closed journal reads as finished")
+check(#j.lines == 3, "three lines read back: " .. #j.lines)
+for i = 1, 3 do check(j.lines[i] == lines_in[i], "line " .. i .. " read back unchanged") end
+local r = Seal.parse_record(j.lines[2])
+check(r.kind == "whisper" and r.sender == "Azurelen" and r.text == "a tab here and a newline",
+      "tabs and newlines inside a field become spaces: " .. r.text)
+
+check(#Seal.open(good, { "wrong", "CHERRY-RIBBON" }).lines == 3, "opens with the right password among several")
+refuses(function() Seal.open(good, { "wrong", "also-wrong" }) end, "none of the 2 password(s)", "wrong passwords are refused")
+check(Seal.game_uppercase("caf\195\169 z!") == "CAF\195\169 Z!", "only a-z is uppercased; é stays é, as in the game")
+check(Seal.game_uppercase("\208\177") == "\208\177", "a Cyrillic letter stays as typed")
+local accented = Seal.make_key("caf\195\169", nil, OPS, MEM)
+local p_acc = WORK .. "/accented.journal"
+local wa = Seal.writer(p_acc, 7, accented); wa:line(Seal.record(1, "say", "x", "y")); wa:close()
+check(#Seal.open(p_acc, "CAF\195\169").lines == 1, "an accented password opens its journal, any case of its a-z")
+refuses(function() Seal.open(p_acc, "CAF\195\137") end, "none of the 1 password(s)", "É is not é: the game does not fold accented letters, nor does this")
+refuses(function() Seal.make_key("bad\255byte", nil, OPS, MEM) end, "not valid UTF-8", "a password that is not valid UTF-8 is refused, as the game refuses it")
+refuses(function() Seal.make_key("\237\160\128", nil, OPS, MEM) end, "not valid UTF-8", "a lone UTF-16 surrogate is not valid UTF-8")
+
+local bytes = slurp(good)
+local H     = Seal.HEADER_BYTES
+local function first_record_len() local b = bytes:sub(H + 1, H + 4); return b:byte(1) + b:byte(2) * 256 end
+
+local p = WORK .. "/damaged.journal"
+local mid = H + 4 + 5
+spit(p, bytes:sub(1, mid - 1) .. string.char((bytes:byte(mid) + 1) % 256) .. bytes:sub(mid + 1))
+refuses(function() Seal.open(p, PASSWORD) end, "record 1 does not open", "one changed byte in a line is refused")
+
+spit(p, bytes:sub(1, 8) .. string.char((bytes:byte(9) + 1) % 256) .. bytes:sub(10))
+refuses(function() Seal.open(p, PASSWORD) end, "record 1 does not open", "a header pointed at another account is refused")
+
+spit(p, bytes:sub(1, 12) .. string.char((bytes:byte(13) + 1) % 256) .. bytes:sub(14))
+refuses(function() Seal.open(p, PASSWORD) end, "none of the 1 password(s)", "a changed salt makes the password not fit")
+
+local n1 = first_record_len()
+spit(p, bytes:sub(1, H) .. bytes:sub(H + 4 + n1 + 1))
+refuses(function() Seal.open(p, PASSWORD) end, "does not open", "a removed line is refused")
+
+spit(p, bytes .. bytes:sub(H + 1, H + 4 + n1))
+refuses(function() Seal.open(p, PASSWORD) end, "after its final line", "a line added after the end is refused")
+
+spit(p, bytes:sub(1, #bytes - 21))
+local cut = Seal.open(p, PASSWORD)
+check(not cut.finished and #cut.lines == 3, "a file missing its final mark reads 3 lines, cut short")
+
+spit(p, bytes:sub(1, #bytes - 30))
+cut = Seal.open(p, PASSWORD)
+check(not cut.finished and #cut.lines == 2, "a file cut inside a line reads the 2 before it, cut short")
+
+spit(p, "not a journal at all, and long enough to have a header....................................................................................................")
+refuses(function() Seal.open(p, PASSWORD) end, "is not a journal", "a file that is not a journal is named as such")
+
+check(Seal.fingerprint(good) == Seal.fingerprint(good), "a fingerprint is the same each time")
+spit(p, bytes)
+check(Seal.fingerprint(p) == Seal.fingerprint(good), "a copy has the same fingerprint")
+spit(p, bytes:sub(1, mid - 1) .. string.char((bytes:byte(mid) + 1) % 256) .. bytes:sub(mid + 1))
+check(Seal.fingerprint(p) ~= Seal.fingerprint(good), "one changed byte changes the fingerprint")
+check(#Seal.fingerprint(good) == 64, "a fingerprint is 64 hex digits")
+
+print(fails == 0 and ("All " .. checks .. " checks passed") or (fails .. " of " .. checks .. " checks failed"))
+os.exit(fails == 0 and 0 or 1)

@@ -6,7 +6,7 @@ local DIR      = arg[1] or "/mnt/kaun/wow-chat-2026"
 local DBC      = DIR .. "/data-files/dbc/"
 local TEMPLATE = DIR .. "/scripts/templates/crowsign.html"
 local OUT      = DIR .. "/docs/HTML/crowsign.html"
-local MYSQL    = DIR .. "/mysql/installed-files/bin/mysql -h127.0.0.1 -P3307 -uritz -pmenardi -N --batch acore_world_release"
+local MYSQL    = DIR .. "/mysql/installed-files/bin/mysql --defaults-file=" .. DIR .. "/mysql/conf/client.cnf -h127.0.0.1 -P3307 -N --batch acore_world_release"
 
 local F = {
     sl_cat = 1, sl_name = 3, sl_icon = 37, sl_verb = 38,

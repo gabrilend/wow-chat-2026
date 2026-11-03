@@ -1,5 +1,6 @@
 
 #include "buddies.h"
+#include "buddies_sargobras.h"
 #include "Chat.h"
 #include "CompanionAccounts.h"
 #include "GameTime.h"
@@ -41,7 +42,8 @@ public:
 
     bool OnPlayerCanUseChat(Player* whisperer, uint32 type, uint32 , std::string& , Player* receiver) override
     {
-        if (!BuddiesEnabled() || type != CHAT_MSG_WHISPER || !CompanionAccounts::Is(receiver->GetSession()->GetAccountId()))
+        if (!BuddiesEnabled() || type != CHAT_MSG_WHISPER || !CompanionAccounts::Is(receiver->GetSession()->GetAccountId())
+            || BuddyIsSargobrasAccount(receiver->GetSession()->GetAccountId()))
             return true;
 
         if (whisperer->GetSession()->IsHeadless())

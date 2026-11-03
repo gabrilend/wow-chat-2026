@@ -26,7 +26,7 @@ OUT="$(
         cat "${REVERT}"
         echo "SELECT 'reverted';"; echo "${LOOK}"
         echo "ROLLBACK;"
-    } | "${MYSQL}" -h127.0.0.1 -P3307 -uritz -pmenardi -N "${DB}" 2>&1 | grep -v "Using a password"
+    } | "${MYSQL}" "--defaults-file=${DIR}/mysql/conf/client.cnf" -h127.0.0.1 -P3307 -N "${DB}" 2>&1 | grep -v "Using a password"
 )" || {
     echo "${OUT}"
     echo "ERROR: the database did not answer the vendor step's looks (nothing was checked; the transaction never committed)."

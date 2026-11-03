@@ -28,5 +28,7 @@ float BuddyBagFullness(Player* bot);
 float BuddyFullBagsShare();
 void  BuddySellAtVendor(PlayerbotAI* ai, Player* bot, Creature* npc);
 std::vector<Item*> BuddyDisposableItems(PlayerbotAI* ai, Player* bot);
+std::vector<Item*> BuddyEarmarkedItems(PlayerbotAI* ai, Player* bot);
+unsigned int BuddyBagSlots(Player* bot);
 
 #endif

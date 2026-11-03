@@ -1,5 +1,13 @@
 #!/usr/bin/env luajit
 
+if arg[1] == "--help" or arg[1] == "-h" then
+    for line in io.lines(arg[0]) do
+        if not line:match("^%-%-") and not line:match("^#!") then break end
+        if not line:match("^%-%-%-%-%-") and not line:match("^#!") then print((line:gsub("^%-%- ?", ""))) end
+    end
+    os.exit(0)
+end
+
 local DIR = "/mnt/kaun/wow-chat-2026"
 if arg[1] and arg[1] ~= "" then DIR = arg[1] end
 local TXT  = arg[2] or (DIR .. "/docs/gm-commands.txt")

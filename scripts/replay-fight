@@ -1,0 +1,22 @@
+#!/bin/bash
+
+DIR="/mnt/kaun/wow-chat-2026"
+FILE=""
+LEANS=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --help|-h) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --leans)   LEANS="--leans"; shift ;;
+        --dir)     DIR="$2"; shift 2 ;;
+        *)         FILE="$1"; shift ;;
+    esac
+done
+if [ -z "${FILE}" ]; then
+    echo "replay-fight: which fight? (a .replay file; --help)" >&2
+    exit 2
+fi
+OUT="${DIR}/tmp/tmp"
+mkdir -p "${OUT}"
+g++ -std=c++17 -O2 -Wall -Wextra -I"${DIR}/patches/B036-mod-buddies/mod-buddies/src" \
+    "${DIR}/tests/buddy-fight-replay/replay-fight.cpp" -o "${OUT}/replay-fight" || exit 1
+"${OUT}/replay-fight" "${FILE}" ${LEANS}

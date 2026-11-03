@@ -58,6 +58,22 @@ int main(int argc, char** argv)
         noBloodElfWarrior = noBloodElfWarrior && !(p.first == 10 && p.second == 1);
     check(noBloodElfWarrior, "only the game's pairs: no blood elf warrior (yet)");
 
+    auto hordeAny = PairsFor(PAIRS, 1, ANY_ROLE, SideOf);
+    size_t hordeAll = 0;
+    for (auto const& p : PAIRS) hordeAll += SideOf(p.first) == 1;
+    check(hordeAny.size() == hordeAll, "any role takes every Horde pair");
+    bool anyMage = false;
+    for (auto const& p : hordeAny) anyMage = anyMage || p.second == 8;
+    check(anyMage, "any role takes mages, who can only do damage");
+    uint32_t roleCount[3] = { 0, 0, 0 };
+    for (auto const& p : hordeAny)
+        for (uint8_t shape = 1; shape <= 10; ++shape)
+            ++roleCount[ShapeRole(p.second, shape)];
+    check(roleCount[1] > 0 && roleCount[2] > 0 && roleCount[0] > roleCount[1] + roleCount[2],
+        "every shape even: some tanks, some healers, damage the most");
+    std::printf("  any role, Horde, every pair and shape alike: %u damage, %u tank, %u healer\n",
+        roleCount[0], roleCount[1], roleCount[2]);
+
     std::vector<Kept> kept = {
         { 101, 1, 1, 1, 20, false },
         { 102, 1, 1, 1, 30, false },
@@ -66,13 +82,20 @@ int main(int argc, char** argv)
         { 105, 1, 1, 1, 35, true  },
         { 106, 1, 1, 0, 35, false },
     };
-    check(PickKept(kept, 1, 1, 1, 35) == 102, "at 35: the highest kept at or below (30), the older of two");
-    check(PickKept(kept, 1, 1, 1, 40) == 104, "at 40: the one at 40");
-    check(PickKept(kept, 1, 1, 1, 19) == 0, "at 19: none (its level never goes down), so a new one");
-    check(PickKept(kept, 1, 1, 0, 35) == 106, "a damage warrior is kept apart from the tanks");
-    check(PickKept(kept, 3, 1, 1, 35) == 0, "a dwarf is not a human");
+    std::set<uint32_t> at35;
+    for (uint32_t roll = 0; roll < 12; ++roll) at35.insert(PickKept(kept, 1, 1, 1, 35, roll));
+    check(at35 == std::set<uint32_t>{ 101, 102, 103 }, "at 35: any of the three kept at or below, by the roll");
+    std::set<uint32_t> at40;
+    for (uint32_t roll = 0; roll < 12; ++roll) at40.insert(PickKept(kept, 1, 1, 1, 40, roll));
+    check(at40 == std::set<uint32_t>{ 101, 102, 103, 104 }, "at 40: the one at 40 among them; the one in use never");
+    check(PickKept(kept, 1, 1, 1, 35, 7) == PickKept(kept, 1, 1, 1, 35, 7), "the same roll, the same one");
+    check(PickKept(kept, 1, 1, 1, 19, 0) == 0, "at 19: none (its level never goes down), so a new one");
+    check(PickKept(kept, 1, 1, 0, 35, 5) == 106, "a damage warrior is kept apart from the tanks");
+    check(PickKept(kept, 3, 1, 1, 35, 0) == 0, "a dwarf is not a human");
     kept[1].inWorld = true;
-    check(PickKept(kept, 1, 1, 1, 35) == 103, "one in use is passed over");
+    std::set<uint32_t> busy;
+    for (uint32_t roll = 0; roll < 12; ++roll) busy.insert(PickKept(kept, 1, 1, 1, 35, roll));
+    check(busy == std::set<uint32_t>{ 101, 103 }, "one in use is passed over");
 
 
     std::printf("%s: %d of %d checks passed\n", failed ? "FAILED" : "ok", passed, passed + failed);

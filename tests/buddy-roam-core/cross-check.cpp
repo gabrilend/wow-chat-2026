@@ -220,6 +220,7 @@ int main(int argc, char** argv)
     int perMap = std::atoi(argv[4]);
     std::ofstream cases(argv[2]), results(argv[3]);
     Settings settings;
+    settings.tieMargin = -1.0;
     cases << "settings turn " << F(settings.turn) << "\n";
 
     static float const BODIES[] = { 0.61f, 0.69f, 0.78f, 1.95f };

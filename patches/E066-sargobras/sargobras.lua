@@ -12,6 +12,7 @@ local Spender = dofile(OWN .. "lib/sargobras-buddy-talent-spender.lua")
 local Choice  = dofile(OWN .. "lib/sargobras-buddy-choice.lua")
 local Valleys = dofile(OWN .. "data/sargobras-starting-valleys.lua")
 local Deck    = dofile(OWN .. "lib/sargobras-valley-deck.lua")
+local Whisper = dofile(OWN .. "lib/sargobras-whisper.lua")
 
 local VALLEY, WANDERER                   = 6170001, 6170002
 local WANDERER_HATTED, HAT_CHANCE        = 6170003, 0.10
@@ -22,6 +23,7 @@ local CAMPFIRE                           = 1798
 local PLAYER_EVENT_ON_LOGIN        = 3
 local PLAYER_EVENT_ON_LOGOUT       = 4
 local PLAYER_EVENT_ON_LEVEL_CHANGE = 13
+local PLAYER_EVENT_ON_WHISPER      = 19
 local PLAYER_EVENT_ON_MAP_CHANGE   = 28
 local CREATURE_EVENT_ON_REACH_WP   = 6
 local GOSSIP_EVENT_ON_HELLO        = 1
@@ -66,6 +68,15 @@ local WALK_GIVE_UP_MS   = 15000
 local DEAL_BUDDY_ANGLE  = math.pi * 3 / 4
 local DEAL_BUDDY_DIST   = 3
 local DEAL_BUDDY_STEP   = 2
+local BOT_ASK_AFTER_MS  = 5000
+local BOT_ASK_RANGE     = 30
+local BOT_TALK_MS       = { 15000, 30000 }
+local BOT_GESTURE_MS    = 4000
+local BOT_NAME_TRIES    = 10
+local BOT_NAME_CHECK_MS = 2500
+local BOT_LISTEN_MS     = 2000
+local BOT_NEXT_ASK_MS   = 10000
+local EMOTE_ONESHOT_TALK = 1
 
 local UNIT_FLAG_NOT_SELECTABLE = 0x02000000
 local SCHOOL_FIRE              = 2
@@ -132,6 +143,19 @@ local function owed_slots(owner)
     return list
 end
 local function owed_slot(owner) return owed_slots(owner)[1] end
+local function serving_slot(owner, creature)
+    local owed = owed_slots(owner)
+    if #owed == 0 then return nil end
+    local mine = slot_of[creature:GetGUIDLow()]
+    for _, s in ipairs(owed) do if s == mine then return mine end end
+    return owed[1]
+end
+
+local function owed_race(owner, slot)
+    if not slot then return 0 end
+    local q = CharDBQuery("SELECT race FROM buddy_roster WHERE owner = " .. owner .. " AND slot = " .. slot)
+    return q and q:GetUInt32(0) or 0
+end
 
 local function clan_roster(owner)
     local list = {}
@@ -146,7 +170,7 @@ local function choose(player, slot, roster, pick)
     local owner = player:GetGUIDLow()
     local b, err = Choice.resolve({ RC = RC, TD = TD, Spender = Spender, rand = math.random,
         team = team_name(player), owner_is_dk = player:GetClass() == CLASS_DEATH_KNIGHT,
-        slot = slot, roster = roster, pick = pick })
+        slot = slot, roster = roster, pick = pick, kept_race = owed_race(owner, slot) })
     if not b then
         print(string.format("%sERROR: owner %d slot %d: %s", TAG, owner, slot, err))
         return nil, err
@@ -312,7 +336,13 @@ local function show_menu(player, creature, page)
         player:GossipMenuAddItem(GOSSIP_ICON_CHAT, "First, our clan needs a name.", 0, INTID_NAME)
         player:GossipMenuAddItem(GOSSIP_ICON_CHAT, "(test) Type our clan's name in a box.", 0, INTID_NAME_BOX, true, CLAN_POPUP)
     elseif owed_slot(player:GetGUIDLow()) then
-        local classes, races = Choice.menu(RC, team_name(player), false)
+        local kept = owed_race(player:GetGUIDLow(), serving_slot(player:GetGUIDLow(), creature))
+        local classes, races
+        if kept ~= 0 then
+            classes, races = Choice.menu_for_race(RC, kept), {}
+        else
+            classes, races = Choice.menu(RC, team_name(player), false)
+        end
         for _, c in ipairs(classes) do
             local text = c.name
             player:GossipMenuAddItem(CLASS_ICON[c.id] or GOSSIP_ICON_CHAT, text, 0, INTID_CLASS + c.id)
@@ -470,6 +500,7 @@ local function walk_to_spot(creature)
 end
 
 local summon_wanderer
+local bot_ask
 
 local function follow_tick(_, _, _, creature)
     local low    = creature:GetGUIDLow()
@@ -559,6 +590,9 @@ summon_wanderer = function(player)
                 new_circle(c, player)
                 walk_to_spot(c)
                 c:RegisterEvent(follow_tick, 1000, 0)
+                if player:IsBot() then
+                    player:RegisterEvent(function(_, _, _, p) bot_ask(p) end, BOT_ASK_AFTER_MS, 1)
+                end
             end
         end
     end
@@ -605,11 +639,8 @@ local function on_select(event, player, creature, sender, intid, code)
     if not player:IsInGuild() then return end
 
     local owner = player:GetGUIDLow()
-    local owed  = owed_slots(owner)
-    if #owed == 0 then return end
-    local slot = owed[1]
-    local mine = slot_of[creature:GetGUIDLow()]
-    for _, s in ipairs(owed) do if s == mine then slot = mine end end
+    local slot  = serving_slot(owner, creature)
+    if not slot then return end
     local b = choose(player, slot, clan_roster(owner), pick)
     if not b then
         creature:SendUnitSay("Hm. The stars are cloudy tonight. Ask me again in a moment.", 0)
@@ -624,6 +655,174 @@ local function on_select(event, player, creature, sender, intid, code)
     end
 
     if is_wanderer(creature:GetEntry()) then go_on_break(creature, player) end
+end
+
+local SARGOBRAS_NAME = "Sargobras"
+local LANG_UNIVERSAL = 0
+
+local function answering_sargobras(player, awake_only)
+    local owner, best, best_tier = player:GetGUIDLow(), nil, nil
+    for _, entry in ipairs({ VALLEY, WANDERER, WANDERER_HATTED }) do
+        for _, c in ipairs(player:GetCreaturesInRange(SIGHT, entry) or {}) do
+            local low  = c:GetGUIDLow()
+            local tier = (entry == VALLEY) and 0 or slot_of[low]
+            if tier and (entry == VALLEY or owner_of[low] == owner) and not (awake_only and fire_of[low])
+                and (not best_tier or tier < best_tier) then
+                best, best_tier = c, tier
+            end
+        end
+    end
+    return best
+end
+
+local function whisper_answer(player, creature, sargobras, text)
+    if creature then return creature:SendUnitSay(text, 0) end
+    sargobras:Whisper(text, LANG_UNIVERSAL, player)
+end
+
+local function whisper_pick(player, creature, sargobras, pick)
+    local owner = player:GetGUIDLow()
+    if player:GetClass() == CLASS_DEATH_KNIGHT then
+        return whisper_answer(player, creature, sargobras, "Your companions come from Acherus, not from me.")
+    end
+    if not player:IsInGuild() then
+        return whisper_answer(player, creature, sargobras, "First a name for your clan. Come and find me, and we'll write it down.")
+    end
+    local slot = creature and serving_slot(owner, creature) or owed_slot(owner)
+    if not slot then
+        return whisper_answer(player, creature, sargobras, "Nobody is owed to you just now. Keep climbing.")
+    end
+    local b = choose(player, slot, clan_roster(owner), pick)
+    if not b then
+        return whisper_answer(player, creature, sargobras, "Hm. The stars are cloudy tonight. Ask me again in a moment.")
+    end
+    local race_name = RC.races[b.race].name
+    if pick.kind == "flexible" then
+        whisper_answer(player, creature, sargobras, "Good, you shall find others like you soon.")
+    else
+        whisper_answer(player, creature, sargobras, string.format("%s %s %s. They'll find you soon.",
+            article(race_name), race_name, RC.classes[b.class].name))
+    end
+    if creature and is_wanderer(creature:GetEntry()) then go_on_break(creature, player) end
+end
+
+local WHISPER_DOES = {
+    class    = function(player, creature, sargobras, w) whisper_pick(player, creature, sargobras, { kind = "class", id = w.id }) end,
+    race     = function(player, creature, sargobras, w) whisper_pick(player, creature, sargobras, { kind = "race",  id = w.id }) end,
+    flexible = function(player, creature, sargobras, w) whisper_pick(player, creature, sargobras, { kind = "flexible" }) end,
+    help     = function(player, creature, sargobras, w) whisper_answer(player, creature, sargobras, Whisper.help_line()) end,
+    owed     = function(player, creature, sargobras, w)
+        local n = #owed_slots(player:GetGUIDLow())
+        whisper_answer(player, creature, sargobras, n == 0 and "Nobody is owed to you just now."
+            or string.format("%d still coming to you.", n))
+    end,
+    unknown  = function(player, creature, sargobras, w)
+        whisper_answer(player, creature, sargobras, JOKES[math.random(#JOKES)])
+        whisper_answer(player, creature, sargobras, Whisper.help_line())
+    end,
+}
+
+local function on_whisper(event, player, msg, msg_type, lang, receiver)
+    if not receiver or receiver:GetName() ~= SARGOBRAS_NAME then return end
+    local w = Whisper.parse(RC, msg)
+    WHISPER_DOES[w.kind](player, answering_sargobras(player), receiver, w)
+end
+
+local bot_asking = {}
+
+local ROLE_NAME = { [0] = "damage", [1] = "tank", [2] = "healer" }
+local function group_roles(player)
+    local have, owner = { tank = 0, healer = 0, damage = 0 }, player:GetGUIDLow()
+    for _, b in ipairs(clan_roster(owner)) do
+        local r = ROLE_NAME[b.role]
+        if r then have[r] = have[r] + 1 end
+    end
+    local g = player:GetGroup()
+    for _, m in ipairs(g and g:GetMembers() or {}) do
+        local q = CharDBQuery("SELECT role FROM buddy_roster WHERE buddy = " .. m:GetGUIDLow() .. " AND owner <> " .. owner)
+        local r = q and ROLE_NAME[q:GetUInt32(0)]
+        if r then have[r] = have[r] + 1 end
+    end
+    return have
+end
+
+local function bot_name_clan(player, creature, done)
+    local names = {}
+    local q = CharDBQuery("SELECT n.name FROM playerbots_names n LEFT JOIN guild g ON g.name = n.name "
+        .. "WHERE g.guildid IS NULL ORDER BY RAND() LIMIT " .. BOT_NAME_TRIES)
+    if q then repeat names[#names + 1] = q:GetString(0) until not q:NextRow() end
+    local i = 0
+    local function try_next(p)
+        if p:IsInGuild() then return done(p) end
+        i = i + 1
+        if not names[i] then
+            print(string.format("%sERROR: bot %s (%d): no clan name of %d drawn from playerbots_names was accepted; it asks again at its next Sargobras",
+                TAG, p:GetName(), p:GetGUIDLow(), #names))
+            bot_asking[p:GetGUIDLow()] = nil
+            return
+        end
+        found_clan(p, creature, names[i])
+        p:RegisterEvent(function(_, _, _, pp) try_next(pp) end, BOT_NAME_CHECK_MS + 500, 1)
+    end
+    try_next(player)
+end
+
+local function bot_listen(player, creature, fx, fy, fz, after)
+    local him = creature:GetGUID()
+    local a   = math.atan2(creature:GetY() - fy, creature:GetX() - fx) + SIT_SWING + math.pi
+    local sx, sy = fx + math.cos(a) * SIT_RADIUS, fy + math.sin(a) * SIT_RADIUS
+    player:MoveTo(0, sx, sy, player:GetMap():GetHeight(sx, sy) or fz)
+    player:RegisterEvent(function(event_id, _, _, p)
+        local c = p:GetMap():GetWorldObject(him)
+        if not c or not owner_of[c:GetGUIDLow()] or p:GetDistance(c) > JOKE_RANGE then
+            p:RemoveEventById(event_id)
+            p:SetStandState(STAND_STATE_STAND)
+            return after(p)
+        end
+        if p:IsMoving() then return end
+        p:SetFacingToObject(c)
+        p:SetStandState(STAND_STATE_SIT)
+    end, BOT_LISTEN_MS, 0)
+end
+
+bot_ask = function(player)
+    local low = player:GetGUIDLow()
+    if bot_asking[low] or player:GetClass() == CLASS_DEATH_KNIGHT or not owed_slot(low) then return end
+    local creature = answering_sargobras(player, true)
+    if not creature or player:GetDistance(creature) > BOT_ASK_RANGE then return end
+    bot_asking[low] = true
+    local him  = creature:GetGUID()
+    local talk = math.random(BOT_TALK_MS[1], BOT_TALK_MS[2])
+    local spent = 0
+    player:RegisterEvent(function(event_id, _, _, p)
+        local c = p:GetMap():GetWorldObject(him)
+        if not c then
+            bot_asking[p:GetGUIDLow()] = nil
+            return p:RemoveEventById(event_id)
+        end
+        spent = spent + BOT_GESTURE_MS
+        if spent < talk then
+            p:SetFacingToObject(c)
+            return p:PerformEmote(EMOTE_ONESHOT_TALK)
+        end
+        p:RemoveEventById(event_id)
+        bot_name_clan(p, c, function(pp)
+            local owner = pp:GetGUIDLow()
+            local slot  = serving_slot(owner, c)
+            local pick  = owed_race(owner, slot) ~= 0 and { kind = "flexible" }
+                or { kind = "role", role = Choice.lacking_role(group_roles(pp), math.random) }
+            local fx, fy, fz = pp:GetLocation()
+            local on_break   = is_wanderer(c:GetEntry())
+            whisper_pick(pp, c, nil, pick)
+            bot_asking[owner] = nil
+            local function ask_next(p3) p3:RegisterEvent(function(_, _, _, p4) bot_ask(p4) end, BOT_NEXT_ASK_MS, 1) end
+            if on_break and fire_of[c:GetGUIDLow()] then
+                bot_listen(pp, c, fx, fy, fz, ask_next)
+            else
+                ask_next(pp)
+            end
+        end)
+    end, BOT_GESTURE_MS, 0)
 end
 
 local CLAN_JOIN_DELAY_MS = 5000
@@ -644,6 +843,9 @@ local function on_login(event, player)
     give_death_knight_buddies(player, false)
     join_clan_later(player)
     summon_wanderer(player)
+    if player:IsBot() then
+        player:RegisterEvent(function(_, _, _, p) bot_ask(p) end, BOT_ASK_AFTER_MS, 1)
+    end
 end
 
 local function on_level_change(event, player, old_level)
@@ -659,6 +861,7 @@ local function on_map_change(event, player)
 end
 
 local function on_logout(event, player)
+    bot_asking[player:GetGUIDLow()] = nil
     local mine = wanderer_of[player:GetGUIDLow()]
     if not mine then return end
     for _, guid in pairs(mine) do
@@ -677,6 +880,7 @@ if roster_ready() then
         RegisterCreatureEvent(entry, CREATURE_EVENT_ON_REACH_WP, on_reach)
     end
     RegisterPlayerEvent(PLAYER_EVENT_ON_CHAT,         on_chat)
+    RegisterPlayerEvent(PLAYER_EVENT_ON_WHISPER,      on_whisper)
     for _, entry in ipairs({ VALLEY, WANDERER, WANDERER_HATTED }) do
         RegisterCreatureGossipEvent(entry, GOSSIP_EVENT_ON_HELLO,  on_hello)
         RegisterCreatureGossipEvent(entry, GOSSIP_EVENT_ON_SELECT, on_select)

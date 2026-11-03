@@ -1,0 +1,15 @@
+return {
+    [ 3561] = { area = 1519, map =   0, zone = true  },
+    [ 3562] = { area = 1537, map =   0, zone = true  },
+    [ 3563] = { area = 1497, map =   0, zone = true  },
+    [ 3565] = { area = 1657, map =   1, zone = true  },
+    [ 3566] = { area = 1638, map =   1, zone = true  },
+    [ 3567] = { area = 1637, map =   1, zone = true  },
+    [32271] = { area = 3557, map = 530, zone = true  },
+    [32272] = { area = 3487, map = 530, zone = true  },
+    [33690] = { area = 3703, map = 530, zone = true  },
+    [35715] = { area = 3703, map = 530, zone = true  },
+    [49358] = { area =   75, map =   0, zone = false },
+    [49359] = { area =  513, map =   1, zone = false },
+    [53140] = { area = 4395, map = 571, zone = true  },
+}

@@ -1,0 +1,56 @@
+#!/usr/bin/env luajit
+
+if arg[1] == "--help" or arg[1] == "-h" then
+    print("Usage: scripts/test-buddy-roam-tie [PROJECT_DIR]")
+    print("  Checks the roaming planner's tie draw (src/lua-basic/lib/buddy-roam.lua, PLAN.TIE).")
+    os.exit(0)
+end
+local DIR  = arg[1] or "/mnt/kaun/wow-chat-2026"
+local Roam = dofile(DIR .. "/src/lua-basic/lib/buddy-roam.lua")
+
+local fails, checks = {}, 0
+local function check(ok, what)
+    checks = checks + 1
+    if not ok then fails[#fails + 1] = what end
+    print((ok and "ok   " or "FAIL ") .. what)
+end
+
+local function floor(height)
+    return { outline = { { 0, 0 }, { 100, 0 }, { 100, 60 }, { 0, 60 } }, rects = {}, walls = {},
+             centre = { x = 50, y = 30 }, height = height }
+end
+local flat = floor(function() return 0 end)
+local hill = floor(function(x, y) return y > 30 and (y - 30) * 0.8 or 0 end)
+local function side(pts)
+    local mid = pts[math.floor(#pts / 2) + 1]
+    return mid.y > 30.01 and "north" or (mid.y < 29.99 and "south" or "straight")
+end
+local function always(v) return function() return v end end
+
+local seen = {}
+for _, r in ipairs({ 0.0, 0.3, 0.5, 0.7, 0.99 }) do
+    local pts = Roam.plan_path(flat, 10, 30, 90, 30, 0.7, always(r))
+    seen[side(pts)] = true
+end
+check(seen.north and seen.south, "flat floor: different random numbers walk different sides (seen: "
+    .. (seen.north and "north " or "") .. (seen.south and "south " or "") .. (seen.straight and "straight" or "") .. ")")
+
+local a = side(Roam.plan_path(flat, 10, 30, 90, 30, 0.7))
+Roam.PLAN.TIE = -1
+local b = side(Roam.plan_path(flat, 10, 30, 90, 30, 0.7, always(0.99)))
+Roam.PLAN.TIE = 0.10
+check(a == "straight" and b == "straight", "no random numbers, or the draw off: the first cheapest, straight (" .. a .. ", " .. b .. ")")
+
+local north = false
+for _, r in ipairs({ 0.0, 0.25, 0.5, 0.75, 0.99 }) do
+    if side(Roam.plan_path(hill, 10, 30, 90, 30, 0.7, always(r))) == "north" then north = true end
+end
+check(not north, "a hill on one side: no draw ever climbs it")
+
+local draws = 0
+Roam.plan_path(flat, 10, 30, 90, 30, 0.7, function() draws = draws + 1; return 0.5 end)
+check(draws == 1, "a tie draws one random number (" .. draws .. ")")
+
+print(string.format("%d checks, %d failed", checks, #fails))
+print(#fails == 0 and "Result: all checks passed." or ("Result: " .. #fails .. " failure(s)."))
+os.exit(#fails == 0 and 0 or 1)

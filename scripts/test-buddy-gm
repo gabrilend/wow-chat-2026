@@ -19,7 +19,12 @@ local function unit(name, low, x, y, o, map)
     u.IsDead = function() return u.dead end
     u.GetLocation = function() return u.x, u.y, u.z, u.o end
     u.GetMapId = function() return u.map end
-    u.GetMap = function() return { GetHeight = function() return 10 end } end
+    u.GetMap = function() return { GetHeight = function() return 10 end,
+                                   IsDungeon = function() return u.instance == "dungeon" end,
+                                   IsRaid = function() return u.instance == "raid" end,
+                                   IsBattleground = function() return u.instance == "battleground" end } end
+    u.GetGUID = function() return "guid-" .. low end
+    u.GetGroup = function() return u.group and { IsMember = function(_, g) return u.group[g] == true end } or nil end
     u.GetTeam = function() return 1 end
     u.GetGMRank = function() return 3 end
     u.ResurrectPlayer = function() u.dead = false; u.revived = true end
@@ -84,6 +89,25 @@ spots = Arc.places(-30, 40, go, 3, "centre")
 check(b2.revived and b2.to and near(b2.to.x, spots[2].x), "the dead Shauzhi is revived at its place by the graveyard")
 check(b1.to == nil and not b1.revived, "the living Pozeta is left alone")
 check(table.concat(gm.heard, "\n"):find("1 of Growth's 3 buddies revived at the nearest graveyard"), "the summary says the graveyard")
+
+print("summon: the open world, every buddy")
+reset(); b2.dead = false; partner.instance = nil
+handler(42, gm, "buddies summon growth ring")
+check(b1.to and b2.to, "both buddies in the world are summoned to Growth")
+check(table.concat(gm.heard, "\n"):find("2 of Growth's 3 buddies moved to Growth"), "the summary: 2 of 3, to Growth")
+
+print("summon into a dungeon: only the party")
+reset(); partner.instance = "dungeon"; partner.group = { ["guid-504"] = true, ["guid-575"] = true }
+handler(42, gm, "buddies summon growth")
+check(b1.to ~= nil, "Pozeta, in Growth's party, comes into the dungeon")
+check(b2.to == nil, "Shauzhi, not in the party, is left where it is")
+said = table.concat(gm.heard, "\n")
+check(said:find("Shauzhi: not in Growth's party or raid") ~= nil, "the one left out is named")
+check(not said:find("character 594"), "and not named a second time as not in the world")
+reset(); partner.instance = "raid"; partner.group = nil
+handler(42, gm, "buddies summon growth")
+check(b1.to == nil and b2.to == nil, "into a raid with no group: none come")
+partner.instance = nil
 
 print("mistakes")
 reset()

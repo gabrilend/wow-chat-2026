@@ -5,7 +5,7 @@ local CHAR_DB = arg[2] or "acore_characters_basic"
 local WORLD   = arg[3] or "acore_world_basic"
 local DBC     = DIR .. "/data-files/dbc/"
 local OUT_DIR = DIR .. "/tmp/shared-memory/buddy-bake"
-local MYSQL   = DIR .. "/mysql/installed-files/bin/mysql -h127.0.0.1 -P3307 -uritz -pmenardi -N --batch "
+local MYSQL   = DIR .. "/mysql/installed-files/bin/mysql --defaults-file=" .. DIR .. "/mysql/conf/client.cnf -h127.0.0.1 -P3307 -N --batch "
 
 local ENTRY_BASE = 6280000
 local ENTRY_TOP  = 7179999

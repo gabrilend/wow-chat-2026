@@ -1,0 +1,73 @@
+#!/bin/bash
+
+DIR="/mnt/kaun/wow-chat-2026"
+EVERY=0
+for a in "$@"; do
+    case "${a}" in
+        --every-profile) EVERY=1 ;;    # every installed tree
+        *)               DIR="${a}" ;; # the project folder
+    esac
+done
+
+FAILS=0
+CHECKED=0
+
+E001="${DIR}/patches/E001-lua-script-symlinks.sh"
+source "${E001}"
+if ! declare -F _e001_lua_src > /dev/null; then
+    echo "  FAIL: ${E001} no longer defines _e001_lua_src (the folder a profile loads); teach this test its new shape"
+    exit 1
+fi
+E001_PROFILES=" $(grep -m1 '^# profiles:' "${E001}" | sed 's/^# profiles:[[:space:]]*//') "
+
+check_tree() {
+    local tree="$1" profile="$2"
+    local link="${tree}/bin/lua_scripts/custom"
+    local want
+    want="$(_e001_lua_src "${profile}")"
+    CHECKED=$((CHECKED + 1))
+    if [[ ! -L "${link}" ]]; then
+        echo "  FAIL: ${link} is missing (the install links it; run the install for ${profile})"
+        FAILS=$((FAILS + 1))
+        return
+    fi
+    local have
+    have="$(readlink "${link}")"
+    if [[ "${have}" != "${want}" ]]; then
+        echo "  FAIL: ${link}"
+        echo "        points at ${have}$([[ -d "${have}" ]] || echo " (which does not exist)")"
+        echo "        the install would link ${want}"
+        if [[ "${E001_PROFILES}" == *" ${profile} "* ]]; then
+            echo "        to mend: scripts/install --profile ${profile} (its Lua step relinks it)"
+        else
+            echo "        to mend: E001 doesn't run for ${profile} (its header's profiles:${E001_PROFILES% }); add it there first"
+        fi
+        FAILS=$((FAILS + 1))
+    elif [[ ! -d "${want}" ]]; then
+        echo "  FAIL: ${link} points at ${want}, which does not exist"
+        FAILS=$((FAILS + 1))
+    fi
+}
+
+ACTIVE="$(cat "${DIR}/.profile")"
+if [[ ${EVERY} -eq 1 ]]; then
+    for tree in "${DIR}"/installed-files-*/; do
+        tree="${tree%/}"
+        profile="${tree##*/installed-files-}"
+        [[ "${profile}" == "shadow" ]] && profile="${ACTIVE}"
+        [[ -d "${tree}/bin" ]] || continue     # a tree never installed holds only its config
+        check_tree "${tree}" "${profile}"
+    done
+else
+    for tree in "${DIR}/installed-files-${ACTIVE}" "${DIR}/installed-files-shadow"; do
+        [[ -d "${tree}/bin" ]] || continue
+        check_tree "${tree}" "${ACTIVE}"
+    done
+fi
+
+if [[ ${FAILS} -eq 0 ]]; then
+    echo "test-datapath-installed-lua: all ${CHECKED} installed Lua links lead where the install means them to"
+    exit 0
+fi
+echo "test-datapath-installed-lua: ${FAILS} of ${CHECKED} installed Lua links are wrong"
+exit 1

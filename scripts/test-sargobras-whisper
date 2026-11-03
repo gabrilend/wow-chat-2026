@@ -1,0 +1,71 @@
+#!/usr/bin/env luajit
+
+if arg[1] == "--help" or arg[1] == "-h" then
+    print("Usage: scripts/test-sargobras-whisper [PROJECT_DIR]")
+    print("  Checks Sargobras's whisper reader (patches/E066-sargobras/helpers/lib/sargobras-whisper.lua).")
+    os.exit(0)
+end
+local DIR = arg[1] or "/mnt/kaun/wow-chat-2026"
+
+local OWN     = DIR .. "/patches/E066-sargobras/helpers/"
+local RC      = dofile(OWN .. "data/sargobras-race-class-data.lua")
+local Whisper = dofile(OWN .. "lib/sargobras-whisper.lua")
+
+local fails, checks = {}, 0
+
+local function expect(text, kind, id)
+    checks = checks + 1
+    local got = Whisper.parse(RC, text)
+    if got.kind ~= kind or got.id ~= id then
+        fails[#fails + 1] = string.format("%-34q -> %s %s, expected %s %s",
+            text, got.kind, tostring(got.id), kind, tostring(id))
+    end
+end
+
+for id, c in pairs(RC.classes) do
+    if id ~= 6 then
+        expect(c.name, "class", id)
+        expect(c.name:upper() .. "!", "class", id)
+        expect("  a " .. c.name:lower() .. ", please ", "class", id)
+    end
+end
+for id, r in pairs(RC.races) do
+    expect(r.name, "race", id)
+    expect(r.name:lower():gsub(" ", "-") .. "?", "race", id)
+end
+
+expect("shadow priest",         "class", 5)
+expect("Holy Paladin please",   "class", 2)
+expect("feral druid",           "class", 11)
+
+expect("troll priest",          "class", 5)
+expect("night elf druid",       "class", 11)
+expect("blood elf paladin",     "class", 2)
+
+expect("blood elf",             "race", 10)
+expect("night elf",             "race", 4)
+expect("elf",                   "unknown")
+
+expect("priestess",             "unknown")
+expect("trolling",              "unknown")
+
+expect("help",                  "help")
+expect("what are the commands?", "help")
+expect("owed",                  "owed")
+expect("I'm flexible",          "flexible")
+expect("anyone is fine",        "flexible")
+
+expect("death knight",          "unknown")
+expect("",                      "unknown")
+expect("hello there",           "unknown")
+
+checks = checks + 1
+local line = Whisper.help_line()
+for _, word in ipairs({ "priest", "troll", "flexible", "owed" }) do
+    if not line:find(word, 1, true) then fails[#fails + 1] = "help line lacks " .. word end
+end
+
+for _, f in ipairs(fails) do print("FAIL " .. f) end
+print(string.format("%d checks, %d failed", checks, #fails))
+print(#fails == 0 and "Result: all checks passed." or ("Result: " .. #fails .. " failure(s) shown."))
+os.exit(#fails == 0 and 0 or 1)

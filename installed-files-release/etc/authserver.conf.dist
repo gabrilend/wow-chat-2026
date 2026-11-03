@@ -79,9 +79,6 @@ LoginDatabase.SynchThreads = 1
 
 
 
-EnableTOTP = 0
-
-
 TOTPMasterSecret =
 
 

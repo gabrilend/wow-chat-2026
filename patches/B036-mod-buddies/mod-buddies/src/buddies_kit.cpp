@@ -1,5 +1,6 @@
 
 #include "buddies.h"
+#include "buddies_gems.h"
 #include "buddies_kit.h"
 #include "buddies_loot.h"
 #include "buddies_spells.h"
@@ -10,6 +11,7 @@
 #include "WorldSession.h"
 #include "buddies_kit_split.h"
 #include "DatabaseEnv.h"
+#include "Bag.h"
 #include "Item.h"
 #include "ObjectMgr.h"
 #include "Player.h"
@@ -68,15 +70,69 @@ static void Enchant(Player* buddy, uint8 slot, std::string& problems)
             "data files extracted?); ";
         return;
     }
+    if (!buddy->IsInWorld())
+    {
+        item->SetUInt32Value(ITEM_FIELD_ENCHANTMENT_1_1 + PERM_ENCHANTMENT_SLOT * MAX_ENCHANTMENT_OFFSET + ENCHANTMENT_ID_OFFSET, id);
+        return;
+    }
     buddy->ApplyEnchantment(item, PERM_ENCHANTMENT_SLOT, false);
-    item->SetEnchantment(PERM_ENCHANTMENT_SLOT, id, 0, 0);
+    item->SetEnchantment(PERM_ENCHANTMENT_SLOT, id, 0, 0, buddy->GetGUID());
     buddy->ApplyEnchantment(item, PERM_ENCHANTMENT_SLOT, true);
 }
 
-static uint32 GiveGear(Player* buddy, uint8 shape, bool firstMaking, std::string& problems)
+static bool RealWeapon(Item const* item)
+{
+    return item && item->GetTemplate()->Class == ITEM_CLASS_WEAPON && item->GetTemplate()->SubClass != ITEM_SUBCLASS_WEAPON_FISHING_POLE
+        && item->GetTemplate()->SubClass != ITEM_SUBCLASS_WEAPON_MISC;
+}
+static bool CarriesWeaponFor(Player* buddy, uint8 slot)
+{
+    auto fits = [&](Item* item)
+    {
+        if (!RealWeapon(item) || buddy->CanUseItem(item->GetTemplate()) != EQUIP_ERR_OK)
+            return false;
+        uint32 type = item->GetTemplate()->InventoryType;
+        if (slot == EQUIPMENT_SLOT_MAINHAND)
+            return type == INVTYPE_WEAPON || type == INVTYPE_WEAPONMAINHAND || type == INVTYPE_2HWEAPON;
+        if (slot == EQUIPMENT_SLOT_OFFHAND)
+            return type == INVTYPE_WEAPON || type == INVTYPE_WEAPONOFFHAND || type == INVTYPE_SHIELD || type == INVTYPE_HOLDABLE;
+        return type == INVTYPE_RANGED || type == INVTYPE_RANGEDRIGHT || type == INVTYPE_THROWN || type == INVTYPE_RELIC;
+    };
+    for (uint8 i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; ++i)
+        if (fits(buddy->GetItemByPos(INVENTORY_SLOT_BAG_0, i)))
+            return true;
+    for (uint8 b = INVENTORY_SLOT_BAG_START; b < INVENTORY_SLOT_BAG_END; ++b)
+        if (Bag* bag = buddy->GetBagByPos(b))
+            for (uint32 j = 0; j < bag->GetBagSize(); ++j)
+                if (fits(bag->GetItemByPos(uint8(j))))
+                    return true;
+    return false;
+}
+
+static uint32 GiveGear(Player* buddy, uint8 shape, bool firstMaking, std::string& problems, bool fillOnly = false)
 {
     if (buddy->GetLevel() <= 1)
-        return 0;
+    {
+        uint32 worn = 0;
+        if (CharStartOutfitEntry const* outfit = GetCharStartOutfitEntry(buddy->getRace(), buddy->getClass(), buddy->getGender()))
+            for (int j = 0; j < MAX_OUTFIT_ITEMS; ++j)
+            {
+                if (outfit->ItemId[j] <= 0)
+                    continue;
+                ItemTemplate const* proto = sObjectMgr->GetItemTemplate(uint32(outfit->ItemId[j]));
+                if (!proto || (proto->Class != ITEM_CLASS_ARMOR && proto->Class != ITEM_CLASS_WEAPON))
+                    continue;
+                uint8 slot = buddy->FindEquipSlot(proto, NULL_SLOT, false);
+                if (slot >= EQUIPMENT_SLOT_END || buddy->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
+                    continue;
+                if (Wear(buddy, slot, proto->ItemId) == EQUIP_ERR_OK)
+                    ++worn;
+            }
+        else
+            problems += "no starting outfit in the client's data for race " + std::to_string(buddy->getRace()) + ", class "
+                + std::to_string(buddy->getClass()) + "; ";
+        return worn;
+    }
     if (shape < 1 || shape > 10)
     {
         problems += "no talent shape (buddy_roster.profile " + std::to_string(shape) + ") to look up its gear by; ";
@@ -101,6 +157,15 @@ static uint32 GiveGear(Player* buddy, uint8 shape, bool firstMaking, std::string
         uint8 slot = (*rows)[0].Get<uint16>();
         recordHas[slot] = true;
         uint32 item = (*rows)[1].Get<uint32>();
+        if (fillOnly)
+        {
+            Item* there = buddy->GetItemByPos(INVENTORY_SLOT_BAG_0, slot);
+            bool hand = slot == EQUIPMENT_SLOT_MAINHAND || slot == EQUIPMENT_SLOT_OFFHAND || slot == EQUIPMENT_SLOT_RANGED;
+            if (there && (!hand || RealWeapon(there)))
+                continue;
+            if (hand && CarriesWeaponFor(buddy, slot))
+                continue;
+        }
         if (ItemTemplate const* proto = sObjectMgr->GetItemTemplate(item); proto && proto->Class == ITEM_CLASS_WEAPON)
         {
             std::string why;
@@ -126,8 +191,17 @@ static uint32 GiveGear(Player* buddy, uint8 shape, bool firstMaking, std::string
                 + std::to_string(buddy->GetLevel()) + "; ";
     return worn;
 }
-static void GiveMeals(Player* buddy, std::string& problems)
+static constexpr uint32 BLACK_MUSHROOM = 41751;
+static bool OwnerIsDeathKnight(uint32 ownerGuid)
 {
+    if (!ownerGuid)
+        return false;
+    QueryResult r = CharacterDatabase.Query("SELECT class FROM characters WHERE guid = {}", ownerGuid);
+    return r && (*r)[0].Get<uint8>() == CLASS_DEATH_KNIGHT;
+}
+static void GiveMeals(Player* buddy, uint32 ownerGuid, std::string& problems)
+{
+    bool deathKnights = OwnerIsDeathKnight(ownerGuid);
     QueryResult rows = WorldDatabase.Query(
         "SELECT DISTINCT it.entry, it.RequiredLevel, it.ItemLevel FROM item_template it JOIN npc_vendor v ON v.item = it.entry "
         "WHERE it.class = 0 AND it.subclass = 5 AND it.RequiredLevel <= {} "
@@ -149,6 +223,8 @@ static void GiveMeals(Player* buddy, std::string& problems)
             if (wantDrink && !drink && spell->HasAura(SPELL_AURA_MOD_POWER_REGEN))
                 drink = entry;
         } while ((!food || (wantDrink && !drink)) && rows->NextRow());
+    if (deathKnights)
+        food = BLACK_MUSHROOM;
     if (!food)
         problems += "no food found at vendors for its level; ";
     else if (!buddy->StoreNewItemInBestSlots(food, MEALS))
@@ -175,6 +251,32 @@ static uint32 BestVendorItem(Player* buddy, std::string const& where)
         "SELECT it.entry FROM item_template it JOIN npc_vendor v ON v.item = it.entry WHERE {} AND it.RequiredLevel <= {} "
         "ORDER BY it.RequiredLevel DESC, it.ItemLevel DESC, it.entry LIMIT 1", where, buddy->GetLevel());
     return row ? (*row)[0].Get<uint32>() : 0;
+}
+
+static bool StowInOrdinaryBags(Player* buddy, uint8 fromBag, uint8 fromSlot)
+{
+    Item* item = buddy->GetItemByPos(fromBag, fromSlot);
+    if (!item)
+        return true;
+    for (uint8 b = INVENTORY_SLOT_BAG_START - 1; b < INVENTORY_SLOT_BAG_END; ++b)
+    {
+        uint8 into = b == INVENTORY_SLOT_BAG_START - 1 ? uint8(INVENTORY_SLOT_BAG_0) : b;
+        if (into != INVENTORY_SLOT_BAG_0)
+        {
+            Item* bag = buddy->GetItemByPos(INVENTORY_SLOT_BAG_0, into);
+            if (!bag || into == fromBag || (fromBag == INVENTORY_SLOT_BAG_0 && into == fromSlot)
+                || bag->GetTemplate()->Class != ITEM_CLASS_CONTAINER)
+                continue;
+        }
+        ItemPosCountVec dest;
+        if (buddy->CanStoreItem(into, NULL_SLOT, dest, item, false) == EQUIP_ERR_OK)
+        {
+            buddy->RemoveItem(fromBag, fromSlot, true);
+            buddy->StoreItem(dest, item, true);
+            return true;
+        }
+    }
+    return false;
 }
 
 static void GiveClassTools(Player* buddy, std::string& problems)
@@ -230,16 +332,35 @@ static void GiveClassTools(Player* buddy, std::string& problems)
             uint32 bagSub = ammoSub == ITEM_SUBCLASS_ARROW ? 2 : 3;
             bool hasIt = false;
             uint8 freeSlot = 0;
+            uint8 wrongSlot = 0;
             for (uint8 b = INVENTORY_SLOT_BAG_START; b < INVENTORY_SLOT_BAG_END; ++b)
             {
                 Item* bag = buddy->GetItemByPos(INVENTORY_SLOT_BAG_0, b);
                 if (!bag && !freeSlot)
                     freeSlot = b;
-                else if (bag && bag->GetTemplate()->Class == ITEM_CLASS_QUIVER && bag->GetTemplate()->SubClass == bagSub)
-                    hasIt = true;
+                else if (bag && bag->GetTemplate()->Class == ITEM_CLASS_QUIVER)
+                {
+                    if (bag->GetTemplate()->SubClass == bagSub)
+                        hasIt = true;
+                    else
+                        wrongSlot = b;
+                }
             }
             if (hasIt)
                 break;
+            if (wrongSlot)
+            {
+                Bag* wrong = buddy->GetBagByPos(wrongSlot);
+                bool emptied = true;
+                for (uint32 s = 0; wrong && s < wrong->GetBagSize(); ++s)
+                    emptied = StowInOrdinaryBags(buddy, wrongSlot, uint8(s)) && emptied;
+                if (!emptied || !StowInOrdinaryBags(buddy, INVENTORY_SLOT_BAG_0, wrongSlot))
+                {
+                    problems += std::string("its ") + (bagSub == 2 ? "ammo pouch" : "quiver") + " is the wrong kind for its weapon, and there is no room in its bags to take it off; ";
+                    break;
+                }
+                freeSlot = wrongSlot;
+            }
             uint32 container = BestVendorItem(buddy, "it.class = 11 AND it.subclass = " + std::to_string(bagSub));
             uint16 dest;
             if (!container || !freeSlot)
@@ -304,12 +425,31 @@ std::string BuddyGiveStartingKit(Player* buddy, uint32 ownerGuid, uint8 shape)
     GiveClassTools(buddy, problems);
     if (ownerGuid)
         BuddyFillWeaponKinds(buddy, BuddyWeaponAllowance(ownerGuid));
-    GiveMeals(buddy, problems);
+    BuddyMaxWeaponSkills(buddy);
+    GiveMeals(buddy, ownerGuid, problems);
     if (buddy->GetLevel() > 1)
         buddy->ModifyMoney(int32(buddy->GetLevel()) * 100);
     if (!worn && buddy->GetLevel() > 1)
         problems += "wears nothing chosen for it; ";
     return problems;
+}
+
+static constexpr float SECOND_PICK_FIT = 0.75f;
+
+static std::string BattlegroundOf(uint32 vendor)
+{
+    static std::pair<char const*, char const*> const BATTLEGROUND_BY_TITLE[] = {
+        { "Warsong",           "Warsong Gulch" },  { "Silverwing", "Warsong Gulch" },
+        { "Defilers",          "Arathi Basin" },   { "League of Arathor", "Arathi Basin" },
+        { "Frostwolf",         "Alterac Valley" }, { "Stormpike", "Alterac Valley" },
+    };
+    CreatureTemplate const* ct = sObjectMgr->GetCreatureTemplate(vendor);
+    if (!ct)
+        return std::string();
+    for (auto const& [word, battleground] : BATTLEGROUND_BY_TITLE)
+        if (ct->SubName.find(word) != std::string::npos)
+            return battleground;
+    return ct->SubName;
 }
 
 std::string BuddyGivePvpJewellery(Player* who, uint8 shape, uint8 role)
@@ -320,8 +460,9 @@ std::string BuddyGivePvpJewellery(Player* who, uint8 shape, uint8 role)
     bool plan = BuddyPlanShape(who->getClass(), shape, role, thirds, types);
 
     std::map<uint32, std::vector<std::pair<float, ItemTemplate const*>>> byKind;
+    std::map<uint32, std::set<std::string>> sourcesOf;
     QueryResult rows = WorldDatabase.Query(
-        "SELECT DISTINCT it.entry, v.ExtendedCost FROM item_template it JOIN npc_vendor v ON v.item = it.entry "
+        "SELECT DISTINCT it.entry, v.ExtendedCost, v.entry FROM item_template it JOIN npc_vendor v ON v.item = it.entry "
         "WHERE it.InventoryType IN (2, 11, 12) AND v.ExtendedCost > 0 AND it.RequiredLevel <= {} AND it.RequiredHonorRank = 0",
         who->GetLevel());
     std::set<uint32> seen;
@@ -330,10 +471,16 @@ std::string BuddyGivePvpJewellery(Player* who, uint8 shape, uint8 role)
         {
             uint32 entry = (*rows)[0].Get<uint32>();
             ItemExtendedCostEntry const* cost = sItemExtendedCostStore.LookupEntry((*rows)[1].Get<uint32>());
-            if (!cost || (!cost->reqhonorpoints && !cost->reqarenapoints) || !seen.insert(entry).second)
+            if (!cost || (!cost->reqhonorpoints && !cost->reqarenapoints))
+                continue;
+            sourcesOf[entry].insert(BattlegroundOf((*rows)[2].Get<uint32>()));
+            if (!seen.insert(entry).second)
                 continue;
             ItemTemplate const* proto = sObjectMgr->GetItemTemplate(entry);
             if (!proto || !(proto->AllowableClass & who->getClassMask()) || !(proto->AllowableRace & who->getRaceMask()))
+                continue;
+            if ((proto->HasFlag2(ITEM_FLAG2_FACTION_HORDE)    && who->GetTeamId(true) != TEAM_HORDE) ||
+                (proto->HasFlag2(ITEM_FLAG2_FACTION_ALLIANCE) && who->GetTeamId(true) != TEAM_ALLIANCE))
                 continue;
             float score = 0.0f;
             if (plan)
@@ -366,15 +513,45 @@ std::string BuddyGivePvpJewellery(Player* who, uint8 shape, uint8 role)
         auto& list = byKind[kind.inventoryType];
         std::stable_sort(list.begin(), list.end(), [](auto const& a, auto const& b)
             { return a.first != b.first ? a.first > b.first : a.second->ItemLevel > b.second->ItemLevel; });
+        std::vector<ItemTemplate const*> picks;
+        if (!list.empty())
+            picks.push_back(list[0].second);
+        if (kind.slots.size() > 1 && list.size() > 1)
+        {
+            ItemTemplate const* first = picks[0];
+            auto otherPlace = [&](ItemTemplate const* p)
+            {
+                for (std::string const& src : sourcesOf[p->ItemId])
+                    if (sourcesOf[first->ItemId].count(src))
+                        return false;
+                return true;
+            };
+            ItemTemplate const* second = nullptr;
+            float const fits = list[1].first * SECOND_PICK_FIT;
+            for (int pass = 1; pass <= 2 && !second; ++pass)
+                for (size_t i = 1; i < list.size() && !second; ++i)
+                    if (list[i].first > 0.0f && list[i].first >= fits && list[i].second->Name1 != first->Name1
+                        && (pass == 2 || otherPlace(list[i].second)))
+                        second = list[i].second;
+            picks.push_back(second ? second : list[1].second);
+        }
+        for (uint8 slot : kind.slots)
+            if (Item* worn = who->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
+                for (ItemTemplate const* p : picks)
+                    if (worn->GetEntry() == p->ItemId)
+                    {
+                        who->DestroyItem(INVENTORY_SLOT_BAG_0, slot, true);
+                        break;
+                    }
         size_t next = 0;
         for (uint8 slot : kind.slots)
         {
-            if (next >= list.size())
+            if (next >= picks.size())
             {
                 problems += std::string("no PvP ") + kind.name + " at its level for slot " + std::to_string(slot) + "; ";
                 continue;
             }
-            ItemTemplate const* proto = list[next++].second;
+            ItemTemplate const* proto = picks[next++];
             if (proto->RequiredReputationFaction)
                 if (FactionEntry const* faction = sFactionStore.LookupEntry(proto->RequiredReputationFaction))
                     if (who->GetReputationMgr().GetRank(faction) < ReputationRank(proto->RequiredReputationRank))
@@ -395,6 +572,26 @@ std::string BuddyRegear(Player* buddy, uint8 shape)
     return problems;
 }
 
+std::string BuddyBringToSpec(Player* buddy, uint8 shape, uint8 role)
+{
+    BuddyLearnEverything(buddy);
+    buddy->UpdateSkillsToMaxSkillsForLevel();
+    std::string problems;
+    GiveGear(buddy, shape, false, problems,  true);
+    GiveClassTools(buddy, problems);
+    if (buddy->GetLevel() >= BUDDY_PVP_JEWELLERY_FROM)
+        for (uint8 slot : { EQUIPMENT_SLOT_NECK, EQUIPMENT_SLOT_FINGER1, EQUIPMENT_SLOT_FINGER2, EQUIPMENT_SLOT_TRINKET1, EQUIPMENT_SLOT_TRINKET2 })
+            if (!buddy->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
+            {
+                problems += BuddyGivePvpJewellery(buddy, shape, role);
+                break;
+            }
+    problems += BuddyGemKit(buddy, shape, role);
+    buddy->UpdateSkillsToMaxSkillsForLevel();
+    buddy->SaveToDB(false, false);
+    return problems;
+}
+
 class buddies_kit_command : public CommandScript
 {
 public:
@@ -405,19 +602,23 @@ public:
         static ChatCommandTable commandTable =
         {
             { "buddy kit", HandleKit, SEC_GAMEMASTER, Console::Yes },
+            { "buddy spec", HandleSpec, SEC_GAMEMASTER, Console::Yes },
         };
         return commandTable;
     }
 
-    static bool HandleKit(ChatHandler* handler, std::string name)
+    static bool HandleSpec(ChatHandler* handler, Optional<PlayerIdentifier> who)
     {
-        if (!normalizePlayerName(name))
+        if (!who)
+            who = PlayerIdentifier::FromTarget(handler);
+        if (!who)
         {
-            handler->PSendSysMessage("Usage: .buddy kit <buddy name>");
+            handler->PSendSysMessage("Usage: .buddy spec [buddy name] (no name: the selected buddy)");
             return false;
         }
-        Player* buddy = ObjectAccessor::FindPlayerByName(name, true);
-        if (!buddy || !BuddyIsCompanionAccount(buddy->GetSession()->GetAccountId()))
+        std::string name = who->GetName();
+        Player* buddy = who->GetConnectedPlayer();
+        if (!buddy || !buddy->IsInWorld() || !BuddyIsCompanionAccount(buddy->GetSession()->GetAccountId()))
         {
             handler->PSendSysMessage("{} is not a buddy in the world (a buddy is in the world while its owner is online).", name);
             return false;
@@ -425,10 +626,38 @@ public:
         QueryResult row = CharacterDatabase.Query("SELECT profile, role FROM buddy_roster WHERE buddy = {}", buddy->GetGUID().GetCounter());
         uint8 shape = row ? (*row)[0].Get<uint8>() : 0;
         uint8 role  = row ? (*row)[1].Get<uint8>() : 0;
+        std::string problems = BuddyBringToSpec(buddy, shape, role);
+        handler->PSendSysMessage("{} (level {}) brought up to spec: lessons, skills, empty kit slots, tools, jewellery, gems{}{}",
+            name, buddy->GetLevel(), problems.empty() ? "" : "; ", problems);
+        return true;
+    }
+
+    static bool HandleKit(ChatHandler* handler, Optional<PlayerIdentifier> who)
+    {
+        if (!who)
+            who = PlayerIdentifier::FromTarget(handler);
+        if (!who)
+        {
+            handler->PSendSysMessage("Usage: .buddy kit [buddy name] (no name: the selected buddy)");
+            return false;
+        }
+        std::string name = who->GetName();
+        Player* buddy = who->GetConnectedPlayer();
+        if (!buddy || !buddy->IsInWorld() || !BuddyIsCompanionAccount(buddy->GetSession()->GetAccountId()))
+        {
+            handler->PSendSysMessage("{} is not a buddy in the world (a buddy is in the world while its owner is online).", name);
+            return false;
+        }
+        QueryResult row = CharacterDatabase.Query("SELECT profile, role FROM buddy_roster WHERE buddy = {}", buddy->GetGUID().GetCounter());
+        uint8 shape = row ? (*row)[0].Get<uint8>() : 0;
+        uint8 role  = row ? (*row)[1].Get<uint8>() : 0;
+        buddy->UpdateSkillsToMaxSkillsForLevel();
         std::string problems = BuddyRegear(buddy, shape);
         if (buddy->GetLevel() >= BUDDY_PVP_JEWELLERY_FROM)
             problems += BuddyGivePvpJewellery(buddy, shape, role);
-        handler->PSendSysMessage("{} (level {}) re-kitted from {} by its talent shape {}{}{}", name, buddy->GetLevel(), KitGearset(buddy->GetLevel()),
+        buddy->UpdateSkillsToMaxSkillsForLevel();
+        problems += BuddyGemKit(buddy, shape, role);
+        handler->PSendSysMessage("{} (level {}) re-kitted and gemmed from {} by its talent shape {}{}{}", name, buddy->GetLevel(), KitGearset(buddy->GetLevel()),
             uint32(shape), problems.empty() ? "" : "; ", problems);
         return true;
     }

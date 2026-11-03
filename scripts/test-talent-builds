@@ -1,0 +1,90 @@
+#!/usr/bin/env luajit
+
+local DIR     = arg[1] or "/mnt/kaun/wow-chat-2026"
+local DATA    = dofile(DIR .. "/src/lua-basic/data/buddy-talent-data.lua")
+local Spender = dofile(DIR .. "/src/lua-basic/lib/buddy-talent-spender.lua")
+local BUILDS  = dofile(DIR .. "/src/lua-basic/data/talent-builds.lua")
+local POINTS  = 51
+local SEEDS   = 200
+local checks, failed = 0, 0
+
+local function check(ok, what)
+    checks = checks + 1
+    if not ok then failed = failed + 1; print("FAIL " .. what) end
+end
+
+local function dice(seed)
+    local s = seed
+    return function(n)
+        s = (s * 1103515245 + 12345) % 2147483648
+        return math.floor(s / 2147483648 * n) + 1
+    end
+end
+
+local function referee(cls, held, step, past_cap)
+    for t, tree in ipairs(cls.trees) do
+        for _, tal in ipairs(tree.talents) do
+            if tal.id == step.id then
+                local spent = 0
+                for _, o in ipairs(tree.talents) do spent = spent + (held[o.id] or 0) end
+                if not (tal.allowed or past_cap)            then return "shut by basic's cap" end
+                if spent < tal.row * 5                      then return "row not open" end
+                if (held[tal.id] or 0) ~= step.rank         then return "not one rank above what is held" end
+                if step.rank >= tal.ranks                   then return "past its last rank" end
+                if tal.dep ~= 0 and (held[tal.dep] or 0) < tal.dep_points then return "prerequisite not held" end
+                if t ~= step.tree                           then return "wrong tree" end
+                return nil, tal
+            end
+        end
+    end
+    return "no such talent"
+end
+
+for _, build in ipairs(BUILDS) do
+    local cls = DATA.classes[build.class]
+    check(cls ~= nil, build.name .. ": class " .. tostring(build.class) .. " exists")
+    local cost = Spender.build_cost(cls, build)
+    check(cost <= POINTS, ("%s: its required talents cost %d of %d points"):format(build.name, cost, POINTS))
+    local forbid = {}
+    for _, n in ipairs(build.forbidden or {}) do forbid[n] = true end
+    local worst
+    for seed = 1, SEEDS do
+        local steps, unspent, missing = Spender.plan_build(cls, build, {}, POINTS, dice(seed))
+        local held, bad = {}, nil
+        for _, st in ipairs(steps) do
+            local why, tal = referee(cls, held, st, build.past_cap)
+            if why then bad = st.name .. ": " .. why; break end
+            if forbid[tal.name] then bad = st.name .. ": forbidden"; break end
+            held[st.id] = (held[st.id] or 0) + 1
+        end
+        if bad or unspent ~= 0 or #missing > 0 then
+            worst = ("%s seed %d: %s"):format(build.name, seed,
+                bad or (unspent ~= 0 and (unspent .. " points unspent")) or ("not maxed: " .. table.concat(missing, ", ")))
+            break
+        end
+    end
+    check(worst == nil, worst or (build.name .. ": all good"))
+    if not worst then
+        local steps = Spender.plan_build(cls, build, {}, POINTS, dice(1))
+        local per = { 0, 0, 0 }
+        for _, st in ipairs(steps) do per[st.tree] = per[st.tree] + 1 end
+        print(("ok   %-30s %2d/%2d/%2d points (required cost %2d)"):format(build.name, per[1], per[2], per[3], cost))
+    end
+end
+
+local druid = DATA.classes[11]
+local function refuses(build, points, pattern, what)
+    local ok, err = pcall(Spender.plan_build, druid, build, {}, points, dice(1))
+    check(not ok and tostring(err):find(pattern) ~= nil, what .. " (got: " .. tostring(err) .. ")")
+end
+refuses({ name = "short", thirds = { 0, 0, 3 }, required = { "Gift of Nature" } }, 10,
+        "short%)", "a build costing more points than the character has is refused")
+refuses({ name = "misspelt", thirds = { 0, 0, 3 }, required = { "Gift of Nurture" } }, 51,
+        "has no talent named", "a misspelled talent is refused")
+refuses({ name = "deep", thirds = { 0, 0, 3 }, required = { "Tree of Life" } }, 51,
+        "basic's talent cap", "a talent past basic's cap is refused")
+refuses({ name = "both", thirds = { 0, 0, 3 }, required = { "Swiftmend" }, forbidden = { "Swiftmend" } }, 51,
+        "both required and forbidden", "a talent both required and forbidden is refused")
+
+print(("%d checks, %d failed"):format(checks, failed))
+os.exit(failed == 0 and 0 or 1)

@@ -1,0 +1,96 @@
+#!/bin/bash
+
+set -uo pipefail
+
+DIR="/mnt/kaun/wow-chat-2026"
+ARGS=()
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --dir)  DIR="$2"; shift 2 ;;
+        --help)
+            sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'
+            exit 0 ;;
+        *)      ARGS+=("$1"); shift ;;
+    esac
+done
+BRANCHES="${DIR}/config/branches"
+MYSQL_BIN="${DIR}/mysql/installed-files/bin"
+CLIENT=("--defaults-file=${DIR}/mysql/conf/client.cnf" -h127.0.0.1 -P3307)
+touch "${BRANCHES}"
+
+sql() { "${MYSQL_BIN}/mysql" "${CLIENT[@]}" -N -B -e "$1"; }
+db_suffix() { echo "${1//-/_}"; }
+source_dbs() {
+    local src="$1" line conf
+    line="$(grep "^${src} " "${BRANCHES}")"
+    if [[ -n "${line}" ]]; then
+        local s; s="$(db_suffix "${src}")"
+        echo "acore_world_${s} acore_characters_${s} acore_playerbots_${s}"
+        return
+    fi
+    conf="${DIR}/installed-files-${src}/etc"
+    [[ -f "${conf}/worldserver.conf" ]] || { echo "branch-realm: ${src} has no installed settings (${conf}/worldserver.conf)" >&2; return 1; }
+    local world chars bots
+    world="$(grep -m1 '^WorldDatabaseInfo' "${conf}/worldserver.conf" | sed 's/.*;\([^;"]*\)"$/\1/')"
+    chars="$(grep -m1 '^CharacterDatabaseInfo' "${conf}/worldserver.conf" | sed 's/.*;\([^;"]*\)"$/\1/')"
+    bots="$(grep -m1 '^PlayerbotsDatabaseInfo' "${conf}/modules/playerbots.conf" 2>/dev/null | sed 's/.*;\([^;"]*\)"$/\1/')"
+    [[ -n "${world}" && -n "${chars}" && -n "${bots}" ]] || { echo "branch-realm: could not read ${src}'s database names (world '${world}', characters '${chars}', bots '${bots}')" >&2; return 1; }
+    echo "${world} ${chars} ${bots}"
+}
+
+if [[ "${ARGS[0]:-}" == "--list" ]]; then
+    if [[ ! -s "${BRANCHES}" ]]; then echo "branch-realm: no branches"; exit 0; fi
+    echo "branch            source     realm  made"
+    while read -r name src id made; do printf '%-17s %-10s %5s  %s\n' "${name}" "${src}" "${id}" "${made}"; done < "${BRANCHES}"
+    exit 0
+fi
+
+if [[ "${ARGS[0]:-}" == "--drop" ]]; then
+    NAME="${ARGS[1]:-}"
+    LINE="$(grep "^${NAME} " "${BRANCHES}")"
+    [[ -n "${NAME}" && -n "${LINE}" ]] || { echo "branch-realm: no branch called '${NAME}' (--list shows them)"; exit 1; }
+    read -r _ _ ID _ <<< "${LINE}"
+    S="$(db_suffix "${NAME}")"
+    for db in "acore_world_${S}" "acore_characters_${S}" "acore_playerbots_${S}"; do sql "DROP DATABASE IF EXISTS \`${db}\`" || exit 1; done
+    sql "DELETE FROM acore_auth.realmlist WHERE id = ${ID} AND name = '${NAME}'" || exit 1
+    grep -v "^${NAME} " "${BRANCHES}" > "${BRANCHES}.new"; mv "${BRANCHES}.new" "${BRANCHES}"
+    echo "branch-realm: dropped ${NAME} (its three databases and realm ${ID})"
+    exit 0
+fi
+
+SRC="${ARGS[0]:-}"; NAME="${ARGS[1]:-}"
+[[ -n "${SRC}" && -n "${NAME}" ]] || { echo "usage: branch-realm SOURCE NAME | --drop NAME | --list (--help)"; exit 1; }
+[[ "${NAME}" =~ ^[a-z][a-z0-9-]*$ ]] || { echo "branch-realm: a branch's name is lower-case letters, digits and hyphens: '${NAME}'"; exit 1; }
+grep -q "^${NAME} " "${BRANCHES}" && { echo "branch-realm: ${NAME} is already a branch (--drop it first)"; exit 1; }
+[[ -d "${DIR}/installed-files-${NAME}" ]] && { echo "branch-realm: ${NAME} is a profile, not a free name"; exit 1; }
+read -r SW SC SB <<< "$(source_dbs "${SRC}")" || exit 1
+[[ -n "${SW:-}" ]] || exit 1
+S="$(db_suffix "${NAME}")"
+NW="acore_world_${S}"; NC="acore_characters_${S}"; NB="acore_playerbots_${S}"
+for db in "${NW}" "${NC}" "${NB}"; do
+    [[ -z "$(sql "SHOW DATABASES LIKE '${db}'")" ]] || { echo "branch-realm: ${db} already exists; nothing done (drop it, or choose another name)"; exit 1; }
+done
+
+STARTED="$(date +%s)"; MADE=()
+undo() { for db in "${MADE[@]}"; do sql "DROP DATABASE IF EXISTS \`${db}\`"; done; }
+for pair in "${SW}:${NW}" "${SC}:${NC}" "${SB}:${NB}"; do
+    from="${pair%%:*}"; to="${pair##*:}"
+    echo "branch-realm: copying ${from} -> ${to} ..."
+    sql "CREATE DATABASE \`${to}\`" || { undo; exit 1; }
+    MADE+=("${to}")
+    if ! "${MYSQL_BIN}/mysqldump" "${CLIENT[@]}" --single-transaction --set-gtid-purged=OFF --routines --triggers --no-tablespaces "${from}" \
+         | "${MYSQL_BIN}/mysql" "${CLIENT[@]}" "${to}"; then
+        echo "branch-realm: copying ${from} into ${to} failed (its error above); dropping what this run made (${MADE[*]}); nothing else was changed"
+        undo; exit 1
+    fi
+done
+
+SRC_ROW="$(sql "SELECT id FROM acore_auth.realmlist WHERE name = '${SRC}'")"
+[[ -n "${SRC_ROW}" ]] || { echo "branch-realm: no realm named ${SRC} in the realm list to copy"; exit 1; }
+ID="$(sql "SELECT MAX(id) + 1 FROM acore_auth.realmlist")"
+sql "INSERT INTO acore_auth.realmlist (id, name, address, localAddress, localSubnetMask, port, icon, flag, timezone, allowedSecurityLevel, population, gamebuild)
+     SELECT ${ID}, '${NAME}', address, localAddress, localSubnetMask, port, icon, 2, timezone, 1, 0, gamebuild FROM acore_auth.realmlist WHERE id = ${SRC_ROW}" || exit 1
+
+echo "${NAME} ${SRC} ${ID} $(date '+%Y-%m-%dT%H:%M')" >> "${BRANCHES}"
+echo "branch-realm: ${NAME} made from ${SRC} in $(( $(date +%s) - STARTED )) s: databases ${NW}, ${NC}, ${NB}; realm ${ID} (game masters only)"
+echo "  start it: scripts/worldserver --profile ${NAME}   (stops any other world server first)"

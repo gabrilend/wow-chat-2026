@@ -31,6 +31,10 @@ parse_args() {
                 fi
                 shift
                 ;;
+            --then-serve)
+                THEN_SERVE=true
+                shift
+                ;;
             --help|-h)
                 show_help
                 exit 0
@@ -146,6 +150,10 @@ promote_shadow_to_main() {
 }
 
 
+THEN_SERVE=false
 parse_args "$@"
 get_profile_paths
 promote_shadow_to_main
+if [[ "${THEN_SERVE}" == "true" ]]; then
+    exec "${DIR}/scripts/worldserver" --profile "${PROFILE}" --after-compile
+fi

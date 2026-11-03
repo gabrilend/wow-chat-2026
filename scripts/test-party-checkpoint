@@ -1,0 +1,112 @@
+#!/bin/bash
+
+set -uo pipefail
+
+DIR="/mnt/kaun/wow-chat-2026"
+if [[ -n "${1:-}" ]]; then DIR="$1"; fi
+WHO="${2:-}"
+TOOL="${DIR}/scripts/party-checkpoint"
+MYSQL=("${DIR}/mysql/installed-files/bin/mysql" "--defaults-file=${DIR}/mysql/conf/client.cnf" -h127.0.0.1 -P3307 -N -B)
+SOURCE_CHARS="acore_characters_basic"
+SOURCE_BOTS="acore_playerbots_basic"
+SCRATCH_PROFILE="cptest"
+CHARS="acore_characters_${SCRATCH_PROFILE}"
+BOTS="acore_playerbots_${SCRATCH_PROFILE}"
+STORE="${DIR}/tmp/shared-memory/test-party-checkpoint"
+CHECKS=0
+FAILED=0
+
+sql() { "${MYSQL[@]}" -e "$1"; }
+ok()   { CHECKS=$((CHECKS + 1)); echo "ok   $1"; }
+fail() { CHECKS=$((CHECKS + 1)); FAILED=$((FAILED + 1)); echo "FAIL $1"; }
+cleanup() { [[ -n "${KEEP:-}" ]] && return; sql "DROP DATABASE IF EXISTS ${CHARS}; DROP DATABASE IF EXISTS ${BOTS};"; rm -rf "${STORE}"; }   # KEEP=1 leaves them, to look at
+trap cleanup EXIT
+
+LISTED="$("${TOOL}" --dir "${DIR}" --profile basic tables | cut -f2 | sort -u)"
+NAMING="$(sql "SELECT DISTINCT table_name FROM information_schema.columns WHERE table_schema = '${SOURCE_CHARS}'
+              AND (column_name LIKE '%guid%' OR column_name IN ('owner', 'buddy'))" | sort -u)"
+MISSING="$(comm -13 <(echo "${LISTED}") <(echo "${NAMING}"))"
+if [[ -z "${MISSING}" ]]; then ok "every table naming a character is kept, cleared or left alone with a reason"
+else fail "tables naming a character that the checkpoint neither keeps nor explains: $(echo ${MISSING})"; fi
+
+if [[ -z "${WHO}" ]]; then
+    WHO="$(sql "SELECT c.name FROM ${SOURCE_CHARS}.buddy_roster r JOIN ${SOURCE_CHARS}.characters c ON c.guid = r.buddy
+               WHERE c.online = 0 ORDER BY c.level DESC LIMIT 1")"
+fi
+GUID="$(sql "SELECT guid FROM ${SOURCE_CHARS}.characters WHERE name = '${WHO}' AND online = 0")"
+if [[ -z "${GUID}" ]]; then fail "no offline character named '${WHO}' to copy"; echo "${CHECKS} checks, ${FAILED} failed"; exit 1; fi
+cleanup
+trap cleanup EXIT
+sql "CREATE DATABASE ${CHARS}; CREATE DATABASE ${BOTS};"
+while IFS=$'\t' read -r where table _; do
+    db="${CHARS}"; src="${SOURCE_CHARS}"
+    if [[ "${where}" == "bots" ]]; then db="${BOTS}"; src="${SOURCE_BOTS}"; fi
+    sql "CREATE TABLE ${db}.${table} LIKE ${src}.${table}"
+done < <("${TOOL}" --dir "${DIR}" --profile basic tables | grep -v '^left')
+for t in character_inventory character_pet; do
+    sql "INSERT INTO ${CHARS}.${t} SELECT * FROM ${SOURCE_CHARS}.${t} WHERE $( [[ ${t} == character_pet ]] && echo owner || echo guid ) = ${GUID}"
+done
+while IFS=$'\t' read -r where table _; do
+    [[ "${table}" == character_inventory || "${table}" == character_pet ]] && continue
+    db="${CHARS}"; src="${SOURCE_CHARS}"
+    if [[ "${where}" == "bots" ]]; then db="${BOTS}"; src="${SOURCE_BOTS}"; fi
+    case "${table}" in
+        item_instance)  cond="guid IN (SELECT item FROM ${CHARS}.character_inventory WHERE guid = ${GUID})" ;;
+        pet_*)          cond="guid IN (SELECT id FROM ${CHARS}.character_pet WHERE owner = ${GUID})" ;;
+        character_pet_declinedname) cond="owner = ${GUID}" ;;
+        *)              cond="guid = ${GUID}" ;;
+    esac
+    sql "INSERT INTO ${db}.${table} SELECT * FROM ${src}.${table} WHERE ${cond}"
+done < <("${TOOL}" --dir "${DIR}" --profile basic tables | grep -v '^left')
+ROWS="$(sql "SELECT COUNT(*) FROM ${CHARS}.item_instance") items, $(sql "SELECT COUNT(*) FROM ${CHARS}.character_spell") spells"
+echo "     copied ${WHO} (character ${GUID}): ${ROWS}"
+
+fingerprint() {
+    local out=""
+    while IFS=$'\t' read -r where table state; do
+        [[ "${state}" != kept ]] && continue
+        db="${CHARS}"; [[ "${where}" == "bots" ]] && db="${BOTS}"
+        out+="$(sql "CHECKSUM TABLE ${db}.${table}")"$'\n'
+    done < <("${TOOL}" --dir "${DIR}" --profile basic tables | grep -v '^left')
+    echo "${out}"
+}
+
+BEFORE="$(fingerprint)"
+if "${TOOL}" --dir "${DIR}" --profile "${SCRATCH_PROFILE}" --store "${STORE}" save test-party "${WHO}" > /dev/null; then
+    ok "saved ${WHO}"
+else
+    fail "save refused or failed"
+fi
+sql "UPDATE ${CHARS}.characters SET level = level + 1, money = money + 12345 WHERE guid = ${GUID};
+     DELETE FROM ${CHARS}.item_instance WHERE guid = (SELECT MIN(item) FROM ${CHARS}.character_inventory WHERE guid = ${GUID});
+     INSERT INTO ${CHARS}.character_spell (guid, spell, specMask) VALUES (${GUID}, 1, 255);
+     INSERT INTO ${CHARS}.character_spell_cooldown (guid, spell, item, time, needSend) VALUES (${GUID}, 2, 0, UNIX_TIMESTAMP() + 600, 1);"
+CHANGED="$(fingerprint)"
+[[ "${CHANGED}" != "${BEFORE}" ]] && ok "the change shows in the fingerprints" || fail "the change did not show in the fingerprints"
+
+"${TOOL}" --dir "${DIR}" --profile "${SCRATCH_PROFILE}" --store "${STORE}" restore --dry-run test-party > /dev/null
+[[ "$(fingerprint)" == "${CHANGED}" ]] && ok "a dry run changes nothing" || fail "a dry run changed something"
+
+sql "UPDATE ${CHARS}.characters SET online = 1 WHERE guid = ${GUID}"
+if "${TOOL}" --dir "${DIR}" --profile "${SCRATCH_PROFILE}" --store "${STORE}" restore test-party > /dev/null 2>&1; then
+    fail "a restore went ahead with the character online"
+else
+    ok "a restore refuses while the character is online"
+fi
+sql "UPDATE ${CHARS}.characters SET online = 0 WHERE guid = ${GUID}"
+
+"${TOOL}" --dir "${DIR}" --profile "${SCRATCH_PROFILE}" --store "${STORE}" restore test-party > /dev/null
+AFTER="$(fingerprint)"
+[[ "${AFTER}" == "${BEFORE}" ]] && ok "the restore gives back every kept table exactly as saved" || {
+    fail "the restore differs from the save:"
+    diff <(echo "${BEFORE}") <(echo "${AFTER}") | sed 's/^/    /'
+}
+[[ "$(sql "SELECT COUNT(*) FROM ${CHARS}.character_spell_cooldown WHERE guid = ${GUID}")" == 0 ]] \
+    && ok "cooldowns are cleared by a restore" || fail "a cooldown survived the restore"
+
+"${TOOL}" --dir "${DIR}" --profile "${SCRATCH_PROFILE}" --store "${STORE}" restore test-party > /dev/null
+[[ "$(fingerprint)" == "${BEFORE}" ]] && ok "restoring twice is the same as once" || fail "a second restore changed something"
+
+echo "${CHECKS} checks, ${FAILED} failed"
+[[ "${FAILED}" -eq 0 ]] && exit 0
+exit 1

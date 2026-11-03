@@ -1,0 +1,248 @@
+#!/usr/bin/env luajit
+
+local DIR, RECORD, FROM, TO, LOGS, ANIMATE = "/mnt/kaun/wow-chat-2026", nil, nil, nil, nil, true
+do
+    local i = 1
+    while i <= #arg do
+        local a = arg[i]
+        if a == "--record" then i = i + 1; RECORD = arg[i]
+        elseif a == "--from" then i = i + 1; FROM = tonumber(arg[i])
+        elseif a == "--to" then i = i + 1; TO = tonumber(arg[i])
+        elseif a == "--logs" then i = i + 1; LOGS = arg[i]
+        elseif a == "--no-animation" then ANIMATE = false
+        elseif a:sub(1, 2) == "--" then io.stderr:write("movement-benchmark: unknown option " .. a .. "\n"); os.exit(2)
+        else DIR = a end
+        i = i + 1
+    end
+end
+local function exists(p) local f = io.open(p); if f then f:close() end; return f ~= nil end
+if not RECORD then
+    RECORD = DIR .. "/tmp/shared-memory/world-positions.tsv"
+    if not exists(RECORD) then RECORD = DIR .. "/tmp/shared-memory/buddy-spread.tsv" end
+end
+if not LOGS then
+    local pf = io.open(DIR .. "/.profile"); local profile = pf and pf:read("*l"); if pf then pf:close() end
+    LOGS = DIR .. "/logs-" .. (profile or "basic")
+end
+local J       = dofile(DIR .. "/scripts/lib/movement-judges.lua")
+local TARGETS = dofile(DIR .. "/src/lua-basic/data/movement-benchmark-targets.lua")
+local GRID    = 533.3333
+
+local lines = {}
+local function say(s) lines[#lines + 1] = s; print(s) end
+
+local groups, first, last = J.read(RECORD, FROM, TO)
+if not groups then io.stderr:write("movement-benchmark: " .. first .. "\n"); os.exit(2) end
+if next(groups) == nil then io.stderr:write("movement-benchmark: no buddies in " .. RECORD .. " in that stretch\n"); os.exit(2) end
+say(("# Movement benchmark, %s to %s"):format(os.date("%Y-%m-%d %H:%M", first), os.date("%H:%M", last)))
+say("")
+say("Record: `" .. RECORD .. "`")
+
+local function area_squares(group)
+    local count, best = {}, nil
+    for _, b in pairs(group.buddies) do
+        for _, s in ipairs(b.samples) do
+            local k = s.map .. "-" .. s.zone .. "-" .. s.area
+            count[k] = (count[k] or 0) + 1
+            if not best or count[k] > count[best] then best = k end
+        end
+    end
+    local map, zone, area = best:match("^(%d+)%-(%d+)%-(%d+)$")
+    local ok, Z = pcall(dofile, ("%s/assets/zone-maps/%s-%s.lua"):format(DIR, map, zone))
+    if not ok then return nil, "zone " .. map .. "-" .. zone .. " (no zone data)", map .. "-" .. zone end
+    local index
+    for i, s in ipairs(Z.subzones) do if s.id == tonumber(area) then index = i end end
+    local out = {}
+    for r, row in ipairs(Z.rows) do
+        local c = 0
+        for v, n in row:gmatch("(%d+)%*(%d+)") do
+            for _ = 1, tonumber(n) do
+                c = c + 1
+                if tonumber(v) == index then
+                    local X, Y = Z.X0 + r - 1, Z.Y1 - c + 1
+                    out[#out + 1] = { x = (32 - (X + 0.5) / 16) * GRID, y = (32 - (Y + 0.5) / 16) * GRID }
+                end
+            end
+        end
+    end
+    return out, (index and Z.subzones[index].name or ("area " .. area)) .. ", " .. Z.name, map .. "-" .. zone
+end
+
+local LAST_ACTIONS = 300
+local actions_cache
+local function actions_of(name)
+    if not actions_cache then
+        actions_cache = {}
+        local f = io.open(LOGS .. "/Playerbots.log")
+        if f then
+            for line in f:lines() do
+                local who, act = line:match("^(%a+) A:(.+)$")
+                if who then
+                    local list = actions_cache[who] or {}
+                    list[#list + 1] = act
+                    if #list > LAST_ACTIONS * 2 then table.move(list, LAST_ACTIONS + 1, #list, 1); for k = #list - LAST_ACTIONS + 1, #list do list[k] = nil end end
+                    actions_cache[who] = list
+                end
+            end
+            f:close()
+        end
+    end
+    local list, counts = actions_cache[name] or {}, {}
+    for k = math.max(1, #list - LAST_ACTIONS + 1), #list do counts[list[k]] = (counts[list[k]] or 0) + 1 end
+    local sorted = {}
+    for act, n in pairs(counts) do sorted[#sorted + 1] = { act = act, n = n } end
+    table.sort(sorted, function(a, b) return a.n > b.n end)
+    local top = {}
+    for k = 1, math.min(5, #sorted) do top[k] = ("%s x%d"):format(sorted[k].act, sorted[k].n) end
+    return #list > 0 and table.concat(top, "; ") or nil
+end
+local function server_lines(pattern, name)
+    local f, n = io.open(LOGS .. "/Server.log"), 0
+    if not f then return 0 end
+    for line in f:lines() do if line:find(name, 1, true) and line:find(pattern) then n = n + 1 end end
+    f:close()
+    return n
+end
+
+local CAUSES = {
+    moving = {
+        { "fighting", "they stand because they fight (not a fault while the fight lasts)", function(ev)
+            local n, f = #ev.standing, 0
+            for _, s in ipairs(ev.standing) do if s.fighting then f = f + 1 end end
+            return n > 0 and f / n or 0, ("%d of %d standing samples were in a fight"):format(f, n) end },
+        { "dead", "they stand because they are dead", function(ev)
+            local n, d = #ev.standing, 0
+            for _, s in ipairs(ev.standing) do if s.dead then d = d + 1 end end
+            return n > 0 and d / n or 0, ("%d of %d standing samples were dead"):format(d, n) end },
+        { "resting with the owner", "they rest because their owner stands near (the following rule: right)", function(ev)
+            local n, r = #ev.standing, 0
+            for _, s in ipairs(ev.standing) do if s.owner_yards and s.owner_yards <= 10 and not s.owner_moving then r = r + 1 end end
+            return n > 0 and r / n or 0, ("%d of %d standing samples were within 10 yards of an owner who stood too"):format(r, n) end },
+        { "nothing moves them", "standing far from their owner, not fighting: no behaviour claimed them (the referee's gap, idea 1)", function(ev)
+            local n, g, who = #ev.standing, 0, {}
+            for _, s in ipairs(ev.standing) do
+                if not s.fighting and not s.dead and s.owner_yards and s.owner_yards > 10 then g = g + 1; who[s.name] = (who[s.name] or 0) + 1 end
+            end
+            local names = {}
+            for name, k in pairs(who) do
+                local acts = actions_of(name)
+                names[#names + 1] = ("%s (%d samples%s)"):format(name, k, acts and ("; its last actions: " .. acts) or "")
+            end
+            return n > 0 and g / n or 0, ("%d of %d standing samples, far from the owner and not fighting: %s"):format(g, n, table.concat(names, " | ")) end },
+    },
+    circling = {
+        { "walking straight", "long straight walks: travel or following, not roaming", function(ev)
+            local n, s = #ev.windows, 0
+            for _, w in ipairs(ev.windows) do if w.length > 20 and w.winding < 1.3 then s = s + 1 end end
+            return n > 0 and s / n or 0, ("%d of %d minute-long stretches walked nearly straight (over 20 yards, winding under 1.3)"):format(s, n) end },
+        { "standing", "too little movement to turn at all", function(ev)
+            local n, s = #ev.windows, 0
+            for _, w in ipairs(ev.windows) do if w.length < 5 then s = s + 1 end end
+            return n > 0 and s / n or 0, ("%d of %d stretches moved under 5 yards"):format(s, n) end },
+        { "wandering without circling", "moving and winding, but not round: the pinwheel's turn too small, or waypoints too far apart", function(ev)
+            local n, s = #ev.windows, 0
+            for _, w in ipairs(ev.windows) do if w.length >= 5 and w.winding >= 1.3 and math.abs(w.net_turn) < math.pi then s = s + 1 end end
+            return n > 0 and s / n or 0, ("%d of %d stretches wound about but turned less than half a circle"):format(s, n) end },
+    },
+    both_ways = {
+        { "one way round", "every buddy turns the same way: the direction is shared, not each buddy's own", function(ev)
+            local pos, neg = 0, 0
+            for _, w in ipairs(ev.windows) do if w.net_turn >= math.pi then pos = pos + 1 elseif w.net_turn <= -math.pi then neg = neg + 1 end end
+            local m = math.max(pos, neg)
+            return m > 0 and 1 - math.min(pos, neg) / m or 0, ("%d stretches circled anticlockwise, %d clockwise"):format(pos, neg) end },
+    },
+    winding = {
+        { "shuffling on a spot", "long paths that go nowhere: stepping toward a place it can't reach (stuck)", function(ev)
+            local n, s, who = #ev.windows, 0, {}
+            for _, w in ipairs(ev.windows) do if w.winding > 8 then s = s + 1; who[w.name] = true end end
+            local notes = {}
+            for name in pairs(who) do notes[#notes + 1] = ("%s (%d unstuck lines in Server.log)"):format(name, server_lines("unstuck", name)) end
+            return n > 0 and s / n or 0, ("%d of %d stretches wound more than 8 to 1: %s"):format(s, n, table.concat(notes, ", ")) end },
+        { "straight lines", "paths with no wander in them", function(ev)
+            local n, s = #ev.windows, 0
+            for _, w in ipairs(ev.windows) do if w.length > 5 and w.winding < 1.2 then s = s + 1 end end
+            return n > 0 and s / n or 0, ("%d of %d stretches were straight (winding under 1.2)"):format(s, n) end },
+    },
+    covering = {
+        { "crowded", "the buddies keep to one part of the place", function(ev, v)
+            return 1 - (v.covering or 0), ("they came near %.0f%% of the place's squares"):format(100 * (v.covering or 0)) end },
+    },
+    still = {
+        { "nothing moves them", "standing 30 s or more with the owner over 10 yards off", function(ev)
+            local who = {}
+            for _, s in ipairs(ev.still) do who[#who + 1] = ("%s at %s for %d s, %.0f yd from the owner"):format(s.name, os.date("%H:%M:%S", s.t), s.seconds, s.owner_yards) end
+            return #ev.still > 0 and 1 or 0, table.concat(who, "; ") end },
+    },
+    stacked = {
+        { "on the owner's spot", "stacked on the owner: aiming at the owner's own position", function(ev)
+            local n, o = #ev.stacked, 0
+            for _, s in ipairs(ev.stacked) do if s.near_owner then o = o + 1 end end
+            return n > 0 and o / n or 0, ("%d of %d stackings were within 3 yards of the owner"):format(o, n) end },
+        { "on one waypoint", "stacked away from the owner: two given the same place", function(ev)
+            local n, o, pairs_ = #ev.stacked, 0, {}
+            for _, s in ipairs(ev.stacked) do if not s.near_owner then o = o + 1; pairs_[#pairs_ + 1] = s.a .. "+" .. s.b end end
+            return n > 0 and o / n or 0, ("%d of %d stackings were away from the owner: %s"):format(o, n, table.concat(pairs_, ", ")) end },
+    },
+}
+
+local failed, busiest, busiest_n = false, nil, 0
+for key, group in pairs(groups) do
+    local squares, place, zone = area_squares(group)
+    local values, evidence = J.measure(group, squares)
+    local n = 0
+    for _ in pairs(group.buddies) do n = n + 1 end
+    local who = key > 0 and ("owner " .. key) or ("bot " .. -key)
+    say("")
+    say(("## %s: %d buddies, mostly in %s"):format(who, n, place))
+    say("")
+    local missed = {}
+    for _, t in ipairs(TARGETS) do
+        local v = values[t.measure]
+        local ok
+        if v == nil then ok = nil
+        else ok = (not t.least or v >= t.least) and (not t.most or v <= t.most) end
+        local bound = (t.least and (">= " .. t.least) or "") .. ((t.least and t.most) and ", " or "") .. (t.most and ("<= " .. t.most) or "")
+        say(("- %-4s %-10s %8s  (target %s: %s)"):format(ok == nil and "--" or (ok and "ok" or "MISS"), t.measure,
+            v and ("%.2f"):format(v) or "-", bound, t.why))
+        if ok == false then missed[#missed + 1] = t.measure end
+    end
+    if #missed > 0 then
+        failed = true
+        say("")
+        say("### What could be wrong (best evidenced first)")
+        for _, m in ipairs(missed) do
+            local found = {}
+            for _, c in ipairs(CAUSES[m] or {}) do
+                local weight, line = c[3](evidence, values)
+                found[#found + 1] = { name = c[1], means = c[2], weight = weight, line = line }
+            end
+            table.sort(found, function(a, b) return a.weight > b.weight end)
+            say("")
+            say(("**%s** missed:"):format(m))
+            for _, f in ipairs(found) do
+                say(("- %3.0f%%  %s: %s. Evidence: %s"):format(100 * f.weight, f.name, f.means, f.line ~= "" and f.line or "none"))
+            end
+        end
+    end
+    local samples = 0
+    for _, b in pairs(group.buddies) do samples = samples + #b.samples end
+    if zone and samples > busiest_n then busiest, busiest_n = zone, samples end
+end
+
+local stamp = os.date("%Y%m%d-%H%M%S")
+local outdir = DIR .. "/tmp/shared-memory/movement-benchmark/" .. stamp
+os.execute("mkdir -p '" .. outdir .. "'")
+if ANIMATE and busiest then
+    local cmd = ("'%s/scripts/animate-zone' '%s' --zone %s --record '%s' --from %d --to %d --out '%s/%s.gif' 2>&1"):format(
+        DIR, DIR, busiest, RECORD, first, last, outdir, busiest)
+    local h = io.popen(cmd); local out = h:read("*a"); h:close()
+    say("")
+    say("Animation: " .. (out:match("animate%-zone: [^\n]*") or out))
+end
+say("")
+say(failed and "**Verdict: try again.** The causes above are where to look next." or "**Verdict: the movement comes back right.** Stop iterating.")
+local f = io.open(outdir .. "/report.md", "w")
+f:write(table.concat(lines, "\n"), "\n")
+f:close()
+print("(report: " .. outdir .. "/report.md)")
+os.exit(failed and 1 or 0)

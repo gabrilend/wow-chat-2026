@@ -66,7 +66,7 @@ if grep -q "^verdict: *compiled" "${RECEIPT}"; then
     sleep 5   # the run log is written through a pipe; let its last lines arrive
 fi
 
-if ! grep -q "World initialized in" "${TRIAL_LOG}" 2>/dev/null; then
+if ! grep -qi "World initialized in" "${TRIAL_LOG}" 2>/dev/null; then
     verdict FAILED "the trial server never said \"World initialized\""
     exit 1
 fi

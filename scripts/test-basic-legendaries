@@ -38,7 +38,7 @@ local script = os.tmpname()
 local f = assert(io.open(script, "w"))
 f:write(table.concat(setup, "\n"), "\n", "SELECT 'stage', 'before';\n", count, "\n", apply, "\n", apply, "\n", "SELECT 'stage', 'applied twice';\n", count, "\n", revert, "\n", "SELECT 'stage', 'reverted';\n", count, "\n")
 f:close()
-local mysql = string.format("'%s/mysql/installed-files/bin/mysql' --no-defaults --socket='%s/mysql/databases/mysql.sock' -uritz -pmenardi acore_world_basic -N -B < '%s' 2>&1", DIR, DIR, script)
+local mysql = string.format("'%s/mysql/installed-files/bin/mysql' --defaults-file=" .. DIR .. "/mysql/conf/client.cnf --socket='%s/mysql/databases/mysql.sock' acore_world_basic -N -B < '%s' 2>&1", DIR, DIR, script)
 local h = io.popen(mysql)
 local stage, seen = nil, {}
 for line in h:lines() do

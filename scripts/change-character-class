@@ -5,7 +5,19 @@ set -euo pipefail
 DIR="/mnt/kaun/wow-chat-2026"
 if [[ "${1:-}" == "--dir" ]]; then DIR="$2"; shift 2; fi
 DRY=0
-if [[ "${1:-}" == "--dry-run" ]]; then DRY=1; shift; fi
+BUDDY_PLAN=""
+BUDDY_ROLE=""
+while [[ "${1:-}" == --* ]]; do
+    case "$1" in
+        --dry-run) DRY=1; shift ;;                                   # rolled back
+        --plan)    BUDDY_PLAN="$2"; shift 2 ;;                       # a buddy's talent plan
+        --role)    BUDDY_ROLE="$2"; shift 2 ;;                       # a buddy's role, by name
+        *)         echo "ERROR: unknown option $1"; exit 1 ;;
+    esac
+done
+declare -A ROLE_NUMBER=( [damage]=0 [tank]=1 [healer]=2 )
+if [[ -n "${BUDDY_PLAN}" && ! "${BUDDY_PLAN}" =~ ^([1-9]|10)$ ]]; then echo "ERROR: --plan is 1 to 10, not '${BUDDY_PLAN}'"; exit 1; fi
+if [[ -n "${BUDDY_ROLE}" && -z "${ROLE_NUMBER[${BUDDY_ROLE}]:-}" ]]; then echo "ERROR: --role is damage, tank or healer, not '${BUDDY_ROLE}'"; exit 1; fi
 NAME="${1:-}"
 CLASS_ARG="${2:-}"
 if [[ -z "${NAME}" || -z "${CLASS_ARG}" ]]; then
@@ -37,7 +49,7 @@ if [[ -z "${NEW_CLASS}" ]]; then
     exit 1
 fi
 
-sql() { "${MYSQL}" -h127.0.0.1 -P3307 -uritz -pmenardi --batch --skip-column-names "$@" 2>&1 | grep -v "Using a password" || true; }
+sql() { "${MYSQL}" "--defaults-file=${DIR}/mysql/conf/client.cnf" -h127.0.0.1 -P3307 --batch --skip-column-names "$@" 2>&1 | grep -v "Using a password" || true; }
 
 STEP="checks"
 trap 'echo "STOPPED at step: ${STEP}. Steps before it completed; see above."' ERR
@@ -74,15 +86,15 @@ BACKUP="${BACKUPS}/${NAME}-${STAMP}-class-${OLD_CLASS}.sql"
     echo "-- from class ${OLD_CLASS} into class ${NEW_CLASS}; load it (after deleting the"
     echo "-- character's rows from the same tables) to put the character back."
     for t in ${OWN_TABLES}; do
-        "${MYSQLDUMP}" -h127.0.0.1 -P3307 -uritz -pmenardi --no-create-info --skip-triggers \
+        "${MYSQLDUMP}" "--defaults-file=${DIR}/mysql/conf/client.cnf" -h127.0.0.1 -P3307 --no-create-info --skip-triggers \
             --where="guid = ${GUID}" "${CHARS}" "${t}" 2>&1 | grep -v "Using a password"
     done
-    "${MYSQLDUMP}" -h127.0.0.1 -P3307 -uritz -pmenardi --no-create-info --skip-triggers \
+    "${MYSQLDUMP}" "--defaults-file=${DIR}/mysql/conf/client.cnf" -h127.0.0.1 -P3307 --no-create-info --skip-triggers \
         --where="owner = ${GUID}" "${CHARS}" character_pet 2>&1 | grep -v "Using a password"
     PETS="$(sql "${CHARS}" -e "SELECT GROUP_CONCAT(id) FROM character_pet WHERE owner = ${GUID}")"
     if [[ -n "${PETS}" && "${PETS}" != "NULL" ]]; then
         for t in ${PET_TABLES}; do
-            "${MYSQLDUMP}" -h127.0.0.1 -P3307 -uritz -pmenardi --no-create-info --skip-triggers \
+            "${MYSQLDUMP}" "--defaults-file=${DIR}/mysql/conf/client.cnf" -h127.0.0.1 -P3307 --no-create-info --skip-triggers \
                 --where="guid IN (${PETS})" "${CHARS}" "${t}" 2>&1 | grep -v "Using a password"
         done
     fi
@@ -129,5 +141,37 @@ if [[ -n "${ITEMS}" ]]; then
         echo "${UNUSABLE}" | sed 's/^/  /'
     fi
 fi
-echo "Next: start the server, log ${NAME} in, and as a game master type: .learn all my trainer"
+# }}}
+
+# {{{ step 5: lessons
+# The new class's lessons up to its level, and its professions to its
+# level: the lessons tool, with the server still stopped (it checks again)
+STEP="lessons"
+if [[ "${DRY}" == "1" ]]; then
+    echo "Dry run: the lessons would be taught by: scripts/teach-character-lessons ${NAME}"
+else
+    "${DIR}/scripts/teach-character-lessons" --dir "${DIR}" "${NAME}" | sed 's/^/  lessons: /'
+fi
+# }}}
+
+# {{{ step 6: a buddy's roster row
+#   a buddy: its row says the new class (and plan, role if named), and the
+#     stage the module dresses it from at its next login (6, STAGE_RECLASSED;
+#     not 5, which is a death knight owner's set-aside buddy, 718)
+#   anyone else: nothing here (a player's gear is left as it was)
+STEP="roster"
+IS_BUDDY="$(sql "${CHARS}" -e "SELECT COUNT(*) FROM buddy_roster WHERE buddy = ${GUID}")"
+if [[ "${IS_BUDDY}" != "0" ]]; then
+    SETS="class = ${NEW_CLASS}, stage = 6"
+    [[ -n "${BUDDY_PLAN}" ]] && SETS+=", profile = ${BUDDY_PLAN}"
+    [[ -n "${BUDDY_ROLE}" ]] && SETS+=", role = ${ROLE_NUMBER[${BUDDY_ROLE}]}"
+    if [[ "${DRY}" == "1" ]]; then
+        echo "Dry run: its roster row would be set: ${SETS}"
+    else
+        sql "${CHARS}" -e "UPDATE buddy_roster SET ${SETS} WHERE buddy = ${GUID}"
+        echo "Roster: $(sql "${CHARS}" -e "SELECT CONCAT('class ', class, ', plan ', profile, ', role ', role, ', stage ', stage) FROM buddy_roster WHERE buddy = ${GUID}")"
+        echo "  at its next login the buddy module dresses it for the new class: kit, PvP jewellery, gems"
+    fi
+fi
+echo "Next: start the server and log ${NAME} in (a buddy comes in with its owner)."
 # }}}

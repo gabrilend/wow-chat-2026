@@ -13,6 +13,8 @@ bool BuddyMeshSnap(Map const* map, BuddyRoam::Point const& at, float reach, floa
 
 bool BuddyMeshLineClear(Map const* map, BuddyRoam::Point const& from, BuddyRoam::Point const& to);
 
+bool BuddyMeshWallDistance(Map const* map, BuddyRoam::Point const& at, float maxRadius, float& dist);
+
 enum class BuddyRouteKind : uint8 { Complete, Partial, None, Shortcut, OffMesh };
 BuddyRouteKind BuddyMeshRoute(Player* bot, BuddyRoam::Point const& to, std::vector<BuddyRoam::Point>& points);
 char const* BuddyRouteKindName(BuddyRouteKind kind);

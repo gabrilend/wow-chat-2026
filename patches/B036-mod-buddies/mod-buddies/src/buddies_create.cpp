@@ -40,17 +40,17 @@ static uint8 NameGroupFor(uint8 race, uint8 gender)
 
 static std::string PickName(uint8 race, uint8 gender)
 {
-    for (int tries = 0; tries < 5; ++tries)
+    QueryResult r = CharacterDatabase.Query(
+        "SELECT n.name FROM playerbots_names n LEFT JOIN characters c ON c.name = n.name "
+        "WHERE c.guid IS NULL AND n.gender = {} ORDER BY RAND()", NameGroupFor(race, gender));
+    if (!r)
+        return "";
+    do
     {
-        QueryResult r = CharacterDatabase.Query(
-            "SELECT n.name FROM playerbots_names n LEFT JOIN characters c ON c.name = n.name "
-            "WHERE c.guid IS NULL AND n.gender = {} ORDER BY RAND() LIMIT 1", NameGroupFor(race, gender));
-        if (!r)
-            return "";
         std::string name = (*r)[0].Get<std::string>();
         if (ObjectMgr::CheckPlayerName(name, true) == CHAR_NAME_SUCCESS && !sObjectMgr->IsReservedName(name))
             return name;
-    }
+    } while (r->NextRow());
     return "";
 }
 
@@ -203,16 +203,31 @@ static void Fail(uint32 owner, uint8 slot, uint8 race, uint8 cls, std::string co
 }
 
 uint32 BuddyMakeCharacter(uint32 account, uint8 race, uint8 cls, uint8 level, uint8 shape, uint8 role,
-    uint32 bagsLike, bool pvpJewellery, char const* kind, std::string const& forWhom, std::string& name, std::string& why)
+    uint32 bagsLike, bool pvpJewellery, char const* kind, std::string const& forWhom, std::string& name, std::string& why,
+    std::string const& wantName, uint8 wantGender, uint32 looksOf)
 {
-    uint8 gender = urand(0, 1) ? GENDER_MALE : GENDER_FEMALE;
-    name = PickName(race, gender);
+    uint8 gender = wantGender <= 1 ? wantGender : (urand(0, 1) ? GENDER_MALE : GENDER_FEMALE);
+    name = wantName.empty() ? PickName(race, gender) : wantName;
     if (name.empty())
     {
-        why = "no unused name is left in playerbots_names for this race and gender";
+        why = "no name in playerbots_names for this race and gender is both unused and allowed by the server's name rules";
         return 0;
     }
     BuddyLooks looks = PickLooks(race, gender);
+    if (looksOf)
+    {
+        if (QueryResult old = CharacterDatabase.Query("SELECT skin, face, hairStyle, hairColor, facialStyle FROM characters WHERE guid = {}", looksOf))
+        {
+            looks.skin       = (*old)[0].Get<uint8>();
+            looks.face       = (*old)[1].Get<uint8>();
+            looks.hairStyle  = (*old)[2].Get<uint8>();
+            looks.hairColor  = (*old)[3].Get<uint8>();
+            looks.facialHair = (*old)[4].Get<uint8>();
+            looks.ok         = true;
+        }
+        else
+            LOG_ERROR("module", "mod-buddies: reset buddy {}: its old self {} is gone, so its looks are drawn afresh", wantName, looksOf);
+    }
     if (!looks.ok)
     {
         why = "CharSections.dbc has no face or hair for this race and gender";
@@ -262,6 +277,7 @@ uint32 BuddyMakeCharacter(uint32 account, uint8 race, uint8 cls, uint8 level, ui
             LOG_ERROR("module", "mod-buddies: new {} {} for {}, PvP jewellery incomplete: {}", kind, name, forWhom, jewelProblems);
     }
     std::string gemProblems = BuddyGemKit(made, shape, role);
+    made->UpdateSkillsToMaxSkillsForLevel();
     if (!gemProblems.empty())
         LOG_ERROR("module", "mod-buddies: new {} {} for {}, kit gems incomplete: {}", kind, name, forWhom, gemProblems);
 
@@ -274,6 +290,56 @@ uint32 BuddyMakeCharacter(uint32 account, uint8 race, uint8 cls, uint8 level, ui
     delete session;
     sWorld->UpdateRealmCharCount(account);
     return guid;
+}
+
+static constexpr uint8 ADOPT_LEVELS = 3;
+static uint32 AdoptStandIn(uint32 account, uint32 owner, uint8 slot, uint8 ownerRace, uint8 cls, uint8 role, uint8 level, std::string& name)
+{
+    QueryResult rows = CharacterDatabase.Query("SELECT s.guid, s.race, s.level, s.profile, c.account FROM buddy_stand_in s "
+        "JOIN characters c ON c.guid = s.guid WHERE s.class = {} AND s.role = {} AND s.level + {} >= {} AND s.level <= {} + {}",
+        cls, role, ADOPT_LEVELS, level, level, ADOPT_LEVELS);
+    if (!rows)
+        return 0;
+    struct Fit { uint32 guid, oldAccount; uint8 race, level, profile; };
+    std::vector<Fit> fits;
+    uint32 weights = 0;
+    do
+    {
+        Fit f{ (*rows)[0].Get<uint32>(), (*rows)[4].Get<uint32>(), (*rows)[1].Get<uint8>(), (*rows)[2].Get<uint8>(), (*rows)[3].Get<uint8>() };
+        if (Player::TeamIdForRace(f.race) != Player::TeamIdForRace(ownerRace))
+            continue;
+        if (ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(f.guid)))
+            continue;
+        fits.push_back(f);
+        weights += f.level;
+    } while (rows->NextRow());
+    if (fits.empty())
+        return 0;
+    uint32 pick = urand(1, weights);
+    Fit chosen = fits.back();
+    for (Fit const& f : fits)
+    {
+        if (pick <= f.level)
+        {
+            chosen = f;
+            break;
+        }
+        pick -= f.level;
+    }
+
+    ObjectGuid guid = ObjectGuid::Create<HighGuid::Player>(chosen.guid);
+    CharacterDatabase.DirectExecute("UPDATE characters SET account = {}, level = {}, xp = 0 WHERE guid = {}", account, level, chosen.guid);
+    CharacterDatabase.DirectExecute("DELETE FROM buddy_stand_in WHERE guid = {}", chosen.guid);
+    CharacterDatabase.DirectExecute("UPDATE buddy_roster SET race = {}, profile = {} WHERE owner = {} AND slot = {}",
+        chosen.race, chosen.profile, owner, slot);
+    sCharacterCache->UpdateCharacterAccountId(guid, account);
+    sCharacterCache->UpdateCharacterLevel(guid, level);
+    sWorld->UpdateRealmCharCount(chosen.oldAccount);
+    sWorld->UpdateRealmCharCount(account);
+    sCharacterCache->GetCharacterNameByGuid(guid, name);
+    LOG_INFO("module", "mod-buddies: stand-in {} (guid {}, level {}) becomes owner {}'s buddy in slot {} at level {}, keeping its gear (617t3)",
+        name, chosen.guid, uint32(chosen.level), owner, uint32(slot), uint32(level));
+    return chosen.guid;
 }
 
 static void CreateBuddy(uint32 owner, uint8 slot, uint8 cls, uint8 race)
@@ -300,17 +366,25 @@ static void CreateBuddy(uint32 owner, uint8 slot, uint8 cls, uint8 race)
     if (!sObjectMgr->GetPlayerInfo(race, cls))
         return Fail(owner, slot, race, cls, "that race can't be that class");
 
-    QueryResult plan = CharacterDatabase.Query("SELECT profile, role FROM buddy_roster WHERE owner = {} AND slot = {}", owner, slot);
+    QueryResult plan = CharacterDatabase.Query("SELECT profile, role, reset_name, reset_gender, reset_from FROM buddy_roster "
+        "WHERE owner = {} AND slot = {}", owner, slot);
     uint8 profile = plan ? (*plan)[0].Get<uint8>() : 0;
     uint8 role    = plan ? (*plan)[1].Get<uint8>() : 0;
+    std::string keepName = plan ? (*plan)[2].Get<std::string>() : "";
+    uint8 keepGender     = plan ? (*plan)[3].Get<uint8>() : 2;
+    uint32 resetFrom     = plan ? (*plan)[4].Get<uint32>() : 0;
     std::string name, why;
-    uint32 guid = BuddyMakeCharacter(account, race, cls, ownerLevel, profile, role, owner, ownerLevel >= BUDDY_PVP_JEWELLERY_FROM, "buddy",
-        "owner " + std::to_string(owner), name, why);
+    uint32 guid = resetFrom ? 0 : AdoptStandIn(account, owner, slot, ownerRace, cls, role, ownerLevel, name);
+    if (!guid)
+        guid = BuddyMakeCharacter(account, race, cls, ownerLevel, profile, role, owner, ownerLevel >= BUDDY_PVP_JEWELLERY_FROM, "buddy",
+            "owner " + std::to_string(owner), name, why, keepName, keepGender, resetFrom);
     if (!guid)
         return Fail(owner, slot, race, cls, why);
 
-    CharacterDatabase.Execute("UPDATE buddy_roster SET buddy = {}, created = UNIX_TIMESTAMP() "
-        "WHERE owner = {} AND slot = {} AND buddy = 0", guid, owner, slot);
+    CharacterDatabase.Execute("UPDATE buddy_roster SET buddy = {}, created = UNIX_TIMESTAMP(), reset_name = '', reset_gender = 2, "
+        "reset_from = 0 WHERE owner = {} AND slot = {} AND buddy = 0", guid, owner, slot);
+    if (resetFrom)
+        BuddyFinishReset(resetFrom, guid, account);
 
     LOG_INFO("module", "mod-buddies: made {} ({}, race {}, class {}, level {}) for owner {}, slot {}",
         name, guid, race, cls, ownerLevel, owner, slot);

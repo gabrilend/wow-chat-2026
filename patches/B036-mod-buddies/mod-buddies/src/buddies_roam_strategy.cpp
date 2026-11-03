@@ -2,12 +2,16 @@
 #include "buddies.h"
 #include "buddies_roam.h"
 #include "buddies_navmesh.h"
+#include "buddies_follow.h"
+#include "buddies_talents.h"
 #include "buddies_steer.h"
 #include "buddies_npcs.h"
 #include "MoveSpline.h"
 #include "buddies_town.h"
 #include "buddies_explore.h"
 #include "buddies_nodes.h"
+#include "buddies_path.h"
+#include "buddies_spawn_zones.h"
 #include "Bag.h"
 #include "CellImpl.h"
 #include "Creature.h"
@@ -438,6 +442,20 @@ public:
                 bot->GetExactDist2d(s.buddy.waypoint.x, s.buddy.waypoint.y), s.buddy.path.size(),
                 found ? "the explorer's grid" : "the pinwheel");
 
+            {
+                std::vector<uint32> ownerKinds;
+                BuddySpawnZonesAt(map->GetId(), owner->GetPositionX(), owner->GetPositionY(), ownerKinds);
+                if (!ownerKinds.empty() && !BuddySharesSpawnZone(map->GetId(), ownerKinds, s.buddy.waypoint.x, s.buddy.waypoint.y))
+                {
+                    BuddyTrace(bot, "roam: waypoint dropped: none of the {} monster kinds living where the owner stands lives there",
+                        ownerKinds.size());
+                    s.buddy.hasWaypoint = false;
+                    s.retryAt = now + MESH_RETRY_MS;
+                    StoreState(guid, s);
+                    return false;
+                }
+            }
+
             BuddyRoam::Point onMesh;
             std::vector<BuddyRoam::Point> route;
             BuddyRouteKind kind = BuddyRouteKind::None;
@@ -462,6 +480,23 @@ public:
             s.checkedLeg        = SIZE_MAX;
             s.watched           = SIZE_MAX;
             s.orderedLeg        = SIZE_MAX;
+        }
+
+        {
+            BuddyPath::Way way;
+            if (BuddyPathWayFor(owner->GetGUID().GetCounter(), way))
+            {
+                BuddyPathStep step = BuddyPathWalk(bot, way, s.buddy.waypoint);
+                if (step != BuddyPathStep::Walking)
+                {
+                    s.buddy.hasWaypoint = false;
+                    s.justArrived       = step == BuddyPathStep::Arrived;
+                    if (step == BuddyPathStep::GaveUp)
+                        s.retryAt = now + MESH_RETRY_MS;
+                }
+                StoreState(guid, s);
+                return step != BuddyPathStep::GaveUp;
+            }
         }
 
         auto& path = s.buddy.path;
@@ -640,6 +675,7 @@ private:
     }
 
     struct VendorSpawn { uint32 spawn, entry, map; BuddyRoam::Point at; };
+    friend float BuddyNearestVendorYards(Player* bot);
     static std::vector<VendorSpawn> const& Vendors()
     {
         static std::once_flag once;
@@ -675,8 +711,6 @@ private:
     {
         if (!s.selling)
         {
-            if (BuddyBagFullness(bot) < BuddyFullBagsShare())
-                return false;
             if (!BuddyTakeSellOrder(bot->GetGUID().GetCounter()))
                 return false;
             VendorSpawn const* best = nullptr;
@@ -760,6 +794,10 @@ private:
 
     Creature* PreyNear(RoamState const& s, uint64 now)
     {
+        Player* owner = botAI->GetMaster();
+        bool ownerHere = owner && owner->IsInWorld() && owner->GetMapId() == bot->GetMapId();
+        Creature* zoned = nullptr;
+        float zonedDist = MOBS_YARDS + 1.0f;
         std::list<Unit*> units;
         Acore::AnyUnitInObjectRangeCheck check(bot, MOBS_YARDS);
         Acore::UnitListSearcher<Acore::AnyUnitInObjectRangeCheck> searcher(bot, units, check);
@@ -789,8 +827,14 @@ private:
                 best = c;
                 bestDist = d;
             }
+            if (ownerHere && d < zonedDist
+                && BuddyInSpawnZone(bot->GetMapId(), c->GetEntry(), owner->GetPositionX(), owner->GetPositionY()))
+            {
+                zoned = c;
+                zonedDist = d;
+            }
         }
-        return best;
+        return zoned ? zoned : best;
     }
 
     Creature* HelpNear()
@@ -1400,6 +1444,8 @@ public:
         creators["buddy roam"]   = [](PlayerbotAI* ai) -> Strategy* { return new BuddyRoamStrategy(ai); };
         creators["buddy travel"] = NewBuddyTravelStrategy;
         creators["buddy town"]   = NewBuddyTownStrategy;
+        creators["buddy follow"] = NewBuddyFollowStrategy;
+        creators["buddy talents"] = NewBuddyTalentsStrategy;
     }
 };
 class BuddyActionContext : public NamedObjectContext<Action>
@@ -1410,6 +1456,7 @@ public:
         creators["buddy roam step"]   = [](PlayerbotAI* ai) -> Action* { return new BuddyRoamStepAction(ai); };
         creators["buddy travel step"] = NewBuddyTravelStepAction;
         creators["buddy town step"]   = NewBuddyTownStepAction;
+        creators["buddy follow step"] = NewBuddyFollowStepAction;
     }
 };
 class BuddyTriggerContext : public NamedObjectContext<Trigger>
@@ -1420,6 +1467,7 @@ public:
         creators["buddy roam due"]   = [](PlayerbotAI* ai) -> Trigger* { return new BuddyRoamDueTrigger(ai); };
         creators["buddy travel due"] = NewBuddyTravelDueTrigger;
         creators["buddy town due"]   = NewBuddyTownDueTrigger;
+        creators["buddy follow due"] = NewBuddyFollowDueTrigger;
     }
 };
 
@@ -1447,14 +1495,18 @@ static void RegisterWithPlayerbots()
 struct Want { char const* name; bool on; };
 static std::vector<Want> const sOpenCountry = {
     { "follow", false }, { "buddy roam", true }, { "grind", false }, { "food", false }, { "loot", true }, { "gather", true },
-    { "buddy travel", true }, { "buddy town", false },
+    { "buddy travel", true }, { "buddy town", false }, { "buddy follow", false },
 };
 static std::vector<Want> const sTown = {
     { "follow", false }, { "buddy roam", false }, { "grind", false }, { "food", false },
-    { "buddy travel", true }, { "buddy town", true },
+    { "buddy travel", true }, { "buddy town", true }, { "buddy follow", false },
+};
+static std::vector<Want> const sOrderedFollow = {
+    { "follow", false }, { "buddy follow", true }, { "buddy roam", false }, { "grind", false }, { "food", false },
+    { "loot", true }, { "gather", true }, { "buddy travel", false }, { "buddy town", false },
 };
 static std::vector<Want> const sInstance = {
-    { "follow", true }, { "buddy roam", false }, { "grind", false }, { "loot", true },
+    { "follow", false }, { "buddy follow", true }, { "buddy roam", false }, { "grind", false }, { "loot", true },
     { "buddy travel", false }, { "buddy town", false },
 };
 
@@ -1494,10 +1546,11 @@ public:
             Player* owner = ai->GetMaster();
             if (!owner || owner->GetGUID().GetCounter() != ownerGuid)
                 continue;
-            bool inside = bot->GetMap()->Instanceable();
-            bool town   = !inside && BuddyTownArea(owner) != 0;
-            std::vector<Want> const& wants = inside ? sInstance : (town ? sTown : sOpenCountry);
-            uint8 place = inside ? PLACE_INSIDE : (town ? PLACE_TOWN : PLACE_COUNTRY);
+            bool inside  = bot->GetMap()->Instanceable();
+            bool ordered = !inside && BuddyFollowLeader(buddyGuid) != 0;
+            bool town    = !inside && !ordered && BuddyTownArea(owner) != 0;
+            std::vector<Want> const& wants = inside ? sInstance : ordered ? sOrderedFollow : (town ? sTown : sOpenCountry);
+            uint8 place = inside ? PLACE_INSIDE : ordered ? PLACE_ORDERED : (town ? PLACE_TOWN : PLACE_COUNTRY);
             auto set = _placeSetFor.find(buddyGuid);
             if (set != _placeSetFor.end() && set->second == place)
                 continue;
@@ -1570,7 +1623,7 @@ private:
 
     uint32 _sinceLast  = 0;
     uint32 _sinceAggro = 0;
-    static constexpr uint8 PLACE_COUNTRY = 0, PLACE_TOWN = 1, PLACE_INSIDE = 2;
+    static constexpr uint8 PLACE_COUNTRY = 0, PLACE_TOWN = 1, PLACE_INSIDE = 2, PLACE_ORDERED = 3;
     std::map<uint32, uint8> _placeSetFor;
 };
 
@@ -1587,6 +1640,15 @@ public:
             player->SetWalk(false);
     }
 };
+
+float BuddyNearestVendorYards(Player* bot)
+{
+    float best = 1e30f;
+    for (BuddyRoamStepAction::VendorSpawn const& v : BuddyRoamStepAction::Vendors())
+        if (v.map == bot->GetMapId())
+            best = std::min(best, bot->GetExactDist2d(v.at.x, v.at.y));
+    return best;
+}
 
 void AddSC_buddies_roam_strategy()
 {

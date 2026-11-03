@@ -1,0 +1,350 @@
+#!/usr/bin/env luajit
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+
+local out, listing
+do
+    local i = 1
+    while i <= #arg do
+        local a = arg[i]
+        if a == "--help" or a == "-h" then
+            for line in io.lines(arg[0]) do
+                if not line:match("^%-%-") and not line:match("^#!") then break end
+                print((line:gsub("^%-%- ?", "")))
+            end
+            os.exit(0)
+        elseif a == "--out"     then out = arg[i + 1]; i = i + 1
+        elseif a == "--listing" then listing = arg[i + 1]; i = i + 1
+        elseif a:sub(1, 2) ~= "--" then DIR = a
+        else error("unknown option " .. a .. " (see --help)") end
+        i = i + 1
+    end
+end
+out     = out or (DIR .. "/patches/B036-mod-buddies/mod-buddies/src/buddies_ability_data.h")
+listing = listing or (DIR .. "/docs/ability-data.md")
+local DBC = DIR .. "/data-files/dbc/"
+
+local CLASSES = {
+    { id = 1, name = "Warrior", family = 4 }, { id = 2, name = "Paladin", family = 10 }, { id = 3, name = "Hunter", family = 9 },
+    { id = 4, name = "Rogue", family = 8 }, { id = 5, name = "Priest", family = 6 }, { id = 6, name = "Death Knight", family = 15 },
+    { id = 7, name = "Shaman", family = 11 }, { id = 8, name = "Mage", family = 3 }, { id = 9, name = "Warlock", family = 5 },
+    { id = 11, name = "Druid", family = 7 },
+}
+local POWER = { [0] = "mana", [1] = "rage", [2] = "focus", [3] = "energy", [6] = "runic power", [-2] = "health" }
+local DIRECT = { [2] = "damage", [9] = "damage", [10] = "heal", [17] = "damage", [31] = "damage", [58] = "damage", [121] = "damage", [67] = "heal" }
+local PERIODIC = { [3] = "damage", [8] = "heal", [53] = "damage", [89] = "damage", [23] = "damage", [226] = "damage", [227] = "damage", [20] = "heal" }
+local ATTR0_PASSIVE, ATTR1_CHANNELED = 0x40, 0x4 + 0x40
+
+local function u32(d, o) local a, b, c, e = d:byte(o + 1, o + 4); return a + b * 256 + c * 65536 + e * 16777216 end
+local function load_dbc(name)
+    local f = io.open(DBC .. name, "rb") or error("cannot open " .. DBC .. name)
+    local d = f:read("*a")
+    f:close()
+    if d:sub(1, 4) ~= "WDBC" then error(name .. " is not a WDBC file") end
+    local n, rs = u32(d, 4), u32(d, 12)
+    local strings = 20 + n * rs
+    local rows = {}
+    for r = 0, n - 1 do
+        local b = 20 + r * rs
+        rows[#rows + 1] = {
+            u = function(field) return u32(d, b + field * 4) end,
+            i = function(field) local v = u32(d, b + field * 4); return v >= 2147483648 and v - 4294967296 or v end,
+            s = function(field)
+                local s = strings + u32(d, b + field * 4)
+                return d:sub(s + 1, (d:find("\0", s + 1, true) or s + 1) - 1)
+            end,
+        }
+    end
+    return rows
+end
+
+local CAST = {}
+for _, r in ipairs(load_dbc("SpellCastTimes.dbc")) do CAST[r.u(0)] = r.i(1) end
+local LEARNABLE = {}
+for _, r in ipairs(load_dbc("SkillLineAbility.dbc")) do LEARNABLE[r.u(2)] = true end
+local BY_CLASS = {}
+local familyOf = {}
+for _, c in ipairs(CLASSES) do familyOf[c.family] = c; BY_CLASS[c.id] = {} end
+for _, r in ipairs(load_dbc("Spell.dbc")) do
+    local id, fam = r.u(0), r.u(208)
+    local cls = familyOf[fam]
+    if cls and LEARNABLE[id] and bit.band(r.u(4), ATTR0_PASSIVE) == 0 then
+        local name = r.s(136)
+        local level = r.u(39)
+        local rank = tonumber(r.s(153):match("^Rank (%d+)$") or "") or 0
+        local a = BY_CLASS[cls.id][name]
+        local better = not a or (rank > a.rank) or (rank == a.rank and level >= a.level)
+        if name ~= "" and better then
+            local direct, periodic, heal = false, false, false
+            for e = 0, 2 do
+                local eff, aura = r.u(71 + e), r.u(95 + e)
+                if DIRECT[eff] then direct = true; heal = heal or DIRECT[eff] == "heal" end
+                if PERIODIC[aura] then periodic = true; heal = heal or PERIODIC[aura] == "heal" end
+            end
+            BY_CLASS[cls.id][name] = {
+                name = name, id = id, level = level, rank = rank,
+                cast = math.max(0, CAST[r.u(28)] or 0),
+                cooldown = math.max(r.u(29), r.u(30)),
+                gcd = r.u(206),
+                power = r.i(41), cost = r.u(42), costPct = r.u(204),
+                channeled = bit.band(r.u(5), ATTR1_CHANNELED) ~= 0,
+                direct = direct, periodic = periodic, heal = heal,
+                dmgClass = r.u(213), school = r.u(225),
+                eff = { r.u(71), r.u(72), r.u(73) }, aura = { r.u(95), r.u(96), r.u(97) },
+                amount = { r.i(80) + 1, r.i(81) + 1, r.i(82) + 1 },
+                misc = { r.i(110), r.i(111), r.i(112) },
+                period = { r.u(98), r.u(99), r.u(100) },
+                targetA = { r.u(86), r.u(87), r.u(88) },
+                duration = r.u(40),
+            }
+        end
+    end
+end
+
+local h, md, count = {}, {}, 0
+h[#h + 1] = "// buddies_ability_data.h - GENERATED by scripts/generate-ability-data from the client's Spell, SpellCastTimes and"
+h[#h + 1] = "// SkillLineAbility tables: every class's learnable abilities (the top rank of each) as the game says they are, the"
+h[#h + 1] = "// roots the action economy weighs from (issue 625f); don't edit, run it again."
+h[#h + 1] = "#ifndef MOD_BUDDIES_ABILITY_DATA_H\n#define MOD_BUDDIES_ABILITY_DATA_H\n\n#include <cstdint>\n"
+h[#h + 1] = "// one ability: its class, name in lower case (as a cast action names it), top rank's spell, cast time, cooldown and"
+h[#h + 1] = "// global cooldown (milliseconds), power type (0 mana, 1 rage, 2 focus, 3 energy, 6 runic power, -2 health), cost (rage and"
+h[#h + 1] = "// runic power in tenths, as the game keeps them; and cost as a percent of base mana), and flags: channelled, hits at"
+h[#h + 1] = "// once, works over time, heals"
+h[#h + 1] = "struct BuddyAbilityRow { uint8_t cls; char const* name; uint32_t spell; int32_t castMs; uint32_t cooldownMs; uint32_t gcdMs;"
+h[#h + 1] = "                         int8_t power; uint32_t cost; uint32_t costPct; uint8_t channeled, direct, periodic, heal; };\n"
+h[#h + 1] = "static BuddyAbilityRow const BUDDY_ABILITIES[] = {"
+md[#md + 1] = "<!-- docs/ability-data.md - GENERATED by scripts/generate-ability-data from the client's spell tables (issue 625f), to read by eye what the action economy weighs from; don't edit, run it again. -->"
+md[#md + 1] = "# Every Class's Abilities, as the Game Says"
+md[#md + 1] = ""
+md[#md + 1] = "The top rank of each learnable ability: cast time, cooldown and global cooldown in seconds, resource and cost, and what it does (*at once*, *over time*, *heals*, *channelled*)."
+for _, c in ipairs(CLASSES) do
+    local names = {}
+    for n in pairs(BY_CLASS[c.id]) do names[#names + 1] = n end
+    table.sort(names)
+    md[#md + 1] = ""
+    md[#md + 1] = "## " .. c.name
+    md[#md + 1] = ""
+    md[#md + 1] = "| Ability | Cast | Cooldown | Global | Cost | Does |"
+    md[#md + 1] = "|---|---:|---:|---:|---|---|"
+    for _, n in ipairs(names) do
+        local a = BY_CLASS[c.id][n]
+        h[#h + 1] = string.format("    { %d, %q, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d },", c.id, n:lower(), a.id, a.cast, a.cooldown, a.gcd,
+            a.power, a.cost, a.costPct, a.channeled and 1 or 0, a.direct and 1 or 0, a.periodic and 1 or 0, a.heal and 1 or 0)
+        local does = {}
+        if a.direct then does[#does + 1] = "at once" end
+        if a.periodic then does[#does + 1] = "over time" end
+        if a.heal then does[#does + 1] = "heals" end
+        if a.channeled then does[#does + 1] = "channelled" end
+        local shown = (a.power == 1 or a.power == 6) and (a.cost / 10) or a.cost
+        local cost = a.costPct > 0 and (a.costPct .. "% base mana") or (a.cost > 0 and (shown .. " " .. (POWER[a.power] or "?")) or "free")
+        md[#md + 1] = string.format("| %s | %.1f | %.1f | %.1f | %s | %s |", n, a.cast / 1000, a.cooldown / 1000, a.gcd / 1000, cost, table.concat(does, ", "))
+        count = count + 1
+    end
+end
+h[#h + 1] = "};\n"
+
+local LOCKOUTS = {
+    { aura = 25771, by = { "divine shield", "divine protection", "hand of protection", "lay on hands" },
+      blocks = { "divine shield", "divine protection", "hand of protection", "lay on hands" } },
+    { aura = 61987, by = { "avenging wrath", "divine shield", "divine protection", "hand of protection", "lay on hands" },
+      blocks = { "avenging wrath", "divine shield", "divine protection", "hand of protection", "lay on hands" } },
+    { aura = 57724, by = { "bloodlust" }, blocks = { "bloodlust", "heroism" } },
+    { aura = 57723, by = { "heroism" },   blocks = { "bloodlust", "heroism" } },
+    { aura = 41425, by = { "ice block" }, blocks = { "ice block" } },
+    { aura =  6788, by = { "power word: shield" }, blocks = { "power word: shield" } },
+}
+local DURATION = {}
+for _, r in ipairs(load_dbc("SpellDuration.dbc")) do DURATION[r.u(0)] = r.u(1) end
+local SPELLS, NAMEOF = {}, {}
+for _, r in ipairs(load_dbc("Spell.dbc")) do SPELLS[r.u(0)] = r end
+local FOLDED = { [61988] = true }
+local isLockout = {}
+for _, l in ipairs(LOCKOUTS) do
+    local r = SPELLS[l.aura] or error("lockout aura " .. l.aura .. " is not in the client's spell table")
+    l.name = r.s(136)
+    l.ms   = DURATION[r.u(40)] or error("lockout aura " .. l.name .. " has no duration in SpellDuration.dbc")
+    isLockout[l.aura] = l
+end
+local learnableName = {}
+for _, c in ipairs(CLASSES) do for n, a in pairs(BY_CLASS[c.id]) do learnableName[n:lower()] = true; NAMEOF[a.id] = n:lower() end end
+local WHILE, checked = {}, 0
+for _, c in ipairs(CLASSES) do
+    for n, a in pairs(BY_CLASS[c.id]) do
+        local r = SPELLS[a.id]
+        for _, field in ipairs({ 26, 27 }) do
+            local aura = r.u(field)
+            if aura ~= 0 then
+                local l = isLockout[aura]
+                if l then
+                    local found = false
+                    for _, b in ipairs(l.blocks) do if b == n:lower() then found = true end end
+                    if not found then error(n .. " is refused by " .. l.name .. " in the client's table, but its lockout row doesn't block it") end
+                    checked = checked + 1
+                elseif FOLDED[aura] then
+                    checked = checked + 1
+                elseif SPELLS[aura] and learnableName[SPELLS[aura].s(136):lower()] then
+                    local ar = SPELLS[aura]
+                    local ms = DURATION[ar.u(40)] or 0
+                    if ms >= 2147483647 then ms = 0 end
+                    WHILE[#WHILE + 1] = { aura = aura, name = ar.s(136), ms = ms, blocks = n:lower() }
+                end
+            end
+        end
+    end
+end
+table.sort(WHILE, function(a, b) return a.blocks < b.blocks end)
+
+h[#h + 1] = "// a lockout: an aura on the character an ability would reach (the caster for one cast on oneself, the target"
+h[#h + 1] = "// otherwise) that refuses it; `by` the abilities that put it on that character as they land (none: an ability's"
+h[#h + 1] = "// own buff, refusing others while it is up), `ms` how long it lasts (0: while it is up), `blocks` what it refuses;"
+h[#h + 1] = "// names lower case, joined by \"|\". Lay on Hands puts it on and is refused only when cast on oneself."
+h[#h + 1] = "struct BuddyLockoutRow { uint32_t aura; char const* name; uint32_t ms; char const* by; char const* blocks; };\n"
+h[#h + 1] = "static BuddyLockoutRow const BUDDY_LOCKOUTS[] = {"
+md[#md + 1] = ""
+md[#md + 1] = "## Lockouts"
+md[#md + 1] = ""
+md[#md + 1] = "An aura on the character an ability would reach that refuses it. *Put on by* the abilities that put it on as they land (Hand of Protection on its target, Lay on Hands only on oneself); *while up* rows are an ability's own buff refusing another."
+md[#md + 1] = ""
+md[#md + 1] = "| Aura | Lasts | Put on by | Refuses |"
+md[#md + 1] = "|---|---:|---|---|"
+for _, l in ipairs(LOCKOUTS) do
+    h[#h + 1] = string.format("    { %5d, %q, %6d, %q, %q },", l.aura, l.name, l.ms, table.concat(l.by, "|"), table.concat(l.blocks, "|"))
+    md[#md + 1] = string.format("| %s | %.0f | %s | %s |", l.name, l.ms / 1000, table.concat(l.by, ", "), table.concat(l.blocks, ", "))
+end
+for _, w in ipairs(WHILE) do
+    h[#h + 1] = string.format("    { %5d, %q, %6d, %q, %q },", w.aura, w.name, w.ms, "", w.blocks)
+    md[#md + 1] = string.format("| %s | %s | (while up) | %s |", w.name, w.ms > 0 and string.format("%.0f", w.ms / 1000) or "until used", w.blocks)
+end
+h[#h + 1] = "};\n"
+
+local LEVER_EFFECT = { [114] = "taunt", [63] = "threat", [91] = "threat", [125] = "share", [130] = "hand", [79] = "leave" }
+local LEVER_AURA   = { [11] = "taunt", [66] = "leave", [18] = "leave", [10] = "aura", [103] = "aura", [39] = "immune", [40] = "immune" }
+local TRIGGERS_EFFECT, TRIGGERS_AURA = { [64] = true }, { [23] = true, [227] = true }
+local SCRIPTED = {
+    ["righteous defense"] = { cls = 2, casts = 31790 },
+    ["death grip"]        = { cls = 6, casts = 49560 },
+    ["soulshatter"]       = { cls = 9, casts = 32835 },
+    ["invisibility"]      = { cls = 8, casts = 32612 },
+}
+local function lever_kinds(r, kinds, amounts, depth)
+    for e = 0, 2 do
+        local eff, aura = r.u(71 + e), r.u(95 + e)
+        local k = LEVER_EFFECT[eff] or LEVER_AURA[aura]
+        if k and not kinds[k] then
+            kinds[k] = true
+            kinds[#kinds + 1] = k
+            if k == "threat" or k == "share" or k == "aura" then amounts[#amounts + 1] = r.i(80 + e) + 1 end
+        end
+        local t = r.u(116 + e)
+        if depth == 0 and t ~= 0 and (TRIGGERS_EFFECT[eff] or TRIGGERS_AURA[aura]) and SPELLS[t] then lever_kinds(SPELLS[t], kinds, amounts, 1) end
+    end
+end
+local levers = {}
+local function add_lever(cls, className, name, rows)
+    local kinds, amounts = {}, {}
+    for _, r in ipairs(rows) do lever_kinds(r, kinds, amounts, 0) end
+    if #kinds > 0 then levers[#levers + 1] = { cls = cls, className = className, name = name, kinds = table.concat(kinds, "|"), amount = amounts[1] or 0 } end
+end
+local classNameOf = {}
+for _, c in ipairs(CLASSES) do classNameOf[c.id] = c.name end
+for _, c in ipairs(CLASSES) do
+    local names = {}
+    for n in pairs(BY_CLASS[c.id]) do names[#names + 1] = n end
+    for n, sc in pairs(SCRIPTED) do
+        if sc.cls == c.id and not BY_CLASS[c.id][n:gsub("^%l", string.upper)] then
+            local found = false
+            for m in pairs(BY_CLASS[c.id]) do if m:lower() == n then found = true end end
+            if not found then names[#names + 1] = n end
+        end
+    end
+    table.sort(names, function(x, y) return x:lower() < y:lower() end)
+    for _, n in ipairs(names) do
+        local a = BY_CLASS[c.id][n]
+        local rows = {}
+        if a then rows[#rows + 1] = SPELLS[a.id] end
+        local sc = SCRIPTED[n:lower()]
+        if sc then rows[#rows + 1] = SPELLS[sc.casts] or error("scripted lever " .. n .. ": spell " .. sc.casts .. " is not in the client's table") end
+        local shown = a and n or (n:gsub("^%l", string.upper))
+        add_lever(c.id, c.name, shown, rows)
+    end
+end
+h[#h + 1] = "// a threat lever: an ability that moves threat or attention (issue 625j), by what its effects and auras do:"
+h[#h + 1] = "// \"taunt\", \"threat\" (added; negative taken), \"share\" (a percent of it), \"hand\" (handed on), \"leave\" (out of"
+h[#h + 1] = "// the fight), \"aura\" (threat made changed while up, percent), \"immune\" (passed over while immune); joined by \"|\""
+h[#h + 1] = "struct BuddyThreatLeverRow { uint8_t cls; char const* name; char const* kinds; int32_t amount; };\n"
+h[#h + 1] = "static BuddyThreatLeverRow const BUDDY_THREAT_LEVERS[] = {"
+md[#md + 1] = ""
+md[#md + 1] = "## Threat levers"
+md[#md + 1] = ""
+md[#md + 1] = "What moves threat or attention, by what each ability's effects and auras do (issue 625j): *taunt*, *threat* added or taken, a *share* of it, *hand* it on, *leave* the fight, an *aura* changing threat made while up, *immune* (passed over with threat kept)."
+md[#md + 1] = ""
+md[#md + 1] = "| Class | Ability | Does | Amount |"
+md[#md + 1] = "|---|---|---|---:|"
+for _, l in ipairs(levers) do
+    h[#h + 1] = string.format("    { %2d, %q, %q, %6d },", l.cls, l.name:lower(), l.kinds, l.amount)
+    md[#md + 1] = string.format("| %s | %s | %s | %d |", l.className, l.name, l.kinds:gsub("|", ", "), l.amount)
+end
+h[#h + 1] = "};\n"
+
+local MARK_AURAS = { [87] = true, [79] = true, [14] = true, [118] = true, [283] = true, [9] = true, [65] = true, [138] = true,
+                     [140] = true, [192] = true, [216] = true, [31] = true, [33] = true, [3] = true, [8] = true, [69] = true,
+                     [22] = true, [101] = true }
+local auraRows = 0
+h[#h + 1] = "// what an ability's auras do to whoever bears them (issue 625n): the aura type (SpellAuraDefines.h), the effect's"
+h[#h + 1] = "// value at the top rank, its misc value (a school mask, for damage taken or dealt and armour), and a ticking aura's"
+h[#h + 1] = "// period in milliseconds"
+h[#h + 1] = "struct BuddyAbilityAuraRow { uint8_t cls; char const* name; uint32_t aura; int32_t amount; int32_t misc; uint32_t periodMs; };\n"
+h[#h + 1] = "static BuddyAbilityAuraRow const BUDDY_ABILITY_AURAS[] = {"
+for _, c in ipairs(CLASSES) do
+    local names = {}
+    for n in pairs(BY_CLASS[c.id]) do names[#names + 1] = n end
+    table.sort(names)
+    for _, n in ipairs(names) do
+        local a = BY_CLASS[c.id][n]
+        for e = 1, 3 do
+            if MARK_AURAS[a.aura[e]] then
+                h[#h + 1] = string.format("    { %2d, %q, %3d, %7d, %4d, %5d },", c.id, n:lower(), a.aura[e], a.amount[e], a.misc[e], a.period[e])
+                auraRows = auraRows + 1
+            end
+        end
+    end
+end
+h[#h + 1] = "};\n"
+
+local reachRows = 0
+h[#h + 1] = "// whom an ability reaches (self: only its caster), its direct heal (-1: the caster's whole health), and how long its aura"
+h[#h + 1] = "// lasts in milliseconds, for trying it as an answer (issue 625n)"
+h[#h + 1] = "struct BuddyAbilityReachRow { uint8_t cls; char const* name; uint8_t self; int32_t heal; uint32_t lastsMs; uint8_t area; };\n"
+h[#h + 1] = "static BuddyAbilityReachRow const BUDDY_ABILITY_REACH[] = {"
+for _, c in ipairs(CLASSES) do
+    local names = {}
+    for n in pairs(BY_CLASS[c.id]) do names[#names + 1] = n end
+    table.sort(names)
+    for _, n in ipairs(names) do
+        local a = BY_CLASS[c.id][n]
+        local marks, heal, self, area = false, 0, true, false
+        for e = 1, 3 do
+            if MARK_AURAS[a.aura[e]] then marks = true end
+            if a.eff[e] == 10 then heal = math.max(heal, a.amount[e]) end
+            if a.eff[e] == 67 then heal = -1 end
+            if a.eff[e] ~= 0 and a.targetA[e] ~= 1 then self = false end
+            if a.targetA[e] == 20 or a.targetA[e] == 56 then area = true end
+        end
+        if marks or heal ~= 0 then
+            local ms = DURATION[a.duration] or 0
+            if ms >= 2147483647 then ms = 0 end
+            h[#h + 1] = string.format("    { %2d, %q, %d, %6d, %6d, %d },", c.id, n:lower(), self and 1 or 0, heal, ms, area and 1 or 0)
+            reachRows = reachRows + 1
+        end
+    end
+end
+h[#h + 1] = "};\n\n#endif"
+print(string.format("%d threat levers; %d aura effects of class abilities; %d abilities' reach", #levers, auraRows, reachRows))
+print(string.format("%d lockouts and %d while-up exclusions; %d of the table's own exclusions agree with them", #LOCKOUTS, #WHILE, checked))
+local f = io.open(out, "w") or error("cannot write " .. out)
+f:write(table.concat(h, "\n"), "\n")
+f:close()
+f = io.open(listing, "w") or error("cannot write " .. listing)
+f:write(table.concat(md, "\n"), "\n")
+f:close()
+print(string.format("%d abilities of %d classes written to %s and %s", count, #CLASSES, out, listing))

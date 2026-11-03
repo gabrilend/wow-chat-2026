@@ -1,0 +1,8 @@
+#!/bin/bash
+
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+OUT="${DIR}/tmp/tmp"
+mkdir -p "${OUT}"
+g++ -std=c++17 -O1 -Wall -Wextra -Werror -I"${DIR}/patches/B036-mod-buddies/mod-buddies/src" \
+    "${DIR}/tests/buddy-window-buffs/window-check.cpp" -o "${OUT}/buddy-window-buffs" || exit 1
+nice -n 19 "${OUT}/buddy-window-buffs"

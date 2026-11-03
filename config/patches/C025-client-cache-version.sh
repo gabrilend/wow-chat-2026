@@ -25,6 +25,13 @@ config_client_cache_version() {
         return 1
     }
 
+    local planned
+    planned="$("${project}/scripts/plan-patches" "${project}" "${PROFILE}" 2>&1)" || {
+        echo "    ERROR: C025 could not read ${PROFILE}'s patches: ${planned}"
+        echo "    to debug: ${project}/scripts/plan-patches ${project} ${PROFILE}"
+        return 1
+    }
+
     local fingerprint
     fingerprint=$(
         {
@@ -33,6 +40,12 @@ config_client_cache_version() {
                 find -L "${project}/sql/${PROFILE}" -path '*.src/*' -type f -print0 \
                     | sort -z | xargs -0 -r cat
             fi
+            local rel folder
+            while IFS=$'\t' read -r _ _ _ rel; do
+                folder="${rel%/*}"
+                [[ "${folder}" == "patches" || "${folder}" == "config/patches" ]] && continue
+                find "${project}/${folder}" -maxdepth 1 -name '*.sql' -type f -print0 | sort -z | xargs -0 -r cat
+            done <<< "${planned}"
         } | cksum | cut -d' ' -f1
     )
     [[ "${fingerprint}" == "0" ]] && fingerprint=1

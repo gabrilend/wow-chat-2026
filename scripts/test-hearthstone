@@ -40,6 +40,7 @@ end
 
 local function party()
     World.events = {}
+    GH.lastOpen, GH.riding = {}, {}
     local ann, bea, cid, dot = Toy.new_player("Ann", 401), Toy.new_player("Bea", 402),
                                Toy.new_player("Cid", 403), Toy.new_player("Dot", 404)
     dot.bot = true
@@ -49,6 +50,7 @@ local function party()
     Toy.group({ ann, bea, cid, dot })
     return ann, bea, cid, dot
 end
+local function done(p) CAST(5, p, Toy.spell(8690)) end
 
 do
     local ann, bea, cid, dot = party()
@@ -57,27 +59,46 @@ do
     check(bea.window ~= nil and cid.window ~= nil, "each other player should be asked in a window")
     check(ann.window == nil, "the hearther should not be asked")
     check(dot.window == nil, "a bot should not be shown a window")
+    check(dot.casts[1] == 8690, "a bot always comes: it starts its own hearthstone at once")
     local hasPopup = false
     for _, it in ipairs(bea.window and bea.window.items or {}) do if it.popup then hasPopup = true end end
     check(hasPopup, "'come along' should carry a confirm box (the okay/cancel)")
     local text = bea.window and bea.window.items[1].text or ""
     check(text == "Ann is hearthing to Durotar. Come along?", "the window should say where the hearther is going (got: " .. text .. ")")
     Toy.answer(bea, 1)
-    Toy.answer(cid, 2)
-    check(bea.window == nil and cid.window == nil, "an answer should close the window")
+    check(bea.window == nil, "an answer should close the window")
+    check(bea.casts[1] == 8690 and bea.cooldownResets == 1, "okay starts Bea's own hearthstone, its cooldown cleared first")
+    check(#ann.casts == 0, "a rider's cast should not invite the group again")
     CAST(5, ann, Toy.spell(8690))
-    check(#bea.teleports == 0, "nobody should move before the hearther has arrived")
+    check(cid.window == nil, "when the hearther's cast ends, a window still open closes as a no")
     advance(1600)
-    check(#bea.teleports == 1, "Bea, who said yes, should travel when the cast completes")
-    check(#cid.teleports == 0, "Cid, who said no, should stay")
-    check(#dot.teleports == 1, "the bot should always come")
+    check(#bea.teleports == 0 and #dot.teleports == 0, "riders arrive by their own hearthstones, not the hearther's")
+    done(bea)
+    done(dot)
+    advance(1600)
+    check(#bea.teleports == 1, "Bea's own hearthstone completing puts her on the circle")
+    check(#cid.teleports == 0, "Cid, who never answered, stays")
+    check(#dot.teleports == 1, "the bot arrives by its own hearthstone")
     check(#ann.teleports == 0, "the hearther travels by their own hearthstone, not by this")
     local spots = GH.circle(500, 600, 4)
     local t = bea.teleports[1]
     check(t and t.map == 1 and math.abs(t.x - spots[2].x) < 1e-6 and math.abs(t.y - spots[2].y) < 1e-6,
-          "Bea (second in the group) should stand at the second place round the hearther's bind point")
+          "Bea (second in the group) should stand at the second place round the hearther's bind point, not her own")
     check(dot.teleports[1] and math.abs(dot.teleports[1].x - spots[4].x) < 1e-6, "the bot (fourth) should stand at the fourth place")
-    check(next(GH.pending) == nil, "the hearth should be forgotten once done")
+    check(next(GH.pending) == nil and next(GH.riding) == nil, "the hearth and the rides should be forgotten once done")
+    for _, p in ipairs({ ann, bea, cid, dot }) do Toy.logout(p) end
+end
+
+do
+    local ann, bea, cid, dot = party()
+    START(ann)
+    Toy.answer(bea, 1)
+    bea:InterruptSpell(1)
+    advance(2100)
+    check(#bea.casts == 2, "an interrupted ride should start Bea's hearthstone again a moment later")
+    for _ = 1, 6 do bea:InterruptSpell(1); advance(2100) end
+    check(GH.riding[bea:GetGUID()] == nil, "interrupted too often, the ride ends")
+    check(bea.messages[#bea.messages]:match("interrupted too often"), "and she is told why")
     for _, p in ipairs({ ann, bea, cid, dot }) do Toy.logout(p) end
 end
 
@@ -87,11 +108,11 @@ do
     Toy.answer(bea, 1)
     CANCEL(ann)
     check(cid.window == nil, "a cancelled hearth should close the windows still open")
-    check(#bea.teleports == 0 and #dot.teleports == 0, "a cancelled hearth should move nobody, even those who said yes")
-    check(next(GH.pending) == nil, "a cancelled hearth should be forgotten")
+    check(bea.casting == nil and dot.casting == nil, "a cancelled hearth should stop the riders' own hearthstones")
+    check(next(GH.pending) == nil and next(GH.riding) == nil, "a cancelled hearth should be forgotten, rides and all")
     CAST(5, ann, Toy.spell(8690))
     advance(2000)
-    check(#bea.teleports == 0, "a completion after the hearth was called off should move nobody")
+    check(#bea.teleports == 0 and #dot.teleports == 0, "a completion after the hearth was called off should move nobody")
     for _, p in ipairs({ ann, bea, cid, dot }) do Toy.logout(p) end
 end
 
@@ -101,15 +122,35 @@ do
     Toy.answer(bea, 1)
     Toy.logout(bea)
     CAST(5, ann, Toy.spell(8690))
+    done(dot)
     local ok, err = pcall(advance, 1600)
     check(ok, "a member logging out before the move should not raise an error (" .. tostring(err) .. ")")
-    check(#bea.teleports == 0, "a member who logged out should not be moved")
+    check(#bea.teleports == 0 and GH.riding[bea:GetGUID()] == nil, "a member who logged out should not be moved, their ride forgotten")
     check(#dot.teleports == 1, "the others should still come")
     for _, p in ipairs({ ann, cid, dot }) do Toy.logout(p) end
 end
 
 do
+    local ann, bea, cid, dot = party()
+    Toy.chardb.ignores[402] = { [401] = true }
+    START(ann)
+    check(bea.window == nil, "a member ignoring the hearther is never asked")
+    check(cid.window ~= nil, "the others still are")
+    Toy.chardb.ignores = {}
+    for _, p in ipairs({ ann, bea, cid, dot }) do Toy.logout(p) end
+
+    ann, bea, cid, dot = party()
+    local real = GH.skip
+    GH.skip = function(m) return m == dot end
+    START(ann)
+    check(#dot.casts == 0 and not GH.pending[ann:GetGUID()].accepted[dot:GetGUID()], "a member the profile skips is neither asked nor brought")
+    GH.skip = real
+    for _, p in ipairs({ ann, bea, cid, dot }) do Toy.logout(p) end
+end
+
+do
     World.events = {}
+    GH.lastOpen = {}
     local solo = Toy.new_player("Solo", 410)
     Toy.login(solo)
     local ok = pcall(START, solo)
@@ -129,9 +170,12 @@ do
     START(ann, 556)
     check(bea.window ~= nil, "Astral Recall beginning should ask the group, as a Hearthstone does")
     Toy.answer(bea, 1)
+    check(bea.casts[1] == 8690, "a member who says yes rides on their own Hearthstone")
     CAST(5, ann, Toy.spell(556))
+    done(bea)
+    done(dot)
     advance(1600)
-    check(#bea.teleports == 1 and #dot.teleports == 1, "Astral Recall completing should bring those who said yes")
+    check(#bea.teleports == 1 and #dot.teleports == 1, "Astral Recall's riders arrive on its circle")
     for _, p in ipairs({ ann, bea, cid, dot }) do Toy.logout(p) end
 end
 
@@ -148,7 +192,11 @@ do
     START(ann)
     local first = GH.pending[ann:GetGUID()].id
     START(ann)
-    check(GH.pending[ann:GetGUID()].id ~= first, "a cast begun again should open a new hearth")
+    check(GH.pending[ann:GetGUID()].id == first, "a cast begun again within 10 seconds asks nobody again")
+    check(ann.messages[#ann.messages] and ann.messages[#ann.messages]:match("wait a few seconds"), "and the hearther is told to wait")
+    advance(10001)
+    START(ann)
+    check(GH.pending[ann:GetGUID()].id ~= first, "10 seconds later, a cast begun again opens a new hearth")
     check(bea.window ~= nil and bea.window.items[1].sender ~= first, "and the window should be the new hearth's")
     for _, p in ipairs({ ann, bea, cid, dot }) do Toy.logout(p) end
 end
