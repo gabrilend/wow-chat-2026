@@ -18,7 +18,11 @@ return {
     { measure = "circling",  least = 0.30,
       why = "\"whirling\", \"a maelstrom of swirls\"" },
     -- both ways: of the circling stretches, the smaller of clockwise and
-    -- anticlockwise over the larger (1: as many each way)
+    -- anticlockwise over the larger (1: as many each way). The end state;
+    -- for now one direction is being got right first (the owner,
+    -- 2026-10-28: "Right now we're isolating one direction until we get the
+    -- pattern right, then we do both"), so a one-way flock misses this on
+    -- purpose until then
     { measure = "both_ways", least = 0.40,
       why = "\"in all directions at once\"" },
     -- winding: path length over the straight distance, a minute at a time,
