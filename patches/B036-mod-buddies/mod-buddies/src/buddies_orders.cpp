@@ -66,6 +66,7 @@
 #include "buddies_town.h"
 #include "buddies_follow.h"
 #include "roam/buddy_follow_core.h"
+#include "roam/buddy_sell_core.h"
 #include "Guild.h"
 #include "World.h"
 #include "Chat.h"
@@ -108,6 +109,7 @@ struct HeardOrder
     Heard                    where = Heard::Say;
     bool                     hard  = false;            // "go away!": not again until the speaker logs out
     bool                     circle = false;           // "circle me", "close follow": follow in the ring (617s2)
+    bool                     everyone = false;         // "everyone go sell": every hearer goes, whatever its bags (623)
 };
 static std::mutex              sOrdersLock;
 static std::vector<HeardOrder> sHeard;
@@ -124,15 +126,20 @@ bool BuddyTakeSellOrder(uint32 buddy)
 // }}}
 
 // {{{ IsGoSell
-// "go sell", any case, with or without trailing punctuation or a "please".
-static bool IsGoSell(std::string msg)
+// "go sell", any case, with or without trailing punctuation or a "please":
+// 1. "everyone go sell" (or "everybody", "all of you"): 2 (623: "if the
+// player says "everyone go sell" then all the buddy-bots do it"). Anything
+// else: 0.
+static int IsGoSell(std::string msg)
 {
     std::transform(msg.begin(), msg.end(), msg.begin(), [](unsigned char c) { return std::tolower(c); });
     while (!msg.empty() && (std::ispunct(static_cast<unsigned char>(msg.back())) || std::isspace(static_cast<unsigned char>(msg.back()))))
         msg.pop_back();
     while (!msg.empty() && std::isspace(static_cast<unsigned char>(msg.front())))
         msg.erase(msg.begin());
-    return msg == "go sell" || msg == "go sell please" || msg == "please go sell";
+    if (msg == "everyone go sell" || msg == "everybody go sell" || msg == "all of you go sell" || msg == "everyone go sell please")
+        return 2;
+    return (msg == "go sell" || msg == "go sell please" || msg == "please go sell") ? 1 : 0;
 }
 // }}}
 
@@ -355,17 +362,39 @@ static void Obey(HeardOrder const& h)
         if (!h.whisperedBuddy.IsEmpty() && h.whisperedBuddy.GetCounter() != buddyGuid)
             continue;                                  // whispered to one buddy: only that one
         Player* b = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(buddyGuid));
-        if (!b || !b->IsInWorld() || !b->IsAlive() || BuddyBagFullness(b) < BuddyFullBagsShare())
+        if (!b || !b->IsInWorld() || !b->IsAlive())
+            continue;
+        // how much of its bag space holds things it would sell, against
+        // the walk to the nearest vendor (623, roam/buddy_sell_core.h).
+        // Each path:
+        //   "everyone go sell"                     - goes
+        //   enough for the walk                    - goes, and says why
+        //   not enough                             - stays, and says why
+        PlayerbotAI* ai = GET_PLAYERBOT_AI(b);
+        uint32 slots = BuddyBagSlots(b);
+        float share = (ai && slots) ? float(BuddyDisposableItems(ai, b).size()) / float(slots) : 0.0f;
+        float yards = BuddyNearestVendorYards(b);
+        bool goes = BuddySell::Goes(share, yards, h.everyone);
+        Player* owner = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(ownerGuid));
+        if (owner && !h.everyone)
+        {
+            uint32 pct = uint32(share * 100.0f + 0.5f);
+            std::string line = goes
+                ? Acore::StringFormat("My bags are {}% full of things to sell, and the vendor is {}, so I'm just gonna go sell.", pct, BuddySell::HowFar(yards))
+                : Acore::StringFormat("My bags are only {}% full of things to sell, and the vendor is {}, so I'll keep going.", pct, BuddySell::HowFar(yards));
+            SayToOwner(b, owner, line.c_str());
+        }
+        if (!goes)
             continue;
         {
             std::lock_guard<std::mutex> lock(sOrdersLock);
             sToldToSell.insert(buddyGuid);
         }
-        if (Player* owner = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(ownerGuid)))
+        if (owner && h.everyone)
             SayToOwner(b, owner, GOING_LINE);
         ++going;
     }
-    LOG_INFO("module", "mod-buddies: {} said \"go sell\"; {} buddies with full bags set off", speaker->GetName(), going);
+    LOG_INFO("module", "mod-buddies: {} said \"{}go sell\"; {} buddies set off", speaker->GetName(), h.everyone ? "everyone " : "", going);
 }
 // }}}
 
@@ -460,7 +489,9 @@ private:
             return;                                    // guild chat: only the follow orders
         else if (IsAttack(msg, h.names))
             h.kind = OrderKind::Attack;
-        else if (!IsGoSell(msg))
+        else if (int sell = IsGoSell(msg))
+            h.everyone = sell == 2;
+        else
             return;                                    // no order: ordinary chat
         std::lock_guard<std::mutex> lock(sOrdersLock);
         sHeard.push_back(h);

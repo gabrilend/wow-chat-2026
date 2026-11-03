@@ -44,10 +44,34 @@ the owner's clan mates), and refuses anyone else's, saying so.
   "I found a lucky penny for you.", one treat in four a purse of its level
   squared times 28 copper (about 10 gold at 60) from its own money, with
   a line in its class's voice (the rogue's is the owner's own words).
-Not built: pieces 3 to 6 (putting earmarked items and split food into a
-trade the owner opens, the full-bags offer and arcs, the "go sell"
-threshold, buddy-to-buddy giving), and piece 8's refusal of others' trades
-beyond B058's clan rule.
+**Earmarked items in a trade, built 2026-10-31, waiting for the compile**
+(piece 3; syntax-checked; source patch B068 round-tripped on a copy;
+`buddies_trade.cpp`): when a trade with a buddy begins, the bot module
+asks the buddy module first; a buddy opens its side itself and, when the
+trader is its owner, puts in its earmarked items (the same the mailbox
+would mail), up to six, through the server's own set-trade-item step; a
+clan mate's trade opens with nothing put in. The bot module's whispered
+list of the whole inventory is skipped for buddies. The bot module then
+accepts whatever the owner offers (buddy accounts are not on its
+random-bot list, whose bots bargain).
+**"go sell" by bags and walk, built 2026-10-31, waiting for the compile**
+(piece 5's first part; the rule in `roam/buddy_sell_core.h`, checked by
+`scripts/test-buddy-sell`, 8 checks; the order in `buddies_orders.cpp`):
+each buddy hearing "go sell" weighs the share of its bag spaces holding
+things it would sell against a bar that rises smoothly with the straight
+walk to the nearest vendor on its map (half full within 200 yards, nine
+tenths from 1500, in a line between; the agent's numbers), and tells its
+owner what it decided and why ("My bags are 65% full of things to sell,
+and the vendor is pretty close, so I'm just gonna go sell." / "... only
+40% ... so I'll keep going."); "everyone go sell" (or "everybody") sends
+every hearer. The selling trip no longer asks for nine-tenths-full bags
+itself; the order decides.
+Not built: split food and water asked for in a trade (piece 3's second
+half), piece 4 (the full-bags offer and arcs), the rest of piece 5 (the
+full buddy asking whether it may go, "I'm scared" and the impromptu party
+from the solo record and live danger, hearthing back together), piece 6
+(buddy-to-buddy giving), and piece 8's refusal of others' trades beyond
+B058's clan rule.
 
 **Clan trades, built 2026-10-26 (source patch B058, not yet compiled):**
 a player in a bot's own guild may now open a trade with it, and the bot

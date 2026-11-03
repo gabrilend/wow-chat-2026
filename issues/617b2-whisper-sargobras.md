@@ -58,8 +58,14 @@ list, so he is hidden from /who and add-friend and takes no bot commands
 the login pass skips him), and a whisper to him gets no buddy's
 placeholder answer (`buddies_whisper.cpp`). If a character on another
 account already holds the name, the module logs the error once and
-makes none. Not yet run: whether the bot module leaves a masterless bot
-quite still, and whether his whisper back reaches the other faction.
+makes none. Seen at the first start (2026-10-31): the bot module set
+him up as one of its random bots, which put him in a random-bot guild
+it made for him ("Red Stronghold", he its only member). **Since
+2026-10-31, waiting for the compile:** each pass takes him out of any
+guild (one he alone makes up is disbanded); his guilds are 630's to
+decide. Not yet seen: whether the bot module otherwise leaves a
+masterless bot quite still, and whether his whisper back reaches the
+other faction.
 Known conflict: the add-friend hiding also hides him from `/friend
 Sargobras`, which the friends-list idea below wants to allow.
 

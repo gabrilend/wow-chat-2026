@@ -21,8 +21,10 @@
  *
  * The fight's forward pass (625n, buddies_forward_pass.cpp) leans each cast
  * too, by the share of the party's gap it closes; with Buddies.ForwardPass
- * 1 the multiplier is on even while the talent weights are off, and a
- * cast's priority is multiplied by both.
+ * 1 the multiplier is on even while the talent weights are off: a cast's
+ * priority is multiplied by its lean, and by the draw's random factor for
+ * the talent weight and the lean together, so the choices differ from one
+ * fight to the next (2026-10-31).
  */
 
 #include "buddies_talents.h"
@@ -138,16 +140,23 @@ namespace
                 return 1.0f;                           // not a spell: movement, items, orders
             std::string name = cast->getSpell();
             std::transform(name.begin(), name.end(), name.begin(), [](unsigned char ch) { return std::tolower(ch); });
-            float factor = 1.0f;
+            // the talent weight (1 with the talent switch off) and the forward
+            // pass's lean (1 with it off) make one weight for the draw, so the
+            // choice among near-equal answers is drawn, never the same each
+            // time (the owner, 2026-10-31: "if it played out the same way
+            // everytime, then we aren't building it correctly"); the lean also
+            // multiplies the priority itself, so it still counts across
+            // answers of different priority
+            float weight = 1.0f, lean = 1.0f;
             if (talents)
             {
                 auto weights = WeightsFor(bot, measure);
                 auto w = weights.find(name);
-                factor = BuddyTalentDraw::Factor(w == weights.end() ? 1.0f : w->second, rand_norm());
+                weight = w == weights.end() ? 1.0f : w->second;
             }
             if (forward)
-                factor *= BuddyForwardPassLean(bot->GetGUID().GetCounter(), name);
-            return factor;
+                lean = BuddyForwardPassLean(bot->GetGUID().GetCounter(), name);
+            return lean * BuddyTalentDraw::Factor(weight * lean, rand_norm());
         }
     };
     // }}}

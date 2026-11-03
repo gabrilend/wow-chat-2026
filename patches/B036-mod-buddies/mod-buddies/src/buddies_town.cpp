@@ -1476,6 +1476,8 @@ float BuddyBagFullness(Player* bot) { return BagFullness(bot); }
 float BuddyFullBagsShare() { return FULL_BAGS_SHARE; }
 void  BuddySellAtVendor(PlayerbotAI* ai, Player* bot, Creature* npc) { DoSell(ai, bot, npc); }
 std::vector<Item*> BuddyDisposableItems(PlayerbotAI* ai, Player* bot) { return Disposable(ai, bot); }
+std::vector<Item*> BuddyEarmarkedItems(PlayerbotAI* ai, Player* bot) { return ItemsForOwner(ai, bot); }
+uint32 BuddyBagSlots(Player* bot) { return BagSlots(bot); }
 
 using ErrandFn = void (*)(PlayerbotAI*, Player*, Creature*);
 static std::unordered_map<uint8, ErrandFn> const sErrands = {

@@ -5,13 +5,13 @@ The owner, 2026-10-29: "the very next compile will include all of the currently 
 
 | Where it stands | Issues |
 |---|---:|
-| Written, waiting for the compile | 38 |
-| Built (whole or in part) | 86 |
+| Written, waiting for the compile | 40 |
+| Built (whole or in part) | 98 |
 | In progress | 4 |
-| Planned, a plan only, or an idea | 88 |
-| Not started | 275 |
+| Planned, a plan only, or an idea | 87 |
+| Not started | 268 |
 | Unclear (the issue should say where it stands) | 42 |
-| **All open** | **533** |
+| **All open** | **539** |
 
 **Do you want to turn these on?** The issues built and waiting for the compile, each with its switch where it names one:
 
@@ -20,6 +20,7 @@ The owner, 2026-10-29: "the very next compile will include all of the currently 
 - **155f1-level-60-fights-balanced**: Level-60 Fights Balanced
 - **155i-dungeon-damage-and-healing-multipliers**: Dungeon Damage and Healing Multipliers [state: in progress (reopened 2026-10-25): the table and its code are built; the rows are not (155f1 writes them)]
 - **155o-inscription-without-glyphs**: Inscription Without Glyphs
+- **155z10-drops-by-monster-rank-and-quality**: Drop Rates and Amounts by Monster Rank and Item Quality [state: built 2026-10-30 (basic_rules.cpp and C044), waiting for the compile; no knob turned yet]
 - **164-per-player-unselectable-creatures**: Creatures One Player Cannot Select, or See
 - **167-spirit-heals-by-stamina**: Spirit Heals by Stamina
 - **181-richer-monster-drops**: Richer Monster Drops
@@ -28,6 +29,7 @@ The owner, 2026-10-29: "the very next compile will include all of the currently 
 - **195-see-past-250-yards**: See Past 250 Yards [state: built 2026-10-20 as two settings, stock by default; waits on the]
 - **617a4-buddy-starting-kit**: Buddy Starting Kit
 - **617b1-buddy-entrance**: A Buddy's Entrance: From Behind Sargobras, a Wave or a Salute
+- **617b2-whisper-sargobras**: Whisper Sargobras
 - **617c1-buddy-login-and-logout**: Buddy Login and Logout
 - **617c3-dungeon-draw**: The Dungeon Draw
 - **617d-buddy-quest-mirroring**: Buddy Quest Mirroring
@@ -51,7 +53,7 @@ The owner, 2026-10-29: "the very next compile will include all of the currently 
 - **617o7-five-ways-to-find-a-path**: Five Ways to Find a Path, Side by Side [state: in progress]
 - **617o8-the-painted-map**: The Painted Map: Pathfinding That Learns, Keeps Its Distance and Spreads [state: in progress]
 - **617r2-buddy-kit-from-a-gearset**: Buddies Dressed from a Gearset
-- **623-buddies-offer-to-trade-when-you-stand-still**: Buddies Offer to Trade When You Stand Still [state: planned; open questions first]
+- **623-buddies-offer-to-trade-when-you-stand-still**: Buddies Offer to Trade When You Stand Still [state: planned; redesigned 2026-10-30 (buddies mail and accept trades, never open them)]
 - **718d-talent-points-caught-up**: A Death Knight's Talent Points, Caught Up Over 55 to 60 [state: in progress: the rule is written, waiting for the owner's compile]
 - **720-hide-shoulders**: Hide Shoulders, Beside Hide Helm and Hide Cloak [state: built 2026-10-26; waiting for the compile and a look in game]
 - **803-monster-accuracy-level-cap**: Monster Accuracy Level Cap
@@ -66,7 +68,7 @@ The owner, 2026-10-29: "the very next compile will include all of the currently 
 - **1100a-quick-tests-start-mysql**: The Quick Tests Start MySQL [state: in progress]
 - **1100b-test-results-kept-in-git-notes**: Test Results Kept in Git's Notes [state: built; its open questions answered (2026-10-27); waiting to be]
 - **1100c-tests-that-follow-a-datapath-end-to-end**: Tests That Follow a Data Path End to End [state: in progress (treasure and travellers not yet followed; open]
-- **1100d-tests-after-a-failed-build**: The Quick Tests After a Failed Build, Not Before [state: built 2026-10-28, not yet run by the owner]
+- **1100d-tests-after-a-failed-build**: The Quick Tests After a Failed Build, Not Before [state: built 2026-10-28; committed 2026-10-30 (138b89ea8, by accident, with the module list); not yet run by the owner]
 - **1100e-the-realm-locked-to-game-masters-while-testing**: The Realm Locked to Game Masters While Testing [state: built 2026-10-28; `status` and `--dry-run` tried, the lock itself]
 - **1103-pictures-redrawn-from-their-recipe**: Pictures Redrawn from Their Recipe [state: built; one open question]
 - **136d-realm-branches**: Realm Branches [state: in progress (planning)]
@@ -86,6 +88,7 @@ The owner, 2026-10-29: "the very next compile will include all of the currently 
 - **155y-no-map-no-minimap**: No World Map, No Minimap
 - **155z14-crowd-control-without-diminishing-returns**: Crowd Control Without Diminishing Returns [state: built 2026-10-26, not yet seen in game]
 - **155z17-coins-alone-are-the-groups**: Coins Alone Are the Group's [state: built 2026-10-27 (compile-checked on patched copies), not yet in a build]
+- **155z18-shields-give-armour-not-stamina**: Shields Give Armour, Not Stamina [state: built 2026-10-30 (E075), off until basic is named in its header]
 - **157g-linode-machines-one-per-realm**: Linode Machines, One per Realm
 - **176-cc-test-profile**: The cc-test Profile
 - **176a2-arathi-basin-match**: Test Scene: an Arathi Basin Match
@@ -102,6 +105,7 @@ The owner, 2026-10-29: "the very next compile will include all of the currently 
 - **211a-druids-hearth-by-moonglade**: Druids Hearth by Moonglade [state: in progress (built offline; not yet seen in game; open questions]
 - **506-gear-gallery**: Gear Gallery
 - **617-buddy-bots**: Buddy Bots: Every Character Brings Companions
+- **617a7-reset-a-buddy-keeping-name-and-race**: Reset a Buddy, Keeping Name and Race [state: in progress (built by the owner's compile of 2026-10-30 and committed; not yet tried in game)]
 - **617c2-proximity-party**: The Proximity Party
 - **617c4-buddy-loyalty**: Buddy Loyalty
 - **617e1-buddy-roam-strategy**: The Buddy Roam Strategy
@@ -128,22 +132,32 @@ The owner, 2026-10-29: "the very next compile will include all of the currently 
 - **617g-buddy-talent-plans**: Buddy Talent Plans
 - **617k-buddy-professions**: Buddy Professions
 - **617l-buddy-clan-guild**: A Guild for Each Clan
+- **617n-buddy-spell-learning**: Buddy Spell Learning
 - **617p-npc-awareness**: NPC Awareness: Buddies Notice and Use the People Around Them
 - **617r-elite-outfits**: Gearset Profiles (the first: "elite", the bannermen; the vanilla starter kit)
 - **617r5-gearset-gallery**: The Gearset Gallery
+- **617s3-tank-at-the-front**: Tank at the Front
+- **617s4-ring-radius-commands**: Ring Radius Commands
+- **617s5-sidesteps-in-a-fight**: Sidesteps in a Fight
 - **617t1-stand-in-maker**: The Stand-in Maker
 - **621-a-strong-enchant-on-a-new-weapon**: A Strong Enchant on a New Weapon [state: built for buddies' kit weapons, 2026-10-15; syntax-checked, not yet]
 - **625a-what-each-talent-touches**: What Each Talent Touches, Read from the Game's Own Tables [state: in progress (the table built; set bonuses not yet)]
+- **625h-the-resource-economy-and-the-fights-length**: The Resource Economy, and the Fight's Length [state: in progress (the fight-length guess built; the smooth curves and thrift next)]
+- **625j-the-threat-economy**: The Threat Economy [state: in progress (the levers, attention, the fight curves and tank swaps built; the tank's load next)]
 - **635a-party-checkpoint-save-and-restore**: A Party Checkpoint: Save and Restore [state: in progress (the tool and its test built 2026-10-27; the]
 - **635b-talent-builds-with-required-talents**: Talent Builds with Required Talents [state: in progress (the planner and its test built 2026-10-27; the]
 - **638-buddy-levers-and-the-semantic-map**: Buddy Levers and the Semantic Map [state: in progress]
 - **718-death-knight-sacrifice-and-open-acherus**: Death Knight: The Sacrifice, and Acherus as an Open Zone
+- **718f-buddies-eat-what-you-eat**: A Death Knight's Buddies Eat What It Eats [state: built 2026-10-30 in the kit, waiting for the compile]
 - **812-enchanting-scrolls-from-dungeon-bosses**: Enchanting Scrolls from Dungeon Bosses
+- **813-instant-attacks-by-the-real-weapon-speed**: Instant Attacks Count Attack Power by the Real Weapon Speed [state: built 2026-10-30 as a setting, off; waiting for the compile, then the owner names basic in C042 to turn it on]
 - **909-gutenberg-text-library**: Gutenberg Text Library
 - **910-wandering-narrator-system**: Wandering Narrator System
 - **910b-whispered-rumours**: Whispered Rumours
 - **913a-client-redirect-handoff**: Client Redirect Handoff
 - **916l-chat-emission-and-rate-limit**: Chat Emission and Rate Limiting
+- **921a-the-shared-weather-deck**: The Shared Weather Deck (switch: `Buddies.AlteracWeather` (the parent's)) [state: in progress (built by the owner's compile of 2026-10-30 and committed; one open question)]
+- **921b-the-wandering-storm**: The Wandering Storm (switch: `Buddies.AlteracWeather` (the parent's)) [state: in progress (built by the owner's compile of 2026-10-30 and committed; two open questions)]
 
 ## In progress
 
@@ -170,11 +184,9 @@ The owner, 2026-10-29: "the very next compile will include all of the currently 
 - **155e1b-geraldenges-tower**: Geraldenge's Tower in Darnassus [state: planned; open questions first]
 - **155p1-each-jewelcrafter-teaches-different-cuts**: Each Jewelcrafter Teaches Different Cuts [state: planned; open questions first]
 - **155p2-azeroth-gemstones-enchanted-into-gems**: Azeroth's Gemstones, Enchanted, Then Cut [state: planned; open questions first]
-- **155z10-drops-by-monster-rank-and-quality**: Drop Rates and Amounts by Monster Rank and Item Quality [state: planned; open questions first]
 - **155z11-weapon-presentations**: Weapon Presentations: a Blacksmith's Work Shown Off [state: planned; open questions first]
 - **155z13-monster-stat-pages**: Monsters with Stat Pages of Their Own [state: an idea; open questions first]
 - **155z16-outland-enchanting-from-drops**: Outland Enchanting, From Drops [state: plan only; nothing built]
-- **155z18-shields-give-armour-not-stamina**: Shields Give Armour, Not Stamina [state: plan; open questions below]
 - **155z8-rares-on-the-common-clock**: Rares and Rare Elites Return as Often as Ordinary Monsters [state: planned; open questions first]
 - **184-play-as-any-creature-model**: Play As Any Creature Model [state: a goal; nothing to build yet]
 - **185-level-up-command**: The Level-Up Command: Level, Gear and Professions Together [state: planned; open questions first]
@@ -187,7 +199,6 @@ The owner, 2026-10-29: "the very next compile will include all of the currently 
 - **309-monsters-test-their-foes**: Monsters Test Their Foes [state: an idea; the design is open]
 - **413-horseshoe-pursuits-nodes**: Horseshoe Pursuits: Upside-Down Leather Nodes [state: planned; open questions first]
 - **617a4a-dressed-from-the-valleys-vendors**: Dressed from the Valley's Vendors [state: plan only; nothing built]
-- **617a7-reset-a-buddy-keeping-name-and-race**: Reset a Buddy, Keeping Name and Race [state: planned; not built (on the session's to-do list to implement)]
 - **617c5-party-buffs-shared-out**: Party Buffs Shared Out [state: plan only; nothing built]
 - **617e14-the-world-watched-from-above**: The World Watched From Above [state: in progress (617e14a, b, c, f built 2026-10-27; d, e plan only)]
 - **617e14d-bots-questing-unattended**: Bots Questing Unattended [state: plan only]
@@ -199,6 +210,7 @@ The owner, 2026-10-29: "the very next compile will include all of the currently 
 - **617h2-every-item-a-buddy-carries**: Every Item a Buddy Carries, and When It Uses It [state: planned; open questions first]
 - **617j4-room-for-what-matters**: Room for What Matters [state: plan only; nothing built]
 - **617o6-layered-ways-drops-flight-water-and-gaps**: Layered Ways: Drops, Flight, Water and Gaps [state: plan only]
+- **617o9-the-smap**: The smap: the World Seen, Grown into a Map of Its Ground [state: planned; nothing built]
 - **617r8-weapons-by-race-and-spec**: Weapons by Race and Spec [state: planned; open questions first]
 - **617t2-ragefire-stand-in-scene**: Trying the Stand-ins at Ragefire Chasm [state: planned; open questions first]
 - **617t3-a-stand-in-becomes-a-buddy**: A Stand-in Becomes a Buddy [state: planned; the design is open]
@@ -206,16 +218,20 @@ The owner, 2026-10-29: "the very next compile will include all of the currently 
 - **617y-spoken-orders**: Spoken Orders: "go sell", "follow me", "follow so-and-so" [state: planned; open questions first]
 - **617z-tank-paced-pulls**: Tank-Paced Pulls: "go faster", "slow down" [state: planned; open questions first]
 - **618a-routes-forward-and-how-the-ground-feels**: Routes Forward, and How the Ground Feels (rmaps) [state: planned]
-- **622-a-buddy-keeps-a-record-of-its-weapons**: A Buddy Keeps a Record of Its Weapons [state: planned; open questions first]
+- **622-a-buddy-keeps-a-record-of-its-weapons**: A Buddy Keeps a Record of Its Weapons [state: planned; may be deprecated (2026-10-30, the owner: "we will]
 - **624-a-buddys-enhancements-by-level**: A Buddy's Enhancements by Level: Rings, Amulets, Enchants [state: planned; open questions first]
 - **625-buddies-favour-their-talented-abilities**: Buddies Favour the Abilities Their Talents Touch [state: an idea; the design is open]
 - **625b-gear-chosen-by-talents**: A Buddy's Weapon Preference, and the Talents That Follow It [state: planned; open questions first]
 - **625c-one-list-from-every-tree**: One List from Every Tree a Buddy Has Points In [state: planned]
 - **625d-choosing-by-the-moments-economy**: Choosing an Answer by the Moment's Economy [state: planned]
 - **625e-what-each-fight-taught**: What Each Fight Taught, Written Down to Be Read Later [state: planned: the log first; reading it is to be built later, from]
+- **625g-forms-and-stances-weighed**: Forms and Stances, Weighed [state: planned]
+- **625i-the-healers-seat**: The Healer's Seat [state: planned]
+- **625k-learning-that-can-start-over**: Learning That Can Start Over [state: planned]
+- **625l-buffs-given-to-who-uses-them-most**: Buffs Given to Who Uses Them Most [state: planned]
+- **625m-pets-as-a-second-pair-of-hands**: Pets as a Second Pair of Hands [state: planned]
 - **626-a-keyboard-for-the-buddies**: A Keyboard for the Buddies, After the City of Heroes Binds [state: an idea; the design is open]
 - **627-the-bots-think-only-when-something-happens**: The Bots Think Only When Something Happens [state: planned; open questions first]
-- **628-buddies-wander-as-baked-npcs**: Buddies Wander as Baked NPCs [state: planned; open questions first]
 - **629-battleground-fronts**: Battleground Fronts: Bots Hold a Line and Fight for Ground [state: planned; open questions first]
 - **630-sargobras-the-unseen-guild-master**: Sargobras, the Unseen Guild Master, and Belonging to Many Guilds [state: planned for the basic profile (the Sargobras realms), server]
 - **631-anyone-who-can-heal-keeps-the-group-up**: Anyone Who Can Heal Keeps the Group Up [state: an idea; open questions first]
@@ -226,22 +242,19 @@ The owner, 2026-10-29: "the very next compile will include all of the currently 
 - **635c-spell-and-gear-preferences-per-character**: Spell and Gear Preferences per Character [state: plan]
 - **635d-any-player-in-any-seat**: Any Player in Any Seat [state: plan]
 - **635e-moonfire-from-a-shared-moon**: Moonfire from a Shared Moon [state: plan]
-- **636-earthliving-jumps-to-the-uncovered**: Earthliving Jumps to the Uncovered [state: plan; open questions below]
-- **637-totem-places-and-wisp-circles**: Totem Places and Wisp Circles [state: plan; open questions below]
+- **636-earthliving-jumps-to-the-uncovered**: Earthliving Jumps to the Uncovered [state: deferred until class behaviour is reworked (2026-10-30, the owner: "let's defer this as well until we are doing class changes.")]
+- **637-totem-places-and-wisp-circles**: Totem Places and Wisp Circles [state: deferred until class behaviour is reworked (2026-10-30, the owner: "let's return to this when we're modifying class behavior. The whisp circles are shared design with other systems though so keep that in mind.")]
 - **718a-allegiance-after-the-story**: Allegiance After the Story: Horde, Alliance, or Acherus [state: planned; the open questions decide what can be built server-side]
 - **718b-reset-and-darions-dream**: Reset a Death Knight, and Darion's Dream [state: planned; open questions first]
 - **718c-tirion-at-lights-hope**: Tirion Holds the Ashbringer at Light's Hope [state: planned; open questions first]
 - **718e-the-fall-and-the-wisps**: The Fall into the Chapel, the Rise, and the Wisps That Lead Out [state: planned; open questions first]
-- **718f-buddies-eat-what-you-eat**: A Death Knight's Buddies Eat What It Eats [state: planned; open questions first]
-- **718g-no-death-grip**: No Death Grip: Another Class's Taunt in Its Place [state: planned; open questions first]
+- **718g-no-death-grip**: No Death Grip: Another Class's Taunt in Its Place [state: deferred until after the next compile (2026-10-30, the owner: "let's defer this until after the next compile. Idk if I still want it...")]
 - **718h-acherus-knights-green-by-default**: The Acherus Knight's Green, by Default [state: plan only; nothing built]
 - **718i-the-death-gate-remembers**: The Death Gate Remembers [state: plan only; nothing built]
 - **721-class-trainers-and-tomes-of-any-ability**: Class Trainers, and Tomes of Any Ability [state: planned; open questions first]
 - **722-the-death-druid**: The Death Druid: Part Death Knight, Part Druid [state: an idea; open questions first]
 - **723-teleport-home-and-back**: Teleport There, and Back to Where You Were [state: planned; open questions first]
 - **921-alterac-valley-shared-weather**: Alterac Valley's Shared Weather, and the Storm That Wanders It (switch: the buddy module's setting `Buddies.AlteracWeather` (0 off, the) [state: planned]
-- **921a-the-shared-weather-deck**: The Shared Weather Deck (switch: `Buddies.AlteracWeather` (the parent's)) [state: planned]
-- **921b-the-wandering-storm**: The Wandering Storm (switch: `Buddies.AlteracWeather` (the parent's)) [state: planned]
 
 ## Not started
 
@@ -393,7 +406,6 @@ The owner, 2026-10-29: "the very next compile will include all of the currently 
 - **615-ranged-bot-help-intervention**: Ranged Bot "Help!" Behavior with Melee Intervention
 - **616-public-healer-frames-addon**: Public Healer Frames Addon (AIO)
 - **617a-buddy-roster-and-creation**: Buddy Roster and Creation
-- **617b2-whisper-sargobras**: Whisper Sargobras
 - **617c-buddy-login-and-proximity-party**: Buddy Login and the Proximity Party
 - **617e-buddy-area-adventuring**: Buddy Area Adventuring
 - **617e10-closer-in-danger**: Closer in Danger: Buddies Keep Near Their Owner Where It's Tough
@@ -404,7 +416,6 @@ The owner, 2026-10-29: "the very next compile will include all of the currently 
 - **617g1-weapon-specialization-follows-the-weapon**: Weapon Specialization Follows the Weapon
 - **617j1-loot-turns**: Loot Turns: Who Opens Which Corpse
 - **617m-buddy-task-hunts**: Buddy Task Hunts: Crafting on Request
-- **617n-buddy-spell-learning**: Buddy Spell Learning
 - **617o-buddy-navmesh-pathfinding**: Buddy Pathfinding on the Navigation Mesh
 - **617o3-baked-distance-maps**: Baked Distance Maps for Fixed Goals
 - **617q-owner-renamed-partner**: The Word "Owner" Renamed: A Buddy's Player Is Its Partner
@@ -415,10 +426,6 @@ The owner, 2026-10-29: "the very next compile will include all of the currently 
 - **617s-compass-formation**: The Compass Formation
 - **617s1-compass-slots**: Compass Slots
 - **617s2-ring-follow**: Ring Follow
-- **617s3-tank-at-the-front**: Tank at the Front
-- **617s4-ring-radius-commands**: Ring Radius Commands
-- **617s5-sidesteps-in-a-fight**: Sidesteps in a Fight
-- **617s6-send-one-buddy**: Send One Buddy
 - **617s8-nearest-open-slot**: Nearest Open Slot (the other follow mode)
 - **617t-dungeon-stand-ins**: Dungeon Stand-ins
 - **617u-buddy-errands-in-lua**: Buddy Errands in Lua
@@ -435,10 +442,9 @@ The owner, 2026-10-29: "the very next compile will include all of the currently 
 - **620f-bot-shortcuts-obey-basic**: Bot Shortcuts Obey Basic
 - **620g-bots-in-the-world-features**: Bots in the World Features
 - **620h-bot-rules-test-scene**: Bot Rules Test Scene
-- **628a-the-bake**: The Bake: a Buddy's Creature From the Characters Database
-- **628b-the-swap**: The Swap: the Baked Body Wanders, the Player Body Comes Back
-- **628c-right-click-to-talk**: Right-Click to Talk: a Conversation and the Real Trade Window
-- **628d-left-click-to-select**: Left-Click to Select: Heals and Buffs Reach the Buddy
+- **625f-the-action-economy**: The Action Economy [state: in progress (window values and the cooldown timeline built; the]
+- **625n-the-fights-forward-pass**: The Fight's Forward Pass [state: in progress (all six layers built and tested offline; the]
+- **628a-the-bake**: The Bake: a Buddy's Creature From the Characters Database [state: kept only as a requirement of 634 (monster bots: a creature's]
 - **629a-front-axes-and-borders**: Front Axes and Borders
 - **629b-road-forks-by-deck**: Road Forks by Deck
 - **629c-the-bar-chart-line**: The Bar-Chart Line

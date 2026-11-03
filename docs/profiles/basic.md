@@ -152,6 +152,8 @@ lowest priority first, each line its header's own (`scripts/plan-patches basic`)
 |      740 | B064 | source | a setting: instant attacks count attack power at the real weapon speed (issue 813)                                     |
 |      750 | B065 | source | Playerbots: buddies leave quest items on corpses and quest objects untouched, for their owner (issue 617j)             |
 |      760 | B066 | source | Playerbots: a dead buddy releases by the buddy module's rule (wait for a nearby rez, ask for one) (issue 632)          |
+|      770 | B067 | source | Core: a hook in the server's own "what this player sees" pass, for radius triggers (issue 165)                         |
+|      780 | B068 | source | Playerbots: a buddy opening a trade puts in what is earmarked for its owner (issue 623)                                |
 
 **After the compile and install (install steps and settings, mixed by priority):**
 

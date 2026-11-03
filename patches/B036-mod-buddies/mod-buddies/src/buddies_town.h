@@ -55,6 +55,13 @@ void  BuddySellAtVendor(PlayerbotAI* ai, Player* bot, Creature* npc);
 // what the bot module would sell to a vendor or auction (617h1's dungeon
 // rule, buddies_dungeon_bags.cpp).
 std::vector<Item*> BuddyDisposableItems(PlayerbotAI* ai, Player* bot);
+// The items in its bags earmarked for its owner (623): what the mailbox
+// errand would mail (upgrades for the owner by the owner's stat weights,
+// bind-on-equip epics it has no use for); a trade the owner opens takes
+// them too (buddies_trade.cpp).
+std::vector<Item*> BuddyEarmarkedItems(PlayerbotAI* ai, Player* bot);
+// The buddy's bag spaces in all: the backpack's 16 and every bag's.
+unsigned int BuddyBagSlots(Player* bot);
 // }}}
 
 #endif

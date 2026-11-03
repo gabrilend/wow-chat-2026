@@ -976,6 +976,7 @@ private:
     // Every vendor of the world that sells something (its spawn spot),
     // read once; hidden stand-ins left out as the town circles leave them.
     struct VendorSpawn { uint32 spawn, entry, map; BuddyRoam::Point at; };
+    friend float BuddyNearestVendorYards(Player* bot);   // the "go sell" order weighs the walk (623)
     static std::vector<VendorSpawn> const& Vendors()
     {
         static std::once_flag once;
@@ -1012,10 +1013,11 @@ private:
     {
         if (!s.selling)
         {
-            if (BuddyBagFullness(bot) < BuddyFullBagsShare())
-                return false;
             // only when told (617y, owner 2026-10-12: the full buddy says so,
-            // and "go sell" sends it); until then it keeps roaming, full
+            // and "go sell" sends it); until then it keeps roaming. How full
+            // is enough is the order's to judge since 2026-10-31 (623: about
+            // half full with a vendor close, nearly full with one far, or
+            // anyone at "everyone go sell"), so the trip no longer asks
             if (!BuddyTakeSellOrder(bot->GetGUID().GetCounter()))
                 return false;
             VendorSpawn const* best = nullptr;
@@ -2245,6 +2247,20 @@ public:
             player->SetWalk(false);
     }
 };
+// }}}
+
+// {{{ BuddyNearestVendorYards
+// How far `bot` stands (in a straight line) from the nearest vendor on its
+// map, from the selling trip's own list; a very large number with none on
+// its map.
+float BuddyNearestVendorYards(Player* bot)
+{
+    float best = 1e30f;
+    for (BuddyRoamStepAction::VendorSpawn const& v : BuddyRoamStepAction::Vendors())
+        if (v.map == bot->GetMapId())
+            best = std::min(best, bot->GetExactDist2d(v.at.x, v.at.y));
+    return best;
+}
 // }}}
 
 // {{{ AddSC_buddies_roam_strategy

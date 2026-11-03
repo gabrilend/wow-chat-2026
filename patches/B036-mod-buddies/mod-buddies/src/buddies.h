@@ -104,6 +104,17 @@ bool BuddyPlanOf(uint32 guid, uint8& profile, uint8& role);
 // with its first moments done (its behaviours reset, moved to its place).
 // World thread only. The army (617e17) gives it a master only after.
 bool BuddyStandInOnItsWay(uint32 guid);
+// The fight scenes (buddies_scenes.cpp, 176a3): whether a stand-in of the
+// running scene lies dead in a fight and holds (asked by the release rule);
+// whether a character fights with the forward pass by the scene's say (-1
+// not the scene's, 0 no, 1 yes); whether a creature is the scene's monster,
+// counted as a boss.
+bool BuddySceneHolds(uint32 guid);
+int BuddySceneForwardPass(uint32 guid);
+bool BuddySceneIsBoss(uint64 rawGuid);
+// Whether a party's tank has room for one more enemy (buddies_forward_pass.cpp,
+// 625j's load): 1 room, 0 hold, -1 not known. For the tank-paced pulls (617z).
+int BuddyForwardPassTankRoom(uint32 groupId);
 // A stand-in out of the world, kept for the next asker (as ".buddy standin
 // dismiss" does); one still on its way is no longer awaited.
 void BuddyDismissStandIn(uint32 guid);
@@ -129,6 +140,11 @@ void BuddyStageCheck(Player* owner);
 // owner's group said "go sell" while this buddy's bags were full
 // (buddies_orders.cpp); the trip takes the order as it starts.
 bool BuddyTakeSellOrder(uint32 buddy);
+
+// How far `bot` stands from the nearest vendor on its map (straight line,
+// yards), from the selling trip's list (buddies_roam_strategy.cpp); very
+// large with none on its map. The "go sell" order weighs it (623).
+float BuddyNearestVendorYards(Player* bot);
 
 // The movement trace (buddies_trace.cpp, 617e2): whether a game master has
 // switched it on for this buddy with ".buddy trace <name>", and one line

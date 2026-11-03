@@ -31,7 +31,33 @@ proximity party's seating, below in Current Behavior and in 617c2).
 
 ## Current Behavior
 
-There is no way to say "when something comes within N yards of this
+**Built 2026-10-31.** The registry, as plain C++ with its own test
+(`roam/buddy_radius_core.h`, `scripts/test-buddy-radius`, 22 checks, a
+quick test): each object's triggers (a name, a radius, yards of slack
+before "leaves" fires, a filter by kind of unit and creature entry, and
+the actions run by name with arguments on entering and on leaving), who
+is inside each, triggers replaced by name or removed with their object,
+units forgotten when they leave the world; and the bulletin board (pin,
+unpin, a boss sticky for its fight, a flag carrier always on with its
+last seen place). **Waiting for the compile** (syntax-checked; source
+patch B067 round-tripped on a copy): the stream, by the smallest change
+to the core, one function pointer called at the start of the server's
+own "what this player sees" step (`Player::UpdateVisibilityOf`, the
+batched form the movement pass runs whenever something moves near a
+player), empty unless a module sets it; and the first user,
+`buddies_board.cpp`: with `Buddies.Board = 1` each buddy carries a
+70-yard trigger with 5 of slack that pins what comes near and unpins
+what goes, plus a look every 10 seconds at pins already up that takes
+down things gone from the world (a despawn is never seen moving off).
+`.buddy board <name>` counts what is on a buddy's board. Not built:
+anything that reads the board yet (the far parties' 5-second look,
+617c2, is the next), triggers for creatures and game objects as owners
+(the hook covers players, so buddies; creatures need the same at
+`CreatureUnitRelocationWorker`), "a spell lands on it", Lua access, the
+flag carrier's projection along routes, and the command's help line (the
+command list was claimed by another session at the time).
+
+Before: there was no way to say "when something comes within N yards of this
 object, run these actions". Features that care about distance look on a
 timer: the buddies' grouping every 5 seconds per player (617c2), the
 roaming's monster look every second (617o4), the people-noticing every 5

@@ -55,6 +55,9 @@
 #include "buddies.h"
 #include "buddies_fight_replay.h"
 #include "buddies_forward_pass.h"
+#include "buddies_healer_seat.h"
+#include "buddies_tank_load.h"
+#include "AiFactory.h"
 #include "Chat.h"
 #include "CommandScript.h"
 #include "Config.h"
@@ -72,12 +75,15 @@
 #include "SpellInfo.h"
 #include "SpellMgr.h"
 #include <atomic>
+#include <cmath>
+#include <cstdio>
 #include <condition_variable>
 #include <deque>
 #include <filesystem>
 #include <fstream>
 #include <map>
 #include <mutex>
+#include <set>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -116,10 +122,15 @@ namespace
         Verdict verdict;
         double verdictAt = -1.0;
         std::vector<std::string> memberNames, enemyNames;
+        std::vector<uint64> memberIds;            // the members' guids (raw), in the verdict's order
         bool pending = false;                     // a step queued or running: no second one meanwhile
         std::vector<BuddyFightState::Event> sinceLast;   // for the replay: the events since the last step
         std::string replayFile;                          // this fight's replay file ("" none)
         double firstMoneyAt = -1.0, firstMoney = 0.0;    // for the gold per hour: when first seen, and its money then
+        BuddySeat::Seats seats;                          // the healer seats as the last step left them (625i)
+        std::set<uint64> saidOom;                        // healers who have said "oom" and not yet "ready" (guids' raw values)
+        std::set<uint64> dryNow;                         // the dry ones as the last step found them
+        BuddyTankLoad::Load load;                        // the tank's load as the last step found it (625j)
     };
     std::mutex sPartiesLock;
     std::unordered_map<uint32, Party> sParties;
@@ -142,10 +153,14 @@ namespace
         uint32 party = 0; Snapshot snapshot; Memory memory; std::vector<std::string> members, enemies; std::vector<std::pair<int, uint32>> buddies;
         std::vector<BuddyFightState::Event> newEvents; std::string replayFile;
         double money = 0.0, goldPerHour = 0.0;           // the members' money together (copper), and the group's rate
+        BuddySeat::Seats seats;                          // the healer seats as the last step left them
     };
 
-    // each buddy's latest leans, by its guid's counter, and when
-    struct Leaning { double at = -1.0; std::map<std::string, double> leans; };
+    // each buddy's latest leans, by its guid's counter, and when; and the
+    // member each buff that goes on one chosen ally should go on (625l: the
+    // buddy casts these itself, HandOutBuffs; the bot module's own cast of
+    // them leans away, BuddyForwardPassLean)
+    struct Leaning { double at = -1.0; std::map<std::string, double> leans; std::map<std::string, uint64> targets; double lastTry = 0.0; };
     std::mutex sLeansLock;
     std::unordered_map<uint32, Leaning> sLeans;
     std::mutex sJobsLock;
@@ -167,6 +182,9 @@ namespace
                 sJobs.pop_front();
             }
             Verdict v = Step(job.snapshot, job.memory);
+            // the healer's seat now, from the last (625i): its holder's heals
+            // lean by it, and the others able to heal lean in when it is dry
+            BuddySeat::Seats seats = BuddySeat::Now(job.snapshot, job.memory, job.seats, v.left);
             if (!job.replayFile.empty())
             {
                 std::ofstream out(job.replayFile, std::ios::app);
@@ -175,17 +193,29 @@ namespace
             }
             for (auto const& [index, guid] : job.buddies)
             {
-                std::map<std::string, double> leans = Leans(job.snapshot, job.memory, index, job.goldPerHour);
+                std::map<std::string, int> to;
+                std::map<std::string, double> leans = Leans(job.snapshot, job.memory, index, job.goldPerHour, &seats, &to);
+                std::map<std::string, uint64> targets;
+                for (auto const& [name, member] : to) targets[name] = job.snapshot.party[member].id;
                 std::lock_guard<std::mutex> lock(sLeansLock);
-                sLeans[guid] = { job.snapshot.t, std::move(leans) };
+                Leaning& l = sLeans[guid];
+                l.at = job.snapshot.t;
+                l.leans = std::move(leans);
+                l.targets = std::move(targets);
             }
             std::lock_guard<std::mutex> lock(sPartiesLock);
             Party& p = sParties[job.party];
+            p.load        = BuddyTankLoad::Of(job.snapshot, v);   // before the verdict is moved away below
             p.verdict     = std::move(v);
             p.verdictAt   = job.snapshot.t;
+            p.memberIds.clear();
+            for (Member const& m : job.snapshot.party) p.memberIds.push_back(m.id);
             p.memberNames = std::move(job.members);
             p.enemyNames  = std::move(job.enemies);
             p.pending     = false;
+            p.seats       = seats;
+            p.dryNow.clear();
+            for (int i : seats.dry) p.dryNow.insert(job.snapshot.party[i].id);
         }
     }
 
@@ -237,6 +267,13 @@ namespace
             m.x = p->GetPositionX(); m.y = p->GetPositionY(); m.z = p->GetPositionZ();
             m.marks = MarksOf(p);
             job.money += double(p->GetMoney());
+            // the healer's seat's numbers: points in healing trees, base mana
+            for (auto const& [tab, points] : AiFactory::GetPlayerSpecTabs(p))
+            {
+                m.talentPoints = uint8(std::min<uint32>(255, m.talentPoints + points));
+                if (BuddySeat::HealingTree(m.cls, tab)) m.healPoints = uint8(std::min<uint32>(255, m.healPoints + points));
+            }
+            m.baseMana = p->GetCreateMana();
             // its long abilities, by any rank it knows, and their time to ready
             for (BuddyAbilityRow const& r : BUDDY_ABILITIES)
             {
@@ -248,7 +285,11 @@ namespace
                         break;
                     }
             }
-            if (p->GetSession() && BuddyIsCompanionAccount(p->GetSession()->GetAccountId()))
+            // who fights with it: a fight scene's say first (its duel has one of
+            // each, buddies_scenes.cpp), else every buddy and stand-in
+            int scene = BuddySceneForwardPass(p->GetGUID().GetCounter());
+            bool companion = p->GetSession() && (BuddyIsCompanionAccount(p->GetSession()->GetAccountId()) || BuddyIsStandInAccount(p->GetSession()->GetAccountId()));
+            if (scene == 1 || (scene < 0 && companion))
                 job.buddies.push_back({ int(s.party.size()), p->GetGUID().GetCounter() });
             s.party.push_back(std::move(m));
             job.members.push_back(p->GetName());
@@ -262,6 +303,7 @@ namespace
             e.health = u->GetHealth(); e.maxHealth = u->GetMaxHealth();
             e.level = u->GetLevel();
             if (Creature* c = u->ToCreature()) e.rank = uint8(c->GetCreatureTemplate()->rank);
+            if (BuddySceneIsBoss(id)) e.rank = 3;                       // a fight scene's monster, counted as a boss
             e.attacking = u->GetVictim() ? u->GetVictim()->GetGUID().GetRawValue() : 0;
             e.marks = MarksOf(u);
             // a cast in progress: its time left, its target, and the damage
@@ -331,9 +373,45 @@ namespace
     };
     // }}}
 
+    // {{{ HandOutBuffs
+    // A buddy casts a buff that goes on one chosen ally on the member the
+    // forward pass named, when its lean says it is worth it now (above 1)
+    // and the bot module says it can be cast there (in reach, ready, the
+    // buddy free to cast): through the bot module's own cast, so its
+    // bookkeeping is kept. Tried at most once a second per buddy, on its own
+    // update (its map's thread).
+    void HandOutBuffs(Player* bot)
+    {
+        std::vector<std::pair<std::string, uint64>> todo;
+        {
+            std::lock_guard<std::mutex> lock(sLeansLock);
+            auto it = sLeans.find(bot->GetGUID().GetCounter());
+            if (it == sLeans.end() || it->second.targets.empty()) return;
+            double now = Now();
+            if ((now - it->second.at) * 1000.0 > LEAN_STALE_MS || now - it->second.lastTry < 1.0) return;
+            it->second.lastTry = now;
+            for (auto const& [name, id] : it->second.targets)
+            {
+                auto lean = it->second.leans.find(name);
+                if (lean != it->second.leans.end() && lean->second > 1.0) todo.push_back({ name, id });
+            }
+        }
+        if (todo.empty() || !bot->IsAlive() || bot->IsNonMeleeSpellCast(false)) return;
+        PlayerbotAI* ai = GET_PLAYERBOT_AI(bot);
+        if (!ai) return;
+        for (auto const& [name, id] : todo)
+        {
+            Unit* target = ObjectAccessor::GetUnit(*bot, ObjectGuid(id));
+            if (!target || !target->IsAlive()) continue;
+            if (ai->CanCastSpell(name, target) && ai->CastSpell(name, target)) return;   // one a try
+        }
+    }
+    // }}}
+
     // {{{ buddies_forward_pass_player
     // The leader's update: while its party fights and something has
-    // happened, a snapshot every half second, queued for the workers.
+    // happened, a snapshot every half second, queued for the workers. And
+    // every buddy's update: its chosen-ally buffs handed out (HandOutBuffs).
     class buddies_forward_pass_player : public PlayerScript
     {
     public:
@@ -342,6 +420,7 @@ namespace
         void OnPlayerUpdate(Player* player, uint32 /*diff*/) override
         {
             if (!On()) return;
+            if (player->IsInCombat()) HandOutBuffs(player);
             Group* g = player->GetGroup();
             if (!g || g->GetLeaderGUID() != player->GetGUID()) return;
             bool fighting = false;
@@ -355,6 +434,7 @@ namespace
                 Party& p = sParties[id];
                 if (p.pending || !p.fresh || (now - p.lastStep) * 1000.0 < STEP_MS) return;
                 bool newFight = (now - p.lastStep) * 1000.0 >= FIGHT_GAP_MS;
+                if (newFight) { p.seats = BuddySeat::Seats(); p.saidOom.clear(); p.dryNow.clear(); }   // a new fight: the seats as it begins
                 if (!Replaying()) p.replayFile.clear();
                 else if (newFight || p.replayFile.empty())
                 {
@@ -379,7 +459,26 @@ namespace
                 Party& p = sParties[id];
                 p.memory.Forget(job.snapshot.t);
                 p.memory.Sample(job.snapshot.t, health);
+                for (Member const& m : job.snapshot.party) p.memory.SampleResource(m.id, job.snapshot.t, m.resource);
                 job.memory = p.memory;
+                job.seats = p.seats;
+                // a healer speaks when it runs dry and when it is ready again
+                // (625i, 617z's words), a buddy only: buddies never speak for
+                // a player
+                auto say = [&](uint64 id, char const* word) {
+                    Player* who = ObjectAccessor::FindPlayer(ObjectGuid(id));
+                    if (!who || !who->GetSession()) return false;
+                    uint32 account = who->GetSession()->GetAccountId();
+                    if (!BuddyIsCompanionAccount(account) && !BuddyIsStandInAccount(account)) return true;   // a player: never spoken for
+                    WorldPacket data;
+                    ChatHandler::BuildChatPacket(data, CHAT_MSG_PARTY, LANG_UNIVERSAL, who, nullptr, word);
+                    g->BroadcastPacket(&data, false);
+                    return true;
+                };
+                for (uint64 id : p.dryNow) if (!p.saidOom.count(id) && say(id, "oom")) p.saidOom.insert(id);
+                for (auto it = p.saidOom.begin(); it != p.saidOom.end(); )
+                    if (!p.dryNow.count(*it)) { say(*it, "ready"); it = p.saidOom.erase(it); }
+                    else ++it;
                 job.newEvents = std::move(p.sinceLast);
                 p.sinceLast.clear();
                 job.replayFile = p.replayFile;
@@ -466,6 +565,10 @@ namespace
             for (size_t e = 0; e < v.attention.size() && e < p.enemyNames.size(); ++e)
                 handler->PSendSysMessage("  {} ({} a second, real) attacks {}", p.enemyNames[e], uint32(v.hits[e]),
                     v.attention[e] >= 0 && size_t(v.attention[e]) < p.memberNames.size() ? p.memberNames[v.attention[e]] : std::string("no one"));
+            if (p.load.tank >= 0 && size_t(p.load.tank) < p.memberNames.size())
+                handler->PSendSysMessage("  Load: {} holds {}; with one more like them it would end at {} health: {}",
+                    p.memberNames[p.load.tank], p.load.enemies, std::isfinite(p.load.room) ? std::to_string(int64(p.load.room)) : std::string("nothing (the end not seen)"),
+                    p.load.room > 0 ? "room to pull more" : "hold");
             if (v.tanks.holder >= 0 && size_t(v.tanks.holder) < p.memberNames.size())
                 handler->PSendSysMessage("  Tanks: {} should hold the hardest hitter{}", p.memberNames[v.tanks.holder],
                     v.tanks.to >= 0 && size_t(v.tanks.to) < p.memberNames.size()
@@ -485,8 +588,107 @@ float BuddyForwardPassLean(uint32 guid, std::string const& spell)
     std::lock_guard<std::mutex> lock(sLeansLock);
     auto it = sLeans.find(guid);
     if (it == sLeans.end() || (Now() - it->second.at) * 1000.0 > LEAN_STALE_MS) return 1.0f;
+    // a buff the forward pass hands out itself, on its chosen ally: the bot
+    // module's own cast of it leans away, so it isn't cast twice or on
+    // another (HandOutBuffs)
+    if (it->second.targets.count(spell)) return 0.05f;
     auto l = it->second.leans.find(spell);
     return l == it->second.leans.end() ? 1.0f : float(l->second);
+}
+// }}}
+
+// {{{ BuddyForwardPassTankRoom
+// Whether a party's tank has room for one more enemy (625j's load: the
+// health it would have left at the fight's end with one more like the
+// average above nothing), for the tank-paced pulls (617z): 1 room, 0 hold,
+// -1 not known (the switch off, no fresh verdict, no one holding any).
+int BuddyForwardPassTankRoom(uint32 groupId)
+{
+    if (!On()) return -1;
+    std::lock_guard<std::mutex> lock(sPartiesLock);
+    auto it = sParties.find(groupId);
+    if (it == sParties.end() || it->second.verdictAt < 0 || (Now() - it->second.verdictAt) * 1000.0 > LEAN_STALE_MS || it->second.load.tank < 0) return -1;
+    return it->second.load.room > 0 ? 1 : 0;
+}
+// }}}
+
+// {{{ BuddyForwardPassFrame
+// The forward pass's view of one character as its party's last step left
+// it, for the fight scenes' frame log (176a3: "comprehensive logging that
+// shows at each "frame" the exact status of the combatants"): fields
+// separated by tabs, in BuddyForwardPassFrameColumns's order; "-" in each
+// field it has nothing for (the switch off, no party, no fresh verdict, not
+// a member of it), so every line has the same columns.
+//   fp-age            seconds since that step
+//   fp-kind           how the fight is read: trash or boss
+//   fp-left           seconds of the fight the step sees left ("?" unseen)
+//   fp-shortfall      the party's health short of the fight's end (the gap)
+//   fp-incoming       damage a second coming to this member
+//   fp-healing        healing a second coming to it
+//   fp-time-to-death  seconds until it would fall at those rates
+//   fp-short-of       the health it is short of the fight's end
+//   fp-seat           holder (heals for the party), dry (out of mana,
+//                     recovering) or -
+//   fp-seats-short    1 when the seats couldn't be filled back
+//   fp-tank-room      for the member holding the most enemies: its health
+//                     at the fight's end with one more enemy like them
+//   fp-leans          every lean away from 1, name=value;...
+//   fp-buffs          buffs it hands out and to whom, name>member;...
+std::string BuddyForwardPassFrameColumns()
+{
+    return "fp-age\tfp-kind\tfp-left\tfp-shortfall\tfp-incoming\tfp-healing\tfp-time-to-death\tfp-short-of\tfp-seat\tfp-seats-short\tfp-tank-room\tfp-leans\tfp-buffs";
+}
+std::string BuddyForwardPassFrame(Player* who)
+{
+    constexpr int COLUMNS = 13;
+    std::vector<std::string> f(COLUMNS, "-");
+    auto join = [&]() { std::string out; for (int i = 0; i < COLUMNS; ++i) out += (i ? "\t" : "") + f[i]; return out; };
+    auto num  = [](double v, int places) { if (!std::isfinite(v)) return std::string("inf"); char b[48]; std::snprintf(b, sizeof b, "%.*f", places, v); return std::string(b); };
+    Group* g = who ? who->GetGroup() : nullptr;
+    if (!On() || !g) return join();
+    uint64 raw = who->GetGUID().GetRawValue();
+    std::vector<std::string> names;
+    std::vector<uint64> ids;
+    {
+        std::lock_guard<std::mutex> lock(sPartiesLock);
+        auto it = sParties.find(g->GetGUID().GetCounter());
+        if (it == sParties.end() || it->second.verdictAt < 0) return join();
+        Party const& p = it->second;
+        Verdict const& v = p.verdict;
+        int i = -1;
+        for (size_t k = 0; k < p.memberIds.size(); ++k) if (p.memberIds[k] == raw) i = int(k);
+        f[0] = num(Now() - p.verdictAt, 1);
+        f[1] = v.kind == BuddyPlan::Fight::Boss ? "boss" : "trash";
+        f[2] = v.leftKnown ? num(v.left, 1) : "?";
+        f[3] = num(v.shortfall, 0);
+        if (i >= 0)
+        {
+            if (size_t(i) < v.incoming.size())    f[4] = num(v.incoming[i], 0);
+            if (size_t(i) < v.healing.size())     f[5] = num(v.healing[i], 0);
+            if (size_t(i) < v.timeToDeath.size()) f[6] = num(v.timeToDeath[i], 1);
+            if (size_t(i) < v.shortOf.size())     f[7] = num(v.shortOf[i], 0);
+            f[8] = BuddySeat::Has(p.seats.holders, i) ? "holder" : BuddySeat::Has(p.seats.dry, i) ? "dry" : "-";
+            if (p.load.tank == i) f[10] = num(p.load.room, 0);
+        }
+        f[9] = p.seats.short_ ? "1" : "0";
+        names = p.memberNames;
+        ids = p.memberIds;
+    }
+    std::lock_guard<std::mutex> lock(sLeansLock);
+    auto it = sLeans.find(who->GetGUID().GetCounter());
+    if (it == sLeans.end()) return join();
+    std::string leans, buffs;
+    for (auto const& [name, lean] : it->second.leans)
+        if (std::fabs(lean - 1.0) > 1e-3) leans += (leans.empty() ? "" : ";") + name + "=" + num(lean, 3);
+    for (auto const& [name, to] : it->second.targets)
+    {
+        std::string whom = "?";
+        for (size_t k = 0; k < ids.size() && k < names.size(); ++k) if (ids[k] == to) whom = names[k];
+        buffs += (buffs.empty() ? "" : ";") + name + ">" + whom;
+    }
+    if (!leans.empty()) f[11] = leans;
+    if (!buffs.empty()) f[12] = buffs;
+    return join();
 }
 // }}}
 

@@ -112,6 +112,11 @@ static Player* NearestResurrector(Player* bot)
 // {{{ BuddyReleaseRule
 int BuddyReleaseRule(Player* bot)
 {
+    // a fight scene's stand-in holds until its round ends (buddies_scenes.cpp:
+    // "if any of them are slain then they wait until either the boss dies, or
+    // the entire party dies"), stand-in or not
+    if (BuddySceneHolds(bot->GetGUID().GetCounter()))
+        return 0;
     if (!BuddyIsCompanionAccount(bot->GetSession()->GetAccountId()))
         return -1;                                     // not a buddy: the bot module's own rules
     uint64 now = GameTime::GetGameTimeMS().count();

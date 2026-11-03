@@ -37,6 +37,7 @@
 #include "CryptoRandom.h"
 #include "DatabaseEnv.h"
 #include "GameTime.h"
+#include "Guild.h"
 #include "Log.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
@@ -124,8 +125,11 @@ public:
         uint32 guid = (*row)[0].Get<uint32>();
 
         // in the world, or brought in
-        if (ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(guid)))
+        if (Player* him = ObjectAccessor::FindConnectedPlayer(ObjectGuid::Create<HighGuid::Player>(guid)))
+        {
+            LeaveBotGuild(him);
             return;
+        }
         if (_askedAt && now - _askedAt < SARGOBRAS_RETRY_MS)
             return;
         _askedAt = now;
@@ -133,6 +137,31 @@ public:
     }
 
 private:
+    // {{{ LeaveBotGuild
+    // The bot module sets up a masterless bot as one of its random bots,
+    // and one of those steps puts it in a random-bot guild, making one if
+    // none has room (seen 2026-10-31: Sargobras became the leader of a new
+    // guild, "Red Stronghold"). He is no random bot, and his place in
+    // guilds is 630's (every guild's unseen master), so he leaves any
+    // guild he is in. Each path:
+    //   in no guild                         - nothing
+    //   the only member (a guild made for him) - the guild disbanded
+    //   one member among others             - he leaves it
+    void LeaveBotGuild(Player* him)
+    {
+        Guild* g = him->GetGuild();
+        if (!g)
+            return;
+        std::string name = g->GetName();
+        if (g->GetMemberCount() <= 1)
+            g->Disband();
+        else
+            g->DeleteMember(him->GetGUID(), false, false, false);
+        LOG_INFO("module", "mod-buddies: {} taken out of the guild \"{}\" the bot module put him in (630 decides his guilds)",
+            SARGOBRAS_NAME, name);
+    }
+    // }}}
+
     uint32 _since = 0;
     uint64 _askedAt = 0;
     bool   _stopped = false;                           // an error said once: nothing more is tried this run
