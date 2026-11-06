@@ -8,18 +8,23 @@
 -- quick-test: yes
 -- ==== end of header ====
 -- test-buddy-party-buffs - check how a party's auras, blessings, judgements
--- and totems are shared out among its paladins and shamans (issue 617c5).
+-- and totems are shared out among its paladins, shamans, hunters and
+-- priests (issue 617c5).
 --
--- For a general audience: with several paladins and shamans in a party,
--- each should give something different and give it to whoever needs it
--- most. This test plays the issue's own cases (three paladins give three
--- auras; a stated wish beats a talent; Sanctuary goes to a tank first;
--- Might never to a caster; a healer low on mana gets Wisdom and goes back
--- to Kings after; two shamans never double a totem), the threats (fire
--- damage calls for the fire resistance aura; casters rule out Stoneskin),
--- a player paladin's own choices left alone, the words of a wish, and then
--- thousands of random parties, each checked against a referee that tries
--- every way of handing the buffs out.
+-- For a general audience: with several buff-givers in a party, each should
+-- give something different, the party's needs should be filled most
+-- needed first, and two buffs the game won't let stack (a paladin's fire
+-- resistance aura and a shaman's fire resistance totem) count as one. This
+-- test plays the issue's own cases (three paladins give three auras; a
+-- stated wish beats a talent; Sanctuary goes to a tank first; Might never
+-- to a caster; a healer low on mana gets Wisdom and goes back to Kings
+-- after; two shamans never double a totem), the checklist (a resistance
+-- only when its school matters, given once whoever gives it; Mana Spring
+-- makes Wisdom unneeded), players planned around, judgements only of the
+-- ones a paladin knows, the ways a wish is said and the sentences that are
+-- not wishes, and then hundreds of random parties, each checked against a
+-- referee written from the issue: every line filled that can be, in order,
+-- talented givers first.
 --
 -- Usage: scripts/test-buddy-party-buffs [PROJECT_DIR] [RUNS]
 --   RUNS  random parties (default 600)
@@ -38,26 +43,29 @@ local function check(ok, what)
 end
 
 -- {{{ people
-local ALL_BLESS = { kings = true, might = true, wisdom = true }
-local ALL_AURAS = { devotion = true, concentration = true, retribution = true,
-                    ["fire resistance"] = true, ["frost resistance"] = true, ["shadow resistance"] = true }
 local function set(...) local t = {} for _, k in ipairs({ ... }) do t[k] = true end return t end
 local function merge(a, b) local t = {} for k in pairs(a) do t[k] = true end for k in pairs(b or {}) do t[k] = true end return t end
+local ALL_BLESS = set("kings", "might", "wisdom")
+local ALL_AURAS = set("devotion", "concentration", "retribution", "fire resistance", "frost resistance", "shadow resistance")
+local ALL_JUDGE = set("judgement of light", "judgement of wisdom", "judgement of justice")
 local function paladin(name, extra, improved, opts)
-    local g = { name = name, class = "paladin", knows = merge(merge(ALL_BLESS, ALL_AURAS), extra), improved = improved or {} }
+    local g = { name = name, class = "paladin", knows = merge(merge(merge(ALL_BLESS, ALL_AURAS), ALL_JUDGE), extra), improved = improved or {} }
     for k, v in pairs(opts or {}) do g[k] = v end
     return g
 end
 local TOTEMS_ALL = set("strength of earth", "stoneskin", "flametongue", "frost resistance", "searing",
                        "mana spring", "healing stream", "fire resistance", "windfury", "wrath of air",
                        "nature resistance", "grounding")
-local function shaman(name, extra) return { name = name, class = "shaman", knows = merge(TOTEMS_ALL, extra), improved = {} } end
+local function shaman(name, extra, improved) return { name = name, class = "shaman", knows = merge(TOTEMS_ALL, extra), improved = improved or {} } end
+local function hunter(name) return { name = name, class = "hunter", knows = set("aspect of the wild"), improved = {} } end
+local function priest(name) return { name = name, class = "priest", knows = set("shadow protection"), improved = {} } end
 local function who(name, role, mana, extra)
     local r = { name = name, role = role, mana = mana, health = 1 }
     for k, v in pairs(extra or {}) do r[k] = v end
     return r
 end
 local function count(t) local n = 0 for _ in pairs(t) do n = n + 1 end return n end
+local function line(plan, name) for _, l in ipairs(plan.checklist) do if l.category == name then return l end end end
 -- }}}
 
 -- {{{ the issue's own cases
@@ -67,7 +75,8 @@ do
                            receivers = { who("T", "tank"), who("H", "healer", 1), who("M", "melee") } })
     local a = p.auras
     check(count(a) == 3 and a.A ~= a.B and a.B ~= a.C and a.A ~= a.C, "three paladins don't give three auras")
-    check(a.A == "devotion" or a.B == "devotion" or a.C == "devotion", "no devotion in a party fighting melee")
+    check(set(a.A, a.B, a.C).devotion and set(a.A, a.B, a.C).concentration and set(a.A, a.B, a.C).retribution,
+          "three paladins don't give devotion, concentration and retribution")
     for _, r in ipairs({ "T", "H", "M" }) do
         local got = {}
         for _, b in pairs(p.blessings[r]) do got[b] = (got[b] or 0) + 1 end
@@ -99,58 +108,63 @@ do
     -- unless asked for
     local w = Buffs.plan({ givers = { paladin("P") }, receivers = { who("C", "caster", 1, { wish = "might" }) } })
     check(w.blessings.C.P == "might", "a caster's own wish for Might wasn't granted")
+    -- of two paladins, the one whose talents improve the wished blessing gives it
+    local two = Buffs.plan({ givers = { paladin("P"), paladin("Q", nil, set("wisdom")) }, receivers = { who("H", "healer", 1, { wish = "wisdom" }) } })
+    check(two.blessings.H.Q == "wisdom" and two.blessings.H.P == "kings", "the talented paladin didn't place the wished Wisdom")
 
     -- a healer low on mana gets Wisdom, and Kings again once it has mana
     local healer = who("H", "healer", 0.2)
     local low = Buffs.plan({ givers = { paladin("P") }, receivers = { healer } })
     check(low.blessings.H.P == "wisdom", "the low-mana healer doesn't get Wisdom")
     healer.mana = 0.9
-    local back = Buffs.plan({ givers = { paladin("P") }, receivers = { healer } })
-    check(back.blessings.H.P == "kings", "the healer doesn't go back to Kings")
+    check(Buffs.plan({ givers = { paladin("P") }, receivers = { healer } }).blessings.H.P == "kings", "the healer doesn't go back to Kings")
     healer.mana = 0.35
     check(Buffs.plan({ givers = { paladin("P") }, receivers = { healer } }).blessings.H.P == "kings", "35% mana counts as low")
     healer.mana = 0.34
     check(Buffs.plan({ givers = { paladin("P") }, receivers = { healer } }).blessings.H.P == "wisdom", "34% mana isn't low")
-    local warrior = who("W", "melee", nil)
-    check(Buffs.plan({ givers = { paladin("P") }, receivers = { warrior } }).blessings.W.P == "might", "a warrior doesn't get Might")
+    check(Buffs.plan({ givers = { paladin("P") }, receivers = { who("W", "melee") } }).blessings.W.P == "might", "a warrior doesn't get Might")
 
     -- two shamans never double a totem, and give a mixed party both air totems
-    local two = Buffs.plan({ givers = { shaman("X"), shaman("Y") },
-                             receivers = { who("M", "melee"), who("C", "caster", 1) } })
+    local ts = Buffs.plan({ givers = { shaman("X"), shaman("Y") }, receivers = { who("M", "melee"), who("C", "caster", 1) } })
     for _, el in ipairs(Buffs.ELEMENTS) do
-        check(two.totems.X[el] ~= nil and two.totems.X[el] ~= two.totems.Y[el], "two shamans doubled or skipped " .. el)
+        check(ts.totems.X[el] ~= nil and ts.totems.X[el] ~= ts.totems.Y[el], "two shamans doubled or skipped " .. el)
     end
-    local air = set(two.totems.X.air, two.totems.Y.air)
+    local air = set(ts.totems.X.air, ts.totems.Y.air)
     check(air.windfury and air["wrath of air"], "a mixed party doesn't get Windfury and Wrath of Air")
-    check(two.totems.X.water == "mana spring" or two.totems.Y.water == "mana spring", "no mana spring for a caster")
-    -- a talented totem goes to the shaman that has it
-    local tw = shaman("Z", set("totem of wrath"))
-    local t3 = Buffs.plan({ givers = { shaman("X"), tw }, receivers = { who("C", "caster", 1) } })
-    check(t3.totems.Z.fire == "totem of wrath" and t3.totems.X.fire == "flametongue", "Totem of Wrath isn't the talented shaman's")
+    check(set(ts.totems.X.water, ts.totems.Y.water)["mana spring"], "no mana spring for a caster")
+    check(set(ts.totems.X.fire, ts.totems.Y.fire).flametongue and set(ts.totems.X.fire, ts.totems.Y.fire).searing,
+          "two shamans' fire totems aren't Flametongue and Searing")
+    -- Totem of Wrath and Flametongue don't stack (one line): the shaman with
+    -- Totem of Wrath gives it, the other something else
+    local t3 = Buffs.plan({ givers = { shaman("X"), shaman("Z", set("totem of wrath")) }, receivers = { who("C", "caster", 1) } })
+    check(t3.totems.Z.fire == "totem of wrath" and t3.totems.X.fire == "searing", "Totem of Wrath isn't the talented shaman's, or Flametongue doubles it")
     -- one shaman, a lone warrior: no caster totems
     local solo = Buffs.plan({ givers = { shaman("X") }, receivers = { who("W", "melee") } })
-    check(solo.totems.X.fire == "searing" and solo.totems.X.water == "healing stream" and solo.totems.X.air == "windfury",
-          "a warrior's shaman put down a caster's totem")
+    check(solo.totems.X.earth == "strength of earth" and solo.totems.X.fire == "searing" and solo.totems.X.water == "healing stream"
+          and solo.totems.X.air == "windfury", "a warrior's shaman put down the wrong totems")
 end
 -- }}}
 
--- {{{ threats
+-- {{{ the checklist: threats, categories across classes
 do
-    local party = { givers = { paladin("A"), shaman("X") }, receivers = { who("T", "tank"), who("C", "caster", 1) },
-                    damage = { fire = 0.5, physical = 0.5 } }
+    local party = { givers = { paladin("A"), shaman("X") }, receivers = { who("T", "tank"), who("C", "caster", 1) }, resist = { fire = true } }
     local p = Buffs.plan(party)
-    check(p.auras.A == "fire resistance", "half the damage fire and no fire resistance aura: " .. tostring(p.auras.A))
-    check(p.totems.X.water == "fire resistance", "half the damage fire and no fire resistance totem")
-    party.damage = { fire = 0.40 }
-    check(Buffs.plan(party).auras.A == "fire resistance", "40% fire didn't call for fire resistance")
-    party.damage = { fire = 0.39 }
-    check(Buffs.plan(party).auras.A == "devotion", "39% fire called for fire resistance")
-    party.damage = { frost = 0.6, shadow = 0.7 }
-    local g2 = Buffs.plan({ givers = { paladin("A"), paladin("B") }, receivers = party.receivers, damage = party.damage })
+    local fire = (p.auras.A == "fire resistance" and 1 or 0) + (p.totems.X.water == "fire resistance" and 1 or 0)
+    check(fire == 1, "fire matters: " .. fire .. " fire resistances up, wanted exactly one")
+    check(p.auras.A == "devotion" and p.totems.X.water == "fire resistance", "the shaman's totem should take fire, leaving the paladin's devotion")
+    check(line(p, "fire resistance").by == "X", "the checklist doesn't say the shaman gives fire resistance")
+    party.resist = {}
+    local q = Buffs.plan(party)
+    check(q.auras.A == "devotion" and q.totems.X.water ~= "fire resistance", "a fire resistance with no fire that matters")
+    check(line(q, "fire resistance") == nil, "the checklist wants fire resistance with no fire that matters")
+    local g2 = Buffs.plan({ givers = { paladin("A"), paladin("B") }, receivers = party.receivers, resist = { frost = true, shadow = true } })
     check(set(g2.auras.A, g2.auras.B)["shadow resistance"] and set(g2.auras.A, g2.auras.B)["frost resistance"], "two resistances called for, not both given")
-    local one = Buffs.plan({ givers = { paladin("A") }, receivers = party.receivers, damage = party.damage })
-    check(one.auras.A == "shadow resistance", "the larger threat's resistance isn't first")
-    party.damage, party.enemy = {}, "casters"
+    local one = Buffs.plan({ givers = { paladin("A") }, receivers = party.receivers, resist = { frost = 0.3, shadow = 0.7 } })
+    check(one.auras.A == "shadow resistance", "the school that matters more isn't first")
+    local same = Buffs.plan({ givers = { paladin("A") }, receivers = party.receivers, resist = { frost = true, shadow = true } })
+    check(same.auras.A == "frost resistance", "two schools that matter alike aren't taken in the list's order")
+    -- against casters
+    party.resist, party.enemy = {}, "casters"
     local c = Buffs.plan(party)
     check(c.auras.A == "concentration", "against casters the aura is " .. tostring(c.auras.A))
     check(c.totems.X.earth ~= "stoneskin", "Stoneskin Totem against casters")
@@ -158,10 +172,27 @@ do
     check(set(cm.totems.X.air, cm.totems.Y.air).grounding, "no grounding totem against casters")
     local nm = Buffs.plan({ givers = { shaman("X"), shaman("Y") }, receivers = { who("C", "caster", 1) } })
     check(not set(nm.totems.X.air, nm.totems.Y.air).grounding, "a grounding totem against no casters")
-    local nz = Buffs.plan({ givers = { shaman("X") }, receivers = { who("C", "caster", 1) }, damage = { nature = 0.8 } })
-    check(nz.totems.X.air == "nature resistance", "nature damage and no nature resistance totem")
-    local fr = Buffs.plan({ givers = { shaman("X") }, receivers = { who("C", "caster", 1) }, damage = { frost = 0.8 } })
-    check(fr.totems.X.fire == "frost resistance", "frost damage and no frost resistance totem")
+    -- nature: a shaman, or a hunter's aspect, whichever leaves more of the list filled
+    local nz = Buffs.plan({ givers = { shaman("X") }, receivers = { who("C", "caster", 1) }, resist = { nature = true } })
+    check(nz.totems.X.air == "nature resistance", "nature matters and no nature resistance totem")
+    local nh = Buffs.plan({ givers = { shaman("X"), hunter("H") }, receivers = { who("M", "melee") }, resist = { nature = true } })
+    check(nh.aspects.H == "aspect of the wild" and nh.totems.X.air == "windfury", "the hunter's aspect didn't take nature, leaving Windfury")
+    local nn = Buffs.plan({ givers = { hunter("H") }, receivers = { who("M", "melee") } })
+    check(nn.aspects.H == nil, "a hunter was given an aspect with no nature that matters")
+    -- shadow: a priest's prayer, or a paladin's aura
+    local sp = Buffs.plan({ givers = { paladin("A"), priest("Pr") }, receivers = { who("T", "tank") }, resist = { shadow = true } })
+    check(sp.prayers.Pr == "shadow protection" and sp.auras.A == "devotion", "the priest's prayer didn't take shadow, leaving devotion")
+    local fr = Buffs.plan({ givers = { shaman("X") }, receivers = { who("C", "caster", 1) }, resist = { frost = true } })
+    check(fr.totems.X.fire == "frost resistance", "frost matters and no frost resistance totem")
+    -- Mana Spring and Wisdom are one line: with the totem down, Wisdom isn't given unless asked for
+    local ms = Buffs.plan({ givers = { paladin("P"), shaman("X") }, receivers = { who("H", "healer", 0.2) } })
+    check(ms.totems.X.water == "mana spring" and ms.blessings.H.P == "kings", "Wisdom given beside Mana Spring: " .. tostring(ms.blessings.H.P))
+    local mw = Buffs.plan({ givers = { paladin("P"), shaman("X") }, receivers = { who("H", "healer", 1, { wish = "wisdom" }) } })
+    check(mw.blessings.H.P == "wisdom", "a wished Wisdom wasn't given beside Mana Spring")
+    -- a line nobody can fill is on the checklist, missing
+    local nobody = Buffs.plan({ givers = { paladin("P", nil, nil) }, receivers = { who("M", "melee") }, resist = { nature = true } })
+    check(line(nobody, "nature resistance") and line(nobody, "nature resistance").by == nil, "a line nobody can fill isn't on the checklist as missing")
+    check(nobody.checklist[1].category == "nature resistance", "the checklist isn't most needed first")
 end
 -- }}}
 
@@ -172,12 +203,19 @@ do
     local p = Buffs.plan({ givers = { owner, paladin("B") }, receivers = { who("T", "tank"), who("M", "melee") } })
     check(p.auras.Owner == nil and p.blessings.T.Owner == nil and p.judgements.Owner == nil, "the player was given a plan")
     check(p.auras.B ~= "devotion", "a buddy doubled the owner's devotion aura")
+    check(line(p, "armor").by == "Owner", "the checklist doesn't tick off the owner's devotion")
     check(p.blessings.T.B ~= "kings" and p.blessings.M.B ~= "kings", "a buddy doubled the owner's Kings")
     check(p.blessings.M.B == "might", "the buddy didn't fill the melee's Might beside the owner's Kings")
     check(p.judgements.B == "wisdom", "the buddy's judgement doubles the owner's Light: " .. tostring(p.judgements.B))
     local sp = { name = "Sham", class = "shaman", player = true, knows = TOTEMS_ALL, gives = { air = "windfury" } }
     local q = Buffs.plan({ givers = { sp, shaman("X") }, receivers = { who("M", "melee"), who("C", "caster", 1) } })
     check(q.totems.Sham == nil and q.totems.X.air == "wrath of air", "the buddy shaman doubled the player's Windfury")
+    local pm = { name = "Sham", class = "shaman", player = true, knows = TOTEMS_ALL, gives = { water = "mana spring" } }
+    local r = Buffs.plan({ givers = { pm, paladin("P") }, receivers = { who("H", "healer", 0.2) } })
+    check(r.blessings.H.P == "kings", "a player's Mana Spring didn't make Wisdom unneeded")
+    local ph = { name = "Hunt", class = "hunter", player = true, knows = set("aspect of the wild"), gives = { aspect = "aspect of the wild" } }
+    local s = Buffs.plan({ givers = { ph, shaman("X") }, receivers = { who("M", "melee") }, resist = { nature = true } })
+    check(s.totems.X.air == "windfury" and line(s, "nature resistance").by == "Hunt", "a player hunter's Aspect of the Wild wasn't counted")
 end
 -- }}}
 
@@ -188,9 +226,16 @@ do
     local dry = { receivers = { who("H", "healer", 0.1, { health = 0.9 }) } }
     check(Buffs.judgements(dry)[1] == "wisdom", "a party out of mana isn't judged with Wisdom first")
     check(table.concat(Buffs.judgements(dry, { wisdom = true }), ",") == "light,justice", "a taken judgement isn't skipped")
-    local three = Buffs.plan({ givers = { paladin("A"), paladin("B"), paladin("C"), paladin("D") }, receivers = dry.receivers })
-    check(three.judgements.A == "wisdom" and three.judgements.B == "light" and three.judgements.C == "justice" and three.judgements.D == nil,
-          "four paladins' judgements are wrong")
+    local four = Buffs.plan({ givers = { paladin("A"), paladin("B"), paladin("C"), paladin("D") }, receivers = dry.receivers })
+    check(count(four.judgements) == 3 and set(four.judgements.A, four.judgements.B, four.judgements.C, four.judgements.D).wisdom
+          and set(four.judgements.A, four.judgements.B, four.judgements.C, four.judgements.D).light
+          and set(four.judgements.A, four.judgements.B, four.judgements.C, four.judgements.D).justice, "four paladins' judgements are wrong")
+    -- only judgements it knows (a young paladin knows Light alone)
+    local young = function(n) local g = paladin(n); g.knows["judgement of wisdom"], g.knows["judgement of justice"] = nil, nil; return g end
+    local yj = Buffs.plan({ givers = { young("A"), young("B") }, receivers = dry.receivers })
+    check(count(yj.judgements) == 1 and (yj.judgements.A == "light" or yj.judgements.B == "light"), "a paladin was given a judgement it doesn't know")
+    local mix = Buffs.plan({ givers = { young("A"), paladin("B") }, receivers = dry.receivers })
+    check(mix.judgements.A == "light" and mix.judgements.B == "wisdom", "the judgements aren't shared by what each paladin knows")
 
     local talk = Buffs.plan({ givers = { paladin("A", nil, set("devotion"), { aura = "retribution" }), paladin("B", nil, nil, { aura = "retribution" }) },
                               receivers = { who("T", "tank") } })
@@ -200,29 +245,42 @@ do
     check(said:find("A: switching to devotion aura.", 1, true) ~= nil, "the switch isn't announced")
     check(not said:find("B:", 1, true), "a paladin keeping its aura said something")
 
-    local cases = {
-        { "Kings please",          "wish",  "kings" },
-        { "can I have BoW?",       "wish",  "wisdom" },
-        { "might",                 "wish",  "might" },
-        { "no Might",              "avoid", "might" },
+    local cases = {   -- the owner's ways of saying it (2026-11-05), and sentences that are not wishes
+        { "kings",                       "wish",  "kings" },
+        { "Kings please",                "wish",  "kings" },
+        { "can you do might instead?",   "wish",  "might" },
+        { "can I get wisdom",            "wish",  "wisdom" },
+        { "can I have BoW?",             "wish",  "wisdom" },
+        { "could I get blessing of kings?", "wish", "kings" },
+        { "might instead",               "wish",  "might" },
+        { "not now, kings please",       "wish",  "kings" },
+        { "no Might",                    "avoid", "might" },
         { "please don't give me sanctuary", "avoid", "sanctuary" },
-        { "not kings, wisdom",     "avoid", "kings" },
-        { "anything is fine",      "clear", true },
-        { "No preference.",        "clear", true },
-        { "hello there",           nil,     nil },
-        { "kingsfoil",             nil,     nil },
+        { "don’t give me might",         "avoid", "might" },
+        { "anything is fine",            "clear", true },
+        { "No preference.",              "clear", true },
+        { "you might want to heal",      nil,     nil },
+        { "I need a new bow",            nil,     nil },
+        { "I need a new bow please",     nil,     nil },
+        { "can I have a bow?",           nil,     nil },
+        { "anything but might",          nil,     nil },
+        { "no idea what kings do",       nil,     nil },
+        { "who has no kings",            nil,     nil },
+        { "can I get 'kings'?",          "wish",  "kings" },
+        { "hello there",                 nil,     nil },
+        { "kingsfoil",                   nil,     nil },
     }
     for _, c in ipairs(cases) do
-        local w = Buffs.parse_wish(c[1])
-        if c[2] then check(w and w[c[2]] == c[3], "\"" .. c[1] .. "\" heard wrong")
-        else check(w == nil, "\"" .. c[1] .. "\" heard as a wish") end
+        local wsh = Buffs.parse_wish(c[1])
+        if c[2] then check(wsh and wsh[c[2]] == c[3], "\"" .. c[1] .. "\" heard wrong")
+        else check(wsh == nil, "\"" .. c[1] .. "\" heard as a wish") end
     end
     local r = who("H", "healer", 1)
     Buffs.hear(r, Buffs.parse_wish("wisdom please"))
     check(r.wish == "wisdom", "a heard wish isn't kept")
     Buffs.hear(r, Buffs.parse_wish("no wisdom"))
     check(r.wish == nil and r.avoid.wisdom, "a no to the wished blessing didn't drop it")
-    Buffs.hear(r, Buffs.parse_wish("wisdom after all"))
+    Buffs.hear(r, Buffs.parse_wish("can I get wisdom"))
     check(r.wish == "wisdom" and not r.avoid.wisdom, "a new wish didn't lift the no")
     Buffs.hear(r, Buffs.parse_wish("no kings"))
     check(r.wish == "wisdom" and r.avoid.kings, "a no to another blessing dropped the wish")
@@ -236,65 +294,85 @@ end
 -- }}}
 
 -- {{{ the referee, written from 617c5
-local USE = { kings = set("tank", "healer", "caster", "melee", "ranged"), might = set("tank", "melee", "ranged"),
-              wisdom = set("healer", "caster", "ranged"), sanctuary = set("tank") }
-local USUAL = { healer = { "kings", "wisdom" }, caster = { "kings", "wisdom" }, melee = { "might", "kings" },
-                ranged = { "might", "kings", "wisdom" }, tank = { "sanctuary", "kings", "might" } }
-local function ref_wishes(r, pals)
-    local out, seen = {}, {}
-    local function add(b) if b and not seen[b] and not (r.avoid or {})[b] then seen[b] = true; out[#out + 1] = b end end
-    add(r.wish)
-    for _, b in ipairs({ "kings", "might", "wisdom", "sanctuary" }) do
-        for _, p in ipairs(pals) do
-            if USE[b][r.role] and p.knows[b] and (p.improved[b] or b == "sanctuary") then add(b) end   -- Sanctuary: rare
-        end
+-- The checklist's lines and who can fill them, from the issue's table (not
+-- the module's): name, the school it resists or nil, the condition, and the
+-- (class, slot, spell) that fill it, best first.
+local LINES = {
+    { "fire resistance",   "fire",   nil, { { "paladin", "aura", "fire resistance" },   { "shaman", "water", "fire resistance" } } },
+    { "frost resistance",  "frost",  nil, { { "paladin", "aura", "frost resistance" },  { "shaman", "fire",  "frost resistance" } } },
+    { "shadow resistance", "shadow", nil, { { "paladin", "aura", "shadow resistance" }, { "priest", "prayer", "shadow protection" } } },
+    { "nature resistance", "nature", nil, { { "shaman", "air", "nature resistance" },   { "hunter", "aspect", "aspect of the wild" } } },
+    { "armor",             nil, "not casters", { { "paladin", "aura", "devotion" } } },
+    { "concentration",     nil, "casters",     { { "paladin", "aura", "concentration" } } },
+    { "retribution",       nil, nil,           { { "paladin", "aura", "retribution" } } },
+    { "strength and agility", nil, "weapons",  { { "shaman", "earth", "strength of earth" } } },
+    { "stoneskin",         nil, "not casters", { { "shaman", "earth", "stoneskin" } } },
+    { "spell power",       nil, "casters",     { { "shaman", "fire", "totem of wrath" }, { "shaman", "fire", "flametongue" } } },
+    { "searing",           nil, nil,           { { "shaman", "fire", "searing" } } },
+    { "mana regeneration", nil, "mana",        { { "shaman", "water", "mana spring" } } },
+    { "healing stream",    nil, nil,           { { "shaman", "water", "healing stream" } } },
+    { "melee haste",       nil, "weapons",     { { "shaman", "air", "windfury" } } },
+    { "spell haste",       nil, "casters",     { { "shaman", "air", "wrath of air" } } },
+    { "grounding",         nil, "vs casters",  { { "shaman", "air", "grounding" } } },
+}
+local SLOTS = { paladin = { "aura" }, shaman = { "earth", "fire", "water", "air" }, hunter = { "aspect" }, priest = { "prayer" } }
+local function ref_lines(party)
+    local roles = {}
+    for _, r in ipairs(party.receivers) do roles[r.role] = true end
+    local mana = false
+    for _, r in ipairs(party.receivers) do if r.mana then mana = true end end
+    local ok = { ["casters"] = roles.healer or roles.caster, ["weapons"] = roles.tank or roles.melee or roles.ranged,
+                 ["mana"] = mana, ["not casters"] = party.enemy ~= "casters", ["vs casters"] = party.enemy == "casters" }
+    local res, rest = {}, {}
+    for k, l in ipairs(LINES) do
+        local m = (party.resist or {})[l[2] or ""]
+        if l[2] then if m then res[#res + 1] = { l, m == true and 1 or m, k } end
+        elseif l[3] == nil or ok[l[3]] then rest[#rest + 1] = l end
     end
-    if r.mana and r.mana < 0.35 and USE.wisdom[r.role] then add("wisdom") end
-    for _, b in ipairs(USUAL[r.role]) do add(b) end
-    for _, b in ipairs({ "kings", "might", "wisdom", "sanctuary" }) do if USE[b][r.role] then add(b) end end
+    table.sort(res, function(a, b) if a[2] ~= b[2] then return a[2] > b[2] end return a[3] < b[3] end)
+    local out = {}
+    for _, x in ipairs(res) do out[#out + 1] = x[1] end
+    for _, l in ipairs(rest) do out[#out + 1] = l end
     return out
 end
--- The best way to hand `list` (ranked) to `givers`: try every assignment
--- (each giver one buff it knows, or none, no buff twice); the best gives
--- the buffs whose ranks, as a yes/no list, are largest first; ties go to
--- the most handed to an improving giver. Returns the chosen set and that count.
-local function ref_best(givers, list)
-    local rank = {}
-    for k, b in ipairs(list) do rank[b] = k end
-    local best, best_imp, best_set = nil, -1, {}
-    local pick, used = {}, {}
-    local function score()
-        local v = {}
-        for k = 1, #list do v[k] = 0 end
-        local imp = 0
-        for g, b in pairs(pick) do v[rank[b]] = 1; if givers[g].improved[b] then imp = imp + 1 end end
-        return v, imp
-    end
-    local function better(v, imp)
-        if not best then return true end
-        for k = 1, #v do if v[k] ~= best[k] then return v[k] > best[k] end end
-        return imp > best_imp
-    end
-    local function go(g)
-        if g > #givers then
-            local v, imp = score()
-            if better(v, imp) then
-                best, best_imp, best_set = v, imp, {}
-                for _, b in pairs(pick) do best_set[b] = true end
+-- Whether every line in `ls` can be given at once by distinct slots
+-- (`can(line)` lists the slot keys that could), by augmenting paths.
+local function feasible(ls, can)
+    local owner = {}
+    local function try(l, seen)
+        for _, s in ipairs(can(l)) do
+            if not seen[s] then
+                seen[s] = true
+                if owner[s] == nil or try(owner[s], seen) then owner[s] = l; return true end
             end
+        end
+        return false
+    end
+    for _, l in ipairs(ls) do if not try(l, {}) then return false end end
+    return true
+end
+-- The best score (improved, then best spells) of any way to give exactly
+-- `ls`, by trying them all; nil when there are too many ways to try.
+local function best_score(ls, options)
+    local product = 1
+    for _, l in ipairs(ls) do product = product * math.max(1, #options(l)) end
+    if product > 20000 then return nil end
+    local used, best = {}, nil
+    local function go(k, imp, top)
+        if k > #ls then
+            if not best or imp > best[1] or (imp == best[1] and top > best[2]) then best = { imp, top } end
             return
         end
-        go(g + 1)
-        for _, b in ipairs(list) do
-            if not used[b] and givers[g].knows[b] then
-                used[b], pick[g] = true, b
-                go(g + 1)
-                used[b], pick[g] = nil, nil
+        for _, o in ipairs(options(ls[k])) do
+            if not used[o.slot] then
+                used[o.slot] = true
+                go(k + 1, imp + (o.improved and 1 or 0), top + (o.best and 1 or 0))
+                used[o.slot] = nil
             end
         end
     end
-    go(1)
-    return best_set, best_imp
+    go(1, 0, 0)
+    return best
 end
 -- }}}
 
@@ -302,33 +380,40 @@ end
 local ROLES = { "tank", "healer", "caster", "melee", "ranged" }
 local AURA_NAMES = { "devotion", "concentration", "retribution", "fire resistance", "frost resistance", "shadow resistance" }
 local BLESS_NAMES = { "kings", "might", "wisdom", "sanctuary" }
+local JUDGE_NAMES = { "judgement of light", "judgement of wisdom", "judgement of justice" }
 local TOTEM_NAMES = {}
 for t in pairs(TOTEMS_ALL) do TOTEM_NAMES[#TOTEM_NAMES + 1] = t end
 TOTEM_NAMES[#TOTEM_NAMES + 1] = "totem of wrath"
 table.sort(TOTEM_NAMES)
-local seen_imp_blessing, seen_full = 0, 0
+local seen = { improved = 0, missing = 0, crossed = 0, scored = 0 }
 for run = 1, RUNS do
     math.randomseed(run * 613 + 11)
     local R = math.random
     local function some(names, p) local t = {} for _, n in ipairs(names) do if R() < p then t[n] = true end end return t end
-    local party = { givers = {}, receivers = {}, damage = {}, enemy = R(3) == 1 and "casters" or nil }
-    for _, school in ipairs({ "physical", "fire", "frost", "shadow", "nature" }) do if R(2) == 1 then party.damage[school] = R() end end
-    local np, ns = R(5) - 1, R(4) - 1
-    for k = 1, np do
+    local party = { givers = {}, receivers = {}, resist = {}, enemy = R(3) == 1 and "casters" or nil }
+    for _, school in ipairs({ "fire", "frost", "shadow", "nature" }) do
+        if R(3) == 1 then party.resist[school] = R(2) == 1 and true or R(9) / 10 end
+    end
+    for k = 1, R(4) - 1 do
         local g = { name = "P" .. k, class = "paladin", knows = some(BLESS_NAMES, 0.8), improved = {} }
-        for a, v in pairs(some(AURA_NAMES, 0.8)) do g.knows[a] = v end
+        for a in pairs(some(AURA_NAMES, 0.8)) do g.knows[a] = true end
+        for j in pairs(some(JUDGE_NAMES, 0.7)) do g.knows[j] = true end
         for b in pairs(g.knows) do if R(4) == 1 then g.improved[b] = true end end
-        if R(4) == 1 then
-            g.player = true
-            g.gives = { aura = AURA_NAMES[R(#AURA_NAMES)], blessings = {}, judgement = Buffs.JUDGEMENTS[R(3)] }
-        end
+        if R(4) == 1 then g.player = true; g.gives = { aura = AURA_NAMES[R(#AURA_NAMES)], blessings = {}, judgement = Buffs.JUDGEMENTS[R(3)] } end
         party.givers[#party.givers + 1] = g
     end
-    for k = 1, ns do
+    for k = 1, R(3) - 1 do
         local g = { name = "S" .. k, class = "shaman", knows = some(TOTEM_NAMES, 0.85), improved = {} }
+        for t in pairs(g.knows) do if R(5) == 1 then g.improved[t] = true end end
         if R(4) == 1 then g.player = true; g.gives = { air = "windfury", water = "mana spring" } end
         party.givers[#party.givers + 1] = g
     end
+    if R(3) == 1 then
+        local g = hunter("H1")
+        if R(4) == 1 then g.player = true; g.gives = { aspect = "aspect of the wild" } end
+        party.givers[#party.givers + 1] = g
+    end
+    if R(3) == 1 then party.givers[#party.givers + 1] = priest("Pr1") end
     for k = 1, R(5) do
         local role = ROLES[R(5)]
         local r = { name = "R" .. k, role = role, health = R(),
@@ -341,98 +426,168 @@ for run = 1, RUNS do
     end
     local where = "run " .. run
     local p = Buffs.plan(party)
-    local pals, shamans, players = {}, {}, {}
+    local players, buddies, pals = {}, {}, {}
     for _, g in ipairs(party.givers) do
-        if g.player then players[#players + 1] = g
-        elseif g.class == "paladin" then pals[#pals + 1] = g else shamans[#shamans + 1] = g end
+        if g.player then players[#players + 1] = g else buddies[#buddies + 1] = g end
+        if not g.player and g.class == "paladin" then pals[#pals + 1] = g end
     end
     for _, g in ipairs(players) do
-        check(p.auras[g.name] == nil and p.judgements[g.name] == nil and p.totems[g.name] == nil, where .. ": a player was planned")
+        check(p.auras[g.name] == nil and p.judgements[g.name] == nil and p.totems[g.name] == nil and p.aspects[g.name] == nil,
+              where .. ": a player was planned")
     end
 
-    -- auras: distinct, known, not a player's, the best set the referee finds
-    local held, auras_list = {}, {}
-    for _, g in ipairs(players) do if g.class == "paladin" and g.gives.aura then held[g.gives.aura] = true end end
-    local resist = {}
-    for _, a in ipairs({ { "fire resistance", "fire" }, { "frost resistance", "frost" }, { "shadow resistance", "shadow" } }) do
-        if (party.damage[a[2]] or 0) >= 0.4 then resist[#resist + 1] = { a[1], party.damage[a[2]] } end
-    end
-    table.sort(resist, function(x, y) if x[2] ~= y[2] then return x[2] > y[2] end return x[1] < y[1] end)
-    for _, x in ipairs(resist) do if not held[x[1]] then auras_list[#auras_list + 1] = x[1] end end
-    local castery = false
-    for _, r in ipairs(party.receivers) do if r.role == "healer" or r.role == "caster" then castery = true end end
-    if party.enemy ~= "casters" and not held.devotion then auras_list[#auras_list + 1] = "devotion" end
-    if castery and not held.concentration then auras_list[#auras_list + 1] = "concentration" end
-    if not held.retribution then auras_list[#auras_list + 1] = "retribution" end
-    local want_set, want_imp = ref_best(pals, auras_list)
-    local got, got_imp = {}, 0
-    for _, g in ipairs(pals) do
-        local a = p.auras[g.name]
-        if a then
-            check(not got[a], where .. ": aura " .. a .. " twice")
-            check(g.knows[a], where .. ": " .. g.name .. " doesn't know " .. a)
-            got[a] = true
-            if g.improved[a] then got_imp = got_imp + 1 end
+    -- the party-wide lines: what the plan gives, slot by slot
+    local lines = ref_lines(party)
+    local held = {}
+    for _, g in ipairs(players) do
+        for _, slot in ipairs(SLOTS[g.class]) do
+            local spell = g.gives[slot]
+            for _, l in ipairs(lines) do
+                for _, w in ipairs(l[4]) do if w[1] == g.class and w[2] == slot and w[3] == spell then held[l] = true end end
+            end
         end
     end
-    for a in pairs(want_set) do check(got[a], where .. ": aura " .. a .. " should be up") end
-    check(count(got) == count(want_set), where .. ": " .. count(got) .. " auras, the referee wants " .. count(want_set))
-    check(got_imp == want_imp, where .. ": " .. got_imp .. " improved auras, the referee finds " .. want_imp)
+    local function given(g, slot)
+        if g.class == "shaman" then return p.totems[g.name] and p.totems[g.name][slot] end
+        if g.class == "paladin" then return p.auras[g.name] end
+        if g.class == "hunter" then return p.aspects[g.name] end
+        return p.prayers[g.name]
+    end
+    local filled, imp, top = {}, 0, 0
+    for _, g in ipairs(buddies) do
+        for _, slot in ipairs(SLOTS[g.class]) do
+            local spell = given(g, slot)
+            if spell then
+                check(g.knows[spell], where .. ": " .. g.name .. " doesn't know " .. spell)
+                local hit
+                for _, l in ipairs(lines) do
+                    for k, w in ipairs(l[4]) do if w[1] == g.class and w[2] == slot and w[3] == spell then hit = { l, k } end end
+                end
+                check(hit ~= nil, where .. ": " .. g.name .. "'s " .. spell .. " fills no line the party wants")
+                if hit then
+                    check(not filled[hit[1]] and not held[hit[1]], where .. ": " .. hit[1][1] .. " given twice")
+                    filled[hit[1]] = true
+                    if g.improved[spell] then imp = imp + 1 end
+                    local first = true
+                    for b = 1, hit[2] - 1 do if hit[1][4][b][1] == g.class and hit[1][4][b][2] == slot then first = false end end
+                    if first then top = top + 1 end
+                    if hit[1][2] and g.class ~= "paladin" then seen.crossed = seen.crossed + 1 end
+                end
+            end
+        end
+    end
+    -- every line that can be filled, in order: a line left missing can't be
+    -- filled beside the filled lines above it
+    local function can(l)
+        local out = {}
+        for _, g in ipairs(buddies) do
+            for _, slot in ipairs(SLOTS[g.class]) do
+                for _, w in ipairs(l[4]) do
+                    if w[1] == g.class and w[2] == slot and g.knows[w[3]] then out[#out + 1] = g.name .. "/" .. slot; break end
+                end
+            end
+        end
+        return out
+    end
+    local above = {}
+    for _, l in ipairs(lines) do
+        if not held[l] then
+            if filled[l] then above[#above + 1] = l
+            else
+                local try = { l }
+                for _, a in ipairs(above) do try[#try + 1] = a end
+                check(not feasible(try, can), where .. ": " .. l[1] .. " could be filled too, and isn't")
+                seen.missing = seen.missing + 1
+            end
+        end
+    end
+    -- the checklist: every line, who gives it
+    check(#p.checklist == #lines, where .. ": the checklist has " .. #p.checklist .. " lines, the referee " .. #lines)
+    for k, l in ipairs(lines) do
+        local c = p.checklist[k]
+        check(c and c.category == l[1], where .. ": checklist line " .. k .. " is " .. tostring(c and c.category) .. ", wanted " .. l[1])
+        if c then check((c.by ~= nil) == (held[l] or filled[l] or false), where .. ": checklist line " .. l[1] .. " says the wrong giver") end
+    end
+    -- talented givers first, then the best spells: the most of any way to give these lines
+    local chosen = {}
+    for _, l in ipairs(lines) do if filled[l] then chosen[#chosen + 1] = l end end
+    local bs = best_score(chosen, function(l)
+        local out = {}
+        for _, g in ipairs(buddies) do
+            for _, slot in ipairs(SLOTS[g.class]) do
+                for k, w in ipairs(l[4]) do
+                    if w[1] == g.class and w[2] == slot and g.knows[w[3]] then
+                        local first = true
+                        for b = 1, k - 1 do if l[4][b][1] == g.class and l[4][b][2] == slot then first = false end end
+                        out[#out + 1] = { slot = g.name .. "/" .. slot, improved = g.improved[w[3]], best = first }
+                        break
+                    end
+                end
+            end
+        end
+        return out
+    end)
+    if bs then
+        seen.scored = seen.scored + 1
+        check(imp == bs[1] and top == bs[2], where .. ": " .. imp .. " improved and " .. top .. " best spells, the referee finds " .. bs[1] .. " and " .. bs[2])
+        if imp > 0 then seen.improved = seen.improved + 1 end
+    end
 
-    -- blessings: per receiver, against the referee's wishes and best hand-out
+    -- blessings: valid, distinct, never a player's again, never said no to,
+    -- and as many as the referee's ranked wishes allow, in order
+    local mana_regen = false
+    for _, l in ipairs(lines) do if l[1] == "mana regeneration" and (held[l] or filled[l]) then mana_regen = true end end
+    for _, g in ipairs(players) do if g.class == "shaman" and g.gives.water == "mana spring" then mana_regen = true end end
     for _, r in ipairs(party.receivers) do
-        local given = {}
-        for _, g in ipairs(players) do local b = g.gives.blessings and g.gives.blessings[r.name]; if b then given[b] = true end end
-        local list = {}
-        for _, b in ipairs(ref_wishes(r, pals)) do if not given[b] then list[#list + 1] = b end end
-        local ws, wi = ref_best(pals, list)
-        local mine, imp = {}, 0
+        local from_players = {}
+        for _, g in ipairs(players) do local b = g.class == "paladin" and g.gives.blessings[r.name]; if b then from_players[b] = true end end
+        local mine = {}
         for gname, b in pairs(p.blessings[r.name]) do
             local g
             for _, x in ipairs(pals) do if x.name == gname then g = x end end
             check(g ~= nil, where .. ": " .. gname .. " isn't a buddy paladin")
             check(not mine[b], where .. ": " .. r.name .. " gets " .. b .. " twice")
-            check(not given[b], where .. ": " .. r.name .. " gets a player's " .. b .. " again")
+            check(not from_players[b], where .. ": " .. r.name .. " gets a player's " .. b .. " again")
             check(not r.avoid[b], where .. ": " .. r.name .. " said no to " .. b)
+            check(not (b == "wisdom" and mana_regen and r.wish ~= "wisdom"), where .. ": " .. r.name .. " gets Wisdom beside Mana Spring")
             if g then check(g.knows[b], where .. ": " .. gname .. " doesn't know " .. b) end
-            if g and g.improved[b] then imp = imp + 1 end
             mine[b] = true
         end
-        for b in pairs(ws) do check(mine[b], where .. ": " .. r.name .. " should get " .. b) end
-        check(count(mine) == count(ws), where .. ": " .. r.name .. " gets " .. count(mine) .. ", the referee " .. count(ws))
-        check(imp == wi, where .. ": " .. r.name .. "'s improved blessings " .. imp .. ", the referee " .. wi)
-        if wi > 0 then seen_imp_blessing = seen_imp_blessing + 1 end
-        if #pals >= 3 then seen_full = seen_full + 1 end
+        if r.wish and not r.avoid[r.wish] and not from_players[r.wish] then
+            local someone = false
+            for _, g in ipairs(pals) do if g.knows[r.wish] then someone = true end end
+            check(not someone or mine[r.wish], where .. ": " .. r.name .. "'s wish for " .. r.wish .. " wasn't granted")
+        end
+        for b, _ in pairs(mine) do
+            check(b == r.wish or Buffs.BLESSINGS[b][r.role] or false, where .. ": " .. r.name .. " (a " .. r.role .. ") gets " .. b .. " unasked")
+        end
     end
 
-    -- judgements: distinct, none a player's
+    -- judgements: distinct, known, never a player's
     local jt = {}
     for _, g in ipairs(players) do if g.class == "paladin" and g.gives.judgement then jt[g.gives.judgement] = true end end
     local js = {}
     for _, g in ipairs(pals) do
         local j = p.judgements[g.name]
-        if j then check(not js[j] and not jt[j], where .. ": judgement " .. j .. " twice"); js[j] = true end
+        if j then
+            check(not js[j] and not jt[j], where .. ": judgement " .. j .. " twice")
+            check(g.knows["judgement of " .. j], where .. ": " .. g.name .. " judges with " .. j .. ", which it doesn't know")
+            js[j] = true
+        end
     end
-    check(count(js) == math.min(#pals, 3 - count(jt)), where .. ": " .. count(js) .. " judgements")
-
-    -- totems: per element distinct, known, never one a player put down,
-    -- never Stoneskin against casters, Grounding only against them
-    for _, el in ipairs(Buffs.ELEMENTS) do
-        local down, these = {}, {}
-        for _, g in ipairs(players) do if g.class == "shaman" and g.gives[el] then down[g.gives[el]] = true end end
-        for _, s in ipairs(shamans) do
-            local t = p.totems[s.name][el]
-            if t then
-                check(not these[t] and not down[t], where .. ": " .. el .. " totem " .. t .. " twice")
-                check(s.knows[t], where .. ": " .. s.name .. " doesn't know " .. t)
-                check(not (t == "stoneskin" and party.enemy == "casters"), where .. ": stoneskin against casters")
-                check(not (t == "grounding" and party.enemy ~= "casters"), where .. ": grounding against no casters")
-                these[t] = true
-            end
+    local open = {}
+    for _, j in ipairs(Buffs.JUDGEMENTS) do if not jt[j] then open[#open + 1] = j end end
+    local function canj(j) local out = {} for _, g in ipairs(pals) do if g.knows["judgement of " .. j] then out[#out + 1] = g.name end end return out end
+    for _, j in ipairs(open) do
+        if not js[j] then
+            local try = { j }
+            for x in pairs(js) do try[#try + 1] = x end
+            check(not feasible(try, canj), where .. ": judgement " .. j .. " could be on the target too")
         end
     end
 end
-check(seen_imp_blessing > 0 and seen_full > 0, "random parties never had an improved blessing or three paladins")
+check(seen.improved > 0 and seen.missing > 0 and seen.crossed > 0 and seen.scored > RUNS / 2,
+      "random parties never showed an improved giver, a missing line, a resistance from a non-paladin, or too few were scored")
 -- }}}
 
 print(string.format("test-buddy-party-buffs: %d checks, %d failures", checks, #fails))
@@ -440,5 +595,5 @@ for _, f in ipairs(fails) do print("  FAIL: " .. f) end
 print(#fails == 0 and "Result: all checks passed." or ("Result: " .. #fails .. " failure(s) shown."))
 os.exit(#fails == 0 and 0 or 1)
 -- ==== footer of test-buddy-party-buffs ====
--- lines:      444
+-- lines:      599
 -- ==== end of footer ====
