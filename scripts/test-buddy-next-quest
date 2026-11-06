@@ -1,0 +1,28 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-next-quest
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      the buddies' next best quest holds to issue 617e18: the log first, then quests to take, gray passed over, a route through several, chains, time to move on, the arc leaning that way
+# quick-test: yes
+# ==== end of header ====
+# test-buddy-next-quest - compiles and runs tests/buddy-next-quest/next-quest-check.cpp
+# against the buddy module's next best quest (roam/buddy_next_quest_core.h,
+# issue 617e18), with no server.
+#
+# Usage: scripts/test-buddy-next-quest [DIR]   (--help: this text)
+
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+    sed -n '10,14p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+OUT="${DIR}/tmp/tmp"
+mkdir -p "${OUT}"
+g++ -std=c++17 -O1 -Wall -Wextra -Werror -I"${DIR}/patches/B036-mod-buddies/mod-buddies/src/roam" \
+    "${DIR}/tests/buddy-next-quest/next-quest-check.cpp" -o "${OUT}/buddy-next-quest" || exit 1
+nice -n 19 "${OUT}/buddy-next-quest"
+# ==== footer of test-buddy-next-quest ====
+# lines:      28
+# ==== end of footer ====
