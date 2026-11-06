@@ -273,15 +273,20 @@ namespace BuddyRotation
                 soonest = std::min(soonest, readyAt[i]);
         double waiting = soonest < m.ahead ? Search(cs, readyAt, soonest, m) : -1.0;
 
-        a.best = waiting;
+        // the best first cast; waiting only when it is better (a tie casts now)
+        a.best = -1.0;
         for (size_t i = 0; i < cs.size(); ++i)
-            if (start[i] > a.best + 1e-9)
+            if (start[i] >= 0.0 && start[i] > a.best + 1e-9)
             {
                 a.best  = start[i];
                 a.first = int(i);
             }
-        if (a.first < 0 && waiting >= 0.0)
+        if (waiting >= 0.0 && waiting > a.best + 1e-9)
+        {
+            a.best    = waiting;
+            a.first   = -1;
             a.waitFor = soonest - t0;
+        }
         if (a.best < 0.0)
             a.best = 0.0;
         for (size_t i = 0; i < cs.size(); ++i)
