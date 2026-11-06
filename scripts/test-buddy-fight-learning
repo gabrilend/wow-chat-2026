@@ -1,0 +1,28 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-fight-learning
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      what each fight taught holds to issue 625e: the raw log distilled to phases, moving shares, what began before movement rose and deaths, written and read back, fingerprinted
+# quick-test: yes
+# ==== end of header ====
+# test-buddy-fight-learning - compiles and runs tests/buddy-fight-learning/learning-check.cpp
+# against the buddy module's fight distilling (buddies_fight_learning.h,
+# issue 625e), with no server.
+#
+# Usage: scripts/test-buddy-fight-learning [DIR]   (--help: this text)
+
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+    sed -n '10,14p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+OUT="${DIR}/tmp/tmp"
+mkdir -p "${OUT}"
+g++ -std=c++17 -O1 -Wall -Wextra -Werror -I"${DIR}/patches/B036-mod-buddies/mod-buddies/src" \
+    "${DIR}/tests/buddy-fight-learning/learning-check.cpp" -o "${OUT}/buddy-fight-learning" || exit 1
+nice -n 19 "${OUT}/buddy-fight-learning"
+# ==== footer of test-buddy-fight-learning ====
+# lines:      28
+# ==== end of footer ====
