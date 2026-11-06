@@ -1,0 +1,365 @@
+#!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-buddy-item-plan
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      check the plan a buddy makes for each item it picks up
+-- quick-test: yes
+-- ==== end of header ====
+-- test-buddy-item-plan - check the plan a buddy makes for each item it
+-- picks up, and when those plans change (issue 617h2).
+--
+-- For a general audience: a buddy decides what every item is for the moment
+-- it picks it up (wear it, open it, learn it, use it, keep it for a recipe,
+-- feed its pet, give it to a clan-mate, disenchant it, auction it, sell
+-- it), and changes a plan only when a newer item makes a difference (the
+-- owner's example: a pearl kept once a recipe that needs it is learned).
+-- This test plays the owner's examples one by one, then thousands of random
+-- buddies picking up random items, and checks every plan against a referee
+-- written from the decisions in 617h2, not from the code being tested.
+--
+-- Checks: each kind of item gets its plan; the hearthstone, tools and
+-- fishing poles are never sold; bound items never go to the auction house
+-- or a clan-mate; a learned recipe turns its reagents from "sell" to
+-- "craft" and changes nothing else; a pickup that learns nothing changes no
+-- held plan; the plans held after any run of pickups are the plans a fresh
+-- login works out from the same bags, in any order; a want turns "ready"
+-- once the money and planned sales cover it, and is bought at the auction
+-- house; a place settles exactly the plans made for it.
+--
+-- Usage: scripts/test-buddy-item-plan [PROJECT_DIR] [RUNS]
+--   RUNS  random buddies (default 400)
+-- Exit status 0 if all pass.
+
+local DIR  = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+local RUNS = tonumber(arg[2]) or 400
+
+local Plan = dofile(DIR .. "/src/lua-basic/lib/buddy-item-plan.lua")
+
+local fails, checks = {}, 0
+local function check(ok, what)
+    checks = checks + 1
+    if not ok and #fails < 25 then fails[#fails + 1] = what end
+end
+
+-- {{{ items for the owner's examples
+local GREEN, BLUE, EPIC, GREY, WHITE = 2, 3, 4, 0, 1
+local function item(t) t.count = t.count or 1; t.quality = t.quality or WHITE; t.sell_price = t.sell_price or 0; return t end
+local PEARL     = function() return item({ id = 5498,  class = 7, subclass = 7, quality = WHITE, sell_price = 100 }) end   -- Small Lustrous Pearl
+local RECIPE    = function() return item({ id = 20854, class = 9, subclass = 10, use = true, sell_price = 50,
+                                           recipe = { skill = 755, rank = 50, teaches = 25339, reagents = { [5498] = 1, [2840] = 1 } } }) end
+local HEARTH    = function() return item({ id = 6948,  class = 15, use = true, bound = true, bonding = 1 }) end
+local PICK      = function() return item({ id = 2901,  class = 7, tool = true, sell_price = 16 }) end
+local POLE      = function() return item({ id = 6256,  class = 2, subclass = 20, sell_price = 4 }) end
+local CLAM      = function() return item({ id = 5523,  class = 0, openable = true, use = true, sell_price = 1 }) end
+local POTION    = function() return item({ id = 118,   class = 0, use = true, sell_price = 5 }) end
+local MEAT      = function() return item({ id = 2672,  class = 0, use = true, food_type = 1, sell_price = 1 }) end
+local BOUND_GRN = function() return item({ id = 9000,  class = 4, quality = GREEN, bonding = 1, bound = true, sell_price = 300, de_skill = 25 }) end
+local BOE_BLUE  = function() return item({ id = 9001,  class = 2, quality = BLUE,  bonding = 2, sell_price = 900 }) end
+local BOE_EPIC  = function() return item({ id = 9002,  class = 2, quality = EPIC,  bonding = 2, sell_price = 5000 }) end
+local GREY_JUNK = function() return item({ id = 9003,  class = 15, quality = GREY, sell_price = 7, count = 3 }) end
+local ROCK      = function() return item({ id = 9004,  class = 15, quality = WHITE, sell_price = 0 }) end
+local TRINKET   = function() return item({ id = 9005,  class = 4, quality = GREEN, bonding = 1, bound = true, use = true, sell_price = 200 }) end
+-- }}}
+
+-- {{{ each kind gets its plan
+do
+    local plain = { professions = {}, recipes = {} }
+    local cases = {
+        { "hearthstone",          HEARTH(),    plain, "keep" },
+        { "a mining pick",        PICK(),      plain, "keep" },
+        { "a fishing pole",       POLE(),      plain, "keep" },
+        { "a clam",               CLAM(),      plain, "open" },
+        { "a healing potion",     POTION(),    plain, "use" },
+        { "a trinket with a use", TRINKET(),   plain, "use" },
+        { "meat, no pet",         MEAT(),      plain, "use" },
+        { "meat, a meat-eating pet", MEAT(),   { pet_diet = { [1] = true } }, "feed" },
+        { "meat, a fish-eating pet", MEAT(),   { pet_diet = { [2] = true } }, "use" },
+        { "a bound green",        BOUND_GRN(), plain, "vendor" },
+        { "a bound green, enchanter 25", BOUND_GRN(), { professions = { [333] = 25 } }, "disenchant" },
+        { "a bound green, enchanter 10", BOUND_GRN(), { professions = { [333] = 10 } }, "vendor" },
+        { "a bind-on-equip blue", BOE_BLUE(),  plain, "auction" },
+        { "a bind-on-equip blue, enchanter", BOE_BLUE(), { professions = { [333] = 300 } }, "auction" },
+        { "an epic (treated as any item)", BOE_EPIC(), plain, "auction" },
+        { "grey junk",            GREY_JUNK(), plain, "vendor" },
+        { "a rock",               ROCK(),      plain, "junk" },
+        { "a pearl (trade goods)", PEARL(),    plain, "auction" },
+        { "a pearl, recipe known", PEARL(),    { recipes = { [1] = { [5498] = 1 } } }, "craft" },
+        { "a recipe, no profession", RECIPE(), plain, "auction" },
+        { "a recipe, profession too low", RECIPE(), { professions = { [755] = 40 } }, "auction" },
+        { "a recipe it can learn", RECIPE(),   { professions = { [755] = 50 } }, "learn" },
+        { "a recipe already known", RECIPE(),  { professions = { [755] = 50 }, recipes = { [25339] = {} } }, "auction" },
+        { "a pearl a clan-mate wants", PEARL(), { clan = { { name = "Brom", needs = { [5498] = true } } } }, "give" },
+        { "a bound green a clan-mate wants", BOUND_GRN(), { clan = { { name = "Brom", needs = { [9000] = true } } } }, "vendor" },
+        { "an upgrade",           (function() local i = BOE_BLUE(); i.wear = "now";  return i end)(), plain, "wear" },
+        { "a kept weapon",        (function() local i = BOE_BLUE(); i.wear = "kept"; return i end)(), plain, "keep" },
+    }
+    for _, c in ipairs(cases) do
+        local plan, why, to = Plan.decide(c[2], c[3])
+        check(plan == c[4], c[1] .. ": planned " .. tostring(plan) .. ", wanted " .. c[4])
+        check(type(why) == "string" and #why > 0, c[1] .. ": no reason given")
+        if plan == "give" then check(to == "Brom", c[1] .. ": given to " .. tostring(to)) end
+    end
+    local bop = BOE_BLUE(); bop.bonding = 1                             -- bind-on-pickup, "bound" not passed
+    check(Plan.decide(bop, plain) == "vendor", "a bind-on-pickup blue not marked bound goes to the auction house")
+    check(Plan.decide(bop, { clan = { { name = "Brom", needs = { [9001] = true } } } }) == "vendor", "a bind-on-pickup blue is given away")
+    local bp = RECIPE(); bp.bonding, bp.bound = 1, true
+    check(Plan.decide(bp, plain) == "vendor", "a bound recipe it can't learn isn't vendored")
+end
+-- }}}
+
+-- {{{ the owner's pearl: a recipe learned turns its reagents to "craft", nothing else
+do
+    local s = Plan.new({ professions = { [755] = 60 } })
+    local _, c1 = Plan.pickup(s, PEARL())
+    local _, c2 = Plan.pickup(s, BOE_BLUE())
+    local _, c3 = Plan.pickup(s, PEARL())
+    check(#c1 == 0 and #c2 == 0 and #c3 == 0, "a pickup that learns nothing changed a held plan")
+    check(s.bag[1].plan == "auction" and s.bag[3].plan == "auction", "pearls before the recipe aren't for the auction house")
+    local e, changes, _, now = Plan.pickup(s, RECIPE())
+    check(e.plan == "learn" and now, "the recipe isn't learned at once")
+    check(#s.bag == 3, "the learned recipe stayed in the bags")
+    check(s.buddy.recipes[25339] ~= nil, "the recipe isn't known after learning it")
+    check(#changes == 2, "learning changed " .. #changes .. " plans, wanted the 2 pearls")
+    for _, ch in ipairs(changes) do
+        check(ch.entry.item.id == 5498 and ch.from == "auction" and ch.to == "craft", "learning changed a plan it shouldn't")
+    end
+    check(s.bag[2].plan == "auction", "the blue's plan changed")
+    local e4 = Plan.pickup(s, PEARL())
+    check(e4.plan == "craft", "a pearl after the recipe isn't for crafting")
+end
+-- }}}
+
+-- {{{ the owner's axe: a want turns ready, and is bought at the auction house
+do
+    local s = Plan.new({ money = 5000, wants = { { name = "two-handed axe", price = 9000 } } })
+    local _, _, w1 = Plan.pickup(s, GREY_JUNK())                     -- 21 copper: not yet
+    check(#w1 == 0 and s.wants[1].state == "saving", "the axe is ready too soon")
+    local blue = BOE_BLUE(); blue.auction = 4000
+    local _, _, w2 = Plan.pickup(s, blue)                            -- 5000 + 21 + 4000 >= 9000
+    check(#w2 == 1 and w2[1].from == "saving" and w2[1].to == "ready", "the axe didn't turn ready")
+    local _, _, w3 = Plan.pickup(s, POTION())
+    check(#w3 == 0, "a ready want changed again")
+
+    local sold = Plan.settle(s, "vendor")
+    check(#sold == 1 and sold[1].act == "vendor" and sold[1].entry.item.id == 9003, "the vendor settled the wrong items")
+    check(s.buddy.money == 5021, "the vendor's money is " .. s.buddy.money)
+    check(#s.bag == 2, "the vendor took more than the junk")
+    check(#Plan.settle(s, "mailbox") == 0, "the mailbox settled something")
+    local ah = Plan.settle(s, "auction")
+    local acts = {}
+    for _, d in ipairs(ah) do acts[d.act] = (acts[d.act] or 0) + 1 end
+    check(acts.auction == 1 and acts.buy == 1, "the auction house didn't sell the blue and buy the axe")
+    check(s.buddy.money == 21, "after the axe the money is " .. s.buddy.money)
+    check(#s.wants == 0, "the bought axe is still wanted")
+    check(#s.bag == 1 and s.bag[1].plan == "use", "the potion left the bags")
+
+    -- the auction house before the vendor: a want counted on the vendor's
+    -- money is ready but not yet bought
+    local a = Plan.new({ money = 0, wants = { { name = "axe", price = 500 } } })
+    Plan.pickup(a, item({ id = 1, class = 15, sell_price = 400 }))
+    Plan.pickup(a, item({ id = 2, class = 15, quality = GREEN, sell_price = 50 }))
+    check(a.wants[1].state == "ready", "the axe isn't ready on 400 + 150")
+    local early = Plan.settle(a, "auction")
+    check(#early == 1 and early[1].act == "auction", "the axe was bought before the vendor's money came in")
+    check(a.buddy.money == 150 and #a.wants == 1, "the unbought axe's money is " .. a.buddy.money)
+    Plan.settle(a, "vendor")
+    local late = Plan.settle(a, "auction")
+    check(#late == 1 and late[1].act == "buy" and a.buddy.money == 50, "the axe isn't bought once the vendor paid")
+
+    local t = Plan.new({ money = 0, wants = { { name = "a", price = 100 }, { name = "b", price = 50 } } })
+    local _, _, w = Plan.pickup(t, item({ id = 1, class = 15, sell_price = 60 }))
+    check(#w == 1 and w[1].want.name == "b", "the cheaper want isn't ready first")
+    check(t.wants[1].state == "saving", "both wants ready on 60 copper")
+    local u = Plan.new({ money = 0, wants = { { name = "z", price = 100 }, { name = "y", price = 100 } } })
+    local _, _, wu = Plan.pickup(u, item({ id = 1, class = 15, sell_price = 100 }))
+    check(#wu == 1 and wu[1].want.name == "y", "two wants of one price aren't taken by name")
+    local v = Plan.new({ money = 0, wants = { { name = "z", price = 100 } } })
+    Plan.pickup(v, item({ id = 1, class = 15, sell_price = 99 }))
+    check(v.wants[1].state == "saving", "a want one copper short is ready")
+    local x = Plan.new({ money = 0, wants = { { name = "z", price = 100 } } })
+    Plan.pickup(x, item({ id = 1, class = 15, sell_price = 100 }))
+    check(x.wants[1].state == "ready", "a want paid exactly isn't ready")
+    local y = Plan.new({ money = 0, wants = { { name = "z", price = 300 } } })
+    Plan.pickup(y, item({ id = 1, class = 15, quality = GREEN, sell_price = 100 }))
+    check(y.wants[1].state == "ready", "a green's auction guess isn't three times its vendor price")
+    local z = Plan.new({ money = 0, wants = { { name = "z", price = 400 } } })
+    Plan.pickup(z, item({ id = 1, class = 15, quality = GREEN, sell_price = 100, count = 2 }))
+    check(z.wants[1].state == "ready", "a stack's value isn't counted whole")
+end
+-- }}}
+
+-- {{{ a login does at once what has become possible
+do
+    local l, done = Plan.login({ professions = { [755] = 50 } }, { PEARL(), RECIPE(), POTION() })
+    check(#done == 1 and done[1].plan == "learn", "a login didn't learn the recipe the buddy can now learn")
+    check(#l.bag == 2 and l.bag[1].plan == "craft", "after the login's learning the pearl isn't for crafting")
+    local m, none = Plan.login({}, { PEARL(), RECIPE(), POTION() })
+    check(#none == 0 and #m.bag == 3, "a login with nothing to do at once did something")
+end
+-- }}}
+
+-- {{{ the referee, written from 617h2's decisions
+-- Each item kind's plan, from the table in the issue's 2026-11-06 decision.
+local function referee(i, b)
+    local prof, known, ench = b.professions or {}, b.recipes or {}, (b.professions or {})[333]
+    local free = not i.bound and i.bonding ~= 1
+    if i.id == 6948 or i.tool or (i.class == 2 and i.subclass == 20) then return "keep" end
+    if i.wear == "now" then return "wear" end
+    if i.wear == "kept" then return "keep" end
+    if i.openable then return "open" end
+    if i.class == 9 and i.recipe and prof[i.recipe.skill] and prof[i.recipe.skill] >= i.recipe.rank
+        and not known[i.recipe.teaches] then return "learn" end
+    if i.class == 0 and i.food_type and b.pet_diet and b.pet_diet[i.food_type] then return "feed" end
+    if i.class ~= 9 and (i.class == 0 or i.use) then return "use" end
+    for _, r in pairs(known) do if r[i.id] then return "craft" end end
+    if free then for _, m in ipairs(b.clan or {}) do if m.needs[i.id] then return "give" end end end
+    if not free and i.de_skill and ench and ench >= i.de_skill then return "disenchant" end
+    if free and (i.quality >= 2 or i.class == 7 or i.class == 9) then return "auction" end
+    if i.sell_price > 0 then return "vendor" end
+    return "junk"
+end
+-- }}}
+
+-- {{{ random buddies, random pickups
+local AT_ONCE = { wear = true, open = true, learn = true, disenchant = true }
+local function random_item(R, pool)
+    if R(12) == 1 then local p = { HEARTH, PICK, POLE, CLAM, POTION, MEAT, RECIPE, PEARL }; return p[R(#p)]() end
+    local i = item({
+        id         = pool[R(#pool)],
+        class      = ({ 0, 2, 4, 7, 9, 15, 15 })[R(7)],
+        subclass   = R(21) - 1,
+        quality    = R(5) - 1,
+        sell_price = R(4) == 1 and 0 or R(2000),
+        count      = R(3),
+    })
+    i.bonding  = R(4) - 1
+    i.bound    = i.bonding == 1 or R(6) == 1
+    i.use      = R(4) == 1
+    i.openable = R(25) == 1
+    i.tool     = R(40) == 1
+    i.food_type = R(3) == 1 and R(3) or nil
+    i.de_skill = R(2) == 1 and R(300) or nil
+    i.wear     = ({ "now", "kept", nil, nil, nil, nil, nil, nil })[R(8)]
+    if R(3) == 1 then i.auction = R(5000) end
+    if i.class == 9 then
+        i.recipe = { skill = ({ 755, 171, 164 })[R(3)], rank = R(300), teaches = 30000 + R(20),
+                     reagents = { [pool[R(#pool)]] = 1, [pool[R(#pool)]] = 2 } }
+    end
+    return i
+end
+
+local seen, relearned, bought_total = {}, 0, 0         -- coverage: every plan comes up, learning changes plans, wants get bought
+for run = 1, RUNS do
+    math.randomseed(run * 977 + 13)
+    local R = math.random
+    local pool = {}
+    for k = 1, 15 do pool[k] = 100 + k end
+    local buddy = {
+        professions = {}, recipes = {}, clan = {}, money = R(3) == 1 and R(20000) or 0, wants = {},
+        pet_diet = R(3) == 1 and { [R(3)] = true } or nil,
+    }
+    for _, skill in ipairs({ 755, 171, 164, 333 }) do if R(2) == 1 then buddy.professions[skill] = R(300) end end
+    if R(3) == 1 then buddy.recipes[29000] = { [pool[R(#pool)]] = 1 } end
+    for k = 1, R(3) - 1 do buddy.clan[k] = { name = "mate" .. k, needs = { [pool[R(#pool)]] = true } } end
+    for k = 1, R(3) - 1 do buddy.wants[k] = { name = "want" .. k, price = R(30000) } end
+    local where = "run " .. run
+
+    local s = Plan.new(buddy)
+    local picked = {}
+    for n = 1, 10 + R(30) do
+        local it = random_item(R, pool)
+        local before = {}
+        for k, e in ipairs(s.bag) do before[k] = e.plan end
+        local want = referee(it, s.buddy)
+        local e, changes, _, now = Plan.pickup(s, it)
+        local w = where .. " pickup " .. n
+        check(e.plan == want, w .. ": planned " .. tostring(e.plan) .. ", the referee says " .. want)
+        check(now == (AT_ONCE[e.plan] == true), w .. ": " .. e.plan .. " settled at once? " .. tostring(now))
+        seen[e.plan] = true
+        if e.plan == "learn" then relearned = relearned + #changes end
+        local differ = 0
+        for k, p in ipairs(before) do if s.bag[k].plan ~= p then differ = differ + 1 end end
+        check(#changes == differ, w .. ": " .. #changes .. " changes listed, " .. differ .. " plans changed")
+        if e.plan ~= "learn" then
+            check(differ == 0, w .. ": a " .. e.plan .. " pickup changed " .. differ .. " held plans")
+        end
+        for _, ch in ipairs(changes) do
+            check(ch.to == "craft" and ch.from ~= "craft" and ch.entry.plan == "craft", w .. ": learning changed a plan to " .. tostring(ch.to))
+        end
+        if not now then picked[#picked + 1] = it end
+        if it.id == 6948 or it.tool or (it.class == 2 and it.subclass == 20) then
+            check(e.plan == "keep", w .. ": the hearthstone, a tool or a pole isn't kept")
+        end
+        if it.bound or it.bonding == 1 then
+            check(e.plan ~= "auction" and e.plan ~= "give", w .. ": a bound item planned " .. e.plan)
+        end
+    end
+
+    -- every held plan is what the buddy, as it is now, would decide afresh
+    for k, e in ipairs(s.bag) do
+        check(e.plan == referee(e.item, s.buddy), where .. ": held plan " .. k .. " is stale")
+        check(Plan.PLANS[e.plan].stays, where .. ": a plan settled at once is held")
+    end
+    check(#s.bag == #picked, where .. ": the bag holds " .. #s.bag .. " of " .. #picked)
+
+    -- a login from the same bags, shuffled, works out the same plans
+    local shuffled = {}
+    for k, it in ipairs(picked) do shuffled[k] = it end
+    for k = #shuffled, 2, -1 do local j = R(k); shuffled[k], shuffled[j] = shuffled[j], shuffled[k] end
+    local l, done = Plan.login(s.buddy, shuffled)
+    check(#done == 0, where .. ": a login settled something at once")
+    local by_item = {}
+    for _, e in ipairs(l.bag) do by_item[e.item] = e.plan end
+    for _, e in ipairs(s.bag) do
+        check(by_item[e.item] == e.plan, where .. ": login planned " .. tostring(by_item[e.item]) .. ", pickups " .. e.plan)
+    end
+
+    -- a want is ready exactly when money and planned sales cover it, cheapest first
+    local left = s.buddy.money
+    for _, e in ipairs(s.bag) do left = left + Plan.value(e.item, e.plan) end
+    local ws = {}
+    for _, wnt in ipairs(s.wants) do ws[#ws + 1] = wnt end
+    table.sort(ws, function(a, b) if a.price ~= b.price then return a.price < b.price end return a.name < b.name end)
+    for _, wnt in ipairs(ws) do
+        local ready = left >= wnt.price
+        if ready then left = left - wnt.price end
+        check(wnt.state == (ready and "ready" or "saving"), where .. ": " .. wnt.name .. " is " .. wnt.state)
+    end
+
+    -- each place settles exactly the plans made for it, and the money adds up
+    for _, place in ipairs({ "vendor", "mailbox", "auction" }) do
+        local due, money, held = 0, s.buddy.money, #s.bag
+        for _, e in ipairs(s.bag) do
+            if Plan.PLANS[e.plan].at == place then due = due + 1; money = money + Plan.value(e.item, e.plan) end
+        end
+        local deeds = Plan.settle(s, place)
+        local boughts = 0
+        local settled, bought = 0, 0
+        for _, d in ipairs(deeds) do
+            if d.act == "buy" then bought = bought + d.want.price; boughts = boughts + 1
+            else settled = settled + 1; check(d.act == place or (place == "mailbox" and d.act == "give"), where .. ": " .. place .. " settled a " .. d.act) end
+        end
+        bought_total = (bought_total or 0) + boughts
+        check(settled == due, where .. ": " .. place .. " settled " .. settled .. " of " .. due)
+        check(#s.bag == held - due, where .. ": " .. place .. " left the bag at " .. #s.bag)
+        check(s.buddy.money == money - bought, where .. ": " .. place .. "'s money is " .. s.buddy.money .. ", wanted " .. (money - bought))
+        check(s.buddy.money >= 0, where .. ": money below zero")
+        for _, e in ipairs(s.bag) do check(Plan.PLANS[e.plan].at ~= place, where .. ": " .. place .. " left a " .. e.plan) end
+    end
+    for _, wnt in ipairs(s.wants) do check(wnt.state ~= "ready" or s.buddy.money < wnt.price, where .. ": a ready, affordable want wasn't bought") end
+end
+for plan in pairs(Plan.PLANS) do check(seen[plan], "random runs never planned " .. plan) end
+check(relearned > 0, "random runs never changed a plan by learning")
+check((bought_total or 0) > 0, "random runs never bought a want")
+-- }}}
+
+print(string.format("test-buddy-item-plan: %d checks, %d failures", checks, #fails))
+for _, f in ipairs(fails) do print("  FAIL: " .. f) end
+print(#fails == 0 and "Result: all checks passed." or ("Result: " .. #fails .. " failure(s) shown."))
+os.exit(#fails == 0 and 0 or 1)
+-- ==== footer of test-buddy-item-plan ====
+-- lines:      365
+-- ==== end of footer ====

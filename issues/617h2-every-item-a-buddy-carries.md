@@ -8,7 +8,8 @@
   buddies), 617n (buddy spells), B046 (the bot module's loot judgement
   for buddies)
 - Priority: Medium
-- State: planned; open questions first
+- State: the plan model built 2026-11-06 (`src/lua-basic/lib/buddy-item-plan.lua`,
+  tested offline); the catalogue and hooking it to the game are not
 
 ## Origin
 
@@ -124,3 +125,54 @@ same questions from other sub-issues; answers are written back here.
    skill, else auction it?
 4. Should buddies spend money on more than they do now (potions from
    vendors, better gear from the auction house, bags)?
+
+## Decisions, 2026-11-06 (an agent, answering what was still open)
+
+Built: the per-item plan from the 2026-10-28 design and the owner's
+2026-10-30 words, as a pure Lua module
+(`src/lua-basic/lib/buddy-item-plan.lua`, page `buddy-item-plan.info.md`),
+tested by `scripts/test-buddy-item-plan` (quick test: the owner's pearl
+and axe examples, each kind of item, and 400 random buddies against a
+referee; a mutation pass of 44 changes to the module, all caught). Not
+built: step 1 (the catalogue needs the world database), step 2's survey
+of the bot module's use rules (its source isn't in this repository), and
+hooking pickups and town stops to the module (needs the server). These
+were open, and are decided here so the model could be built; each can be
+changed in one line of the rule table:
+
+1. **The order of the rules** (first that fits wins): what it can't spare
+   (hearthstone, a profession tool, a fishing pole, a weapon kept as a
+   runner-up), wear, open, learn, feed its pet, use, craft, give to a
+   clan-mate, disenchant, auction, vendor, junk. Its own uses come before
+   a clan-mate's, and a clan-mate's before money.
+2. **Whether to wear it is not judged here.** The bot module's item usage
+   and 617e4b's kept weapons already decide that; the caller passes
+   `wear = "now"` or `"kept"`.
+3. **Wear, open, learn and disenchant are done at once**, at pickup; what
+   comes out (the old gear, the clam's pearl, the dust) is picked up as new
+   items with plans of their own.
+4. **A plan changes only when a recipe is learned** (its reagents become
+   "craft", the owner's pearl), as nothing else a pickup does changes a
+   fact a held plan reads. A login works every plan out again from the
+   bags; the test checks that this always gives the plans the pickups
+   gave.
+5. **The owner's axe is a "want"**: a price it saves for, "ready" once its
+   money plus what its planned sales should bring cover it, cheapest want
+   first, and bought at the next auction house the money (after the sales
+   made so far) covers. What a want is (which gear, from where) is the
+   caller's.
+6. **The auction estimate**, when the caller has none, is three times the
+   vendor price, until 617h's auction pricing gives one.
+7. **Disenchant only what can't be auctioned** (bound items), so the
+   owner's "greens and blues go to the auction house" still holds for
+   unbound ones; the enchanting skill must reach the item's.
+8. **Food its pet eats is fed to the pet**, as the buddy buys its own food
+   (617h's meals); food the pet doesn't eat is kept to use.
+9. **Recipes it can't learn go to the auction house** when they can be
+   traded (the "another list" of 617's question 25), to a vendor
+   otherwise; a clan-mate who wants one gets it first.
+10. **Trade goods for a profession are kept only as reagents of a recipe it
+    knows**; other trade goods go to the auction house (owner, 2026-09-24:
+    "For trade goods they will list it").
+11. **Items nobody pays for are "junk"**, the first thing full bags (623)
+    let go; nothing here destroys them.
