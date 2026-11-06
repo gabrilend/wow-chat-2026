@@ -7,7 +7,8 @@
 - Related: 625d (choosing by the moment's economy: its mana measure,
   which this refines), 625f (the action economy), 625i (the healer's seat)
 - Priority: Medium
-- State: in progress (the fight-length guess built; the smooth curves and thrift next)
+- State: in progress (the fight-length guess, the smooth lines and the thrift built offline;
+  the server reading them next)
 
 ## Origin
 
@@ -33,9 +34,50 @@ And earlier: "the less mana we have, the more important mana economy is"
 
 ## Current Behavior
 
-The smooth curves are not built: the bot module's health bands (critical
-below 25%, low 45%, medium 65%, almost full 85%) are hard lines, and its
-one mana rule a switch at 60%.
+In the bot module, its health bands (critical below 25%, low 45%, medium
+65%, almost full 85%) are hard lines, and its one mana rule a switch at
+60%; nothing in the server reads the smooth lines below yet.
+
+**The smooth lines and the thrift, built 2026-11-06 (offline, on a branch
+for review):** `buddies_thrift.h`, steps 1 and 3.
+- **The lines, smoothed** (`Hurt`, `Saving`): each band fades in over 10
+  points either side of its line (two lines 20 apart meet without
+  overlapping), by the smooth step 3t² - 2t³, so there is no jump and no
+  kink; far from a line it is the bot module's own band (at 35%, three of
+  four), and 44% and 46% differ by 0.04 where the bands set them a quarter
+  apart. The save-mana switch slides the same way from 50% to 70%.
+- **Regeneration as time** (`PerSecond`, `RefillSeconds`, `Thrift`): mana
+  a second at the moment (mana per 5 always; spirit five seconds after the
+  last cast, before that only the share a talent like Meditation keeps;
+  a drink only between fights), and the seconds the missing part takes to
+  come back; energy by its own 10 a second, focus 5, rage and runic power
+  0 (they come from fighting: nothing to save). A cost counts by that
+  time: not under 30 seconds, wholly past 120, smooth between.
+- **The lean among answers** (`Weigh`, `Lean`): the speed weight is how
+  hurt the ally is, the cost weight what is left of that times the
+  thrift; each answer's lean is how near it comes to the fastest, to the
+  speed weight's power, times how near to the cheapest, to the cost
+  weight's power. A dying ally: the fast heal; a scratched one with mana
+  slow to come back: the cheap one; a scratched one with mana back in
+  seconds: nothing much preferred ("told to be extravagant").
+- **The surplus** (`Surplus`, `DamageLean`): what a buddy holds, less
+  what it loses by the fight's end (its need a second less what comes
+  back, over the fight-length guess counted a third longer); no end seen,
+  nothing spare; coming back faster than needed, all of it spare. Damage
+  spells lean from 0.05 (nothing spare, as the healer's seat leans) to 1
+  (spare mana for three of them), smoothly. A Bloodlust ahead shortens the
+  guess as a stretch and so leaves more to spare.
+- **Between fights** (`Between`): a buddy below 60% mana drinks and says
+  "mana", drinks on until full and says "ready" (617z's words; the tank's
+  pace, `roam/buddy_pace_core.h`, hears them as stop and go on). Rage and
+  runic power never drink.
+Checked by `scripts/test-buddy-thrift` (53 checks, a quick test), the
+owner's three cases of 2026-10-30 among them (trash: damage spells freely;
+a long fight: kept; a fight ending sooner than the mana demands: damage
+again); 22 of 22 deliberately broken versions of the header caught. Not
+yet: the server reading the character's regeneration and the party's
+need for heals each half second, and the forward pass's leans taking the
+thrift's (the draw multiplying them).
 
 **The fight's length, built 2026-10-30 (committed, offline):**
 `buddies_fight_length.h`. The rate is the slope of the straight line that
@@ -100,3 +142,29 @@ server, and the thrift that weighs mana against the time left.
 1. How sure should the fight-length estimate be before a healer spends
    on damage: spend as soon as the estimate says there is surplus, or only
    with a margin (say the estimate could be a third too short)?
+   **Decided 2026-11-06 (the agent's call, for the owner to curate):**
+   with the margin: the need is counted over the guess and a third more
+   (`MARGIN`, one number). The guess is a straight line through the last
+   seconds, and a boss's later phases or an add can make it short; a
+   healer that spends on damage and then runs dry costs more than one that
+   keeps a little back. Spending is not all or nothing either: damage
+   spells lean in smoothly as the surplus grows past one cast toward three.
+
+## Decisions (2026-11-06)
+
+The agent's calls while building steps 1 and 3, for the owner to curate;
+each number is one constant in `buddies_thrift.h`:
+- **How soft a line is**: 10 points either side (the bands are 20 apart,
+  so each slide ends where the next begins).
+- **The thrift's two times**: the issue's own 30 seconds and two minutes.
+- **Speed against cost**: the speed weight is the hurt; the cost weight is
+  (1 - hurt) times the thrift, so a fast-refilling buddy weighs cost
+  little even on a scratched ally (625d: "more mp5 ... means mana economy
+  is devalued and action economy is told to be extravagant").
+- **Rage and runic power**: nothing to save (they come from fighting), so
+  their thrift is 0 and they never drink; energy and focus refill by
+  their game rates.
+- **Drinking between fights**: below 60% (the bot module's save-mana line,
+  reused), until full, with "mana" and "ready" said as 617z hears them.
+- **Damage spells' lean**: 0.05 with nothing spare (as the healer's seat
+  leans a dry healer's heals), 1 with three casts' worth spare.

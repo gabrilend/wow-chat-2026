@@ -1,0 +1,28 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-thrift
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      the resource economy holds to issue 625h: the bot module's lines smoothed, mana as time to refill, spare mana lets a healer's damage in
+# quick-test: yes
+# ==== end of header ====
+# test-buddy-thrift - compiles and runs tests/buddy-thrift/thrift-check.cpp
+# against the buddy module's resource economy (buddies_thrift.h, issue
+# 625h), with no server.
+#
+# Usage: scripts/test-buddy-thrift [DIR]   (--help: this text)
+
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+    sed -n '10,14p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+OUT="${DIR}/tmp/tmp"
+mkdir -p "${OUT}"
+g++ -std=c++17 -O1 -Wall -Wextra -Werror -I"${DIR}/patches/B036-mod-buddies/mod-buddies/src" \
+    "${DIR}/tests/buddy-thrift/thrift-check.cpp" -o "${OUT}/buddy-thrift" || exit 1
+nice -n 19 "${OUT}/buddy-thrift"
+# ==== footer of test-buddy-thrift ====
+# lines:      28
+# ==== end of footer ====
