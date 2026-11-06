@@ -29,11 +29,14 @@
 
 #include "buddies_ability_data.h"
 #include "buddies_fight_state.h"
+#include "roam/buddy_pace_core.h"
 
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <map>
+#include <string>
 
 namespace BuddySeat
 {
@@ -130,6 +133,30 @@ namespace BuddySeat
 
     inline bool Has(std::vector<int> const& v, int i) { return std::find(v.begin(), v.end(), i) != v.end(); }
 
+    // {{{ Heard
+    // The words heard in the party's chat since the last step, by who said
+    // them (617z's words, read by the tank's pace: "oom", "out of mana",
+    // "mana"; "ready"). A player is read the same way as a buddy and never
+    // spoken for (the 2026-10-30 design: "hear the player's own words in the
+    // party's chat"): its "oom" counts it out of mana at once, whatever its
+    // mana bar says, and its "ready" counts it ready again at once. Now uses
+    // them and forgets them (each is heard once).
+    struct Heard
+    {
+        std::map<uint64_t, BuddyPace::Word> said;
+        void Hear(uint64_t who, std::string const& line)
+        {
+            BuddyPace::Word w = BuddyPace::ReadWord(line);
+            if (w == BuddyPace::Word::Oom || w == BuddyPace::Word::Ready) said[who] = w;
+        }
+        bool Said(uint64_t who, BuddyPace::Word w) const
+        {
+            auto it = said.find(who);
+            return it != said.end() && it->second == w;
+        }
+    };
+    // }}}
+
     // The seats now, from the last (`was`, want -1 at a fight's start). A
     // holder keeps its seat until it runs out of mana or dies (the owner:
     // "we should only update this role when the current healer runs out of
@@ -138,8 +165,11 @@ namespace BuddySeat
     // shares are back to what the fight began with.
     // Members are indexed as in the snapshot (the party's order is the
     // server's, the same from step to step within a fight).
-    inline Seats Now(Snapshot const& s, Memory const& memory, Seats was, double left)
+    // `heard`: the words since the last step (Heard above), used and then
+    // forgotten; none: the readings alone.
+    inline Seats Now(Snapshot const& s, Memory const& memory, Seats was, double left, Heard* heard = nullptr)
     {
+        auto said = [&](int i, BuddyPace::Word w) { return heard && heard->Said(s.party[i].id, w); };
         Seats seats;
         seats.want = was.want;
         if (seats.want < 0)
@@ -154,10 +184,11 @@ namespace BuddySeat
                 if (i >= 0 && size_t(i) < s.party.size() && s.party[i].health > 0) seats.holders.push_back(i);
         // the dry stay dry until ready; a holder newly out of mana joins them
         for (int i : was.dry)
-            if (i >= 0 && size_t(i) < s.party.size() && s.party[i].health > 0 &&
-                s.party[i].resource < ReadyAt(s.party[i], memory.HealingPerSecond(s.party[i].id, s.t), left)) seats.dry.push_back(i);
+            if (i >= 0 && size_t(i) < s.party.size() && s.party[i].health > 0 && !said(i, BuddyPace::Word::Ready) &&
+                (said(i, BuddyPace::Word::Oom) ||
+                 s.party[i].resource < ReadyAt(s.party[i], memory.HealingPerSecond(s.party[i].id, s.t), left))) seats.dry.push_back(i);
         for (auto it = seats.holders.begin(); it != seats.holders.end(); )
-            if (Oom(s.party[*it])) { seats.dry.push_back(*it); it = seats.holders.erase(it); }
+            if (Oom(s.party[*it]) || said(*it, BuddyPace::Word::Oom)) { seats.dry.push_back(*it); it = seats.holders.erase(it); }
             else ++it;
         // filled back to what the fight began with
         auto have = [&]() { double h = 0; for (int i : seats.holders) h += HealerShare(s.party[i]); return h; };
@@ -167,7 +198,8 @@ namespace BuddySeat
             for (size_t i = 0; i < s.party.size(); ++i)
             {
                 Member const& m = s.party[i];
-                if (!CanHeal(m) || HealerShare(m) <= 0 || Has(seats.holders, int(i)) || Has(seats.dry, int(i)) || Oom(m)) continue;
+                if (!CanHeal(m) || HealerShare(m) <= 0 || Has(seats.holders, int(i)) || Has(seats.dry, int(i)) || Oom(m) ||
+                    said(int(i), BuddyPace::Word::Oom)) continue;
                 // whole healers before thirds (a third seated first would
                 // leave the party short while a whole healer stood by), then
                 // the most mana among equal shares
@@ -178,7 +210,69 @@ namespace BuddySeat
             if (best < 0) { seats.short_ = true; break; }
             seats.holders.push_back(best);
         }
+        if (heard) heard->said.clear();
         return seats;
+    }
+    // }}}
+
+    // {{{ DryWay: fighting the way that brings mana back
+    // The owner, 2026-10-30, word for word: "Then they can Seal of Wisdom,
+    // feral scratch, or priest wand or whatever until they get their mana
+    // back." A dry member stops casting (its spirit works after five
+    // seconds without a cast) and fights without spells: what it puts on
+    // first (`first`, cast once, from the generated ability table) and how
+    // it strikes:
+    //   paladin  Seal of Wisdom, then melee (its strikes give mana back)
+    //   druid    cat form, then melee ("feral scratch")
+    //   priest   its wand (no spell cast, so spirit works)
+    //   shaman   melee (the agent's call: no wand, no mana-giving seal)
+    //   others   nothing of their own
+    enum class Strike : uint8_t { None, Melee, Wand };
+    struct DryWay { char const* first = nullptr; Strike strike = Strike::None; };
+
+    inline DryWay Dry(uint8_t cls)
+    {
+        switch (cls)
+        {
+            case 2:  return { "seal of wisdom", Strike::Melee };   // paladin
+            case 11: return { "cat form",       Strike::Melee };   // druid
+            case 5:  return { nullptr,          Strike::Wand  };   // priest
+            case 7:  return { nullptr,          Strike::Melee };   // shaman
+            default: return {};
+        }
+    }
+
+    // DRY_FIRST: how far a dry member's DryWay `first` leans in (the seal,
+    // the form), so it is put on before it strikes; 1 for anyone not dry
+    // and for anything else. Its heals lean away already (0.05, the
+    // forward pass's seat leans).
+    constexpr double DRY_FIRST = 3.0;
+    inline double DryLean(Seats const& seats, int i, uint8_t cls, std::string const& ability)
+    {
+        DryWay w = Dry(cls);
+        return Has(seats.dry, i) && w.first && ability == w.first ? DRY_FIRST : 1.0;
+    }
+    // }}}
+
+    // {{{ Judgement: Wisdom while the healers' mana is low
+    // The owner, 2026-10-30: "Sometimes just hitting the enemy can get them
+    // judgement of wisdom - paladins should prioritize wisdom over light if
+    // the healer's mana is low." The healers' mana is low when a seat is dry
+    // or short, or a holder spending mana is below WISDOM_BELOW of it.
+    // Which judgement a paladin keeps on the enemy (the generated table's
+    // names).
+    constexpr double WISDOM_BELOW = 0.5;
+    inline bool HealersLow(Snapshot const& s, Seats const& seats)
+    {
+        if (seats.short_ || !seats.dry.empty()) return true;
+        for (int i : seats.holders)
+            if (i >= 0 && size_t(i) < s.party.size() && s.party[i].resourceKind == 0 && s.party[i].maxResource > 0 &&
+                s.party[i].resource < WISDOM_BELOW * s.party[i].maxResource) return true;
+        return false;
+    }
+    inline char const* Judgement(Snapshot const& s, Seats const& seats)
+    {
+        return HealersLow(s, seats) ? "judgement of wisdom" : "judgement of light";
     }
     // }}}
 }
