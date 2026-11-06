@@ -1,0 +1,52 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-stat-blend
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      a split-spec buddy's stat weights blend only what each tree wants (stamina can't win by being shared), hit marked down with a healing tree; small upgrades only when nobody else wants them; class books to whoever can learn them
+# quick-test: yes
+# ==== end of header ====
+# test-buddy-stat-blend - checks how a buddy with points in several trees
+# values each stat, whether a small upgrade is worn, and where a class book
+# goes (buddies_stat_blend.h), against issue 617j, with no server.
+#
+# For a general audience: a buddy split between talent trees scores gear by
+# a blend of what each tree wants. The owner worried a plain average would
+# make every such buddy chase stamina, which every tree likes a little; so
+# a stat a tree only tolerates counts for little, and a blend with a
+# healing tree cares less for hit rating. An upgrade under 10% is worn only
+# when nobody else in the clan wants the item, and a class book goes to
+# whoever in the clan can learn it, else to the auction house.
+#
+# Usage: scripts/test-buddy-stat-blend [PROJECT_DIR] [--help]
+# Builds into tmp/tmp/ (the executable tier). Exits non-zero when any
+# check fails.
+
+set -uo pipefail
+
+# {{{ configuration
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+    echo "Usage: scripts/test-buddy-stat-blend [PROJECT_DIR]"
+    echo "  Builds and runs the stat blend's offline check (tests/buddy-stat-blend/blend-check.cpp)."
+    exit 0
+fi
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+CORE="${DIR}/patches/B036-mod-buddies/mod-buddies/src"
+SOURCE="${DIR}/tests/buddy-stat-blend/blend-check.cpp"
+EXEC_DIR="${DIR}/tmp/tmp"
+BINARY="${EXEC_DIR}/buddy-stat-blend-check"
+# }}}
+
+[[ -d "${DIR}/tmp" ]] || { echo "ERROR: ${DIR}/tmp missing (the project's link to /tmp/<project>)"; exit 1; }
+mkdir -p "${EXEC_DIR}"
+
+if ! g++ -std=c++17 -O2 -Wall -Wextra -Werror -I"${CORE}" "${SOURCE}" -o "${BINARY}"; then
+    echo "test-buddy-stat-blend: the stat blend did not build alone (above); nothing was checked"
+    exit 1
+fi
+"${BINARY}"
+# ==== footer of test-buddy-stat-blend ====
+# lines:      52
+# ==== end of footer ====
