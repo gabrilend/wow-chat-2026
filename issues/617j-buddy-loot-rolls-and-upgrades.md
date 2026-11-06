@@ -83,6 +83,27 @@ not built (below), and nothing has been seen in game.
   other (each better for a different tree) and the buddy would swap them
   forever. See Open Questions.
 
+**The owner's answers of 2026-10-28 as plain arithmetic, built 2026-11-06
+(offline, on a branch for review):** `buddies_stat_blend.h`.
+- **The blend by what each tree wants** (`Wanted`, `Blend`): each tree's
+  weight for a stat counts whole when the tree wants it (0.6 of its own
+  most-wanted stat or more) and a quarter when it only tolerates it, times
+  the tree's share; so stamina, liked a little by every tree, can't win by
+  being shared (a thirds druid: 20 agility now beats 40 stamina, where a
+  plain average put stamina above agility). Hit rating is halved when any
+  tree with points is a healing one, a 2/1 shape with a healing third
+  included. One tree alone keeps its weights unchanged.
+- **The upgrade bar** (`Wear`): 10% better or more is worn (the bot
+  module's own 1.1); better by less, only when nobody else in the clan
+  wants the item.
+- **Class books** (`BookTo`): to the first clan member, player or buddy,
+  who can learn it and hasn't; none, the auction house.
+Checked by `scripts/test-buddy-stat-blend` (23 checks, a quick test); 17 of
+17 deliberately broken versions of the header caught. Not yet: B046's
+scorer taking these weights (it scores each tree apart and weights the
+scores today), asking the clan who else wants an item, and the hand-over
+of a book or an item (the trade window, below).
+
 **Not built:** giving within the clan (a buddy holding an item it can't
 use trades it to the clan member it upgrades most, the owner scored once
 per tree of their class; the "so-and-so was also interested" line), and a
@@ -253,9 +274,28 @@ same questions from other sub-issues; answers are written back here.
   of a third of each tree (built), or "an upgrade to any one of its three
   specs" (the earlier wording)? The second makes the buddy swap two items
   back and forth when each is better for a different tree.
+  **Settled by the 2026-10-28 answer above:** the blend, by what each tree
+  wants (`buddies_stat_blend.h`, 2026-11-06).
 - (Open, 2026-10-02) Class book when the owner needs it but isn't in the
   group: the buddy greeds it now (to keep it in the clan), but nothing
   hands it over yet. Should it need instead?
+  **Decided 2026-11-06 (the agent's call, from the 2026-10-28 answer, for
+  the owner to curate):** the buddy needs it when any clan member who
+  isn't in the group can learn it (so it stays in the clan), then hands it
+  to the first such (`BookTo`); with no clanmate needing it, it is greeded
+  and goes to the auction house.
 - (Open, 2026-10-02) The bot module's 10% upgrade threshold
   (`AiPlayerbot.EquipUpgradeThreshold` 1.1) keeps "always equip upgrades"
   from equipping small ones. Keep, or lower it for basic?
+  **Settled by the 2026-10-28 answer above:** keep 1.1, and below it wear
+  an upgrade only when nobody else in the clan wants the item (`Wear`).
+
+## Decisions (2026-11-06)
+
+The agent's calls while building `buddies_stat_blend.h`, for the owner to
+curate; each number is one constant there:
+- **"Wants" against "tolerates"**: a tree wants a stat it weighs at 0.6 of
+  its own most-wanted stat or more; a tolerated stat counts a quarter.
+- **Hit with a healing tree**: halved, whatever the healing tree's share.
+- **Who gets a class book first**: the clan's own order (the roster's), a
+  player no earlier than a buddy, as asked ("no player preference").
