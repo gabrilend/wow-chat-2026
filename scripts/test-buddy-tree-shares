@@ -1,0 +1,51 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-tree-shares
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      one list from every tree: answers weighted by each tree's share, casts kept to the shares over a fight, the role's tree first on a shared concern
+# quick-test: yes
+# ==== end of header ====
+# test-buddy-tree-shares - checks one list from every tree a buddy has points
+# in (buddies_tree_shares.h, with the talent draw it feeds) against issue
+# 625c, with no server.
+#
+# For a general audience: a druid with two thirds of its points in healing
+# and a third in damage should cast about two thirds heals and a third
+# damage spells, not heals only. Each tree's spells count by its share, and
+# a running count of the fight leans toward whichever tree is behind. When
+# two trees answer the same concern, the role's tree goes first; the feral
+# druid's answer to an ally at low health follows the owner's own words.
+#
+# Usage: scripts/test-buddy-tree-shares [PROJECT_DIR] [--help]
+# Builds into tmp/tmp/ (the executable tier). Exits non-zero when any
+# check fails.
+
+set -uo pipefail
+
+# {{{ configuration
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+    echo "Usage: scripts/test-buddy-tree-shares [PROJECT_DIR]"
+    echo "  Builds and runs the tree shares's offline check (tests/buddy-tree-shares/shares-check.cpp)."
+    exit 0
+fi
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+CORE="${DIR}/patches/B036-mod-buddies/mod-buddies/src"
+SOURCE="${DIR}/tests/buddy-tree-shares/shares-check.cpp"
+EXEC_DIR="${DIR}/tmp/tmp"
+BINARY="${EXEC_DIR}/buddy-tree-shares-check"
+# }}}
+
+[[ -d "${DIR}/tmp" ]] || { echo "ERROR: ${DIR}/tmp missing (the project's link to /tmp/<project>)"; exit 1; }
+mkdir -p "${EXEC_DIR}"
+
+if ! g++ -std=c++17 -O2 -Wall -Wextra -Werror -I"${CORE}" "${SOURCE}" -o "${BINARY}"; then
+    echo "test-buddy-tree-shares: the tree shares did not build alone (above); nothing was checked"
+    exit 1
+fi
+"${BINARY}"
+# ==== footer of test-buddy-tree-shares ====
+# lines:      51
+# ==== end of footer ====
