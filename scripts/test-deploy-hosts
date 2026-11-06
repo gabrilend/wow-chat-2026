@@ -198,7 +198,15 @@ do
     code2, _, err2 = run(remote, "login lan_address")
     check(code2 == 1 and err2:find("\"login\" is not a role", 1, true), "an unknown role isn't refused by name")
 
+    for _, h in ipairs({ "--help", "-h", "world --help" }) do
+        local hc, hout, herr = run(remote, h)
+        check(hc == 0 and hout:find("usage", 1, true) and hout:find("lan_address", 1, true) and hout:find("--check", 1, true) and herr == "",
+              "\"" .. h .. "\" doesn't print the help and succeed")
+    end
+
     local bad = project("bad", 'return { database = "local", auth = "local", world = { lan_address = "127.0.0.1", ssh_user = "wow", install_dir = "/srv/w", arch = "x86_64" } }')
+    code2 = run(bad, "--help")
+    check(code2 == 0, "--help refused because the roles file has a mistake")
     code2, out, err2 = run(bad, "auth lan_address")
     check(code2 == 1 and out == "" and err2:find("1 mistake", 1, true) and err2:find("world.lan_address", 1, true), "a file with a mistake answered")
     local broken = project("broken", "return { database = ")
@@ -228,5 +236,5 @@ for _, f in ipairs(fails) do print("  FAIL: " .. f) end
 print(#fails == 0 and "Result: all checks passed." or ("Result: " .. #fails .. " failure(s) shown."))
 os.exit(#fails == 0 and 0 or 1)
 -- ==== footer of test-deploy-hosts ====
--- lines:      232
+-- lines:      240
 -- ==== end of footer ====
