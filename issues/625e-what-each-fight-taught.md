@@ -7,8 +7,9 @@
 - Related: 625d (choosing by the moment's economy: the movement measure),
   617e5b (boss fights by the warnings)
 - Priority: Medium
-- State: planned: the log first; reading it is to be built later, from
-  scratch when a use for it arrives
+- State: the distilling and the fingerprint built offline (2026-11-06,
+  on a branch for review); the server's writing and the reading still to
+  build
 
 ## Origin
 
@@ -25,7 +26,31 @@ count the whole fight or the last half minute:
 
 ## Current Behavior
 
-Nothing is written down about fights.
+Nothing is written down about fights in the server. The raw log's format
+exists: the replay log (625n, `buddies_fight_replay.h`), every snapshot
+and event of a fight.
+
+**The distilling and the fingerprint, built 2026-11-06 (offline, on a
+branch for review):** `buddies_fight_learning.h`. `Distill` reads a
+fight's raw log (the replay log's steps) and keeps the crucial points:
+the fight's length and outcome (won, lost, left); its phases (the pull,
+each health band the boss crosses, 75%, 50% and 25%, and each change its
+script reports); each character's share of each phase spent moving (625d's
+measure, started again at each phase); each time movement rose (half the
+party or more moving, after less), what the enemies began in the 3
+seconds before (a cast, an enemy that appeared, a mark on the party, a
+spell that hit two or more of them); and each death in the party. `Write`
+and `Read` turn that into a short plain-text block and back, one fight
+per block; `Path` keeps them by boss and by day
+(`learned/fights/ENTRY-name/DATE.fights`). The fingerprint: `Parts`
+hashes each part of the fight the server reads (creature rows, spells,
+scripts, settings, tuning) and `Whole` the lot; `Changed` names what
+differs, and `Stale` says a block was learned from another fight. Checked
+by `scripts/test-buddy-fight-learning` (41 checks, a quick test) on a
+made-up minute-long boss fight; 39 of 39 deliberately broken versions of
+the header caught. Not yet: the server writing the raw log to the RAM
+drive, distilling at the fight's end and clearing the raw log, the
+per-boss switches, the commit of the blocks, and the reading (step 3).
 
 ## Intended Behavior
 
@@ -113,3 +138,44 @@ Nothing is written down about fights.
    travels with the code to other machines), or beside it, untracked?
    **Answered 2026-10-30:** in git, with a fingerprint of the fight
    (above, word for word).
+
+## Decisions (2026-11-06)
+
+The agent's calls while building `buddies_fight_learning.h`, for the owner
+to curate (tuning goes to docs/balance-updates.md):
+- **Phases** begin at the pull, at each boss health band crossed (75%,
+  50%, 25%; a band already passed at the pull begins nothing; two crossed
+  at once make one phase, named by the lower), and at each phase change
+  the boss's script reports. Changes in one snapshot make one phase, all
+  named ("script health 50").
+- **"A change in what it casts" is built but off** (`newCastAfter`, -1):
+  a boss spell first cast 30 seconds or more after the pull would begin a
+  phase. Off because a boss's slow spell (a cooldown over 30 seconds)
+  would start a false phase and reset the movement measure; its casts are
+  still kept as cues where movement rose.
+- **Moving** is faster than 1 yard a second between two snapshots, so
+  shuffling and turning don't count, however often snapshots come. Only
+  characters count (pets follow their masters), and the dead stop
+  counting when they die.
+- **Movement rose** when half the party or more is moving after fewer
+  were; running in at the pull is no rise. **What began just before**:
+  the 3 seconds before the moving stretch, through its first interval;
+  only what enemies did: casts begun, marks put on the party, a spell
+  that hit two or more of the party (fire on the ground), an enemy that
+  appeared (written by its creature entry, "?" when the server didn't
+  give one). Damage numbers and positions are left out.
+- **Outcome**: won when the boss died (its death written, or no health at
+  the end), lost when everyone in the party is down at the end, left
+  otherwise. **Deaths**: every death in the party (pets too), each in the
+  phase of its own time; one raised and fallen again counts twice.
+- **The fingerprint** is FNV-1a, 64 bits: the same text gives the same
+  number on every machine and compiler. One hash per named part, so a
+  change can be named ("spells changed"), and the whole from those, so
+  the order the parts are given in doesn't matter.
+- **The block** is plain words, a line per point, times to a tenth of a
+  second and shares to a hundredth, so the file is small, reads in a
+  diff, and the same fight writes the same block. The run's seed is kept
+  on the fight's line, for replaying it the same way.
+- **Kept at** `learned/fights/ENTRY-name/DATE.fights` in the project, a
+  day's fights of one boss in one file, beside the starts and methods as
+  strategems/grown-and-relearnable.md keeps "what was learned".
