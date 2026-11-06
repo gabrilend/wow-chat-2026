@@ -7,7 +7,8 @@
 - Related: 625f (the action economy: the window values), 625h (the
   resource economy: Innervate), 625i (the healer's seat)
 - Priority: Medium
-- State: in progress (whom and when, and the casting, built; a player's faith not yet)
+- State: in progress (whom and when, and the casting, built; a player's faith and the short
+  list built offline 2026-11-06, not yet fed by the server)
 
 ## Origin
 
@@ -92,9 +93,41 @@ one for Bloodlust; the seat test names the priest whose mana runs out ten
 seconds into the last minute for Innervate, and no one when its mana
 lasts the fight.
 
-Not yet: the short list made on joining (every member is looked at each
-step, which the half-second step makes cheap enough); a player's saved
-cooldown and the faith that falls with it (planned below); slotting a
+**A player's faith and the short list, built 2026-11-06 (offline, on a
+branch for review):** `buddies_faith.h`, one `Book` per buddy, read by the
+forward pass's `Leans` when the server hands it one (its last argument;
+none handed, nothing changes).
+- **The short list** (`Make`): made when the buddy joins a party or the
+  party changes: for each buff it gives one ally, who might benefit (Power
+  Infusion and Innervate: those who spend mana; any other: everyone). Only
+  those listed are weighed; making it again starts every player's faith
+  at the baseline (the owner's "until the player logs out again. Possibly
+  when the group disbands or the player or that buddy-bot leaves it").
+- **Watching a player's long cooldowns** (`Saw`): each cooldown of 90
+  seconds or more, for players only (buddies are never marked down). Each
+  whole length it sits ready is a use lost: a step of faith (x0.8) off
+  for every buff the player is listed for. Used within 15 seconds of
+  coming back: a step back, never past the baseline (1).
+- **Saving and burning**: a player with a long cooldown ready, not yet
+  held a whole length, is saving it; one who used one within 10 seconds
+  is burning. Either way their worth to the buff counts 1.25 times ("more
+  satisfying than seeing it go to a bot"). While the buff's best target is
+  a player saving, the buddy holds it for them: its lean is 0.05 and the
+  target stays theirs; when they burn, it goes on them.
+- **The choice** (`Weight`): each member's gain from the buff (as before)
+  times its weight: 0 off the list, the faith (and the burn's 1.25) for a
+  player, 1 for anyone else; the buff's own lean is still worked out on
+  the real gain, not the weighed one. Innervate's choice is weighed the
+  same way.
+Checked by `scripts/test-buddy-faith` (33 checks, a quick test): the list,
+lost uses counted once each, faith back by prompt use and never past the
+baseline, short cooldowns and buddies not watched; Power Infusion held for
+a player mage's Arcane Power, given at the burn, passed to the buddy mage
+after two lost uses (and after one, once the burn is over), and Innervate
+the same. The forward pass's own tests pass unchanged.
+
+Not yet: the server feeding the book (a player's long cooldowns each half
+second, the list made at joining) and handing it to `Leans`; slotting a
 buff into another buddy's cooldown timeline. The bot module casts its buffs on fixed targets (Power
 Infusion on itself or a set role, Innervate on a healer by its own
 rules).
@@ -201,9 +234,31 @@ rules).
 1. How far back should "just jumped" look: the last few seconds (a
    cooldown just used), or long enough to see a whole burst start?
    Now asked only for players (buddies are slotted by their plans).
+   **Decided 2026-11-06 (the agent's call, for the owner to curate):** a
+   long cooldown used in the last 10 seconds (`JUST`), read from the
+   cooldown itself rather than from a rise in measured worth: the use is
+   the sign the owner named ("they just cast a cooldown"), and it is seen
+   the moment it happens, where a rise in damage takes seconds to show.
 2. How long may a player hold a ready cooldown before the malus starts:
    from its first good moment (Bloodlust up, the boss's weak phase), or
    after a few seconds of the cooldown sitting ready whatever is happening?
    **Answered 2026-10-30:** each time they hold it as long as its own
    cooldown; faith comes back with prompt use, never above the baseline
    (above).
+
+## Decisions (2026-11-06)
+
+The agent's calls while building a player's faith, for the owner to
+curate; each is one constant in `buddies_faith.h`:
+- **A step of faith**: x0.8 per use lost. With a player's burn counted
+  x1.25, two lost uses bring an equal player below an equal buddy, and a
+  player dealing much more keeps the buff longer.
+- **"Rapidly after it's CD completes"**: within 15 seconds of coming back.
+- **Saving**: a ready long cooldown not yet held a whole length; past that
+  it is a use lost, and the buddy no longer waits.
+- **A player's burn**: x1.25 while saving or burning ("this is more
+  satisfying than seeing it go to a bot").
+- **Who might benefit**: Power Infusion and Innervate, those who spend
+  mana; every other chosen-ally buff, everyone.
+- **When the faith starts again**: whenever the list is made again (the
+  owner's alternatives, one rule for all).
