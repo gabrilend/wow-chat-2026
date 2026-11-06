@@ -25,12 +25,19 @@
 -- "craft" and changes nothing else; a pickup that learns nothing changes no
 -- held plan; the plans held after any run of pickups are the plans a fresh
 -- login works out from the same bags, in any order; a want turns "ready"
--- once the money and planned sales cover it, and is bought at the auction
--- house; a place settles exactly the plans made for it. With full bags
--- (617j4): grey junk goes first, then part-stacks of what it has plenty
--- of, then the rest, part-stacks before full ones, cheapest first; what it
--- can't spare, upgrades, need-won and quest items never go; an item worth
--- no more than the least it carries is left.
+-- once the purse and planned sales cover it, and is bought at the auction
+-- house only with money in the purse (an item put up there brings nothing
+-- until its money is fetched from the mailbox); a place settles exactly the
+-- plans made for it. Quest items nobody pays for are left on the ground,
+-- others are judged as white items (trade goods when a profession uses
+-- them). Ammo it fires is kept, the best stacks up to its count, and better
+-- ammo sends the worst to the vendor, the same whatever order it came in.
+-- The mailbox: money always taken, items by plan and by what the town has.
+-- With full bags (617j4): grey junk goes first, then part-stacks of what it
+-- has plenty of, then the rest, part-stacks before full ones, cheapest
+-- first; what it can't spare (its ammo too), upgrades and need-won items
+-- never go, and quest items go as white items do; an item worth no more
+-- than the least it carries is left.
 --
 -- Usage: scripts/test-buddy-item-plan [PROJECT_DIR] [RUNS]
 --   RUNS  random buddies (default 400)
@@ -66,6 +73,11 @@ local BOE_EPIC  = function() return item({ id = 9002,  class = 2, quality = EPIC
 local GREY_JUNK = function() return item({ id = 9003,  class = 15, quality = GREY, sell_price = 7, count = 3 }) end
 local ROCK      = function() return item({ id = 9004,  class = 15, quality = WHITE, sell_price = 0 }) end
 local TRINKET   = function() return item({ id = 9005,  class = 4, quality = GREEN, bonding = 1, bound = true, use = true, sell_price = 200 }) end
+local QUEST_FREE = function() return item({ id = 9006, class = 12, quality = WHITE, bonding = 4, sell_price = 0 }) end
+local QUEST_PAID = function() return item({ id = 9007, class = 12, quality = GREEN, bonding = 4, sell_price = 40 }) end
+local QUEST_MAT  = function() return item({ id = 9008, class = 12, quality = WHITE, sell_price = 25, material = true }) end
+local ARROWS     = function(dps, n) return item({ id = 2512 + dps, class = 6, subclass = 2, ammo_dps = dps, sell_price = 1, count = n or 200, stack = 200 }) end
+local BULLETS    = function(dps, n) return item({ id = 2516 + dps, class = 6, subclass = 3, ammo_dps = dps, sell_price = 1, count = n or 200, stack = 200 }) end
 -- }}}
 
 -- {{{ each kind gets its plan
@@ -99,6 +111,13 @@ do
         { "a bound green a clan-mate wants", BOUND_GRN(), { clan = { { name = "Brom", needs = { [9000] = true } } } }, "vendor" },
         { "an upgrade",           (function() local i = BOE_BLUE(); i.wear = "now";  return i end)(), plain, "wear" },
         { "a kept weapon",        (function() local i = BOE_BLUE(); i.wear = "kept"; return i end)(), plain, "keep" },
+        { "a quest item nobody pays for", QUEST_FREE(), plain, "leave" },
+        { "a quest item, judged white not green", QUEST_PAID(), plain, "vendor" },
+        { "a quest item a profession uses", QUEST_MAT(), plain, "auction" },
+        { "a quest item a known recipe uses", QUEST_MAT(), { recipes = { [1] = { [9008] = 1 } } }, "craft" },
+        { "arrows, a bow user",   ARROWS(5),   { ammo = 2, ammo_stacks = 1 }, "keep" },
+        { "bullets, a bow user",  BULLETS(5),  { ammo = 2, ammo_stacks = 1 }, "vendor" },
+        { "arrows, no ranged weapon", ARROWS(5), plain, "vendor" },
     }
     for _, c in ipairs(cases) do
         local plan, why, to = Plan.decide(c[2], c[3])
@@ -152,26 +171,39 @@ do
     check(s.buddy.money == 5021, "the vendor's money is " .. s.buddy.money)
     check(#s.bag == 2, "the vendor took more than the junk")
     check(#Plan.settle(s, "mailbox") == 0, "the mailbox settled something")
+    -- the blue is put up: out of mind, no money yet, so no axe (the owner,
+    -- 2026-11-05: "How could we buy something with money we don't have?")
     local ah = Plan.settle(s, "auction")
-    local acts = {}
-    for _, d in ipairs(ah) do acts[d.act] = (acts[d.act] or 0) + 1 end
-    check(acts.auction == 1 and acts.buy == 1, "the auction house didn't sell the blue and buy the axe")
-    check(s.buddy.money == 21, "after the axe the money is " .. s.buddy.money)
-    check(#s.wants == 0, "the bought axe is still wanted")
+    check(#ah == 1 and ah[1].act == "auction", "the auction house didn't just put the blue up")
+    check(s.buddy.money == 5021, "putting the blue up changed the purse to " .. s.buddy.money)
+    check(#s.wants == 1 and s.wants[1].state == "saving", "the axe is still counted on the blue's sale")
     check(#s.bag == 1 and s.bag[1].plan == "use", "the potion left the bags")
+    -- the blue sold: its money comes by mail, then the axe is bought
+    local got = Plan.mailbox(s, { { money = 4000 } }, { auction = true, vendor = true })
+    check(got == 4000 and s.buddy.money == 9021, "the auction's money wasn't taken from the mail")
+    check(s.wants[1].state == "ready", "the axe isn't ready once the money is in the purse")
+    local buy = Plan.settle(s, "auction")
+    check(#buy == 1 and buy[1].act == "buy" and s.buddy.money == 21 and #s.wants == 0, "the axe isn't bought with the purse's money")
 
-    -- the auction house before the vendor: a want counted on the vendor's
-    -- money is ready but not yet bought
+    -- the wants go in their list's order, each one the purse covers
+    local o = Plan.new({ money = 120, wants = { { name = "big", price = 100 }, { name = "small", price = 50 }, { name = "tiny", price = 20 } } })
+    local bought = Plan.settle(o, "auction")
+    check(#bought == 2 and bought[1].want.name == "big" and bought[2].want.name == "tiny" and o.buddy.money == 0,
+          "the wants weren't bought in list order, each the purse covered")
+    check(#o.wants == 1 and o.wants[1].name == "small", "the want the purse couldn't cover is gone")
+    check(Plan.drop_want(o, "small") == 1 and #o.wants == 0, "a want can't be pruned")
+    check(Plan.drop_want(o, "small") == 0, "pruning a want that isn't there pruned something")
+
+    -- the vendor before the auction house: the vendor pays at once
     local a = Plan.new({ money = 0, wants = { { name = "axe", price = 500 } } })
-    Plan.pickup(a, item({ id = 1, class = 15, sell_price = 400 }))
-    Plan.pickup(a, item({ id = 2, class = 15, quality = GREEN, sell_price = 50 }))
-    check(a.wants[1].state == "ready", "the axe isn't ready on 400 + 150")
-    local early = Plan.settle(a, "auction")
-    check(#early == 1 and early[1].act == "auction", "the axe was bought before the vendor's money came in")
-    check(a.buddy.money == 150 and #a.wants == 1, "the unbought axe's money is " .. a.buddy.money)
+    Plan.pickup(a, item({ id = 1, class = 15, sell_price = 500 }))
+    check(a.wants[1].state == "ready", "the axe isn't ready on a 500 sale")
+    check(#Plan.settle(a, "auction") == 0, "the axe was bought before the vendor's money came in")
     Plan.settle(a, "vendor")
     local late = Plan.settle(a, "auction")
-    check(#late == 1 and late[1].act == "buy" and a.buddy.money == 50, "the axe isn't bought once the vendor paid")
+    check(#late == 1 and late[1].act == "buy" and a.buddy.money == 0, "the axe isn't bought once the vendor paid")
+    local okay = pcall(Plan.new, { ammo = 2 })
+    check(not okay, "a buddy that fires ammo but keeps no count of stacks was accepted")
 
     local t = Plan.new({ money = 0, wants = { { name = "a", price = 100 }, { name = "b", price = 50 } } })
     local _, _, w = Plan.pickup(t, item({ id = 1, class = 15, sell_price = 60 }))
@@ -205,11 +237,126 @@ do
 end
 -- }}}
 
+-- {{{ quest items left on the ground, ammo kept to its count
+do
+    local q = Plan.new({})
+    local e, ch, _, now = Plan.pickup(q, QUEST_FREE())
+    check(e.plan == "leave" and not now and #q.bag == 0 and #ch == 0, "a quest item nobody pays for was taken")
+
+    -- a hunter's ammo bag of 3 stacks: the best three kept, better ammo sends the worst to the vendor
+    local h = Plan.new({ ammo = 2, ammo_stacks = 3 })
+    Plan.pickup(h, ARROWS(5)); Plan.pickup(h, ARROWS(5)); Plan.pickup(h, ARROWS(7))
+    for k = 1, 3 do check(h.bag[k].plan == "keep", "a hunter's arrow stack " .. k .. " of 3 isn't kept") end
+    local e4, c4 = Plan.pickup(h, ARROWS(9))
+    check(e4.plan == "keep" and #c4 == 1 and c4[1].from == "keep" and c4[1].to == "vendor" and c4[1].entry.item.ammo_dps == 5,
+          "better arrows didn't send one of the worst stacks to the vendor")
+    local e5, c5 = Plan.pickup(h, ARROWS(3))
+    check(e5.plan == "vendor" and #c5 == 0, "arrows worse than the kept three weren't sold")
+    local e6, c6 = Plan.pickup(h, ARROWS(9, 40))                       -- better arrows first, then the fuller stack
+    check(e6.plan == "keep" and #c6 == 1 and c6[1].entry.item.ammo_dps == 5 and c6[1].to == "vendor",
+          "a part-stack of better arrows didn't replace the last of the worse")
+    local e8 = Plan.pickup(h, ARROWS(7, 40))
+    check(e8.plan == "vendor", "a part-stack beat a full stack of the same arrows")
+    local e7 = Plan.pickup(h, BULLETS(20))
+    check(e7.plan == "vendor", "a bow user kept bullets")
+    -- a warrior keeps one stack, the best
+    local w = Plan.new({ ammo = 3, ammo_stacks = 1 })
+    Plan.pickup(w, BULLETS(4))
+    local _, cw = Plan.pickup(w, BULLETS(6))
+    check(w.bag[1].plan == "vendor" and w.bag[2].plan == "keep" and #cw == 1, "a warrior kept more than its one best stack")
+    -- a learned recipe doesn't bring a sold stack back
+    local r = Plan.new({ ammo = 2, ammo_stacks = 1, professions = { [755] = 50 } })
+    Plan.pickup(r, ARROWS(4)); Plan.pickup(r, ARROWS(6))
+    local _, cr = Plan.pickup(r, RECIPE())
+    check(#cr == 0 and r.bag[1].plan == "vendor" and r.bag[2].plan == "keep", "learning a recipe brought sold ammo back")
+    -- a bigger ammo bag keeps the stack it was going to sell, at the next pickup
+    r.buddy.ammo_stacks = 2
+    local _, cb = Plan.pickup(r, POTION())
+    check(#cb == 1 and cb[1].from == "vendor" and cb[1].to == "keep" and r.bag[1].plan == "keep", "a bigger ammo bag didn't keep the spare stack")
+    local okay = pcall(Plan.pickup, Plan.new({ ammo = 2, ammo_stacks = 1 }), item({ id = 1, class = 6, subclass = 2, sell_price = 1 }))
+    check(not okay, "ammo with no damage per second was ranked")
+
+    -- the same ammo, picked up in any order, ends with the same stacks kept
+    for run = 1, 200 do
+        math.randomseed(run * 31 + 7)
+        local R = math.random
+        local stacks, list = R(4), {}
+        for k = 1, R(12) do list[k] = (R(2) == 1 and ARROWS or BULLETS)(R(6), R(200)) end
+        local function kept(order)
+            local s = Plan.new({ ammo = 2, ammo_stacks = stacks })
+            for _, it in ipairs(order) do Plan.pickup(s, it) end
+            local out = {}
+            for _, en in ipairs(s.bag) do
+                if en.plan == "keep" then out[#out + 1] = en.item.ammo_dps .. "x" .. en.item.count end
+            end
+            table.sort(out)
+            return table.concat(out, " "), s
+        end
+        local a, sa = kept(list)
+        local back = {}
+        for k = #list, 1, -1 do back[#back + 1] = list[k] end
+        local b = kept(back)
+        check(a == b, "ammo run " .. run .. ": kept " .. a .. " one way, " .. b .. " the other")
+        local arrows = 0
+        for _, it in ipairs(list) do if it.subclass == 2 then arrows = arrows + 1 end end
+        local n = 0
+        for _, en in ipairs(sa.bag) do if en.plan == "keep" then n = n + 1 end end
+        check(n == math.min(stacks, arrows), "ammo run " .. run .. ": kept " .. n .. " stacks of " .. arrows .. ", room for " .. stacks)
+        for _, en in ipairs(sa.bag) do
+            if en.plan == "keep" then
+                for _, other in ipairs(sa.bag) do
+                    check(other.plan == "keep" or other.item.subclass ~= 2 or other.item.ammo_dps <= en.item.ammo_dps,
+                          "ammo run " .. run .. ": better arrows sold while worse were kept")
+                end
+            end
+        end
+    end
+end
+-- }}}
+
+-- {{{ the mailbox: money always, items by plan and by what the town has
+do
+    local function mail() return { { money = 300, items = { GREY_JUNK(), BOE_BLUE(), POTION(), PEARL(), ROCK() } } } end
+    -- a mailbox with no vendor or auction house near (the death knights' land)
+    local s = Plan.new({ money = 0, recipes = { [1] = { [5498] = 1 } } })
+    local money, taken, left = Plan.mailbox(s, mail(), { vendor = false, auction = false, crafting = false })
+    local plans = {}
+    for _, e in ipairs(taken) do plans[#plans + 1] = e.plan end
+    check(money == 300 and s.buddy.money == 300, "the mail's money wasn't taken")
+    check(table.concat(plans, " ") == "use", "a mailbox with nothing near took " .. table.concat(plans, " "))
+    check(#left == 4, "a mailbox with nothing near left " .. #left .. " items, wanted the junk, the blue, the pearl, the rock")
+    -- a capital: vendor and auction house, and a profession errand on the to-do list
+    local c = Plan.new({ money = 0, recipes = { [1] = { [5498] = 1 } } })
+    local _, ct, cl = Plan.mailbox(c, mail(), { vendor = true, auction = true, crafting = true })
+    local cp = {}
+    for _, e in ipairs(ct) do cp[#cp + 1] = e.plan end
+    check(table.concat(cp, " ") == "vendor auction use craft", "a capital's mailbox took " .. table.concat(cp, " "))
+    check(#cl == 1 and cl[1].plan == "junk", "a capital's mailbox didn't leave only the rock")
+    check(#c.bag == 4, "what the mailbox took isn't in the bags")
+    -- the profession item waits for a profession errand
+    local p = Plan.new({ recipes = { [1] = { [5498] = 1 } } })
+    local _, pt = Plan.mailbox(p, { { items = { PEARL() } } }, { vendor = true, auction = true, crafting = false })
+    check(#pt == 0, "a reagent was taken with no profession errand on the to-do list")
+    -- an unsold auction coming back is planned again, as a fresh pickup
+    local u = Plan.new({ money = 0 })
+    local back = BOE_BLUE()
+    local _, ut = Plan.mailbox(u, { { items = { back } } }, { auction = true })
+    check(#ut == 1 and ut[1].plan == "auction" and u.bag[1].item == back, "an unsold auction coming back wasn't planned again")
+    -- money with items: the money is taken even when the items are left
+    local g = Plan.new({ money = 10 })
+    local gm, gt = Plan.mailbox(g, { { money = 55, items = { BOE_BLUE() } } }, { auction = false })
+    check(gm == 55 and g.buddy.money == 65 and #gt == 0, "a letter's money wasn't taken when its item was left")
+end
+-- }}}
+
 -- {{{ the referee, written from 617h2's decisions
 -- Each item kind's plan, from the table in the issue's 2026-11-06 decision.
 local function referee(i, b)
     local prof, known, ench = b.professions or {}, b.recipes or {}, (b.professions or {})[333]
     local free = not i.bound and i.bonding ~= 1
+    local quality = i.class == 12 and 1 or i.quality                  -- quest items are judged white (2026-11-05)
+    local goods   = i.class == 7 or (i.class == 12 and i.material)    -- and trade goods when a profession uses them
+    if i.class == 12 and i.sell_price == 0 then return "leave" end
     if i.id == 6948 or i.tool or (i.class == 2 and i.subclass == 20) then return "keep" end
     if i.wear == "now" then return "wear" end
     if i.wear == "kept" then return "keep" end
@@ -221,7 +368,7 @@ local function referee(i, b)
     for _, r in pairs(known) do if r[i.id] then return "craft" end end
     if free then for _, m in ipairs(b.clan or {}) do if m.needs[i.id] then return "give" end end end
     if not free and i.de_skill and ench and ench >= i.de_skill then return "disenchant" end
-    if free and (i.quality >= 2 or i.class == 7 or i.class == 9) then return "auction" end
+    if free and (quality >= 2 or goods or i.class == 9) then return "auction" end
     if i.sell_price > 0 then return "vendor" end
     return "junk"
 end
@@ -233,7 +380,7 @@ local function random_item(R, pool)
     if R(12) == 1 then local p = { HEARTH, PICK, POLE, CLAM, POTION, MEAT, RECIPE, PEARL }; return p[R(#p)]() end
     local i = item({
         id         = pool[R(#pool)],
-        class      = ({ 0, 2, 4, 7, 9, 15, 15 })[R(7)],
+        class      = ({ 0, 2, 4, 7, 9, 12, 15, 15 })[R(8)],
         subclass   = R(21) - 1,
         quality    = R(5) - 1,
         sell_price = R(4) == 1 and 0 or R(2000),
@@ -247,6 +394,7 @@ local function random_item(R, pool)
     i.food_type = R(3) == 1 and R(3) or nil
     i.de_skill = R(2) == 1 and R(300) or nil
     i.wear     = ({ "now", "kept", nil, nil, nil, nil, nil, nil })[R(8)]
+    i.material = R(3) == 1
     if R(3) == 1 then i.auction = R(5000) end
     if i.class == 9 then
         i.recipe = { skill = ({ 755, 171, 164 })[R(3)], rank = R(300), teaches = 30000 + R(20),
@@ -293,8 +441,9 @@ for run = 1, RUNS do
         for _, ch in ipairs(changes) do
             check(ch.to == "craft" and ch.from ~= "craft" and ch.entry.plan == "craft", w .. ": learning changed a plan to " .. tostring(ch.to))
         end
-        if not now then picked[#picked + 1] = it end
-        if it.id == 6948 or it.tool or (it.class == 2 and it.subclass == 20) then
+        if not now and e.plan ~= "leave" then picked[#picked + 1] = it end
+        if e.plan == "leave" then check(#s.bag == #picked, w .. ": an item left on the ground is in the bags") end
+        if it.class ~= 12 and (it.id == 6948 or it.tool or (it.class == 2 and it.subclass == 20)) then   -- a quest item nobody pays for is left first
             check(e.plan == "keep", w .. ": the hearthstone, a tool or a pole isn't kept")
         end
         if it.bound or it.bonding == 1 then
@@ -337,7 +486,10 @@ for run = 1, RUNS do
     for _, place in ipairs({ "vendor", "mailbox", "auction" }) do
         local due, money, held = 0, s.buddy.money, #s.bag
         for _, e in ipairs(s.bag) do
-            if Plan.PLANS[e.plan].at == place then due = due + 1; money = money + Plan.value(e.item, e.plan) end
+            if Plan.PLANS[e.plan].at == place then
+                due = due + 1
+                if place == "vendor" then money = money + Plan.value(e.item, e.plan) end   -- only a vendor pays at once
+            end
         end
         local deeds = Plan.settle(s, place)
         local boughts = 0
@@ -353,7 +505,7 @@ for run = 1, RUNS do
         check(s.buddy.money >= 0, where .. ": money below zero")
         for _, e in ipairs(s.bag) do check(Plan.PLANS[e.plan].at ~= place, where .. ": " .. place .. " left a " .. e.plan) end
     end
-    for _, wnt in ipairs(s.wants) do check(wnt.state ~= "ready" or s.buddy.money < wnt.price, where .. ": a ready, affordable want wasn't bought") end
+    for _, wnt in ipairs(s.wants) do check(s.buddy.money < wnt.price, where .. ": a want the purse covers wasn't bought") end
 end
 for plan in pairs(Plan.PLANS) do check(seen[plan], "random runs never planned " .. plan) end
 check(relearned > 0, "random runs never changed a plan by learning")
@@ -396,14 +548,25 @@ do
     local u2 = bag({ LINEN(3), item({ id = 9011, class = 15, sell_price = 500 }) })
     check(Plan.room_order(u2)[1].item.id == 9011, "a lone part-stack of linen went before a vendor item")
 
-    -- never: what it can't spare, quest items, need-won items
-    local qi = item({ id = 9012, class = 12, sell_price = 0 })
+    -- never: what it can't spare (its ammo too), need-won items
     local nw = BOE_EPIC(); nw.need_won = true
-    local v = bag({ HEARTH(), PICK(), POLE(), qi, nw })
+    local v = Plan.new({ ammo = 2, ammo_stacks = 1 })
+    for _, it in ipairs({ HEARTH(), PICK(), POLE(), ARROWS(5), nw }) do Plan.pickup(v, it) end
     check(#Plan.room_order(v) == 0, "something it may never lose is in the order")
     local none, why = Plan.make_room(v, up)
     check(none == nil and why:find("nothing"), "room made where nothing may go")
     check(#v.bag == 5, "the bag changed when nothing may go")
+    -- quest items: one nobody pays for is never taken, so needs no room; one
+    -- with a price goes as a white item, and as a trade good when a profession uses it
+    local qv = bag({ WHITE_SWORD() })
+    local qn, qwhy = Plan.make_room(qv, QUEST_FREE())
+    check(qn == nil and qwhy:find("isn't picked up") and #qv.bag == 1, "room was made for a quest item nobody pays for")
+    local QMAT = function(n) local i = QUEST_MAT(); i.count, i.stack = n, 20; return i end
+    local qb = bag({ QUEST_PAID(), WHITE_SWORD(), QMAT(20), QMAT(3) })
+    local qo = Plan.room_order(qb)
+    check(#qo == 4, "a quest item with a price can't be destroyed for room")
+    check(qo[1].item.id == 9008 and qo[1].item.count == 3, "a part-stack of a quest material it has plenty of isn't first, as a trade good")
+    check(qo[2].item.id == 9007, "a green quest item isn't judged as a white vendor item")
 
     -- an item worth no more than the least is left; a need-won one gets room
     local w = bag({ WHITE_SWORD(), GREY_JUNK() })
@@ -429,14 +592,16 @@ end
 -- {{{ making room, at random, against a referee written from 617j4
 do
     local RANK = { junk = 1, vendor = 2, auction = 3, give = 4, feed = 5, craft = 6, use = 7 }
-    local function never(e) return e.plan == "keep" or e.item.wear == "now" or e.item.need_won or e.item.class == 12 end
+    local function never(e) return e.plan == "keep" or e.item.wear == "now" or e.item.need_won end
     local function full(i) return (i.count or 1) >= (i.stack or 1) end
     local function tier(bagl, e)
         local i = e.item
-        if i.quality == 0 then return 1 end
+        local q = i.class == 12 and 1 or i.quality                     -- quest items as white ones (2026-11-05)
+        if q == 0 then return 1 end
         local plenty = false
         for _, o in ipairs(bagl) do if o ~= e and o.item.id == i.id and full(o.item) then plenty = true end end
-        if i.quality <= 1 and (i.class == 7 or (i.class == 0 and i.food_type)) and not full(i) and plenty then return 2 end
+        local goods = i.class == 7 or (i.class == 12 and i.material)
+        if q <= 1 and (goods or (i.class == 0 and i.food_type)) and not full(i) and plenty then return 2 end
         return 3
     end
     local function ref_key(bagl, e)
@@ -475,7 +640,7 @@ do
         local plan = Plan.decide(inc, s.buddy)
         local must = inc.wear == "now" or inc.need_won or plan == "wear" or plan == "open" or plan == "learn" or plan == "disenchant"
         local ie = { item = inc, plan = plan }
-        local want = first ~= nil and (must or never(ie) or less(ref_key(s.bag, first), ref_key(s.bag, ie)))
+        local want = first ~= nil and plan ~= "leave" and (must or never(ie) or less(ref_key(s.bag, first), ref_key(s.bag, ie)))
         local gone = Plan.make_room(s, inc)
         check((gone ~= nil) == want, where .. ": room made? " .. tostring(gone ~= nil) .. ", the referee says " .. tostring(want))
         if gone then
@@ -496,5 +661,5 @@ for _, f in ipairs(fails) do print("  FAIL: " .. f) end
 print(#fails == 0 and "Result: all checks passed." or ("Result: " .. #fails .. " failure(s) shown."))
 os.exit(#fails == 0 and 0 or 1)
 -- ==== footer of test-buddy-item-plan ====
--- lines:      500
+-- lines:      665
 -- ==== end of footer ====

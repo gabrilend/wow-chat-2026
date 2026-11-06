@@ -9,7 +9,9 @@
   for buddies)
 - Priority: Medium
 - State: the plan model built 2026-11-06 (`src/lua-basic/lib/buddy-item-plan.lua`,
-  tested offline); the catalogue and hooking it to the game are not
+  tested offline), and on 2026-11-05 given the owner's answers (quest
+  items, ammo, the purse, the mailbox); the catalogue and hooking it to the
+  game are not; one question open (who fills an ammo bag)
 
 ## Origin
 
@@ -115,7 +117,46 @@ same questions from other sub-issues; answers are written back here.
   worked out again when the buddy logs in; each list is settled when the
   buddy is near what settles it (a vendor, the auction house, a profession
   trainer, a mailbox...); a buddy sells as much as it needs to. Quest
-  items never reach buddies.
+  items never reach buddies (changed 2026-11-05: those with a sell price
+  do, below).
+
+- **Answered 2026-11-05** (the owner, reviewing the plan model's pull
+  request; word for word):
+  - Quest items: "buddies shouldn't pick up quest items unless they have
+    a sell price, and then they should vendor them, unless they're used in
+    professions or something, then they should treat them like a trade
+    good. Essentially, treat them like "white" quality items."
+  - Ammo: "ammo needs to be kept. For hunters and others who are
+    specifically ranged-weapon-forward (custom classes?) we want to fill up
+    an ammo bag. Basically, if there's an ammo bag, always keep it full of
+    the best ammo we can get our hands on. If we can get better ammo, we
+    can sell the lowest quality one to replace it. For other classes
+    (warrior, rogue, etc) we just need one stack of ammo."
+  - Buying with auction money not yet in hand: "well that's silly. How
+    could we buy something with money we don't have? We should count them
+    as "sold", as in, we're not actively thinking about them, and if the
+    auction doesn't get a buyer then we will re-prioritize the item again
+    when we pick it up from the mailbox. If we get gold from a successful
+    auction, then great! No re-categorization needed." Then: "no, money
+    only counts when it's in their purse, after being picked up from the
+    mailbox."
+  - Wants bought in their list's order rather than cheapest first:
+    "that's okay. So long as we can prune the list when needed."
+  - The mailbox: "when buddy-bots have the mailbox open, they should be
+    able to decide whether or not to pick up items. They will always get
+    the mail that has just gold in it, and indeed if there's a message that
+    has gold and items, they will always take the gold and possibly leave
+    the items. When they have the mailbox open, they will run their
+    prioritization system on the items that are in the mailbox. If they are
+    in a town with an auction house, then they will pick up things they
+    need to auction. Same for if they're in a town with a vendor. If
+    they're at a mailbox without any vendors, like for example in the DK
+    starting zone, then they won't pick up any items that they intend to
+    vendor. For profession items, they will pick them up if they have
+    profession stuff on their todo list, which they generate when they
+    enter the town and update dynamically as they run errands. The todo
+    list is wiped when the player leaves the town, so buddy-bots will drop
+    what they're doing and follow the player." (The to-do list is 617e4's.)
 
 1. Openable items (a bag of coins, a clam, a locked box a rogue opens):
    open at once on pickup, or keep?
@@ -125,6 +166,12 @@ same questions from other sub-issues; answers are written back here.
    skill, else auction it?
 4. Should buddies spend money on more than they do now (potions from
    vendors, better gear from the auction house, bags)?
+5. **Open (2026-11-05): who fills an ammo bag.** What makes a class
+   "ranged-weapon-forward" (a hunter today; custom classes later): read
+   from the class, or from the buddy's ranged slot being its main weapon?
+   The owner: "I dunno. let's leave it unanswered for now." Until it is
+   answered the caller says, as `buddy.ammo_stacks` (an ammo bag's slots,
+   or 1).
 
 ## Decisions, 2026-11-06 (an agent, answering what was still open)
 
@@ -132,19 +179,25 @@ Built: the per-item plan from the 2026-10-28 design and the owner's
 2026-10-30 words, as a pure Lua module
 (`src/lua-basic/lib/buddy-item-plan.lua`, page `buddy-item-plan.info.md`),
 tested by `scripts/test-buddy-item-plan` (quick test: the owner's pearl
-and axe examples, each kind of item, and 400 random buddies against a
-referee; a mutation pass of 44 changes to the module, all caught). Not
+and axe examples, each kind of item, quest items, ammo kept and replaced,
+the mailbox, and 400 random buddies against a referee; a mutation pass of
+44 changes to the module, all caught, and 19 more for the 2026-11-05
+answers, all caught). Not
 built: step 1 (the catalogue needs the world database), step 2's survey
 of the bot module's use rules (its source isn't in this repository), and
 hooking pickups and town stops to the module (needs the server). These
 were open, and are decided here so the model could be built; each can be
 changed in one line of the rule table:
 
-1. **The order of the rules** (first that fits wins): what it can't spare
+1. **The order of the rules** (first that fits wins): a quest item nobody
+   pays for is left where it lies ("leave"); what it can't spare
    (hearthstone, a profession tool, a fishing pole, a weapon kept as a
-   runner-up), wear, open, learn, feed its pet, use, craft, give to a
-   clan-mate, disenchant, auction, vendor, junk. Its own uses come before
-   a clan-mate's, and a clan-mate's before money.
+   runner-up, the ammo it fires), wear, open, learn, feed its pet, use,
+   craft, give to a clan-mate, disenchant, auction, vendor, junk. Its own
+   uses come before a clan-mate's, and a clan-mate's before money. A quest
+   item with a price is judged as a white item, and as a trade good when a
+   profession uses it (`item.material`, from the catalogue), per the owner's
+   2026-11-05 answer.
 2. **Whether to wear it is not judged here.** The bot module's item usage
    and 617e4b's kept weapons already decide that; the caller passes
    `wear = "now"` or `"kept"`.
@@ -152,15 +205,30 @@ changed in one line of the rule table:
    comes out (the old gear, the clam's pearl, the dust) is picked up as new
    items with plans of their own.
 4. **A plan changes only when a recipe is learned** (its reagents become
-   "craft", the owner's pearl), as nothing else a pickup does changes a
-   fact a held plan reads. A login works every plan out again from the
+   "craft", the owner's pearl) **or better ammo comes** (the worst kept
+   stack goes to the vendor). Ammo is ranked by damage per second, then
+   the fuller stack, then the one held longest; the buddy keeps
+   `ammo_stacks` stacks, and a spare stack still in the bags is kept again
+   if that number grows. A login works every plan out again from the
    bags; the test checks that this always gives the plans the pickups
-   gave.
+   gave, and that the same ammo in any order keeps the same stacks.
 5. **The owner's axe is a "want"**: a price it saves for, "ready" once its
-   money plus what its planned sales should bring cover it, cheapest want
-   first, and bought at the next auction house the money (after the sales
-   made so far) covers. What a want is (which gear, from where) is the
+   purse plus what the items still in its bags should sell for cover it
+   (cheapest want first, for the "ready" mark only). Wants are bought at an
+   auction house in their list's order, each one the purse covers, and
+   only from the purse: an item put up at the auction house is out of mind
+   and brings nothing until its money is taken from the mailbox; an item
+   that didn't sell comes back by mail and is planned again there. The
+   list is pruned by name. What a want is (which gear, from where) is the
    caller's.
+5a. **The mailbox** (`Plan.mailbox`): money is always taken; each item by
+   the plan it would get: to auction only with an auction house near, to
+   sell only with a vendor near, a profession item (a reagent it crafts
+   with, a recipe it can learn, a bound item to disenchant) only when the
+   to-do list holds a profession errand; what it keeps, wears, opens,
+   uses, feeds its pet or gives on is always taken, junk never. What the
+   town has and what is on the to-do list are the caller's facts (617e4's
+   town visit).
 6. **The auction estimate**, when the caller has none, is three times the
    vendor price, until 617h's auction pricing gives one.
 7. **Disenchant only what can't be auctioned** (bound items), so the

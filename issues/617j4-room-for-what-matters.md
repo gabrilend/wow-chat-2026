@@ -53,8 +53,10 @@ and never had them (his backpack was full and he had no bags):
 3. **Room is made for what matters**: when a buddy must take an item and
    has no room, it destroys the least worth item it carries to make room.
    What may go, first to last: grey junk, then common trade goods and food
-   it has plenty of, then anything else that is not a gear upgrade, a quest
-   item or soulbound gear it wears. A gear upgrade is never what goes, and
+   it has plenty of, then anything else that is not a gear upgrade, its
+   ammo or soulbound gear it wears. Quest items go as white items do (the
+   owner, 2026-11-05: "treat them like "white" quality items"; one nobody
+   pays for is never picked up, 617h2). A gear upgrade is never what goes, and
    a gear upgrade (or anything won with a need roll) always gets its room.
 4. **Upgrades are celebrated**: a buddy that loots or wins an upgrade puts
    it on, and is happy about it: an emote (cheer, dance), and sometimes (a
@@ -106,8 +108,9 @@ Built: step 2, the worth order, as `Plan.room_order` and `Plan.make_room`
 in `src/lua-basic/lib/buddy-item-plan.lua` (617h2's per-item plans, as
 617u's 2026-10-28 answer puts a buddy's item lists in Lua), tested in
 `scripts/test-buddy-item-plan` (the owner's scene: full bags, a won green,
-a grey goes; stacks; what never goes; 400 random bags against a referee;
-24 of 24 mutants caught). Not built: step 1 (why buddies don't loot: needs
+a grey goes; stacks; what never goes; quest items as white ones; 400
+random bags against a referee; 24 of 24 mutants caught, and 2 of 2 for
+the quest-item change). Not built: step 1 (why buddies don't loot: needs
 the game and the trace), step 3 (calling it before a loot or a won roll:
 `buddies_loot.cpp`, needs the server), steps 4 and 5 (the cheer and the
 guild line, seen in game).
@@ -124,8 +127,13 @@ guild line, seen in game).
    before full stacks (the owner's 2026-10-28 answer), then the cheapest
    by vendor price times the stack.
 3. **Never destroyed**: what 617h2 says it can't spare (hearthstone,
-   tools, fishing pole, kept weapons), need-won items, quest items. A gear
-   upgrade is worn at once, so never sits in the bags.
+   tools, fishing pole, kept weapons, the stacks of ammo it fires and
+   keeps: the owner, 2026-11-05, "ammo needs to be kept"), need-won items.
+   A gear upgrade is worn at once, so never sits in the bags. Quest items
+   (changed 2026-11-05, from "never destroyed"): the owner's answer in
+   617h2 makes them white items, so one with a price is ranked as a white
+   item (a trade good when a profession uses it), and one nobody pays for
+   is never in the bags, nor given room.
 4. **An item worth no more than the least it carries is left behind**
    rather than swapped for it; an upgrade, a need-won item, something to
    open or learn, and anything that may never go always get room when
