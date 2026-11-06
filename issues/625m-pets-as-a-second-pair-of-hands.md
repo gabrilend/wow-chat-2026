@@ -8,7 +8,8 @@
   threat economy: a pet's taunt moves attention), 625a (what each talent
   touches: the pet talents)
 - Priority: Medium
-- State: planned
+- State: in progress (the pet's lane built offline 2026-11-06; the
+  server's side next)
 
 ## Origin
 
@@ -30,6 +31,51 @@ Not built. The bot module leaves a pet's abilities to the game's own
 autocast (each ability on or off, and a command to toggle them,
 `TogglePetSpellAutoCastAction` in the module's pet actions): the pet
 casts what is switched on whenever it can, with no aim.
+
+**The pet's abilities are already in the game's data** (found
+2026-11-06): `scripts/generate-ability-data` lists them under their
+master's class in `buddies_ability_data.h` (Claw, Bite, Growl, Cower and
+Dash under the hunter's; Firebolt, Torment, Suffering, Spell Lock, Devour
+Magic, Seduction and Shadow Bite under the warlock's), with their cast
+times, cooldowns, global cooldowns and costs. So step 1 is mostly done;
+not found there: the ghoul's Gnaw and the Water Elemental's Freeze (the
+table's one "freeze" is a shaman's, spell 63685).
+
+**The pet's lane, built 2026-11-06 (offline, on a branch for review):**
+`buddies_pet_lane.h` (step 2), on the action economy's look ahead for
+short abilities (`buddies_rotation_time.h`, 625f), which gains what a
+pet needs: a resource of its own (a pool, its most, and how fast it comes
+back; each cast paid for or waited for), a deadline a cast must land by,
+and a worth that fades each second until it lands. The lane is that look
+ahead run on the pet's abilities with the pet's own global cooldown and
+resource, beside the buddy's and never against it. Each pet ability is
+priced by its goal from what the moment shows (the server reads it):
+- **damage**: its own worth (Claw, Firebolt);
+- **interrupt**: the enemy's cast in progress, if it lands before that
+  cast does (Spell Lock); nothing with none under way;
+- **taunt**: what the loose enemy costs each second (625j's curve) for as
+  long as it would stay loose, each second before the taunt lands lost
+  (Growl, Torment);
+- **dispel**: what the worst mark still costs, the same way (Devour
+  Magic).
+The plain attack stays on the game's autocast (open question 1); the lane
+says when to pause it: while the plan starts with an ability with a goal,
+holds the resource for one coming back, or wants one off the global
+cooldown that can't yet be paid for (Growl with 10 focus: Claw would keep
+spending the focus Growl needs). Costs are read in the pet's own unit
+(focus and energy as they are, rage and runic power from the game's
+tenths, mana as its amount or its share of base mana). Checked by
+`scripts/test-buddy-pet-lane` (31 checks, a quick test): a wolf claws on
+autocast until an enemy is loose and Growl is slipped in; Spell Lock is
+worth the 2000 heal it stops, nothing with no cast; a taunt worth 3000 back
+in 2 seconds holds 50 focus and pauses the autocast; the hunter's lane
+and the wolf's each pick their own, the same with or without the other.
+15 of 15 deliberately broken versions of the lane and 14 of 14 of the
+resource, deadline and fading caught; the short abilities' own test (32
+checks) still holds. Not yet: the server's side (step 3: the pet's
+autocast switched by the lane, its abilities cast through the pet's own
+action, behind a switch), and the Sight read from the fight (625j's curve,
+the enemy's cast, the marks on the party).
 
 ## Intended Behavior
 
@@ -73,3 +119,23 @@ casts what is switched on whenever it can, with no aim.
    **Answered 2026-10-30** (the owner, word for word): "the plain attack
    can be autocast I guess." So the pet's plain attack stays on the
    game's autocast as filler, and the buddy chooses the rest.
+
+## Decisions (2026-11-06)
+
+The agent's calls while building `buddies_pet_lane.h`, for the owner to
+curate:
+- **A taunt's worth** is the health the loose enemy costs each second,
+  above what it would cost on the tank, times how long it would stay
+  loose with no taunt (the rest of the fight when nobody knows), each
+  second before the taunt lands taken off. A dispel is priced the same way
+  from the mark's cost a second and the time it has left.
+- **An interrupt** is worth the whole of the enemy's cast, but only if it
+  lands before that cast does.
+- **The autocast pause**: the plain attack's autocast stays on unless the
+  lane's plan starts with an ability with a goal, holds the resource for
+  one, or wants one off the global cooldown that can't yet be paid for. A
+  wait for the plain attack's own resource leaves the autocast on.
+- **Off the global cooldown** (Growl, Spell Lock): slipped in whenever
+  worth something and paid for, as the buddy's own are; their costs are
+  not raced against the rest, which is why the pause above watches them.
+

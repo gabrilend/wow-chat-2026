@@ -6,8 +6,7 @@
 //
 // The pets' abilities are the game's own rows (buddies_ability_data.h lists
 // them under their master's class); the worths and the moments are made
-// up. The felhunter's plain attack (Shadow Bite) is not in the table, so a
-// made-up one stands for it.
+// up.
 
 #include "buddies_pet_lane.h"
 
@@ -54,6 +53,7 @@ int main()
     check(near(lock.cost, 200.0) && near(lock.gcd, 0.0) && near(bolt.cost, 180.0) && near(bolt.cast, 2.5) && near(bolt.gcd, 1.0),
           "Spell Lock 200 mana off the global cooldown; Firebolt 180 mana, a 2.5-second cast, a 1-second global cooldown");
     check(near(PetCast(Row(WARRIOR, "mortal strike"), 1.0).cost, 30.0), "rage from the game's tenths: Mortal Strike 30");
+    check(near(PetCast(Row(6, "anti-magic shell"), 1.0).cost, 20.0), "runic power from the game's tenths: Anti-Magic Shell 20");
     BuddyAbilityRow pct = Row(WARLOCK, "spell lock"); pct.cost = 0; pct.costPct = 10;
     check(near(PetCast(pct, 0.0, 1500.0).cost, 150.0), "a cost given as a share of base mana: 10% of 1500 is 150");
     // }}}
@@ -74,6 +74,13 @@ int main()
         l = Weigh(wolf, loose, low);
         check(l.answer.weight[1] == 0.0 && !l.autocast,
               "with 10 focus Growl can't be paid for: autocast paused, so Claw doesn't spend the focus Growl needs");
+        Lane quiet = Weigh(wolf, Sight{}, low);
+        check(quiet.autocast, "10 focus and nobody loose: nothing to save for, the autocast stays on (Claw when its focus is back)");
+        Moment lowBusy = low; lowBusy.gcdLeft = 0.5;
+        check(Weigh(wolf, Sight{}, lowBusy).autocast, "the same with the pet's global cooldown still running half a second");
+        Cast cheapBite = claw; cheapBite.worth = 60.0;
+        Lane two = Weigh({ { claw, Goal::Damage, true }, { cheapBite, Goal::Damage, true } }, Sight{}, hunterPet);
+        check(two.autocast && two.answer.first == 0, "two marked as the plain attack: the first is the one on autocast");
         Cast cooling = growl; cooling.readyIn = 2.0;
         l = Weigh({ { claw, Goal::Damage, true }, { cooling, Goal::Taunt, false } }, loose, low);
         check(l.autocast, "Growl still cooling: nothing to save for yet, Claw goes on");
@@ -89,14 +96,23 @@ int main()
               && BuddyRotation::Landed(c, 11.0, hunterPet) == 0.0,
               "Growl against an enemy loose for 10 s at 300 a second: 3000 now, 1800 four seconds on, nothing once it would be back anyway");
         Sight rest; rest.looseRate = 100.0;
-        check(near(GoalCast(g, rest, hunterPet).worth, 3000.0), "loose for the rest of a 30-second fight at 100 a second: 3000");
+        Moment shorter = hunterPet; shorter.fightLeft = 20.0;
+        check(near(GoalCast(g, rest, hunterPet).worth, 3000.0) && near(GoalCast(g, rest, shorter).worth, 2000.0),
+              "loose for the rest of the fight at 100 a second: 3000 in a 30-second fight, 2000 in a 20-second one");
+        PetAbility d{ PetCast(Row(WARLOCK, "devour magic"), 0.0), Goal::Dispel, false };
+        Sight curse; curse.markRate = 150.0; curse.markLeft = 10.0;
+        Cast dc = GoalCast(d, curse, hunterPet);
+        check(near(dc.worth, 1500.0) && near(dc.fade, 150.0), "a curse costing 150 a second for 10 more: Devour Magic worth 1500, fading 150 a second");
+        PetAbility k{ lock, Goal::Interrupt, false };
+        Sight none; none.castWorth = 2000.0;
+        check(GoalCast(k, none, hunterPet).worth == 0.0, "an interrupt with no cast under way is worth nothing, whatever the last one was worth");
     }
     // }}}
 
     // {{{ an interrupt is worth the cast it stops, if it lands first
     {
         Moment felMoment; felMoment.pool = 1000.0; felMoment.most = 1000.0; felMoment.regen = 10.0;
-        Cast bite{ 0.0, 1.5, 6.0, 0.0, 120.0, false, 0.0 };                         // a made-up plain attack
+        Cast bite = PetCast(Row(WARLOCK, "shadow bite"), 120.0, 1000.0);           // the felhunter's plain attack
         Cast devour = PetCast(Row(WARLOCK, "devour magic"), 0.0);
         std::vector<PetAbility> fel = { { bite, Goal::Damage, true }, { lock, Goal::Interrupt, false }, { devour, Goal::Dispel, false } };
         Sight heal; heal.castWorth = 2000.0; heal.castLeft = 1.5;
@@ -110,8 +126,8 @@ int main()
               && BuddyRotation::Landed(GoalCast(slowKick, heal, felMoment), 0.6, felMoment) == 0.0,
               "an interrupt with a 1-second cast: nothing against a cast landing in 0.5 s, the whole cast against one in 1.5, "
               "nothing if begun too late for it");
-        Sight curse; curse.markRate = 150.0; curse.markLeft = 10.0;
-        l = Weigh(fel, curse, felMoment);
+        Sight curse2; curse2.markRate = 150.0; curse2.markLeft = 10.0;
+        l = Weigh(fel, curse2, felMoment);
         check(l.answer.first == 2 && !l.autocast, "a curse worth 1500 on the party: Devour Magic first, autocast paused");
     }
     // }}}
@@ -141,6 +157,11 @@ int main()
         Moment slow = dry; slow.regen = 5.0;
         double a = BuddyRotation::Weigh(only, free).best, b = BuddyRotation::Weigh(only, dry).best, c = BuddyRotation::Weigh(only, slow).best;
         check(near(a, 400.0), "costs not counted: four Claws in the 6-second look ahead");
+        Moment poor = slow; poor.pool = 10.0;
+        BuddyRotation::Answer w = BuddyRotation::Weigh(only, poor);
+        check(w.first == -1 && near(w.waitFor, 3.0) && near(w.best, 100.0), "10 focus: wait 3 s for the 15 more a Claw needs, then one Claw");
+        Moment small = slow; small.most = 20.0;
+        check(BuddyRotation::Afford(claw, 0.0, 0.0, small) > 1e29, "a cost above the pool's most is never paid");
         check(near(b, 100.0), "30 focus and none coming back: one Claw");
         check(near(c, 200.0), "30 focus, 5 a second: a Claw now and another once 25 is back (at 4 s), no third in time");
         check(BuddyRotation::Afford(claw, 30.0, 1.0, slow) == 1.0 && near(BuddyRotation::Afford(claw, 5.0, 1.0, slow), 5.0)
