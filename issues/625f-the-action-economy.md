@@ -9,8 +9,8 @@
   617e5b (boss fights by the warnings: the boss-mechanic economy)
 - Priority: High (the owner: "I am very excited to work on the action
   economy.")
-- State: in progress (window values and the cooldown timeline built; the
-  worker threads and the multiplier next)
+- State: in progress (window values, the cooldown timeline and the short
+  abilities' look ahead built; the worker threads and the multiplier next)
 
 ## Origin
 
@@ -158,6 +158,41 @@ length (625h's estimate), the windows from the party's buffs and a boss's
 phases, and the weight handed to the talent draw's multiplier, all in the
 server and waiting for those.
 
+**The short abilities' global cooldown and cast times, built 2026-11-06
+(offline, on a branch for review):** `buddies_rotation_time.h` (step 2's
+"next"). A look ahead of 6 seconds tries every order of a buddy's
+abilities on the global cooldown (and waiting for one about to come
+back): each cast holds the next for the longer of its cast time and its
+global cooldown (haste shortens both, the global cooldown no lower than
+the game's 1 second), comes back a cooldown after it lands, and is worth
+its worth when it lands: nothing if movement is coming before it lands
+(instants go on while moving), nothing if the target dies under it (one
+begun after is on the next enemy), nothing past the fight's end; a
+channel keeps the part before. A cast straddling the look ahead's end
+counts by its share inside, so a long cast begun at the edge earns no more
+than its time there. After the look ahead, each ability with a cooldown
+is used about once a cooldown from when it is next ready to the fight's
+end, each use gaining its worth less what the buddy's filler (its best
+ability without a cooldown, per second) would have earned in its slot:
+so a cooldown started sooner is worth more, and one no better than the
+filler is no hurry. Each ability's weight for the draw's multiplier is the
+best order starting with it against the best of all (1 for the best first
+cast, 0 for one not ready); the answer also says when waiting is best and
+for how long. Abilities off the global cooldown are slipped in between,
+weight 1 whenever ready. Cast times, global cooldowns and cooldowns come
+from the generated ability data (a channel's length from its aura's).
+Checked by `scripts/test-buddy-rotation-time` (31 checks, a quick test):
+Fireball over Scorch standing still, Scorch with movement 2 seconds off,
+Fireball again with 75% haste; Mortal Strike over a slightly weaker
+filler, the two even when worth the same; Fire Blast back in 0.2 seconds
+waited for rather than starting a Fireball; a 0.2-second hold in the
+middle of a plan; a channel cut by movement. 27 of 27 deliberately broken
+versions caught. About 0.2 milliseconds for eight abilities at no haste,
+6 at 50% haste (more casts fit in the look ahead), for the worker threads
+to carry. Not yet: the resource each cast costs (625h's), pushback when
+the caster is hit, the worth handed in from the talent draw, the weights
+handed to it, and the worker threads.
+
 ## Intended Behavior
 
 **Time is the currency.** Every answer costs time: the global cooldown it
@@ -225,8 +260,9 @@ by its own measure, and the draw (625) weighs them together. Learning
    with what each economy said.
 2. The timeline as plain arithmetic in the buddy module's pure core
    (each ability's global cooldown, cast time, cooldown, readiness), with
-   tests. (Done for long cooldowns: `buddies_cooldown_plan.h`; the global
-   cooldown and cast times of the rotation's short abilities are next.)
+   tests. (Done for long cooldowns: `buddies_cooldown_plan.h`; for the
+   rotation's short abilities, their global cooldown and cast times:
+   `buddies_rotation_time.h`, 2026-11-06.)
 3. Its weight joined to the talent draw's multiplier.
 
 ## Open Questions
@@ -264,3 +300,26 @@ by its own measure, and the draw (625) weighs them together. Learning
    ability) is to be read from the ability's own data (cast time, global
    cooldown, resource, ticks), and the window's worth said in damage and
    health (`strategems/everything-is-damage-and-health.md`).
+
+## Decisions (2026-11-06)
+
+The agent's calls while building `buddies_rotation_time.h`, for the owner
+to curate; each number is one constant or setting there:
+- **"Leans upward the longer it sits ready"** is read as: every moment a
+  ready cooldown waits costs the uses it pushes past the fight's end, the
+  same each moment (time already lost is gone, so the lean does not grow
+  with it), and only by what a use gains over the filler it displaces. An
+  ability no better than the filler gets no hurry from its cooldown.
+- **The look ahead is 6 seconds** (four global cooldowns); a fight of
+  unknown length is counted as 30 seconds (a pack's ordinary length)
+  until 625h's estimate is handed in.
+- **Movement** is said as when it comes and how long it lasts (2 seconds
+  by default): a cast with a cast time begun before it and landing after,
+  or begun during it, is lost; instants go on.
+- **A dying target**: a cast begun before the death and landing after is
+  wasted; one begun after is on the next enemy and counts.
+- **The weight** is the best order starting with an ability against the
+  best order of all, as the long cooldowns' plan does; when waiting is
+  best, the answer says so (no ability first) and for how long, for the
+  server to hold the cast.
+
