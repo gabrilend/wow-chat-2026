@@ -8,7 +8,9 @@
   dungeon draw: who is tank and healer), 617t (dungeon stand-ins: a tank
   may be a stand-in), 617c4 (dungeons)
 - Priority: Medium
-- State: planned; open questions first
+- State: in progress (the pace's decision core built 2026-10-31; a healer
+  buddy's own "slow down", a player's pull picked up, harmless packs and
+  the waiting line added 2026-11-06; the server's part not yet)
 
 ## Origin
 
@@ -47,10 +49,35 @@ mana less that cost keeps a reserve that grows as its confidence falls
 stops it until "ready"; a fight the healer came out of above the reserve
 adds 0.05 (the owner's "go faster" by pulling more). It clears 10 to 30
 yards either side of its route by confidence. Every number is the
-agent's call, to be judged in game. Not built: the route to the next boss
-(the dungeon's boss order and its forks), hearing the words in group
-chat, the walk ahead and the pull, a healer buddy's own "slow down", and
-picking up what a player pulls.
+agent's call, to be judged in game.
+
+**Added 2026-11-06 (offline, on a branch for review)**, in the same core
+and its test (now 48 checks; 19 of 19 deliberately broken versions of
+the additions caught):
+- **A player's pull, picked up** (`PlayerPulled`): the tank says "Fine,
+  I'll take them." (a little put out), remembers the fight, and if the
+  healer came out of it above the reserve, its confidence rises at once
+  to at least what it would have needed to pull that pack itself at the
+  healer's mana as it began (`NeededFor`): "they'll adjust to the new
+  speed and pull accordingly". A pull that drained the healer teaches no
+  new speed.
+- **What it says when it holds** (`WaitLine`, question 6): "Waiting for
+  ready." after an "oom", "Waiting for mana." when short.
+- **Harmless packs** (`GreyLevel`, `PackPlan`, question 5): a pack at or
+  below the tank's grey level (the game's own: 13 for a level-20 tank)
+  is walked past, unless it is hostile, when it is swept up on the way by
+  area attacks without asking the healer ("If they are hostile they are
+  picked up and cleared by AoE on the way").
+- **A healer buddy's own "slow down"** (`HealerVoice`): whispered to the
+  tank when two of its last three fights ended with its mana under 25%,
+  or a fight where the group's health fell faster than it could heal; then
+  it keeps quiet for three fights, which aren't counted, and starts fresh.
+  The tank hears it as any "slow down".
+Not built: the route to the next boss (the dungeon's boss order and its
+forks), hearing the words in group chat, the walk ahead and the pull, and
+the server feeding the pieces above (the healer's mana at each fight's
+start and end, whether the group fell behind, the pack's levels and
+hostility).
 
 Before: nothing paced a dungeon but the player. Inside a dungeon each buddy follows
 its owner (the bot module's own following), and when the owner comes
@@ -203,3 +230,18 @@ same questions from other sub-issues; answers are written back here.
 6. When the answer is "wait", does the tank say so ("Waiting for mana."),
    as "My bags are full." is said (617y)? **Answered 2026-10-30:**
    "sure."
+
+## Decisions (2026-11-06)
+
+The agent's calls while adding to the core, for the owner to curate; each
+is one field of `BuddyPace::Settings` or one line of the core:
+- **Learning a player's speed**: a player's pull the healer came out of
+  well sets the tank's confidence to at least what that pull needed; it
+  never lowers it.
+- **The put-out line**: "Fine, I'll take them."
+- **Harmless** means grey to the tank, by the game's own rule; a grey pack
+  that will attack is swept up, one that won't is walked past.
+- **When a healer buddy speaks up**: two of three fights ending under 25%
+  mana, or falling behind the group's damage; then three fights of quiet
+  ("if the healer asks to slow down though he will for a time, until he
+  builds up confidence again").
