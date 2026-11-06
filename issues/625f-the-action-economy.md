@@ -181,12 +181,12 @@ cast, 0 for one not ready); the answer also says when waiting is best and
 for how long. Abilities off the global cooldown are slipped in between,
 weight 1 whenever ready. Cast times, global cooldowns and cooldowns come
 from the generated ability data (a channel's length from its aura's).
-Checked by `scripts/test-buddy-rotation-time` (31 checks, a quick test):
+Checked by `scripts/test-buddy-rotation-time` (32 checks, a quick test):
 Fireball over Scorch standing still, Scorch with movement 2 seconds off,
 Fireball again with 75% haste; Mortal Strike over a slightly weaker
 filler, the two even when worth the same; Fire Blast back in 0.2 seconds
 waited for rather than starting a Fireball; a 0.2-second hold in the
-middle of a plan; a channel cut by movement. 27 of 27 deliberately broken
+middle of a plan; a channel cut by movement. 29 of 29 deliberately broken
 versions caught. About 0.2 milliseconds for eight abilities at no haste,
 6 at 50% haste (more casts fit in the look ahead), for the worker threads
 to carry. Not yet: the resource each cast costs (625h's), pushback when
@@ -321,5 +321,6 @@ to curate; each number is one constant or setting there:
 - **The weight** is the best order starting with an ability against the
   best order of all, as the long cooldowns' plan does; when waiting is
   best, the answer says so (no ability first) and for how long, for the
-  server to hold the cast.
+  server to hold the cast. A wait that only ties with casting now is not
+  taken: the cast goes now.
 

@@ -123,6 +123,11 @@ int main()
         Answer a = Weigh({ fireball, blast }, m);
         check(a.first == -1 && near(a.waitFor, 0.2) && a.weight[1] == 0.0 && a.weight[0] < 1.0,
               "Fire Blast back in 0.2 s: waiting for it beats starting a 3.5-second Fireball; Fireball leans away");
+        Cast nothing = blast; nothing.worth = 0.0;
+        Moment shortFight; shortFight.fightLeft = 2.0;
+        a = Weigh({ FromRow(Row(MAGE, "ice lance"), 3.0), nothing }, shortFight);
+        check(a.first == 0 && near(a.waitFor, 0.0) && near(a.best, 6.0),
+              "two Ice Lances fit in a 2-second fight either way: waiting 0.2 s for nothing ties with casting now, and the tie casts now");
         Cast far = blast; far.readyIn = 3.0;
         a = Weigh({ fireball, far }, m);
         check(a.first == 0 && near(a.waitFor, 0.0), "back in 3 seconds: Fireball now");
