@@ -5,6 +5,7 @@
 - Parent: Issue 157 (three-machine-deployment)
 - Phase: 1
 - **Blocks:** 157b, 157c, 157g
+- State: built 2026-11-06 (every role "local"; the machines are the owner's to fill in)
 
 ## Overview
 
@@ -48,3 +49,34 @@ also describes today's single-machine setup, with all three roles set to
 
 ## Related
 - `issues/157-three-machine-deployment.md`
+
+## Decisions, 2026-11-06 (an agent, building it)
+
+Built: the roles file, `config/deploy-hosts.lua`, with all three roles
+`"local"`; the reader, `scripts/deploy-host [DIR] <role> <field>` (and
+`--check`), over the checker `scripts/lib/deploy-hosts.lua`; and the quick
+test `scripts/test-deploy-hosts` (the project's file, every mistake the
+checker names, the tool's answers and refusals on small project folders;
+33 of 33 mutants caught). Question 1 (the machines' addresses and users)
+stays the owner's: the file says so, and nothing changes until it is
+filled in.
+
+1. **A local role** is the string `"local"`; a machine is a table of
+   exactly the four fields. Asked for a local role's fields, the reader
+   answers this machine's: address `127.0.0.1` (as 157c expects), an empty
+   ssh user (no ssh: 157b runs local roles directly), the project folder,
+   and `uname -m`. An extra field, `local`, answers `yes` or `no`, so
+   157b can ask it directly.
+2. **When a shared address is a mistake** (step 3): two or three roles on
+   one address are one machine, which is allowed; it is a mistake only
+   when they name different architectures (one machine has one). A
+   loopback address (127.x) for a machine is refused too: that role should
+   be `"local"`.
+3. **Safety**: the file is run with nothing to call, so it can only build
+   its table; a compiled (bytecode) file is refused; any mistake makes the
+   reader answer nothing, so a bash script never acts on half a file.
+4. **Field rules**: dotted IPv4 with no leading zeros; user names of
+   lower-case letters, digits, `_` and `-` (up to 32, not starting with a
+   digit); install folders absolute, not `/`, without `..` or spaces;
+   architectures x86_64, aarch64, armv7l, i686 (more are one line in
+   `Hosts.ARCHES`).

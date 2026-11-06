@@ -1,0 +1,232 @@
+#!/usr/bin/env luajit
+-- ==== header: 8 lines, footer: 3 lines ====
+-- id:         test-deploy-hosts
+-- profiles:   all
+-- priority:   10
+-- kind:       test
+-- about:      check the roles file (which machine does which server job)
+-- quick-test: yes
+-- ==== end of header ====
+-- test-deploy-hosts - check the roles file (which machine does which
+-- server job) and the tool that reads it (issue 157a).
+--
+-- For a general audience: config/deploy-hosts.lua says where the database,
+-- the login server and the world server run; scripts/deploy-host answers
+-- one fact about one of them for the bash scripts. This test checks that
+-- the project's own file is sound and all "local"; that every kind of
+-- mistake the checker promises to catch is caught, and a sound file with
+-- two roles on one machine is not refused; and that the tool answers the
+-- right thing, refuses a broken or missing file by name, and can't be made
+-- to run anything by the file it reads.
+--
+-- Usage: scripts/test-deploy-hosts [PROJECT_DIR]
+--   Writes small project folders under $TMPDIR (or PROJECT_DIR/tmp) and
+--   removes them.
+-- Exit status 0 if all pass.
+
+local DIR = "/mnt/kaun/wow-chat-2026"
+if arg[1] and arg[1] ~= "" then DIR = arg[1] end
+
+local Hosts = dofile(DIR .. "/scripts/lib/deploy-hosts.lua")
+
+local fails, checks = {}, 0
+local function check(ok, what)
+    checks = checks + 1
+    if not ok and #fails < 25 then fails[#fails + 1] = what end
+end
+
+-- {{{ the project's own file
+do
+    local hosts, err = Hosts.load(DIR .. "/config/deploy-hosts.lua")
+    check(hosts ~= nil, "the project's roles file doesn't load: " .. tostring(err))
+    if hosts then
+        check(#Hosts.problems(hosts) == 0, "the project's roles file has mistakes: " .. table.concat(Hosts.problems(hosts), "; "))
+        for _, r in ipairs(Hosts.ROLES) do check(hosts[r] == "local", r .. " isn't local in the project's file") end
+    end
+end
+-- }}}
+
+-- {{{ the checker
+local function machine(addr, arch, extra)
+    local m = { lan_address = addr, ssh_user = "wow", install_dir = "/srv/wow-chat-2026", arch = arch or "x86_64" }
+    for k, v in pairs(extra or {}) do m[k] = v end
+    return m
+end
+local function with(world, more)
+    local h = { database = "local", auth = "local", world = world }
+    for k, v in pairs(more or {}) do h[k] = v end
+    return h
+end
+local NONE = {}   -- stands for nil in a table literal
+local function strip(t) for k, v in pairs(t) do if v == NONE then t[k] = nil end end return t end
+local sound = {
+    { "all local",                    with("local") },
+    { "one machine",                  with(machine("192.168.1.20")) },
+    { "two roles on one machine",     with(machine("10.0.0.5"), { auth = machine("10.0.0.5") }) },
+    { "three machines",               { database = machine("10.0.0.1"), auth = machine("10.0.0.2", "aarch64"), world = machine("10.0.0.3", "i686") } },
+    { "an address of 255s",           with(machine("255.255.255.254")) },
+    { "an address of a 1",            with(machine("1.0.0.0")) },
+    { "an armv7l",                    with(machine("10.0.0.3", "armv7l")) },
+    { "a user with _ and -",          with(machine("10.0.0.3", nil, { ssh_user = "_wow-chat9" })) },
+    { "a 32-letter user",             with(machine("10.0.0.3", nil, { ssh_user = string.rep("a", 32) })) },
+    { "a folder with dots in a name", with(machine("10.0.0.3", nil, { install_dir = "/srv/wow..chat/a.b" })) },
+}
+for _, c in ipairs(sound) do
+    local p = Hosts.problems(c[2])
+    check(#p == 0, c[1] .. " was refused: " .. table.concat(p, "; "))
+end
+local wrong = {   -- each: what, table, a word the complaint must hold
+    { "a role missing",            strip({ database = "local", auth = "local" }),                 "world is missing" },
+    { "an unknown role",           with("local", { login = "local" }),                           "\"login\" is not a role" },
+    { "a role neither",            with("remote"),                                               "neither" },
+    { "a number for a role",       with(7),                                                      "neither" },
+    { "three numbers",             with(machine("10.0.1")),                                      "IPv4" },
+    { "five numbers",              with(machine("10.0.1.2.3")),                                  "IPv4" },
+    { "a 256",                     with(machine("10.0.0.256")),                                  "IPv4" },
+    { "a leading zero",            with(machine("10.0.0.05")),                                   "IPv4" },
+    { "four digits",               with(machine("10.0.0.1000")),                                 "IPv4" },
+    { "a name, not an address",    with(machine("worldbox")),                                    "IPv4" },
+    { "a space after",             with(machine("10.0.0.1 ")),                                   "IPv4" },
+    { "an address as a number",    with(machine(10)),                                            "not text" },
+    { "this machine's address",    with(machine("127.0.0.1")),                                   "\"local\"" },
+    { "another loopback",          with(machine("127.1.2.3")),                                   "\"local\"" },
+    { "no machine",                with(machine("0.0.0.0")),                                     "no machine" },
+    { "a user with capitals",      with(machine("10.0.0.3", nil, { ssh_user = "Wow" })),          "user name" },
+    { "a user starting a digit",   with(machine("10.0.0.3", nil, { ssh_user = "9wow" })),         "user name" },
+    { "a 33-letter user",          with(machine("10.0.0.3", nil, { ssh_user = string.rep("a", 33) })), "user name" },
+    { "an empty user",             with(machine("10.0.0.3", nil, { ssh_user = "" })),             "user name" },
+    { "a user as a number",        with(machine("10.0.0.3", nil, { ssh_user = 5 })),              "not text" },
+    { "a relative folder",         with(machine("10.0.0.3", nil, { install_dir = "srv/wow" })),   "absolute" },
+    { "the whole disk",            with(machine("10.0.0.3", nil, { install_dir = "/" })),         "whole disk" },
+    { "the whole disk twice",      with(machine("10.0.0.3", nil, { install_dir = "//" })),        "whole disk" },
+    { "a folder going up",         with(machine("10.0.0.3", nil, { install_dir = "/srv/../etc" })), "goes up" },
+    { "a folder ending up",        with(machine("10.0.0.3", nil, { install_dir = "/srv/.." })),   "goes up" },
+    { "a folder with a space",     with(machine("10.0.0.3", nil, { install_dir = "/srv/wow chat" })), "space" },
+    { "a folder as a table",       with(machine("10.0.0.3", nil, { install_dir = {} })),          "not text" },
+    { "an unknown arch",           with(machine("10.0.0.3", "sparc")),                           "architecture" },
+    { "an arch as a number",       with(machine("10.0.0.3", 64)),                                "not text" },
+    { "a field missing",           with(strip(machine("10.0.0.3", nil, { arch = NONE }))),       "world.arch is missing" },
+    { "an unknown field",          with(machine("10.0.0.3", nil, { port = 22 })),                "world.port is not a field" },
+    { "one machine, two arches",   with(machine("10.0.0.5"), { auth = machine("10.0.0.5", "aarch64") }), "one machine" },
+}
+for _, c in ipairs(wrong) do
+    local p = Hosts.problems(c[2])
+    local all = table.concat(p, "; ")
+    check(#p >= 1, c[1] .. " wasn't refused")
+    check(all:find(c[3], 1, true) ~= nil, c[1] .. ": the complaint (" .. all .. ") doesn't say " .. c[3])
+end
+do
+    local p = Hosts.problems({ database = machine("10.0.0.5"), auth = machine("10.0.0.5", "aarch64"), world = machine("10.0.0.5", "i686") })
+    check(#p == 2, "three roles on one machine with three arches: " .. #p .. " complaints, wanted 2")
+    local q = Hosts.problems({ database = machine("10.0.0.5", "i686"), auth = machine("10.0.0.1"), world = machine("10.0.0.5", "i686") })
+    check(#q == 0, "two roles agreeing on one machine, a third elsewhere, was refused")
+    local s3 = Hosts.problems({ database = machine("10.0.0.5", "i686"), auth = machine("10.0.0.5", "aarch64"), world = machine("10.0.0.5", "i686") })
+    check(#s3 == 1 and s3[1]:find("auth and database", 1, true), "a role agreeing with the machine's first role was refused: " .. table.concat(s3, "; "))
+    local many = { database = "local", auth = "local", world = "local" }
+    local odd = { "zeta", "alpha", "mid", "beta", "omega", "gamma", "kappa", "delta", "nu", "eta" }
+    for _, k in ipairs(odd) do many[k] = 1 end
+    local r = Hosts.problems(many)
+    table.sort(odd)
+    local inorder = #r == #odd
+    for k, name in ipairs(odd) do inorder = inorder and r[k] ~= nil and r[k]:find("\"" .. name .. "\"", 1, true) ~= nil end
+    check(inorder, "unknown roles aren't each named, in order: " .. table.concat(r, "; "))
+end
+-- }}}
+
+-- {{{ the field answers
+do
+    local here = { dir = "/project", arch = "x86_64" }
+    local h = with(machine("10.0.0.3", "aarch64"))
+    local function f(role, field) return Hosts.field(h, role, field, here) end
+    check(f("world", "lan_address") == "10.0.0.3", "a machine's address")
+    check(f("world", "ssh_user") == "wow" and f("world", "install_dir") == "/srv/wow-chat-2026" and f("world", "arch") == "aarch64", "a machine's fields")
+    check(f("world", "local") == "no" and f("auth", "local") == "yes", "local yes/no")
+    check(f("auth", "lan_address") == "127.0.0.1", "a local role's address isn't 127.0.0.1")
+    check(f("auth", "ssh_user") == "", "a local role has an ssh user")
+    check(f("auth", "install_dir") == "/project" and f("auth", "arch") == "x86_64", "a local role isn't this machine")
+    local v, why = f("login", "lan_address")
+    check(v == nil and why:find("\"login\" is not a role", 1, true), "an unknown role answered")
+    v, why = f("world", "port")
+    check(v == nil and why:find("\"port\" is not a field", 1, true), "an unknown field answered")
+end
+-- }}}
+
+-- {{{ the tool, on small project folders
+local BASE = os.getenv("TMPDIR")
+if not BASE or BASE == "" or BASE:sub(1, 1) ~= "/" or BASE:match("^/+$") then BASE = DIR .. "/tmp" end
+BASE = BASE:gsub("/+$", "") .. "/test-deploy-hosts-" .. tostring(os.time()) .. "-" .. tostring(math.random(1e6))
+local function sh(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
+local function run(dir, args)
+    local out, errf, code = BASE .. "/out", BASE .. "/err", BASE .. "/code"
+    os.execute(sh(DIR .. "/scripts/deploy-host") .. " " .. sh(dir) .. " " .. args .. " >" .. sh(out) .. " 2>" .. sh(errf) .. "; echo $? >" .. sh(code))
+    local function slurp(p) local fh = io.open(p, "rb"); if not fh then return "" end local t = fh:read("*a"); fh:close(); return t end
+    return tonumber(slurp(code)), slurp(out), slurp(errf)
+end
+local function project(name, text)
+    local d = BASE .. "/" .. name
+    os.execute("mkdir -p " .. sh(d .. "/config") .. " " .. sh(d .. "/scripts/lib"))
+    os.execute("cp " .. sh(DIR .. "/scripts/lib/deploy-hosts.lua") .. " " .. sh(d .. "/scripts/lib/"))
+    if text then local fh = assert(io.open(d .. "/config/deploy-hosts.lua", "wb")); fh:write(text); fh:close() end
+    return d
+end
+os.execute("mkdir -p " .. sh(BASE))
+do
+    local code, out = run(DIR, "--check")
+    check(code == 0 and out == "ok\n", "the project's file doesn't pass --check")
+    code, out = run(DIR, "world lan_address")
+    check(code == 0 and out == "127.0.0.1\n", "the tool's local address: " .. out)
+    code, out = run(DIR, "database install_dir")
+    check(code == 0 and out == DIR:gsub("/+$", "") .. "\n", "the tool's local folder: " .. out)
+    code, out = run(DIR .. "/", "database install_dir")
+    check(code == 0 and out == DIR:gsub("/+$", "") .. "\n", "a project folder ending in / isn't trimmed: " .. out)
+    code, out = run(DIR, "auth ssh_user")
+    check(code == 0 and out == "\n", "the tool's local user isn't an empty line")
+    code, out = run(DIR, "auth arch")
+    check(code == 0 and out:match("^[%w_]+\n$"), "the tool's local arch: " .. out)
+
+    local remote = project("remote", 'return { database = "local", auth = "local", world = { lan_address = "192.168.1.20", ssh_user = "wow", install_dir = "/srv/w", arch = "aarch64" } }')
+    code, out = run(remote, "world lan_address")
+    check(code == 0 and out == "192.168.1.20\n", "a remote address: " .. out)
+    code, out = run(remote, "world arch")
+    check(code == 0 and out == "aarch64\n", "a remote arch: " .. out)
+    code, out = run(remote, "world local")
+    check(code == 0 and out == "no\n", "a remote role is local")
+    local code2, _, err2 = run(remote, "world")
+    check(code2 == 1 and err2:find("usage", 1, true), "one argument isn't refused with the usage")
+    code2, _, err2 = run(remote, "--check extra")
+    check(code2 == 1 and err2:find("usage", 1, true), "--check with more isn't refused")
+    code2, _, err2 = run(remote, "login lan_address")
+    check(code2 == 1 and err2:find("\"login\" is not a role", 1, true), "an unknown role isn't refused by name")
+
+    local bad = project("bad", 'return { database = "local", auth = "local", world = { lan_address = "127.0.0.1", ssh_user = "wow", install_dir = "/srv/w", arch = "x86_64" } }')
+    code2, out, err2 = run(bad, "auth lan_address")
+    check(code2 == 1 and out == "" and err2:find("1 mistake", 1, true) and err2:find("world.lan_address", 1, true), "a file with a mistake answered")
+    local broken = project("broken", "return { database = ")
+    code2, out, err2 = run(broken, "--check")
+    check(code2 == 1 and err2:find(broken .. "/config/deploy-hosts.lua", 1, true), "a broken file isn't named")
+    local missing = project("missing", nil)
+    code2, _, err2 = run(missing, "--check")
+    check(code2 == 1 and err2:find("no roles file", 1, true) and err2:find(missing, 1, true), "a missing file isn't named")
+    local notable = project("notable", 'return "local"')
+    code2, _, err2 = run(notable, "--check")
+    check(code2 == 1 and err2:find("does not return a table", 1, true), "a file returning text isn't refused")
+    local sneaky = project("sneaky", 'os.execute("touch ' .. BASE .. '/ran"); return { database = "local", auth = "local", world = "local" }')
+    code2, _, err2 = run(sneaky, "--check")
+    local ran = io.open(BASE .. "/ran", "rb")
+    check(code2 == 1 and not ran, "the roles file could run a command")
+    if ran then ran:close() end
+    local dumped = string.dump(function() return { database = "local", auth = "local", world = "local" } end)
+    local compiled = project("compiled", dumped)
+    code2, _, err2 = run(compiled, "--check")
+    check(code2 == 1 and err2:find("compiled", 1, true), "a compiled file isn't refused")
+end
+if BASE:find("/test-deploy-hosts-", 1, true) then os.execute("rm -rf " .. sh(BASE)) end
+-- }}}
+
+print(string.format("test-deploy-hosts: %d checks, %d failures", checks, #fails))
+for _, f in ipairs(fails) do print("  FAIL: " .. f) end
+print(#fails == 0 and "Result: all checks passed." or ("Result: " .. #fails .. " failure(s) shown."))
+os.exit(#fails == 0 and 0 or 1)
+-- ==== footer of test-deploy-hosts ====
+-- lines:      232
+-- ==== end of footer ====
