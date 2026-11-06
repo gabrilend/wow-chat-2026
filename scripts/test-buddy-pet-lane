@@ -4,7 +4,7 @@
 # profiles:   all
 # priority:   10
 # kind:       test
-# about:      a pet's lane holds to issue 625m: the pet's own global cooldown and resource, its abilities priced by their goals (interrupt, taunt, dispel), the plain attack's autocast paused only to save for a goal, never weighed against its master's abilities
+# about:      a pet's lane holds to issue 625m: its own global cooldown and resource, abilities priced by their goals, autocast paused only to save for one
 # quick-test: yes
 # ==== end of header ====
 # test-buddy-pet-lane - compiles and runs tests/buddy-pet-lane/pet-lane-check.cpp
