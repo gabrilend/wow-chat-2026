@@ -1,0 +1,51 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-form-trip
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      forms and stances weighed: a trip out of a form or stance and back priced as one answer, rage lost, energy and Furor gained, the role's duty first
+# quick-test: yes
+# ==== end of header ====
+# test-buddy-form-trip - checks forms and stances weighed
+# (buddies_form_trip.h) against issue 625g, with no server.
+#
+# For a general audience: a cat druid can step out of cat form to heal and
+# step back in, and a warrior can switch stance for a taunt and switch back.
+# Whether that is worth it depends on what the trip costs: the time its own
+# work stops, the mana, the rage a stance change throws away, and the energy
+# that comes back meanwhile with Furor's gift on returning. This test builds
+# the weighing alone with the system compiler and checks a Furor cat's heals
+# and a warrior's taunt.
+#
+# Usage: scripts/test-buddy-form-trip [PROJECT_DIR] [--help]
+# Builds into tmp/tmp/ (the executable tier). Exits non-zero when any
+# check fails.
+
+set -uo pipefail
+
+# {{{ configuration
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+    echo "Usage: scripts/test-buddy-form-trip [PROJECT_DIR]"
+    echo "  Builds and runs the form trip's offline check (tests/buddy-form-trip/trip-check.cpp)."
+    exit 0
+fi
+DIR="/mnt/kaun/wow-chat-2026"
+[[ -n "${1:-}" ]] && DIR="$1"
+CORE="${DIR}/patches/B036-mod-buddies/mod-buddies/src"
+SOURCE="${DIR}/tests/buddy-form-trip/trip-check.cpp"
+EXEC_DIR="${DIR}/tmp/tmp"
+BINARY="${EXEC_DIR}/buddy-form-trip-check"
+# }}}
+
+[[ -d "${DIR}/tmp" ]] || { echo "ERROR: ${DIR}/tmp missing (the project's link to /tmp/<project>)"; exit 1; }
+mkdir -p "${EXEC_DIR}"
+
+if ! g++ -std=c++17 -O2 -Wall -Wextra -Werror -I"${CORE}" "${SOURCE}" -o "${BINARY}"; then
+    echo "test-buddy-form-trip: the form trip did not build alone (above); nothing was checked"
+    exit 1
+fi
+"${BINARY}"
+# ==== footer of test-buddy-form-trip ====
+# lines:      51
+# ==== end of footer ====
