@@ -8,6 +8,8 @@
 - Related: 617j (need and greed by the clan's judgement), 617h1 (full bags
   send a buddy to a vendor)
 - Priority: Medium
+- State: in progress (whose turn built offline 2026-11-06; the loot rule,
+  the counting hook and the buddies' asking are the server's, not yet)
 
 ## Origin
 
@@ -19,7 +21,33 @@ everyone has looted roughly the same amount of times."
 
 ## Current Behavior
 
-Not built. The group's loot rule is whatever the group was made with (the
+**Whose turn, built 2026-11-06 (offline, on a branch for review):**
+`buddies_loot_turns.h`, plain data and arithmetic, checked by
+`scripts/test-buddy-loot-turns` (23 checks, a quick test; 16 of 16
+deliberately broken versions caught). Steps 2 to 4's arithmetic:
+- **Two counts** per group: corpses opened per clan (a player and its
+  buddies; a player without buddies is a clan of one) and per member.
+- **Whose turn** (`Whose`): among those who could open the corpse, the
+  clan that has opened fewest ("each ... treated as a monolith"), then its
+  member that has opened fewest; ties to the nearer (for clans, each
+  clan's nearest member). The owner counts like a buddy.
+- **A player's turn held a moment**: ten seconds; after that the corpse
+  goes to whoever is next as if the players weren't there.
+- **Coins only**: no one's turn, anyone may open it, and it isn't counted
+  (B062 shares the coins).
+- **A new group**: the counts start again when the group's members change
+  (not when the same members are listed in another order).
+- **What a buddy asks** (`Mine`) before walking to a corpse, and a trace
+  line (`loot turn: 10 (clan 10 opened 1, it 0)`).
+Checked against a referee written from this issue on 24,000 corpses of
+400 random groups (one to three clans of one to five), and for fairness:
+with everyone coming for their turns, after sixty corpses every clan's
+count is within one of every other's. Not yet, the server's part: setting
+the loot rule when a buddy forms a group (step 1), counting when a loot
+window opens (step 2), and the bot module's loot action asking `Mine`
+(step 3, by a source patch like B046).
+
+Before: The group's loot rule is whatever the group was made with (the
 bot module's default when a buddy invites, the game's when the owner
 does). Buddies loot corpses by the bot module's own loot behaviour, which
 opens whatever corpse it may, nearest first, so a buddy standing by
@@ -81,10 +109,33 @@ same questions from other sub-issues; answers are written back here.
   group loot, items of the roll threshold and above are rolled for and
   buddies always pass, so the owner gets every good item, and the turns
   only share the ordinary loot.
+  **Decided 2026-11-06 (the agent's call, from the owner's answer above,
+  for the owner to curate):** free for all, set by a buddy when it forms a
+  group. "Buddies don't pass" rules out the second; under free for all the
+  turns decide every corpse, which is what keeps the counts even, and a
+  good item still reaches the clan member who needs it by 617j's giving
+  within the clan. A player who leads may set another rule; the game's own
+  turns and rolls then stand (617j's need and greed run there).
 - Does "everyone" include the owner in the count, or only the buddies
   among themselves (the owner looting whatever they like)?
+  (Answered 2026-10-28, above: the owner takes turns too.)
 - How long does a buddy wait for its owner to take their turn before the
   corpse goes to the next lowest count?
+  **Decided 2026-11-06 (the agent's call):** ten seconds (`WAIT`, one
+  number), counted from when the corpse can be opened; long enough to
+  finish a fight's last swing and turn round, short enough that a corpse
+  the owner walks past isn't left. The same for any player's turn.
+
+## Decisions (2026-11-06)
+
+The agent's calls while building whose turn, for the owner to curate:
+- **Clans equal, whatever their size**: each clan's count is its own, so a
+  clan of two and a clan of five each open half of the corpses ("treated
+  as a monolith").
+- **Ties**: the clan whose nearest member is nearest, then that clan's
+  nearer member.
+- **A new group**: only a change of members starts the counts again.
+- **Free for all**, and the wait of ten seconds (above).
 
 ## Related Issues
 
