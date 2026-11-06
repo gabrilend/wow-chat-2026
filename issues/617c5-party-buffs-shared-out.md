@@ -10,7 +10,9 @@
   the playerbots module's paladin and shaman strategies
   (`Ai/Class/Paladin/Strategy/`, `Ai/Class/Shaman/Strategy/`)
 - Priority: Medium
-- State: plan only; nothing built
+- State: step 2's Lua model and step 3's wish words built 2026-11-06
+  (`src/lua-basic/lib/buddy-party-buffs.lua`); the C++ core and steps 1,
+  4 and 5 not
 
 ## Origin
 
@@ -143,3 +145,50 @@ same questions from other sub-issues; answers are written back here.
    last until logout or until changed?
 3. **Judgement order** when there are fewer paladins than judgements:
    which one first (Wisdom for a mana-using party, Light for a melee one)?
+
+## Decisions, 2026-11-06 (an agent, answering what was still open)
+
+Built: the Lua model of the party plan (step 2) and the words of a wish
+(step 3's parsing), in `src/lua-basic/lib/buddy-party-buffs.lua` (page
+`buddy-party-buffs.info.md`), tested by `scripts/test-buddy-party-buffs`
+(the step-2 tests named above, the threats, a player paladin planned
+around, the wish words, and 600 random parties checked against a referee
+that tries every hand-out; 42 of 44 mutants caught, the other 2 change
+nothing the plan promises: a loop's early stop and which of two equally
+good hand-outs is picked). Not built: step 1 (the bot module's buff
+strategies: its source isn't on this host), the C++ core beside the buddy
+module's other cores, step 4 (the buff actions asking the plan) and step 5
+(seen in game).
+
+1. **Players as paladins** (question 1): yes, planned around. What a
+   player gives (aura, a blessing on a member, a judgement) is read and
+   left alone, and buddies fill what is missing; a player shaman's totems
+   likewise. This follows the 2026-10-28 answer ("Buddies plan around any
+   player in the group ... awareness of the current buffs and try to fill
+   them").
+2. **How a wish is said** (question 2): whispered to a buddy, a
+   blessing's name or its short form (Kings or BoK, Might or BoM, Wisdom or
+   BoW, Sanctuary, Sanc or BoS) asks for it; "no", "not" or "don't" before
+   it says no to it; "no preference" or "anything" clears both. A new wish
+   replaces the last; it holds until logout (2026-10-28).
+3. **Judgement order** (question 3): by the 2026-10-28 answer, Light
+   first when the party's average health shortfall is larger than its mana
+   users' average mana shortfall, Wisdom first otherwise, then the other,
+   then Justice; worked out again whenever the plan is.
+4. **Low on mana** means under 35%; Wisdom then comes before the usual,
+   and the next plan made with its mana back gives Kings again (the
+   owner's "swap back for the next fight").
+5. **A resistance is called for** when its school was at least 40% of the
+   damage the party took lately (fire, frost and shadow auras; fire, frost
+   and nature totems), the largest first; below that it is not given.
+6. **What helps whom**: Might to tanks, melee and hunters; Wisdom to
+   healers, casters and hunters; Sanctuary to tanks, first; Kings to all.
+   Concentration Aura, Totem of Wrath, Flametongue and Wrath of Air only
+   with a healer or caster in the party; Windfury and Strength of Earth
+   only with weapon users; Mana Spring only with mana users; no Devotion
+   Aura or Stoneskin Totem against casters; Grounding only against them.
+   A second shaman puts down the next totem that helps, or none.
+7. **Improved buffs**: among the ways to give the chosen buffs, the one
+   that hands the most to the givers whose talents improve them; a paladin
+   with an improved aura says so, and a paladin changing aura says it is
+   switching.
