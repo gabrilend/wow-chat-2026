@@ -1,0 +1,28 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-passing
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      passing each other holds to issue 617e11: swerve half each, keep right, kneel to double the level, wave, and the round at login
+# quick-test: yes
+# ==== end of header ====
+# test-buddy-passing - compiles and runs tests/buddy-passing/passing-check.cpp
+# against the buddy module's passing core (roam/buddy_passing_core.h, issue
+# 617e11), with no server.
+#
+# Usage: scripts/test-buddy-passing [DIR]   (--help: this text)
+
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+    sed -n '10,14p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+OUT="${DIR}/tmp/tmp"
+mkdir -p "${OUT}"
+g++ -std=c++17 -O1 -Wall -Wextra -Werror -I"${DIR}/patches/B036-mod-buddies/mod-buddies/src" \
+    "${DIR}/tests/buddy-passing/passing-check.cpp" -o "${OUT}/buddy-passing" || exit 1
+nice -n 19 "${OUT}/buddy-passing"
+# ==== footer of test-buddy-passing ====
+# lines:      28
+# ==== end of footer ====
