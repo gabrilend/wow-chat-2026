@@ -79,6 +79,24 @@ in the mail (`left`, each `{ item, plan }`).
 ### `Plan.drop_want(state, name) -> count`
 Prunes the wants of that name from the list; how many went.
 
+### `Plan.room_order(state) -> list of entries`
+With full bags (617j4): the held items that may be destroyed, least worth
+first. Grey junk first; then part-stacks of common trade goods and food it
+also holds a full stack of; then the rest, by plan (`junk`, `vendor`,
+`auction`, `give`, `feed`, `craft`, `use`). Within each, part-stacks
+before full stacks, then the cheapest (vendor price times the stack); ties
+in bag order. Never listed: a `keep` plan (the ammo it fires among them),
+a need-won item (`item.need_won`). A quest item in the bags (only one with
+a price is ever taken) is ranked as a white item, and as a trade good
+when a profession uses it.
+
+### `Plan.make_room(state, item) -> entry | nil, why`
+The buddy must take `item` and has no free slot: destroys (removes from
+the bag) and returns the first of `room_order`. Returns nil when nothing
+may go, or when `item` would itself come no later than that first (it is
+left behind). An item settled at once (an upgrade, something to open or
+learn) or one that may never go always gets room when anything may.
+
 ### `Plan.value(item, plan) -> copper`
 What a whole stack is expected to bring under a plan (0 unless `auction`
 or `vendor`).

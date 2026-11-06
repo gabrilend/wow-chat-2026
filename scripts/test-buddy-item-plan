@@ -33,6 +33,11 @@
 -- them). Ammo it fires is kept, the best stacks up to its count, and better
 -- ammo sends the worst to the vendor, the same whatever order it came in.
 -- The mailbox: money always taken, items by plan and by what the town has.
+-- With full bags (617j4): grey junk goes first, then part-stacks of what it
+-- has plenty of, then the rest, part-stacks before full ones, cheapest
+-- first; what it can't spare (its ammo too), upgrades and need-won items
+-- never go, and quest items go as white items do; an item worth no more
+-- than the least it carries is left.
 --
 -- Usage: scripts/test-buddy-item-plan [PROJECT_DIR] [RUNS]
 --   RUNS  random buddies (default 400)
@@ -507,10 +512,154 @@ check(relearned > 0, "random runs never changed a plan by learning")
 check((bought_total or 0) > 0, "random runs never bought a want")
 -- }}}
 
+-- {{{ making room (617j4): the owner's order
+do
+    local function bag(items)
+        local s = Plan.new({})
+        for _, it in ipairs(items) do Plan.pickup(s, it) end
+        return s
+    end
+    local LINEN = function(n) return item({ id = 2589, class = 7, quality = WHITE, sell_price = 13, count = n, stack = 20 }) end
+    local BREAD = function(n) return item({ id = 4540, class = 0, quality = WHITE, use = true, food_type = 4, sell_price = 1, count = n, stack = 20 }) end
+    local WHITE_SWORD = function() return item({ id = 9010, class = 2, quality = WHITE, bonding = 2, sell_price = 40 }) end
+
+    -- the owner's scene: full bags, a won green upgrade, a grey goes
+    local s = bag({ WHITE_SWORD(), GREY_JUNK(), LINEN(20) })
+    local up = BOE_BLUE(); up.wear = "now"
+    local gone = Plan.make_room(s, up)
+    check(gone and gone.item.id == 9003, "the grey isn't what goes for an upgrade")
+    check(#s.bag == 2, "making room left " .. #s.bag .. " items")
+
+    -- part-stacks of plenty go before other things, full stacks last in their tier
+    local t = bag({ WHITE_SWORD(), LINEN(20), LINEN(3), BREAD(20), BREAD(2), POTION() })
+    local o = Plan.room_order(t)
+    check(o[1].item.id == 4540 and o[1].item.count == 2, "the bread part-stack (worth 2) isn't first")
+    check(o[2].item.id == 2589 and o[2].item.count == 3, "the linen part-stack isn't second")
+    check(#o == 6, "the order has " .. #o .. " of 6")
+    local pos = {}
+    for k, e in ipairs(o) do pos[e] = k end
+    check(pos[t.bag[2]] > pos[t.bag[1]], "the full stack of linen goes before the white sword")
+    check(pos[t.bag[6]] > pos[t.bag[2]] and pos[t.bag[4]] == 6, "what is kept for a use doesn't go last (the full bread stack, worth most, last of all)")
+
+    -- one part-stack with no full stack beside it is no "plenty"
+    local u = bag({ WHITE_SWORD(), LINEN(3) })
+    local ou = Plan.room_order(u)
+    check(ou[1].item.id == 9010, "a lone part-stack of linen (auction) went before the white sword (vendor)")
+    local u2 = bag({ LINEN(3), item({ id = 9011, class = 15, sell_price = 500 }) })
+    check(Plan.room_order(u2)[1].item.id == 9011, "a lone part-stack of linen went before a vendor item")
+
+    -- never: what it can't spare (its ammo too), need-won items
+    local nw = BOE_EPIC(); nw.need_won = true
+    local v = Plan.new({ ammo = 2, ammo_stacks = 1 })
+    for _, it in ipairs({ HEARTH(), PICK(), POLE(), ARROWS(5), nw }) do Plan.pickup(v, it) end
+    check(#Plan.room_order(v) == 0, "something it may never lose is in the order")
+    local none, why = Plan.make_room(v, up)
+    check(none == nil and why:find("nothing"), "room made where nothing may go")
+    check(#v.bag == 5, "the bag changed when nothing may go")
+    -- quest items: one nobody pays for is never taken, so needs no room; one
+    -- with a price goes as a white item, and as a trade good when a profession uses it
+    local qv = bag({ WHITE_SWORD() })
+    local qn, qwhy = Plan.make_room(qv, QUEST_FREE())
+    check(qn == nil and qwhy:find("isn't picked up") and #qv.bag == 1, "room was made for a quest item nobody pays for")
+    local QMAT = function(n) local i = QUEST_MAT(); i.count, i.stack = n, 20; return i end
+    local qb = bag({ QUEST_PAID(), WHITE_SWORD(), QMAT(20), QMAT(3) })
+    local qo = Plan.room_order(qb)
+    check(#qo == 4, "a quest item with a price can't be destroyed for room")
+    check(qo[1].item.id == 9008 and qo[1].item.count == 3, "a part-stack of a quest material it has plenty of isn't first, as a trade good")
+    check(qo[2].item.id == 9007, "a green quest item isn't judged as a white vendor item")
+
+    -- an item worth no more than the least is left; a need-won one gets room
+    local w = bag({ WHITE_SWORD(), GREY_JUNK() })
+    local g, gwhy = Plan.make_room(w, item({ id = 9013, class = 15, quality = GREY, sell_price = 1 }))
+    check(g == nil and gwhy:find("worth"), "a cheaper grey was taken by destroying a grey")
+    check(#w.bag == 2, "a refused item changed the bag")
+    local eq = Plan.make_room(w, GREY_JUNK())
+    check(eq == nil, "an equal grey was taken by destroying a grey")
+    local better = Plan.make_room(w, item({ id = 9014, class = 15, quality = WHITE, sell_price = 1 }))
+    check(better and better.item.id == 9003, "a white didn't push out the grey")
+    local x = bag({ WHITE_SWORD() })
+    local cheap = item({ id = 9015, class = 15, quality = GREY, sell_price = 1, need_won = true })
+    check(Plan.make_room(x, cheap) ~= nil, "a need-won grey didn't get room")
+    local y = bag({ WHITE_SWORD() })
+    check(Plan.make_room(y, CLAM()) ~= nil, "a clam to open didn't get room")
+    local z = bag({ WHITE_SWORD() })
+    check(Plan.make_room(z, HEARTH()) ~= nil, "a hearthstone didn't get room")
+    local tie = bag({ item({ id = 9020, class = 15, quality = GREY, sell_price = 5 }), item({ id = 9021, class = 15, quality = GREY, sell_price = 5 }) })
+    check(Plan.room_order(tie)[1].item.id == 9020, "of two equal greys the later one goes first")
+end
+-- }}}
+
+-- {{{ making room, at random, against a referee written from 617j4
+do
+    local RANK = { junk = 1, vendor = 2, auction = 3, give = 4, feed = 5, craft = 6, use = 7 }
+    local function never(e) return e.plan == "keep" or e.item.wear == "now" or e.item.need_won end
+    local function full(i) return (i.count or 1) >= (i.stack or 1) end
+    local function tier(bagl, e)
+        local i = e.item
+        local q = i.class == 12 and 1 or i.quality                     -- quest items as white ones (2026-11-05)
+        if q == 0 then return 1 end
+        local plenty = false
+        for _, o in ipairs(bagl) do if o ~= e and o.item.id == i.id and full(o.item) then plenty = true end end
+        local goods = i.class == 7 or (i.class == 12 and i.material)
+        if q <= 1 and (goods or (i.class == 0 and i.food_type)) and not full(i) and plenty then return 2 end
+        return 3
+    end
+    local function ref_key(bagl, e)
+        local t = tier(bagl, e)
+        return { t, t == 3 and RANK[e.plan] or 0, full(e.item) and 1 or 0, e.item.sell_price * e.item.count }
+    end
+    local function less(a, b) for k = 1, 4 do if a[k] ~= b[k] then return a[k] < b[k] end end return false end
+    local made = 0
+    for run = 1, RUNS do
+        math.randomseed(run * 389 + 5)
+        local R = math.random
+        local pool = { 201, 202, 203, 204, 205 }
+        local function rnd()
+            local i = random_item(R, pool)
+            i.stack = ({ 1, 5, 20 })[R(3)]
+            i.count = math.min(i.count, i.stack); if R(3) == 1 then i.count = i.stack end
+            i.need_won = R(15) == 1
+            if R(30) == 1 then i.class = 12 end
+            return i
+        end
+        local s = Plan.new({ professions = { [333] = R(300) }, recipes = { [1] = { [201] = 1 } }, pet_diet = R(2) == 1 and { [1] = true } or nil })
+        for n = 1, 5 + R(20) do Plan.pickup(s, rnd()) end
+        local where = "room run " .. run
+        local order, inorder = Plan.room_order(s), {}
+        for k, e in ipairs(order) do inorder[e] = k end
+        local pos = {}
+        for k, e in ipairs(s.bag) do pos[e] = k; check(never(e) == (inorder[e] == nil), where .. ": a " .. e.plan .. " item is wrongly in or out of the order") end
+        for k = 2, #order do
+            local a, b = ref_key(s.bag, order[k - 1]), ref_key(s.bag, order[k])
+            check(not less(b, a), where .. ": items " .. (k - 1) .. " and " .. k .. " are out of order")
+            if not less(a, b) then check(pos[order[k - 1]] < pos[order[k]], where .. ": a tie isn't in bag order") end
+        end
+        local inc = rnd()
+        local held = #s.bag
+        local first = order[1]
+        local plan = Plan.decide(inc, s.buddy)
+        local must = inc.wear == "now" or inc.need_won or plan == "wear" or plan == "open" or plan == "learn" or plan == "disenchant"
+        local ie = { item = inc, plan = plan }
+        local want = first ~= nil and plan ~= "leave" and (must or never(ie) or less(ref_key(s.bag, first), ref_key(s.bag, ie)))
+        local gone = Plan.make_room(s, inc)
+        check((gone ~= nil) == want, where .. ": room made? " .. tostring(gone ~= nil) .. ", the referee says " .. tostring(want))
+        if gone then
+            made = made + 1
+            check(gone == first, where .. ": what went isn't the first of the order")
+            check(#s.bag == held - 1, where .. ": making room took " .. (held - #s.bag) .. " items")
+            for _, e in ipairs(s.bag) do check(e ~= gone, where .. ": what went is still held") end
+        else
+            check(#s.bag == held, where .. ": no room made, yet the bag changed")
+        end
+    end
+    check(made > 0 and made < RUNS, "random runs made room " .. made .. " times of " .. RUNS)
+end
+-- }}}
+
 print(string.format("test-buddy-item-plan: %d checks, %d failures", checks, #fails))
 for _, f in ipairs(fails) do print("  FAIL: " .. f) end
 print(#fails == 0 and "Result: all checks passed." or ("Result: " .. #fails .. " failure(s) shown."))
 os.exit(#fails == 0 and 0 or 1)
 -- ==== footer of test-buddy-item-plan ====
--- lines:      516
+-- lines:      665
 -- ==== end of footer ====
