@@ -9,7 +9,8 @@
   fights by the warnings: when a fight makes everyone move), 617c5 (party
   buffs shared out)
 - Priority: High
-- State: planned
+- State: in progress (the five measures built offline; the server reading
+  them and the multiplier next)
 
 ## Origin
 
@@ -35,7 +36,43 @@ still active, shouldn't cast again now": it does, already (below).
 
 ## Current Behavior
 
-Not built. What the bot module already gives (read 2026-10-29):
+**The five measures, built 2026-11-06 (offline, on a branch for review,
+stacked on 625h's thrift):** `buddies_moment.h`, steps 1 and 2.
+- **Urgency and mana (1, 3)** are the thrift's lean (625h,
+  `buddies_thrift.h`): speed weighed by how hurt the target is, cost by
+  what is left of that times how long the buddy's mana takes to come back.
+  An answer that heals nothing itself (Nature's Swiftness) is left out of
+  that comparison.
+- **Never overheal below 90% mana** (`Overheals`, `Refused`): a heal
+  larger than the health missing gets 0 below 90%, and counts as usual at
+  90% or above. A heal over time on a target about to be hit (just took
+  aggro, a tank charging in) is not an overheal.
+- **The action economy (2)** (`Busy`, `Action`): busy is 0 with one concern
+  firing, 1/2 with two, 3/4 with four; each answer counts by how near it
+  comes to the fastest, to the power of busy, and a heal over time by
+  1 + busy more (it keeps working while the buddy answers the next
+  concern).
+- **Movement (4)** (`Moving`, `Movement`): the share of this phase spent
+  moving, started again at each phase change; moving, a cast-time answer
+  gets 0; standing still, it counts 1 + that share, so the instants are
+  kept for the moving stretches.
+- **Empowered moments (5)** (`Empowered`): a cooldown counts 4 inside an
+  empowered moment, 0.25 before the fight's middle outside one, 1 past the
+  middle or in a critical concern; when 625f's cooldown plan has a weight
+  for it, that weight decides.
+- **The suit** (`Suit`): the measures multiplied, for the talent draw (625)
+  to multiply into its weight.
+Checked by `scripts/test-buddy-moment` (30 checks, a quick test), the
+issue's own cases among them (an ally at 20%: fast answers; at 80%: the
+cheapest, Healing Touch's overheal refused; mana back in seconds: the
+cheap answer barely ahead; a moving fight: cast-time answers first while
+standing; Bloodlust: cooldowns sixteen-fold); 24 of 24 deliberately broken
+versions of the header caught. Not yet: the server reading the moment each
+time the bot chooses (the target's health missing, the concerns firing,
+the buddy's movement and empowered buffs) and the multiplier (step 3), and
+writing each phase's movement down for 625e.
+
+What the bot module already gives (read 2026-10-29):
 - A heal-over-time already on the target is skipped until it is about to
   end: a heal's usefulness check asks whether the caster's own aura is on
   the target and below its refresh time (`CastAuraSpellAction::isUseful`).
@@ -170,3 +207,23 @@ the same, its movement the same, its empowered moments the same.
    **Answered 2026-10-30:** "we will turn it off manually when we've
    tested every boss thoroughly." A switch per boss, by hand; a changed
    fight is relearned from scratch (625e).
+
+## Decisions (2026-11-06)
+
+The agent's calls while building steps 1 and 2, for the owner to curate;
+each number is one constant in `buddies_moment.h`:
+- **Urgency and mana are 625h's**: the thrift (built the same day for
+  625h) already weighs speed by the hurt and cost by the refill time, so
+  this core takes its lean as measures 1 and 3 rather than a second copy.
+- **How busy is busy**: 1 - 1/(concerns firing); a heal over time counts
+  up to double at the busiest (`BUSY_HOT` 1).
+- **"Never overheal" is a refusal, not a lean**: below 90% mana an
+  overhealing heal gets 0, as the owner's "never" says; a heal over time
+  on someone about to be hit is exempt ("These are not overheals").
+- **Movement's lean**: a cast-time answer counts up to double (`MOVE_SAVE`
+  1) in a phase spent wholly moving; the instants are left as they are
+  rather than lowered, so one is still there when nothing else fits.
+- **Empowered moments**: a cooldown counts 4 inside one and 0.25 before the
+  fight's middle outside one (held, not forbidden); 1 past the middle, in
+  a critical concern, or with no length guessed yet treated as early.
+  625f's cooldown plan, where it has a weight, overrides these.
