@@ -26,6 +26,7 @@
 #define MOD_BUDDIES_FORWARD_PASS_H
 
 #include "buddies_curve.h"
+#include "buddies_faith.h"
 #include "buddies_fight_state.h"
 #include "buddies_healer_seat.h"
 #include "buddies_window_buffs.h"
@@ -484,8 +485,13 @@ namespace BuddyForwardPass
     // Innervate on the healer's seat while it is out of mana. The server
     // casts these itself on that member, and the bot module's own cast of
     // them leans away (buddies_forward_pass.cpp).
+    // `faith`, when kept (buddies_faith.h, 625l: a player's faith): whom a
+    // chosen-ally buff goes on is weighed by each member's place on the
+    // buddy's short list and its faith in each player; when the one it
+    // would go on is a player saving a long cooldown for a burn, the buddy
+    // holds it for them (it leans away now; the target stays theirs).
     inline std::map<std::string, double> Leans(Snapshot const& s, Memory const& memory, int b, double goldPerHour, BuddySeat::Seats const* seats = nullptr,
-                                               std::map<std::string, int>* targets = nullptr)
+                                               std::map<std::string, int>* targets = nullptr, BuddyFaith::Book const* faith = nullptr)
     {
         std::map<std::string, double> out;
         if (b < 0 || static_cast<size_t>(b) >= s.party.size()) return out;
@@ -508,6 +514,7 @@ namespace BuddyForwardPass
         {
             if (r.cls != me.cls) continue;
             Answer a;
+            bool held = false;                                                // kept for a player's burn (625l)
             int target = r.self ? b : (worst >= 0 ? worst : b);
             std::vector<BuddyMarks::AuraEffect> effects = BuddyMarks::OfAbility(r.cls, r.name);
             if (!effects.empty() && r.lastsMs > 0) a.extras = { { target, effects, r.lastsMs / 1000.0 } };
@@ -534,15 +541,21 @@ namespace BuddyForwardPass
                     if (r.area) for (Member const& m : s.party) add += shareOf(m) * gainOf(m);
                     else if (r.self) add = myShare * gainOf(me);
                     else
+                    {
+                        double best = 0.0;                                     // the chosen one's worth, weighed by faith
                         for (size_t k = 0; k < s.party.size(); ++k)
                         {
-                            double gives = shareOf(s.party[k]) * gainOf(s.party[k]);
-                            if (s.party[k].health > 0 && gives > add)
+                            double gives  = shareOf(s.party[k]) * gainOf(s.party[k]);
+                            double weighs = gives * (faith ? faith->Weight(s.party[k].id, r.name, s.t) : 1.0);
+                            if (s.party[k].health > 0 && weighs > best)
                             {
-                                add = gives;
+                                add  = gives;
+                                best = weighs;
+                                held = faith && faith->Saving(s.party[k].id, s.t);
                                 if (targets) (*targets)[r.name] = int(k);   // the one it gives most to
                             }
                         }
+                    }
                     a.burstFactor = 1.0 + add;
                     a.burstLasts  = r.lastsMs / 1000.0;
                     a.extras.clear();                                          // its marks are its burst, not a shield
@@ -555,6 +568,7 @@ namespace BuddyForwardPass
                 if (BuddySeat::Has(seats->dry, b)) lean = 0.05;
                 else if (!BuddySeat::Has(seats->holders, b) && BuddySeat::CanHeal(me) && !seats->short_) lean = 1.0;
             }
+            if (held) lean = BuddyFaith::HOLD;                            // kept for the player's burn
             out[r.name] = lean;
         }
         // Innervate: its mana turned into what the one who gets it would do
@@ -575,7 +589,7 @@ namespace BuddyForwardPass
             double enemies = 0.0;
             for (Enemy const& e : s.enemies) enemies += e.health;
             double pace = base.leftKnown && base.left > 0 ? enemies / base.left : 0.0;
-            Score best{ 0.0, 0.0 };
+            Score best{ 0.0, 0.0 }, bestWeighed{ 0.0, 0.0 };
             int bestAt = -1;
             for (size_t k = 0; mana > 0 && k < s.party.size(); ++k)
             {
@@ -587,7 +601,10 @@ namespace BuddyForwardPass
                 double extra = std::min(mana / falling, base.left - outAt);
                 Score sc{ std::min(base.shortfall, memory.HealingPerSecond(m.id, s.t) * extra),
                           pace > 0 ? memory.DealtPerSecond(m.id, s.t) * extra / pace : 0.0 };
-                if (bestAt < 0 || Better(sc, best)) { best = sc; bestAt = int(k); }
+                double weight = faith ? faith->Weight(m.id, "innervate", s.t) : 1.0;   // the short list and faith (625l)
+                if (weight <= 0.0) continue;
+                Score weighed{ sc.health * weight, sc.seconds * weight };
+                if (bestAt < 0 || Better(weighed, bestWeighed)) { best = sc; bestWeighed = weighed; bestAt = int(k); }
             }
             if (bestAt >= 0)
             {

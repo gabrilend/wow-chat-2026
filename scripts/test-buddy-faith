@@ -1,0 +1,28 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-faith
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      a player's faith holds to issue 625l: buffs kept for a player's burn, faith lost by holding a long cooldown, back by prompt use
+# quick-test: yes
+# ==== end of header ====
+# test-buddy-faith - compiles and runs tests/buddy-faith/faith-check.cpp
+# against a buddy's faith in each player (buddies_faith.h) and the forward
+# pass's choice of whom a buff goes on (issue 625l), with no server.
+#
+# Usage: scripts/test-buddy-faith [DIR]   (--help: this text)
+
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+    sed -n '10,14p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+OUT="${DIR}/tmp/tmp"
+mkdir -p "${OUT}"
+g++ -std=c++17 -O1 -Wall -Wextra -Werror -I"${DIR}/patches/B036-mod-buddies/mod-buddies/src" \
+    "${DIR}/tests/buddy-faith/faith-check.cpp" -o "${OUT}/buddy-faith" || exit 1
+nice -n 19 "${OUT}/buddy-faith"
+# ==== footer of test-buddy-faith ====
+# lines:      28
+# ==== end of footer ====
