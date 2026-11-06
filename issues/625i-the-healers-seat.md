@@ -7,7 +7,8 @@
 - Related: 625c (every tree's list: a hybrid's minor tree), 625h (the
   resource economy), 617z (tank-paced pulls: the healer's "oom" signals)
 - Priority: Medium
-- State: in progress (the seats built; mana-regaining fighting not yet)
+- State: in progress (the seats built; the dry healer's way back to mana,
+  Judgement of Wisdom and a player's own words built offline 2026-11-06)
 
 ## Origin
 
@@ -84,9 +85,26 @@ leaving the party short, a Holy paladin making it whole, ready again
 without taking the seat back, a fallen holder replaced, the leans, and
 Innervate's target).
 
-Not yet: the holder fighting in the way that brings mana back (Seal of
-Wisdom, a wand, a form), paladins choosing Judgement of Wisdom while a
-seat is dry, and hearing a player's own "oom" in chat.
+**The rest, built 2026-11-06 (offline, on a branch for review):** in
+`buddies_healer_seat.h`.
+- **The dry member's way back to mana** (`Dry`, `DryLean`): a paladin puts
+  on Seal of Wisdom and strikes, a druid goes into cat form and claws
+  ("feral scratch"), a priest uses its wand, a shaman strikes; none of them
+  casts, so spirit works. The seal or the form leans in (3) while the
+  member is dry; its heals already lean away (0.05).
+- **Judgement of Wisdom** (`HealersLow`, `Judgement`): a paladin keeps
+  Judgement of Wisdom on the enemy while a seat is dry or short, or a
+  holder is under half its mana; Judgement of Light otherwise.
+- **A player's own words** (`Heard`, and `Now`'s new last argument): the
+  party chat's "oom", "out of mana", "mana" and "ready" (read by the tank
+  pace's `ReadWord`, the whole line the word), from a player or a buddy,
+  each heard once: "oom" takes the speaker out of the seat and keeps it
+  dry whatever its mana bar shows; "ready" ends its dry spell at once, and
+  it takes a seat back only when one is free.
+Checked by the same test, now 40 checks; 16 of 16 deliberately broken
+versions of the additions caught. Not yet: the server carrying these out
+(putting on the seal or form and striking, choosing the judgement, passing
+the party's chat lines to `Heard`), which waits for the owner's compile.
 
 ## Intended Behavior
 
@@ -157,3 +175,19 @@ seat is dry, and hearing a player's own "oom" in chat.
    tree waits while its role's duty calls, its share made up in calm
    moments, or should the third hold even then?
    **Answered 2026-10-30:** "that's right".
+
+## Decisions (2026-11-06)
+
+The agent's calls while building the rest, for the owner to curate; each
+number is one constant in `buddies_healer_seat.h`:
+- **A dry shaman strikes**: the owner named the paladin, the druid and the
+  priest; a shaman has no wand or mana-giving seal, so it fights in melee
+  without casting, letting spirit work.
+- **How far the seal or form leans**: 3, so it is put on before the
+  strikes begin; nothing else of the dry member's changes.
+- **"The healer's mana is low"**: a seat dry or short, or a holder under
+  half its mana (`WISDOM_BELOW` 0.5).
+- **A word outweighs the bar**: a player's (or buddy's) "oom" counts it out
+  of mana even with mana showing (it may know better: a long cast ahead, a
+  silence), and its "ready" counts it ready at once; each word is used
+  once, at the next step.

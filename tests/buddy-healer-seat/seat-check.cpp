@@ -2,13 +2,16 @@
 // a healer each member is, the seats kept to what the fight began with and
 // changed only when a holder runs dry or falls, out of mana and ready
 // again, how the answers lean by them, and Innervate given to whoever its
-// mana would do the most for.
+// mana would do the most for; and (2026-11-06) the dry member's way of
+// fighting for its mana back, Judgement of Wisdom while the healers' mana is
+// low, and a player's own "oom" and "ready" heard in the party's chat.
 
 #include "buddies_forward_pass.h"
 #include "buddies_healer_seat.h"
 
 #include <cmath>
 #include <cstdio>
+#include <string>
 
 using namespace BuddyForwardPass;
 using BuddySeat::Seats;
@@ -130,6 +133,83 @@ int main()
     to.clear();
     Leans(full, mf, 2, 0, &seats, &to);
     check(!to.count("innervate"), "the priest's mana lasting the fight: Innervate is asked for no one");
+
+
+    // {{{ out of mana: fighting the way that brings mana back (2026-11-06)
+    check(BuddySeat::Dry(2).first == std::string("seal of wisdom") && BuddySeat::Dry(2).strike == BuddySeat::Strike::Melee,
+          "a dry paladin: Seal of Wisdom, then strikes");
+    check(BuddySeat::Dry(11).first == std::string("cat form") && BuddySeat::Dry(11).strike == BuddySeat::Strike::Melee,
+          "a dry druid: cat form, then claws (\"feral scratch\")");
+    check(BuddySeat::Dry(5).first == nullptr && BuddySeat::Dry(5).strike == BuddySeat::Strike::Wand, "a dry priest: its wand, no spell");
+    check(BuddySeat::Dry(7).strike == BuddySeat::Strike::Melee && BuddySeat::Dry(1).strike == BuddySeat::Strike::None,
+          "a dry shaman strikes; a warrior has no dry way of its own");
+    bool named = true;
+    for (uint8_t cls : { uint8_t(2), uint8_t(11) })
+    {
+        bool found = false;
+        for (BuddyAbilityRow const& a : BUDDY_ABILITIES) found = found || (a.cls == cls && std::string(a.name) == BuddySeat::Dry(cls).first);
+        named = named && found;
+    }
+    check(named, "the seal and the form are the generated table's own names");
+    Snapshot pal = four; Memory mp = m;
+    pal.party[3].resource = 1;                               // the paladin, holding the seat, runs dry
+    Seats palDry = BuddySeat::Now(pal, mp, seats4, 60);
+    check(BuddySeat::Has(palDry.dry, 3), "the paladin holding the seat runs dry");
+    check(BuddySeat::DryLean(palDry, 3, 2, "seal of wisdom") == BuddySeat::DRY_FIRST && BuddySeat::DryLean(palDry, 3, 2, "flash of light") == 1.0,
+          "the dry paladin leans to Seal of Wisdom, nothing else of its own changed here");
+    check(BuddySeat::DryLean(palDry, 2, 11, "cat form") == 1.0, "a druid not dry: cat form doesn't lean for this");
+    // }}}
+
+    // {{{ Judgement of Wisdom while the healers' mana is low
+    Snapshot js; Memory jm;
+    fight(js, jm, 15000);
+    Seats jseats = BuddySeat::Now(js, jm, {}, 60);
+    check(std::string(BuddySeat::Judgement(js, jseats)) == "judgement of light", "the priest at three quarters mana: Judgement of Light");
+    js.party[1].resource = 9000;
+    check(std::string(BuddySeat::Judgement(js, jseats)) == "judgement of wisdom", "the priest under half its mana: Judgement of Wisdom");
+    js.party[1].resource = 15000;
+    Seats jdry = jseats; jdry.dry = { 2 };
+    Seats jshort = jseats; jshort.short_ = true;
+    check(std::string(BuddySeat::Judgement(js, jdry)) == "judgement of wisdom" && std::string(BuddySeat::Judgement(js, jshort)) == "judgement of wisdom",
+          "anyone dry, or the seats short: Judgement of Wisdom");
+    // }}}
+
+    // {{{ a player's own words
+    BuddySeat::Heard heard;
+    heard.Hear(PRIEST, "OOM!");
+    heard.Hear(DRUID, "I'm oom soon");
+    heard.Hear(TANK, "slow down");
+    check(heard.Said(PRIEST, BuddyPace::Word::Oom) && heard.said.size() == 1,
+          "\"OOM!\" is heard; a longer line, and a word that isn't oom or ready, are not kept");
+    Snapshot ws; Memory wm;
+    fight(ws, wm, 15000);
+    Seats wseats = BuddySeat::Now(ws, wm, {}, 60);
+    Seats said = BuddySeat::Now(ws, wm, wseats, 60, &heard);
+    check(BuddySeat::Has(said.dry, 1) && !BuddySeat::Has(said.holders, 1),
+          "the priest says \"oom\" with three quarters of its mana bar: taken at its word, out of the seat");
+    check(heard.said.empty(), "each word is heard once");
+    Seats still = BuddySeat::Now(ws, wm, said, 60, &heard);
+    check(BuddySeat::Has(still.dry, 1), "nothing more said: it stays out until its mana covers its healing for the rest of the fight");
+    Snapshot fullBar = ws; fullBar.party[1].resource = fullBar.party[1].maxResource;
+    check(!BuddySeat::Has(BuddySeat::Now(fullBar, wm, said, 60).dry, 1), "a full mana bar and nothing said: ready again by the reading");
+    heard.Hear(PRIEST, "oom");
+    check(BuddySeat::Has(BuddySeat::Now(fullBar, wm, said, 60, &heard).dry, 1), "but saying \"oom\" again keeps it out, whatever its bar");
+    ws.party[1].resource = heal.cost * 2;
+    Seats low = BuddySeat::Now(ws, wm, said, 60);
+    check(BuddySeat::Has(low.dry, 1), "short of mana, saying nothing: still dry");
+    heard.Hear(PRIEST, "ready");
+    Seats back = BuddySeat::Now(ws, wm, low, 60, &heard);
+    check(!BuddySeat::Has(back.dry, 1) && BuddySeat::Has(back.holders, 1) && !back.short_,
+          "it says \"ready\": no longer dry at once, and the seats being short, it is seated again");
+    heard.Hear(PRIEST, "ready");
+    Seats waits = BuddySeat::Now(four, m, seats4, 60, &heard);
+    check(!BuddySeat::Has(waits.dry, 1) && waits.holders == std::vector<int>{ 3 },
+          "with the paladin holding the seat, the priest's \"ready\" leaves it waiting for one to come free");
+    heard.Hear(DRUID, "oom");
+    Snapshot ws2 = ws; ws2.party[1].resource = 1;
+    Seats nobody = BuddySeat::Now(ws2, wm, wseats, 60, &heard);
+    check(!BuddySeat::Has(nobody.holders, 2) && nobody.short_, "a member who just said \"oom\" isn't seated: short");
+    // }}}
 
     std::printf("\n%d passed, %d failed\n", passed, failed);
     return failed == 0 ? 0 : 1;

@@ -4,7 +4,7 @@
 # profiles:   all
 # priority:   10
 # kind:       test
-# about:      the healer's seat: who holds it, out of mana and ready again, and how the others' heals lean by it
+# about:      the healer's seat: who holds it, out of mana and ready again, how the others' heals lean by it, the dry healer's way back to mana, Judgement of Wisdom, and a player's own oom and ready
 # quick-test: yes
 # ==== end of header ====
 # test-buddy-healer-seat - compiles and runs
