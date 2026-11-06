@@ -24,6 +24,38 @@ their earliest convenience and attempt to rejoin the player."
 
 ## Current Behavior
 
+**The route search, built 2026-11-06 (offline, on a branch for review):**
+`roam/buddy_route_core.h`, the owner's answer of 2026-10-28 ("They should
+build a route, as they would with any path finding task") as plain
+arithmetic, not yet wired into the crossing.
+- **The ways** (`Link`): a sailing from one dock to another (the wait for
+  it, then the ride), a portal (stepped through), and a mage's own
+  teleport, cast from wherever the buddy stands; the owner's own recorded
+  way is marked.
+- **The search** (`Find`): the quickest chain from the buddy to the
+  owner, by Dijkstra over the buddy, the owner and each way's ends,
+  walking between any two places on one map (the straight line at run
+  speed, 7 yards a second, with 30% allowed for the detour; the real walk
+  is the mesh's). A teleport is taken only when it is the quickest; the
+  owner's own way counts 90% of its time when choosing, so it wins when
+  about as quick, and the route's time is still its full time.
+- **Aboard** (`BestStop`): of the ship's stops ahead, the one whose
+  docking plus the route from it to the owner ends soonest, so a buddy
+  gets off early and walks when the stop by the owner is far round the
+  loop, and rides on when walking would take longer.
+Checked by `scripts/test-buddy-route` (15 checks, a quick test): a walk on
+one map, walk-sail-walk, a teleport landing near the owner taken and one
+landing across the continent passed over for the boat, Kalimdor to Outland
+by a sailing and the Dark Portal, the owner's boat when nearly as quick
+and not when much slower, and the stops aboard; 12 of 14 deliberately
+broken versions of the header caught, the other two changing nothing the
+route can show (stopping the search at the goal is only a saving; a
+teleport cast later on the way is never quicker than cast at once). Not
+yet: the crossing (`buddies_crossing.cpp`) building the ways from the
+transports' routes and next sailings, the area triggers and the buddy's
+teleports, and following the first leg; the walking times from the mesh
+rather than the straight line.
+
 **Built 2026-10-02, syntax-checked, not yet compiled or tried in game**
 (`patches/B036-mod-buddies/mod-buddies/src/buddies_crossing.cpp` and `.h`; wired into
 "buddy travel" in `buddies_town.cpp`; roaming and the town visit stand
@@ -348,6 +380,10 @@ same questions from other sub-issues; answers are written back here.
   A case where getting off early and walking would be faster is ridden
   round instead. Worth a real comparison (route timings plus walking
   distance), or is "nearest stop" right?
+  **Decided 2026-11-06 (the agent's call, by the owner's 2026-10-30 "route
+  search. Same machinery."):** a real comparison: aboard, the buddy gets
+  off at the stop whose docking plus the route from it to the owner ends
+  soonest (`BestStop` in `roam/buddy_route_core.h`).
 - (2026-10-02) **Island dock, buddy elsewhere**: a buddy at an island dock
   sails to its owner; a buddy on the same map but neither at the owner's
   dock nor at another stop of that ship walks toward the owner's dock,
@@ -370,6 +406,12 @@ same questions from other sub-issues; answers are written back here.
   when its owner took a boat it could follow. Is that wanted, or should
   the owner's own means come first and the teleport only replace a summon
   or a teleport?
+  **Decided 2026-11-06 (the agent's call, from the owner's answer to
+  question 11 of 2026-10-28, for the owner to curate):** neither: the
+  route search decides. A teleport is taken when it is the quickest way,
+  and the owner's own boat is preferred only when about as quick (its time
+  counted at 90% when choosing), following "Same ship as the owner, when
+  possible" (2026-10-02).
 - **Unstuck on the way to a dock**: 617e4's stuck rule (no 10-yard gain
   in 90 s) measures progress toward the owner, so it is off while walking
   to a dock or portal on another continent; the bot module's own
@@ -429,3 +471,14 @@ same questions from other sub-issues; answers are written back here.
   a quarter second, never a jump, a landing or the step onto or off the
   deck; checked by `scripts/test-boarding-trim` (12 checks, a quick
   test). Then `scripts/export-buddy-boardings` carries them into git.
+
+## Decisions (2026-11-06)
+
+The agent's calls while building the route search, for the owner to
+curate; each number is one constant in `roam/buddy_route_core.h`:
+- **Walking's time, until the mesh gives it**: the straight line at run
+  speed (7 yards a second) with 30% added for the detour.
+- **The owner's own way**: counted at 90% of its time when choosing, so it
+  wins ties and near-ties and loses when clearly slower.
+- **A sailing's time**: the wait until it leaves plus the ride, both given
+  by the crossing from the transport's route and where the ship is now.
