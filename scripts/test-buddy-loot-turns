@@ -1,0 +1,28 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-loot-turns
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      loot turns hold to issue 617j1: clans one block each, the owner takes turns too, coins are no one's, a player's turn held a moment
+# quick-test: yes
+# ==== end of header ====
+# test-buddy-loot-turns - compiles and runs
+# tests/buddy-loot-turns/turns-check.cpp against the buddy module's loot
+# turns (buddies_loot_turns.h, issue 617j1), with no server.
+#
+# Usage: scripts/test-buddy-loot-turns [DIR]   (--help: this text)
+
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+    sed -n '10,14p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+OUT="${DIR}/tmp/tmp"
+mkdir -p "${OUT}"
+g++ -std=c++17 -O1 -Wall -Wextra -Werror -I"${DIR}/patches/B036-mod-buddies/mod-buddies/src" \
+    "${DIR}/tests/buddy-loot-turns/turns-check.cpp" -o "${OUT}/buddy-loot-turns" || exit 1
+nice -n 19 "${OUT}/buddy-loot-turns"
+# ==== footer of test-buddy-loot-turns ====
+# lines:      28
+# ==== end of footer ====
