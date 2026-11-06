@@ -4,7 +4,7 @@
 # profiles:   all
 # priority:   10
 # kind:       test
-# about:      the action economy's short abilities hold to issue 625f: cast times and the global cooldown weighed as time, movement and a dying target cut casts, cooldowns started sooner valued, a short wait for a better ability taken
+# about:      the short abilities hold to issue 625f: cast time and global cooldown as time, casts cut by movement or a dying target, cooldowns started sooner valued
 # quick-test: yes
 # ==== end of header ====
 # test-buddy-rotation-time - compiles and runs tests/buddy-rotation-time/rotation-check.cpp
