@@ -42,6 +42,8 @@
 --   de_skill     the enchanting rank disenchanting it takes (nil: can't be)
 --   wear         "now" (an upgrade it puts on), "kept" (a weapon it keeps as
 --                a runner-up), or nil
+--   stack        how many make a full stack (item_template's stackable; default 1)
+--   need_won     true for an item won with a need roll (617j4: always gets room)
 --------------------------------------------------------------------------------
 
 local Plan = {}
@@ -53,9 +55,11 @@ local CLASS_CONSUMABLE   = 0
 local CLASS_WEAPON       = 2
 local CLASS_TRADE_GOODS  = 7
 local CLASS_RECIPE       = 9
+local CLASS_QUEST        = 12
 local SUBCLASS_FISHPOLE  = 20           -- of weapons
 local BIND_ON_PICKUP     = 1
 local QUALITY_GREEN      = 2
+local QUALITY_WHITE      = 1
 local AUCTION_GUESS      = 3            -- x vendor price, when the caller gives no auction estimate
 -- }}}
 
@@ -292,6 +296,107 @@ function Plan.settle(state, place)
     end
     return deeds
 end
+-- }}}
+
+-- {{{ making room (617j4)
+-- When a buddy must take an item and has no free slot, it destroys the
+-- least worth item it carries. The owner's order (617j4), first to go to
+-- last: grey junk; then common trade goods and food it has plenty of; then
+-- anything else. Never: what it can't spare (a "keep" plan), a gear
+-- upgrade, a need-won item, a quest item. Within a tier, part-stacks go
+-- before full stacks (owner, 2026-10-28: "One or two of a thing is less
+-- valuable than 20."), then the cheapest (vendor price times the stack).
+-- In the last tier the plans go in this order (decided 2026-11-06): what
+-- would only be sold first, what is kept for a use last.
+Plan.ROOM_PLAN_ORDER = { junk = 1, vendor = 2, auction = 3, give = 4, feed = 5, craft = 6, use = 7 }
+
+-- {{{ local function full_stack
+local function full_stack(item) return (item.count or 1) >= (item.stack or 1) end
+-- }}}
+
+-- {{{ local function holds_full
+-- Whether the bag holds a full stack of item `id` ("plenty", decided
+-- 2026-11-06). Only part-stacks are judged by it, so the one judged never
+-- counts itself.
+local function holds_full(state, id)
+    for _, e in ipairs(state.bag) do
+        if e.item.id == id and full_stack(e.item) then return true end
+    end
+    return false
+end
+-- }}}
+
+-- {{{ local function room_key
+-- An entry's place in the order, as { tier, plan rank, part (0) or full
+-- (1), worth }, or nil when it may never go. (A gear upgrade is never in
+-- the bag: it is worn at once.)
+local function room_key(state, e)
+    local i = e.item
+    if e.plan == "keep" or i.need_won or i.class == CLASS_QUEST then return nil end
+    local q, plain = i.quality or 0, i.class == CLASS_TRADE_GOODS or (i.class == CLASS_CONSUMABLE and i.food_type ~= nil)
+    local tier = 3
+    if q == 0 then
+        tier = 1
+    elseif q <= QUALITY_WHITE and plain and not full_stack(i) and holds_full(state, i.id) then
+        tier = 2
+    end
+    return { tier, tier == 3 and (Plan.ROOM_PLAN_ORDER[e.plan] or 0) or 0,
+             full_stack(i) and 1 or 0, (i.sell_price or 0) * (i.count or 1) }
+end
+-- }}}
+
+-- {{{ local function before
+local function before(a, b)
+    for k = 1, 4 do if a[k] ~= b[k] then return a[k] < b[k] end end
+    return false
+end
+-- }}}
+
+-- {{{ function Plan.room_order
+-- The held items that may go, least worth first: a list of entries. Ties
+-- keep the bag's order (the one picked up first goes first).
+function Plan.room_order(state)
+    local list = {}
+    for n, e in ipairs(state.bag) do
+        local key = room_key(state, e)
+        if key then list[#list + 1] = { e = e, key = key, n = n } end
+    end
+    table.sort(list, function(a, b)
+        if before(a.key, b.key) then return true end
+        if before(b.key, a.key) then return false end
+        return a.n < b.n
+    end)
+    local out = {}
+    for k, x in ipairs(list) do out[k] = x.e end
+    return out
+end
+-- }}}
+
+-- {{{ function Plan.make_room
+-- The buddy must take `item` and has no free slot (the caller knows its
+-- slots, and that the item stacks onto nothing). Returns the entry it
+-- destroys (already gone from the bag), or nil and why: nothing may go, or
+-- the new item is worth less than everything that may (it is left where it
+-- is). An item settled at once (a gear upgrade worn, a clam opened, a
+-- recipe learned, an item disenchanted) and one that may never go (a
+-- need-won item, what it can't spare) always get room when anything may.
+function Plan.make_room(state, item)
+    local order = Plan.room_order(state)
+    if #order == 0 then return nil, "nothing it carries may go" end
+    local plan = Plan.decide(item, state.buddy)
+    if Plan.PLANS[plan].at ~= "now" then
+        local key = room_key(state, { item = item, plan = plan })   -- nil: it may never go, so it gets room
+        if key and not before(room_key(state, order[1]), key) then
+            return nil, "worth no more than anything it carries"
+        end
+    end
+    local gone = order[1]
+    for n, e in ipairs(state.bag) do
+        if e == gone then table.remove(state.bag, n); break end
+    end
+    return gone
+end
+-- }}}
 -- }}}
 
 return Plan

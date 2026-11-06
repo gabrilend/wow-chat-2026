@@ -8,7 +8,8 @@
   bags today), 617a4 (the starting kit: bags), B046 (the playerbots
   module's loot judgement for buddies), `buddies_loot.cpp`
 - Priority: High (a won upgrade was lost, 2026-10-26)
-- State: plan only; nothing built
+- State: step 2 (the worth order) built 2026-11-06 in Lua
+  (`src/lua-basic/lib/buddy-item-plan.lua`); steps 1, 3, 4 and 5 not
 
 ## Origin
 
@@ -98,3 +99,38 @@ same questions from other sub-issues; answers are written back here.
    fixed lines, or the chat layer's (920)?
 3. (Answered 2026-10-27: "yes") **Need rolls with full bags**: a buddy
    with no room and nothing it may destroy passes the roll.
+
+## Decisions, 2026-11-06 (an agent, answering what was still open)
+
+Built: step 2, the worth order, as `Plan.room_order` and `Plan.make_room`
+in `src/lua-basic/lib/buddy-item-plan.lua` (617h2's per-item plans, as
+617u's 2026-10-28 answer puts a buddy's item lists in Lua), tested in
+`scripts/test-buddy-item-plan` (the owner's scene: full bags, a won green,
+a grey goes; stacks; what never goes; 400 random bags against a referee;
+24 of 24 mutants caught). Not built: step 1 (why buddies don't loot: needs
+the game and the trace), step 3 (calling it before a loot or a won roll:
+`buddies_loot.cpp`, needs the server), steps 4 and 5 (the cheer and the
+guild line, seen in game).
+
+1. **"Plenty of"** (question 1): a part-stack of a common (white or grey)
+   trade good or food is "plenty" when the buddy also holds a full stack
+   of the same item; such part-stacks go right after grey junk. Destroying
+   happens only when an item must be taken now with no free slot, so
+   selling it next time in town is not an option at that moment; the
+   vendor still gets everything else (617h).
+2. **The rest, in plan order**: what would only be sold goes first (junk,
+   vendor), then what would be auctioned or given away, then food for its
+   pet, reagents, and last what it keeps to use; within each, part-stacks
+   before full stacks (the owner's 2026-10-28 answer), then the cheapest
+   by vendor price times the stack.
+3. **Never destroyed**: what 617h2 says it can't spare (hearthstone,
+   tools, fishing pole, kept weapons), need-won items, quest items. A gear
+   upgrade is worn at once, so never sits in the bags.
+4. **An item worth no more than the least it carries is left behind**
+   rather than swapped for it; an upgrade, a need-won item, something to
+   open or learn, and anything that may never go always get room when
+   anything may go (with nothing that may go, a need roll is passed: the
+   2026-10-27 answer).
+5. **Question 2** (how often a guild line, and its words) is left open:
+   step 4 isn't built, and the 2026-10-28 answer already says "when it's a
+   big upgrade".
