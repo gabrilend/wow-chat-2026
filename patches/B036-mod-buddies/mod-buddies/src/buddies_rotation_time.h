@@ -60,7 +60,14 @@ namespace BuddyRotation
     //             ability's own numbers, through the talent draw's weights)
     //   channeled whether its worth comes over the cast (cut short, the
     //             part before) or as it lands (cut short, nothing)
-    struct Cast { double cast, gcd, cooldown, readyIn, worth; bool channeled; };
+    //   cost      the resource it spends, counted only when the Moment
+    //             gives a pool (a pet's lane, 625m; a buddy's own resource
+    //             is the resource economy's, 625h)
+    //   deadline  seconds from now it must land by to be worth anything (an
+    //             interrupt: before the enemy's cast lands; -1: none)
+    //   fade      worth lost for each second until it lands (a taunt: the
+    //             health lost each second the enemy stays loose; 0: none)
+    struct Cast { double cast, gcd, cooldown, readyIn, worth; bool channeled; double cost = 0.0, deadline = -1.0, fade = 0.0; };
     // }}}
 
     // {{{ FromRow
@@ -99,9 +106,13 @@ namespace BuddyRotation
     //   fightLeft  until the fight's end (625h's estimate; -1: unknown,
     //              counted as ASSUME_LEFT): nothing lands after it
     //   ahead      how far the orders are tried (the look ahead)
+    //   pool       the resource there is now (-1: not counted), up to
+    //              `most`, coming back `regen` a second (625m: a pet's
+    //              focus, energy or mana, its own)
     struct Moment
     {
         double gcdLeft = 0.0, haste = 0.0, moveIn = -1.0, moveFor = 2.0, targetLeft = -1.0, fightLeft = -1.0, ahead = 6.0;
+        double pool = -1.0, most = 0.0, regen = 0.0;
     };
     // }}}
 
@@ -133,7 +144,9 @@ namespace BuddyRotation
 
     // {{{ Landed
     // What one cast begun at t is worth by the moment (Moment says how
-    // movement, the target's death and the fight's end each cut it).
+    // movement, the target's death and the fight's end each cut it), and by
+    // its own deadline and fading (not for a channel: a channel's worth
+    // comes over its length).
     inline double Landed(Cast const& c, double t, Moment const& m)
     {
         double len   = CastTime(c, m.haste);
@@ -148,9 +161,10 @@ namespace BuddyRotation
             if (dies)  stop = std::min(stop, m.targetLeft);
             return c.worth * std::clamp((stop - t) / len, 0.0, 1.0);
         }
-        if (lands > end || (moves && lands > m.moveIn) || (dies && lands > m.targetLeft))
+        if (lands > end || (moves && lands > m.moveIn) || (dies && lands > m.targetLeft)
+            || (c.deadline >= 0.0 && lands > c.deadline + 1e-9))
             return 0.0;
-        return c.worth;
+        return std::max(0.0, c.worth - c.fade * lands);
     }
     // }}}
 
@@ -203,13 +217,31 @@ namespace BuddyRotation
     }
     // }}}
 
+    // {{{ Afford, Refill
+    // When a cast costing `cost` can be paid, from time t with `pool` then:
+    // t itself when the resource isn't counted or there is enough, else
+    // when the regeneration makes enough (never, with none). And the pool
+    // after dt more seconds of regeneration, no more than the most.
+    inline double Afford(Cast const& c, double pool, double t, Moment const& m)
+    {
+        if (m.pool < 0.0 || c.cost <= pool + 1e-9) return t;
+        if (c.cost > m.most + 1e-9 || m.regen <= 0.0) return 1e30;
+        return t + (c.cost - pool) / m.regen;
+    }
+    inline double Refill(double pool, double dt, Moment const& m)
+    {
+        return m.pool < 0.0 ? pool : std::min(m.most, pool + m.regen * dt);
+    }
+    // }}}
+
     // {{{ Search
-    // Every order from time t: cast any ability on the global cooldown that
-    // is ready (it holds the next cast for the longer of its cast and its
-    // global cooldown, and comes back a cooldown after it lands), or wait for
-    // the soonest one not yet ready. Ends at the look ahead; the tail counts
-    // the rest. Returns the best worth from here.
-    inline double Search(std::vector<Cast> const& cs, std::vector<double>& readyAt, double t, Moment const& m)
+    // Every order from time t (with `pool` of the resource then): cast any
+    // ability on the global cooldown that is ready and paid for (it holds
+    // the next cast for the longer of its cast and its global cooldown, and
+    // comes back a cooldown after it lands), or wait for the soonest one not
+    // yet ready or paid for. Ends at the look ahead; the tail counts the
+    // rest. Returns the best worth from here.
+    inline double Search(std::vector<Cast> const& cs, std::vector<double>& readyAt, double t, double pool, Moment const& m)
     {
         if (t >= m.ahead)
             return Tail(cs, readyAt, m);
@@ -219,21 +251,26 @@ namespace BuddyRotation
             Cast const& c = cs[i];
             if (c.gcd <= 0.0)
                 continue;                      // off the global cooldown: slipped in, not raced
-            if (readyAt[i] > t + 1e-9)
+            double at = std::max(readyAt[i], Afford(c, pool, t, m));
+            if (at > t + 1e-9)
             {
-                soonest = std::min(soonest, readyAt[i]);
+                soonest = std::min(soonest, at);
                 continue;
             }
             double len  = CastTime(c, m.haste);
             double slot = std::max(len, GcdTime(c, m.haste));
             double keep = readyAt[i];
             readyAt[i]  = c.cooldown > 0.0 ? t + len + c.cooldown : t;
-            double v    = Landed(c, t, m) * Within(t, slot, m) + Search(cs, readyAt, t + slot, m);
+            double left = m.pool < 0.0 ? pool : pool - c.cost;
+            double v    = Landed(c, t, m) * Within(t, slot, m) + Search(cs, readyAt, t + slot, Refill(left, slot, m), m);
             readyAt[i]  = keep;
             best = std::max(best, v);
         }
         if (soonest < 1e29)
-            best = std::max(best, Search(cs, readyAt, std::min(soonest, m.ahead), m));
+        {
+            double to = std::min(soonest, m.ahead);
+            best = std::max(best, Search(cs, readyAt, to, Refill(pool, to - t, m), m));
+        }
         if (best < 0.0)
             best = Tail(cs, readyAt, m);       // nothing to cast, nothing coming back
         return best;
@@ -250,44 +287,54 @@ namespace BuddyRotation
         std::vector<double> readyAt(cs.size());
         for (size_t i = 0; i < cs.size(); ++i)
             readyAt[i] = cs[i].readyIn;
-        double t0 = std::max(0.0, m.gcdLeft);
+        double t0    = std::max(0.0, m.gcdLeft);
+        double pool0 = Refill(m.pool, t0, m);
 
-        // each ability first (on the global cooldown and ready by t0)
+        // each ability first (on the global cooldown, ready and paid for by t0)
         std::vector<double> start(cs.size(), -1.0);
+        double soonest = 1e30;
         for (size_t i = 0; i < cs.size(); ++i)
         {
             Cast const& c = cs[i];
-            if (c.gcd <= 0.0 || readyAt[i] > t0 + 1e-9)
+            if (c.gcd <= 0.0)
                 continue;
+            double at = std::max(readyAt[i], Afford(c, pool0, t0, m));
+            if (at > t0 + 1e-9)
+            {
+                soonest = std::min(soonest, at);
+                continue;
+            }
             double len  = CastTime(c, m.haste);
             double slot = std::max(len, GcdTime(c, m.haste));
             double keep = readyAt[i];
             readyAt[i]  = c.cooldown > 0.0 ? t0 + len + c.cooldown : t0;
-            start[i]    = Landed(c, t0, m) * Within(t0, slot, m) + Search(cs, readyAt, t0 + slot, m);
+            double left = m.pool < 0.0 ? pool0 : pool0 - c.cost;
+            start[i]    = Landed(c, t0, m) * Within(t0, slot, m) + Search(cs, readyAt, t0 + slot, Refill(left, slot, m), m);
             readyAt[i]  = keep;
         }
         // or waiting for the soonest to come back
-        double soonest = 1e30;
-        for (size_t i = 0; i < cs.size(); ++i)
-            if (cs[i].gcd > 0.0 && readyAt[i] > t0 + 1e-9)
-                soonest = std::min(soonest, readyAt[i]);
-        double waiting = soonest < m.ahead ? Search(cs, readyAt, soonest, m) : -1.0;
+        double waiting = soonest < m.ahead ? Search(cs, readyAt, soonest, Refill(pool0, soonest - t0, m), m) : -1.0;
 
-        a.best = waiting;
+        // the best first cast; waiting only when it is better (a tie casts now)
+        a.best = -1.0;
         for (size_t i = 0; i < cs.size(); ++i)
-            if (start[i] > a.best + 1e-9)
+            if (start[i] >= 0.0 && start[i] > a.best + 1e-9)
             {
                 a.best  = start[i];
                 a.first = int(i);
             }
-        if (a.first < 0 && waiting >= 0.0)
+        if (waiting >= 0.0 && waiting > a.best + 1e-9)
+        {
+            a.best    = waiting;
+            a.first   = -1;
             a.waitFor = soonest - t0;
+        }
         if (a.best < 0.0)
             a.best = 0.0;
         for (size_t i = 0; i < cs.size(); ++i)
         {
             if (cs[i].gcd <= 0.0)
-                a.weight[i] = (readyAt[i] <= 1e-9 && Landed(cs[i], 0.0, m) > 0.0) ? 1.0 : 0.0;
+                a.weight[i] = (readyAt[i] <= 1e-9 && Afford(cs[i], m.pool, 0.0, m) <= 0.0 && Landed(cs[i], 0.0, m) > 0.0) ? 1.0 : 0.0;
             else if (start[i] > 0.0 && a.best > 0.0)
                 a.weight[i] = start[i] / a.best;
         }

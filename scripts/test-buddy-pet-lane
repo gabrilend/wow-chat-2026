@@ -1,0 +1,28 @@
+#!/bin/bash
+# ==== header: 8 lines, footer: 3 lines ====
+# id:         test-buddy-pet-lane
+# profiles:   all
+# priority:   10
+# kind:       test
+# about:      a pet's lane holds to issue 625m: the pet's own global cooldown and resource, its abilities priced by their goals (interrupt, taunt, dispel), the plain attack's autocast paused only to save for a goal, never weighed against its master's abilities
+# quick-test: yes
+# ==== end of header ====
+# test-buddy-pet-lane - compiles and runs tests/buddy-pet-lane/pet-lane-check.cpp
+# against the buddy module's pet lane (buddies_pet_lane.h, and the resource
+# it needs in buddies_rotation_time.h; issue 625m), with no server.
+#
+# Usage: scripts/test-buddy-pet-lane [DIR]   (--help: this text)
+
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+    sed -n '10,14p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+DIR="${1:-/mnt/kaun/wow-chat-2026}"
+OUT="${DIR}/tmp/tmp"
+mkdir -p "${OUT}"
+g++ -std=c++17 -O1 -Wall -Wextra -Werror -I"${DIR}/patches/B036-mod-buddies/mod-buddies/src" \
+    "${DIR}/tests/buddy-pet-lane/pet-lane-check.cpp" -o "${OUT}/buddy-pet-lane" || exit 1
+nice -n 19 "${OUT}/buddy-pet-lane"
+# ==== footer of test-buddy-pet-lane ====
+# lines:      28
+# ==== end of footer ====
