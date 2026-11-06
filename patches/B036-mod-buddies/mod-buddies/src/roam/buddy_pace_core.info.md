@@ -21,6 +21,10 @@ the walk and pull are the server's part, still to build.
 | `eliteWeight` | float | 3 | an elite counts as this many normals |
 | `levelFactor` | float | 1.1 | per level above the group's average |
 | `clearMin`, `clearMax` | float | 10, 30 | yards cleared either side of the route, nervous to confident |
+| `healerLowAfter` | float | 25 | mana (percent) a healer buddy's fight ending under counts as too low |
+| `healerWindow` | size_t | 3 | fights a healer buddy looks back over |
+| `healerLowCount` | size_t | 2 | of them, this many too low: it says "slow down" |
+| `healerQuiet` | size_t | 3 | fights it keeps quiet (and doesn't count) after saying it |
 
 ## Pieces
 
@@ -47,3 +51,24 @@ the walk and pull are the server's part, still to build.
 | `ExpectedCost(pack, s)` | -> float | the record's mana per weight (or the default) times the pack's weight |
 | `ShouldPull(healerManaPct, pack, s)` | -> bool | not stopped, and the mana less the expected cost keeps the reserve |
 | `ClearYards(s)` | -> float | `clearMin` to `clearMax` by confidence |
+| `NeededFor(healerManaPct, pack, s)` | -> float | the confidence it would need to pull that pack itself (`minConfidence` to 1) |
+| `PlayerPulled(cost, healerManaBeforePct, healerManaAfterPct, pack, s)` | -> char const* | a pack someone else pulled, picked up: remembered; the healer above the reserve after it, confidence at least `NeededFor` the pack at the mana it began with; returns the put-out line |
+| `WaitLine(healerManaPct, pack, s)` | -> char const* | "Waiting for ready." when stopped, "Waiting for mana." when short, null when it would pull |
+
+## Harmless packs
+
+| Name | What it is |
+|---|---|
+| `GreyLevel(level)` | -> int32: the game's grey level (AzerothCore's `GetGrayLevel`) |
+| `Plan` (uint8 enum) | `Pull`, `WalkPast`, `Sweep` |
+| `PackPlan(tankLevel, packLevel, hostile)` | -> Plan: above grey, Pull (asked as any pack); grey and not hostile, WalkPast; grey and hostile, Sweep (cleared by area attacks on the way) |
+
+## HealerVoice
+
+A healer buddy's own judgement of when to whisper "slow down" to the tank.
+
+| Member | Type | Meaning |
+|---|---|---|
+| `after` | deque of float | its mana (percent) at each counted fight's end |
+| `quiet` | size_t | fights still to keep quiet for |
+| `Fought(manaAfterPct, fellBehind, s)` | -> Word | `Slow` when `healerLowCount` of the last `healerWindow` fights ended under `healerLowAfter`, or the group's health fell faster than it could heal; then quiet for `healerQuiet` fights; `None` otherwise |

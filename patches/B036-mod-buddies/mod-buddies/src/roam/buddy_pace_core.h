@@ -37,6 +37,25 @@
  *                     wellDoneGain;
  *   clearing width  - clearMin to clearMax yards round the route, by
  *                     confidence.
+ *
+ * Added 2026-11-06 (the agent's calls, in Settings too):
+ *   a player's pull - the tank picks up a pack someone else pulled, says
+ *                     it's a little put out, and if the healer came out of
+ *                     it above the reserve, its confidence rises at once to
+ *                     at least what it would have needed to pull that pack
+ *                     itself ("they'll adjust to the new speed and pull
+ *                     accordingly");
+ *   what it says    - "Waiting for mana." or "Waiting for ready." when it
+ *                     holds (the owner, 2026-10-30, of the line: "sure.");
+ *   harmless packs  - grey to the tank (the game's own grey level): walked
+ *                     past, unless hostile, when they are swept up on the
+ *                     way without asking the healer ("If they are hostile
+ *                     they are picked up and cleared by AoE on the way");
+ *   a healer buddy  - says "slow down" (whispered to the tank) when it
+ *                     can't keep up: healerLowCount of its last healerWindow
+ *                     fights ended with its mana under healerLowAfter, or a
+ *                     fight where the group's health fell faster than it
+ *                     could heal; then keeps quiet for healerQuiet fights.
  */
 
 #ifndef BUDDY_PACE_CORE_H
@@ -67,6 +86,11 @@ struct Settings
     float  levelFactor         = 1.1f;   // per level above (or below) the group's average
     float  clearMin            = 10.0f;  // yards cleared either side of the route by the most nervous tank
     float  clearMax            = 30.0f;  // and by the most confident
+    // a healer buddy's own "slow down" (2026-11-06)
+    float  healerLowAfter      = 25.0f;  // mana (percent) a fight ending under counts as too low
+    size_t healerWindow        = 3;      // fights it looks back over
+    size_t healerLowCount      = 2;      // of them, this many too low: "slow down"
+    size_t healerQuiet         = 3;      // fights it keeps quiet after saying it
 };
 // }}}
 
@@ -185,6 +209,94 @@ struct Tank
 
     // yards cleared either side of the route
     float ClearYards(Settings const& s) const { return s.clearMin + confidence * (s.clearMax - s.clearMin); }
+
+    // the confidence it would need to pull a pack itself with the healer
+    // at this mana: the reserve it may keep is what the expected cost
+    // leaves (between minConfidence and 1)
+    float NeededFor(float healerManaPct, Pack const& p, Settings const& s) const
+    {
+        float spare = healerManaPct - ExpectedCost(p, s);
+        return std::clamp(1.0f - spare / s.maxReserve, s.minConfidence, 1.0f);
+    }
+
+    // a pack someone else pulled, picked up: remembered like any fight;
+    // the healer above the reserve after it, confidence at least what the
+    // tank would have needed to pull it (the healer's mana as it began);
+    // returns what the tank says, a little put out
+    char const* PlayerPulled(FightCost const& f, float healerManaBeforePct, float healerManaAfterPct, Pack const& p, Settings const& s)
+    {
+        bool well = healerManaAfterPct >= Reserve(s);
+        Fought(f, healerManaAfterPct, s);
+        if (well)
+            confidence = std::max(confidence, NeededFor(healerManaBeforePct, p, s));
+        return "Fine, I'll take them.";
+    }
+
+    // what it says when it holds: nothing when it would pull
+    char const* WaitLine(float healerManaPct, Pack const& p, Settings const& s) const
+    {
+        if (stopped)                          return "Waiting for ready.";
+        if (!ShouldPull(healerManaPct, p, s)) return "Waiting for mana.";
+        return nullptr;
+    }
+};
+// }}}
+
+// {{{ harmless packs
+// The game's grey level for a character of `level` (a monster at or below
+// it gives no experience: AzerothCore's own GetGrayLevel).
+inline int32_t GreyLevel(int32_t level)
+{
+    if (level <= 5)  return 0;
+    if (level <= 39) return level - 5 - level / 10;
+    if (level <= 59) return level - 1 - level / 5;
+    return level - 9;
+}
+
+// What the tank does with a pack on its way: Pull (asked as any pack:
+// ShouldPull), WalkPast (grey to it and not hostile: "refuse to fight"),
+// Sweep (grey and hostile: cleared by area attacks on the way, the healer
+// not asked).
+enum class Plan : uint8_t { Pull, WalkPast, Sweep };
+
+inline Plan PackPlan(int32_t tankLevel, int32_t packLevel, bool hostile)
+{
+    if (packLevel > GreyLevel(tankLevel)) return Plan::Pull;
+    return hostile ? Plan::Sweep : Plan::WalkPast;
+}
+// }}}
+
+// {{{ HealerVoice
+// A healer buddy's own judgement of when to whisper "slow down" to the
+// tank (the owner, 2026-10-12: "healer buddies can say it to the tank if
+// the tank is doing too dangerous and they can't keep up").
+struct HealerVoice
+{
+    std::deque<float> after;   // its mana (percent) at each recent fight's end
+    size_t quiet = 0;          // fights still to keep quiet for
+
+    // a fight ended: its mana after it, and whether the group's health fell
+    // faster than it could heal for a stretch of it (the server's reading).
+    // Returns Word::Slow when it says "slow down", Word::None otherwise.
+    Word Fought(float manaAfterPct, bool fellBehind, Settings const& s)
+    {
+        if (quiet > 0)                    // keeping quiet: these fights aren't counted
+        {
+            --quiet;
+            return Word::None;
+        }
+        after.push_back(manaAfterPct);
+        while (after.size() > s.healerWindow)
+            after.pop_front();
+        size_t low = 0;
+        for (float m : after)
+            low += m < s.healerLowAfter ? 1 : 0;
+        if (!fellBehind && low < s.healerLowCount)
+            return Word::None;
+        quiet = s.healerQuiet;
+        after.clear();
+        return Word::Slow;
+    }
 };
 // }}}
 
